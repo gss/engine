@@ -1,0 +1,14 @@
+{
+  "name": "gss-engine",
+  "description": "GSS styling engine",
+  "version": "0.0.1",
+  "scripts": [
+    "lib/Engine.js",
+    "lib/dom/Getter.js",
+    "lib/dom/Setter.js"
+  ],
+  "dependencies": {
+    "slightlyoff/cassowary.js": "*"
+  },
+  "main": "lib/Engine.js"
+}
