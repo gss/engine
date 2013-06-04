@@ -7,8 +7,5 @@
     "lib/dom/Getter.js",
     "lib/dom/Setter.js"
   ],
-  "dependencies": {
-    "slightlyoff/cassowary.js": "*"
-  },
   "main": "lib/Engine.js"
 }
