@@ -12,7 +12,7 @@ describe 'Cassowary', ->
     ieq = new c.Inequality(x, c.GEQ, 100)
     solver.addConstraint(ieq)
     expect(x.value).to.equal 100
-  it '[x(7)] - [y(5)] == [z] // z is 2', ->
+  it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', ->
     solver = new c.SimplexSolver()
     x = new c.Variable()
     y = new c.Variable()
