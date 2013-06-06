@@ -4,19 +4,21 @@ class Thread
     @cachedVars = {}
     @solver = new c.SimplexSolver()
   
-  execute: (ast) =>
+  unparse: (ast) =>
     for vs in ast.vars
       @_execute vs
     for cs in ast.constraints
-      @solver.addContraint @_execute cs
+      @solver.addConstraint @_execute cs
   
   _execute: (ast) =>
-    for node in ast
-      func = @[node[0]]
-      for sub, i in node[1...node.length]
-        if sub instanceof Array # then recurse
-          node[i] = @_execute sub
-      return func.apply @, node[1...a.length]
+    node = ast
+    func = @[node[0]]
+    if !func? then throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
+    for sub, i in node[1..node.length]
+      if sub instanceof Array # then recurse
+        node[i+1] = @_execute sub
+    console.log node[0..sub.length]
+    return func.apply @, node[1..sub.length]
   
   _getValues: () ->
     o = {}
@@ -24,16 +26,19 @@ class Thread
       o[id] = @cachedVars[id].value
     return o
   
+  number: (num) ->
+    return Number(num)
+  
   var: (id, prop, context) ->
-    if cachedVars[id]
-      return cachedVars[id]
+    if @cachedVars[id]
+      return @cachedVars[id]
     v = new c.Variable {name:id}
-    cachedVars[id] = v
+    @cachedVars[id] = v
     return v
   
   get: (id) ->
-    if cachedVars[id]
-      return cachedVars[id]
+    if @cachedVars[id]
+      return @cachedVars[id]
     throw new Error("AST method 'get' couldn't find var with id: #{id}")
       
   plus: (e1,e2) ->
@@ -53,6 +58,7 @@ class Thread
     return strength
   
   eq: (e1,e2,s,w) =>    
+    console.log e1,e2
     return new c.Equation e1, e2, @strength(s), w
   
   lte: (e1,e2,s,w) =>    

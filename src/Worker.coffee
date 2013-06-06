@@ -6,7 +6,7 @@ w = new Thread()
 onmessage = (m) ->
   ast = m.data.ast
   
-  w.execute ast
+  w.unparse ast
   
   postMessage({values:w._getValues()})
   

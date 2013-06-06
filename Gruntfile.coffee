@@ -25,9 +25,9 @@ module.exports = ->
 
     # Automated recompilation and testing when developing
     watch:
-      #build:
-      #  files: ['spec/*.coffee', 'src/*.coffee']
-      #  tasks: ['build']
+      build:
+        files: ['spec/*.coffee', 'src/*.coffee']
+        tasks: ['build']
       test:
         files: ['spec/*.coffee', 'src/*.coffee']
         tasks: ['test']
@@ -71,6 +71,6 @@ module.exports = ->
   @loadNpmTasks 'grunt-mocha-phantomjs'
   @loadNpmTasks 'grunt-contrib-watch'
 
-  @registerTask 'build', ['component', 'coffee', 'uglify', 'jshint','component_build']
+  @registerTask 'build', ['component', 'coffee', 'uglify','component_build']
   @registerTask 'test', ['build',  'mocha_phantomjs']
   @registerTask 'default', ['build']

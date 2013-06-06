@@ -44,8 +44,28 @@ describe 'Cassowary', ->
     expect(y.value).to.equal 5
     expect(z.value).to.equal 2
 describe 'Cassowary Thread', ->
+  thread = null
   it 'should instantiate', ->
     thread = new Thread()
+  it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', ->
+    thread.unparse 
+      vars:
+        [
+          ['var', 'x']
+          ['var', 'y']
+          ['var', 'z']
+        ]
+      constraints:
+        [
+          ['eq', ['get', 'x'], ['number', 7]]
+          ['eq', ['get', 'y'], ['number', 5]]
+          ['eq', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]            
+        ] 
+    debugger         
+    chai.expect(thread._getValues()).to.eql
+      x: 7
+      y: 5
+      z: 2    
 describe 'Cassowary Web Worker', ->
   worker = null
   it 'should be possible to instantiate', ->
