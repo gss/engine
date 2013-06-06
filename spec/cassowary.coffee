@@ -45,7 +45,7 @@ describe 'Cassowary', ->
     expect(z.value).to.equal 2
 describe 'Cassowary Thread', ->
   it 'should instantiate', ->
-    thread = new Cassowary()
+    thread = new Thread()
 describe 'Cassowary Web Worker', ->
   worker = null
   it 'should be possible to instantiate', ->
