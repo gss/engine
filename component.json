@@ -8,7 +8,7 @@
     "lib/dom/Setter.js"
   ],
   "files": [
-    "worker.js"
+    "worker/gss-solver.js"
   ],
   "main": "lib/Engine.js"
 }

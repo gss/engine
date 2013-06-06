@@ -24,7 +24,7 @@ module.exports = ->
           './browser/gss-engine.min.js': ['./browser/gss-engine.js']
       worker:
         files:
-          './browser/engine/worker.min.js': ['./browser/engine/worker.js']
+          './browser/engine/worker/gss-solver.min.js': ['./browser/engine/worker/gss-solver.js']
 
     # Automated recompilation and testing when developing
     watch:
@@ -71,7 +71,7 @@ module.exports = ->
     concat:
       worker:
         src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
-        dest: 'worker.js'
+        dest: 'worker/gss-solver.js'
 
     # BDD tests on browser
     mocha_phantomjs:
