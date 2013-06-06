@@ -13,9 +13,10 @@ class Setter
     element.style.position = 'absolute'
 
   setWidth: (element, value) ->
-    element.style.width = value
+    element.style.width = "#{value}px"
 
   setLeft: (element, value) ->
     @makePositioned element
     # TODO: Calculate offset of position parent
-    element.style.left = value
+
+module.exports = Setter

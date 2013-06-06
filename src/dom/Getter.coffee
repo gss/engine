@@ -8,8 +8,12 @@ class Getter
     switch method
       when "$id"
         # TODO: Restrict to container
+        if identifier[0] is '#'
+          identifier = identifier.substr 1
         return document.getElementById identifier
       when "$class"
+        if identifier[0] is '.'
+          identifier = identifier.substr 1
         return @container.getElementsByClassName identifier
       when "$tag"
         return @container.getElementsByTagName identifier

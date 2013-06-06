@@ -2,22 +2,34 @@ Get = require("./dom/Getter.js")
 Set = require("./dom/Setter.js")
 
 class Engine
-  constructor: (container) ->
-    @container = (if container then container else document)
+  constructor: (@workerPath, @container) ->
+    @container = document unless @container
     @elements = {}
     @variables = {}
+    @dimensions = {}
     @worker = null
     @getter = new Get(@container)
     @setter = new Set(@container)
+    @onSolved = null
 
   run: (ast) ->
     # Get elements for variables
     ast.vars.forEach @measure
     
-    #for identifier of @variables
+    # Clean up variables for solving
+    for variable, index in ast.vars
+      ast.vars[index] = ['var', variable[1]]
+
     # Add constraints to AST
+    for identifier, value of @variables
+      ast.constraints.unshift [
+        'eq',
+        ['get', identifier],
+        ['number', value]
+        'weak'
+      ]
     
-    @solve ast.constraints
+    @solve ast
 
   measure: (variable) =>
     identifier = variable[1]
@@ -25,24 +37,32 @@ class Engine
     selector = variable[3]
     
     # Skip variables that are not on DOM
-    return  unless selector
+    return unless selector
+
+    @dimensions[identifier] = dimension
     
     # Read element from DOM
-    @elements[identifier] = @getter.get(selector)  unless @elements[identifier]
+    @elements[identifier] = @getter.get(selector) unless @elements[identifier]
+    return unless @elements[identifier]
     
     # Measure the element
     @variables[identifier] = @getter.measure(@elements[identifier], dimension)
 
-  process: (values) =>
+  process: (message) =>
+    values = message.data.values
     for identifier of values
-      dimension = ""
-      element = @elements(identifier)
+      dimension = @dimensions[identifier]
+      element = @elements[identifier]
       @setter.set element, dimension, values[identifier]
 
-  solve: (constraints) ->
+    # Run callback
+    @onSolved values if @onSolved
+
+  solve: (ast) ->
     unless @worker
-      @worker = new Worker("some-file")
+      @worker = new Worker @workerPath
       @worker.addEventListener "message", @process
-    @worker.postMessage constraints
+    @worker.postMessage
+      ast: ast
 
 module.exports = Engine
