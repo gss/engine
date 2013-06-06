@@ -39,6 +39,14 @@ module.exports = ->
 
     # CoffeeScript compilation
     coffee:
+      src:
+        options:
+          bare: true
+        expand: true
+        cwd: 'src'
+        src: ['**.coffee']
+        dest: 'lib'
+        ext: '.js'
       spec:
         options:
           bare: true
