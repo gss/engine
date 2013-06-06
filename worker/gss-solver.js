@@ -33,6 +33,7 @@ Thread = (function() {
     this.unparse = __bind(this.unparse, this);
     this.cachedVars = {};
     this.solver = new c.SimplexSolver();
+    this.solver.autoSolve = false;
   }
 
   Thread.prototype.unparse = function(ast) {
@@ -70,6 +71,7 @@ Thread = (function() {
 
   Thread.prototype._getValues = function() {
     var id, o;
+    this.solver.resolve();
     o = {};
     for (id in this.cachedVars) {
       o[id] = this.cachedVars[id].value;

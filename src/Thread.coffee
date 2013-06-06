@@ -3,6 +3,8 @@ class Thread
   constructor: ->
     @cachedVars = {}
     @solver = new c.SimplexSolver()
+    @solver.autoSolve = false
+  
   
   unparse: (ast) =>
     for vs in ast.vars
@@ -21,6 +23,7 @@ class Thread
     return func.apply @, node[1...node.length]
   
   _getValues: () ->
+    @solver.resolve()
     o = {}
     for id of @cachedVars
       o[id] = @cachedVars[id].value
@@ -55,6 +58,7 @@ class Thread
   
   strength: (s) ->
     strength = c.Strength[s]
+    #if !strength? then throw new Error("Strength unrecognized: #{s}")
     return strength
   
   eq: (e1,e2,s,w) =>    
