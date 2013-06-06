@@ -1,6 +1,3 @@
-importScripts "../vendor/c.js"
-importScripts "../lib/Thread.js"
-
 w = new Thread()
 
 onmessage = (m) ->

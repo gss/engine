@@ -22,6 +22,9 @@ module.exports = ->
       engine:
         files:
           './browser/gss-engine.min.js': ['./browser/gss-engine.js']
+      worker:
+        files:
+          './browser/engine/worker.min.js': ['./browser/engine/worker.js']
 
     # Automated recompilation and testing when developing
     watch:
@@ -64,21 +67,28 @@ module.exports = ->
         dest: 'spec'
         ext: '.js'
 
+    # Worker process concatenation
+    concat:
+      worker:
+        src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
+        dest: 'worker.js'
+
     # BDD tests on browser
     mocha_phantomjs:
       all: ['spec/runner.html']
 
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-component'
+  @loadNpmTasks 'grunt-contrib-coffee'
+  @loadNpmTasks 'grunt-contrib-concat'
   @loadNpmTasks 'grunt-component-build'
   @loadNpmTasks 'grunt-contrib-uglify'
 
   # Grunt plugins used for testing
   @loadNpmTasks 'grunt-contrib-jshint'
-  @loadNpmTasks 'grunt-contrib-coffee'
   @loadNpmTasks 'grunt-mocha-phantomjs'
   @loadNpmTasks 'grunt-contrib-watch'
 
-  @registerTask 'build', ['coffee', 'component', 'component_build', 'uglify']
+  @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
   @registerTask 'test', ['build',  'mocha_phantomjs']
   @registerTask 'default', ['build']

@@ -7,5 +7,8 @@
     "lib/dom/Getter.js",
     "lib/dom/Setter.js"
   ],
+  "files": [
+    "worker.js"
+  ],
   "main": "lib/Engine.js"
 }
