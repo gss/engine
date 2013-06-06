@@ -47,7 +47,7 @@ describe 'Cassowary Thread', ->
   thread = null
   it 'should instantiate', ->
     thread = new Thread()
-  it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', ->
+  it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', (done) ->
     thread.unparse 
       vars:
         [
@@ -57,24 +57,27 @@ describe 'Cassowary Thread', ->
         ]
       constraints:
         [
+          ['eq',             
+            ['get', 'z'],
+            ['minus', ['get', 'x'], ['get', 'y'] ]
+          ]
           ['eq', ['get', 'x'], ['number', 7]]
-          ['eq', ['get', 'y'], ['number', 5]]
-          ['eq', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]            
-        ] 
-    debugger         
+          ['eq', ['get', 'y'], ['number', 5]]                              
+        ]     
     chai.expect(thread._getValues()).to.eql
       x: 7
       y: 5
       z: 2    
+    done()
 describe 'Cassowary Web Worker', ->
   worker = null
   it 'should be possible to instantiate', ->
     worker = new Worker('../lib/Worker.js')
   it 'should solve a set of simple constraints', (done) ->
     worker.addEventListener 'error', onWorkerError
-    worker.addEventListener 'message', (values) ->
-      console.log "MESSAGE", values
-      chai.expect(values.data).to.eql
+    worker.addEventListener 'message', (m) ->
+
+      chai.expect(m.data.values).to.eql
         a: 7
         b: 5
         c: 2
@@ -92,5 +95,7 @@ describe 'Cassowary Web Worker', ->
           [
             ['eq', ['get', 'a'], ['number', 7]]
             ['eq', ['get', 'b'], ['number', 5]]
-            ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c']]            
+            ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c']]                        
+
+          
           ]
