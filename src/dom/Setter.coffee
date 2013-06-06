@@ -5,8 +5,17 @@ class Setter
   set: (element, dimension, value) ->
     switch dimension
       when 'width'
-        element.style.width = value
+        @setWidth element, value
       when 'left'
-        element.style.position = 'absolute'
-        # TODO: Calculate offset of position parent
-        element.style.left = value
+        @setLeft element, value
+
+  makePositioned: (element) ->
+    element.style.position = 'absolute'
+
+  setWidth: (element, value) ->
+    element.style.width = value
+
+  setLeft: (element, value) ->
+    @makePositioned element
+    # TODO: Calculate offset of position parent
+    element.style.left = value
