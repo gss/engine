@@ -25,8 +25,12 @@ module.exports = ->
 
     # Automated recompilation and testing when developing
     watch:
-      files: ['spec/*.coffee', 'src/*.coffee']
-      tasks: ['test']
+      #build:
+      #  files: ['spec/*.coffee', 'src/*.coffee']
+      #  tasks: ['build']
+      test:
+        files: ['spec/*.coffee', 'src/*.coffee']
+        tasks: ['test']
 
     # Syntax checking
     jshint:

@@ -43,6 +43,9 @@ describe 'Cassowary', ->
     expect(x.value).to.equal 7
     expect(y.value).to.equal 5
     expect(z.value).to.equal 2
+describe 'Cassowary Thread', ->
+  it 'should instantiate', ->
+    thread = new Cassowary()
 describe 'Cassowary Web Worker', ->
   worker = null
   it 'should be possible to instantiate', ->
@@ -50,6 +53,7 @@ describe 'Cassowary Web Worker', ->
   it 'should solve a set of simple constraints', (done) ->
     worker.addEventListener 'error', onWorkerError
     worker.addEventListener 'message', (values) ->
+      console.log "MESSAGE", values
       chai.expect(values.data).to.eql
         a: 7
         b: 5
@@ -57,15 +61,16 @@ describe 'Cassowary Web Worker', ->
       done()
     # [a(7)] - [b(6)] == [c]
     worker.postMessage 
-      vars:
-        [
-          ['var', 'a']
-          ['var', 'b']
-          ['var', 'c']
-        ]
-      constraints:
-        [
-          ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c']]
-          ['eq', ['get', 'a'], ['number', 7]]
-          ['eq', ['get', 'b'], ['number', 5]]
-        ]
+      ast:
+        vars:
+          [
+            ['var', 'a']
+            ['var', 'b']
+            ['var', 'c']
+          ]
+        constraints:
+          [
+            ['eq', ['get', 'a'], ['number', 7]]
+            ['eq', ['get', 'b'], ['number', 5]]
+            ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c']]            
+          ]
