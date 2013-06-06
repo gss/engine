@@ -19,7 +19,7 @@ module.exports = ->
     uglify:
       options:
         report: 'min'
-      noflo:
+      engine:
         files:
           './browser/gss-engine.min.js': ['./browser/gss-engine.js']
 
