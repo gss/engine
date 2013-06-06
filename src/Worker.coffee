@@ -1,7 +1,22 @@
 importScripts "../vendor/c.js"
 
+cachedVars = {}
+
 astFunctions =
-           
+  
+  var: (id, prop, context) ->
+    if cachedVars[id]
+      return cachedVars[id]
+    v = new c.Variable {name:id}
+    cachedVars[id] = v
+    return v
+  
+  get: (id) ->
+    if cachedVars[id]
+      return cachedVars[id]
+    else
+      
+  
   plus: (e1,e2) ->
     return c.plus e2, e2 
   
