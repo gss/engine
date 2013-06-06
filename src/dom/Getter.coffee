@@ -1,17 +1,23 @@
-Getter = (container) ->
-  @container = (if container then container else document)
-  @container
+class Getter
+  constructor: (@container) ->
+    @container = document unless @container
 
-Getter::get = (selector) ->
-  method = selector[0]
-  identifier = selector[1]
-  switch method
-    when "$id"
-      return @getById(identifier)
-    when "$class"
-      return @getByClass(identifier)
-    when "$tag"
-      return @getByTag(identifier)
-  document.querySelectorAll identifier
+  get: (selector) ->
+    method = selector[0]
+    identifier = selector[1]
+    switch method
+      when "$id"
+        # TODO: Restrict to container
+        return document.getElementById identifier
+      when "$class"
+        return @container.getElementsByClassName identifier
+      when "$tag"
+        return @container.getElementsByTagName identifier
+    @container.querySelectorAll identifier
+
+  measure: (element, dimension) ->
+    switch dimension
+      when 'width'
+        return element.getBoundingClientRect().width
 
 module.exports = Getter
