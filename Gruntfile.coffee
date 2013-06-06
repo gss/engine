@@ -39,14 +39,6 @@ module.exports = ->
 
     # CoffeeScript compilation
     coffee:
-      src:
-        options:
-          bare: true
-        expand: true
-        cwd: 'src'
-        src: ['**/*.coffee']
-        dest: 'lib'
-        ext: '.js'      
       spec:
         options:
           bare: true
@@ -71,6 +63,6 @@ module.exports = ->
   @loadNpmTasks 'grunt-mocha-phantomjs'
   @loadNpmTasks 'grunt-contrib-watch'
 
-  @registerTask 'build', ['component', 'coffee', 'uglify','component_build']
-  @registerTask 'test', ['build',  'mocha_phantomjs']
+  @registerTask 'build', ['component', 'component_build', 'uglify']
+  @registerTask 'test', ['build',  'coffee', 'mocha_phantomjs']
   @registerTask 'default', ['build']

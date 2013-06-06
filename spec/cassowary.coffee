@@ -8,7 +8,7 @@ expect = chai.expect
 
 describe 'Cassowary', ->
   it 'should be available', ->
-    expect(c?).to.be.true
+    expect(c).to.be.a 'function'
   it 'var >= num', ->
     solver = new c.SimplexSolver()
     x = new c.Variable({ value: 10 })
@@ -20,9 +20,9 @@ describe 'Cassowary', ->
     x = new c.Variable()
     y = new c.Variable()
     z = new c.Variable()
-    eq1 = new c.Equation(x,7) 
-    eq2 = new c.Equation(y,5) 
-    eq3 = new c.Equation(c.minus(x,y),z) 
+    eq1 = new c.Equation(x,7)
+    eq2 = new c.Equation(y,5)
+    eq3 = new c.Equation(c.minus(x,y),z)
     solver.addConstraint(eq1)
     solver.addConstraint(eq2)
     solver.addConstraint(eq3)
