@@ -36,9 +36,14 @@ module.exports = ->
         tasks: ['test']
 
     # Syntax checking
-    jshint:
-      lib: ['lib/*.js']
-      dom: ['lib/**/*.js']
+    coffeelint:
+      src: ['src/*.coffee', 'src/**/*.coffee']
+      spec:
+        files:
+          src: ['spec/*.coffee']
+        options:
+          max_line_length:
+            level: 'ignore'
 
     # CoffeeScript compilation
     coffee:
@@ -85,10 +90,10 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-uglify'
 
   # Grunt plugins used for testing
-  @loadNpmTasks 'grunt-contrib-jshint'
+  @loadNpmTasks 'grunt-coffeelint'
   @loadNpmTasks 'grunt-mocha-phantomjs'
   @loadNpmTasks 'grunt-contrib-watch'
 
   @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
-  @registerTask 'test', ['build',  'mocha_phantomjs']
+  @registerTask 'test', ['coffeelint', 'build',  'mocha_phantomjs']
   @registerTask 'default', ['build']

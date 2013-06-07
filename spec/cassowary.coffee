@@ -1,5 +1,5 @@
 onWorkerError = (event) ->
-    throw new Error(event.message + " (" + event.filename + ":" + event.lineno + ")")
+  throw new Error(event.message + " (" + event.filename + ":" + event.lineno + ")")
 
 expect = chai.expect
 
@@ -35,9 +35,9 @@ describe 'Cassowary Web Worker', ->
     onMessage = (m) ->
       expect(m.data.values.x).to.eql 7
       expect(m.data.values.y).to.eql 5
-      expect(m.data.values.z).to.eql 2  
+      expect(m.data.values.z).to.eql 2
       expect(m.data.values.a).to.eql 99
-      worker.removeEventListener 'message', onMessage    
+      worker.removeEventListener 'message', onMessage
       done()
     # [a(7)] - [b(6)] == [c]
     worker.addEventListener 'message', onMessage
@@ -57,12 +57,12 @@ describe 'Cassowary Web Worker', ->
             ['eq', ['get', 'a'], ['number', 99], 'required']
           ]
   it 'should solve with variable expressions', (done) ->
-    onMessage = (m) ->    
+    onMessage = (m) ->
       expect(m.data.values.left).to.eql 1
       #expect(m.data.values.right).to.eql 100  # TODO
       expect(m.data.values['right-target']).to.eql 100
       expect(m.data.values.width).to.eql 99
-      worker.removeEventListener 'message', onMessage    
+      worker.removeEventListener 'message', onMessage
       done()
     # [a(7)] - [b(6)] == [c]
     worker.addEventListener 'message', onMessage
@@ -73,7 +73,7 @@ describe 'Cassowary Web Worker', ->
             ['var', 'right-target']
             ['var', 'left']
             ['var', 'width']
-            ['varexp', 'right', ['plus', ['get','left'],['get','width']]]            
+            ['varexp', 'right', ['plus', ['get','left'],['get','width']]]
           ]
         constraints:
           [

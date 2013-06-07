@@ -15,7 +15,8 @@ class Thread
   _execute: (ast) =>
     node = ast
     func = @[node[0]]
-    if !func? then throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
+    if !func?
+      throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
         node.splice i+1,1,@_execute sub
@@ -43,12 +44,14 @@ class Thread
     cv = @cachedVars
     if cv[id]
       return cv[id]
-    if !(expression instanceof c.Expression) then throw new Error("Thread `varexp` requires an instance of c.Expression")
+    if !(expression instanceof c.Expression)
+      throw new Error("Thread `varexp` requires an instance of c.Expression")
     # Return new instance of expression everytime it is accessed.
-    # Unlike `c.Variable`s, `c.Expression` need to be cloned to work properly because... math =)
+    # Unlike `c.Variable`s, `c.Expression` need to be cloned to work properly
+    # because... math =)
     Object.defineProperty cv, id,
-      get: ->        
-        clone = expression.clone() 
+      get: ->
+        clone = expression.clone()
         # TODO: Add value getter to expressions...
         return clone
     return expression
@@ -59,10 +62,10 @@ class Thread
     throw new Error("AST method 'get' couldn't find var with id: #{id}")
       
   plus: (e1, e2) ->
-    return c.plus e1, e2 
+    return c.plus e1, e2
   
   minus : (e1,e2) ->
-    return c.minus e1, e2 
+    return c.minus e1, e2
     
   multiply: (e1,e2) ->
     return c.plus e1, e2
@@ -75,17 +78,17 @@ class Thread
     #if !strength? then throw new Error("Strength unrecognized: #{s}")
     return strength
   
-  eq: (e1,e2,s,w) =>    
+  eq: (e1,e2,s,w) =>
     return new c.Equation e1, e2, @strength(s), w
   
-  lte: (e1,e2,s,w) =>    
+  lte: (e1,e2,s,w) =>
     return new c.Inequality e1, c.LEQ, e2, @strength(s), w
   
-  gte: (e1,e2,s,w) =>    
+  gte: (e1,e2,s,w) =>
     return new c.Inequality e1, c.GEQ, e2, @strength(s), w
   
-  lt: (e1,e2,s,w) =>    
+  lt: (e1,e2,s,w) =>
     return new c.Inequality e1, c.LEQ, e2, @strength(s), w
   
-  gt: (e1,e2,s,w) =>    
+  gt: (e1,e2,s,w) =>
     return new c.Inequality e1, c.GEQ, e2, @strength(s), w
