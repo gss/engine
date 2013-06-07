@@ -44,10 +44,12 @@ class Thread
     if cv[id]
       return cv[id]
     if !(expression instanceof c.Expression) then throw new Error("Thread `varexp` requires an instance of c.Expression")
+    # Return new instance of expression everytime it is accessed.
+    # Unlike `c.Variable`s, `c.Expression` need to be cloned to work properly because... math =)
     Object.defineProperty cv, id,
-      get: ->
-        clone = expression.clone()
-        clone.value = clone.constant
+      get: ->        
+        clone = expression.clone() 
+        # TODO: Add value getter to expressions...
         return clone
     return expression
   

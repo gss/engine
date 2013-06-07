@@ -108,7 +108,6 @@ Thread = (function() {
       get: function() {
         var clone;
         clone = expression.clone();
-        clone.value = clone.constant;
         return clone;
       }
     });
