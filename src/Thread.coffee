@@ -39,6 +39,18 @@ class Thread
     @cachedVars[id] = v
     return v
   
+  varexp: (id, expression) -> # an expression accessed like a variable
+    cv = @cachedVars
+    if cv[id]
+      return cv[id]
+    if !(expression instanceof c.Expression) then throw new Error("Thread `varexp` requires an instance of c.Expression")
+    Object.defineProperty cv, id,
+      get: ->
+        clone = expression.clone()
+        clone.value = clone.constant
+        return clone
+    return expression
+  
   get: (id) ->
     if @cachedVars[id]
       return @cachedVars[id]

@@ -2,10 +2,10 @@ onWorkerError = (event) ->
     throw new Error(event.message + " (" + event.filename + ":" + event.lineno + ")")
 
 expect = chai.expect
-log = console.log
 
 describe 'Cassowary Web Worker', ->
   worker = null
+  worker2 = null
   it 'should be possible to instantiate', ->
     worker = new Worker('../browser/engine/worker/gss-solver.js')
     worker.addEventListener 'error', onWorkerError
@@ -56,4 +56,29 @@ describe 'Cassowary Web Worker', ->
             ['eq', ['get', 'y'], ['number', 5]]
             ['lte', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]
             ['eq', ['get', 'a'], ['number', 99], 'required']
+          ]
+  it 'should solve with variable expressions', (done) ->
+    onMessage = (m) ->    
+      expect(m.data.values.left).to.eql 1
+      #expect(m.data.values.right).to.eql 100  # TODO
+      expect(m.data.values['right-target']).to.eql 100
+      expect(m.data.values.width).to.eql 99
+      worker.removeEventListener 'message', onMessage    
+      done()
+    # [a(7)] - [b(6)] == [c]
+    worker.addEventListener 'message', onMessage
+    worker.postMessage
+      ast:
+        vars:
+          [
+            ['var', 'right-target']
+            ['var', 'left']
+            ['var', 'width']
+            ['varexp', 'right', ['plus', ['get','left'],['get','width']]]            
+          ]
+        constraints:
+          [
+            ['eq', ['get', 'right-target'], ['number', 100]]
+            ['eq', ['get', 'left'], ['number', 1]]
+            ['eq', ['get', 'right'], ['get', 'right-target']]
           ]
