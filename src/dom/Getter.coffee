@@ -19,11 +19,27 @@ class Getter
         return @container.getElementsByTagName identifier
     @container.querySelectorAll identifier
 
+  getPosition: (element) ->
+    x = 0
+    y = 0
+    loop
+      x += element.offsetLeft
+      y += element.offsetTop
+      break unless element.offsetParent
+      element = element.offsetParent
+    return offsets =
+      left: x
+      top: y
+
   measure: (element, dimension) ->
     switch dimension
       when 'width'
         return element.getBoundingClientRect().width
       when 'height'
         return element.getBoundingClientRect().height
+      when 'left'
+        return @getPosition(element).left
+      when 'top'
+        return @getPosition(element).top
 
 module.exports = Getter
