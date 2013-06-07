@@ -20,7 +20,7 @@ describe 'GSS engine', ->
     it 'should pass the container to its DOM setter', ->
       chai.expect(gss.setter).to.be.an 'object'
       chai.expect(gss.setter.container).to.eql gss.container
-  describe 'with a simple constraints', ->
+  describe 'with #button1[width] == #button2[width]', ->
     ast =
       selectors: [
         '#button1'
