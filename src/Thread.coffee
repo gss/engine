@@ -3,6 +3,8 @@ class Thread
   constructor: ->
     @cachedVars = {}
     @solver = new c.SimplexSolver()
+    @solver.autoSolve = false
+  
   
   unparse: (ast) =>
     for vs in ast.vars
@@ -21,6 +23,7 @@ class Thread
     return func.apply @, node[1...node.length]
   
   _getValues: () ->
+    @solver.resolve()
     o = {}
     for id of @cachedVars
       o[id] = @cachedVars[id].value
@@ -35,6 +38,20 @@ class Thread
     v = new c.Variable {name:id}
     @cachedVars[id] = v
     return v
+  
+  varexp: (id, expression) -> # an expression accessed like a variable
+    cv = @cachedVars
+    if cv[id]
+      return cv[id]
+    if !(expression instanceof c.Expression) then throw new Error("Thread `varexp` requires an instance of c.Expression")
+    # Return new instance of expression everytime it is accessed.
+    # Unlike `c.Variable`s, `c.Expression` need to be cloned to work properly because... math =)
+    Object.defineProperty cv, id,
+      get: ->        
+        clone = expression.clone() 
+        # TODO: Add value getter to expressions...
+        return clone
+    return expression
   
   get: (id) ->
     if @cachedVars[id]
@@ -55,6 +72,7 @@ class Thread
   
   strength: (s) ->
     strength = c.Strength[s]
+    #if !strength? then throw new Error("Strength unrecognized: #{s}")
     return strength
   
   eq: (e1,e2,s,w) =>    
