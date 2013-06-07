@@ -6,6 +6,8 @@ class Setter
     switch dimension
       when 'width'
         @setWidth element, value
+      when 'height'
+        @setHeight element, value
       when 'left'
         @setLeft element, value
 
@@ -14,6 +16,9 @@ class Setter
 
   setWidth: (element, value) ->
     element.style.width = "#{value}px"
+
+  setHeight: (element, value) ->
+    element.style.height = "#{value}px"
 
   setLeft: (element, value) ->
     @makePositioned element

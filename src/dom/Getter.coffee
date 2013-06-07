@@ -23,5 +23,7 @@ class Getter
     switch dimension
       when 'width'
         return element.getBoundingClientRect().width
+      when 'height'
+        return element.getBoundingClientRect().height
 
 module.exports = Getter

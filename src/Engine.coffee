@@ -23,10 +23,9 @@ class Engine
     # Add constraints to AST
     for identifier, value of @variables
       ast.constraints.unshift [
-        'eq',
+        'gte',
         ['get', identifier],
         ['number', value]
-        'weak'
       ]
     
     @solve ast
