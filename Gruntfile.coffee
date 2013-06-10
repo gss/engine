@@ -29,7 +29,7 @@ module.exports = ->
     # Automated recompilation and testing when developing
     watch:
       build:
-        files: ['spec/*.coffee', 'src/*.coffee']
+        files: ['spec/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
         tasks: ['build']
       test:
         files: ['spec/*.coffee', 'src/*.coffee']
