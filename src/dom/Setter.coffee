@@ -4,9 +4,9 @@ class Setter
 
   set: (element, dimension, value) ->
     switch dimension
-      when 'width'
+      when 'width', 'w'
         @setWidth element, value
-      when 'height'
+      when 'height', 'h'
         @setHeight element, value
       when 'left', 'x'
         @setLeft element, value

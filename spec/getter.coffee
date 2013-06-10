@@ -39,9 +39,9 @@ describe 'DOM Getter', ->
     it 'should be able to return the correct width', ->
       measured = get.measure span, 'width'
       chai.expect(measured).to.equal expected.width
-    it 'should be able to return the correct height', ->
-      measured = get.measure span, 'height'
-      chai.expect(measured).to.equal expected.height
+      # Test the shorthand too
+      measured = get.measure span, 'w'
+      chai.expect(measured).to.equal expected.width
     it 'should be able to return the correct left', ->
       measured = get.measure span, 'left'
       chai.expect(measured).to.equal expected.left
@@ -54,6 +54,12 @@ describe 'DOM Getter', ->
     it 'should be able to return the correct centerX', ->
       measured = get.measure span, 'centerX'
       chai.expect(measured).to.equal expected.left + expected.width / 2
+    it 'should be able to return the correct height', ->
+      measured = get.measure span, 'height'
+      chai.expect(measured).to.equal expected.height
+      # Test the shorthand too
+      measured = get.measure span, 'h'
+      chai.expect(measured).to.equal expected.height
     it 'should be able to return the correct top', ->
       measured = get.measure span, 'top'
       chai.expect(measured).to.equal expected.top

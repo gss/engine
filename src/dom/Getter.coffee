@@ -33,9 +33,9 @@ class Getter
 
   measure: (element, dimension) ->
     switch dimension
-      when 'width'
+      when 'width', 'w'
         return element.getBoundingClientRect().width
-      when 'height'
+      when 'height', 'h'
         return element.getBoundingClientRect().height
       when 'left', 'x'
         return @getPosition(element).left
