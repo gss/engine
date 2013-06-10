@@ -17,8 +17,8 @@ Using the [GSS compiler](https://github.com/the-gss/compiler), this is translate
 {
   "selectors": ["#button1", "#button2"],
   "vars": [
-    ["get", "#button1[w]", "w", ["$id", "#button1"]],
-    ["get", "#button2[w]", "w", ["$id", "#button2"]]
+    ["var", "#button1[w]", "w", ["$id", "#button1"]],
+    ["var", "#button2[w]", "w", ["$id", "#button2"]]
   ],
   "constraints": [
     ["eq",
