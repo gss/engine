@@ -72,3 +72,38 @@ describe 'DOM Getter', ->
     it 'should be able to return the correct centerY', ->
       measured = get.measure span, 'centerY'
       chai.expect(measured).to.equal expected.top + expected.height / 2
+
+  describe 'getting position from positioned element with inherited offsets', ->
+    div = container.querySelector '#childPos'
+    expected =
+      top: 50
+      left: -400
+    it 'should be able to return the correct left', ->
+      measured = get.measure div, 'left'
+      chai.expect(measured).to.equal expected.left
+      # Test the shorthand too
+      measured = get.measure div, 'x'
+      chai.expect(measured).to.equal expected.left
+    it 'should be able to return the correct top', ->
+      measured = get.measure div, 'top'
+      chai.expect(measured).to.equal expected.top
+      # Test the shorthand too
+      measured = get.measure div, 'y'
+      chai.expect(measured).to.equal expected.top
+  describe 'getting position from element with inherited offsets', ->
+    div = container.querySelector '#childNoPos'
+    expected =
+      top: 40
+      left: -500
+    it 'should be able to return the correct left', ->
+      measured = get.measure div, 'left'
+      chai.expect(measured).to.equal expected.left
+      # Test the shorthand too
+      measured = get.measure div, 'x'
+      chai.expect(measured).to.equal expected.left
+    it 'should be able to return the correct top', ->
+      measured = get.measure div, 'top'
+      chai.expect(measured).to.equal expected.top
+      # Test the shorthand too
+      measured = get.measure div, 'y'
+      chai.expect(measured).to.equal expected.top

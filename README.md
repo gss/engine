@@ -52,12 +52,12 @@ Constraints are given by using various dimensions of elements. The elements are 
 The currently supported dimensions of an element are:
 
 * `width` (shorthand: `w`)
-* `height` (shorthand: `h`)
-* `top` (shorthand: `y`)
 * `left` (shorthand: `x`)
-* `bottom` *read-only*
 * `right` *read-only*
 * `centerX` *read-only*
+* `height` (shorthand: `h`)
+* `top` (shorthand: `y`)
+* `bottom` *read-only*
 * `centerY` *read-only*
 
 ## Cassowary
