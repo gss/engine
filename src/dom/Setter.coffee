@@ -8,9 +8,9 @@ class Setter
         @setWidth element, value
       when 'height'
         @setHeight element, value
-      when 'left'
+      when 'left', 'x'
         @setLeft element, value
-      when 'top'
+      when 'top', 'y'
         @setTop element, value
 
   makePositioned: (element) ->

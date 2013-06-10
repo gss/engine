@@ -37,9 +37,18 @@ class Getter
         return element.getBoundingClientRect().width
       when 'height'
         return element.getBoundingClientRect().height
-      when 'left'
+      when 'left', 'x'
         return @getPosition(element).left
-      when 'top'
+      when 'top', 'y'
         return @getPosition(element).top
+      # Read-only values
+      when 'bottom'
+        return @measure(element, 'top') + @measure(element, 'height')
+      when 'right'
+        return @measure(element, 'left') + @measure(element, 'width')
+      when 'centerX'
+        return @measure(element, 'left') + @measure(element, 'width') / 2
+      when 'centerY'
+        return @measure(element, 'top') + @measure(element, 'height') / 2
 
 module.exports = Getter

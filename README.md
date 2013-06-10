@@ -13,17 +13,12 @@ The currently supported dimensions of an element are:
 
 * width
 * height
-* top
-* left
-
-Additional dimensions planned include:
-
-* bottom
-* right
-* centerX
-* centerY
-* centerWidth
-* centerHeight
+* `top` (shorthand: `y`)
+* `left` (shorthand: `x`)
+* bottom *read-only*
+* right *read-only*
+* centerX *read-only*
+* centerY *read-only*
 
 ## Cassowary
 
