@@ -33,6 +33,7 @@ describe 'GSS engine', ->
       constraints: [
         ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
       ]
+    console.log JSON.stringify ast, null, 2
     button1 = container.querySelector '#button1'
     button2 = container.querySelector '#button2'
     it 'before solving the second button should be wider', ->

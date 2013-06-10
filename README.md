@@ -3,6 +3,41 @@ GSS engine [![Build Status](https://travis-ci.org/the-gss/engine.png?branch=mast
 
 This library processes parsed GSS constraints, solves them using Cassowary, and updates CSS accordingly.
 
+## Usage
+
+This CCSS expression says that two buttons should have the same width:
+
+```ccss
+#button1[w] == #button2[w]
+```
+
+Using the [GSS compiler](https://github.com/the-gss/compiler), this is translated to the following AST:
+
+```json
+{
+  "selectors": ["#button1", "#button2"],
+  "vars": [
+    ["get", "#button1[w]", "w", ["$id", "#button1"]],
+    ["get", "#button2[w]", "w", ["$id", "#button2"]]
+  ],
+  "constraints": [
+    ["eq",
+      ["get", "#button1[w]"],
+      ["get", "#button2[w]"]
+    ]
+  ]
+}
+```
+
+This AST can then be passed to the GSS engine. The GSS engine will measure the existing dimensions of the DOM elements, and initialize a Cassowary Web Worker to solve the optimal width for both of the buttons to match the given constraint.
+
+```javascript
+var gss = require('gss-engine');
+gss.run(ast);
+```
+
+After the proper values have been solved, the engine will modify the CSS values in DOM accordingly.
+
 ## Supported dimensions
 
 Each instance of the GSS engine is run for a given DOM container. If no container is provided, the GSS engine will fall back to the [document object](https://developer.mozilla.org/en-US/docs/Web/API/document).
