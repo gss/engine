@@ -30,7 +30,7 @@ module.exports = ->
     watch:
       build:
         files: ['spec/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['build']
+        tasks: ['test']
       test:
         files: ['spec/*.coffee', 'src/*.coffee']
         tasks: ['test']
