@@ -32,7 +32,12 @@ Using the [GSS compiler](https://github.com/the-gss/compiler), this is translate
 This AST can then be passed to the GSS engine. The GSS engine will measure the existing dimensions of the DOM elements, and initialize a Cassowary Web Worker to solve the optimal width for both of the buttons to match the given constraint.
 
 ```javascript
-var gss = require('gss-engine');
+// Load the GSS engine CommonJS module
+var Engine = require('gss-engine');
+// Instantiate the GSS engine by giving it a path to the Cassowary Solver Web Worker
+var gss = new Engine('/some/path/to/gss-solver.js');
+
+// Run the engine with the AST above
 gss.run(ast);
 ```
 
