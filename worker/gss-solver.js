@@ -167,15 +167,15 @@ Thread = (function() {
 
 })();
 
-var onmessage, w;
+var w;
 
 w = new Thread();
 
-onmessage = function(m) {
+self.onmessage = function(m) {
   var ast;
   ast = m.data.ast;
   w.unparse(ast);
-  return postMessage({
+  return self.postMessage({
     values: w._getValues()
   });
   /*

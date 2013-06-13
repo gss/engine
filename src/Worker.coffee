@@ -1,11 +1,11 @@
 w = new Thread()
 
-onmessage = (m) ->
+self.onmessage = (m) ->
   ast = m.data.ast
   
   w.unparse ast
   
-  postMessage({values:w._getValues()})
+  self.postMessage({values:w._getValues()})
   
   ###
   if ast isnt null
