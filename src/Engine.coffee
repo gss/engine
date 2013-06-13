@@ -64,4 +64,8 @@ class Engine
     @worker.postMessage
       ast: ast
 
+  stop: ->
+    return unless @worker
+    @worker.terminate()
+
 module.exports = Engine

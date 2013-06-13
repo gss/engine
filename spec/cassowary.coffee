@@ -5,6 +5,10 @@ expect = chai.expect
 
 describe 'Cassowary Web Worker', ->
   worker = null
+  after (done) ->
+    worker.terminate()
+    done()
+
   it 'should be possible to instantiate', ->
     worker = new Worker('../browser/gss-engine/worker/gss-solver.js')
     worker.addEventListener 'error', onWorkerError

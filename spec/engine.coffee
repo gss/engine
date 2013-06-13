@@ -3,6 +3,10 @@ Engine = require 'gss-engine/lib/Engine.js'
 describe 'GSS engine', ->
   container = document.querySelector '#fixtures #engine'
   gss = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+  after (done) ->
+    gss.stop()
+    done()
+
   describe 'when initialized', ->
     it 'should be bound to the DOM container', ->
       chai.expect(gss.container).to.eql container
