@@ -82,6 +82,32 @@ module.exports = ->
     mocha_phantomjs:
       all: ['spec/runner.html']
 
+    # Cross-browser testing
+    connect:
+      server:
+        options:
+          base: ''
+          port: 9999
+
+    'saucelabs-mocha':
+      all:
+        options:
+          urls: ['http://127.0.0.1:9999/spec/runner.html']
+          browsers: [
+            browserName: 'chrome'
+          ,
+            browserName: 'firefox'
+          ,
+            browserName: 'internet explorer'
+            platform: 'WIN8'
+            version: '10'
+          ]
+          build: process.env.TRAVIS_JOB_ID
+          testname: 'GSS browser tests'
+          tunnelTimeout: 5
+          concurrency: 3
+          detailedError: true
+
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-component'
   @loadNpmTasks 'grunt-contrib-coffee'
@@ -94,6 +120,11 @@ module.exports = ->
   @loadNpmTasks 'grunt-mocha-phantomjs'
   @loadNpmTasks 'grunt-contrib-watch'
 
+  # Cross-browser testing in the cloud
+  @loadNpmTasks 'grunt-contrib-connect'
+  @loadNpmTasks 'grunt-saucelabs'
+
   @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
   @registerTask 'test', ['coffeelint', 'build',  'mocha_phantomjs']
+  @registerTask 'crossbrowser', ['coffeelint', 'build', 'mocha_phantomjs', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

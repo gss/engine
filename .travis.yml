@@ -1,6 +1,19 @@
+---
 language: node_js
 node_js:
-  - "0.8"
-  - "0.10"
+- '0.10'
 before_script:
-  - npm install -g grunt-cli
+- npm install -g grunt-cli
+script: grunt crossbrowser
+env:
+  global:
+  - secure: ! 'JQFbHURLGcXjfgSy3bf+8unRrMgbkvQ/MAkthK1N9dpVHBKwFQUHa7NR2N2Q
+
+      lWbCvWQGwyguu91oPm1tQmHHRUDwzlJPXaNT2Dt5vxI7YPDtf6aPU8RkcqI9
+
+      i5ZmNcDIAF8VQQYDf07ZStAp72T21zCOnsBEHC5OKeR8JW18qMo='
+  - secure: ! 'AwXQ++vjwzi2YQLnrvlC0SExqCZh3nxVsYJNib8TR++UJJ2jkosfXeDUvvKk
+
+      QrIpnMlHte1kn6KRcojm+HL9AkTHMWhnQE1aYAe12FwBCgD0AI3dD7162s5N
+
+      VB9WEjNUagi6ppPs8e2IJ7D6r6qZUxCj9zixIg4RBkxu/gq87kA='
