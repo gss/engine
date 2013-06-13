@@ -64,8 +64,8 @@ class Engine
   solve: (ast) ->
     unless @worker
       @worker = new Worker @workerPath
-      @worker.addEventListener "message", @process
-      @worker.addEventListener "error", @handleError
+      @worker.addEventListener "message", @process, false
+      @worker.addEventListener "error", @handleError, false
     @worker.postMessage
       ast: ast
 

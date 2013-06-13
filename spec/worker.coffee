@@ -11,6 +11,7 @@ describe 'Cassowary Web Worker', ->
 
   it 'should be possible to instantiate', ->
     worker = new Worker('../browser/gss-engine/worker/gss-solver.js')
+    expect(worker).to.be.an 'object'
   it 'should solve a set of simple constraints', (done) ->
     onMessage = (m) ->
       expect(m.data.values.a).to.eql 7
@@ -18,12 +19,12 @@ describe 'Cassowary Web Worker', ->
       expect(m.data.values.c).to.eql 2
       worker.removeEventListener 'message', onMessage
       done()
-    worker.addEventListener 'message', onMessage
+    worker.addEventListener 'message', onMessage, false
     onError = (e) ->
       assertError e
       worker.removeEventListener 'error', onError
       done()
-    worker.addEventListener 'error', onError
+    worker.addEventListener 'error', onError, false
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
       ast:
@@ -47,12 +48,12 @@ describe 'Cassowary Web Worker', ->
       expect(m.data.values.a).to.eql 99
       worker.removeEventListener 'message', onMessage
       done()
-    worker.addEventListener 'message', onMessage
+    worker.addEventListener 'message', onMessage, false
     onError = (e) ->
       assertError e
       worker.removeEventListener 'error', onError
       done()
-    worker.addEventListener 'error', onError
+    worker.addEventListener 'error', onError, false
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
       ast:
@@ -77,12 +78,12 @@ describe 'Cassowary Web Worker', ->
       expect(m.data.values.width).to.eql 99
       worker.removeEventListener 'message', onMessage
       done()
-    worker.addEventListener 'message', onMessage
+    worker.addEventListener 'message', onMessage, false
     onError = (e) ->
       assertError e
       worker.removeEventListener 'error', onError
       done()
-    worker.addEventListener 'error', onError
+    worker.addEventListener 'error', onError, false
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
       ast:
