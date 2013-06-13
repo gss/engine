@@ -57,10 +57,15 @@ class Engine
     # Run callback
     @onSolved values if @onSolved
 
+  handleError: (error) ->
+    return @onError error if @onError
+    throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"
+
   solve: (ast) ->
     unless @worker
       @worker = new Worker @workerPath
       @worker.addEventListener "message", @process
+      @worker.addEventListener "error", @handleError
     @worker.postMessage
       ast: ast
 

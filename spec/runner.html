@@ -36,19 +36,21 @@
       </div>
     </div>
     <script src="../browser/gss-engine.js"></script>
+    <script src="../vendor/c.js"></script>
+    <script src="../lib/Thread.js"></script>
     <script src="http://chaijs.com/chai.js"></script>
     <script src="../node_modules/mocha/mocha.js"></script>
     <script>mocha.setup('bdd');</script>
     <script src="./cassowary.js"></script>
+    <script src="./thread.js"></script>
+    <script src="./worker.js"></script>
     <script src="./getter.js"></script>
     <script src="./setter.js"></script>
     <script src="./engine.js"></script>
-    <script src="../vendor/c.js"></script>
     <script>
       if (window.mochaPhantomJS) {
         mochaPhantomJS.run();
       } else {
-        mocha.checkLeaks();
         mocha.run();
       }
     </script>

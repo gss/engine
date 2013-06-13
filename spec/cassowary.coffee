@@ -1,87 +1,39 @@
-onWorkerError = (event) ->
-  throw new Error(event.message + " (" + event.filename + ":" + event.lineno + ")")
-
 expect = chai.expect
 
-describe 'Cassowary Web Worker', ->
-  worker = null
-  after (done) ->
-    worker.terminate()
-    done()
-
-  it 'should be possible to instantiate', ->
-    worker = new Worker('../browser/gss-engine/worker/gss-solver.js')
-    worker.addEventListener 'error', onWorkerError
-  it 'should solve a set of simple constraints', (done) ->
-    onMessage = (m) ->
-      expect(m.data.values.a).to.eql 7
-      expect(m.data.values.b).to.eql 5
-      expect(m.data.values.c).to.eql 2
-      worker.removeEventListener 'message', onMessage
-      done()
-    # [a(7)] - [b(6)] == [c]
-    worker.addEventListener 'message', onMessage
-    worker.postMessage
-      ast:
-        vars:
-          [
-            ['var', 'a']
-            ['var', 'b']
-            ['var', 'c']
-          ]
-        constraints:
-          [
-            ['eq', ['get', 'a'], ['number', 7], 'medium']
-            ['eq', ['get', 'b'], ['number', 5]]
-            ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c'], 'medium']
-          ]
-  it 'should solve with new constraints added to existing worker', (done) ->
-    onMessage = (m) ->
-      expect(m.data.values.x).to.eql 7
-      expect(m.data.values.y).to.eql 5
-      expect(m.data.values.z).to.eql 2
-      expect(m.data.values.a).to.eql 99
-      worker.removeEventListener 'message', onMessage
-      done()
-    # [a(7)] - [b(6)] == [c]
-    worker.addEventListener 'message', onMessage
-    worker.postMessage
-      ast:
-        vars:
-          [
-            ['var', 'x']
-            ['var', 'y']
-            ['var', 'z']
-          ]
-        constraints:
-          [
-            ['eq', ['get', 'x'], ['number', 7]]
-            ['eq', ['get', 'y'], ['number', 5]]
-            ['lte', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]
-            ['eq', ['get', 'a'], ['number', 99], 'required']
-          ]
-  it 'should solve with variable expressions', (done) ->
-    onMessage = (m) ->
-      expect(m.data.values.left).to.eql 1
-      #expect(m.data.values.right).to.eql 100  # TODO
-      expect(m.data.values['right-target']).to.eql 100
-      expect(m.data.values.width).to.eql 99
-      worker.removeEventListener 'message', onMessage
-      done()
-    # [a(7)] - [b(6)] == [c]
-    worker.addEventListener 'message', onMessage
-    worker.postMessage
-      ast:
-        vars:
-          [
-            ['var', 'right-target']
-            ['var', 'left']
-            ['var', 'width']
-            ['varexp', 'right', ['plus', ['get','left'],['get','width']]]
-          ]
-        constraints:
-          [
-            ['eq', ['get', 'right-target'], ['number', 100]]
-            ['eq', ['get', 'left'], ['number', 1]]
-            ['eq', ['get', 'right'], ['get', 'right-target']]
-          ]
+describe 'Cassowary', ->
+  it 'should be available', ->
+    expect(c).to.be.a 'function'
+  it 'var >= num', ->
+    solver = new c.SimplexSolver()
+    x = new c.Variable({ value: 10 })
+    ieq = new c.Inequality(x, c.GEQ, 100)
+    solver.addConstraint(ieq)
+    expect(x.value).to.equal 100
+  it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', ->
+    solver = new c.SimplexSolver()
+    x = new c.Variable()
+    y = new c.Variable()
+    z = new c.Variable()
+    eq1 = new c.Equation(x,7)
+    eq2 = new c.Equation(y,5)
+    eq3 = new c.Equation(c.minus(x,y),z)
+    solver.addConstraint(eq1)
+    solver.addConstraint(eq2)
+    solver.addConstraint(eq3)
+    expect(x.value).to.equal 7
+    expect(y.value).to.equal 5
+    expect(z.value).to.equal 2
+  it 'top left right bottom // z is 2', ->
+    solver = new c.SimplexSolver()
+    x = new c.Variable()
+    y = new c.Variable()
+    z = new c.Variable()
+    eq1 = new c.Equation(x,7)
+    eq2 = new c.Equation(y,5)
+    eq3 = new c.Equation(c.minus(x,y),z)
+    solver.addConstraint(eq1)
+    solver.addConstraint(eq2)
+    solver.addConstraint(eq3)
+    expect(x.value).to.equal 7
+    expect(y.value).to.equal 5
+    expect(z.value).to.equal 2

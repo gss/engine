@@ -48,6 +48,10 @@ describe 'GSS engine', ->
         chai.expect(button1.getBoundingClientRect().width).to.equal values['#button1[width]']
         chai.expect(button2.getBoundingClientRect().width).to.equal values['#button2[width]']
         done()
+      gss.onError = (error) ->
+        chai.assert("#{event.message} (#{event.filename}:#{event.lineno})").to.equal ''
+        gss.onError = null
+        done()
       gss.run ast
   describe 'with rule #button3[width] == #button4[height]', ->
     ast =
@@ -73,5 +77,9 @@ describe 'GSS engine', ->
         chai.expect(button3.getBoundingClientRect().width).to.equal values['#button3[width]']
         chai.expect(button4.getBoundingClientRect().height).to.equal values['#button4[height]']
         chai.expect(button4.getBoundingClientRect().height).to.be.above button3.getBoundingClientRect().height
+        done()
+      gss.onError = (error) ->
+        chai.assert("#{event.message} (#{event.filename}:#{event.lineno})").to.equal ''
+        gss.onError = null
         done()
       gss.run ast
