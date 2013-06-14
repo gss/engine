@@ -98,6 +98,12 @@ module.exports = ->
           ,
             browserName: 'firefox'
           ,
+            browserName: 'safari'
+          ,
+            browserName: 'ipad'
+          ,
+            browserName: 'android'
+          ,
             browserName: 'internet explorer'
             platform: 'WIN8'
             version: '10'
