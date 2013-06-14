@@ -76,8 +76,8 @@ describe 'GSS engine', ->
         rounded =
           calc_b4h: Math.round values['#button4[height]']
           calc_b3w: Math.round values['#button3[width]']
-          real_b4h: button4.getBoundingClientRect().height
-          real_b3w: button3.getBoundingClientRect().width
+          real_b4h: Math.round button4.getBoundingClientRect().height
+          real_b3w: Math.round button3.getBoundingClientRect().width
 
         chai.expect(rounded.calc_b3w).to.equal rounded.calc_b4h
         chai.expect(rounded.real_b3w).to.equal rounded.calc_b3w

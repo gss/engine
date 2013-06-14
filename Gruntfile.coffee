@@ -103,7 +103,7 @@ module.exports = ->
             version: '10'
           ]
           build: process.env.TRAVIS_JOB_ID
-          testname: 'GSS browser tests'
+          testname: 'GSS engine browser tests'
           tunnelTimeout: 5
           concurrency: 3
           detailedError: true
