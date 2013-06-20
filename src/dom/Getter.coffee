@@ -6,6 +6,9 @@ class Getter
     method = selector[0]
     identifier = selector[1]
     switch method
+      when "$reserved"
+        if identifier is 'this'
+          return container
       when "$id"
         # TODO: Restrict to container
         if identifier[0] is '#'
