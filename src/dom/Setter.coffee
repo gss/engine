@@ -15,6 +15,7 @@ class Setter
 
   makePositioned: (element) ->
     element.style.position = 'absolute'
+    element.style.margin = '0px'
 
   getOffsets: (element) ->
     offsets =
