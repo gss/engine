@@ -26,9 +26,11 @@ class Getter
       when 'height', 'h'
         return element.getBoundingClientRect().height
       when 'left', 'x'
-        return element.getBoundingClientRect().left
+        scroll = window.scrollX or window.scrollLeft or 0
+        return element.getBoundingClientRect().left + scroll
       when 'top', 'y'
-        return element.getBoundingClientRect().top
+        scroll = window.scrollY or window.scrollTop or 0
+        return element.getBoundingClientRect().top + scroll
       # Read-only values
       when 'bottom'
         return @measure(element, 'top') + @measure(element, 'height')
