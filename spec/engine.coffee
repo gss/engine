@@ -30,11 +30,9 @@ describe 'GSS engine', ->
         '#button1'
         '#button2'
       ]
-      vars: [
+      commands: [
         ['get', '#button1[width]', 'width', ['$id', '#button1']]
         ['get', '#button2[width]', 'width', ['$id', '#button2']]
-      ]
-      constraints: [
         ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
       ]
     button1 = container.querySelector '#button1'
@@ -59,11 +57,9 @@ describe 'GSS engine', ->
         '#button3'
         '#button4'
       ]
-      vars: [
+      commands: [
         ['get', '#button3[width]', 'width', ['$id', '#button3']]
         ['get', '#button4[height]', 'height', ['$id', '#button4']]
-      ]
-      constraints: [
         ['eq', ['get', '#button3[width]'], ['get', '#button4[height]']]
       ]
     button3 = container.querySelector '#button3'

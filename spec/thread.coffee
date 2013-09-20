@@ -4,14 +4,11 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
   it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', (done) ->
     thread.unparse
-      vars:
+      commands:
         [
           ['var', 'x']
           ['var', 'y']
           ['var', 'z']
-        ]
-      constraints:
-        [
           ['eq',
             ['get', 'z'],
             ['minus', ['get', 'x'], ['get', 'y'] ]

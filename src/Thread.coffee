@@ -4,13 +4,15 @@ class Thread
     @cachedVars = {}
     @solver = new c.SimplexSolver()
     @solver.autoSolve = false
-  
-  
+    
   unparse: (ast) =>
-    for vs in ast.vars
-      @_execute vs
-    for cs in ast.constraints
-      @solver.addConstraint @_execute cs
+    for command in ast.commands
+      @_execute command
+    #
+    #for vs in ast.vars
+    #  @_execute vs
+    #for cs in ast.constraints
+    #  @solver.addConstraint @_execute cs
   
   _execute: (ast) =>
     node = ast
@@ -78,17 +80,36 @@ class Thread
     #if !strength? then throw new Error("Strength unrecognized: #{s}")
     return strength
   
+  # Equation Constraints
+  
   eq: (e1,e2,s,w) =>
-    return new c.Equation e1, e2, @strength(s), w
+    constraint = new c.Equation e1, e2, @strength(s), w
+    @solver.addConstraint constraint
+    return constraint
   
   lte: (e1,e2,s,w) =>
-    return new c.Inequality e1, c.LEQ, e2, @strength(s), w
+    constraint = new c.Inequality e1, c.LEQ, e2, @strength(s), w
+    @solver.addConstraint constraint
+    return constraint
   
   gte: (e1,e2,s,w) =>
-    return new c.Inequality e1, c.GEQ, e2, @strength(s), w
+    constraint = new c.Inequality e1, c.GEQ, e2, @strength(s), w
+    @solver.addConstraint constraint
+    return constraint
   
   lt: (e1,e2,s,w) =>
-    return new c.Inequality e1, c.LEQ, e2, @strength(s), w
+    constraint = new c.Inequality e1, c.LEQ, e2, @strength(s), w
+    @solver.addConstraint constraint
+    return constraint
   
   gt: (e1,e2,s,w) =>
-    return new c.Inequality e1, c.GEQ, e2, @strength(s), w
+    constraint = new c.Inequality e1, c.GEQ, e2, @strength(s), w
+    @solver.addConstraint constraint
+    return constraint
+  
+  # Constraints on Variables
+  
+  stay: () =>
+    for a in arguments
+      @solver.addStay a
+    return @solver

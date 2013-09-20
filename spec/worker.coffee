@@ -28,14 +28,11 @@ describe 'Cassowary Web Worker', ->
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
       ast:
-        vars:
+        commands:
           [
             ['var', 'a']
             ['var', 'b']
             ['var', 'c']
-          ]
-        constraints:
-          [
             ['eq', ['get', 'a'], ['number', 7], 'medium']
             ['eq', ['get', 'b'], ['number', 5]]
             ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c'], 'medium']
@@ -57,14 +54,11 @@ describe 'Cassowary Web Worker', ->
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
       ast:
-        vars:
+        commands:
           [
             ['var', 'x']
             ['var', 'y']
             ['var', 'z']
-          ]
-        constraints:
-          [
             ['eq', ['get', 'x'], ['number', 7]]
             ['eq', ['get', 'y'], ['number', 5]]
             ['lte', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]
@@ -87,15 +81,12 @@ describe 'Cassowary Web Worker', ->
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
       ast:
-        vars:
+        commands:
           [
             ['var', 'right-target']
             ['var', 'left']
             ['var', 'width']
             ['varexp', 'right', ['plus', ['get','left'],['get','width']]]
-          ]
-        constraints:
-          [
             ['eq', ['get', 'right-target'], ['number', 100]]
             ['eq', ['get', 'left'], ['number', 1]]
             ['eq', ['get', 'right'], ['get', 'right-target']]
