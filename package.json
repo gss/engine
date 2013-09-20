@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "git://github.com/the-gss/vfl-compiler.git"
+    "url": "git://github.com/the-gss/engine.git"
   },
   "licenses": [
     {
