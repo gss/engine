@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "scripts": [
     "lib/Engine.js",
+    "lib/Command.js",
     "lib/dom/Getter.js",
     "lib/dom/Setter.js"
   ],

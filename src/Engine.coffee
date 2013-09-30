@@ -1,9 +1,11 @@
 Get = require("./dom/Getter.js")
 Set = require("./dom/Setter.js")
+Command = require("./Command.js")
 
 class Engine
   constructor: (@workerPath, @container) ->
     @container = document unless @container
+    @commands = new Command @
     @elements = {}
     @variables = {}
     @dimensions = {}
@@ -19,11 +21,12 @@ class Engine
 
   run: (ast) ->
     # Get elements for variables
-    ast.vars.forEach @measure
+    if ast.vars
+      ast.vars.forEach @measure
     
-    # Clean up variables for solving
-    for variable, index in ast.vars
-      ast.vars[index] = ['var', variable[1]]
+      # Clean up variables for solving
+      for variable, index in ast.vars
+        ast.vars[index] = ['var', variable[1]]
 
     # Add constraints to AST
     for identifier, value of @variables
@@ -91,7 +94,7 @@ class Engine
 
   _execute: (command) => # Not DRY, see Thread.coffee... design pattern WIP
     node = command
-    func = @["command-" + node[0]]
+    func = @command[node[0]]
     if !func?
       throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
     for sub, i in node[1..node.length]
@@ -100,25 +103,11 @@ class Engine
     #console.log node[0...node.length]
     return func.apply @, node[1...node.length]
       
-  # generates vars for each element
-  "command-var": (id, prop, elements) ->
-    newcommands = []
-    if elements instanceof Array
-      for el in elements
-        @commandsForWorker.push "var", el.id + prop
-      elements.onadd (newElements) ->
-        for el in elements
-          @commandsForWorker.push "var", el.id + prop
-    else # pass through
-      @commandsForWorker.push ["var", arguments...]
-    return newcommands
-  
   _addVarCommandsForElements: (elements) ->
     @commandsForWorker.push "var", el.id + prop
-  
-  "command-$class": (className) ->
-    @_registerLiveNodeList "." + className, () =>
-      return @container.getElementsByClassName(className)
+
+  registerCommand: (command, args) ->
+    @commandsForWorker.push command, args
   
   _registerLiveNodeList: (selector, createNodeList) ->
     if @queryCache[selector]?
