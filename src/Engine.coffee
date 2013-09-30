@@ -11,6 +11,11 @@ class Engine
     @getter = new Get(@container)
     @setter = new Set(@container)
     @onSolved = null
+    #
+    @commandsForWorker = []
+    #@elementsById = {}
+    #@elementsBySelector = {}
+    #@varsById = {}
 
   run: (ast) ->
     # Get elements for variables
@@ -72,5 +77,65 @@ class Engine
   stop: ->
     return unless @worker
     @worker.terminate()
+    
+  _current_gid:1
+
+  _registerGssId: (el) ->
+    gid = @_current_gid++
+    el.setAttribute('data-gss-id', gid)
+    return gid
+  
+  execute: (commands) =>
+    for command in commands
+      @_execute command
+
+  _execute: (command) => # Not DRY, see Thread.coffee... design pattern WIP
+    node = command
+    func = @["command-" + node[0]]
+    if !func?
+      throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
+    for sub, i in node[1..node.length]
+      if sub instanceof Array # then recurse
+        node.splice i+1,1,@_execute sub
+    #console.log node[0...node.length]
+    return func.apply @, node[1...node.length]
+      
+  # generates vars for each element
+  "command-var": (id, prop, elements) ->
+    newcommands = []
+    if elements instanceof Array
+      for el in elements
+        @commandsForWorker.push "var", el.id + prop
+      elements.onadd (newElements) ->
+        for el in elements
+          @commandsForWorker.push "var", el.id + prop
+    else # pass through
+      @commandsForWorker.push ["var", arguments...]
+    return newcommands
+  
+  _addVarCommandsForElements: (elements) ->
+    @commandsForWorker.push "var", el.id + prop
+  
+  "command-$class": (className) ->
+    @_registerLiveNodeList "." + className, () =>
+      return @container.getElementsByClassName(className)
+  
+  _registerLiveNodeList: (selector, createNodeList) ->
+    if @queryCache[selector]?
+      return @queryCache[selector]
+    else
+      query = {}
+      nodeList = createNodeList()
+      query.nodeList = nodeList
+      # ids
+      query.ids = []
+      for el in nodeList
+        id = @_registerGssId(el)
+        if query.ids.indexOf(id) isnt -1 then query.ids.push[id]
+      #
+      query.observer = new PathObserver nodeList, 'length', (newval, oldval) ->
+        alert 'handle nodelist change'
+      @queryCache[selector] = query
+      return nodeList
 
 module.exports = Engine
