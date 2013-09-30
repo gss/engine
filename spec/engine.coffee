@@ -1,8 +1,21 @@
 Engine = require 'gss-engine/lib/Engine.js'
 
 describe 'GSS engine', ->
-  container = document.querySelector '#fixtures #engine'
-  gss = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+  container = null
+  gss = null
+
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    container.innerHTML = """
+      <button id="button1">One</button>
+      <button id="button2">Second</button>
+      <button id="button3">Three</button>
+      <button id="button4">4</button>
+    """
+    gss = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+
   after (done) ->
     gss.stop()
     done()
@@ -37,9 +50,11 @@ describe 'GSS engine', ->
       constraints: [
         ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
       ]
-    button1 = container.querySelector '#button1'
-    button2 = container.querySelector '#button2'
+    button1 = null
+    button2 = null
     it 'before solving the second button should be wider', ->
+      button1 = container.querySelector '#button1'
+      button2 = container.querySelector '#button2'
       chai.expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
     it 'after solving the buttons should be of equal width', (done) ->
       gss.onSolved = (values) ->
@@ -66,9 +81,11 @@ describe 'GSS engine', ->
       constraints: [
         ['eq', ['get', '#button3[width]'], ['get', '#button4[height]']]
       ]
-    button3 = container.querySelector '#button3'
-    button4 = container.querySelector '#button4'
+    button3 = null
+    button4 = null
     it 'before solving the buttons should be of equal height', ->
+      button3 = container.querySelector '#button3'
+      button4 = container.querySelector '#button4'
       chai.expect(button3.getBoundingClientRect().height).to.equal button4.getBoundingClientRect().height
     it 'after solving the second button should be taller', (done) ->
       gss.onSolved = (values) ->
