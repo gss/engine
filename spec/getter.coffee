@@ -1,14 +1,30 @@
 Getter = require 'gss-engine/lib/dom/Getter.js'
 
 describe 'DOM Getter', ->
-  container = document.querySelector '#fixtures #getter'
-  get = new Getter container
+  container = null
+  get = null
+
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    container.innerHTML = """
+      <span class="span" id="span">Hello, world</span>
+      <div id="box" style="width: 300px; height: 200px; position: absolute; top: 20px; left: -400px;"></div>
+      <div style="position: absolute; top: 40px; left: -500px">
+        <div id="childPos" style="position: absolute; top: 10px; left: 100px;"></div>
+        <div id="childNoPos"></div>
+      </div>
+    """
+    get = new Getter container
+
   it 'should be bound to the DOM container', ->
     chai.expect(get.container).to.eql container
 
   describe 'reading DOM', ->
-    span = container.querySelector '#span'
+    span = null
     it 'should return elements by ID', ->
+      span = container.querySelector '#span'
       result = get.get ['$id', 'span']
       chai.expect(result).to.eql span
     it 'should return elements by class', ->
@@ -22,14 +38,15 @@ describe 'DOM Getter', ->
       chai.expect(result[0]).to.eql span
 
   describe 'measuring DOM text element width', ->
-    span = container.querySelector '#span'
+    span = null
     it 'should be able to return the correct width', ->
+      span = container.querySelector '#span'
       measured = get.measure span, 'width'
-      chai.expect(measured).to.be.at.least 100
+      chai.expect(measured).to.be.at.least 103
       chai.expect(measured).to.equal span.getBoundingClientRect().width
 
   describe 'measuring different dimensions of a box', ->
-    span = container.querySelector '#box'
+    span = null
     # We test for the hardcoded style values of the element
     expected =
       top: 20
@@ -37,6 +54,7 @@ describe 'DOM Getter', ->
       width: 300
       height: 200
     it 'should be able to return the correct width', ->
+      span = container.querySelector '#box'
       measured = get.measure span, 'width'
       chai.expect(measured).to.equal expected.width
       # Test the shorthand too
@@ -74,11 +92,12 @@ describe 'DOM Getter', ->
       chai.expect(measured).to.equal expected.top + expected.height / 2
 
   describe 'getting position from positioned element with inherited offsets', ->
-    div = container.querySelector '#childPos'
+    div = null
     expected =
       top: 50
       left: -400
     it 'should be able to return the correct left', ->
+      div = container.querySelector '#childPos'
       measured = Math.ceil get.measure div, 'left'
       chai.expect(measured).to.equal expected.left
       # Test the shorthand too
@@ -91,11 +110,12 @@ describe 'DOM Getter', ->
       measured = Math.floor get.measure div, 'y'
       chai.expect(measured).to.equal expected.top
   describe 'getting position from element with inherited offsets', ->
-    div = container.querySelector '#childNoPos'
+    div = null
     expected =
       top: 40
       left: -500
     it 'should be able to return the correct left', ->
+      div = container.querySelector '#childNoPos'
       measured = Math.ceil get.measure div, 'left'
       chai.expect(measured).to.equal expected.left
       # Test the shorthand too

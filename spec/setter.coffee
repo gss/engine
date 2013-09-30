@@ -1,14 +1,27 @@
 Setter = require 'gss-engine/lib/dom/Setter.js'
 
 describe 'DOM Setter', ->
-  container = document.querySelector '#fixtures #setter'
-  set = new Setter container
+  container = null
+  set = null
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    container.innerHTML = """
+      <button id="sizedButton">Button</button>
+      <button id="posButton">Button</button>
+      <div style="position: absolute; top: 40px; left: -500px">
+        <button id="childPosButton">Button</button>
+      </div>
+    """
+    set = new Setter container
   it 'should be bound to the DOM container', ->
     chai.expect(set.container).to.eql container
 
   describe 'setting a button size', ->
-    button = container.querySelector '#sizedButton'
+    button = null
     it 'should be able to set the width', ->
+      button = container.querySelector '#sizedButton'
       set.set button, 'width', 200
       chai.expect(Math.floor(button.getBoundingClientRect().width)).to.equal 200
       # Test the shorthand too
@@ -22,8 +35,9 @@ describe 'DOM Setter', ->
       chai.expect(Math.floor(button.getBoundingClientRect().height)).to.equal 50
 
   describe 'positioning a button', ->
-    button = container.querySelector '#posButton'
+    button = null
     it 'should be able to set the left', ->
+      button = container.querySelector '#posButton'
       set.set button, 'left', -300
       chai.expect(Math.ceil(button.getBoundingClientRect().left)).to.equal -300
       # Test the shorthand too
@@ -37,8 +51,9 @@ describe 'DOM Setter', ->
       chai.expect(Math.floor(button.getBoundingClientRect().top)).to.equal 100
 
   describe 'positioning a button with inherited offsets', ->
-    button = container.querySelector '#childPosButton'
+    button = null
     it 'should be able to set the left', ->
+      button = container.querySelector '#childPosButton'
       set.set button, 'left', -300
       # Offset relative to positioning parent
       chai.expect(button.offsetLeft).to.equal 200
