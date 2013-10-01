@@ -68,7 +68,11 @@ class Engine
       if key[0] is "$"
         gid = key.substring(1, key.indexOf("["))
         dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))
-        @setter.set @elsByGssId[gid], dimension, values[key]
+        element = @elsByGssId[gid]
+        if element
+          @setter.set element, dimension, values[key]
+        else
+          console.log "Element wasn't found"
 
     # Run callback
     @onSolved values if @onSolved
