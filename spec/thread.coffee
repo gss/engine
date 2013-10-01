@@ -1,8 +1,8 @@
 describe 'Cassowary Thread', ->
-  thread = null
   it 'should instantiate', ->
     thread = new Thread()
   it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', (done) ->
+    thread = new Thread()
     thread.unparse
       commands:
         [
@@ -20,4 +20,21 @@ describe 'Cassowary Thread', ->
       x: 7
       y: 5
       z: 2
+    done()
+  
+  it '$12322[width] == [grid-col]; ...', (done) ->
+    thread = new Thread()
+    thread.unparse
+      commands:[
+        ['var', '$12322[width]']
+        ['var', '$34222[width]']
+        ['var', '[grid-col]']
+        ['eq', ['get','$12322[width]'],['get','[grid-col]']]
+        ['eq', ['get','$34222[width]'],['get','[grid-col]']]
+        ['eq', ['number','100'],['get','[grid-col]']]
+      ]
+    chai.expect(thread._getValues()).to.eql
+      "$12322[width]": 100
+      "$34222[width]": 100
+      "[grid-col]": 100
     done()

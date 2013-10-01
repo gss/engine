@@ -44,8 +44,8 @@ describe 'GSS engine', ->
         '#button2'
       ]
       commands: [
-        ['get', '#button1[width]', 'width', ['$id', '#button1']]
-        ['get', '#button2[width]', 'width', ['$id', '#button2']]
+        ['var', '#button1[width]', 'width', ['$id', 'button1']]
+        ['var', '#button2[width]', 'width', ['$id', 'button2']]
         ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
       ]
     button1 = null

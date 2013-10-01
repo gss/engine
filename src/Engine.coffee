@@ -5,7 +5,7 @@ Command = require("./Command.js")
 class Engine
   constructor: (@workerPath, @container) ->
     @container = document unless @container
-    @commands = new Command @
+    @commands = new Command(@)
     @elements = {}
     @variables = {}
     @dimensions = {}
@@ -15,11 +15,13 @@ class Engine
     @onSolved = null
     #
     @commandsForWorker = []
-    #@elementsById = {}
+    @queryCache = {}
+    @elsByGssId = {}
     #@elementsBySelector = {}
     #@varsById = {}
 
   run: (ast) ->
+    ###
     # Get elements for variables
     if ast.vars
       ast.vars.forEach @measure
@@ -35,8 +37,10 @@ class Engine
         ['get', identifier],
         ['number', value]
       ]
-    
-    @solve ast
+    ###
+    @execute ast.commands
+    astForWorker = {commands:@commandsForWorker}
+    @solve astForWorker
 
   measure: (variable) =>
     identifier = variable[1]
@@ -54,13 +58,17 @@ class Engine
     
     # Measure the element
     @variables[identifier] = @getter.measure(@elements[identifier], dimension)
-
+  
+  dimensionAndElementFromKey: (key) ->
+    
+      
   process: (message) =>
     values = message.data.values
-    for identifier of values
-      dimension = @dimensions[identifier]
-      element = @elements[identifier]
-      @setter.set element, dimension, values[identifier]
+    for key of values
+      if key[0] is "$"
+        gid = key.substring(1, key.indexOf("["))
+        dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))
+        @setter.set @elsByGssId[gid], dimension, values[key]
 
     # Run callback
     @onSolved values if @onSolved
@@ -81,50 +89,73 @@ class Engine
     return unless @worker
     @worker.terminate()
     
-  _current_gid:1
+  _current_gid: 1
 
-  _registerGssId: (el) ->
-    gid = @_current_gid++
-    el.setAttribute('data-gss-id', gid)
+  gssId: (el) ->
+    gid = el.getAttribute('data-gss-id')
+    if !gid?
+      gid = @_current_gid++
+      el.setAttribute('data-gss-id', gid)
+    # cache, TODO: REMOVE FROM CACHE!!
+    @elsByGssId[gid] = el
     return gid
   
   execute: (commands) =>
     for command in commands
-      @_execute command
+      @_execute command, command
 
-  _execute: (command) => # Not DRY, see Thread.coffee... design pattern WIP
+  _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
     node = command
-    func = @command[node[0]]
+    func = @commands[node[0]]
     if !func?
-      throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
+      throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
+    
+    #recursive excution
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
-        node.splice i+1,1,@_execute sub
+        node.splice i+1,1,@_execute sub, root
+
     #console.log node[0...node.length]
-    return func.apply @, node[1...node.length]
-      
+    return func.call @, root, node[1...node.length]...
+    
   _addVarCommandsForElements: (elements) ->
     @commandsForWorker.push "var", el.id + prop
 
-  registerCommand: (command, args) ->
-    @commandsForWorker.push command, args
+            
+  registerCommand: (command) ->
+    # TODO: treat commands as strings and check cache for dups?
+    @commandsForWorker.push command
   
-  _registerLiveNodeList: (selector, createNodeList) ->
+  registerDomQuery: (selector, isMulti, isLive, createNodeList) ->
     if @queryCache[selector]?
       return @queryCache[selector]
     else
       query = {}
+      query.selector = selector
+      query.isQuery = true
+      query.isMulti = isMulti
+      query.isLive  = isLive
+      # query.isPriority for querySelectorAll?
       nodeList = createNodeList()
       query.nodeList = nodeList
       # ids
       query.ids = []
       for el in nodeList
-        id = @_registerGssId(el)
-        if query.ids.indexOf(id) isnt -1 then query.ids.push[id]
+        id = @gssId(el)
+        if query.ids.indexOf(id) is -1 then query.ids.push(id)
       #
       query.observer = new PathObserver nodeList, 'length', (newval, oldval) ->
         alert 'handle nodelist change'
       @queryCache[selector] = query
-      return nodeList
+      return query
+    
+  onElementsAdded: (nodelist, callback) ->
+    # need to listen to nodelist...
+    newEls = ['TBD...']
+    callback.apply @, newEls
+  
+  getVarsFromVarId: (id) ->
+    # ...
+    
 
 module.exports = Engine
