@@ -21,7 +21,7 @@ describe 'Cassowary Thread', ->
       y: 5
       z: 2
     done()
-  
+
   it '$12322[width] == [grid-col]; ...', (done) ->
     thread = new Thread()
     thread.unparse
@@ -38,3 +38,21 @@ describe 'Cassowary Thread', ->
       "$34222[width]": 100
       "[grid-col]": 100
     done()
+
+
+  it 'intrinsic mock', (done) ->
+    thread = new Thread()
+    thread.unparse
+      commands:[
+        ['var', '[width]']
+        ['var', '[intrinsic-width]']
+        ['eq', ['get','[width]'],['number','100'], 'strong']
+        ['eq', ['get','[width]'],['get','[intrinsic-width]'], 'required']
+        ['suggest', ['get','[intrinsic-width]'], ['number','999']]
+      ]
+    chai.expect(thread._getValues()).to.eql
+      "[width]": 999
+      "[intrinsic-width]": 999
+    done()
+
+

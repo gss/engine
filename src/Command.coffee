@@ -62,7 +62,7 @@ spawnCommands = (root, engine, cacheKey) ->
         engine.registerCommand eval command
 
 getSuggestValueCommand = (gssId, prop, val) ->
-  return ['suggestvalue', ['get', "$#{gssId}[#{prop}]"], ['number', val]]
+  return ['suggest', ['get', "$#{gssId}[#{prop}]"], ['number', val]]
 
 checkIntrinsics = (root, engine, varId, prop, query) ->
   # TODO
