@@ -17,51 +17,19 @@ class Engine
     @commandsForWorker = []
     @queryCache = {}
     @elsByGssId = {}
-    #@elementsBySelector = {}
-    #@varsById = {}
 
   run: (ast) ->
-    ###
-    # Get elements for variables
-    if ast.vars
-      ast.vars.forEach @measure
-    
-      # Clean up variables for solving
-      for variable, index in ast.vars
-        ast.vars[index] = ['var', variable[1]]
-
-    # Add constraints to AST
-    for identifier, value of @variables
-      ast.constraints.unshift [
-        'gte',
-        ['get', identifier],
-        ['number', value]
-      ]
-    ###
     @execute ast.commands
     astForWorker = {commands:@commandsForWorker}
     @solve astForWorker
-
-  measure: (variable) =>
-    identifier = variable[1]
-    dimension = variable[2]
-    selector = variable[3]
-    
-    # Skip variables that are not on DOM
-    return unless selector
-
-    @dimensions[identifier] = dimension
-    
-    # Read element from DOM
-    @elements[identifier] = @getter.get(selector) unless @elements[identifier]
-    return unless @elements[identifier]
-    
-    # Measure the element
-    @variables[identifier] = @getter.measure(@elements[identifier], dimension)
   
-  dimensionAndElementFromKey: (key) ->
-    
-      
+  measure: (el, prop) =>
+    return @getter.measure(el, prop)
+  
+  measureByGssId: (id, prop) ->
+    el = @elsByGssId[id]
+    @measure el, prop
+  
   process: (message) =>
     values = message.data.values
     for key of values
