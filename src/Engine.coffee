@@ -44,10 +44,11 @@ class Engine
 
     @dispatch_solved values
 
-  dispatch_solved: (values) ->
+  dispatch_solved: (values) =>
     e = new CustomEvent "solved",
       detail:
         values: values
+        engine: @
       bubbles: true
       cancelable: true
     @container.dispatchEvent e
