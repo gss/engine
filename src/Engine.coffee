@@ -1,3 +1,4 @@
+require("customevent-polyfill")
 Get = require("./dom/Getter.js")
 Set = require("./dom/Setter.js")
 Command = require("./Command.js")
@@ -12,7 +13,6 @@ class Engine
     @worker = null
     @getter = new Get(@container)
     @setter = new Set(@container)
-    @onSolved = null
     #
     @commandsForWorker = []
     @queryCache = {}
@@ -22,14 +22,14 @@ class Engine
     @execute ast.commands
     astForWorker = {commands:@commandsForWorker}
     @solve astForWorker
-  
+
   measure: (el, prop) =>
     return @getter.measure(el, prop)
-  
+
   measureByGssId: (id, prop) ->
     el = @elsByGssId[id]
     @measure el, prop
-  
+
   process: (message) =>
     values = message.data.values
     for key of values
@@ -42,8 +42,15 @@ class Engine
         else
           console.log "Element wasn't found"
 
-    # Run callback
-    @onSolved values if @onSolved
+    @dispatch_solved values
+
+  dispatch_solved: (values) ->
+    e = new CustomEvent "solved",
+      detail:
+        values: values
+      bubbles: true
+      cancelable: true
+    @container.dispatchEvent e
 
   handleError: (error) ->
     return @onError error if @onError
@@ -60,7 +67,7 @@ class Engine
   stop: ->
     return unless @worker
     @worker.terminate()
-    
+
   _current_gid: 1
 
   gssId: (el) ->
@@ -71,7 +78,7 @@ class Engine
     # cache, TODO: REMOVE FROM CACHE!!
     @elsByGssId[gid] = el
     return gid
-  
+
   execute: (commands) =>
     for command in commands
       @_execute command, command
@@ -81,7 +88,7 @@ class Engine
     func = @commands[node[0]]
     if !func?
       throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
-    
+
     #recursive excution
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
@@ -89,15 +96,15 @@ class Engine
 
     #console.log node[0...node.length]
     return func.call @, root, node[1...node.length]...
-    
+
   _addVarCommandsForElements: (elements) ->
     @commandsForWorker.push "var", el.id + prop
 
-            
+
   registerCommand: (command) ->
     # TODO: treat commands as strings and check cache for dups?
     @commandsForWorker.push command
-  
+
   registerDomQuery: (selector, isMulti, isLive, createNodeList) ->
     if @queryCache[selector]?
       return @queryCache[selector]
@@ -120,14 +127,14 @@ class Engine
         alert 'handle nodelist change'
       @queryCache[selector] = query
       return query
-    
+
   onElementsAdded: (nodelist, callback) ->
     # need to listen to nodelist...
     newEls = ['TBD...']
     callback.apply @, newEls
-  
+
   getVarsFromVarId: (id) ->
     # ...
-    
+
 
 module.exports = Engine

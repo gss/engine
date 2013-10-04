@@ -4,10 +4,13 @@
   "version": "0.0.1",
   "scripts": [
     "lib/Engine.js",
-    "lib/Command.js",
+    "lib/Command.js",    
     "lib/dom/Getter.js",
     "lib/dom/Setter.js"
   ],
+  "dependencies": {
+    "d4tocchini/customevent-polyfill": "*"
+  },
   "files": [
     "worker/gss-solver.js"
   ],

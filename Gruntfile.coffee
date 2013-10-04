@@ -30,7 +30,7 @@ module.exports = ->
     watch:
       build:
         files: ['spec/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
-        tasks: ['test']
+        tasks: ['build']
       test:
         files: ['spec/*.coffee', 'src/*.coffee']
         tasks: ['test']
@@ -42,7 +42,9 @@ module.exports = ->
         files:
           src: ['spec/*.coffee']
         options:
-          max_line_length:
+          'max_line_length':
+            level: 'ignore'
+          'no_backticks':
             level: 'ignore'
 
     # CoffeeScript compilation
@@ -131,6 +133,6 @@ module.exports = ->
   @loadNpmTasks 'grunt-saucelabs'
 
   @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
-  @registerTask 'test', ['coffeelint', 'build',  'mocha_phantomjs']
+  @registerTask 'test', ['build',  'mocha_phantomjs']
   @registerTask 'crossbrowser', ['coffeelint', 'build', 'mocha_phantomjs', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

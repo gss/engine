@@ -2,7 +2,7 @@ Engine = require 'gss-engine/lib/Engine.js'
 
 describe 'GSS engine', ->
   container = null
-  gss = null
+  engine = null
 
   before ->
     fixtures = document.getElementById 'fixtures'
@@ -14,29 +14,29 @@ describe 'GSS engine', ->
       <button id="button3">Three</button>
       <button id="button4">4</button>
     """
-    gss = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+    engine = new Engine '../browser/gss-engine/worker/gss-solver.js', container
 
   after (done) ->
-    gss.stop()
+    engine.stop()
     done()
 
   describe 'when initialized', ->
     it 'should be bound to the DOM container', ->
-      chai.expect(gss.container).to.eql container
+      chai.expect(engine.container).to.eql container
     it 'should not hold variables', ->
-      chai.expect(gss.variables).to.be.an 'object'
-      chai.expect(gss.variables).to.be.empty
+      chai.expect(engine.variables).to.be.an 'object'
+      chai.expect(engine.variables).to.be.empty
     it 'should not hold elements', ->
-      chai.expect(gss.elements).to.be.an 'object'
-      chai.expect(gss.elements).to.be.empty
+      chai.expect(engine.elements).to.be.an 'object'
+      chai.expect(engine.elements).to.be.empty
     it 'should not hold a worker', ->
-      chai.expect(gss.worker).to.be.a 'null'
+      chai.expect(engine.worker).to.be.a 'null'
     it 'should pass the container to its DOM getter', ->
-      chai.expect(gss.getter).to.be.an 'object'
-      chai.expect(gss.getter.container).to.eql gss.container
+      chai.expect(engine.getter).to.be.an 'object'
+      chai.expect(engine.getter.container).to.eql engine.container
     it 'should pass the container to its DOM setter', ->
-      chai.expect(gss.setter).to.be.an 'object'
-      chai.expect(gss.setter.container).to.eql gss.container
+      chai.expect(engine.setter).to.be.an 'object'
+      chai.expect(engine.setter.container).to.eql engine.container
   describe 'with rule #button1[width] == #button2[width]', ->
     ast =
       selectors: [
@@ -56,14 +56,15 @@ describe 'GSS engine', ->
       button2 = container.querySelector '#button2'
       chai.expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
     it 'after solving the buttons should be of equal width', (done) ->
-      gss.onSolved = (values) ->
+      container.addEventListener "solved", (e) ->
+        values = e.detail.values
         chai.expect(values).to.be.an 'object'
         chai.expect(button1.getBoundingClientRect().width).to.equal 100
         chai.expect(button2.getBoundingClientRect().width).to.equal 100
         done()
-      gss.onError = (error) ->
+      engine.onError = (error) ->
         chai.assert("#{event.message} (#{event.filename}:#{event.lineno})").to.equal ''
-        gss.onError = null
+        engine.onError = null
         done()
-      gss.run ast
+      engine.run ast
   

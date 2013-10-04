@@ -1,0 +1,11 @@
+{
+  "name": "customevent-polyfill",
+  "description": "HTML CustomEvent Polyfill",
+  "version": "0.5.0",
+  "scripts": [
+    "CustomEvent.js"
+  ],
+  "files": [],
+  "main": "CustomEvent.js",
+  "repo": "https://raw.github.com/d4tocchini/customevent-polyfill"
+}
