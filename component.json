@@ -12,6 +12,7 @@
     "d4tocchini/customevent-polyfill": "*"
   },
   "files": [
+    "vendor/observe.js",
     "worker/gss-solver.js"
   ],
   "main": "lib/Engine.js"
