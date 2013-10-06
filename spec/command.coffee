@@ -2,28 +2,22 @@ Engine = require 'gss-engine/lib/Engine.js'
 
 describe 'GSS commands', ->
   container = null
-  gss = null
+  engine = null
 
   before ->
     fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
-    container.innerHTML = """
-      <button id="button1">One</button>
-      <button id="button2">Second</button>
-      <button id="button3">Three</button>
-      <button id="button4">4</button>
-    """
   beforeEach ->
-    gss = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+    engine = new Engine '../browser/gss-engine/worker/gss-solver.js', container
 
   afterEach (done) ->
-    gss.stop()
+    engine.stop()
     done()
 
   describe 'when initialized', ->
     it 'should be bound to the DOM container', ->
-      chai.expect(gss.container).to.eql container
+      chai.expect(engine.container).to.eql container
 
   describe 'command transformations -', ->
     it 'var with class & generate ids', ->
@@ -32,10 +26,10 @@ describe 'GSS commands', ->
         <div class="box">One</div>
         <div class="box">One</div>
       """
-      gss.execute [
+      engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
-      chai.expect(gss.commandsForWorker).to.eql [
+      chai.expect(engine.commandsForWorker).to.eql [
           ['var', '$1[x]', '$1']
           ['var', '$2[x]', '$2']
           ['var', '$3[x]', '$3']
@@ -48,10 +42,10 @@ describe 'GSS commands', ->
         <div class="box" data-gss-id="35346">One</div>
         <div class="box" data-gss-id="89347">One</div>
       """
-      gss.execute [
+      engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
-      chai.expect(gss.commandsForWorker).to.eql [
+      chai.expect(engine.commandsForWorker).to.eql [
           ['var', '$12322[x]', '$12322']
           ['var', '$34222[x]', '$34222']
           ['var', '$35346[x]', '$35346']
@@ -65,12 +59,12 @@ describe 'GSS commands', ->
         <div class="box" data-gss-id="35346">One</div>
         <div class="box" data-gss-id="89347">One</div>
       """
-      gss.execute [
+      engine.execute [
         ['var', '.box[x]', 'x', ['$class','box']]
         ['var', '.box[width]', 'width', ['$class','box']]
         ['varexp', '.box[right]', ['plus',['get','.box[x]'],['get','.box[width]']], ['$class','box']]
       ]
-      chai.expect(gss.commandsForWorker).to.eql [
+      chai.expect(engine.commandsForWorker).to.eql [
         ['var', '$12322[x]', '$12322']
         ['var', '$34222[x]', '$34222']
         ['var', '$35346[x]', '$35346']
@@ -90,13 +84,13 @@ describe 'GSS commands', ->
         <div class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
       """
-      gss.execute [
+      engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
         ['var', '[grid-col]']
         ['eq', ['get','.box[width]'],['get','[grid-col]']]
         ['eq', ['number','100'],['get','[grid-col]']]
       ]
-      chai.expect(gss.commandsForWorker).to.eql [
+      chai.expect(engine.commandsForWorker).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '$34222[width]', '$34222']
         ['var', '[grid-col]']
@@ -111,12 +105,12 @@ describe 'GSS commands', ->
         <div class="box" data-gss-id="34222">One</div>
         <div class="box" data-gss-id="35346">One</div>
       """
-      gss.execute [
+      engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
         ['var', '#box1[width]', 'width', ['$id','box1']]
         ['lte', ['get','.box[width]'],['get','#box1[width]']]
       ]
-      chai.expect(gss.commandsForWorker).to.eql [
+      chai.expect(engine.commandsForWorker).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '$34222[width]', '$34222']
         ['var', '$35346[width]', '$35346']
@@ -132,12 +126,12 @@ describe 'GSS commands', ->
         <div style="width:222px;" class="box" data-gss-id="34222">One</div>
         <div style="width:333px;" class="box" data-gss-id="35346">One</div>
       """
-      gss.execute [
+      engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
         ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
         ['eq', ['get','.box[width]'],['get','.box[intrinsic-width]']]
       ]
-      chai.expect(gss.commandsForWorker).to.eql [
+      chai.expect(engine.commandsForWorker).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '$34222[width]', '$34222']
         ['var', '$35346[width]', '$35346']
@@ -151,4 +145,89 @@ describe 'GSS commands', ->
         ['eq', ['get','$34222[width]'],['get','$34222[intrinsic-width]']]
         ['eq', ['get','$35346[width]'],['get','$35346[intrinsic-width]']]
       ]
-
+  
+  #
+  #
+  #
+  describe 'live command spawning -', ->
+    
+    it 'var with class & static ids', (done) ->
+      container.innerHTML = """
+        <div class="box" data-gss-id="12322">One</div>
+        <div class="box" data-gss-id="34222">One</div>
+      """
+      engine.run commands: [
+          ['var', '.box[x]', 'x', ['$class','box']]
+        ]
+      chai.expect(engine.lastCommandsForWorker).to.eql [
+          ['var', '$12322[x]', '$12322']
+          ['var', '$34222[x]', '$34222']
+        ]
+      count = 0
+      listener = (e) ->
+        count++
+        if count is 1
+          container.insertAdjacentHTML('beforeend', '<div class="box" data-gss-id="35346">One</div>')
+        else if count is 2
+          chai.expect(engine.lastCommandsForWorker).to.eql [
+              ['var', '$35346[x]', '$35346']
+            ]
+          container.removeEventListener 'solved', listener
+          done()        
+      container.addEventListener 'solved', listener
+  
+  describe 'live command perfs', ->       
+    it '100 at once', (done) ->
+      count = 0
+      
+      innerHTML = """
+          <div class='box' data-gss-id='35346#{count++}'>One</div>     <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>   <div class='box' data-gss-id='35346#{count++}'>One</div>
+          <div class='box' data-gss-id='21823#{count++}'>One</div>     <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>   <div class='box' data-gss-id='21823#{count++}'>One</div>
+          <div class='box' data-gss-id='21423#{count++}'>One</div>     <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>   <div class='box' data-gss-id='21423#{count++}'>One</div>
+          <div class='box' data-gss-id='35246#{count++}'>One</div>     <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>   <div class='box' data-gss-id='35246#{count++}'>One</div>
+          <div class='box' data-gss-id='24123#{count++}'>One</div>     <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>   <div class='box' data-gss-id='24123#{count++}'>One</div>
+          <div class='box' data-gss-id='25123#{count++}'>One</div>     <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>   <div class='box' data-gss-id='25123#{count++}'>One</div>
+          <div class='box' data-gss-id='36346#{count++}'>One</div>     <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>   <div class='box' data-gss-id='36346#{count++}'>One</div>
+          <div class='box' data-gss-id='27123#{count++}'>One</div>     <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>   <div class='box' data-gss-id='27123#{count++}'>One</div>
+          <div class='box' data-gss-id='28123#{count++}'>One</div>     <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>   <div class='box' data-gss-id='28123#{count++}'>One</div>
+          <div class='box' data-gss-id='39346#{count++}'>One</div>     <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>   <div class='box' data-gss-id='39346#{count++}'>One</div>
+          <div class='box' data-gss-id='20123#{count++}'>One</div>     <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>   <div class='box' data-gss-id='20123#{count++}'>One</div>
+          <div class='box' data-gss-id='21123#{count++}'>One</div>     <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>   <div class='box' data-gss-id='21123#{count++}'>One</div>
+        
+          
+      """
+      container.innerHTML = innerHTML
+      
+      engine.run commands: [
+          ['var', '.box[width]', 'width', ['$class','box']]
+          ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
+          ['eq', ['get','.box[width]'],['get','.box[intrinsic-width]']]
+        ]
+      
+      listener = (e) ->
+        container.removeEventListener 'solved', listener
+        done()      
+      container.addEventListener 'solved', listener
+      
+    it '100 serially', (done) ->
+      container.innerHTML = """
+      """
+      engine.run commands: [
+          ['var', '.box[width]', 'width', ['$class','box']]
+          ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
+          ['eq', ['get','.box[width]'],['get','.box[intrinsic-width]']]
+        ]
+      count = 0
+      listener = (e) ->
+        count++        
+        container.insertAdjacentHTML 'beforeend', """
+            <div class='box' data-gss-id='35346#{count}'>One</div>
+          """
+        if count is 100
+          container.removeEventListener 'solved', listener
+          done()
+      
+      container.addEventListener 'solved', listener
+        
+      
+      

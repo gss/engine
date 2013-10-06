@@ -16,61 +16,28 @@ checkCache = (root,cacheKey) ->
 
 bindRoot = (root, query) ->
   root._is_bound = true
-  if !root._binds? then root._binds = []
+  if !root._binds? 
+    root._binds = []
+    root._boundSelectors = []
   if root._binds.indexOf(query) is -1
     root._binds.push query
+    root._boundSelectors.push query.selector
     if query.isMulti
       if root._binds.multi
         throw new Error "Multi el queries only allowed once per statement"
       root._binds.multi = query
 
-spawnCommands = (root, engine, cacheKey) ->
-  # TODO
-  # - Respawn by observing query.ids
-  if !root._is_bound
-    # just pass root through
-    engine.registerCommand root
-  else
-    if cacheKey
-      bindCache[cacheKey] = root._binds
-    queries = root._binds
-    srcString = JSON.stringify root
-    #
-    replaces = {}
-    ready = true
-    for q in queries
-      if q.ids.length < 0
-        ready = false
-        break
-      if q isnt queries.multi
-        replaces[q.selector] = q.ids[0] # only should be 1 el
-    if ready
-      if queries.multi
-        multiSplit = queries.multi.selector
-        for id in queries.multi.ids
-          command = srcString.split "%%" + multiSplit + "%%"
-          command = command.join "$" + id
-          for splitter, joiner of replaces
-            command = command.split "%%" + splitter + "%%"
-            command = command.join "$" + joiner
-          engine.registerCommand eval command
-      else
-        command = srcString
-        for splitter, joiner of replaces
-          command = command.split "%%" + splitter + "%%"
-          command = command.join "$" + joiner
-        engine.registerCommand eval command
-
+        
 getSuggestValueCommand = (gssId, prop, val) ->
   return ['suggest', ['get', "$#{gssId}[#{prop}]"], ['number', val]]
 
 checkIntrinsics = (root, engine, varId, prop, query) ->
   # TODO
-  # - Respawn by observing query.ids
+  # - Respawn by observing query.lastAddedIds
   # - dedup when el matches mult selectors with intrinsics
   if query? # only if bound to dom query
     if prop.indexOf("intrinsic-") is 0
-      for id in query.ids
+      for id in query.lastAddedIds
         val = engine.measureByGssId(id, prop.split("intrinsic-")[1])
         engine.registerCommand getSuggestValueCommand id, prop, val
 
@@ -87,9 +54,77 @@ makeTemplateFromVarId = (varId) ->
   return templ
 
 class Command
+  
   constructor: (engine) ->
-    @engine = engine
-
+    @spawnableRoots = []
+    @engine = engine    
+  
+  registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->
+    if !root._is_bound
+      # just pass root through
+      @engine.registerCommand root
+    else    
+      if varid
+        bindCache[varid] = root._binds      
+      root._template = JSON.stringify(root)
+      root._varid = varid
+      root._prop = prop
+      root._checkInstrinsics = checkInstrinsics
+      root._intrinsicQuery = intrinsicQuery
+      @spawnableRoots.push root
+      @spawn root
+  
+  handleAddsToSelectors: (selectorsWithAdds) ->
+    for root in @spawnableRoots
+      for boundSelector in root._boundSelectors
+        if selectorsWithAdds.indexOf(boundSelector) isnt -1
+          @spawn root
+          break
+    @
+  
+  spawn: (root) ->
+    queries = root._binds
+    rootString = root._template
+    replaces = {}
+    ready = true
+    
+    for q in queries
+      if q.lastAddedIds.length < 0
+        ready = false
+        break
+      if q isnt queries.multi
+        replaces[q.selector] = q.lastAddedIds[0] # only should be 1 el
+    
+    if ready      
+      
+      # generate commands bound to plural selector
+      if queries.multi
+        template = rootString.split "%%" + queries.multi.selector + "%%"
+        for id in queries.multi.lastAddedIds          
+          command = template.join "$" + id
+          for splitter, joiner of replaces
+            command = command.split "%%" + splitter + "%%"
+            command = command.join "$" + joiner
+          @engine.registerCommand eval command
+          
+      # generate command bound to singular selector
+      else
+        command = rootString
+        for splitter, joiner of replaces
+          command = command.split "%%" + splitter + "%%"
+          command = command.join "$" + joiner
+        @engine.registerCommand eval command
+      
+    # generate intrinsic commands
+    # only if bound to dom query
+    if root._checkInstrinsics and root._intrinsicQuery?
+      prop = root._prop
+      if prop.indexOf("intrinsic-") is 0
+        for id in root._intrinsicQuery.lastAddedIds
+          val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])
+          @engine.registerCommand getSuggestValueCommand id, prop, val
+    
+      
   # Variable Commands
   # ------------------------
 
@@ -102,15 +137,15 @@ class Command
       # add selector to end of command & tag
       # for tracking w/in Cassowary Thread
       self.push "%%" + query.selector + "%%"
-    spawnCommands(self, @engine, varId)
-    checkIntrinsics(self, @engine, varId, prop, query)
+    @registerSpawn(self, varId, prop, query, true)
+    #checkIntrinsics(self, @engine, varId, prop, query)
 
   'varexp': (self, varId, expression, zzz) =>
     # clean all but first three
     self.splice(3,10)
     # mark for gssId replacement
     self[1] = makeTemplateFromVarId varId
-    spawnCommands(self, @engine, varId)
+    @registerSpawn(self, varId)
 
   'get': (root, varId) =>
     checkCache root, varId
@@ -135,22 +170,22 @@ class Command
   # ------------------------
 
   'eq': (self,e1,e2,s,w) =>
-    spawnCommands(self, @engine)
+    @registerSpawn(self)
 
   'lte': (self,e1,e2,s,w) =>
-    spawnCommands(self, @engine)
+    @registerSpawn(self)
 
   'gte': (self,e1,e2,s,w) =>
-    spawnCommands(self, @engine)
+    @registerSpawn(self)
 
   'lt': (self,e1,e2,s,w) =>
-    spawnCommands(self, @engine)
+    @registerSpawn(self)
 
   'gt': (self,e1,e2,s,w) =>
-    spawnCommands(self, @engine)
+    @registerSpawn(self)
 
   'stay': (self) =>
-    spawnCommands(self, @engine)
+    @registerSpawn(self)
 
   'strength': (root,s) =>
     return ['strength', s]
@@ -160,14 +195,14 @@ class Command
 
   # mutli
   '$class': (root,sel) =>
-    query = @engine.registerDomQuery "." + sel, true, true, () =>
+    query = @engine.registerDomQuery selector:"."+sel, isMulti:true, isLive:true, createNodeList:() =>
       return @engine.container.getElementsByClassName(sel)
     bindRoot root, query
     return query
 
   # mutli
   '$tag': (root,sel) =>
-    query = @engine.registerDomQuery sel, true, true, () =>
+    query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:true, createNodeList:() =>
       return @engine.container.getElementsByTagName(sel)
     bindRoot root, query
     return query
@@ -178,7 +213,7 @@ class Command
 
   # singular
   '$id': (root,sel) =>
-    query = @engine.registerDomQuery "#" + sel, false, false, () =>
+    query = @engine.registerDomQuery selector:"#"+sel, isMulti:false, isLive:false, createNodeList:() =>
       # TODO: handle container.getElementById for web components?
       el = document.getElementById(sel)
       return [el]

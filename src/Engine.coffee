@@ -1,48 +1,126 @@
 require("customevent-polyfill")
+require("./GSS-id.js")
+Query = require("./Query.js")
 Get = require("./dom/Getter.js")
 Set = require("./dom/Setter.js")
 Command = require("./Command.js")
 
+
+
+arrayAddsRemoves = (old, neu, removesFromContainer) ->
+  adds = []
+  removes = []
+  for n in neu
+    if old.indexOf(n) is -1
+      adds.push n
+  for o in old
+    if neu.indexOf(o) is -1
+      # don't include in removes if already in removesFromContainer
+      if removesFromContainer.indexOf(o) isnt -1
+        removes.push o
+  return {adds:adds,removes:removes}
+
+
+
 class Engine
+  
   constructor: (@workerPath, @container) ->
     @container = document unless @container
-    @commands = new Command(@)
-    @elements = {}
-    @variables = {}
-    @dimensions = {}
+    @commander = new Command(@)
     @worker = null
     @getter = new Get(@container)
     @setter = new Set(@container)
     #
     @commandsForWorker = []
+    @lastCommandsForWorker = null
     @queryCache = {}
-    @elsByGssId = {}
+    
+    # MutationObserver
+    # 
+    # - removed in stop
+    #
+    @observer = new MutationObserver (mutations) =>
+      
+      trigger = false
+      
+      # els removed from container
+      removesFromContainer = []
+      for m in mutations
+        if m.removedNodes.lenght > 0 # nodelist are weird?
+          for node in m.removedNodes
+            gid = GSS.getId node
+            if gid? 
+              if GSS.getById gid
+                removesFromContainer.push gid
+                trigger = true
+      GSS._ids_killed removesFromContainer
 
-  run: (ast) ->
-    @execute ast.commands
-    astForWorker = {commands:@commandsForWorker}
-    @solve astForWorker
+      # els added or removed from queries
+      selectorsWithAdds = []
+      addsBySelector = {}
+      removesBySelector = {}
+      # selectorsWithShuffles = []
+      # shufflesByQuery = {} ?
+      for selector, query of @queryCache
+        query.update()
+        if query.changedLastUpdate
+          if query.lastAddedIds.length > 0
+            trigger = true
+            selectorsWithAdds.push selector
+            addsBySelector[selector] = query.lastAddedIds
+          if query.lastRemovedIds.length > 0
+            trigger = true
+            removesBySelector[selector] = query.lastRemovedIds
+      ###
+      if trigger
+        e = new CustomEvent "solverinvalidated",
+          detail:
+            addsBySelector: addsBySelector
+            removesBySelector: removesBySelector
+            removesFromContainer: removesFromContainer
+            selectorsWithAdds: selectorsWithAdds
+            engine: @
+          bubbles: true
+          cancelable: true
+        @container.dispatchEvent e
+      ###
+      if trigger
+        @commander.handleAddsToSelectors selectorsWithAdds
+        @solve()
+      #console.log "query.observer selector:#{selector}, mutations:", mutations
+      #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds
+        
+    @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
+
+  # boot
+  run: (ast) -> 
+    @execute ast.commands    
+    @solve()
 
   measure: (el, prop) =>
     return @getter.measure(el, prop)
 
   measureByGssId: (id, prop) ->
-    el = @elsByGssId[id]
+    el = GSS.getById id
     @measure el, prop
+    
+  resetCommandsForWorker: () =>
+    @lastCommandsForWorker = @commandsForWorker
+    @commandsForWorker = []
 
-  process: (message) =>
+  handleWorkerMessage: (message) =>    
     values = message.data.values
     for key of values
       if key[0] is "$"
         gid = key.substring(1, key.indexOf("["))
         dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))
-        element = @elsByGssId[gid]
+        element = GSS.getById gid
         if element
           @setter.set element, dimension, values[key]
         else
           console.log "Element wasn't found"
 
-    @dispatch_solved values
+    @dispatch_solved values    
 
   dispatch_solved: (values) =>
     e = new CustomEvent "solved",
@@ -57,36 +135,37 @@ class Engine
     return @onError error if @onError
     throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"
 
-  solve: (ast) ->
+  solve: () ->
+    ast = {commands:@commandsForWorker}
     unless @worker
       @worker = new Worker @workerPath
-      @worker.addEventListener "message", @process, false
-      @worker.addEventListener "error", @handleError, false
+      @worker.addEventListener "message", @handleWorkerMessage, false
+      @worker.addEventListener "error", @handleError, false    
     @worker.postMessage
       ast: ast
-
+    @resetCommandsForWorker()
+    
+      
+  stopped: false
   stop: ->
-    return unless @worker
-    @worker.terminate()
-
-  _current_gid: 1
-
-  gssId: (el) ->
-    gid = el.getAttribute('data-gss-id')
-    if !gid?
-      gid = @_current_gid++
-      el.setAttribute('data-gss-id', gid)
-    # cache, TODO: REMOVE FROM CACHE!!
-    @elsByGssId[gid] = el
-    return gid
-
+    if @stopped then return @
+    @observer.disconnect()
+    if @worker
+      @worker.terminate()
+    for selector, query of @queryCache      
+      delete query.nodeList
+      delete query.ids
+      delete @query
+    @stopped = true
+  
+  # digestCommands
   execute: (commands) =>
     for command in commands
       @_execute command, command
 
   _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
     node = command
-    func = @commands[node[0]]
+    func = @commander[node[0]]
     if !func?
       throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
 
@@ -100,32 +179,21 @@ class Engine
 
   _addVarCommandsForElements: (elements) ->
     @commandsForWorker.push "var", el.id + prop
-
-
+    
+  registerCommands: (commands) ->
+    for command in commands
+      @registerCommand command
+            
   registerCommand: (command) ->
     # TODO: treat commands as strings and check cache for dups?
     @commandsForWorker.push command
 
-  registerDomQuery: (selector, isMulti, isLive, createNodeList) ->
+  registerDomQuery: (o) ->
+    selector = o.selector
     if @queryCache[selector]?
       return @queryCache[selector]
     else
-      query = {}
-      query.selector = selector
-      query.isQuery = true
-      query.isMulti = isMulti
-      query.isLive  = isLive
-      # query.isPriority for querySelectorAll?
-      nodeList = createNodeList()
-      query.nodeList = nodeList
-      # ids
-      query.ids = []
-      for el in nodeList
-        id = @gssId(el)
-        if query.ids.indexOf(id) is -1 then query.ids.push(id)
-      #
-      query.observer = new PathObserver nodeList, 'length', (newval, oldval) ->
-        alert 'handle nodelist change'
+      query = new Query(o)
       @queryCache[selector] = query
       return query
 

@@ -3,8 +3,10 @@
   "description": "GSS styling engine",
   "version": "0.0.1",
   "scripts": [
+    "lib/GSS-id.js",
+    "lib/Query.js",
     "lib/Engine.js",
-    "lib/Command.js",    
+    "lib/Command.js",  
     "lib/dom/Getter.js",
     "lib/dom/Setter.js"
   ],

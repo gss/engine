@@ -23,12 +23,6 @@ describe 'GSS engine', ->
   describe 'when initialized', ->
     it 'should be bound to the DOM container', ->
       chai.expect(engine.container).to.eql container
-    it 'should not hold variables', ->
-      chai.expect(engine.variables).to.be.an 'object'
-      chai.expect(engine.variables).to.be.empty
-    it 'should not hold elements', ->
-      chai.expect(engine.elements).to.be.an 'object'
-      chai.expect(engine.elements).to.be.empty
     it 'should not hold a worker', ->
       chai.expect(engine.worker).to.be.a 'null'
     it 'should pass the container to its DOM getter', ->
