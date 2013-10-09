@@ -2,7 +2,7 @@ if window.GSS then GSS = window.GSS else GSS = {}
 
 GSS._id_counter = 1
 
-GSS._byIdCache = {}
+GSS._byIdCache = []
 
 GSS._ids_killed = (ids) ->
   for id in ids

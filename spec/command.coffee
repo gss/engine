@@ -145,6 +145,44 @@ describe 'GSS commands', ->
         ['eq', ['get','$34222[width]'],['get','$34222[intrinsic-width]']]
         ['eq', ['get','$35346[width]'],['get','$35346[intrinsic-width]']]
       ]
+    
+    it '.box[width] == ::window[width]', ->
+      container.innerHTML = """
+        <div style="width:111px;" class="box" data-gss-id="12322">One</div>      
+      """
+      engine.execute [
+        ['var', '.box[width]', 'width', ['$class','box']]
+        ['var', '::window[width]', 'width', ['$reserved','window']]
+        ['eq', ['get','.box[width]'],['get','::window[width]']]
+      ]
+      chai.expect(engine.commandsForWorker).to.eql [
+        ['var', '$12322[width]', '$12322']
+        ['var', '::window[width]']
+        ['suggest', ['get','::window[width]'], ['number', window.outerWidth]]
+        ['eq', ['get','$12322[width]'],['get','::window[width]']]
+      ]
+      
+    it '::window props', ->
+      container.innerHTML = """
+        <div style="width:111px;" class="box" data-gss-id="12322">One</div>      
+      """
+      engine.execute [
+        ['var', '::window[x]', 'x', ['$reserved','window']]
+        ['var', '::window[y]', 'y', ['$reserved','window']]
+        ['var', '::window[width]', 'width', ['$reserved','window']]
+        ['var', '::window[height]', 'height', ['$reserved','window']]
+      ]
+      console.log engine.commandsForWorker
+      chai.expect(engine.commandsForWorker).to.eql [
+        ['var', '::window[x]']
+        ['eq', ['get','::window[x]'],['number',0], 'required']
+        ['var', '::window[y]']
+        ['eq', ['get','::window[y]'],['number',0], 'required']
+        ['var', '::window[width]']
+        ['suggest', ['get','::window[width]'], ['number', window.outerWidth]]
+        ['var', '::window[height]']
+        ['suggest', ['get','::window[height]'], ['number', window.outerHeight]]
+      ]
   
   #
   #

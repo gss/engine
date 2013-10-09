@@ -41,23 +41,89 @@ checkIntrinsics = (root, engine, varId, prop, query) ->
         val = engine.measureByGssId(id, prop.split("intrinsic-")[1])
         engine.registerCommand getSuggestValueCommand id, prop, val
 
-#_templateVarIdCache = {}
-makeTemplateFromVarId = (varId) ->
+# - preload cache for pass-throughs
+# - global cache, kinda dangerous?
+# TODO:
+# - replace with smarter parser
+_templateVarIdCache = {
+  "::window[width]":"::window[width]"
+  "::window[height]":"::window[height]"
+  "::window[x]":"::window[x]"
+  "::window[y]":"::window[y]"
+  "::window[center-x]":"::window[center-x]"
+  "::window[center-y]":"::window[center-y]"
+}
+window._templateVarIdCache = _templateVarIdCache
+
+makeTemplateFromVarId = (varId) ->  
   # Ad Hoc Templating!
-  #if _templateVarIdCache[varId] then return _templateVarIdCache[varId]
+  if _templateVarIdCache[varId] then return _templateVarIdCache[varId]
+  #if varId.indexOf("::window") is 0 then return varId
+  #
   templ = varId
   y = varId.split("[")
   if y[0].length > 1
     y[y.length-2] += "%%"
     templ = "%%" + y.join("[")
-    #_templateVarIdCache[varId] = templ
+    _templateVarIdCache[varId] = templ
   return templ
 
+# transforms & generates needed commands for engine
 class Command
   
   constructor: (engine) ->
     @spawnableRoots = []
-    @engine = engine    
+    @boundWindowProps = []
+    @engine = engine
+  
+  execute: (commands) ->
+    for command in commands
+      @_execute command, command
+  
+  _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
+    node = command
+    func = @[node[0]]
+    if !func?
+      throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
+    #recursive excution
+    for sub, i in node[1..node.length]
+      if sub instanceof Array # then recurse
+        node.splice i+1,1,@_execute sub, root
+
+    #console.log node[0...node.length]
+    return func.call @engine, root, node[1...node.length]...
+  
+  teardown: ->
+    if !@_bound_to_window_resize
+      window.removeEventListener("resize", @spawnForWindowSize, false)
+  
+  _bound_to_window_resize: false
+  
+  spawnForWindowWidth: () ->    
+    @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', window.outerWidth]]
+  
+  spawnForWindowHeight: () ->    
+    @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight]]
+  
+  spawnForWindowSize: () ->
+    if @_bound_to_window_resize
+      if @boundWindowProps.indexOf('width') isnt -1 then @spawnForWindowWidth()
+      if @boundWindowProps.indexOf('height') isnt -1 then @spawnForWindowHeight()
+      
+  bindToWindow: (prop) ->
+    if @boundWindowProps.indexOf(prop) is -1
+      @boundWindowProps.push prop
+    if prop is 'width' or prop is 'height'
+      if prop is 'width' then @spawnForWindowWidth() else @spawnForWindowHeight()      
+      if !@_bound_to_window_resize
+        window.addEventListener("resize", @spawnForWindowSize, false)      
+        @_bound_to_window_resize = true
+    else if prop is 'x' 
+      @engine.registerCommand ['eq', ['get', '::window[x]'], ['number', 0], 'required']
+    else if prop is 'y' 
+      @engine.registerCommand ['eq', ['get', '::window[y]'], ['number', 0], 'required']
+    #else
+    #  throw new Error "Not sure how to bind to window prop: #{prop}"    
   
   registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->
     if !root._is_bound
@@ -128,16 +194,19 @@ class Command
   # Variable Commands
   # ------------------------
 
-  'var': (self, varId, prop, query) =>
+  'var': (self, varId, prop, query) =>    
     # clean all but first two
-    self.splice(2,10)
-    # mark for gssId replacement
-    self[1] = makeTemplateFromVarId varId
+    self.splice(2,10)    
     if self._is_bound # query?
+      # mark for gssId replacement
+      self[1] = makeTemplateFromVarId varId
       # add selector to end of command & tag
       # for tracking w/in Cassowary Thread
       self.push "%%" + query.selector + "%%"
     @registerSpawn(self, varId, prop, query, true)
+    if query is 'window'
+      @bindToWindow prop
+      query = null
     #checkIntrinsics(self, @engine, varId, prop, query)
 
   'varexp': (self, varId, expression, zzz) =>
@@ -208,7 +277,14 @@ class Command
     return query
 
   # singular
-  '$reserved': (root,sel) =>
+  '$reserved': (root, sel) =>
+    query = null
+    if sel is 'window'
+      return 'window'
+      #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
+      #  return ""
+    else
+      throw new Error "$reserved selectors not yet handled: #{sel}"
     return query
 
   # singular

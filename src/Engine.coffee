@@ -93,9 +93,13 @@ class Engine
     @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
 
   # boot
-  run: (ast) -> 
-    @execute ast.commands    
+  run: (ast) ->
+    @execute ast.commands
     @solve()
+  
+  teardown: ->
+    # stop observer
+    # stop commands
 
   measure: (el, prop) =>
     return @getter.measure(el, prop)
@@ -160,22 +164,7 @@ class Engine
   
   # digestCommands
   execute: (commands) =>
-    for command in commands
-      @_execute command, command
-
-  _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
-    node = command
-    func = @commander[node[0]]
-    if !func?
-      throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
-
-    #recursive excution
-    for sub, i in node[1..node.length]
-      if sub instanceof Array # then recurse
-        node.splice i+1,1,@_execute sub, root
-
-    #console.log node[0...node.length]
-    return func.call @, root, node[1...node.length]...
+    @commander.execute commands
 
   _addVarCommandsForElements: (elements) ->
     @commandsForWorker.push "var", el.id + prop
