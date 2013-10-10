@@ -42,17 +42,23 @@ class Engine
     @observer = new MutationObserver (mutations) =>
       
       trigger = false
+      trigger_removesFromContainer = false
+      trigger_removesBySelector = false
+      trigger_addsToSelectors = false
       
       # els removed from container
       removesFromContainer = []
       for m in mutations
-        if m.removedNodes.lenght > 0 # nodelist are weird?
+        if m.removedNodes.length > 0 # nodelist are weird?
           for node in m.removedNodes
-            gid = GSS.getId node
-            if gid? 
-              if GSS.getById gid
-                removesFromContainer.push gid
+            gid = GSS.getId node            
+            if gid?
+              if GSS.getById gid                
                 trigger = true
+                trigger_removesFromContainer = true
+                removesFromContainer.push gid                
+                
+                
       GSS._ids_killed removesFromContainer
 
       # els added or removed from queries
@@ -63,14 +69,25 @@ class Engine
       # shufflesByQuery = {} ?
       for selector, query of @queryCache
         query.update()
+        # TODO: callback?
         if query.changedLastUpdate
           if query.lastAddedIds.length > 0
             trigger = true
+            trigger_addsToSelectors = true
             selectorsWithAdds.push selector
             addsBySelector[selector] = query.lastAddedIds
           if query.lastRemovedIds.length > 0
             trigger = true
-            removesBySelector[selector] = query.lastRemovedIds
+            trigger_removesBySelector = true
+            removedIds = query.lastRemovedIds
+            # ignore redudant removes
+            if trigger_removesFromContainer
+              removesBySelector[selector] = []
+              for rid in removedIds
+                if removesFromContainer.indexOf(rid) is -1
+                  removesBySelector[selector].push rid
+            else
+              removesBySelector[selector] = removedIds
       ###
       if trigger
         e = new CustomEvent "solverinvalidated",
@@ -84,18 +101,34 @@ class Engine
           cancelable: true
         @container.dispatchEvent e
       ###
-      if trigger
+
+      if trigger_removesFromContainer
+        @commander.handleRemovesFromContainer removesFromContainer
+      if trigger_addsToSelectors 
         @commander.handleAddsToSelectors selectorsWithAdds
+      #if trigger_removesBySelector 
+      #  @commander.handleRemovesBySelector removesBySelector
+      if trigger
         @solve()
       #console.log "query.observer selector:#{selector}, mutations:", mutations
       #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds
         
-    @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
+  _is_observing: false
+  
+  observe:() ->
+    if !@_is_observing
+      @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: false})
+      @_is_observing = true
+      
+  unobserve: () ->
+    @_is_observing = false
+    @observer.disconnect()
 
   # boot
   run: (ast) ->
     @execute ast.commands
     @solve()
+    @observe()
   
   teardown: ->
     # stop observer
@@ -112,7 +145,8 @@ class Engine
     @lastCommandsForWorker = @commandsForWorker
     @commandsForWorker = []
 
-  handleWorkerMessage: (message) =>    
+  handleWorkerMessage: (message) =>
+    @unobserve()
     values = message.data.values
     for key of values
       if key[0] is "$"
@@ -123,8 +157,9 @@ class Engine
           @setter.set element, dimension, values[key]
         else
           console.log "Element wasn't found"
-
-    @dispatch_solved values    
+    @observe()
+    @dispatch_solved values
+    
 
   dispatch_solved: (values) =>
     e = new CustomEvent "solved",
@@ -153,7 +188,7 @@ class Engine
   stopped: false
   stop: ->
     if @stopped then return @
-    @observer.disconnect()
+    @unobserve()
     if @worker
       @worker.terminate()
     for selector, query of @queryCache      
@@ -185,14 +220,5 @@ class Engine
       query = new Query(o)
       @queryCache[selector] = query
       return query
-
-  onElementsAdded: (nodelist, callback) ->
-    # need to listen to nodelist...
-    newEls = ['TBD...']
-    callback.apply @, newEls
-
-  getVarsFromVarId: (id) ->
-    # ...
-
 
 module.exports = Engine

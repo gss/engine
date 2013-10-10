@@ -10,7 +10,7 @@ GSS._ids_killed = (ids) ->
 
 GSS.getById = (id) ->
   if GSS._byIdCache[id] then return GSS._byIdCache[id]
-  el = document.querySelector "[data-gss-id=#{id}]" 
+  el = document.querySelector '[data-gss-id="#{id}"]'
   # returns null if none found 
   # store in cache if found?
   #if el then GSS._byIdCache[id] = el
@@ -25,6 +25,7 @@ GSS.setupId = (el) ->
   return gid
 
 GSS.getId = (el) ->
-  gid = el.getAttribute('data-gss-id')
+  if el.getAttribute then return el.getAttribute('data-gss-id')
+  return null
   
 if !window.GSS then window.GSS = GSS

@@ -28,8 +28,8 @@ bindRoot = (root, query) ->
       root._binds.multi = query
 
         
-getSuggestValueCommand = (gssId, prop, val) ->
-  return ['suggest', ['get', "$#{gssId}[#{prop}]"], ['number', val]]
+getSuggestValueCommand = (gssId, prop, val, selector) ->
+  return ['suggest', ['get', "$#{gssId}[#{prop}]", "#{selector}$#{gssId}"], ['number', val]]
 
 checkIntrinsics = (root, engine, varId, prop, query) ->
   # TODO
@@ -39,7 +39,7 @@ checkIntrinsics = (root, engine, varId, prop, query) ->
     if prop.indexOf("intrinsic-") is 0
       for id in query.lastAddedIds
         val = engine.measureByGssId(id, prop.split("intrinsic-")[1])
-        engine.registerCommand getSuggestValueCommand id, prop, val
+        engine.registerCommand getSuggestValueCommand id, prop, val, query.selector
 
 # - preload cache for pass-throughs
 # - global cache, kinda dangerous?
@@ -62,8 +62,9 @@ makeTemplateFromVarId = (varId) ->
   #
   templ = varId
   y = varId.split("[")
-  if y[0].length > 1
-    y[y.length-2] += "%%"
+  if y[0].length > 1 
+    # template just the last []'s, to protect prop selectors
+    y[y.length-2] += "%%" 
     templ = "%%" + y.join("[")
     _templateVarIdCache[varId] = templ
   return templ
@@ -85,12 +86,10 @@ class Command
     func = @[node[0]]
     if !func?
       throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
-    #recursive excution
+    # recursive excution
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
         node.splice i+1,1,@_execute sub, root
-
-    #console.log node[0...node.length]
     return func.call @engine, root, node[1...node.length]...
   
   teardown: ->
@@ -139,7 +138,16 @@ class Command
       root._intrinsicQuery = intrinsicQuery
       @spawnableRoots.push root
       @spawn root
+    
+  handleRemovesFromContainer: (removesFromContainer) ->
+    command = ['remove']
+    
+    for id in removesFromContainer
+      command.push "$"+id
+    @engine.registerCommand command
+    @
   
+
   handleAddsToSelectors: (selectorsWithAdds) ->
     for root in @spawnableRoots
       for boundSelector in root._boundSelectors
@@ -188,7 +196,7 @@ class Command
       if prop.indexOf("intrinsic-") is 0
         for id in root._intrinsicQuery.lastAddedIds
           val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])
-          @engine.registerCommand getSuggestValueCommand id, prop, val
+          @engine.registerCommand getSuggestValueCommand id, prop, val, root._intrinsicQuery.selector
     
       
   # Variable Commands
@@ -216,9 +224,12 @@ class Command
     self[1] = makeTemplateFromVarId varId
     @registerSpawn(self, varId)
 
-  'get': (root, varId) =>
+  'get': (root, varId, tracker) =>
     checkCache root, varId
-    return ['get', makeTemplateFromVarId(varId)]
+    if tracker and tracker isnt "::window"
+      return ['get', makeTemplateFromVarId(varId),tracker+"%%"+tracker+"%%"]
+    else
+      return ['get', makeTemplateFromVarId(varId)]
 
   'number': (root, num) ->
     return ['number', num]

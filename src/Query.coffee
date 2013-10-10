@@ -1,4 +1,4 @@
-arrayAddsRemoves = (old, neu, removesFromContainer) ->
+arrayAddsRemoves = (old, neu) ->
   adds = []
   removes = []
   for n in neu
@@ -6,9 +6,7 @@ arrayAddsRemoves = (old, neu, removesFromContainer) ->
       adds.push n
   for o in old
     if neu.indexOf(o) is -1
-      # don't include in removes if already in removesFromContainer
-      if removesFromContainer?.indexOf?(o) isnt -1
-        removes.push o
+      removes.push o
   return {adds:adds,removes:removes}
 
 class Query  
@@ -20,7 +18,9 @@ class Query
     @createNodeList = o.createNodeList or throw new Error "GssQuery must implement createNodeList()"
     @isMulti = o.isMulti or false
     @isLive = o.isLive or false
-    @ids = []
+    #@isReserved = o.isReserved or false
+    #@isImmutable = o.isImmutable or true
+    @ids = o.ids or []
     @lastAddedIds = []
     @lastRemovedIds = []
     @lastLocalRemovedIds = []
@@ -43,10 +43,10 @@ class Query
     {adds,removes} = arrayAddsRemoves oldIds, newIds
     if adds.length > 0
       @changedLastUpdate = true
-      @lastAddedIds = adds
+    @lastAddedIds = adds
     if removes.length > 0
       @changedLastUpdate = true
-      @lastRemovedIds = removes
+    @lastRemovedIds = removes
     @ids = newIds
     @
     

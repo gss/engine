@@ -4,26 +4,29 @@ class Thread
     @cachedVars = {}
     @solver = new c.SimplexSolver()
     @solver.autoSolve = false
-
+    @constraintsByTracker = {}
+    @varIdsByTracker = {}
+    @
+    
   unparse: (ast) =>
     for command in ast.commands
-      @_execute command
+      @_execute command, command
     #
     #for vs in ast.vars
     #  @_execute vs
     #for cs in ast.constraints
     #  @solver.addConstraint @_execute cs
 
-  _execute: (ast) =>
-    node = ast
+  _execute: (command, root) =>
+    node = command
     func = @[node[0]]
     if !func?
       throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
+    # recursive excution
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
-        node.splice i+1,1,@_execute sub
-    #console.log node[0...node.length]
-    return func.apply @, node[1...node.length]
+        node.splice i+1,1,@_execute sub, root 
+    return func.call @, root, node[1...node.length]...
 
   _getValues: () ->
     @solver.resolve()
@@ -32,17 +35,26 @@ class Thread
       o[id] = @cachedVars[id].value
     return o
 
-  number: (num) ->
+  number: (root, num) ->
     return Number(num)
+    
+  _trackVarId: (varr,vid,tracker) ->
+    if !@varIdsByTracker[tracker] then @varIdsByTracker[tracker] = []
+    if @varIdsByTracker[tracker].indexOf(vid) is -1 then @varIdsByTracker[tracker].push(vid)
 
-  var: (id, prop, context) ->
+  var: (self, id, prop, tracker) ->
     if @cachedVars[id]
       return @cachedVars[id]
     v = new c.Variable {name:id}
+    # vars can only have one tracker
+    if tracker
+      @_trackVarId id, tracker
+      v._tracker = tracker
+      v._is_tracked = true
     @cachedVars[id] = v
     return v
 
-  varexp: (id, expression) -> # an expression accessed like a variable
+  varexp: (self, id, expression, tracker) -> # an expression accessed like a variable
     cv = @cachedVars
     if cv[id]
       return cv[id]
@@ -54,70 +66,103 @@ class Thread
     Object.defineProperty cv, id,
       get: ->
         clone = expression.clone()
+        # varexps can only have one tracker
+        if tracker
+          @_trackVarId id, tracker
+          clone._tracker = tracker
+          clone._is_tracked = true
         # TODO: Add value getter to expressions...
         return clone
     return expression
-
-  get: (id) ->
-    if @cachedVars[id]
-      return @cachedVars[id]
+  
+  _trackRootIfNeeded: (root,tracker) ->
+    if tracker
+      root._is_tracked = true
+      if !root._trackers then root._trackers = []
+      if  root._trackers.indexOf(tracker) is -1 then root._trackers.push(tracker)
+  
+  # The `get` command registers all trackable information to the root constraint commands
+  get: (root, id, tracker) ->
+    v = @cachedVars[id]
+    if v
+      @_trackRootIfNeeded root, tracker
+      @_trackRootIfNeeded root, v.tracker
+      return v
     throw new Error("AST method 'get' couldn't find var with id: #{id}")
 
-  plus: (e1, e2) ->
+  plus: (root,e1, e2) ->
     return c.plus e1, e2
 
-  minus : (e1,e2) ->
+  minus : (root,e1,e2) ->
     return c.minus e1, e2
 
-  multiply: (e1,e2) ->
+  multiply: (root,e1,e2) ->
     return c.plus e1, e2
 
-  divide: (e1,e2,s,w) ->
+  divide: (root,e1,e2,s,w) ->
     return c.divide e1, e2
 
-  strength: (s) ->
+  _strength: (s) ->
     strength = c.Strength[s]
     #if !strength? then throw new Error("Strength unrecognized: #{s}")
     return strength
-
+  
+  #
+  _addConstraint: (root, constraint) =>
+    @solver.addConstraint constraint
+    if root._is_tracked
+      for tracker in root._trackers        
+        if !@constraintsByTracker[tracker] then @constraintsByTracker[tracker] = [] 
+        @constraintsByTracker[tracker].push constraint
+    return constraint
+  
   # Equation Constraints
 
-  eq: (e1,e2,s,w) =>
-    constraint = new c.Equation e1, e2, @strength(s), w
-    @solver.addConstraint constraint
-    return constraint
+  eq:  (self,e1,e2,s,w) =>
+    return @_addConstraint(self, new c.Equation(e1, e2, @_strength(s), w))
 
-  lte: (e1,e2,s,w) =>
-    constraint = new c.Inequality e1, c.LEQ, e2, @strength(s), w
-    @solver.addConstraint constraint
-    return constraint
+  lte: (self,e1,e2,s,w) =>
+    return @_addConstraint(self, new c.Inequality(e1, c.LEQ, e2, @_strength(s), w))
 
-  gte: (e1,e2,s,w) =>
-    constraint = new c.Inequality e1, c.GEQ, e2, @strength(s), w
-    @solver.addConstraint constraint
-    return constraint
+  gte: (self,e1,e2,s,w) =>
+    return @_addConstraint(self, new c.Inequality(e1, c.GEQ, e2, @_strength(s), w))
 
-  lt: (e1,e2,s,w) =>
-    constraint = new c.Inequality e1, c.LEQ, e2, @strength(s), w
-    @solver.addConstraint constraint
-    return constraint
+  lt:  (self,e1,e2,s,w) =>
+    return @_addConstraint(self, new c.Inequality(e1, c.LEQ, e2, @_strength(s), w))
 
-  gt: (e1,e2,s,w) =>
-    constraint = new c.Inequality e1, c.GEQ, e2, @strength(s), w
-    @solver.addConstraint constraint
-    return constraint
+  gt:  (self,e1,e2,s,w) =>
+    return @_addConstraint(self, new c.Inequality(e1, c.GEQ, e2, @_strength(s), w))
 
   # Edit / Stay Constraints
 
-  editvar: (varr, strength) =>
+  _editvar: (varr, strength) =>
     return @solver.addEditVar varr
-
-  suggest: (varr, val, strength) =>
+  
+  # Todo
+  # - track edit constraints... c.EditConstraint
+  suggest: (self, varr, val, strength) =>
     # beiginEdit?
-    @editvar varr, strength
+    @_editvar varr, strength
     @solver.suggestValue varr, val
 
-  stay: () =>
-    for a in arguments
-      @solver.addStay a
+  # Todo
+  # - track stay constraints... c.StayConstraint
+  stay: (self) =>
+    args = [arguments...]
+    for v in args[1...args.length]
+      @solver.addStay v
     return @solver
+  
+  # Remove Commands
+  
+  remove: (self,tracker) =>
+    # remove constraints
+    if @constraintsByTracker[tracker]
+      for constraint in @constraintsByTracker[tracker]
+        @solver.removeConstraint constraint
+      delete @constraintsByTracker[tracker]
+    # clean up varcache
+    if @varIdsByTracker[tracker]
+      for id in @varIdsByTracker[tracker]
+        delete @cachedVars[id]
+      
