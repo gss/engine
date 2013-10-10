@@ -37,3 +37,19 @@ describe 'Cassowary', ->
     expect(x.value).to.equal 7
     expect(y.value).to.equal 5
     expect(z.value).to.equal 2
+  it 'hierarchy', ->
+    solver = new c.SimplexSolver()
+    solver.autoSolve = false
+    x = new c.Variable()
+    eq1 = new c.Equation(x,100,c.Strength.strong)
+    eq2 = new c.Equation(x,10,c.Strength.medium)
+    eq3 = new c.Equation(x,1,c.Strength.weak)
+    solver.addConstraint(eq1).addConstraint(eq2).addConstraint(eq3)
+    solver.solve()
+    expect(x.value).to.equal 100
+    solver.removeConstraint eq1
+    solver.solve()
+    expect(x.value).to.equal 10
+    solver.removeConstraint eq2
+    solver.solve()
+    expect(x.value).to.equal 1

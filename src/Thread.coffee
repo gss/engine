@@ -29,7 +29,8 @@ class Thread
     return func.call @, root, node[1...node.length]...
 
   _getValues: () ->
-    @solver.resolve()
+    #@solver.resolve()
+    @solver.solve()
     o = {}
     for id of @cachedVars
       o[id] = @cachedVars[id].value
@@ -38,11 +39,11 @@ class Thread
   number: (root, num) ->
     return Number(num)
     
-  _trackVarId: (varr,vid,tracker) ->
+  _trackVarId: (id,tracker) ->
     if !@varIdsByTracker[tracker] then @varIdsByTracker[tracker] = []
-    if @varIdsByTracker[tracker].indexOf(vid) is -1 then @varIdsByTracker[tracker].push(vid)
+    if @varIdsByTracker[tracker].indexOf(id) is -1 then @varIdsByTracker[tracker].push(id)
 
-  var: (self, id, prop, tracker) ->
+  var: (self, id, tracker) ->
     if @cachedVars[id]
       return @cachedVars[id]
     v = new c.Variable {name:id}
@@ -155,7 +156,7 @@ class Thread
   
   # Remove Commands
   
-  remove: (self,tracker) =>
+  'remove': (self,tracker) =>
     # remove constraints
     if @constraintsByTracker[tracker]
       for constraint in @constraintsByTracker[tracker]
@@ -165,4 +166,5 @@ class Thread
     if @varIdsByTracker[tracker]
       for id in @varIdsByTracker[tracker]
         delete @cachedVars[id]
+      delete @varIdsByTracker[tracker]
       

@@ -238,7 +238,6 @@ describe 'GSS commands', ->
         if count is 1
           container.querySelector('[data-gss-id="34222"]').remove()
         else if count is 2          
-          console.log engine.lastCommandsForWorker
           chai.expect(engine.lastCommandsForWorker).to.eql [
               ['remove', '$34222']
             ]
