@@ -42,9 +42,11 @@ class Engine
     @observer = new MutationObserver (mutations) =>
       
       trigger = false
+      trigger_removes = false
       trigger_removesFromContainer = false
-      trigger_removesBySelector = false
       trigger_addsToSelectors = false
+      
+      removes = []
       
       # els removed from container
       removesFromContainer = []
@@ -53,18 +55,19 @@ class Engine
           for node in m.removedNodes
             gid = GSS.getId node            
             if gid?
-              if GSS.getById gid                
+              if GSS.getById gid      
+                removes.push("$" + gid)
                 trigger = true
                 trigger_removesFromContainer = true
-                removesFromContainer.push gid                
+                trigger_removes = true
                 
                 
-      GSS._ids_killed removesFromContainer
+      GSS._ids_killed removes
 
       # els added or removed from queries
       selectorsWithAdds = []
       addsBySelector = {}
-      removesBySelector = {}
+      # removesBySelector = {}
       # selectorsWithShuffles = []
       # shufflesByQuery = {} ?
       for selector, query of @queryCache
@@ -72,22 +75,22 @@ class Engine
         # TODO: callback?
         if query.changedLastUpdate
           if query.lastAddedIds.length > 0
-            trigger = true
-            trigger_addsToSelectors = true
             selectorsWithAdds.push selector
             addsBySelector[selector] = query.lastAddedIds
+            trigger = true
+            trigger_addsToSelectors = true
           if query.lastRemovedIds.length > 0
             trigger = true
-            trigger_removesBySelector = true
+            trigger_removes = true
             removedIds = query.lastRemovedIds
             # ignore redudant removes
-            if trigger_removesFromContainer
-              removesBySelector[selector] = []
-              for rid in removedIds
-                if removesFromContainer.indexOf(rid) is -1
-                  removesBySelector[selector].push rid
-            else
-              removesBySelector[selector] = removedIds
+            for rid in removedIds
+              rid = "$" + rid
+              if trigger_removesFromContainer             
+                if removes.indexOf(rid) is -1 
+                  removes.push(selector + rid) # .box$3454
+              else
+                removes.push(selector + rid)
       ###
       if trigger
         e = new CustomEvent "solverinvalidated",
@@ -102,12 +105,10 @@ class Engine
         @container.dispatchEvent e
       ###
 
-      if trigger_removesFromContainer
-        @commander.handleRemovesFromContainer removesFromContainer
+      if trigger_removes
+        @commander.handleRemoves removes
       if trigger_addsToSelectors 
         @commander.handleAddsToSelectors selectorsWithAdds
-      #if trigger_removesBySelector 
-      #  @commander.handleRemovesBySelector removesBySelector
       if trigger
         @solve()
       #console.log "query.observer selector:#{selector}, mutations:", mutations

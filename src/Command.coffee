@@ -139,12 +139,8 @@ class Command
       @spawnableRoots.push root
       @spawn root
     
-  handleRemovesFromContainer: (removesFromContainer) ->
-    command = ['remove']
-    
-    for id in removesFromContainer
-      command.push "$"+id
-    @engine.registerCommand command
+  handleRemoves: (removes) ->
+    @engine.registerCommand ['remove', removes...]
     @
   
 

@@ -217,7 +217,7 @@ describe 'GSS commands', ->
           done()        
       container.addEventListener 'solved', listener
   
-    it 'removed', (done) ->
+    it 'removed from dom', (done) ->
       container.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
@@ -237,13 +237,42 @@ describe 'GSS commands', ->
         count++
         if count is 1
           container.querySelector('[data-gss-id="34222"]').remove()
-        else if count is 2
+        else if count is 2          
           console.log engine.lastCommandsForWorker
           chai.expect(engine.lastCommandsForWorker).to.eql [
               ['remove', '$34222']
             ]
           container.removeEventListener 'solved', listener
           done()        
+      container.addEventListener 'solved', listener
+    
+    it 'removed from selector', (done) ->
+      container.innerHTML = """
+        <div class="box" data-gss-id="12322">One</div>
+        <div class="box" data-gss-id="34222">One</div>
+      """
+      engine.run commands: [
+          ['var', '.box[x]', 'x', ['$class','box']]
+          ['eq', ['get','.box[x]','.box'], ['number',100]]
+        ]
+      chai.expect(engine.lastCommandsForWorker).to.eql [
+          ['var', '$12322[x]', '$12322']
+          ['var', '$34222[x]', '$34222']
+          ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
+          ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
+        ]
+      count = 0
+      listener = (e) ->
+        count++
+        if count is 1
+          el = container.querySelector('[data-gss-id="34222"]')          
+          el.className = el.className.replace(/\bbox\b/,'')
+        else if count is 2          
+          chai.expect(engine.lastCommandsForWorker).to.eql [
+              ['remove', '.box$34222']
+            ]
+          container.removeEventListener 'solved', listener
+          done()
       container.addEventListener 'solved', listener
       
   
