@@ -9,11 +9,11 @@ arrayAddsRemoves = (old, neu) ->
       removes.push o
   return {adds:adds,removes:removes}
 
-class Query  
+class Query
   
   isQuery: true
     
-  constructor: (o={}) ->    
+  constructor: (o={}) ->
     @selector = o.selector or throw new Error "GssQuery must have a selector"
     @createNodeList = o.createNodeList or throw new Error "GssQuery must implement createNodeList()"
     @isMulti = o.isMulti or false

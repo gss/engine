@@ -16,7 +16,7 @@ checkCache = (root,cacheKey) ->
 
 bindRoot = (root, query) ->
   root._is_bound = true
-  if !root._binds? 
+  if !root._binds?
     root._binds = []
     root._boundSelectors = []
   if root._binds.indexOf(query) is -1
@@ -55,16 +55,16 @@ _templateVarIdCache = {
 }
 window._templateVarIdCache = _templateVarIdCache
 
-makeTemplateFromVarId = (varId) ->  
+makeTemplateFromVarId = (varId) ->
   # Ad Hoc Templating!
   if _templateVarIdCache[varId] then return _templateVarIdCache[varId]
   #if varId.indexOf("::window") is 0 then return varId
   #
   templ = varId
   y = varId.split("[")
-  if y[0].length > 1 
+  if y[0].length > 1
     # template just the last []'s, to protect prop selectors
-    y[y.length-2] += "%%" 
+    y[y.length-2] += "%%"
     templ = "%%" + y.join("[")
     _templateVarIdCache[varId] = templ
   return templ
@@ -98,10 +98,10 @@ class Command
   
   _bound_to_window_resize: false
   
-  spawnForWindowWidth: () ->    
+  spawnForWindowWidth: () ->
     @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', window.outerWidth]]
   
-  spawnForWindowHeight: () ->    
+  spawnForWindowHeight: () ->
     @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight]]
   
   spawnForWindowSize: () ->
@@ -113,24 +113,24 @@ class Command
     if @boundWindowProps.indexOf(prop) is -1
       @boundWindowProps.push prop
     if prop is 'width' or prop is 'height'
-      if prop is 'width' then @spawnForWindowWidth() else @spawnForWindowHeight()      
+      if prop is 'width' then @spawnForWindowWidth() else @spawnForWindowHeight()
       if !@_bound_to_window_resize
-        window.addEventListener("resize", @spawnForWindowSize, false)      
+        window.addEventListener("resize", @spawnForWindowSize, false)
         @_bound_to_window_resize = true
-    else if prop is 'x' 
+    else if prop is 'x'
       @engine.registerCommand ['eq', ['get', '::window[x]'], ['number', 0], 'required']
-    else if prop is 'y' 
+    else if prop is 'y'
       @engine.registerCommand ['eq', ['get', '::window[y]'], ['number', 0], 'required']
     #else
-    #  throw new Error "Not sure how to bind to window prop: #{prop}"    
+    #  throw new Error "Not sure how to bind to window prop: #{prop}"
   
   registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->
     if !root._is_bound
       # just pass root through
       @engine.registerCommand root
-    else    
+    else
       if varid
-        bindCache[varid] = root._binds      
+        bindCache[varid] = root._binds
       root._template = JSON.stringify(root)
       root._varid = varid
       root._prop = prop
@@ -165,12 +165,12 @@ class Command
       if q isnt queries.multi
         replaces[q.selector] = q.lastAddedIds[0] # only should be 1 el
     
-    if ready      
+    if ready
       
       # generate commands bound to plural selector
       if queries.multi
         template = rootString.split "%%" + queries.multi.selector + "%%"
-        for id in queries.multi.lastAddedIds          
+        for id in queries.multi.lastAddedIds
           command = template.join "$" + id
           for splitter, joiner of replaces
             command = command.split "%%" + splitter + "%%"
@@ -198,9 +198,9 @@ class Command
   # Variable Commands
   # ------------------------
 
-  'var': (self, varId, prop, query) =>    
+  'var': (self, varId, prop, query) =>
     # clean all but first two
-    self.splice(2,10)    
+    self.splice(2,10)
     if self._is_bound # query?
       # mark for gssId replacement
       self[1] = makeTemplateFromVarId varId

@@ -30,10 +30,10 @@ describe 'Cassowary Thread', ->
         ['var', '[y]', 'y']
         ['eq', ['get','[x]'],['number','100'],'strong']
         ['eq', ['get','[x]'],['number','10'],'medium']
-        ['eq', ['get','[x]'],['number','1'],'weak']                        
-        ['eq', ['get','[y]'],['number','1'],'weak']        
+        ['eq', ['get','[x]'],['number','1'],'weak']
+        ['eq', ['get','[y]'],['number','1'],'weak']
         ['eq', ['get','[y]'],['number','10'],'medium']
-        ['eq', ['get','[y]'],['number','101'],'strong']        
+        ['eq', ['get','[y]'],['number','101'],'strong']
       ]
     values = thread._getValues()
     chai.expect(values).to.eql
@@ -80,7 +80,7 @@ describe 'Cassowary Thread', ->
       commands:[
         ['var', '[x]']
         ['eq', ['get','[x]','x-tracker'],['number','100'],'strong']
-        ['eq', ['get','[x]'],['number','10'],'weak']        
+        ['eq', ['get','[x]'],['number','10'],'weak']
       ]
     chai.expect(thread._getValues()).to.eql
       "[x]": 100

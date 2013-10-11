@@ -53,8 +53,8 @@ describe 'GSS engine', ->
       container.addEventListener "solved", (e) ->
         values = e.detail.values
         chai.expect(values).to.be.an 'object'
-        chai.expect(button1.getBoundingClientRect().width).to.equal 100
-        chai.expect(button2.getBoundingClientRect().width).to.equal 100
+        chai.expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
+        chai.expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
         done()
       engine.onError = (error) ->
         chai.assert("#{event.message} (#{event.filename}:#{event.lineno})").to.equal ''

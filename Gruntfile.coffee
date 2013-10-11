@@ -37,7 +37,12 @@ module.exports = ->
 
     # Syntax checking
     coffeelint:
-      src: ['src/*.coffee', 'src/**/*.coffee']
+      src:
+        files:
+          src: ['src/*.coffee', 'src/**/*.coffee']
+        options:
+          'max_line_length':
+            level: 'ignore'
       spec:
         files:
           src: ['spec/*.coffee']
@@ -133,6 +138,6 @@ module.exports = ->
   @loadNpmTasks 'grunt-saucelabs'
 
   @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
-  @registerTask 'test', ['build',  'mocha_phantomjs']
-  @registerTask 'crossbrowser', ['coffeelint', 'build', 'mocha_phantomjs', 'connect', 'saucelabs-mocha']
+  @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
+  @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

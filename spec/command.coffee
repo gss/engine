@@ -148,7 +148,7 @@ describe 'GSS commands', ->
     
     it '.box[width] == ::window[width]', ->
       container.innerHTML = """
-        <div style="width:111px;" class="box" data-gss-id="12322">One</div>      
+        <div style="width:111px;" class="box" data-gss-id="12322">One</div>
       """
       engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
@@ -164,7 +164,7 @@ describe 'GSS commands', ->
       
     it '::window props', ->
       container.innerHTML = """
-        <div style="width:111px;" class="box" data-gss-id="12322">One</div>      
+        <div style="width:111px;" class="box" data-gss-id="12322">One</div>
       """
       engine.execute [
         ['var', '::window[x]', 'x', ['$reserved','window']]
@@ -214,7 +214,7 @@ describe 'GSS commands', ->
               ['eq', ['get','$35346[x]','.box$35346'], ['number',100]]
             ]
           container.removeEventListener 'solved', listener
-          done()        
+          done()
       container.addEventListener 'solved', listener
   
     it 'removed from dom', (done) ->
@@ -236,13 +236,14 @@ describe 'GSS commands', ->
       listener = (e) ->
         count++
         if count is 1
-          container.querySelector('[data-gss-id="34222"]').remove()
-        else if count is 2          
-          chai.expect(engine.lastCommandsForWorker).to.eql [
-              ['remove', '$34222']
-            ]
+          res = container.querySelector('[data-gss-id="34222"]')
+          res.parentNode.removeChild res
+        else if count is 2
+          chai.expect(engine.lastCommandsForWorker[engine.lastCommandsForWorker.length - 1]).to.eql [
+            'remove', '$34222'
+          ]
           container.removeEventListener 'solved', listener
-          done()        
+          done()
       container.addEventListener 'solved', listener
     
     it 'removed from selector', (done) ->
@@ -264,9 +265,9 @@ describe 'GSS commands', ->
       listener = (e) ->
         count++
         if count is 1
-          el = container.querySelector('[data-gss-id="34222"]')          
+          el = container.querySelector('[data-gss-id="34222"]')
           el.className = el.className.replace(/\bbox\b/,'')
-        else if count is 2          
+        else if count is 2
           chai.expect(engine.lastCommandsForWorker).to.eql [
               ['remove', '.box$34222']
             ]
@@ -275,7 +276,7 @@ describe 'GSS commands', ->
       container.addEventListener 'solved', listener
       
   
-  describe 'live command perfs', ->       
+  describe 'live command perfs', ->
     it '100 at once', (done) ->
       count = 0
       
@@ -305,7 +306,7 @@ describe 'GSS commands', ->
       
       listener = (e) ->
         container.removeEventListener 'solved', listener
-        done()      
+        done()
       container.addEventListener 'solved', listener
       
     it '100 serially', (done) ->
@@ -318,7 +319,7 @@ describe 'GSS commands', ->
         ]
       count = 0
       listener = (e) ->
-        count++        
+        count++
         container.insertAdjacentHTML 'beforeend', """
             <div class='box' data-gss-id='35346#{count}'>One</div>
           """

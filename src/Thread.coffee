@@ -25,7 +25,7 @@ class Thread
     # recursive excution
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
-        node.splice i+1,1,@_execute sub, root 
+        node.splice i+1,1,@_execute sub, root
     return func.call @, root, node[1...node.length]...
 
   _getValues: () ->
@@ -112,8 +112,8 @@ class Thread
   _addConstraint: (root, constraint) =>
     @solver.addConstraint constraint
     if root._is_tracked
-      for tracker in root._trackers        
-        if !@constraintsByTracker[tracker] then @constraintsByTracker[tracker] = [] 
+      for tracker in root._trackers
+        if !@constraintsByTracker[tracker] then @constraintsByTracker[tracker] = []
         @constraintsByTracker[tracker].push constraint
     return constraint
   
