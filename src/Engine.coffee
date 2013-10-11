@@ -5,7 +5,9 @@ Get = require("./dom/Getter.js")
 Set = require("./dom/Setter.js")
 Command = require("./Command.js")
 
-
+# Polyfill
+unless window.MutationObserver
+  window.MutationObserver = window.JsMutationObserver
 
 arrayAddsRemoves = (old, neu, removesFromContainer) ->
   adds = []
@@ -36,7 +38,7 @@ class Engine
     @queryCache = {}
     
     # MutationObserver
-    # 
+    #
     # - removed in stop
     #
     @observer = new MutationObserver (mutations) =>
@@ -53,9 +55,9 @@ class Engine
       for m in mutations
         if m.removedNodes.length > 0 # nodelist are weird?
           for node in m.removedNodes
-            gid = GSS.getId node            
+            gid = GSS.getId node
             if gid?
-              if GSS.getById gid      
+              if GSS.getById gid
                 removes.push("$" + gid)
                 trigger = true
                 trigger_removesFromContainer = true
@@ -86,8 +88,8 @@ class Engine
             # ignore redudant removes
             for rid in removedIds
               rid = "$" + rid
-              if trigger_removesFromContainer             
-                if removes.indexOf(rid) is -1 
+              if trigger_removesFromContainer
+                if removes.indexOf(rid) is -1
                   removes.push(selector + rid) # .box$3454
               else
                 removes.push(selector + rid)
@@ -107,7 +109,7 @@ class Engine
 
       if trigger_removes
         @commander.handleRemoves removes
-      if trigger_addsToSelectors 
+      if trigger_addsToSelectors
         @commander.handleAddsToSelectors selectorsWithAdds
       if trigger
         @solve()
@@ -180,7 +182,7 @@ class Engine
     unless @worker
       @worker = new Worker @workerPath
       @worker.addEventListener "message", @handleWorkerMessage, false
-      @worker.addEventListener "error", @handleError, false    
+      @worker.addEventListener "error", @handleError, false
     @worker.postMessage
       ast: ast
     @resetCommandsForWorker()
@@ -192,7 +194,7 @@ class Engine
     @unobserve()
     if @worker
       @worker.terminate()
-    for selector, query of @queryCache      
+    for selector, query of @queryCache
       delete query.nodeList
       delete query.ids
       delete @query

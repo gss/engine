@@ -15,6 +15,8 @@
   },
   "files": [
     "vendor/observe.js",
+    "vendor/sidetable.js",
+    "vendor/MutationObserver.js",
     "worker/gss-solver.js"
   ],
   "main": "lib/Engine.js"
