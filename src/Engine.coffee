@@ -25,7 +25,7 @@ arrayAddsRemoves = (old, neu, removesFromContainer) ->
 
 
 class Engine
-  
+
   constructor: (@workerPath, @container) ->
     @container = document unless @container
     @commander = new Command(@)
@@ -36,93 +36,94 @@ class Engine
     @commandsForWorker = []
     @lastCommandsForWorker = null
     @queryCache = {}
-    
+
     # MutationObserver
     #
     # - removed in stop
     #
-    @observer = new MutationObserver (mutations) =>
-      
-      trigger = false
-      trigger_removes = false
-      trigger_removesFromContainer = false
-      trigger_addsToSelectors = false
-      
-      removes = []
-      
-      # els removed from container
-      removesFromContainer = []
-      for m in mutations
-        if m.removedNodes.length > 0 # nodelist are weird?
-          for node in m.removedNodes
-            gid = GSS.getId node
-            if gid?
-              if GSS.getById gid
-                removes.push("$" + gid)
-                trigger = true
-                trigger_removesFromContainer = true
-                trigger_removes = true
-                
-                
-      GSS._ids_killed removes
+    @observer = new MutationObserver @_handleMutations
+    @
 
-      # els added or removed from queries
-      selectorsWithAdds = []
-      addsBySelector = {}
-      # removesBySelector = {}
-      # selectorsWithShuffles = []
-      # shufflesByQuery = {} ?
-      for selector, query of @queryCache
-        query.update()
-        # TODO: callback?
-        if query.changedLastUpdate
-          if query.lastAddedIds.length > 0
-            selectorsWithAdds.push selector
-            addsBySelector[selector] = query.lastAddedIds
-            trigger = true
-            trigger_addsToSelectors = true
-          if query.lastRemovedIds.length > 0
-            trigger = true
-            trigger_removes = true
-            removedIds = query.lastRemovedIds
-            # ignore redudant removes
-            for rid in removedIds
-              rid = "$" + rid
-              if trigger_removesFromContainer
-                if removes.indexOf(rid) is -1
-                  removes.push(selector + rid) # .box$3454
-              else
-                removes.push(selector + rid)
-      ###
-      if trigger
-        e = new CustomEvent "solverinvalidated",
-          detail:
-            addsBySelector: addsBySelector
-            removesBySelector: removesBySelector
-            removesFromContainer: removesFromContainer
-            selectorsWithAdds: selectorsWithAdds
-            engine: @
-          bubbles: true
-          cancelable: true
-        @container.dispatchEvent e
-      ###
-
-      if trigger_removes
-        @commander.handleRemoves removes
-      if trigger_addsToSelectors
-        @commander.handleAddsToSelectors selectorsWithAdds
-      if trigger
-        @solve()
-      #console.log "query.observer selector:#{selector}, mutations:", mutations
-      #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds
-        
   _is_observing: false
-  
+
+  _handleMutations: (mutations=[]) =>
+    trigger = false
+    trigger_removes = false
+    trigger_removesFromContainer = false
+    trigger_addsToSelectors = false
+
+    removes = []
+
+    # els removed from container
+    removesFromContainer = []
+    for m in mutations
+      if m.removedNodes.length > 0 # nodelist are weird?
+        for node in m.removedNodes
+          gid = GSS.getId node
+          if gid?
+            if GSS.getById gid
+              removes.push("$" + gid)
+              trigger = true
+              trigger_removesFromContainer = true
+              trigger_removes = true
+
+    # clean up ids
+    GSS._ids_killed removes
+
+    # els added or removed from queries
+    selectorsWithAdds = []
+    addsBySelector = {}
+    # selectorsWithShuffles = []
+    # shufflesByQuery = {} ?
+    for selector, query of @queryCache
+      query.update()
+      # TODO: callback?
+      if query.changedLastUpdate
+        if query.lastAddedIds.length > 0
+          selectorsWithAdds.push selector
+          addsBySelector[selector] = query.lastAddedIds
+          trigger = true
+          trigger_addsToSelectors = true
+        if query.lastRemovedIds.length > 0
+          trigger = true
+          trigger_removes = true
+          removedIds = query.lastRemovedIds
+          # ignore redudant removes
+          for rid in removedIds
+            rid = "$" + rid
+            if trigger_removesFromContainer
+              if removes.indexOf(rid) is -1
+                removes.push(selector + rid) # .box$3454
+            else
+              removes.push(selector + rid)
+    ###
+    if trigger
+      e = new CustomEvent "solverinvalidated",
+        detail:
+          addsBySelector: addsBySelector
+          removesBySelector: removesBySelector
+          removesFromContainer: removesFromContainer
+          selectorsWithAdds: selectorsWithAdds
+          engine: @
+        bubbles: true
+        cancelable: true
+      @container.dispatchEvent e
+    ###
+
+    if trigger_removes
+      @commander.handleRemoves removes
+    if trigger_addsToSelectors
+      @commander.handleAddsToSelectors selectorsWithAdds
+    if trigger
+      @solve()
+    #console.log "query.observer selector:#{selector}, mutations:", mutations
+    #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds
+
   observe:() ->
     if !@_is_observing
       @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: false})
       @_is_observing = true
-      
+
   unobserve: () ->
     @_is_observing = false
     @observer.disconnect()
@@ -132,7 +133,7 @@ class Engine
     @execute ast.commands
     @solve()
     @observe()
-  
+
   teardown: ->
     # stop observer
     # stop commands
@@ -143,7 +144,7 @@ class Engine
   measureByGssId: (id, prop) ->
     el = GSS.getById id
     @measure el, prop
-    
+
   resetCommandsForWorker: () =>
     @lastCommandsForWorker = @commandsForWorker
     @commandsForWorker = []
@@ -162,7 +163,7 @@ class Engine
           console.log "Element wasn't found"
     @observe()
     @dispatch_solved values
-    
+
 
   dispatch_solved: (values) =>
     e = new CustomEvent "solved",
@@ -186,8 +187,8 @@ class Engine
     @worker.postMessage
       ast: ast
     @resetCommandsForWorker()
-    
-      
+
+
   stopped: false
   stop: ->
     if @stopped then return @
@@ -199,18 +200,18 @@ class Engine
       delete query.ids
       delete @query
     @stopped = true
-  
+
   # digestCommands
   execute: (commands) =>
     @commander.execute commands
 
   _addVarCommandsForElements: (elements) ->
     @commandsForWorker.push "var", el.id + prop
-    
+
   registerCommands: (commands) ->
     for command in commands
       @registerCommand command
-            
+
   registerCommand: (command) ->
     # TODO: treat commands as strings and check cache for dups?
     @commandsForWorker.push command

@@ -145,7 +145,7 @@ describe 'GSS commands', ->
         ['eq', ['get','$34222[width]','.box$34222'],['get','$34222[intrinsic-width]','.box$34222']]
         ['eq', ['get','$35346[width]','.box$35346'],['get','$35346[intrinsic-width]','.box$35346']]
       ]
-    
+
     it '.box[width] == ::window[width]', ->
       container.innerHTML = """
         <div style="width:111px;" class="box" data-gss-id="12322">One</div>
@@ -161,7 +161,7 @@ describe 'GSS commands', ->
         ['suggest', ['get','::window[width]'], ['number', window.outerWidth]]
         ['eq', ['get','$12322[width]','.box$12322'],['get','::window[width]']]
       ]
-      
+
     it '::window props', ->
       container.innerHTML = """
         <div style="width:111px;" class="box" data-gss-id="12322">One</div>
@@ -182,12 +182,12 @@ describe 'GSS commands', ->
         ['var', '::window[height]']
         ['suggest', ['get','::window[height]'], ['number', window.outerHeight]]
       ]
-  
+
   #
   #
   #
   describe 'live command spawning -', ->
-    
+
     it 'add to class', (done) ->
       container.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
@@ -216,7 +216,7 @@ describe 'GSS commands', ->
           container.removeEventListener 'solved', listener
           done()
       container.addEventListener 'solved', listener
-  
+
     it 'removed from dom', (done) ->
       container.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
@@ -239,13 +239,13 @@ describe 'GSS commands', ->
           res = container.querySelector('[data-gss-id="34222"]')
           res.parentNode.removeChild res
         else if count is 2
-          chai.expect(engine.lastCommandsForWorker[engine.lastCommandsForWorker.length - 1]).to.eql [
-            'remove', '$34222'
+          chai.expect(engine.lastCommandsForWorker).to.eql [
+            ['remove', '$34222'] # this should be the only command
           ]
           container.removeEventListener 'solved', listener
           done()
       container.addEventListener 'solved', listener
-    
+
     it 'removed from selector', (done) ->
       container.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
@@ -267,6 +267,10 @@ describe 'GSS commands', ->
         if count is 1
           el = container.querySelector('[data-gss-id="34222"]')
           el.className = el.className.replace(/\bbox\b/,'')
+          # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          # JSMutationObserver on Phantom doesn't trigger mutation
+          engine._handleMutations()
+          # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         else if count is 2
           chai.expect(engine.lastCommandsForWorker).to.eql [
               ['remove', '.box$34222']
@@ -274,12 +278,12 @@ describe 'GSS commands', ->
           container.removeEventListener 'solved', listener
           done()
       container.addEventListener 'solved', listener
-      
+
   
   describe 'live command perfs', ->
     it '100 at once', (done) ->
       count = 0
-      
+
       innerHTML = """
           <div class='box' data-gss-id='35346#{count++}'>One</div>     <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>   <div class='box' data-gss-id='35346#{count++}'>One</div>
           <div class='box' data-gss-id='21823#{count++}'>One</div>     <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>   <div class='box' data-gss-id='21823#{count++}'>One</div>
@@ -293,22 +297,22 @@ describe 'GSS commands', ->
           <div class='box' data-gss-id='39346#{count++}'>One</div>     <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>   <div class='box' data-gss-id='39346#{count++}'>One</div>
           <div class='box' data-gss-id='20123#{count++}'>One</div>     <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>   <div class='box' data-gss-id='20123#{count++}'>One</div>
           <div class='box' data-gss-id='21123#{count++}'>One</div>     <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>   <div class='box' data-gss-id='21123#{count++}'>One</div>
-        
-          
+
+
       """
       container.innerHTML = innerHTML
-      
+
       engine.run commands: [
           ['var', '.box[width]', 'width', ['$class','box']]
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
           ['eq', ['get','.box[width]','box'],['get','.box[intrinsic-width]','.box']]
         ]
-      
+
       listener = (e) ->
         container.removeEventListener 'solved', listener
         done()
       container.addEventListener 'solved', listener
-      
+
     it '100 serially', (done) ->
       container.innerHTML = """
       """
@@ -326,8 +330,6 @@ describe 'GSS commands', ->
         if count is 100
           container.removeEventListener 'solved', listener
           done()
-      
+
       container.addEventListener 'solved', listener
-        
-      
-      
+
