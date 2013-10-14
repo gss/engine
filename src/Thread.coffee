@@ -98,7 +98,7 @@ class Thread
     return c.minus e1, e2
 
   multiply: (root,e1,e2) ->
-    return c.plus e1, e2
+    return c.times e1, e2
 
   divide: (root,e1,e2,s,w) ->
     return c.divide e1, e2
