@@ -87,7 +87,7 @@ describe 'GSS engine', ->
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-    it 'engine.vars are updated with multiple suggests', (done) ->
+    it 'engine.vars are updated after many suggests', (done) ->
       engine.run 
         commands: [
           ['var', '[col-width]']
@@ -95,7 +95,7 @@ describe 'GSS engine', ->
           ['eq', ['get', '[col-width]'], ['number',100], 'strong']
           ['eq', ['get', '[row-height]'], ['number',50], 'strong']
           ['suggest', ['get', '[col-width]'], 10]
-          ['suggest', ['get', '[row-height]'], 5]
+          ['suggest', '[row-height]', 5]
         ]
       container.innerHTML = ""
       count = 0
@@ -109,13 +109,22 @@ describe 'GSS engine', ->
             '[row-height]': 5
           engine.run 
             commands: [
-              ['suggest', ['get', '[col-width]'], 1]
+              ['suggest', '[col-width]', 1]
               ['suggest', ['get', '[row-height]'], .5]
             ]
-        if count is 2
+        else if count is 2
           chai.expect(engine.vars).to.eql 
             '[col-width]': 1
             '[row-height]': .5
+          engine.run 
+            commands: [
+              ['suggest', '[col-width]', 333]
+              ['suggest', '[row-height]', 222]
+            ]
+        else if count is 3
+          chai.expect(engine.vars).to.eql 
+            '[col-width]': 333
+            '[row-height]': 222
           container.removeEventListener 'solved', onSolved
           done()
       container.addEventListener 'solved', onSolved

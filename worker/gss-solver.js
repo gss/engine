@@ -223,6 +223,9 @@ Thread = (function() {
   };
 
   Thread.prototype.suggest = function(self, varr, val, strength) {
+    if (typeof varr === 'string') {
+      varr = this.get(self, varr);
+    }
     this._editvar(varr, strength);
     return this.solver.suggestValue(varr, val);
   };

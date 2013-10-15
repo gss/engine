@@ -142,8 +142,10 @@ class Thread
   # Todo
   # - track edit constraints... c.EditConstraint
   suggest: (self, varr, val, strength) =>
+    
+    if typeof varr is 'string' then varr = @get(self, varr)
+    
     # beiginEdit?
-        
     @_editvar varr, strength
     @solver.suggestValue varr, val
     #setEditedValue
