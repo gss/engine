@@ -1,8 +1,21 @@
 class Setter
+  
   constructor: (@container) ->
     @container = document unless @container
-
-  set: (element, dimension, value) ->
+  
+  set: (vars) ->
+    for key,val of vars
+      if key[0] is "$"
+        gid = key.substring(1, key.indexOf("["))
+        dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))
+        element = GSS.getById gid
+        if element
+          #element.style[dimension] = val
+          @elementSet element, dimension, val
+        else
+          console.log "Element wasn't found"
+  
+  elementSet: (element, dimension, value) ->
     switch dimension
       when 'width', 'w'
         @setWidth element, value
@@ -45,5 +58,23 @@ class Setter
     @makePositioned element
     offsets = @getOffsets element
     element.style.top = "#{value - offsets.y}px"
+  
+  ###
+  setwithStyleTag: (vars) =>
+    if !@_has_setVars_styleTag
+      @_has_setVars_styleTag = true
+      @container.insertAdjacentHTML('afterbegin','<style data-gss-generated></style>')
+      @generatedStyle = @container.childNodes[0]
+    html = ""    
+    for key of vars
+      if key[0] is "$"
+        gid = key.substring(1, key.indexOf("["))
+        dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))
+        html += "[data-gss-id=\"#{gid}\"]{#{dimension}:#{vars[key]}px !important;}"
+    #@generatedStyle.textContent = html
+    @generatedStyle.innerHTML = html
+    #console.log @container.childNodes
+    #@container.insertAdjacentHTML 'afterbegin', html
+  ###
 
 module.exports = Setter

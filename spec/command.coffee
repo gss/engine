@@ -260,7 +260,7 @@ describe 'GSS commands', ->
           ['var', '$34222[x]', '$34222']
           ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
           ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
-        ]
+        ]      
       count = 0
       listener = (e) ->
         count++
@@ -283,7 +283,7 @@ describe 'GSS commands', ->
   describe 'live command perfs', ->
     it '100 at once', (done) ->
       count = 0
-
+      
       innerHTML = """
           <div class='box' data-gss-id='35346#{count++}'>One</div>     <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>   <div class='box' data-gss-id='35346#{count++}'>One</div>
           <div class='box' data-gss-id='21823#{count++}'>One</div>     <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>   <div class='box' data-gss-id='21823#{count++}'>One</div>
@@ -307,7 +307,7 @@ describe 'GSS commands', ->
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
           ['eq', ['get','.box[width]','box'],['get','.box[intrinsic-width]','.box']]
         ]
-
+        
       listener = (e) ->
         container.removeEventListener 'solved', listener
         done()
@@ -327,6 +327,7 @@ describe 'GSS commands', ->
         container.insertAdjacentHTML 'beforeend', """
             <div class='box' data-gss-id='35346#{count}'>One</div>
           """
+        #console.log count
         if count is 100
           container.removeEventListener 'solved', listener
           done()

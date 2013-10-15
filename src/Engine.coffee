@@ -1,8 +1,8 @@
 require("customevent-polyfill")
 require("./GSS-id.js")
-Query = require("./Query.js")
+Query = require("./dom/Query.js")
 Get = require("./dom/Getter.js")
-Set = require("./dom/Setter.js")
+Setter = require("./dom/Setter.js")
 Command = require("./Command.js")
 
 # Polyfill
@@ -32,7 +32,7 @@ class Engine
     @commander = new Command(@)
     @worker = null
     @getter = new Get(@container)
-    @setter = new Set(@container)
+    @setter = new Setter(@container)
     #
     @commandsForWorker = []
     @lastCommandsForWorker = null
@@ -154,18 +154,10 @@ class Engine
     @unobserve()
     values = message.data.values
     for key,val of values
-      @vars[key] = val 
-      if key[0] is "$"
-        gid = key.substring(1, key.indexOf("["))
-        dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))
-        element = GSS.getById gid
-        if element
-          @setter.set element, dimension, values[key]
-        else
-          console.log "Element wasn't found"
+      @vars[key] = val
+    @setter.set values
     @observe()
-    @dispatch_solved values
-
+    @dispatch_solved values    
 
   dispatch_solved: (values) =>
     e = new CustomEvent "solved",

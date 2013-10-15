@@ -22,45 +22,45 @@ describe 'DOM Setter', ->
     button = null
     it 'should be able to set the width', ->
       button = container.querySelector '#sizedButton'
-      set.set button, 'width', 200
+      set.elementSet button, 'width', 200
       chai.expect(Math.floor(button.getBoundingClientRect().width)).to.equal 200
       # Test the shorthand too
-      set.set button, 'w', 100
+      set.elementSet button, 'w', 100
       chai.expect(Math.floor(button.getBoundingClientRect().width)).to.equal 100
     it 'should be able to set the height', ->
-      set.set button, 'height', 200
+      set.elementSet button, 'height', 200
       chai.expect(Math.floor(button.getBoundingClientRect().height)).to.equal 200
       # Test the shorthand too
-      set.set button, 'h', 50
+      set.elementSet button, 'h', 50
       chai.expect(Math.floor(button.getBoundingClientRect().height)).to.equal 50
 
   describe 'positioning a button', ->
     button = null
     it 'should be able to set the left', ->
       button = container.querySelector '#posButton'
-      set.set button, 'left', -300
+      set.elementSet button, 'left', -300
       chai.expect(Math.ceil(button.getBoundingClientRect().left)).to.equal -300
       # Test the shorthand too
-      set.set button, 'x', -400
+      set.elementSet button, 'x', -400
       chai.expect(Math.ceil(button.getBoundingClientRect().left)).to.equal -400
     it 'should be able to set the top', ->
-      set.set button, 'top', 50
+      set.elementSet button, 'top', 50
       chai.expect(Math.floor(button.getBoundingClientRect().top)).to.equal 50
       # Test the shorthand too
-      set.set button, 'y', 100
+      set.elementSet button, 'y', 100
       chai.expect(Math.floor(button.getBoundingClientRect().top)).to.equal 100
 
   describe 'positioning a button with inherited offsets', ->
     button = null
     it 'should be able to set the left', ->
       button = container.querySelector '#childPosButton'
-      set.set button, 'left', -300
+      set.elementSet button, 'left', -300
       # Offset relative to positioning parent
       chai.expect(button.offsetLeft).to.equal 200
       # Offset relative to document
       chai.expect(Math.floor(button.getBoundingClientRect().left)).to.equal -300
     it 'should be able to set the top', ->
-      set.set button, 'top', 50
+      set.elementSet button, 'top', 50
       # Offset relative to positioning parent
       chai.expect(button.offsetTop).to.equal 10
       # Offset relative to document

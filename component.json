@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": [
     "lib/GSS-id.js",
-    "lib/Query.js",
+    "lib/dom/Query.js",
     "lib/Engine.js",
     "lib/Command.js",  
     "lib/dom/Getter.js",
