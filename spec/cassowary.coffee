@@ -37,6 +37,38 @@ describe 'Cassowary', ->
     expect(x.value).to.equal 7
     expect(y.value).to.equal 5
     expect(z.value).to.equal 2
+  it 'plus expression', ->
+    solver = new c.SimplexSolver()
+    solver.autoSolve = false
+    aw = new c.Variable()
+    tw = new c.Variable()
+    pad = new c.Variable()    
+    eq1 = new c.Equation(tw,100,c.Strength.required)
+    eq2 = new c.Equation(aw,c.plus(tw,pad),c.Strength.required)
+    eq3 = new c.Equation(pad,2,c.Strength.required)
+    solver.addConstraint(eq1).addConstraint(eq2).addConstraint(eq3)
+    solver.solve()
+    expect(aw.value).to.equal 102
+    expect(tw.value).to.equal 100
+    expect(pad.value).to.equal 2
+  it 'times expression', ->
+    solver = new c.SimplexSolver()
+    solver.autoSolve = false
+    aw = new c.Variable()
+    tw = new c.Variable()
+    zoom = new c.Variable()    
+    solver.addEditVar(zoom)
+    solver.beginEdit()
+    solver.suggestValue(zoom,2)
+    solver.solve()
+    # setting value on zoom so equation can be linear
+    eq1 = new c.Equation(tw,100,c.Strength.required)
+    eq2 = new c.Equation(aw,c.times(tw,zoom.value),c.Strength.required)
+    solver.addConstraint(eq1).addConstraint(eq2)
+    solver.solve()
+    expect(aw.value).to.equal 200
+    expect(tw.value).to.equal 100
+    expect(zoom.value).to.equal 2
   it 'hierarchy', ->
     solver = new c.SimplexSolver()
     solver.autoSolve = false

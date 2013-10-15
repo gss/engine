@@ -8,7 +8,7 @@ class Thread
     @varIdsByTracker = {}
     @
     
-  unparse: (ast) =>
+  execute: (ast) =>
     for command in ast.commands
       @_execute command, command
     #
@@ -21,7 +21,7 @@ class Thread
     node = command
     func = @[node[0]]
     if !func?
-      throw new Error("Thread unparse broke, couldn't find method: #{node[0]}")
+      throw new Error("Thread.execute broke, couldn't find method: #{node[0]}")
     # recursive excution
     for sub, i in node[1..node.length]
       if sub instanceof Array # then recurse
@@ -143,8 +143,10 @@ class Thread
   # - track edit constraints... c.EditConstraint
   suggest: (self, varr, val, strength) =>
     # beiginEdit?
+        
     @_editvar varr, strength
     @solver.suggestValue varr, val
+    #setEditedValue
 
   # Todo
   # - track stay constraints... c.StayConstraint

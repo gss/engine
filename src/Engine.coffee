@@ -27,6 +27,7 @@ arrayAddsRemoves = (old, neu, removesFromContainer) ->
 class Engine
 
   constructor: (@workerPath, @container) ->
+    @vars = {}
     @container = document unless @container
     @commander = new Command(@)
     @worker = null
@@ -152,7 +153,8 @@ class Engine
   handleWorkerMessage: (message) =>
     @unobserve()
     values = message.data.values
-    for key of values
+    for key,val of values
+      @vars[key] = val 
       if key[0] is "$"
         gid = key.substring(1, key.indexOf("["))
         dimension = key.substring(key.indexOf("[")+1, key.indexOf("]"))

@@ -3,7 +3,7 @@ w = new Thread()
 self.onmessage = (m) ->
   ast = m.data.ast
   
-  w.unparse ast
+  w.execute ast
   
   self.postMessage({values:w._getValues()})
   

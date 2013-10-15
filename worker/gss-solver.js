@@ -36,7 +36,7 @@ Thread = (function() {
     this.eq = __bind(this.eq, this);
     this._addConstraint = __bind(this._addConstraint, this);
     this._execute = __bind(this._execute, this);
-    this.unparse = __bind(this.unparse, this);
+    this.execute = __bind(this.execute, this);
     this.cachedVars = {};
     this.solver = new c.SimplexSolver();
     this.solver.autoSolve = false;
@@ -45,7 +45,7 @@ Thread = (function() {
     this;
   }
 
-  Thread.prototype.unparse = function(ast) {
+  Thread.prototype.execute = function(ast) {
     var command, _i, _len, _ref, _results;
     _ref = ast.commands;
     _results = [];
@@ -61,7 +61,7 @@ Thread = (function() {
     node = command;
     func = this[node[0]];
     if (func == null) {
-      throw new Error("Thread unparse broke, couldn't find method: " + node[0]);
+      throw new Error("Thread.execute broke, couldn't find method: " + node[0]);
     }
     _ref = node.slice(1, +node.length + 1 || 9e9);
     for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
@@ -269,7 +269,7 @@ w = new Thread();
 self.onmessage = function(m) {
   var ast;
   ast = m.data.ast;
-  w.unparse(ast);
+  w.execute(ast);
   return self.postMessage({
     values: w._getValues()
   });

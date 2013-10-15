@@ -3,7 +3,7 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
   it '[x]==7; [y]==5; [x] - [y] == [z] // z is 2', (done) ->
     thread = new Thread()
-    thread.unparse
+    thread.execute
       commands:
         [
           ['var', 'x']
@@ -24,7 +24,7 @@ describe 'Cassowary Thread', ->
   
   it 'hierarchy', (done) ->
     thread = new Thread()
-    thread.unparse
+    thread.execute
       commands:[
         ['var', '[x]', 'x']
         ['var', '[y]', 'y']
@@ -43,7 +43,7 @@ describe 'Cassowary Thread', ->
 
   it '$12322[width] == [grid-col]; ...', (done) ->
     thread = new Thread()
-    thread.unparse
+    thread.execute
       commands:[
         ['var', '$12322[width]']
         ['var', '$34222[width]']
@@ -57,10 +57,46 @@ describe 'Cassowary Thread', ->
       "$34222[width]": 100
       "[grid-col]": 100
     done()
+  
+  it 'Serial Suggests with plus expression', (done) ->
+    thread = new Thread()
+    thread.execute
+      commands:[
+        ['var', '[actual-width]']
+        ['var', '[target-width]']
+        ['var', '[pad]']
+        ['eq', ['plus',['get','[target-width]'],['get','[pad]']], ['get','[actual-width]']]
+        ['eq', ['get','[target-width]'],['number',100], 'required']
+        ['suggest', ['get','[pad]'],1]
+      ]
+    chai.expect(thread._getValues()).to.eql
+      "[target-width]": 100
+      "[actual-width]": 101
+      "[pad]": 1
+    thread.execute
+      commands:[
+        ['suggest', ['get','[pad]'],2]
+      ]
+    chai.expect(thread._getValues()).to.eql
+      "[target-width]": 100
+      "[actual-width]": 102
+      "[pad]": 2
+    done()
+    thread.execute
+      commands:[
+        ['suggest', ['get','[pad]'],3]
+        ['suggest', ['get','[pad]'],4]
+      ]
+    chai.expect(thread._getValues()).to.eql
+      "[target-width]": 100
+      "[actual-width]": 104
+      "[pad]": 4
+    done()
+  
 
   it 'intrinsic mock', (done) ->
     thread = new Thread()
-    thread.unparse
+    thread.execute
       commands:[
         ['var', '[width]']
         ['var', '[intrinsic-width]']
@@ -76,7 +112,7 @@ describe 'Cassowary Thread', ->
   
   it 'tracking & removing by get tracker', (done) ->
     thread = new Thread()
-    thread.unparse
+    thread.execute
       commands:[
         ['var', '[x]']
         ['eq', ['get','[x]','x-tracker'],['number','100'],'strong']
@@ -84,7 +120,7 @@ describe 'Cassowary Thread', ->
       ]
     chai.expect(thread._getValues()).to.eql
       "[x]": 100
-    thread.unparse
+    thread.execute
       commands:[
         ['remove', 'x-tracker']
       ]
@@ -94,7 +130,7 @@ describe 'Cassowary Thread', ->
   
   it 'tracking & removing by var tracker', (done) ->
     thread = new Thread()
-    thread.unparse
+    thread.execute
       commands:[
         ['var', '[x]', 'x-tracker']
         ['var', '[y]']
@@ -105,7 +141,7 @@ describe 'Cassowary Thread', ->
     chai.expect(thread._getValues()).to.eql
       "[x]": 100
       "[y]": 50
-    thread.unparse
+    thread.execute
       commands:[
         ['remove', 'x-tracker']
       ]

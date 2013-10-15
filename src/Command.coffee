@@ -244,7 +244,12 @@ class Command
 
   # Constraints Commands
   # ------------------------
-
+  
+  'suggest': () =>
+    # pass through    
+    args = [arguments...]
+    @engine.registerCommand ['suggest', args[1...args.length]...]
+    
   'eq': (self,e1,e2,s,w) =>
     @registerSpawn(self)
 
