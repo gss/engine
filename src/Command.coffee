@@ -27,20 +27,6 @@ bindRoot = (root, query) ->
         throw new Error "Multi el queries only allowed once per statement"
       root._binds.multi = query
 
-        
-getSuggestValueCommand = (gssId, prop, val, selector) ->
-  return ['suggest', ['get', "$#{gssId}[#{prop}]", "#{selector}$#{gssId}"], ['number', val]]
-
-checkIntrinsics = (root, engine, varId, prop, query) ->
-  # TODO
-  # - Respawn by observing query.lastAddedIds
-  # - dedup when el matches mult selectors with intrinsics
-  if query? # only if bound to dom query
-    if prop.indexOf("intrinsic-") is 0
-      for id in query.lastAddedIds
-        val = engine.measureByGssId(id, prop.split("intrinsic-")[1])
-        engine.registerCommand getSuggestValueCommand id, prop, val, query.selector
-
 # - preload cache for pass-throughs
 # - global cache, kinda dangerous?
 # TODO:
@@ -71,16 +57,17 @@ makeTemplateFromVarId = (varId) ->
 
 # transforms & generates needed commands for engine
 class Command
-  
+
   constructor: (engine) ->
     @spawnableRoots = []
+    @intrinsicRegistersById = {}
     @boundWindowProps = []
     @engine = engine
-  
+
   execute: (commands) ->
     for command in commands
       @_execute command, command
-  
+
   _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
     node = command
     func = @[node[0]]
@@ -91,24 +78,24 @@ class Command
       if sub instanceof Array # then recurse
         node.splice i+1,1,@_execute sub, root
     return func.call @engine, root, node[1...node.length]...
-  
+
   teardown: ->
     if !@_bound_to_window_resize
       window.removeEventListener("resize", @spawnForWindowSize, false)
-  
+
   _bound_to_window_resize: false
-  
+
   spawnForWindowWidth: () ->
     @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', window.outerWidth]]
-  
+
   spawnForWindowHeight: () ->
     @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight]]
-  
+
   spawnForWindowSize: () ->
     if @_bound_to_window_resize
       if @boundWindowProps.indexOf('width') isnt -1 then @spawnForWindowWidth()
       if @boundWindowProps.indexOf('height') isnt -1 then @spawnForWindowHeight()
-      
+
   bindToWindow: (prop) ->
     if @boundWindowProps.indexOf(prop) is -1
       @boundWindowProps.push prop
@@ -123,7 +110,7 @@ class Command
       @engine.registerCommand ['eq', ['get', '::window[y]'], ['number', 0], 'required']
     #else
     #  throw new Error "Not sure how to bind to window prop: #{prop}"
-  
+
   registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->
     if !root._is_bound
       # just pass root through
@@ -134,17 +121,21 @@ class Command
       root._template = JSON.stringify(root)
       root._varid = varid
       root._prop = prop
-      root._checkInstrinsics = checkInstrinsics
-      root._intrinsicQuery = intrinsicQuery
+      if checkInstrinsics
+        root._checkInstrinsics = checkInstrinsics
+        root._intrinsicQuery = intrinsicQuery
       @spawnableRoots.push root
       @spawn root
-    
-  handleRemoves: (removes) ->
-    @engine.registerCommand ['remove', removes...]
-    @
-  
 
-  handleAddsToSelectors: (selectorsWithAdds) ->
+  handleRemoves: (removes) ->
+    if (removes.length < 1) then return @    
+    @engine.registerCommand ['remove', removes...]
+    for varid in removes
+      delete @intrinsicRegistersById[varid]
+    @
+
+  handleSelectorsWithAdds: (selectorsWithAdds) ->
+    if (selectorsWithAdds.length < 1) then return @
     for root in @spawnableRoots
       for boundSelector in root._boundSelectors
         if selectorsWithAdds.indexOf(boundSelector) isnt -1
@@ -152,21 +143,49 @@ class Command
           break
     @
   
+  handleInvalidMeasures: (invalidMeasures) ->
+    if (invalidMeasures.length < 1) then return @
+    for id in invalidMeasures
+      registersByProp = @intrinsicRegistersById[id]
+      if registersByProp
+        for prop,register of registersByProp
+          register.call @
+    @
+  
+  spawnIntrinsicSuggests: (root) =>
+    # only if bound to dom query
+    if root._checkInstrinsics and root._intrinsicQuery?
+      prop = root._prop
+      if prop.indexOf("intrinsic-") is 0
+        # closure for inner `register` callback vars
+        root._intrinsicQuery.lastAddedIds.forEach (id) =>          
+          gid = "$" + id
+          if !@intrinsicRegistersById[gid] then @intrinsicRegistersById[gid] = {}              
+          # only register intrinsic prop once per id          
+          if !@intrinsicRegistersById[gid][prop]
+            register = () ->
+              val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])              
+              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val]]
+              # ['suggest', ['get', "#{gid}[#{prop}]", "#{selector}$#{gid}"], ['number', val]]
+            @intrinsicRegistersById[gid][prop] = register
+            register.call @
+    @
+
   spawn: (root) ->
     queries = root._binds
     rootString = root._template
     replaces = {}
     ready = true
-    
+
     for q in queries
       if q.lastAddedIds.length < 0
         ready = false
         break
       if q isnt queries.multi
         replaces[q.selector] = q.lastAddedIds[0] # only should be 1 el
-    
+
     if ready
-      
+
       # generate commands bound to plural selector
       if queries.multi
         template = rootString.split "%%" + queries.multi.selector + "%%"
@@ -176,7 +195,7 @@ class Command
             command = command.split "%%" + splitter + "%%"
             command = command.join "$" + joiner
           @engine.registerCommand eval command
-          
+
       # generate command bound to singular selector
       else
         command = rootString
@@ -184,17 +203,11 @@ class Command
           command = command.split "%%" + splitter + "%%"
           command = command.join "$" + joiner
         @engine.registerCommand eval command
-      
+
     # generate intrinsic commands
-    # only if bound to dom query
-    if root._checkInstrinsics and root._intrinsicQuery?
-      prop = root._prop
-      if prop.indexOf("intrinsic-") is 0
-        for id in root._intrinsicQuery.lastAddedIds
-          val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])
-          @engine.registerCommand getSuggestValueCommand id, prop, val, root._intrinsicQuery.selector
-    
-      
+    @spawnIntrinsicSuggests root
+
+
   # Variable Commands
   # ------------------------
 
@@ -211,7 +224,6 @@ class Command
     if query is 'window'
       @bindToWindow prop
       query = null
-    #checkIntrinsics(self, @engine, varId, prop, query)
 
   'varexp': (self, varId, expression, zzz) =>
     # clean all but first three
@@ -244,12 +256,12 @@ class Command
 
   # Constraints Commands
   # ------------------------
-  
+
   'suggest': () =>
-    # pass through    
+    # pass through
     args = [arguments...]
     @engine.registerCommand ['suggest', args[1...args.length]...]
-    
+
   'eq': (self,e1,e2,s,w) =>
     @registerSpawn(self)
 

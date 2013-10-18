@@ -1,8 +1,8 @@
 class Setter
-  
+
   constructor: (@container) ->
     @container = document unless @container
-  
+
   set: (vars) ->
     for key,val of vars
       if key[0] is "$"
@@ -14,7 +14,7 @@ class Setter
           @elementSet element, dimension, val
         else
           console.log "Element wasn't found"
-  
+
   elementSet: (element, dimension, value) ->
     switch dimension
       when 'width', 'w'
@@ -58,14 +58,14 @@ class Setter
     @makePositioned element
     offsets = @getOffsets element
     element.style.top = "#{value - offsets.y}px"
-  
+
   ###
   setwithStyleTag: (vars) =>
     if !@_has_setVars_styleTag
       @_has_setVars_styleTag = true
       @container.insertAdjacentHTML('afterbegin','<style data-gss-generated></style>')
       @generatedStyle = @container.childNodes[0]
-    html = ""    
+    html = ""
     for key of vars
       if key[0] is "$"
         gid = key.substring(1, key.indexOf("["))

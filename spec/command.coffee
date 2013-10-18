@@ -138,9 +138,9 @@ describe 'GSS commands', ->
         ['var', '$12322[intrinsic-width]', '$12322']
         ['var', '$34222[intrinsic-width]', '$34222']
         ['var', '$35346[intrinsic-width]', '$35346']
-        ['suggest', ['get','$12322[intrinsic-width]','.box$12322'], ['number', 111]]
-        ['suggest', ['get','$34222[intrinsic-width]','.box$34222'], ['number', 222]]
-        ['suggest', ['get','$35346[intrinsic-width]','.box$35346'], ['number', 333]]
+        ['suggest', ['get','$12322[intrinsic-width]'], ['number', 111]]
+        ['suggest', ['get','$34222[intrinsic-width]'], ['number', 222]]
+        ['suggest', ['get','$35346[intrinsic-width]'], ['number', 333]]
         ['eq', ['get','$12322[width]','.box$12322'],['get','$12322[intrinsic-width]','.box$12322']]
         ['eq', ['get','$34222[width]','.box$34222'],['get','$34222[intrinsic-width]','.box$34222']]
         ['eq', ['get','$35346[width]','.box$35346'],['get','$35346[intrinsic-width]','.box$35346']]
@@ -187,103 +187,135 @@ describe 'GSS commands', ->
   #
   #
   describe 'live command spawning -', ->
-
-    it 'add to class', (done) ->
-      container.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
-      """
-      engine.run commands: [
-          ['var', '.box[x]', 'x', ['$class','box']]
-          ['eq', ['get','.box[x]','.box'], ['number',100]]
-        ]
-      chai.expect(engine.lastCommandsForWorker).to.eql [
-          ['var', '$12322[x]', '$12322']
-          ['var', '$34222[x]', '$34222']
-          ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
-          ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
-        ]
-      count = 0
-      listener = (e) ->
-        count++
-        if count is 1
-          container.insertAdjacentHTML('beforeend', '<div class="box" data-gss-id="35346">One</div>')
-        else if count is 2
-          chai.expect(engine.lastCommandsForWorker).to.eql [
-              ['var', '$35346[x]', '$35346']
-              ['eq', ['get','$35346[x]','.box$35346'], ['number',100]]
-            ]
-          container.removeEventListener 'solved', listener
-          done()
-      container.addEventListener 'solved', listener
-
-    it 'removed from dom', (done) ->
-      container.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
-      """
-      engine.run commands: [
-          ['var', '.box[x]', 'x', ['$class','box']]
-          ['eq', ['get','.box[x]','.box'], ['number',100]]
-        ]
-      chai.expect(engine.lastCommandsForWorker).to.eql [
-          ['var', '$12322[x]', '$12322']
-          ['var', '$34222[x]', '$34222']
-          ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
-          ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
-        ]
-      count = 0
-      listener = (e) ->
-        count++
-        if count is 1
-          res = container.querySelector('[data-gss-id="34222"]')
-          res.parentNode.removeChild res
-        else if count is 2
-          chai.expect(engine.lastCommandsForWorker).to.eql [
-            ['remove', '$34222'] # this should be the only command
+    
+    describe 'adds & removes -', ->
+      it 'add to class', (done) ->
+        container.innerHTML = """
+          <div class="box" data-gss-id="12322">One</div>
+          <div class="box" data-gss-id="34222">One</div>
+        """
+        engine.run commands: [
+            ['var', '.box[x]', 'x', ['$class','box']]
+            ['eq', ['get','.box[x]','.box'], ['number',100]]
           ]
-          container.removeEventListener 'solved', listener
-          done()
-      container.addEventListener 'solved', listener
+        chai.expect(engine.lastCommandsForWorker).to.eql [
+            ['var', '$12322[x]', '$12322']
+            ['var', '$34222[x]', '$34222']
+            ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
+            ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
+          ]
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1
+            container.insertAdjacentHTML('beforeend', '<div class="box" data-gss-id="35346">One</div>')
+          else if count is 2
+            chai.expect(engine.lastCommandsForWorker).to.eql [
+                ['var', '$35346[x]', '$35346']
+                ['eq', ['get','$35346[x]','.box$35346'], ['number',100]]
+              ]
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
 
-    it 'removed from selector', (done) ->
-      container.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
-      """
-      engine.run commands: [
-          ['var', '.box[x]', 'x', ['$class','box']]
-          ['eq', ['get','.box[x]','.box'], ['number',100]]
-        ]
-      chai.expect(engine.lastCommandsForWorker).to.eql [
-          ['var', '$12322[x]', '$12322']
-          ['var', '$34222[x]', '$34222']
-          ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
-          ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
-        ]      
-      count = 0
-      listener = (e) ->
-        count++
-        if count is 1
-          el = container.querySelector('[data-gss-id="34222"]')
-          el.className = el.className.replace(/\bbox\b/,'')
-          # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          # JSMutationObserver on Phantom doesn't trigger mutation
-          engine._handleMutations()
-          # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        else if count is 2
-          chai.expect(engine.lastCommandsForWorker).to.eql [
-              ['remove', '.box$34222']
+      it 'removed from dom', (done) ->
+        container.innerHTML = """
+          <div class="box" data-gss-id="12322">One</div>
+          <div class="box" data-gss-id="34222">One</div>
+        """
+        engine.run commands: [
+            ['var', '.box[x]', 'x', ['$class','box']]
+            ['eq', ['get','.box[x]','.box'], ['number',100]]
+          ]
+        chai.expect(engine.lastCommandsForWorker).to.eql [
+            ['var', '$12322[x]', '$12322']
+            ['var', '$34222[x]', '$34222']
+            ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
+            ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
+          ]
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1
+            res = container.querySelector('[data-gss-id="34222"]')
+            res.parentNode.removeChild res
+          else if count is 2
+            chai.expect(engine.lastCommandsForWorker).to.eql [
+              ['remove', '$34222'] # this should be the only command
             ]
-          container.removeEventListener 'solved', listener
-          done()
-      container.addEventListener 'solved', listener
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
 
-  
+      it 'removed from selector', (done) ->
+        container.innerHTML = """
+          <div class="box" data-gss-id="12322">One</div>
+          <div class="box" data-gss-id="34222">One</div>
+        """
+        engine.run commands: [
+            ['var', '.box[x]', 'x', ['$class','box']]
+            ['eq', ['get','.box[x]','.box'], ['number',100]]
+          ]
+        chai.expect(engine.lastCommandsForWorker).to.eql [
+            ['var', '$12322[x]', '$12322']
+            ['var', '$34222[x]', '$34222']
+            ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
+            ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
+          ]
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1
+            el = container.querySelector('[data-gss-id="34222"]')
+            el.className = el.classList.remove('box') #.replace(/\bbox\b/,'')
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # JSMutationObserver on Phantom doesn't trigger mutation
+            #engine._handleMutations()
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          else if count is 2
+            chai.expect(engine.lastCommandsForWorker).to.eql [
+                ['remove', '.box$34222']
+              ]
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
+    
+    describe 'resizing -', ->
+
+      it 'element resized', (done) ->
+        container.innerHTML = """
+          <div style="width:111px;" class="box" data-gss-id="111">One</div>
+          <div style="width:222px;" class="box" data-gss-id="222">One</div>
+        """
+        engine.run commands: [
+          ['var', '.box[height]', 'height', ['$class','box']]
+          ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
+          ['eq', ['get','.box[height]','.box'],['get','.box[intrinsic-width]','.box']]
+        ]
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1
+            el = container.querySelector('[data-gss-id="111"]')            
+            el.style.width = 1110+"px"
+            el.innerHTML = "<div></div>"
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # JSMutationObserver on Phantom doesn't trigger mutation
+            #engine._handleMutations()
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          else if count is 2
+            chai.expect(engine.lastCommandsForWorker).to.eql [
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110]]
+              ]
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
+
+
   describe 'live command perfs', ->
     it '100 at once', (done) ->
       count = 0
-      
+
       innerHTML = """
           <div class='box' data-gss-id='35346#{count++}'>One</div>     <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>   <div class='box' data-gss-id='35346#{count++}'>One</div>
           <div class='box' data-gss-id='21823#{count++}'>One</div>     <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>   <div class='box' data-gss-id='21823#{count++}'>One</div>
@@ -307,7 +339,7 @@ describe 'GSS commands', ->
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
           ['eq', ['get','.box[width]','box'],['get','.box[intrinsic-width]','.box']]
         ]
-        
+
       listener = (e) ->
         container.removeEventListener 'solved', listener
         done()

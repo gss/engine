@@ -51,13 +51,12 @@ class Engine
     trigger = false
     trigger_removes = false
     trigger_removesFromContainer = false
-    trigger_addsToSelectors = false
 
-    removes = []
-
-    # els removed from container
-    removesFromContainer = []
+    removes = []    
+    invalidMeasures = []    
+    
     for m in mutations
+      # els removed from container
       if m.removedNodes.length > 0 # nodelist are weird?
         for node in m.removedNodes
           gid = GSS.getId node
@@ -66,14 +65,21 @@ class Engine
               removes.push("$" + gid)
               trigger = true
               trigger_removesFromContainer = true
-              trigger_removes = true
-
+      # els that may need remeasuring
+      if m.type is "characterData" or m.type is "attributes" or m.type is "childList" 
+        gid = "$" + GSS.getId m.target
+        if gid?
+          if invalidMeasures.indexOf(gid) is -1
+            #if GSS.getById gid
+            trigger = true
+            invalidMeasures.push(gid)
+        
+      
     # clean up ids
     GSS._ids_killed removes
 
     # els added or removed from queries
     selectorsWithAdds = []
-    addsBySelector = {}
     # selectorsWithShuffles = []
     # shufflesByQuery = {} ?
     for selector, query of @queryCache
@@ -82,12 +88,10 @@ class Engine
       if query.changedLastUpdate
         if query.lastAddedIds.length > 0
           selectorsWithAdds.push selector
-          addsBySelector[selector] = query.lastAddedIds
+          #addsBySelector[selector] = query.lastAddedIds
           trigger = true
-          trigger_addsToSelectors = true
         if query.lastRemovedIds.length > 0
           trigger = true
-          trigger_removes = true
           removedIds = query.lastRemovedIds
           # ignore redudant removes
           for rid in removedIds
@@ -97,6 +101,7 @@ class Engine
                 removes.push(selector + rid) # .box$3454
             else
               removes.push(selector + rid)
+    
     ###
     if trigger
       e = new CustomEvent "solverinvalidated",
@@ -111,10 +116,9 @@ class Engine
       @container.dispatchEvent e
     ###
 
-    if trigger_removes
-      @commander.handleRemoves removes
-    if trigger_addsToSelectors
-      @commander.handleAddsToSelectors selectorsWithAdds
+    @commander.handleRemoves removes
+    @commander.handleSelectorsWithAdds selectorsWithAdds
+    @commander.handleInvalidMeasures invalidMeasures
     if trigger
       @solve()
     #console.log "query.observer selector:#{selector}, mutations:", mutations
@@ -122,7 +126,7 @@ class Engine
 
   observe:() ->
     if !@_is_observing
-      @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: false})
+      @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
       @_is_observing = true
 
   unobserve: () ->
@@ -144,7 +148,7 @@ class Engine
 
   measureByGssId: (id, prop) ->
     el = GSS.getById id
-    @measure el, prop
+    @getter.measure(el, prop)
 
   resetCommandsForWorker: () =>
     @lastCommandsForWorker = @commandsForWorker
@@ -157,7 +161,7 @@ class Engine
       @vars[key] = val
     @setter.set values
     @observe()
-    @dispatch_solved values    
+    @dispatch_solved values
 
   dispatch_solved: (values) =>
     e = new CustomEvent "solved",
@@ -195,7 +199,7 @@ class Engine
       delete @query
     @stopped = true
 
-  # digestCommands
+  # digests or transforms commands
   execute: (commands) =>
     @commander.execute commands
 

@@ -43,11 +43,15 @@ module.exports = ->
         options:
           'max_line_length':
             level: 'ignore'
+          'no_trailing_whitespace':
+            level: 'ignore'
       spec:
         files:
           src: ['spec/*.coffee']
         options:
           'max_line_length':
+            level: 'ignore'
+          'no_trailing_whitespace':
             level: 'ignore'
           'no_backticks':
             level: 'ignore'
