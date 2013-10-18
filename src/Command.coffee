@@ -86,10 +86,10 @@ class Command
   _bound_to_window_resize: false
 
   spawnForWindowWidth: () ->
-    @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', window.outerWidth]]
+    @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', window.outerWidth], 'required']
 
   spawnForWindowHeight: () ->
-    @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight]]
+    @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight], 'required']
 
   spawnForWindowSize: () ->
     if @_bound_to_window_resize
@@ -165,7 +165,7 @@ class Command
           if !@intrinsicRegistersById[gid][prop]
             register = () ->
               val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])              
-              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val]]
+              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val], 'required']
               # ['suggest', ['get', "#{gid}[#{prop}]", "#{selector}$#{gid}"], ['number', val]]
             @intrinsicRegistersById[gid][prop] = register
             register.call @
