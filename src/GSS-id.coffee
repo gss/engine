@@ -19,7 +19,7 @@ GSS.getById = (id) ->
 GSS.setupId = (el) ->
   gid = el.getAttribute('data-gss-id')
   if !gid?
-    gid = GSS._id_counter++
+    gid = String(GSS._id_counter++) # b/c getAttribute returns String
     el.setAttribute('data-gss-id', gid)
   GSS._byIdCache[gid] = el
   return gid
