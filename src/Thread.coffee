@@ -175,7 +175,10 @@ class Thread
     # remove constraints
     if @constraintsByTracker[tracker]
       for constraint in @constraintsByTracker[tracker]
-        @solver.removeConstraint constraint
+        try 
+          @solver.removeConstraint constraint
+        catch error
+          throw new Error "cant remove constraint by tracker: #{tracker}"
       delete @constraintsByTracker[tracker]
     # clean up varcache
     if @varIdsByTracker[tracker]
