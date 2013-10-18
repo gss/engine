@@ -80,8 +80,7 @@ describe 'Cassowary Thread', ->
     chai.expect(thread._getValues()).to.eql
       "[target-width]": 100
       "[actual-width]": 102
-      "[pad]": 2
-    done()
+      "[pad]": 2    
     thread.execute
       commands:[
         ['suggest', ['get','[pad]'],3]

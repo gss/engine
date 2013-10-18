@@ -2,8 +2,10 @@ class Thread
 
   constructor: ->
     @cachedVars = {}
-    @solver = new c.SimplexSolver()
-    @solver.autoSolve = false
+    solver = new c.SimplexSolver()
+    @__editVarNames = []
+    solver.autoSolve = false
+    @solver = solver
     @constraintsByTracker = {}
     @varIdsByTracker = {}
     @
@@ -137,6 +139,8 @@ class Thread
   # Edit / Stay Constraints
 
   _editvar: (varr, strength) =>
+    if @__editVarNames.indexOf(varr.name) is -1
+      @__editVarNames.push(varr.name)
     return @solver.addEditVar varr
   
   # Todo
@@ -160,7 +164,14 @@ class Thread
   
   # Remove Commands
   
-  'remove': (self,tracker) =>
+  'remove': (self) => # (tacker, tracker, tracker...)
+    args = [arguments...]
+    trackers = [args[1...args.length]...]
+    for tracker in trackers
+      @_remove tracker
+      
+  _remove: (tracker) =>    
+    delete @__editVarNames[tracker]
     # remove constraints
     if @constraintsByTracker[tracker]
       for constraint in @constraintsByTracker[tracker]

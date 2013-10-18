@@ -25,6 +25,7 @@ var Thread,
 
 Thread = (function() {
   function Thread() {
+    this._remove = __bind(this._remove, this);
     this['remove'] = __bind(this['remove'], this);
     this.stay = __bind(this.stay, this);
     this.suggest = __bind(this.suggest, this);
@@ -37,9 +38,12 @@ Thread = (function() {
     this._addConstraint = __bind(this._addConstraint, this);
     this._execute = __bind(this._execute, this);
     this.execute = __bind(this.execute, this);
+    var solver;
     this.cachedVars = {};
-    this.solver = new c.SimplexSolver();
-    this.solver.autoSolve = false;
+    solver = new c.SimplexSolver();
+    this.__editVarNames = [];
+    solver.autoSolve = false;
+    this.solver = solver;
     this.constraintsByTracker = {};
     this.varIdsByTracker = {};
     this;
@@ -219,6 +223,9 @@ Thread = (function() {
   };
 
   Thread.prototype._editvar = function(varr, strength) {
+    if (this.__editVarNames.indexOf(varr.name) === -1) {
+      this.__editVarNames.push(varr.name);
+    }
     return this.solver.addEditVar(varr);
   };
 
@@ -241,8 +248,21 @@ Thread = (function() {
     return this.solver;
   };
 
-  Thread.prototype['remove'] = function(self, tracker) {
+  Thread.prototype['remove'] = function(self) {
+    var args, tracker, trackers, _i, _len, _results;
+    args = __slice.call(arguments);
+    trackers = __slice.call(args.slice(1, args.length));
+    _results = [];
+    for (_i = 0, _len = trackers.length; _i < _len; _i++) {
+      tracker = trackers[_i];
+      _results.push(this._remove(tracker));
+    }
+    return _results;
+  };
+
+  Thread.prototype._remove = function(tracker) {
     var constraint, id, _i, _j, _len, _len1, _ref, _ref1;
+    delete this.__editVarNames[tracker];
     if (this.constraintsByTracker[tracker]) {
       _ref = this.constraintsByTracker[tracker];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
