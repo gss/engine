@@ -178,7 +178,8 @@ class Thread
         try 
           @solver.removeConstraint constraint
         catch error
-          throw new Error "cant remove constraint by tracker: #{tracker}"
+          #throw new Error "cant remove constraint by tracker: #{tracker}"
+          movealong = 'please'
       delete @constraintsByTracker[tracker]
     # clean up varcache
     if @varIdsByTracker[tracker]
