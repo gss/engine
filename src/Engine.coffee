@@ -65,9 +65,12 @@ class Engine
               removes.push("$" + gid)
               trigger = true
               trigger_removesFromContainer = true
-      # els that may need remeasuring
-      if m.type is "characterData" or m.type is "attributes" or m.type is "childList" 
-        gid = "$" + GSS.getId m.target
+      # els that may need remeasuring      
+      if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
+        if m.type is "characterData"
+          gid = "$" + GSS.getId m.target.parentElement
+        else
+          gid = "$" + GSS.getId m.target
         if gid?
           if invalidMeasures.indexOf(gid) is -1
             #if GSS.getById gid
@@ -141,10 +144,7 @@ class Engine
 
   teardown: ->
     # stop observer
-    # stop commands
-
-  measure: (el, prop) =>
-    return @getter.measure(el, prop)
+    # stop commands    
 
   measureByGssId: (id, prop) ->
     el = GSS.getById id

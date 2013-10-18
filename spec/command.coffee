@@ -282,7 +282,7 @@ describe 'GSS commands', ->
     
     describe 'resizing -', ->
 
-      it 'element resized', (done) ->
+      it 'element resized by style change', (done) ->
         container.innerHTML = """
           <div style="width:111px;" class="box" data-gss-id="111">One</div>
           <div style="width:222px;" class="box" data-gss-id="222">One</div>
@@ -298,7 +298,6 @@ describe 'GSS commands', ->
           if count is 1
             el = container.querySelector('[data-gss-id="111"]')            
             el.style.width = 1110+"px"
-            el.innerHTML = "<div></div>"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
@@ -306,6 +305,62 @@ describe 'GSS commands', ->
           else if count is 2
             chai.expect(engine.lastCommandsForWorker).to.eql [
                 ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110]]
+              ]
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
+      
+      it 'element resized by inserting child', (done) ->
+        container.innerHTML = """
+          <div style="width:111px;" class="box" data-gss-id="111">One</div>
+          <div style="width:222px;" class="box" data-gss-id="222">One</div>
+        """
+        engine.run commands: [
+          ['var', '.box[height]', 'height', ['$class','box']]
+          ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
+          ['eq', ['get','.box[height]','.box'],['get','.box[intrinsic-width]','.box']]
+        ]
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1
+            el = container.querySelector('[data-gss-id="111"]')            
+            el.innerHTML = "<div></div>"
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # JSMutationObserver on Phantom doesn't trigger mutation
+            #engine._handleMutations()
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          else if count is 2
+            chai.expect(engine.lastCommandsForWorker).to.eql [
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111]]
+              ]
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
+      
+      it 'element resized by changing text', (done) ->
+        container.innerHTML = """
+          <div style="width:111px;" class="box" data-gss-id="111">One</div>
+          <div style="width:222px;" class="box" data-gss-id="222">One</div>
+        """
+        engine.run commands: [
+          ['var', '.box[height]', 'height', ['$class','box']]
+          ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
+          ['eq', ['get','.box[height]','.box'],['get','.box[intrinsic-width]','.box']]
+        ]
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1
+            el = container.querySelector('[data-gss-id="111"]')            
+            el.innerHTML = "aa"
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # JSMutationObserver on Phantom doesn't trigger mutation
+            #engine._handleMutations()
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          else if count is 2
+            chai.expect(engine.lastCommandsForWorker).to.eql [
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111]]
               ]
             container.removeEventListener 'solved', listener
             done()
