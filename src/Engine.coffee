@@ -9,19 +9,24 @@ Command = require("./Command.js")
 unless window.MutationObserver
   window.MutationObserver = window.JsMutationObserver
 
-snatchProps = (frm, to) ->
-  # `to` object steals props from & deletes the `frm` object
-  #
+cleanAndSnatch = (frm, to) ->
+  # - `to` object cleans itslef & steals props from & deletes the `frm` object
+  # - useful for keeping single object in memory for getters & setters
+  # - FYI, getters & setters for `o.key` work after `delete o.key`
   for key, val of to
+    # delete if not on `frm` object
     if !frm[key]?
+      delete to[key]
+    # snatch shared keys
+    else      
       to[key] = frm[key]
       delete frm[key]
-  #  
-  for key, val of frm
+  # snatch new keys
+  for key, val of frm    
     to[key] = frm[key]
     #delete frm[key]
   frm = undefined
-  to
+  return to
 
 
 
@@ -140,8 +145,10 @@ class Engine
 
   # boot
   run: (ast) ->
-    @execute ast.commands
-    @solve()
+    if ast.commands
+      # digest
+      @execute ast.commands
+      @solve()
     @observe()
 
   teardown: ->
@@ -158,7 +165,7 @@ class Engine
 
   handleWorkerMessage: (message) =>
     @unobserve()
-    snatchProps message.data.values, @vars
+    cleanAndSnatch message.data.values, @vars
     @setter.set @vars
     @observe()
     @dispatch "solved", {values:@vars}
@@ -186,7 +193,6 @@ class Engine
       @worker.addEventListener "error", @handleError, false
     @worker.postMessage workerMessage
     @resetWorkerCommands()
-
 
   stopped: false
   stop: ->

@@ -14,6 +14,7 @@ checkCache = (root,cacheKey) ->
     for bind in binds
       bindRoot root, bind
 
+
 bindRoot = (root, query) ->
   root._is_bound = true
   if !root._binds?
@@ -234,10 +235,12 @@ class Command
 
   'get': (root, varId, tracker) =>
     checkCache root, varId
-    if tracker and tracker isnt "::window"
+    if tracker and (tracker isnt "::window")
       return ['get', makeTemplateFromVarId(varId),tracker+"%%"+tracker+"%%"]
-    else
+    else if root._is_bound
       return ['get', makeTemplateFromVarId(varId)]
+    else
+      return ['get', varId]
 
   'number': (root, num) ->
     return ['number', num]
