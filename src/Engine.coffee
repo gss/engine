@@ -9,18 +9,19 @@ Command = require("./Command.js")
 unless window.MutationObserver
   window.MutationObserver = window.JsMutationObserver
 
-arrayAddsRemoves = (old, neu, removesFromContainer) ->
-  adds = []
-  removes = []
-  for n in neu
-    if old.indexOf(n) is -1
-      adds.push n
-  for o in old
-    if neu.indexOf(o) is -1
-      # don't include in removes if already in removesFromContainer
-      if removesFromContainer.indexOf(o) isnt -1
-        removes.push o
-  return {adds:adds,removes:removes}
+snatchProps = (frm, to) ->
+  # `to` object steals props from & deletes the `frm` object
+  #
+  for key, val of to
+    if !frm[key]?
+      to[key] = frm[key]
+      delete frm[key]
+  #  
+  for key, val of frm
+    to[key] = frm[key]
+    #delete frm[key]
+  frm = undefined
+  to
 
 
 
@@ -157,20 +158,19 @@ class Engine
 
   handleWorkerMessage: (message) =>
     @unobserve()
-    values = message.data.values
-    for key,val of values
-      @vars[key] = val
-    @setter.set values
+    snatchProps message.data.values, @vars
+    @setter.set @vars
     @observe()
-    @dispatch_solved values
+    @dispatch "solved", {values:@vars}
 
-  dispatch_solved: (values) =>
-    e = new CustomEvent "solved",
-      detail:
-        values: values
-        engine: @
-      bubbles: true
-      cancelable: true
+  dispatch: (eName, oDetail = {}, bubbles = true, cancelable = true) =>
+    oDetail.engine = @
+    o = {
+      detail:oDetail
+      bubbles: bubbles
+      cancelable: cancelable
+    }
+    e = new CustomEvent eName, o
     @container.dispatchEvent e
 
   handleError: (error) ->
