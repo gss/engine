@@ -10,7 +10,7 @@ unless window.MutationObserver
   window.MutationObserver = window.JsMutationObserver
 
 cleanAndSnatch = (frm, to) ->
-  # - `to` object cleans itslef & steals props from & deletes the `frm` object
+  # - `to` object cleans itself & steals props from & deletes the `frm` object
   # - useful for keeping single object in memory for getters & setters
   # - FYI, getters & setters for `o.key` work after `delete o.key`
   for key, val of to
@@ -29,27 +29,26 @@ cleanAndSnatch = (frm, to) ->
   return to
 
 
+GSS.engines = []
 
 class Engine
 
-  constructor: (@workerPath, @container) ->
-    @vars = {}
-    @container = document unless @container
+  constructor: (o) ->
+    {@container, @workerPath, @vars, @getter, @setter} = o
+    @vars      = {}                      unless @vars
+    @container = document                unless @container
+    @getter    = new Get(@container)     unless @getter
+    @setter    = new Setter(@container)  unless @setter
     @commander = new Command(@)
-    @worker = null
-    @getter = new Get(@container)
-    @setter = new Setter(@container)
+    @worker    = null
     #    
     @workerCommands = []
     @workerMessageHistory = []
     @lastWorkerCommands = null
-    @queryCache = {}
-
-    # MutationObserver
-    #
-    # - removed in stop
-    #
+    @queryCache = {}    
     @observer = new MutationObserver @_handleMutations
+    #
+    GSS.engines.push @
     @
 
   _is_observing: false
@@ -65,7 +64,7 @@ class Engine
     for m in mutations
       # els removed from container
       if m.removedNodes.length > 0 # nodelist are weird?
-        for node in m.removedNodes
+        for node in m.removedNodes          
           gid = GSS.getId node
           if gid?
             if GSS.getById gid
@@ -84,7 +83,6 @@ class Engine
             trigger = true
             invalidMeasures.push(gid)
         
-      
     # clean up ids
     GSS._ids_killed removes
 

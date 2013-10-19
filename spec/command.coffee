@@ -9,7 +9,9 @@ describe 'GSS commands', ->
     container = document.createElement 'div'
     fixtures.appendChild container
   beforeEach ->
-    engine = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+    engine = new Engine 
+      workerPath:'../browser/gss-engine/worker/gss-solver.js'
+      container:container
 
   afterEach (done) ->
     engine.stop()

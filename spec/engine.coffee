@@ -10,7 +10,9 @@ describe 'GSS engine', ->
     fixtures.appendChild container
   
   beforeEach ->
-    engine = new Engine '../browser/gss-engine/worker/gss-solver.js', container
+    engine = new Engine 
+      workerPath: '../browser/gss-engine/worker/gss-solver.js'
+      container: container
 
   afterEach (done) ->
     engine.stop()
