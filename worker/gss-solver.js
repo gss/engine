@@ -49,9 +49,9 @@ Thread = (function() {
     this;
   }
 
-  Thread.prototype.execute = function(ast) {
+  Thread.prototype.execute = function(message) {
     var command, _i, _len, _ref, _results;
-    _ref = ast.commands;
+    _ref = message.commands;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       command = _ref[_i];
@@ -295,9 +295,9 @@ var w;
 w = new Thread();
 
 self.onmessage = function(m) {
-  var ast;
-  ast = m.data.ast;
-  w.execute(ast);
+  var message;
+  message = m.data;
+  w.execute(message);
   return self.postMessage({
     values: w._getValues()
   });

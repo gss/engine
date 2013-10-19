@@ -33,9 +33,10 @@ class Engine
     @worker = null
     @getter = new Get(@container)
     @setter = new Setter(@container)
-    #
-    @commandsForWorker = []
-    @lastCommandsForWorker = null
+    #    
+    @workerCommands = []
+    @workerMessageHistory = []
+    @lastWorkerCommands = null
     @queryCache = {}
 
     # MutationObserver
@@ -150,9 +151,9 @@ class Engine
     el = GSS.getById id
     @getter.measure(el, prop)
 
-  resetCommandsForWorker: () =>
-    @lastCommandsForWorker = @commandsForWorker
-    @commandsForWorker = []
+  resetWorkerCommands: () =>
+    @lastWorkerCommands = @workerCommands
+    @workerCommands = []
 
   handleWorkerMessage: (message) =>
     @unobserve()
@@ -177,14 +178,14 @@ class Engine
     throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"
 
   solve: () ->
-    ast = {commands:@commandsForWorker}
+    workerMessage = {commands:@workerCommands}
+    @workerMessageHistory.push workerMessage
     unless @worker
       @worker = new Worker @workerPath
       @worker.addEventListener "message", @handleWorkerMessage, false
       @worker.addEventListener "error", @handleError, false
-    @worker.postMessage
-      ast: ast
-    @resetCommandsForWorker()
+    @worker.postMessage workerMessage
+    @resetWorkerCommands()
 
 
   stopped: false
@@ -204,7 +205,7 @@ class Engine
     @commander.execute commands
 
   _addVarCommandsForElements: (elements) ->
-    @commandsForWorker.push "var", el.id + prop
+    @workerCommands.push "var", el.id + prop
 
   registerCommands: (commands) ->
     for command in commands
@@ -212,7 +213,7 @@ class Engine
 
   registerCommand: (command) ->
     # TODO: treat commands as strings and check cache for dups?
-    @commandsForWorker.push command
+    @workerCommands.push command
 
   registerDomQuery: (o) ->
     selector = o.selector

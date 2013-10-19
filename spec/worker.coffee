@@ -27,16 +27,15 @@ describe 'Cassowary Web Worker', ->
     worker.addEventListener 'error', onError, false
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
-      ast:
-        commands:
-          [
-            ['var', 'a']
-            ['var', 'b']
-            ['var', 'c']
-            ['eq', ['get', 'a'], ['number', 7], 'medium']
-            ['eq', ['get', 'b'], ['number', 5]]
-            ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c'], 'medium']
-          ]
+      commands:
+        [
+          ['var', 'a']
+          ['var', 'b']
+          ['var', 'c']
+          ['eq', ['get', 'a'], ['number', 7], 'medium']
+          ['eq', ['get', 'b'], ['number', 5]]
+          ['eq', ['minus', ['get', 'a'], ['get', 'b']], ['get', 'c'], 'medium']
+        ]
   it 'should solve with new constraints added to existing worker', (done) ->
     onMessage = (m) ->
       expect(m.data.values.x).to.eql 7
@@ -53,17 +52,16 @@ describe 'Cassowary Web Worker', ->
     worker.addEventListener 'error', onError, false
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
-      ast:
-        commands:
-          [
-            ['var', 'x']
-            ['var', 'y']
-            ['var', 'z']
-            ['eq', ['get', 'x'], ['number', 7]]
-            ['eq', ['get', 'y'], ['number', 5]]
-            ['lte', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]
-            ['eq', ['get', 'a'], ['number', 99], 'required']
-          ]
+      commands:
+        [
+          ['var', 'x']
+          ['var', 'y']
+          ['var', 'z']
+          ['eq', ['get', 'x'], ['number', 7]]
+          ['eq', ['get', 'y'], ['number', 5]]
+          ['lte', ['minus', ['get', 'x'], ['get', 'y']], ['get', 'z']]
+          ['eq', ['get', 'a'], ['number', 99], 'required']
+        ]
   it 'should solve with variable expressions', (done) ->
     onMessage = (m) ->
       expect(m.data.values.left).to.eql 1
@@ -80,14 +78,13 @@ describe 'Cassowary Web Worker', ->
     worker.addEventListener 'error', onError, false
     # [a(7)] - [b(6)] == [c]
     worker.postMessage
-      ast:
-        commands:
-          [
-            ['var', 'right-target']
-            ['var', 'left']
-            ['var', 'width']
-            ['varexp', 'right', ['plus', ['get','left'],['get','width']]]
-            ['eq', ['get', 'right-target'], ['number', 100]]
-            ['eq', ['get', 'left'], ['number', 1]]
-            ['eq', ['get', 'right'], ['get', 'right-target']]
-          ]
+      commands:
+        [
+          ['var', 'right-target']
+          ['var', 'left']
+          ['var', 'width']
+          ['varexp', 'right', ['plus', ['get','left'],['get','width']]]
+          ['eq', ['get', 'right-target'], ['number', 100]]
+          ['eq', ['get', 'left'], ['number', 1]]
+          ['eq', ['get', 'right'], ['get', 'right-target']]
+        ]

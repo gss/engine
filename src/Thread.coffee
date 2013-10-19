@@ -10,13 +10,13 @@ class Thread
     @varIdsByTracker = {}
     @
     
-  execute: (ast) =>
-    for command in ast.commands
+  execute: (message) =>
+    for command in message.commands
       @_execute command, command
     #
-    #for vs in ast.vars
+    #for vs in message.vars
     #  @_execute vs
-    #for cs in ast.constraints
+    #for cs in message.constraints
     #  @solver.addConstraint @_execute cs
 
   _execute: (command, root) =>
