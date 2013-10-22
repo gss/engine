@@ -80,7 +80,7 @@ class Engine
   
   _run: (ast) ->
     if ast.commands
-      @execute ast.commands      
+      @execute ast.commands
   
   # digests or transforms commands
   execute: (commands) =>
@@ -207,8 +207,11 @@ class Engine
 
     for m in mutations
       # style tag was modified then stop & reload everything
-      if m.type is "characterData" and @getter.hasAST(m.target.parentElement)
-        return @loadAndRun()
+      if m.type is "characterData" 
+        if @getter.hasAST(m.target.parentElement)
+          return @loadAndRun()
+        else if @getter.hasAST(m.target.parentElement.parentElement)
+          return @loadAndRun()
       
       # els removed from container
       if m.removedNodes.length > 0 # nodelist are weird?

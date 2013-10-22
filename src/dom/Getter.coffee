@@ -91,7 +91,7 @@ class Getter
     return null
   
   'readAST:text/gss-ast': (node) ->
-    source = node.innerHTML.trim()
+    source = node.textContent.trim()
     if source.length is 0 then return {}
     try 
       ast = JSON.parse source
