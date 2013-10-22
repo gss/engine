@@ -50,7 +50,8 @@ makeTemplateFromVarId = (varId) ->
 class Commander
 
   constructor: (@engine) ->
-    @cleanVars()
+    @lazySpawnForWindowSize = GSS._.debounce @spawnForWindowSize, GSS.resizeDebounce, true
+    @cleanVars()    
   
   clean: () ->
     @cleanVars()
@@ -94,7 +95,7 @@ class Commander
 
   unlisten: ->
     if !@_bound_to_window_resize
-      window.removeEventListener("resize", @spawnForWindowSize, false)
+      window.removeEventListener("resize", @lazySpawnForWindowSize, false)
     @_bound_to_window_resize = false
 
   _bound_to_window_resize: false
@@ -105,7 +106,7 @@ class Commander
   spawnForWindowHeight: () ->
     @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight], 'required']
 
-  spawnForWindowSize: () ->
+  spawnForWindowSize: () =>
     if @_bound_to_window_resize
       if @boundWindowProps.indexOf('width') isnt -1 then @spawnForWindowWidth()
       if @boundWindowProps.indexOf('height') isnt -1 then @spawnForWindowHeight()
@@ -116,7 +117,7 @@ class Commander
     if prop is 'width' or prop is 'height'
       if prop is 'width' then @spawnForWindowWidth() else @spawnForWindowHeight()
       if !@_bound_to_window_resize
-        window.addEventListener("resize", @spawnForWindowSize, false)
+        window.addEventListener("resize", @lazySpawnForWindowSize, false)
         @_bound_to_window_resize = true
     else if prop is 'x'
       @engine.registerCommand ['eq', ['get', '::window[x]'], ['number', 0], 'required']

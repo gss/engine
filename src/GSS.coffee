@@ -42,30 +42,19 @@ GSS.loadAndRun = (container = document) ->
   for container in containersToLoad
     GSS(container).loadAndRun()
 
+# Config
 
-# marshal in plugin
+GSS.config = 
+  resizeDebounce: 100
 
-#if window.GSS?
-#  for key,val of window.GSS
-#    GSS[key] = val
 
-window.GSS = GSS
-GSS.Getter = require("./dom/Getter.js")
-GSS.observer = require("./dom/Observer.js")
-GSS.Commander = require("./Commander.js")
-GSS.Query = require("./dom/Query.js")
-GSS.Setter = require("./dom/Setter.js")
-GSS.Engine = require("./Engine.js")
-
-GSS.getter = new GSS.Getter()
-getter = GSS.getter
-
-# engines
+# Engines
 
 GSS.getEngine = (el) ->
   return GSS.engines.byId[@getId(el)]
 
-# ids
+
+# IDs
 
 GSS._id_counter = 1
 
@@ -99,3 +88,51 @@ GSS.setupId = (el) ->
 
 GSS.getId = (el) ->
   getter.getId el
+
+
+# Utils
+
+GSS._ = {}
+
+getTime = Date.now or ->
+  return new Date().getTime()
+
+# Returns a function, that, as long as it continues to be invoked, will not
+# be triggered. The function will be called after it stops being called for
+# N milliseconds. If `immediate` is passed, trigger the function on the
+# leading edge, instead of the trailing.
+GSS._.debounce = (func, wait, immediate) ->
+  timeout = undefined
+  args = undefined
+  context = undefined
+  timestamp = undefined
+  result = undefined
+  ->
+    context = this
+    args = [arguments...]
+    timestamp = getTime()
+    later = ->
+      last = getTime() - timestamp
+      if last < wait
+        timeout = setTimeout(later, wait - last)
+      else
+        timeout = null
+        result = func.apply(context, args)  unless immediate
+
+    callNow = immediate and not timeout
+    timeout = setTimeout(later, wait)  unless timeout
+    result = func.apply(context, args)  if callNow
+    result
+
+# Requires
+
+window.GSS = GSS
+GSS.Getter = require("./dom/Getter.js")
+GSS.observer = require("./dom/Observer.js")
+GSS.Commander = require("./Commander.js")
+GSS.Query = require("./dom/Query.js")
+GSS.Setter = require("./dom/Setter.js")
+GSS.Engine = require("./Engine.js")
+
+GSS.getter = new GSS.Getter()
+getter = GSS.getter
