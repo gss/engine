@@ -33,7 +33,7 @@ class Getter
     @container.querySelectorAll identifier  
   
   getId: (el) ->
-    if el.getAttribute then return el.getAttribute('data-gss-id')
+    if el?.getAttribute? then return el.getAttribute('data-gss-id')
     return null
       
   measure: (node, dimension) ->

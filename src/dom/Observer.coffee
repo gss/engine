@@ -34,7 +34,6 @@ observer = new MutationObserver (mutations) ->
             containersToLoad.push container
     
     for container in containersToLoad
-      console.log container
       GSS(container).loadAndRun()
 
 # read all styles when shit is ready

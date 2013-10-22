@@ -42,7 +42,8 @@ class Query
     newIds = []
     for el in @nodeList
       id = GSS.setupId(el)
-      newIds.push(id)
+      if id
+        newIds.push(id)
     {adds,removes} = arrayAddsRemoves oldIds, newIds
     if adds.length > 0
       @changedLastUpdate = true
