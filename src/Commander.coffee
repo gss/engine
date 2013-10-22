@@ -114,6 +114,7 @@ class Commander
     if @_bound_to_window_resize
       if @boundWindowProps.indexOf('width') isnt -1 then @spawnForWindowWidth()
       if @boundWindowProps.indexOf('height') isnt -1 then @spawnForWindowHeight()
+      @engine.solve()
 
   bindToWindow: (prop) ->
     if @boundWindowProps.indexOf(prop) is -1
