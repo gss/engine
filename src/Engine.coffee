@@ -1,13 +1,4 @@
-require("customevent-polyfill")
-require("./GSS-id.js")
-Query = require("./dom/Query.js")
-Get = require("./dom/Getter.js")
-Setter = require("./dom/Setter.js")
-Command = require("./Command.js")
-
-# Polyfill
-unless window.MutationObserver
-  window.MutationObserver = window.JsMutationObserver
+if !GSS? then throw new Error "GSS object needed for Engine"
 
 cleanAndSnatch = (frm, to) ->
   # - `to` object cleans itself & steals props from & deletes the `frm` object
@@ -29,17 +20,22 @@ cleanAndSnatch = (frm, to) ->
   return to
 
 
-GSS.engines = []
+GSS.engines = engines = []
+engines.byId = {}
 
 class Engine
 
   constructor: (o) ->
     {@container, @workerPath, @vars, @getter, @setter} = o
-    @vars      = {}                      unless @vars
-    @container = document                unless @container
-    @getter    = new Get(@container)     unless @getter
-    @setter    = new Setter(@container)  unless @setter
-    @commander = new Command(@)
+    @vars      = {}                          unless @vars
+    @container = document                    unless @container
+    if @container.tagName is "HEAD" then @container = document
+    @getter    = new GSS.Getter(@container)  unless @getter
+    @setter    = new GSS.Setter(@container)  unless @setter
+    @workerPath= GSS.worker                  unless @workerPath
+    # id is always gssid of container
+    @id        = GSS.setupContainerId @container
+    @commander = new GSS.Commander(@)
     @worker    = null
     #    
     @workerCommands = []
@@ -49,22 +45,178 @@ class Engine
     @observer = new MutationObserver @_handleMutations
     #
     GSS.engines.push @
+    engines.byId[@id] = @
+    #
+    #@boot o
+    @
+  
+  is_running: false
+  
+  ###
+  run: (ast) ->
+    if ast.commands
+      @is_running = true
+      # digest
+      @execute ast.commands      
+      #debounced = () =>
+      @solve()
+      #setTimeout debounced, 1
+      @observe()
+    @
+  ###
+  
+  run: (asts) ->
+    # if arra, batch execute then solve
+    if asts instanceof Array
+      for ast in asts        
+        @_run ast
+    else 
+      @_run asts
+    # if commands were found & executed
+    if @workerCommands.length > 0
+      @is_running = true
+      @solve()
+    
+  
+  _run: (ast) ->
+    if ast.commands
+      @execute ast.commands      
+  
+  # digests or transforms commands
+  execute: (commands) =>
+    @commander.execute commands
+  
+  loadAndRun: () ->
+    if @is_running
+      @clean()
+    #@ASTs = @getter.readAllASTs()
+    @run( @getter.readAllASTs() )
+    @
+  
+  # clean when container insides changes, but if container changes must destroy
+  clean: () ->
+    @unobserve()
+    @commander.clean()
+    @getter.clean?() 
+    @setter.clean?()
+    # clean vars
+    @workerCommands = []
+    #@workerMessageHistory = [] keep history
+    @lastWorkerCommands = null    
+    #
+    for key, val of @vars
+      delete @vars[key]
+    #
+    if @worker
+      @worker.terminate()
+      @worker = null
+    #
+    for selector, query of @queryCache
+      query.destroy()
+      @queryCache[selector] = null
+    @queryCache = {}
+    @
+  
+  stopped: false
+  
+  stop: ->
+    console.warn "Stop deprecated for destroyed"
+    @destroy()
+    ###
+    if @stopped then return @
+    @stopped = true
+    @unobserve()
+    if @worker
+      @worker.terminate()
+      delete @worker
+    for selector, query of @queryCache
+      query.destroy()
+      @queryCache[selector] = null
+    @queryCache = {}
+    ###
+    @
+  
+  is_destroyed: false
+  
+  destroy: ->
+    @is_destroyed = true
+    @is_running   = null
+    @commander.destroy()
+    @getter.destroy?() 
+    @setter.destroy?()
+    #
+    @unobserve()
+    @observer = null
+    # release vars
+    @ast    = null    
+    @getter = null
+    @setter = null
+    @container = null
+    @commander = null
+    @workerCommands = null
+    @workerMessageHistory = null
+    @lastWorkerCommands = null
+    #
+    @vars   = null
+    #
+    if @worker
+      @worker.terminate()
+      @worker = null
+    #
+    for selector, query of @queryCache
+      query.destroy()
+      @queryCache[selector] = null
+    @queryCache = null
+    # remove from GSS.engines
+    i = engines.indexOf @
+    if i > -1 then engines.splice(i, 1)
+    delete engines.byId[@id]
+    @
+  
+  is_observing: false
+  
+  observe:() ->
+    if !@is_observing
+      @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
+      @is_observing = true
     @
 
-  _is_observing: false
+  unobserve: () ->
+    @is_observing = false
+    @observer.disconnect()
+    @
+  
+  solve: () ->
+    workerMessage = {commands:@workerCommands}
+    @workerMessageHistory.push workerMessage
+    unless @worker
+      @worker = new Worker @workerPath
+      @worker.addEventListener "message", @handleWorkerMessage, false
+      @worker.addEventListener "error", @handleError, false
+    @worker.postMessage workerMessage
+    @resetWorkerCommands()
 
   _handleMutations: (mutations=[]) =>
     trigger = false
+    trigger_containerRemoved = false
     trigger_removes = false
     trigger_removesFromContainer = false
 
     removes = []    
     invalidMeasures = []    
-    
+
     for m in mutations
+      # style tag was modified then stop & reload everything
+      if m.type is "characterData" and @getter.hasAST(m.target.parentElement)
+        return @loadAndRun()
+      
       # els removed from container
       if m.removedNodes.length > 0 # nodelist are weird?
-        for node in m.removedNodes          
+        for node in m.removedNodes
+          # if container is removed...
+          if node is @container
+            console.log "handle engine container removed"
+          #
           gid = GSS.getId node
           if gid?
             if GSS.getById gid
@@ -74,6 +226,7 @@ class Engine
       # els that may need remeasuring      
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
         if m.type is "characterData"
+          target = m.target.parentElement          
           gid = "$" + GSS.getId m.target.parentElement
         else
           gid = "$" + GSS.getId m.target
@@ -130,28 +283,7 @@ class Engine
     if trigger
       @solve()
     #console.log "query.observer selector:#{selector}, mutations:", mutations
-    #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds
-
-  observe:() ->
-    if !@_is_observing
-      @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
-      @_is_observing = true
-
-  unobserve: () ->
-    @_is_observing = false
-    @observer.disconnect()
-
-  # boot
-  run: (ast) ->
-    if ast.commands
-      # digest
-      @execute ast.commands
-      @solve()
-    @observe()
-
-  teardown: ->
-    # stop observer
-    # stop commands    
+    #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds    
 
   measureByGssId: (id, prop) ->
     el = GSS.getById id
@@ -180,34 +312,8 @@ class Engine
 
   handleError: (error) ->
     return @onError error if @onError
-    throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"
-
-  solve: () ->
-    workerMessage = {commands:@workerCommands}
-    @workerMessageHistory.push workerMessage
-    unless @worker
-      @worker = new Worker @workerPath
-      @worker.addEventListener "message", @handleWorkerMessage, false
-      @worker.addEventListener "error", @handleError, false
-    @worker.postMessage workerMessage
-    @resetWorkerCommands()
-
-  stopped: false
-  stop: ->
-    if @stopped then return @
-    @unobserve()
-    if @worker
-      @worker.terminate()
-    for selector, query of @queryCache
-      delete query.nodeList
-      delete query.ids
-      delete @query
-    @stopped = true
-
-  # digests or transforms commands
-  execute: (commands) =>
-    @commander.execute commands
-
+    throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"    
+    
   _addVarCommandsForElements: (elements) ->
     @workerCommands.push "var", el.id + prop
 
@@ -215,17 +321,31 @@ class Engine
     for command in commands
       @registerCommand command
 
-  registerCommand: (command) ->
+  registerCommand: (command) ->    
     # TODO: treat commands as strings and check cache for dups?
     @workerCommands.push command
 
-  registerDomQuery: (o) ->
+  registerDomQuery: (o) ->    
     selector = o.selector
     if @queryCache[selector]?
       return @queryCache[selector]
     else
-      query = new Query(o)
+      @observe()
+      query = new GSS.Query(o)
       @queryCache[selector] = query
       return query
+###
+Engine::loadAllASTs = () ->
+  @ASTs = @getter.readAllASTs()
+
+Engine::addAST = (ast) ->
+  @ASTs.push ast
+  @run ast  
+
+Engine::removeAST = (ast) ->  
+  @clean()
+  @ASTs.splice @ASTs.indexOf(ast), 1
+  @run @ASTs
+###
 
 module.exports = Engine

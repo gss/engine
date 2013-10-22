@@ -1,4 +1,4 @@
-Engine = require 'gss-engine/lib/Engine.js'
+Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 
 describe 'GSS commands', ->
   container = null
@@ -14,7 +14,7 @@ describe 'GSS commands', ->
       container:container
 
   afterEach (done) ->
-    engine.stop()
+    engine.destroy()
     done()
 
   describe 'when initialized', ->
@@ -32,9 +32,10 @@ describe 'GSS commands', ->
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
       chai.expect(engine.workerCommands).to.eql [
-          ['var', '$1[x]', '$1']
+          # $1 is engine
           ['var', '$2[x]', '$2']
           ['var', '$3[x]', '$3']
+          ['var', '$4[x]', '$4']
         ]
 
     it 'var with class & static ids', ->
@@ -385,6 +386,7 @@ describe 'GSS commands', ->
 
 
   describe 'live command perfs', ->
+ 
     it '100 at once', (done) ->
       count = 0
 
@@ -411,22 +413,27 @@ describe 'GSS commands', ->
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
           ['eq', ['get','.box[width]','box'],['get','.box[intrinsic-width]','.box']]
         ]
-
+      
       listener = (e) ->
-        container.removeEventListener 'solved', listener
+        container.removeEventListener 'solved', listener        
         done()
       container.addEventListener 'solved', listener
-
+    
     it '100 serially', (done) ->
-      container.innerHTML = """
-      """
+      container.innerHTML = ""
       engine.run commands: [
           ['var', '.box[width]', 'width', ['$class','box']]
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
           ['eq', ['get','.box[width]','.box'],['get','.box[intrinsic-width]','.box']]
         ]
-      count = 0
-      listener = (e) ->
+
+      count = 1
+      
+      # first one here otherwise, nothing to solve
+      container.insertAdjacentHTML 'beforeend', """
+          <div class='box' data-gss-id='35346#{count}'>One</div>
+        """      
+      listener = (e) ->        
         count++
         container.insertAdjacentHTML 'beforeend', """
             <div class='box' data-gss-id='35346#{count}'>One</div>

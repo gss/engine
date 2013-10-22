@@ -1,12 +1,14 @@
 {
   "name": "gss-engine",
+  "repo": "the-gss/engine",
   "description": "GSS styling engine",
   "version": "0.0.1",
   "scripts": [
-    "lib/GSS-id.js",
+    "lib/GSS.js",
     "lib/dom/Query.js",
+    "lib/dom/Observer.js",
     "lib/Engine.js",
-    "lib/Command.js",  
+    "lib/Commander.js",  
     "lib/dom/Getter.js",
     "lib/dom/Setter.js"
   ],
@@ -19,5 +21,5 @@
     "vendor/MutationObserver.js",
     "worker/gss-solver.js"
   ],
-  "main": "lib/Engine.js"
+  "main": "lib/GSS.js"
 }

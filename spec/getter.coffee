@@ -1,4 +1,4 @@
-Getter = require 'gss-engine/lib/dom/Getter.js'
+Getter = GSS.getter #require 'gss-engine/lib/dom/Getter.js'
 
 describe 'DOM Getter', ->
   container = null
@@ -7,6 +7,7 @@ describe 'DOM Getter', ->
   before ->
     fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
+    get = new GSS.Getter container
     fixtures.appendChild container
     container.innerHTML = """
       <span class="span" id="span">Hello, world</span>
@@ -16,25 +17,22 @@ describe 'DOM Getter', ->
         <div id="childNoPos"></div>
       </div>
     """
-    get = new Getter container
-
-  it 'should be bound to the DOM container', ->
-    chai.expect(get.container).to.eql container
+    #get = new Getter container
 
   describe 'reading DOM', ->
     span = null
     it 'should return elements by ID', ->
       span = container.querySelector '#span'
-      result = get.get ['$id', 'span']
+      result = get.get ['$id', 'span'], container
       chai.expect(result).to.eql span
     it 'should return elements by class', ->
-      result = get.get ['$class', 'span']
+      result = get.get ['$class', 'span'], container
       chai.expect(result[0]).to.eql span
     it 'should return elements by tag', ->
-      result = get.get ['$tag', 'span']
+      result = get.get ['$tag', 'span'], container
       chai.expect(result[0]).to.eql span
     it 'should return elements by selector', ->
-      result = get.get ['$', '.span']
+      result = get.get ['$', '.span'], container
       chai.expect(result[0]).to.eql span
 
   describe 'measuring DOM text element width', ->

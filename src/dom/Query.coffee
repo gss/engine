@@ -1,3 +1,5 @@
+# Encapsulates Dom Queries used in GSS rules
+
 arrayAddsRemoves = (old, neu) ->
   adds = []
   removes = []
@@ -23,7 +25,7 @@ class Query
     @ids = o.ids or []
     @lastAddedIds = []
     @lastRemovedIds = []
-    @lastLocalRemovedIds = []
+    #@lastLocalRemovedIds = []
     @update()
     @
   
@@ -32,6 +34,7 @@ class Query
   changedLastUpdate: false
   
   update: () ->
+    if @is_destroyed then throw new Error "Can't update destroyed query: #{selector}"
     @changedLastUpdate = false
     if !@isLive or !@_updated_once
       @nodeList = @createNodeList()
@@ -49,6 +52,17 @@ class Query
     @lastRemovedIds = removes
     @ids = newIds
     @
+  
+  is_destroyed: false
+  
+  destroy: () ->
+    @is_destroyed       = true
+    @ids                = null
+    @lastAddedIds       = null
+    @lastRemovedIds     = null
+    @createNodeList     = null
+    @nodeList           = null
+    @changedLastUpdate  = null    
     
 
 module.exports = Query

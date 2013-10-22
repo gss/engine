@@ -5,16 +5,6 @@ to match live results of query.
 
 ###
 
-# `var` & `varexp` cache binds for `get`
-bindCache = {}
-
-checkCache = (root,cacheKey) ->
-  binds = bindCache[cacheKey]
-  if binds?
-    for bind in binds
-      bindRoot root, bind
-
-
 bindRoot = (root, query) ->
   root._is_bound = true
   if !root._binds?
@@ -57,13 +47,35 @@ makeTemplateFromVarId = (varId) ->
   return templ
 
 # transforms & generates needed commands for engine
-class Command
+class Commander
 
-  constructor: (engine) ->
+  constructor: (@engine) ->
+    @cleanVars()
+  
+  clean: () ->
+    @cleanVars()
+    @unlisten()
+  
+  cleanVars: () ->
     @spawnableRoots = []
     @intrinsicRegistersById = {}
     @boundWindowProps = []
-    @engine = engine
+    @bindCache = {}
+  
+  destroy: () ->
+    @spawnableRoots = null
+    @intrinsicRegistersById = null
+    @boundWindowProps = null
+    @bindCache = null
+    @unlisten()
+  
+  
+  # `var` & `varexp` cache binds for `get`
+  _checkCache: (root,cacheKey) =>
+    binds = @bindCache[cacheKey]
+    if binds?
+      for bind in binds
+        bindRoot root, bind
 
   execute: (commands) ->
     for command in commands
@@ -80,9 +92,10 @@ class Command
         node.splice i+1,1,@_execute sub, root
     return func.call @engine, root, node[1...node.length]...
 
-  teardown: ->
+  unlisten: ->
     if !@_bound_to_window_resize
       window.removeEventListener("resize", @spawnForWindowSize, false)
+    @_bound_to_window_resize = false
 
   _bound_to_window_resize: false
 
@@ -118,7 +131,7 @@ class Command
       @engine.registerCommand root
     else
       if varid
-        bindCache[varid] = root._binds
+        @bindCache[varid] = root._binds
       root._template = JSON.stringify(root)
       root._varid = varid
       root._prop = prop
@@ -212,7 +225,7 @@ class Command
   # Variable Commands
   # ------------------------
 
-  'var': (self, varId, prop, query) =>
+  'var': (self, varId, prop, query) =>    
     # clean all but first two
     self.splice(2,10)
     if self._is_bound # query?
@@ -234,7 +247,7 @@ class Command
     @registerSpawn(self, varId)
 
   'get': (root, varId, tracker) =>
-    checkCache root, varId
+    @_checkCache root, varId
     if tracker and (tracker isnt "::window")
       return ['get', makeTemplateFromVarId(varId),tracker+"%%"+tracker+"%%"]
     else if root._is_bound
@@ -324,4 +337,4 @@ class Command
     return query
 
 
-module.exports = Command
+module.exports = Commander

@@ -1,8 +1,14 @@
+# Encapsulates DOM writes
+
 class Setter
 
   constructor: (@container) ->
     @container = document unless @container
-
+  
+  clean: () ->
+  
+  destroy: () ->
+    
   set: (vars) ->
     for key,val of vars
       if key[0] is "$"

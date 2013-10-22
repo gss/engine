@@ -1,4 +1,4 @@
-Setter = require 'gss-engine/lib/dom/Setter.js'
+Setter = GSS.Setter #require 'gss-engine/lib/dom/Setter.js'
 
 describe 'DOM Setter', ->
   container = null
