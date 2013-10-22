@@ -95,7 +95,7 @@ class Engine
   
   # clean when container insides changes, but if container changes must destroy
   clean: () ->
-    @unobserve()
+    #@unobserve()
     @commander.clean()
     @getter.clean?() 
     @setter.clean?()
