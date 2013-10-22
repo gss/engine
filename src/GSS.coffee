@@ -11,7 +11,7 @@ GSS = (o) ->
   if o.tagName
     engine = GSS.getEngine(o)
     if engine then return engine
-    return new Engine({container:o})
+    return new GSS.Engine({container:o})
     
   # if object, create new engine
   else if o isnt null and typeof o is 'object'
