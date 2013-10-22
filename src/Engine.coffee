@@ -89,9 +89,23 @@ class Engine
   loadAndRun: () ->
     if @is_running
       @clean()
-    #@ASTs = @getter.readAllASTs()
-    @run( @getter.readAllASTs() )
+    #@run( @getter.readAllASTs() )
+    ASTs = []
+    for node in @getter.getAllStyleNodes()
+      AST = @getter.readAST node
+      if AST then ASTs.push AST
+      if node.isContentEditable and !node._isFixingSelfFromBullShit
+        node._isFixingSelfFromBullShit = true
+        node.addEventListener "input", @onEditableStyleInput    
+    @run ASTs
     @
+  
+  onEditableStyleInput: (e) =>
+    @unobserve()
+    e.target.innerHTML = e.target.innerText
+    @observe()
+    @loadAndRun()
+    
   
   # clean when container insides changes, but if container changes must destroy
   clean: () ->
@@ -209,8 +223,6 @@ class Engine
       # style tag was modified then stop & reload everything
       if m.type is "characterData" 
         if @getter.hasAST(m.target.parentElement)
-          return @loadAndRun()
-        else if @getter.hasAST(m.target.parentElement.parentElement)
           return @loadAndRun()
       
       # els removed from container
