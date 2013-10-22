@@ -161,7 +161,7 @@ describe 'GSS commands', ->
       chai.expect(engine.workerCommands).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '::window[width]']
-        ['suggest', ['get','::window[width]'], ['number', window.outerWidth], 'required']
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
         ['eq', ['get','$12322[width]','.box$12322'],['get','::window[width]']]
       ]
 
@@ -175,15 +175,16 @@ describe 'GSS commands', ->
         ['var', '::window[width]', 'width', ['$reserved','window']]
         ['var', '::window[height]', 'height', ['$reserved','window']]
       ]
+      console.log engine.workerCommands
       chai.expect(engine.workerCommands).to.eql [
         ['var', '::window[x]']
         ['eq', ['get','::window[x]'],['number',0], 'required']
         ['var', '::window[y]']
         ['eq', ['get','::window[y]'],['number',0], 'required']
         ['var', '::window[width]']
-        ['suggest', ['get','::window[width]'], ['number', window.outerWidth], 'required']
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
         ['var', '::window[height]']
-        ['suggest', ['get','::window[height]'], ['number', window.outerHeight], 'required']
+        ['suggest', ['get','::window[height]'], ['number', window.innerHeight], 'required']
       ]
 
   #

@@ -141,18 +141,26 @@ class Thread
   _editvar: (varr, strength) =>
     if @__editVarNames.indexOf(varr.name) is -1
       @__editVarNames.push(varr.name)
-    return @solver.addEditVar varr
+      @solver.addEditVar varr
+    @  
   
-  # Todo
-  # - track edit constraints... c.EditConstraint
   suggest: (self, varr, val, strength) =>
+    # Todo
+    # - Debounce solver resolution or batch suggest
+    # - track edit constraints... c.EditConstraint
     
     if typeof varr is 'string' then varr = @get(self, varr)
+      
+    # if !@is_editing
+    #  @is_editing = true
+    #  @solver.beginEdit()
     
-    # beiginEdit?
+    # @solver.setEditedValue
+    
     @_editvar varr, strength
     @solver.suggestValue varr, val
-    #setEditedValue
+    @solver.resolve()
+    
 
   # Todo
   # - track stay constraints... c.StayConstraint

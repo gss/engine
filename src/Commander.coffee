@@ -50,7 +50,7 @@ makeTemplateFromVarId = (varId) ->
 class Commander
 
   constructor: (@engine) ->
-    @lazySpawnForWindowSize = GSS._.debounce @spawnForWindowSize, GSS.resizeDebounce, true
+    @lazySpawnForWindowSize = GSS._.debounce @spawnForWindowSize, GSS.resizeDebounce, false
     @cleanVars()    
   
   clean: () ->
@@ -101,10 +101,14 @@ class Commander
   _bound_to_window_resize: false
 
   spawnForWindowWidth: () ->
-    @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', window.outerWidth], 'required']
+    w = window.innerWidth
+    if @engine.vars["::window[width]"] isnt w
+      @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', w], 'required']
 
   spawnForWindowHeight: () ->
-    @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', window.outerHeight], 'required']
+    h = window.innerHeight
+    if @engine.vars["::window[height]"] isnt h
+      @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', h], 'required']
 
   spawnForWindowSize: () =>
     if @_bound_to_window_resize

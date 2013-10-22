@@ -45,7 +45,7 @@ GSS.loadAndRun = (container = document) ->
 # Config
 
 GSS.config = 
-  resizeDebounce: 100
+  resizeDebounce: 30
 
 
 # Engines
