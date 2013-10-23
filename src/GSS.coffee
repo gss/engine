@@ -92,7 +92,7 @@ GSS._.debounce = (func, wait, immediate) ->
 # Requires
 
 window.GSS = GSS
-GSS.workerURL = require("./WorkerBlobURL.js")
+GSS.workerURL = require("./WorkerBlobUrl.js")
 GSS.Getter = require("./dom/Getter.js")
 GSS.observer = require("./dom/Observer.js")
 GSS.Commander = require("./Commander.js")
