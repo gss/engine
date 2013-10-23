@@ -90,8 +90,8 @@ module.exports = ->
         dest: 'worker/gss-solver.js'
       blob:
         options:
-          banner: "module.exports = window.URL.createObjectURL(new Blob(["
-          footer: "]));"
+          banner: 'module.exports = window.URL.createObjectURL(new Blob(['
+          footer: '],{type:"text/javascript"}));'
           process: (src, filepath) ->
             return JSON.stringify(src) # only works with one file
         src: ['worker/gss-solver.js']

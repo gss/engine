@@ -12,7 +12,7 @@
     "lib/dom/Getter.js",
     "lib/dom/Setter.js",
     "lib/dom/IdMixin.js",    
-    "lib/WorkerBlobURL.js"
+    "lib/WorkerBlobUrl.js"
   ],
   "dependencies": {
     "d4tocchini/customevent-polyfill": "*"

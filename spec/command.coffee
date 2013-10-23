@@ -174,7 +174,6 @@ describe 'GSS commands', ->
         ['var', '::window[width]', 'width', ['$reserved','window']]
         ['var', '::window[height]', 'height', ['$reserved','window']]
       ]
-      console.log engine.workerCommands
       chai.expect(engine.workerCommands).to.eql [
         ['var', '::window[x]']
         ['eq', ['get','::window[x]'],['number',0], 'required']
