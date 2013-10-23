@@ -11,7 +11,8 @@
     "lib/Commander.js",  
     "lib/dom/Getter.js",
     "lib/dom/Setter.js",
-    "lib/dom/IdMixin.js"
+    "lib/dom/IdMixin.js",    
+    "lib/WorkerBlobURL.js"
   ],
   "dependencies": {
     "d4tocchini/customevent-polyfill": "*"
@@ -20,8 +21,7 @@
     "vendor/observe.js",
     "vendor/sidetable.js",
     "vendor/MutationObserver.js",
-    "worker/gss-solver.js",
-    "worker/blob.js"
+    "worker/gss-solver.js"
   ],
   "main": "lib/GSS.js"
 }

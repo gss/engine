@@ -90,12 +90,12 @@ module.exports = ->
         dest: 'worker/gss-solver.js'
       blob:
         options:
-          banner: "GSS.workerURL = window.URL.createObjectURL(new Blob(["
+          banner: "module.exports = window.URL.createObjectURL(new Blob(["
           footer: "]));"
           process: (src, filepath) ->
             return JSON.stringify(src) # only works with one file
         src: ['worker/gss-solver.js']
-        dest: 'worker/blob.js'
+        dest: 'lib/WorkerBlobUrl.js'
         
 
     # BDD tests on browser
@@ -150,7 +150,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build', ['coffee', 'concat:worker', 'concat:blob', 'component', 'component_build', 'uglify']
+  @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

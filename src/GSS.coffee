@@ -1,5 +1,6 @@
 # Polyfills
 require("customevent-polyfill")
+
 unless window.MutationObserver
   window.MutationObserver = window.JsMutationObserver
 
@@ -91,6 +92,7 @@ GSS._.debounce = (func, wait, immediate) ->
 # Requires
 
 window.GSS = GSS
+GSS.workerURL = require("./WorkerBlobURL.js")
 GSS.Getter = require("./dom/Getter.js")
 GSS.observer = require("./dom/Observer.js")
 GSS.Commander = require("./Commander.js")
@@ -101,6 +103,8 @@ GSS.Engine = require("./Engine.js")
 for key, val of require("./dom/IdMixin.js")
   if GSS[key] then throw new Error "IdMixin key clash: #{key}"
   GSS[key] = val
+  
+
 
 GSS.getter = new GSS.Getter()
 getter = GSS.getter
