@@ -30,11 +30,11 @@ class Setter
       when 'left', 'x'
         @setLeft element, value
       when 'top', 'y'
-        @setTop element, value
-
+        @setTop element, value  
+  
   makePositioned: (element) ->
     element.style.position = 'absolute'
-    element.style.margin = '0px'
+    element.style.margin = '0px'    
 
   getOffsets: (element) ->
     offsets =

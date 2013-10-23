@@ -31,10 +31,6 @@ class Getter
       when "$tag"
         return @container.getElementsByTagName identifier
     @container.querySelectorAll identifier  
-  
-  getId: (el) ->
-    if el?.getAttribute? then return el.getAttribute('data-gss-id')
-    return null
       
   measure: (node, dimension) ->
     switch dimension

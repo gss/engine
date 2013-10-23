@@ -54,42 +54,6 @@ GSS.getEngine = (el) ->
   return GSS.engines.byId[@getId(el)]
 
 
-# IDs
-
-GSS._id_counter = 1
-
-GSS._byIdCache = []
-
-GSS._ids_killed = (ids) ->
-  for id in ids
-    delete GSS._byIdCache[id]
-
-GSS.getById = (id) ->
-  if GSS._byIdCache[id] then return GSS._byIdCache[id]
-  # TODO: move to getter
-  el = document.querySelector '[data-gss-id="' + id + '"]'
-  # returns null if none found
-  # store in cache if found?
-  if el then GSS._byIdCache[id] = el
-  return el
-
-GSS.setupContainerId = (el) ->
-  el._gss_is_container = true
-  return GSS.setupId el
-
-GSS.setupId = (el) ->
-  gid = getter.getId el
-  if !gid?
-    gid = String(GSS._id_counter++) # b/c getAttribute returns String
-    # TODO: move to setter
-    el.setAttribute('data-gss-id', gid)
-  GSS._byIdCache[gid] = el
-  return gid
-
-GSS.getId = (el) ->
-  getter.getId el
-
-
 # Utils
 
 GSS._ = {}
@@ -133,6 +97,10 @@ GSS.Commander = require("./Commander.js")
 GSS.Query = require("./dom/Query.js")
 GSS.Setter = require("./dom/Setter.js")
 GSS.Engine = require("./Engine.js")
+
+for key, val of require("./dom/IdMixin.js")
+  if GSS[key] then throw new Error "IdMixin key clash: #{key}"
+  GSS[key] = val
 
 GSS.getter = new GSS.Getter()
 getter = GSS.getter

@@ -47,6 +47,7 @@ class Engine
     GSS.engines.push @
     engines.byId[@id] = @
     #
+    @cssDump = null
     #@boot o
     @
   
@@ -81,6 +82,18 @@ class Engine
   _run: (ast) ->
     if ast.commands
       @execute ast.commands
+    if ast.css      
+      @unobserve()
+      @setupCSSDumpIfNeeded()
+      @cssDump.insertAdjacentHTML "beforeend", ast.css
+      @observe()
+      
+  setupCSSDumpIfNeeded: () ->
+    if !@cssDump
+      #@container.insertAdjacentHTML "afterbegin", ""
+      @cssDump = document.createElement "style"
+      @cssDump.id = @id + "-gss-css-dump"
+      #@cssDump.classList.add("gss-css-dump")
   
   # digests or transforms commands
   execute: (commands) =>
