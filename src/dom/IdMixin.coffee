@@ -1,3 +1,9 @@
+# IdMixin 
+#
+# - Composes its props onto the `GSS` object
+# - Handles ID handling for DOM
+#
+
 IdMixin = 
   
   _id_counter: 1
@@ -28,10 +34,12 @@ IdMixin =
       # TODO: move to setter
       el.setAttribute('data-gss-id', gid)
       el.style['box-sizing'] = 'border-box'
+      el._gss_id = gid
     @_byIdCache[gid] = el
     return gid
 
   getId: (el) ->
+    if el?._gss_id then return el?._gss_id
     if el?.getAttribute? then return el.getAttribute('data-gss-id')
     return null
 
