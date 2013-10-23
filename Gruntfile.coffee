@@ -19,12 +19,12 @@ module.exports = ->
     uglify:
       options:
         report: 'min'
-      engine:
-        files:
-          './browser/gss-engine.min.js': ['./browser/gss-engine.js']
       worker:
         files:
-          './browser/gss-engine/worker/gss-solver.min.js': ['./browser/gss-engine/worker/gss-solver.js']
+          './worker/gss-solver.min.js': ['./worker/gss-solver.js']
+      engine:
+        files:
+          './browser/gss-engine.min.js': ['./browser/gss-engine.js']      
 
     # Automated recompilation and testing when developing
     watch:
@@ -94,7 +94,7 @@ module.exports = ->
           footer: '],{type:"text/javascript"}));'
           process: (src, filepath) ->
             return JSON.stringify(src) # only works with one file
-        src: ['worker/gss-solver.js']
+        src: ['worker/gss-solver.min.js']
         dest: 'lib/WorkerBlobUrl.js'
         
 
@@ -150,7 +150,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build', ['coffee', 'concat', 'component', 'component_build', 'uglify']
+  @registerTask 'build', ['coffee', 'uglify:worker', 'concat', 'component', 'component_build', 'uglify:engine']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

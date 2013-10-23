@@ -21,7 +21,8 @@
     "vendor/observe.js",
     "vendor/sidetable.js",
     "vendor/MutationObserver.js",
-    "worker/gss-solver.js"
+    "worker/gss-solver.js",
+    "worker/gss-solver.min.js"
   ],
   "main": "lib/GSS.js"
 }
