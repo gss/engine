@@ -92,7 +92,8 @@ class Engine
     if !@cssDump
       #@container.insertAdjacentHTML "afterbegin", ""
       @cssDump = document.createElement "style"
-      @cssDump.id = @id + "-gss-css-dump"
+      @cssDump.id = "gss-css-dump-" + @id 
+      @container.appendChild @cssDump
       #@cssDump.classList.add("gss-css-dump")
   
   # digests or transforms commands
@@ -126,6 +127,8 @@ class Engine
     @commander.clean()
     @getter.clean?() 
     @setter.clean?()
+    #
+    @cssDump?.innerHTML = ""
     # clean vars
     @workerCommands = []
     #@workerMessageHistory = [] keep history
@@ -174,6 +177,9 @@ class Engine
     #
     @unobserve()
     @observer = null
+    #
+    #@cssDump?.remove()
+    @cssDump = null
     # release vars
     @ast    = null    
     @getter = null

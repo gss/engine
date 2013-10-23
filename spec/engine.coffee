@@ -298,4 +298,34 @@ describe 'GSS Engine Life Cycle', ->
       fixtures.appendChild container
       engine3 = GSS(container)
       chai.expect(engine1).to.not.equal engine3
-      
+
+describe 'CSS Dump /', ->  
+  container = null
+  
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+
+  describe 'Asynchronous existentialism (one engine for life of container)', ->
+    engine = null
+    
+    it 'CSS in AST', (done) ->
+      engine = GSS(container)
+      container.innerHTML =  """
+        <style type="text/gss-ast">
+        {
+          "commands": [
+            ["var", "[col-width-1]"],
+            ["suggest", "[col-width-1]", 111]
+          ],
+          "css": "#box{width:100px;}#b{height:10px;}"       
+        }
+        </style>
+        """
+      listener = (e) ->           
+        chai.expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
+        chai.expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
+        container.removeEventListener 'solved', listener
+        done()
+      container.addEventListener 'solved', listener      
