@@ -26,13 +26,13 @@ engines.byId = {}
 class Engine
 
   constructor: (o) ->
-    {@container, @workerPath, @vars, @getter, @setter} = o
+    {@container, @workerURL, @vars, @getter, @setter} = o
     @vars      = {}                          unless @vars
     @container = document                    unless @container
     if @container.tagName is "HEAD" then @container = document
     @getter    = new GSS.Getter(@container)  unless @getter
     @setter    = new GSS.Setter(@container)  unless @setter
-    @workerPath= GSS.worker                  unless @workerPath
+    @workerURL = GSS.workerURL               unless @workerURL
     # id is always gssid of container
     @id        = GSS.setupContainerId @container
     @commander = new GSS.Commander(@)
@@ -223,7 +223,7 @@ class Engine
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
     unless @worker
-      @worker = new Worker @workerPath
+      @worker = new Worker @workerURL
       @worker.addEventListener "message", @handleWorkerMessage, false
       @worker.addEventListener "error", @handleError, false
     @worker.postMessage workerMessage

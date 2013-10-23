@@ -29,7 +29,7 @@ GSS = (o) ->
   else
     throw new Error ""
 
-GSS.worker = '../browser/gss-engine/worker/gss-solver.js'
+#GSS.worker = '../browser/gss-engine/worker/gss-solver.js'
 
 GSS.loadAndRun = (container = document) ->
   # finds all GSS style nodes and runs their engines

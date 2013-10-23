@@ -11,7 +11,6 @@ describe 'GSS engine', ->
   
   beforeEach ->
     engine = new Engine 
-      workerPath: '../browser/gss-engine/worker/gss-solver.js'
       container: container
 
   afterEach (done) ->
