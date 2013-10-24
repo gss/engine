@@ -80,13 +80,13 @@ class Engine
     
   
   _run: (ast) ->
-    if ast.commands
-      @execute ast.commands
     if ast.css      
       @unobserve()
       @setupCSSDumpIfNeeded()
       @cssDump.insertAdjacentHTML "beforeend", ast.css
       @observe()
+    if ast.commands
+      @execute ast.commands    
       
   setupCSSDumpIfNeeded: () ->
     if !@cssDump
