@@ -52,7 +52,7 @@ describe 'GSS commands', ->
           ['var', '$34222[x]', '$34222']
           ['var', '$35346[x]', '$35346']
           ['var', '$89347[x]', '$89347']
-        ]
+        ]        
 
     it 'varexp with class', ->
       container.innerHTML = """
@@ -80,7 +80,54 @@ describe 'GSS commands', ->
         ['varexp', '$35346[right]',['plus',['get','$35346[x]'],['get','$35346[width]']]]
         ['varexp', '$89347[right]',['plus',['get','$89347[x]'],['get','$89347[width]']]]
       ]
-
+    
+    it 'stay with class & static ids', ->
+      container.innerHTML = """
+        <div class="box" data-gss-id="12322">One</div>
+        <div class="box" data-gss-id="34222">One</div>
+      """
+      engine.execute [
+          ['var', '.box[x]', 'x', ['$class','box']]
+          ['stay', ['get','.box[x]','.box']]
+        ]
+      console.log engine.workerCommands
+      chai.expect(engine.workerCommands).to.eql [
+          ['var', '$12322[x]', '$12322']
+          ['var', '$34222[x]', '$34222']
+          ['stay', ['get','$12322[x]','.box$12322']]
+          ['stay', ['get','$34222[x]','.box$34222']]
+        ]
+    
+    it 'multiple stays', ->
+      container.innerHTML = """
+        <div class="box block" data-gss-id="12322">One</div>
+        <div class="box block" data-gss-id="34222">One</div>
+      """
+      engine.execute [
+          ['var', '.box[x]', 'x', ['$class','box']]
+          ['var', '.box[y]', 'y', ['$class','box']]
+          ['var', '.block[width]', 'width', ['$class','block']]
+          ['stay', ['get','.box[x]','.box']]
+          ['stay', ['get','.box[y]','.box']]
+          ['stay', ['get','.block[width]','.block']]
+        ]
+      console.log engine.workerCommands
+      chai.expect(engine.workerCommands).to.eql [
+          ['var', '$12322[x]', '$12322']
+          ['var', '$34222[x]', '$34222']
+          ['var', '$12322[y]', '$12322']
+          ['var', '$34222[y]', '$34222']
+          ['var', '$12322[width]', '$12322']
+          ['var', '$34222[width]', '$34222']
+          # break up stays to allow multiple plural queries
+          ['stay', ['get','$12322[x]','.box$12322']]
+          ['stay', ['get','$34222[x]','.box$34222']] 
+          ['stay', ['get','$12322[y]','.box$12322']]          
+          ['stay', ['get','$34222[y]','.box$34222']]
+          ['stay', ['get','$12322[width]','.block$12322']]          
+          ['stay', ['get','$34222[width]','.block$34222']]
+        ]
+    
     it 'eq with class', ->
       container.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>

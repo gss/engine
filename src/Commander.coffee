@@ -18,6 +18,12 @@ bindRoot = (root, query) ->
         throw new Error "Multi el queries only allowed once per statement"
       root._binds.multi = query
 
+cloneBinds = (from, to) ->
+  if from._is_bound = true
+    for query in from._binds
+      bindRoot to, query
+  return to
+
 # - preload cache for pass-throughs
 # - global cache, kinda dangerous?
 # TODO:
@@ -48,7 +54,7 @@ makeTemplateFromVarId = (varId) ->
 
 # transforms & generates needed commands for engine
 class Commander
-
+  
   constructor: (@engine) ->
     @lazySpawnForWindowSize = GSS._.debounce @spawnForWindowSize, GSS.resizeDebounce, false
     @cleanVars()    
@@ -131,7 +137,7 @@ class Commander
     #else
     #  throw new Error "Not sure how to bind to window prop: #{prop}"
 
-  registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->
+  registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->    
     if !root._is_bound
       # just pass root through
       @engine.registerCommand root
@@ -301,6 +307,18 @@ class Commander
 
   'stay': (self) =>
     @registerSpawn(self)
+    ###
+    if !self._is_bound then return @registerSpawn(self)
+    # break up stays to allow multiple plural queries
+    args = [arguments...]
+    gets = args[1...args.length]    
+    for get in gets
+      stay = ['stay']
+      stay.push get
+      cloneBinds self, stay
+      @registerSpawn(stay)
+    ###
+      
 
   'strength': (root,s) =>
     return ['strength', s]
