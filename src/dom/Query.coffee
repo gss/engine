@@ -11,22 +11,28 @@ arrayAddsRemoves = (old, neu) ->
       removes.push o
   return {adds:adds,removes:removes}
 
+LOG = () ->
+  if GSS.config.debug
+    console.log "Query::", arguments...
+
 class Query
   
   isQuery: true
     
-  constructor: (o={}) ->
+  constructor: (o={}) ->    
     @selector = o.selector or throw new Error "GssQuery must have a selector"
     @createNodeList = o.createNodeList or throw new Error "GssQuery must implement createNodeList()"
+    @afterChange = o.afterChange or null
     @isMulti = o.isMulti or false
-    @isLive = o.isLive or false
+    @isLive = o.isLive or false # needs to recall createNodeList?
     #@isReserved = o.isReserved or false
     #@isImmutable = o.isImmutable or true
     @ids = o.ids or []
     @lastAddedIds = []
     @lastRemovedIds = []
+    LOG "constructor() @", @
     #@lastLocalRemovedIds = []
-    @update()
+    #@update() # have to manuall call update
     @
   
   _updated_once: false
@@ -34,10 +40,12 @@ class Query
   changedLastUpdate: false
   
   update: () ->
+    LOG "update() @", @
     if @is_destroyed then throw new Error "Can't update destroyed query: #{selector}"
-    @changedLastUpdate = false
-    if !@isLive or !@_updated_once
+    @changedLastUpdate = false    
+    if !@isLive or !@_updated_once          
       @nodeList = @createNodeList()
+      @_updated_once = true
     oldIds = @ids
     newIds = []
     for el in @nodeList
@@ -52,6 +60,8 @@ class Query
       @changedLastUpdate = true
     @lastRemovedIds = removes
     @ids = newIds
+    if @changedLastUpdate
+      if @afterChange then @afterChange.call @
     @
   
   is_destroyed: false

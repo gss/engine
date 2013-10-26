@@ -1,3 +1,4 @@
+
 describe 'Cassowary Thread', ->
   it 'should instantiate', ->
     thread = new Thread()
@@ -98,9 +99,9 @@ describe 'Cassowary Thread', ->
     thread.execute
       commands:[
         ['var', '[width]']
-        ['var', '[intrinsic-width]']
+        ['var', '[intrinsic-width]']        
         ['eq', ['get','[width]'],['number','100'], 'weak']
-        ['eq', ['get','[width]'],['get','[intrinsic-width]'], 'required']
+        ['eq', ['get','[width]'],['get','[intrinsic-width]'], 'require']        
         ['suggest', ['get','[intrinsic-width]'], ['number','999']]
       ]
     values = thread._getValues()
@@ -108,6 +109,28 @@ describe 'Cassowary Thread', ->
       "[width]": 999
       "[intrinsic-width]": 999
     done()
+  
+  
+  it 'intrinsic var is immutable with stay !!!!! not working right until cassowary is fixed', () ->
+    #c.trace = true
+    thread = new Thread()
+    thread.execute
+      commands:[
+        ['var', '[width]']
+        ['var', '[intrinsic-width]']
+        ['var', '[hgap]']
+        ['eq', ['get','[hgap]'],['number',20], 'require']                
+        ['eq', ['get','[width]'],['plus',['get','[intrinsic-width]'],['get','[hgap]']],'require']
+        ['suggest', ['get','[intrinsic-width]'], ['number',100], 'strong', 1000]
+        ['eq', ['get','[width]'], ['number',20], 'strong']  
+      ]
+    values = thread._getValues()
+    console.log values
+    chai.expect(values).to.eql
+      "[width]": 120
+      "[intrinsic-width]": 100
+      "[hgap]": 20
+    #done()
   
   it 'tracking & removing by get tracker', (done) ->
     thread = new Thread()

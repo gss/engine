@@ -105,10 +105,19 @@ class Thread
   divide: (root,e1,e2,s,w) ->
     return c.divide e1, e2
 
-  _strength: (s) ->
-    strength = c.Strength[s]
-    #if !strength? then throw new Error("Strength unrecognized: #{s}")
-    return strength
+  _strength: (s='required') ->
+    if typeof s is 'string'
+      if s is 'require' then s = 'required'
+      strength = c.Strength[s]
+      #if !strength? then throw new Error("Strength unrecognized: #{s}")
+      return strength
+    return s
+    ###   
+    if strength.symbolicWeight?
+      return strength
+    else
+      throw new Error("Unrecognized Strength: #{s}")
+    ###
   
   #
   _addConstraint: (root, constraint) =>
@@ -138,13 +147,13 @@ class Thread
 
   # Edit / Stay Constraints
 
-  _editvar: (varr, strength) =>
+  _editvar: (varr, s, w) =>
     if @__editVarNames.indexOf(varr.name) is -1
       @__editVarNames.push(varr.name)
-      @solver.addEditVar varr
+      @solver.addEditVar varr, @_strength(s), w
     @  
   
-  suggest: (self, varr, val, strength) =>
+  suggest: (self, varr, val, s='strong', w) =>
     # Todo
     # - Debounce solver resolution or batch suggest
     # - track edit constraints... c.EditConstraint
@@ -157,7 +166,7 @@ class Thread
     
     # @solver.setEditedValue
     
-    @_editvar varr, strength
+    @_editvar varr, s, w
     @solver.suggestValue varr, val
     @solver.resolve()
     

@@ -32,28 +32,23 @@ GSS = (o) ->
 
 #GSS.worker = '../browser/gss-engine/worker/gss-solver.js'
 
-GSS.loadAndRun = (container = document) ->
-  # finds all GSS style nodes and runs their engines
-  containersToLoad = []
-  for node in GSS.getter.getAllStyleNodes()
-    if GSS.getter.hasAST node
-      container = GSS.getter.getEngineForStyleNode node
-      if containersToLoad.indexOf(container) is -1
-        containersToLoad.push container
-  for container in containersToLoad
-    GSS(container).loadAndRun()
-
 # Config
 
 GSS.config = 
   resizeDebounce: 30
+
+# overwrite config if provided
+
+if GSS_CONFIG
+  for key, val of GSS_CONFIG
+    GSS.config[key] = val
+    
 
 
 # Engines
 
 GSS.getEngine = (el) ->
   return GSS.engines.byId[@getId(el)]
-
 
 # Utils
 
@@ -94,17 +89,20 @@ GSS._.debounce = (func, wait, immediate) ->
 window.GSS = GSS
 GSS.workerURL = require("./WorkerBlobUrl.js")
 GSS.Getter = require("./dom/Getter.js")
-GSS.observer = require("./dom/Observer.js")
 GSS.Commander = require("./Commander.js")
 GSS.Query = require("./dom/Query.js")
 GSS.Setter = require("./dom/Setter.js")
 GSS.Engine = require("./Engine.js")
 
+# ID stuff
+
 for key, val of require("./dom/IdMixin.js")
   if GSS[key] then throw new Error "IdMixin key clash: #{key}"
   GSS[key] = val
-  
 
+# 
 
 GSS.getter = new GSS.Getter()
 getter = GSS.getter
+
+GSS.observer = require("./dom/Observer.js")

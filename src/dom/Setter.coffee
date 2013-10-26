@@ -22,15 +22,16 @@ class Setter
           console.log "Element wasn't found"
 
   elementSet: (element, dimension, value) ->
+    offsets = null
     switch dimension
       when 'width', 'w'
         @setWidth element, value
       when 'height', 'h'
         @setHeight element, value
-      when 'left', 'x'
+      when 'left', 'x'        
         @setLeft element, value
       when 'top', 'y'
-        @setTop element, value  
+        @setTop element, value
   
   makePositioned: (element) ->
     element.style.position = 'absolute'
@@ -55,13 +56,13 @@ class Setter
   setHeight: (element, value) ->
     element.style.height = "#{value}px"
 
-  setLeft: (element, value) ->
+  setLeft: (element, value, offsets) ->
     @makePositioned element
     offsets = @getOffsets element
     element.style.left = "#{value - offsets.x}px"
 
-  setTop: (element, value) ->
-    @makePositioned element
+  setTop: (element, value, offsets) ->
+    @makePositioned element    
     offsets = @getOffsets element
     element.style.top = "#{value - offsets.y}px"
 

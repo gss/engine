@@ -28,10 +28,10 @@ IdMixin =
     return @setupId el
 
   setupId: (el) ->
+    return null unless el
     gid = @getId el
-    if !gid?
+    if !gid?        
       gid = String(@_id_counter++) # b/c getAttribute returns String
-      # TODO: move to setter
       el.setAttribute('data-gss-id', gid)
       el.style['box-sizing'] = 'border-box'
       el._gss_id = gid

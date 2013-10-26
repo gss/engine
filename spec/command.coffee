@@ -1,5 +1,7 @@
 Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 
+
+
 describe 'GSS commands', ->
   container = null
   engine = null
@@ -22,6 +24,7 @@ describe 'GSS commands', ->
 
   describe 'command transformations -', ->
     it 'var with class & generate ids', ->
+
       container.innerHTML = """
         <div class="box">One</div>
         <div class="box">One</div>
@@ -30,11 +33,12 @@ describe 'GSS commands', ->
       engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
+      
       chai.expect(engine.workerCommands).to.eql [
           # $1 is engine
-          ['var', '$2[x]', '$2']
           ['var', '$3[x]', '$3']
           ['var', '$4[x]', '$4']
+          ['var', '$5[x]', '$5']
         ]
 
     it 'var with class & static ids', ->
@@ -90,7 +94,6 @@ describe 'GSS commands', ->
           ['var', '.box[x]', 'x', ['$class','box']]
           ['stay', ['get','.box[x]','.box']]
         ]
-      console.log engine.workerCommands
       chai.expect(engine.workerCommands).to.eql [
           ['var', '$12322[x]', '$12322']
           ['var', '$34222[x]', '$34222']
@@ -111,7 +114,6 @@ describe 'GSS commands', ->
           ['stay', ['get','.box[y]','.box']]
           ['stay', ['get','.block[width]','.block']]
         ]
-      console.log engine.workerCommands
       chai.expect(engine.workerCommands).to.eql [
           ['var', '$12322[x]', '$12322']
           ['var', '$34222[x]', '$34222']
@@ -187,9 +189,9 @@ describe 'GSS commands', ->
         ['var', '$12322[intrinsic-width]', '$12322']
         ['var', '$34222[intrinsic-width]', '$34222']
         ['var', '$35346[intrinsic-width]', '$35346']
-        ['suggest', ['get','$12322[intrinsic-width]'], ['number', 111], 'required']
-        ['suggest', ['get','$34222[intrinsic-width]'], ['number', 222], 'required']
-        ['suggest', ['get','$35346[intrinsic-width]'], ['number', 333], 'required']
+        ['suggest', ['get','$12322[intrinsic-width]'], ['number', 111], 'strong', 1000]
+        ['suggest', ['get','$34222[intrinsic-width]'], ['number', 222], 'strong', 1000]
+        ['suggest', ['get','$35346[intrinsic-width]'], ['number', 333], 'strong', 1000]
         ['eq', ['get','$12322[width]','.box$12322'],['get','$12322[intrinsic-width]','.box$12322']]
         ['eq', ['get','$34222[width]','.box$34222'],['get','$34222[intrinsic-width]','.box$34222']]
         ['eq', ['get','$35346[width]','.box$35346'],['get','$35346[intrinsic-width]','.box$35346']]
@@ -207,7 +209,7 @@ describe 'GSS commands', ->
       chai.expect(engine.workerCommands).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '::window[width]']
-        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'strong', 1000]
         ['eq', ['get','$12322[width]','.box$12322'],['get','::window[width]']]
       ]
 
@@ -227,9 +229,9 @@ describe 'GSS commands', ->
         ['var', '::window[y]']
         ['eq', ['get','::window[y]'],['number',0], 'required']
         ['var', '::window[width]']
-        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'strong', 1000]
         ['var', '::window[height]']
-        ['suggest', ['get','::window[height]'], ['number', window.innerHeight], 'required']
+        ['suggest', ['get','::window[height]'], ['number', window.innerHeight], 'strong', 1000]
       ]
 
   #
@@ -356,7 +358,7 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110], 'required']
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110], 'strong', 1000]
               ]
             chai.expect(engine.vars['$111[intrinsic-width]']).to.equal 1110
             chai.expect(engine.vars['$222[height]']).to.equal 1110
@@ -386,7 +388,7 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
               ]
             container.removeEventListener 'solved', listener
             done()
@@ -416,13 +418,13 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2            
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
               ]
             engine.lastWorkerCommands = [] # to ensure it's reset
             el.innerHTML = "aabbb"            
           else if count is 3
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
               ]
             container.removeEventListener 'solved', listener
             done()

@@ -106,15 +106,19 @@ class Commander
 
   _bound_to_window_resize: false
 
+  # TODO(D4): make required suggestions work
+  
   spawnForWindowWidth: () ->
     w = window.innerWidth
     if @engine.vars["::window[width]"] isnt w
-      @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', w], 'required']
+      @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', w], 'strong', 1000]
+      #@engine.registerCommand ['stay', ['get', "::window[width]"]]
 
   spawnForWindowHeight: () ->
     h = window.innerHeight
     if @engine.vars["::window[height]"] isnt h
-      @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', h], 'required']
+      @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', h], 'strong', 1000]
+      #@engine.registerCommand ['stay', ['get', "::window[width]"]]
 
   spawnForWindowSize: () =>
     if @_bound_to_window_resize
@@ -130,8 +134,8 @@ class Commander
       if !@_bound_to_window_resize
         window.addEventListener("resize", @lazySpawnForWindowSize, false)
         @_bound_to_window_resize = true
-    else if prop is 'x'
-      @engine.registerCommand ['eq', ['get', '::window[x]'], ['number', 0], 'required']
+    else if prop is 'x'      
+      @engine.registerCommand ['eq', ['get', '::window[x]'], ['number', 0], 'required']      
     else if prop is 'y'
       @engine.registerCommand ['eq', ['get', '::window[y]'], ['number', 0], 'required']
     #else
@@ -177,6 +181,8 @@ class Commander
         for prop,register of registersByProp
           register.call @
     @
+    
+  
   
   spawnIntrinsicSuggests: (root) =>
     # only if bound to dom query
@@ -190,9 +196,11 @@ class Commander
           # only register intrinsic prop once per id          
           if !@intrinsicRegistersById[gid][prop]
             register = () ->
-              val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])              
-              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val], 'required']
-              # ['suggest', ['get', "#{gid}[#{prop}]", "#{selector}$#{gid}"], ['number', val]]
+              val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])        
+              # TODO(D4): make required suggestions work      
+              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val], 'strong', 1000]              
+              #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
+
             @intrinsicRegistersById[gid][prop] = register
             register.call @
     @
@@ -344,9 +352,15 @@ class Commander
   '$reserved': (root, sel) =>
     query = null
     if sel is 'window'
-      return 'window'
+      return 'window'    
       #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
       #  return ""
+    
+    else if sel is 'this'
+      engine = @engine
+      query = @engine.registerDomQuery selector:"::"+"this", isMulti:false, isLive:true, createNodeList:() ->
+        return [engine.container]        
+      bindRoot root, query
     else
       throw new Error "$reserved selectors not yet handled: #{sel}"
     return query

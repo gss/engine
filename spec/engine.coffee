@@ -327,4 +327,98 @@ describe 'CSS Dump /', ->
         chai.expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
         container.removeEventListener 'solved', listener
         done()
-      container.addEventListener 'solved', listener      
+      container.addEventListener 'solved', listener
+
+describe 'Nested Engine', ->  
+  container = null
+  containerEngine = null
+  wrap = null
+  wrapEngine = null
+  
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    #        
+    container.innerHTML =  """
+      <section>
+        <div id="wrap" style="width:100px;" data-gss-id="999">
+          <style type="text/gss-ast">
+          {
+            "commands": [
+              ["var", "#boo[width]", "width", ["$id","boo"]],
+              ["eq", ["get","#boo[width]","#boo"], ["number",100]]
+            ]
+          }
+          </style>
+          <div id="boo" data-gss-id="boo"></div>
+        </div>
+      </section>
+      """
+    containerEngine = GSS(container)
+    wrap = document.getElementById('wrap')
+    wrapEngine = GSS(wrap)    
+
+  it 'engines are attached to correct element', () ->
+    chai.expect(wrapEngine).to.not.equal containerEngine
+    chai.expect(wrapEngine.container).to.equal wrap
+    chai.expect(containerEngine.container).to.equal container
+  
+  it 'correct values', (done) ->
+    listener = (e) ->           
+      chai.expect(wrapEngine.vars).to.eql 
+        "$boo[width]": 100
+      wrap.removeEventListener 'solved', listener
+      done()
+    wrap.addEventListener 'solved', listener
+
+describe '::This framed view', ->  
+  container = null
+  containerEngine = null
+  wrap = null
+  wrapEngine = null
+  
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    #        
+    container.innerHTML =  """
+        <div id="wrap" style="width:100px;" data-gss-id="wrap">
+          <style type="text/gss-ast">
+          {
+            "commands": [
+              ["var", "#boo[width]", "width", ["$id","boo"]],
+              ["var", "::this[width]", "width", ["$reserved","this"]],
+              ["eq", ["get","#boo[width]","#boo"], ["get","::this[width]"]]
+            ]
+          }
+          </style>
+          <div id="boo" data-gss-id="boo"></div>
+        </div>
+      """
+    containerEngine = GSS(container)
+    wrap = document.getElementById('wrap')
+    wrapEngine = GSS(wrap)    
+
+  it 'engines are attached to correct element', () ->
+    chai.expect(wrapEngine).to.not.equal containerEngine
+    chai.expect(wrapEngine.container).to.equal wrap
+    chai.expect(containerEngine.container).to.equal container
+  
+  it 'correct values', (done) ->
+    listener = (e) ->           
+      chai.expect(wrapEngine.vars).to.eql 
+        "$boo[width]": 100
+        "$wrap[width]": 100
+      wrap.removeEventListener 'solved', listener
+      done()
+    wrap.addEventListener 'solved', listener
+    
+  
+  
+  
+
+      
+      
+      

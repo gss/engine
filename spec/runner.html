@@ -24,6 +24,7 @@
     </div-->    
     <script src="../browser/gss-engine.js"></script>
     <script>
+      GSS_CONFIG = {debug:false};
       require("gss-engine");
     </script>
     <script src="../vendor/c.js"></script>
@@ -35,7 +36,11 @@
     <!--script src="http://chaijs.com/chai.js"></script-->
     <script src="../node_modules/chai/chai.js"></script>
     <script src="../node_modules/mocha/mocha.js"></script>
-    <script>mocha.setup('bdd');</script>
+    <script>
+      mocha.setup('bdd');
+      chai.Assertion.includeStack = true;
+      chai.Assertion.showDiff = true;
+    </script>
     
     <script src="./command.js"></script>
     <script src="./cassowary.js"></script>

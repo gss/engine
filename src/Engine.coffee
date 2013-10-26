@@ -19,6 +19,9 @@ cleanAndSnatch = (frm, to) ->
   frm = undefined
   return to
 
+LOG = () ->
+  if GSS.config.debug
+    console.log "Engine::", arguments...
 
 GSS.engines = engines = []
 engines.byId = {}
@@ -48,6 +51,7 @@ class Engine
     engines.byId[@id] = @
     #
     @cssDump = null
+    LOG "constructor() @", @
     #@boot o
     @
   
@@ -67,7 +71,8 @@ class Engine
   ###
   
   run: (asts) ->
-    # if arra, batch execute then solve
+    LOG @id,".run(asts)",asts
+    # if array, batch execute then solve
     if asts instanceof Array
       for ast in asts        
         @_run ast
@@ -101,6 +106,7 @@ class Engine
     @commander.execute commands
   
   loadAndRun: () ->
+    LOG @id,".loadAndRun()"
     if @is_running
       @clean()
     #@run( @getter.readAllASTs() )
@@ -108,21 +114,26 @@ class Engine
     for node in @getter.getAllStyleNodes()
       AST = @getter.readAST node
       if AST then ASTs.push AST
+      ###
       if node.isContentEditable and !node._isFixingSelfFromBullShit
         node._isFixingSelfFromBullShit = true
         node.addEventListener "input", @onEditableStyleInput    
+      ###
     @run ASTs
     @
   
+  ###
   onEditableStyleInput: (e) =>
     @unobserve()
     e.target.innerHTML = e.target.innerText
     @observe()
     @loadAndRun()
+  ###
     
   
   # clean when container insides changes, but if container changes must destroy
   clean: () ->
+    LOG @id,".clean()"
     #@unobserve()
     @commander.clean()
     @getter.clean?() 
@@ -220,6 +231,7 @@ class Engine
     @
   
   solve: () ->
+    LOG @id,".solve()",@workerCommands
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
     unless @worker
@@ -230,6 +242,7 @@ class Engine
     @resetWorkerCommands()
 
   _handleMutations: (mutations=[]) =>
+    LOG @id,"._handleMutations(m)",m
     trigger = false
     trigger_containerRemoved = false
     trigger_removes = false
@@ -241,7 +254,7 @@ class Engine
     for m in mutations
       # style tag was modified then stop & reload everything
       if m.type is "characterData" 
-        if @getter.hasAST(m.target.parentElement)
+        if @getter.isStyleNode(m.target.parentElement)
           return @loadAndRun()
       
       # els removed from container
@@ -320,6 +333,7 @@ class Engine
     #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds    
 
   measureByGssId: (id, prop) ->
+    LOG @id,".measureByGssId()",@workerCommands
     el = GSS.getById id
     @getter.measure(el, prop)
 
@@ -328,6 +342,7 @@ class Engine
     @workerCommands = []
 
   handleWorkerMessage: (message) =>
+    LOG @id,".handleWorkerMessage()",@workerCommands
     @unobserve()
     cleanAndSnatch message.data.values, @vars
     @setter.set @vars
@@ -366,6 +381,7 @@ class Engine
     else
       @observe()
       query = new GSS.Query(o)
+      query.update()
       @queryCache[selector] = query
       return query
 ###

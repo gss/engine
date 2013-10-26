@@ -67,15 +67,16 @@ class Getter
       if AST then ASTs.push AST
     return ASTs
   
-  hasAST: (node) ->  
-    mime = node.getAttribute?("type")
-    if mime
-      return (mime.indexOf("text/gss") is 0)
+  isStyleNode: (node) ->  
+    if node?.tagName is "STYLE"
+      mime = node.getAttribute?("type")
+      if mime
+        return (mime.indexOf("text/gss") is 0)
     return false
   
   #getNearestEngine:
   
-  getEngineForStyleNode: (node) ->
+  getEngineContainerForStyleNode: (node) ->
     return node.parentElement
   
   # returns null if not a styleNode, returns {} if styleNode is empty    
