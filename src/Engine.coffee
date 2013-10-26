@@ -270,6 +270,7 @@ class Engine
               removes.push("$" + gid)
               trigger = true
               trigger_removesFromContainer = true
+              
       # els that may need remeasuring      
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
         if m.type is "characterData"
@@ -324,11 +325,13 @@ class Engine
       @container.dispatchEvent e
     ###
 
-    @commander.handleRemoves removes
-    @commander.handleSelectorsWithAdds selectorsWithAdds
-    @commander.handleInvalidMeasures invalidMeasures
+    
     if trigger
+      @commander.handleRemoves removes
+      @commander.handleSelectorsWithAdds selectorsWithAdds
+      @commander.handleInvalidMeasures invalidMeasures
       @solve()
+
     #console.log "query.observer selector:#{selector}, mutations:", mutations
     #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds    
 

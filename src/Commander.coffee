@@ -56,7 +56,7 @@ makeTemplateFromVarId = (varId) ->
 class Commander
   
   constructor: (@engine) ->
-    @lazySpawnForWindowSize = GSS._.debounce @spawnForWindowSize, GSS.resizeDebounce, false
+    @lazySpawnForWindowSize = GSS._.debounce @spawnForWindowSize, GSS.config.resizeDebounce, false
     @cleanVars()    
   
   clean: () ->

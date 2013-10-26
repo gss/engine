@@ -414,11 +414,63 @@ describe '::This framed view', ->
       wrap.removeEventListener 'solved', listener
       done()
     wrap.addEventListener 'solved', listener
-    
+
+###
+
+describe 'Engine Hierarchy', ->  
+  container = null
+  containerEngine = null
+  wrap = null
+  wrapEngine = null
   
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    #        
+    container.innerHTML =  """
+        <style type="text/gss-ast">
+        {
+          "commands": [
+            ["var", "#wrap[width]", "width", ["$id","wrap"]],
+            ["eq", ["get","#wrap[width]","#wrap"], ["number",555]]
+          ]
+        }
+        </style>
+        <div id="wrap" style="width:100px;" data-gss-id="wrap">
+          <style type="text/gss-ast">
+          {
+            "commands": [
+              ["var", "#boo[width]", "width", ["$id","boo"]],
+              ["var", "::this[width]", "width", ["$reserved","this"]],
+              ["eq", ["get","#boo[width]","#boo"], ["get","::this[width]"]]
+            ]
+          }
+          </style>
+          <div id="boo" data-gss-id="boo"></div>
+        </div>
+      """
+    containerEngine = GSS(container)
+    wrap = document.getElementById('wrap')
+    wrapEngine = GSS(wrap)    
+
+  it 'engines are attached to correct element', () ->
+    chai.expect(wrapEngine).to.not.equal containerEngine
+    chai.expect(wrapEngine.container).to.equal wrap
+    chai.expect(containerEngine.container).to.equal container
   
-  
+  it 'correct values', (done) ->
+    #GSS.config.debug = true
+    #debugger
+    cListener = (e) ->           
+      console.log 'container'
+      #wrap.removeEventListener 'solved', cListener
+    container.addEventListener 'solved', cListener
+    wListener = (e) ->           
+      console.log 'wrap'
+      #wrap.removeEventListener 'solved', wListener
+    wrap.addEventListener 'solved', wListener
 
       
       
-      
+###

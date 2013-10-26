@@ -125,7 +125,6 @@ describe 'Cassowary Thread', ->
         ['eq', ['get','[width]'], ['number',20], 'strong']  
       ]
     values = thread._getValues()
-    console.log values
     chai.expect(values).to.eql
       "[width]": 120
       "[intrinsic-width]": 100

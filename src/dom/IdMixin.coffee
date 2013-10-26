@@ -30,11 +30,14 @@ IdMixin =
   setupId: (el) ->
     return null unless el
     gid = @getId el
-    if !gid?        
-      gid = String(@_id_counter++) # b/c getAttribute returns String
+    if !gid?       
+      _id =  @_id_counter++
+      # default id to el.id
+      gid = String(el.id or _id) # b/c el.id returns String       
       el.setAttribute('data-gss-id', gid)
       el.style['box-sizing'] = 'border-box'
-      el._gss_id = gid
+      el._gss_id = gid 
+      if @_byIdCache[gid]? then throw new Error "Only one element can have a given gss-id: #{gid}"
     @_byIdCache[gid] = el
     return gid
 
