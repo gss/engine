@@ -39,7 +39,7 @@ GSS.config =
 
 # overwrite config if provided
 
-if GSS_CONFIG
+if GSS_CONFIG?
   for key, val of GSS_CONFIG
     GSS.config[key] = val
     
