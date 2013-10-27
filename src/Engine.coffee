@@ -25,19 +25,21 @@ LOG = () ->
 
 GSS.engines = engines = []
 engines.byId = {}
+engines.root = null
 
 class Engine
 
   constructor: (o) ->
-    {@container, @workerURL, @vars, @getter, @setter} = o
+    {@scope, @workerURL, @vars, @getter, @setter, @is_root} = o
     @vars      = {}                          unless @vars
-    @container = document                    unless @container
-    if @container.tagName is "HEAD" then @container = document
-    @getter    = new GSS.Getter(@container)  unless @getter
-    @setter    = new GSS.Setter(@container)  unless @setter
+    if !@scope
+      @scope = GSS.getter.getRootScope()
+    if @scope.tagName is "HEAD" then @scope = document
+    @getter    = new GSS.Getter(@scope)  unless @getter
+    @setter    = new GSS.Setter(@scope)  unless @setter
     @workerURL = GSS.workerURL               unless @workerURL
-    # id is always gssid of container
-    @id        = GSS.setupContainerId @container
+    # id is always gssid of scope
+    @id        = GSS.setupScopeId @scope
     @commander = new GSS.Commander(@)
     @worker    = null
     #    
@@ -52,6 +54,13 @@ class Engine
     #
     @cssDump = null
     LOG "constructor() @", @
+    #
+    if @is_root
+      engines.root = @
+    if @scope is GSS.Getter.getRootScope()
+      @queryScope = document
+    else
+      @queryScope = @scope
     #@boot o
     @
   
@@ -95,10 +104,10 @@ class Engine
       
   setupCSSDumpIfNeeded: () ->
     if !@cssDump
-      #@container.insertAdjacentHTML "afterbegin", ""
+      #@scope.insertAdjacentHTML "afterbegin", ""
       @cssDump = document.createElement "style"
       @cssDump.id = "gss-css-dump-" + @id 
-      @container.appendChild @cssDump
+      @scope.appendChild @cssDump
       #@cssDump.classList.add("gss-css-dump")
   
   # digests or transforms commands
@@ -131,7 +140,7 @@ class Engine
   ###
     
   
-  # clean when container insides changes, but if container changes must destroy
+  # clean when scope insides changes, but if scope changes must destroy
   clean: () ->
     LOG @id,".clean()"
     #@unobserve()
@@ -195,7 +204,7 @@ class Engine
     @ast    = null    
     @getter = null
     @setter = null
-    @container = null
+    @scope = null
     @commander = null
     @workerCommands = null
     @workerMessageHistory = null
@@ -221,7 +230,7 @@ class Engine
   
   observe:() ->
     if !@is_observing
-      @observer.observe(@container, {subtree: true, childList: true, attributes: true, characterData: true})
+      @observer.observe(@scope, {subtree: true, childList: true, attributes: true, characterData: true})
       @is_observing = true
     @
 
@@ -244,9 +253,9 @@ class Engine
   _handleMutations: (mutations=[]) =>
     LOG @id,"._handleMutations(m)",m
     trigger = false
-    trigger_containerRemoved = false
+    trigger_scopeRemoved = false
     trigger_removes = false
-    trigger_removesFromContainer = false
+    trigger_removesFromScope = false
 
     removes = []    
     invalidMeasures = []    
@@ -257,19 +266,19 @@ class Engine
         if @getter.isStyleNode(m.target.parentElement)
           return @loadAndRun()
       
-      # els removed from container
+      # els removed from scope
       if m.removedNodes.length > 0 # nodelist are weird?
         for node in m.removedNodes
-          # if container is removed...
-          if node is @container
-            console.log "handle engine container removed"
+          # if scope is removed...
+          if node is @scope
+            console.log "handle engine scope removed"
           #
           gid = GSS.getId node
           if gid?
             if GSS.getById gid
               removes.push("$" + gid)
               trigger = true
-              trigger_removesFromContainer = true
+              trigger_removesFromScope = true
               
       # els that may need remeasuring      
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
@@ -305,7 +314,7 @@ class Engine
           # ignore redudant removes
           for rid in removedIds
             rid = "$" + rid
-            if trigger_removesFromContainer
+            if trigger_removesFromScope
               if removes.indexOf(rid) is -1
                 removes.push(selector + rid) # .box$3454
             else
@@ -317,12 +326,12 @@ class Engine
         detail:
           addsBySelector: addsBySelector
           removesBySelector: removesBySelector
-          removesFromContainer: removesFromContainer
+          removesFromScope: removesFromScope
           selectorsWithAdds: selectorsWithAdds
           engine: @
         bubbles: true
         cancelable: true
-      @container.dispatchEvent e
+      @scope.dispatchEvent e
     ###
 
     
@@ -333,7 +342,7 @@ class Engine
       @solve()
 
     #console.log "query.observer selector:#{selector}, mutations:", mutations
-    #console.log "removesFromContainer:", removesFromContainer, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds    
+    #console.log "removesFromScope:", removesFromScope, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds    
 
   measureByGssId: (id, prop) ->
     LOG @id,".measureByGssId()",@workerCommands
@@ -360,7 +369,7 @@ class Engine
       cancelable: cancelable
     }
     e = new CustomEvent eName, o
-    @container.dispatchEvent e
+    @scope.dispatchEvent e
 
   handleError: (error) ->
     return @onError error if @onError

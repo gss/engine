@@ -3,29 +3,29 @@ Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 
 
 describe 'GSS commands', ->
-  container = null
+  scope = null
   engine = null
 
   before ->
     fixtures = document.getElementById 'fixtures'
-    container = document.createElement 'div'
-    fixtures.appendChild container
+    scope = document.createElement 'div'
+    fixtures.appendChild scope
   beforeEach ->
     engine = new Engine 
-      container:container
+      scope:scope
 
   afterEach (done) ->
     engine.destroy()
     done()
 
   describe 'when initialized', ->
-    it 'should be bound to the DOM container', ->
-      chai.expect(engine.container).to.eql container
+    it 'should be bound to the DOM scope', ->
+      chai.expect(engine.scope).to.eql scope
 
   describe 'command transformations -', ->
     it 'var with class & generate ids', ->
 
-      container.innerHTML = """
+      scope.innerHTML = """
         <div class="box">One</div>
         <div class="box">One</div>
         <div class="box">One</div>
@@ -36,13 +36,13 @@ describe 'GSS commands', ->
       
       chai.expect(engine.workerCommands).to.eql [
           # $1 is engine
-          ['var', '$3[x]', '$3']
           ['var', '$4[x]', '$4']
           ['var', '$5[x]', '$5']
+          ['var', '$6[x]', '$6']
         ]
 
     it 'var with class & static ids', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
         <div class="box" data-gss-id="35346">One</div>
@@ -59,7 +59,7 @@ describe 'GSS commands', ->
         ]        
 
     it 'varexp with class', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
         <div class="box" data-gss-id="35346">One</div>
@@ -86,7 +86,7 @@ describe 'GSS commands', ->
       ]
     
     it 'stay with class & static ids', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
       """
@@ -102,7 +102,7 @@ describe 'GSS commands', ->
         ]
     
     it 'multiple stays', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div class="box block" data-gss-id="12322">One</div>
         <div class="box block" data-gss-id="34222">One</div>
       """
@@ -131,7 +131,7 @@ describe 'GSS commands', ->
         ]
     
     it 'eq with class', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
       """
@@ -151,7 +151,7 @@ describe 'GSS commands', ->
       ]
 
     it 'lte for class & id selectos', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div id="box1" class="box" data-gss-id="12322">One</div>
         <div class="box" data-gss-id="34222">One</div>
         <div class="box" data-gss-id="35346">One</div>
@@ -172,7 +172,7 @@ describe 'GSS commands', ->
       ]
 
     it 'intrinsic-width with class', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div style="width:111px;" class="box" data-gss-id="12322">One</div>
         <div style="width:222px;" class="box" data-gss-id="34222">One</div>
         <div style="width:333px;" class="box" data-gss-id="35346">One</div>
@@ -198,7 +198,7 @@ describe 'GSS commands', ->
       ]
 
     it '.box[width] == ::window[width]', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div style="width:111px;" class="box" data-gss-id="12322">One</div>
       """
       engine.execute [
@@ -214,7 +214,7 @@ describe 'GSS commands', ->
       ]
 
     it '::window props', ->
-      container.innerHTML = """
+      scope.innerHTML = """
         <div style="width:111px;" class="box" data-gss-id="12322">One</div>
       """
       engine.execute [
@@ -241,7 +241,7 @@ describe 'GSS commands', ->
     
     describe 'adds & removes -', ->
       it 'add to class', (done) ->
-        container.innerHTML = """
+        scope.innerHTML = """
           <div class="box" data-gss-id="12322">One</div>
           <div class="box" data-gss-id="34222">One</div>
         """
@@ -259,18 +259,18 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            container.insertAdjacentHTML('beforeend', '<div class="box" data-gss-id="35346">One</div>')
+            scope.insertAdjacentHTML('beforeend', '<div class="box" data-gss-id="35346">One</div>')
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['var', '$35346[x]', '$35346']
                 ['eq', ['get','$35346[x]','.box$35346'], ['number',100]]
               ]
-            container.removeEventListener 'solved', listener
+            scope.removeEventListener 'solved', listener
             done()
-        container.addEventListener 'solved', listener
+        scope.addEventListener 'solved', listener
 
       it 'removed from dom', (done) ->
-        container.innerHTML = """
+        scope.innerHTML = """
           <div class="box" data-gss-id="12322">One</div>
           <div class="box" data-gss-id="34222">One</div>
         """
@@ -288,18 +288,18 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            res = container.querySelector('[data-gss-id="34222"]')
+            res = scope.querySelector('[data-gss-id="34222"]')
             res.parentNode.removeChild res
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
               ['remove', '$34222'] # this should be the only command
             ]
-            container.removeEventListener 'solved', listener
+            scope.removeEventListener 'solved', listener
             done()
-        container.addEventListener 'solved', listener
+        scope.addEventListener 'solved', listener
 
       it 'removed from selector', (done) ->
-        container.innerHTML = """
+        scope.innerHTML = """
           <div class="box" data-gss-id="12322">One</div>
           <div class="box" data-gss-id="34222">One</div>
         """
@@ -317,7 +317,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = container.querySelector('[data-gss-id="34222"]')
+            el = scope.querySelector('[data-gss-id="34222"]')
             el.className = el.classList.remove('box') #.replace(/\bbox\b/,'')
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
@@ -327,16 +327,16 @@ describe 'GSS commands', ->
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['remove', '.box$34222']
               ]
-            container.removeEventListener 'solved', listener
+            scope.removeEventListener 'solved', listener
             done()
-        container.addEventListener 'solved', listener
+        scope.addEventListener 'solved', listener
     
     #
     #
     describe 'resizing -', ->
 
       it 'element resized by style change', (done) ->
-        container.innerHTML = """
+        scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" data-gss-id="111">One</div>
           <div style="width:222px;" id="box2" class="box" data-gss-id="222">One</div>
         """
@@ -350,7 +350,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = container.querySelector('[data-gss-id="111"]')            
+            el = scope.querySelector('[data-gss-id="111"]')            
             el.style.width = 1110+"px"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
@@ -362,12 +362,12 @@ describe 'GSS commands', ->
               ]
             chai.expect(engine.vars['$111[intrinsic-width]']).to.equal 1110
             chai.expect(engine.vars['$222[height]']).to.equal 1110
-            container.removeEventListener 'solved', listener
+            scope.removeEventListener 'solved', listener
             done()
-        container.addEventListener 'solved', listener
+        scope.addEventListener 'solved', listener
       
       it 'element resized by inserting child', (done) ->
-        container.innerHTML = """
+        scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" data-gss-id="111">One</div>
           <div style="width:222px;" id="box2" class="box" data-gss-id="222">One</div>
         """
@@ -380,7 +380,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = container.querySelector('[data-gss-id="111"]')            
+            el = scope.querySelector('[data-gss-id="111"]')            
             el.innerHTML = "<div></div>"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
@@ -390,12 +390,12 @@ describe 'GSS commands', ->
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
               ]
-            container.removeEventListener 'solved', listener
+            scope.removeEventListener 'solved', listener
             done()
-        container.addEventListener 'solved', listener
+        scope.addEventListener 'solved', listener
       
       it 'element resized by changing text', (done) ->
-        container.innerHTML = """
+        scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" data-gss-id="111">One</div>
           <div style="width:222px;" id="box2" class="box" data-gss-id="222">One</div>
         """
@@ -409,7 +409,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++          
           if count is 1
-            el = container.querySelector('[data-gss-id="111"]')            
+            el = scope.querySelector('[data-gss-id="111"]')            
             engine.lastWorkerCommands = [] # to ensure it's reset
             el.innerHTML = "aa"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -426,9 +426,9 @@ describe 'GSS commands', ->
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
               ]
-            container.removeEventListener 'solved', listener
+            scope.removeEventListener 'solved', listener
             done()
-        container.addEventListener 'solved', listener
+        scope.addEventListener 'solved', listener
       
       
 
@@ -454,7 +454,7 @@ describe 'GSS commands', ->
 
 
       """
-      container.innerHTML = innerHTML
+      scope.innerHTML = innerHTML
 
       engine.run commands: [
           ['var', '.box[width]', 'width', ['$class','box']]
@@ -463,12 +463,12 @@ describe 'GSS commands', ->
         ]
       
       listener = (e) ->
-        container.removeEventListener 'solved', listener        
+        scope.removeEventListener 'solved', listener        
         done()
-      container.addEventListener 'solved', listener
+      scope.addEventListener 'solved', listener
     
     it '100 serially', (done) ->
-      container.innerHTML = ""
+      scope.innerHTML = ""
       engine.run commands: [
           ['var', '.box[width]', 'width', ['$class','box']]
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
@@ -478,18 +478,18 @@ describe 'GSS commands', ->
       count = 1
       
       # first one here otherwise, nothing to solve
-      container.insertAdjacentHTML 'beforeend', """
+      scope.insertAdjacentHTML 'beforeend', """
           <div class='box' data-gss-id='35346#{count}'>One</div>
         """      
       listener = (e) ->        
         count++
-        container.insertAdjacentHTML 'beforeend', """
+        scope.insertAdjacentHTML 'beforeend', """
             <div class='box' data-gss-id='35346#{count}'>One</div>
           """
         #console.log count
         if count is 100
-          container.removeEventListener 'solved', listener
+          scope.removeEventListener 'solved', listener
           done()
 
-      container.addEventListener 'solved', listener
+      scope.addEventListener 'solved', listener
 

@@ -2,14 +2,14 @@
 
 class Getter
   
-  constructor: (@container) ->
+  constructor: (@scope) ->
     @styleNodes = null
-    @container = document unless @container
+    @scope = document unless @scope
   
   clean: ->
   
   destroy: ->
-    @container = null
+    @scope = null
     @styleNodes = null    
    
   get: (selector) ->
@@ -18,19 +18,19 @@ class Getter
     switch method
       when "$reserved"
         if identifier is 'this'
-          return @container
+          return @scope
       when "$id"
-        # TODO: Restrict to container
+        # TODO: Restrict to scope
         if identifier[0] is '#'
           identifier = identifier.substr 1
         return document.getElementById identifier
       when "$class"
         if identifier[0] is '.'
           identifier = identifier.substr 1
-        return @container.getElementsByClassName identifier
+        return @scope.getElementsByClassName identifier
       when "$tag"
-        return @container.getElementsByTagName identifier
-    @container.querySelectorAll identifier  
+        return @scope.getElementsByTagName identifier
+    @scope.querySelectorAll identifier  
       
   measure: (node, dimension) ->
     switch dimension
@@ -57,7 +57,7 @@ class Getter
   getAllStyleNodes: () ->
     # get live nodeList only once
     if !@styleNodes
-      @styleNodes = @container.getElementsByTagName("style")
+      @styleNodes = @scope.getElementsByTagName("style")
     return @styleNodes
   
   readAllASTs: () ->
@@ -76,7 +76,7 @@ class Getter
   
   #getNearestEngine:
   
-  getEngineContainerForStyleNode: (node) ->
+  getEngineScopeForStyleNode: (node) ->
     return node.parentElement
   
   # returns null if not a styleNode, returns {} if styleNode is empty    
@@ -98,5 +98,8 @@ class Getter
     
   'readAST:text/gss': (node) ->
     throw new Error "did not include GSS's compilers"
+
+Getter.getRootScope = ->
+  return document.body
 
 module.exports = Getter

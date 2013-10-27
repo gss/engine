@@ -11,23 +11,23 @@ describe 'GSS engine', ->
   
   beforeEach ->
     engine = new Engine 
-      container: container
+      scope: container
 
   afterEach (done) ->
     engine.destroy()
     done()
 
   describe 'when initialized', ->
-    it 'should be bound to the DOM container', ->
-      chai.expect(engine.container).to.eql container
+    it 'should be bound to the DOM scope', ->
+      chai.expect(engine.scope).to.eql container
     it 'should not hold a worker', ->
       chai.expect(engine.worker).to.be.a 'null'
-    #it 'should pass the container to its DOM getter', ->
-    #  chai.expect(engine.getter).to.be.an 'object'
-    #  chai.expect(engine.getter.container).to.eql engine.container
-    it 'should pass the container to its DOM setter', ->
+    it 'should pass the scope to its DOM getter', ->
+      chai.expect(engine.getter).to.be.an 'object'
+      chai.expect(engine.getter.scope).to.eql engine.scope
+    it 'should pass the scope to its DOM setter', ->
       chai.expect(engine.setter).to.be.an 'object'
-      chai.expect(engine.setter.container).to.eql engine.container
+      chai.expect(engine.setter.scope).to.eql engine.scope
   
   describe 'with rule #button1[width] == #button2[width]', ->
     
@@ -183,7 +183,7 @@ describe 'GSS Engine Life Cycle', ->
     it 'without GSS rules style tag', ->
       engine1 = GSS(container)
       chai.expect(engine1.id).to.be.equal GSS.getId(container)
-      chai.expect(engine1.container).to.be.equal container
+      chai.expect(engine1.scope).to.be.equal container
     
     it 'after receives GSS style tag', (done) ->
       engine2 = GSS(container)
@@ -361,8 +361,8 @@ describe 'Nested Engine', ->
 
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
-    chai.expect(wrapEngine.container).to.equal wrap
-    chai.expect(containerEngine.container).to.equal container
+    chai.expect(wrapEngine.scope).to.equal wrap
+    chai.expect(containerEngine.scope).to.equal container
   
   it 'correct values', (done) ->
     listener = (e) ->           
@@ -372,6 +372,77 @@ describe 'Nested Engine', ->
       done()
     wrap.addEventListener 'solved', listener
 
+
+
+
+describe 'Engine Hierarchy', ->  
+  
+  describe 'root engine', ->
+    root = null
+    it 'is initialized', ->
+      root = GSS.engines.root
+      chai.expect(root).to.exist
+    it 'is root element', ->
+      chai.expect(root.scope).to.equal GSS.Getter.getRootScope()
+    
+  
+  ###
+  describe 'nesting', ->
+    container = null
+    containerEngine = null
+    wrap = null
+    wrapEngine = null
+    
+    before ->
+      fixtures = document.getElementById 'fixtures'
+      container = document.createElement 'div'
+      fixtures.appendChild container
+      #        
+      container.innerHTML =  """
+          <style type="text/gss-ast">
+          {
+            "commands": [
+              ["var", "#wrap[width]", "width", ["$id","wrap"]],
+              ["eq", ["get","#wrap[width]","#wrap"], ["number",555]]
+            ]
+          }
+          </style>
+          <div id="wrap" style="width:100px;" data-gss-id="wrap">
+            <style type="text/gss-ast">
+            {
+              "commands": [
+                ["var", "#boo[width]", "width", ["$id","boo"]],
+                ["var", "::this[width]", "width", ["$reserved","this"]],
+                ["eq", ["get","#boo[width]","#boo"], ["get","::this[width]"]]
+              ]
+            }
+            </style>
+            <div id="boo" data-gss-id="boo"></div>
+          </div>
+        """
+      containerEngine = GSS(container)
+      wrap = document.getElementById('wrap')
+      wrapEngine = GSS(wrap)    
+
+    it 'engines are attached to correct element', () ->
+      chai.expect(wrapEngine).to.not.equal containerEngine
+      chai.expect(wrapEngine.scope).to.equal wrap
+      chai.expect(containerEngine.scope).to.equal container
+  
+    it 'correct values', (done) ->
+      #GSS.config.debug = true
+      #debugger
+      cListener = (e) ->           
+        console.log 'container'
+        #wrap.removeEventListener 'solved', cListener
+      container.addEventListener 'solved', cListener
+      wListener = (e) ->           
+        console.log 'wrap'
+        #wrap.removeEventListener 'solved', wListener
+      wrap.addEventListener 'solved', wListener
+  ###
+
+      
 describe '::This framed view', ->  
   container = null
   containerEngine = null
@@ -403,8 +474,8 @@ describe '::This framed view', ->
 
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
-    chai.expect(wrapEngine.container).to.equal wrap
-    chai.expect(containerEngine.container).to.equal container
+    chai.expect(wrapEngine.scope).to.equal wrap
+    chai.expect(containerEngine.scope).to.equal container
   
   it 'correct values', (done) ->
     listener = (e) ->           
@@ -414,63 +485,3 @@ describe '::This framed view', ->
       wrap.removeEventListener 'solved', listener
       done()
     wrap.addEventListener 'solved', listener
-
-###
-
-describe 'Engine Hierarchy', ->  
-  container = null
-  containerEngine = null
-  wrap = null
-  wrapEngine = null
-  
-  before ->
-    fixtures = document.getElementById 'fixtures'
-    container = document.createElement 'div'
-    fixtures.appendChild container
-    #        
-    container.innerHTML =  """
-        <style type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "#wrap[width]", "width", ["$id","wrap"]],
-            ["eq", ["get","#wrap[width]","#wrap"], ["number",555]]
-          ]
-        }
-        </style>
-        <div id="wrap" style="width:100px;" data-gss-id="wrap">
-          <style type="text/gss-ast">
-          {
-            "commands": [
-              ["var", "#boo[width]", "width", ["$id","boo"]],
-              ["var", "::this[width]", "width", ["$reserved","this"]],
-              ["eq", ["get","#boo[width]","#boo"], ["get","::this[width]"]]
-            ]
-          }
-          </style>
-          <div id="boo" data-gss-id="boo"></div>
-        </div>
-      """
-    containerEngine = GSS(container)
-    wrap = document.getElementById('wrap')
-    wrapEngine = GSS(wrap)    
-
-  it 'engines are attached to correct element', () ->
-    chai.expect(wrapEngine).to.not.equal containerEngine
-    chai.expect(wrapEngine.container).to.equal wrap
-    chai.expect(containerEngine.container).to.equal container
-  
-  it 'correct values', (done) ->
-    #GSS.config.debug = true
-    #debugger
-    cListener = (e) ->           
-      console.log 'container'
-      #wrap.removeEventListener 'solved', cListener
-    container.addEventListener 'solved', cListener
-    wListener = (e) ->           
-      console.log 'wrap'
-      #wrap.removeEventListener 'solved', wListener
-    wrap.addEventListener 'solved', wListener
-
-      
-      
-###

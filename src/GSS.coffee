@@ -9,17 +9,19 @@ if window.GSS then throw new Error "Only one GSS object per window"
 GSS = (o) ->
   
   # if dom element, return engine
+  if o is document or o is window 
+    return GSS.engines.root
   if o.tagName
     engine = GSS.getEngine(o)
     if engine then return engine
-    return new GSS.Engine({container:o})
+    return new GSS.Engine({scope:o})
     
   # if object, create new engine
   else if o isnt null and typeof o is 'object'
     
-    # does engine exist for this container?
-    if o.container
-      engine = GSS.getEngine(o.container)      
+    # does engine exist for this scope?
+    if o.scope
+      engine = GSS.getEngine(o.scope)      
       if engine 
         engine.boot o
         return engine      
@@ -32,18 +34,20 @@ GSS = (o) ->
 
 #GSS.worker = '../browser/gss-engine/worker/gss-solver.js'
 
+GSS.boot = () ->
+  # setup root engine
+  GSS({scope:GSS.Getter.getRootScope(), is_root:true})
+
 # Config
 
 GSS.config = 
   resizeDebounce: 30
 
 # overwrite config if provided
-
-if GSS_CONFIG?
+if GSS_CONFIG
   for key, val of GSS_CONFIG
     GSS.config[key] = val
     
-
 
 # Engines
 

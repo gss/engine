@@ -23,8 +23,8 @@ IdMixin =
     if el then @_byIdCache[id] = el
     return el
 
-  setupContainerId: (el) ->
-    el._gss_is_container = true
+  setupScopeId: (el) ->
+    el._gss_is_scope = true
     return @setupId el
 
   setupId: (el) ->

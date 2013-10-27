@@ -16,7 +16,7 @@ describe 'DOM Setter', ->
     """
     set = new Setter container
   it 'should be bound to the DOM container', ->
-    chai.expect(set.container).to.eql container
+    chai.expect(set.scope).to.eql container
 
   describe 'setting a button size', ->
     button = null

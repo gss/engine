@@ -2,8 +2,8 @@
 
 class Setter
 
-  constructor: (@container) ->
-    @container = document unless @container
+  constructor: (@scope) ->
+    @scope = document unless @scope
   
   clean: () ->
   
@@ -70,8 +70,8 @@ class Setter
   setwithStyleTag: (vars) =>
     if !@_has_setVars_styleTag
       @_has_setVars_styleTag = true
-      @container.insertAdjacentHTML('afterbegin','<style data-gss-generated></style>')
-      @generatedStyle = @container.childNodes[0]
+      @scope.insertAdjacentHTML('afterbegin','<style data-gss-generated></style>')
+      @generatedStyle = @scope.childNodes[0]
     html = ""
     for key of vars
       if key[0] is "$"
@@ -80,8 +80,8 @@ class Setter
         html += "[data-gss-id=\"#{gid}\"]{#{dimension}:#{vars[key]}px !important;}"
     #@generatedStyle.textContent = html
     @generatedStyle.innerHTML = html
-    #console.log @container.childNodes
-    #@container.insertAdjacentHTML 'afterbegin', html
+    #console.log @scope.childNodes
+    #@scope.insertAdjacentHTML 'afterbegin', html
   ###
 
 module.exports = Setter

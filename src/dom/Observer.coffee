@@ -4,7 +4,7 @@ LOG = () ->
   if GSS.config.debug
     console.log "Observer", arguments...
 
-_containersToLoad = null
+_scopesToLoad = null
 
 styleQuery = GSS.styleQuery = new GSS.Query
   selector:"style"
@@ -14,24 +14,24 @@ styleQuery = GSS.styleQuery = new GSS.Query
     return document.getElementsByTagName "style"
   afterChange: () ->
     LOG "afterChange"    
-    _containersToLoad = []
+    _scopesToLoad = []
     if @changedLastUpdate
       for id in @lastAddedIds
         node = GSS.getById id
         if GSS.getter.isStyleNode node
-          container = GSS.getter.getEngineContainerForStyleNode node
-          if _containersToLoad.indexOf(container) is -1 and container
-            _containersToLoad.push GSS.getter.getEngineContainerForStyleNode node
+          scope = GSS.getter.getEngineScopeForStyleNode node
+          if _scopesToLoad.indexOf(scope) is -1 and scope
+            _scopesToLoad.push GSS.getter.getEngineScopeForStyleNode node
       for id in @lastRemovedIds
         node = GSS.getById id
         if GSS.getter.isStyleNode node
-          container = GSS.getter.getEngineContainerForStyleNode node
-          if _containersToLoad.indexOf(container) is -1 and container?.parentNode?
-            _containersToLoad.push container
+          scope = GSS.getter.getEngineScopeForStyleNode node
+          if _scopesToLoad.indexOf(scope) is -1 and scope?.parentNode?
+            _scopesToLoad.push scope
       #
-      for container in _containersToLoad
-        LOG "afterUpdate containerToLoad", container
-        GSS(container).loadAndRun()
+      for scope in _scopesToLoad
+        LOG "afterUpdate scopeToLoad", scope
+        GSS(scope).loadAndRun()
                      
 
 # Polyfill
@@ -43,52 +43,55 @@ observer = new MutationObserver (mutations) ->
   #LOG "observer(mutations)",mutations
   #GSS.checkAllStyleNodes()
   
-  #containersToLoad = []
+  #scopesToLoad = []
   
   for m in mutations
-    # els removed from container
+    # els removed from scope
     if m.removedNodes.length > 0 # nodelist are weird?
       for node in m.removedNodes
         # destroy engines
-        if node._gss_is_container
+        if node._gss_is_scope
           GSS.getEngine(node).destroy()      
         ###
-        # containers with removed ASTs
+        # scopes with removed ASTs
         if GSS.getter.isStyleNode node
-          container = GSS.getter.getEngineContainerForStyleNode node
-          if containersToLoad.indexOf(container) is -1 and container
-            containersToLoad.push container  
+          scope = GSS.getter.getEngineScopeForStyleNode node
+          if scopesToLoad.indexOf(scope) is -1 and scope
+            scopesToLoad.push scope  
         ###
         
     ###
-    # els removed from container
+    # els removed from scope
     if m.addedNodes.length > 0 # nodelist are weird?
       for node in m.addedNodes        
-        # containers with new ASTs        
+        # scopes with new ASTs        
         if GSS.getter.isStyleNode node
-          container = GSS.getter.getEngineContainerForStyleNode node
-          if containersToLoad.indexOf(container) is -1
-            containersToLoad.push container
+          scope = GSS.getter.getEngineScopeForStyleNode node
+          if scopesToLoad.indexOf(scope) is -1
+            scopesToLoad.push scope
 
-    for container in containersToLoad
-      GSS(container).loadAndRun()
+    for scope in scopesToLoad
+      GSS(scope).loadAndRun()
     ###
   # end for mutation
   styleQuery.update()
 
 GSS.loadAndRun = () ->
   # finds all GSS style nodes and runs their engines
-  containersToLoad = []
+  scopesToLoad = []
   for node in GSS.getter.getAllStyleNodes()
     if GSS.getter.isStyleNode node
-      container = GSS.getter.getEngineContainerForStyleNode node
-      if containersToLoad.indexOf(container) is -1
-        containersToLoad.push container
-  for container in containersToLoad
-    GSS(container).loadAndRun()
+      scope = GSS.getter.getEngineScopeForStyleNode node
+      if scopesToLoad.indexOf(scope) is -1
+        scopesToLoad.push scope
+  for scope in scopesToLoad
+    GSS(scope).loadAndRun()
+  
+
 
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
+  GSS.boot()
   LOG "DOMContentLoaded"
   # The event "DOMContentLoaded" will be fired when the document has been parsed completely, that is without stylesheets* and additional images. If you need to wait for images and stylesheets, use "load" instead.
   observer.observe(document, {subtree: true, childList: true, attributes: false, characterData: false})

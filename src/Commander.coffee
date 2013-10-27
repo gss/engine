@@ -337,14 +337,14 @@ class Commander
   # mutli
   '$class': (root,sel) =>
     query = @engine.registerDomQuery selector:"."+sel, isMulti:true, isLive:true, createNodeList:() =>
-      return @engine.container.getElementsByClassName(sel)
+      return @engine.queryScope.getElementsByClassName(sel)
     bindRoot root, query
     return query
 
   # mutli
   '$tag': (root,sel) =>
     query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:true, createNodeList:() =>
-      return @engine.container.getElementsByTagName(sel)
+      return @engine.queryScope.getElementsByTagName(sel)
     bindRoot root, query
     return query
 
@@ -359,7 +359,7 @@ class Commander
     else if sel is 'this'
       engine = @engine
       query = @engine.registerDomQuery selector:"::"+"this", isMulti:false, isLive:true, createNodeList:() ->
-        return [engine.container]        
+        return [engine.scope]        
       bindRoot root, query
     else
       throw new Error "$reserved selectors not yet handled: #{sel}"
@@ -368,7 +368,7 @@ class Commander
   # singular
   '$id': (root,sel) =>
     query = @engine.registerDomQuery selector:"#"+sel, isMulti:false, isLive:false, createNodeList:() =>
-      # TODO: handle container.getElementById for web components?
+      # TODO: handle scope.getElementById for web components?
       el = document.getElementById(sel)
       return [el]
     bindRoot root, query
