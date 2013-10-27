@@ -111,7 +111,7 @@ describe 'Cassowary Thread', ->
     done()
   
   
-  it 'intrinsic var is immutable with stay !!!!! not working right until cassowary is fixed', () ->
+  it 'intrinsic var is immutable with suggestion', () ->
     #c.trace = true
     thread = new Thread()
     thread.execute
@@ -121,7 +121,7 @@ describe 'Cassowary Thread', ->
         ['var', '[hgap]']
         ['eq', ['get','[hgap]'],['number',20], 'require']                
         ['eq', ['get','[width]'],['plus',['get','[intrinsic-width]'],['get','[hgap]']],'require']
-        ['suggest', ['get','[intrinsic-width]'], ['number',100], 'strong', 1000]
+        ['suggest', ['get','[intrinsic-width]'], ['number',100], 'required']
         ['eq', ['get','[width]'], ['number',20], 'strong']  
       ]
     values = thread._getValues()

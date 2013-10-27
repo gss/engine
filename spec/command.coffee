@@ -189,9 +189,9 @@ describe 'GSS commands', ->
         ['var', '$12322[intrinsic-width]', '$12322']
         ['var', '$34222[intrinsic-width]', '$34222']
         ['var', '$35346[intrinsic-width]', '$35346']
-        ['suggest', ['get','$12322[intrinsic-width]'], ['number', 111], 'strong', 1000]
-        ['suggest', ['get','$34222[intrinsic-width]'], ['number', 222], 'strong', 1000]
-        ['suggest', ['get','$35346[intrinsic-width]'], ['number', 333], 'strong', 1000]
+        ['suggest', ['get','$12322[intrinsic-width]'], ['number', 111], 'required']
+        ['suggest', ['get','$34222[intrinsic-width]'], ['number', 222], 'required']
+        ['suggest', ['get','$35346[intrinsic-width]'], ['number', 333], 'required']
         ['eq', ['get','$12322[width]','.box$12322'],['get','$12322[intrinsic-width]','.box$12322']]
         ['eq', ['get','$34222[width]','.box$34222'],['get','$34222[intrinsic-width]','.box$34222']]
         ['eq', ['get','$35346[width]','.box$35346'],['get','$35346[intrinsic-width]','.box$35346']]
@@ -209,7 +209,7 @@ describe 'GSS commands', ->
       chai.expect(engine.workerCommands).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '::window[width]']
-        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'strong', 1000]
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
         ['eq', ['get','$12322[width]','.box$12322'],['get','::window[width]']]
       ]
 
@@ -229,9 +229,9 @@ describe 'GSS commands', ->
         ['var', '::window[y]']
         ['eq', ['get','::window[y]'],['number',0], 'required']
         ['var', '::window[width]']
-        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'strong', 1000]
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
         ['var', '::window[height]']
-        ['suggest', ['get','::window[height]'], ['number', window.innerHeight], 'strong', 1000]
+        ['suggest', ['get','::window[height]'], ['number', window.innerHeight], 'required']
       ]
 
   #
@@ -356,9 +356,9 @@ describe 'GSS commands', ->
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          else if count is 2
+          else if count is 2            
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110], 'strong', 1000]
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110], 'required']
               ]
             chai.expect(engine.vars['$111[intrinsic-width]']).to.equal 1110
             chai.expect(engine.vars['$222[height]']).to.equal 1110
@@ -388,7 +388,7 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
               ]
             scope.removeEventListener 'solved', listener
             done()
@@ -418,13 +418,13 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2            
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
               ]
             engine.lastWorkerCommands = [] # to ensure it's reset
             el.innerHTML = "aabbb"            
           else if count is 3
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'strong', 1000]
+                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
               ]
             scope.removeEventListener 'solved', listener
             done()

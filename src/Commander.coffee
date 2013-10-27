@@ -105,19 +105,17 @@ class Commander
     @_bound_to_window_resize = false
 
   _bound_to_window_resize: false
-
-  # TODO(D4): make required suggestions work
   
   spawnForWindowWidth: () ->
     w = window.innerWidth
     if @engine.vars["::window[width]"] isnt w
-      @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', w], 'strong', 1000]
+      @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', w], 'required']
       #@engine.registerCommand ['stay', ['get', "::window[width]"]]
 
   spawnForWindowHeight: () ->
     h = window.innerHeight
     if @engine.vars["::window[height]"] isnt h
-      @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', h], 'strong', 1000]
+      @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', h], 'required']
       #@engine.registerCommand ['stay', ['get', "::window[width]"]]
 
   spawnForWindowSize: () =>
@@ -198,7 +196,7 @@ class Commander
             register = () ->
               val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])        
               # TODO(D4): make required suggestions work      
-              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val], 'strong', 1000]              
+              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val], 'required']              
               #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
 
             @intrinsicRegistersById[gid][prop] = register
