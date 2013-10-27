@@ -27,7 +27,7 @@ GSS = (o) ->
         return engine      
   
     # return new engine for chaining
-    return new Engine(o)
+    return new GSS.Engine(o)
     
   else
     throw new Error ""
