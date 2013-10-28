@@ -32,11 +32,9 @@ class Engine
   constructor: (o) ->
     {@scope, @workerURL, @vars, @getter, @setter, @is_root} = o
     @vars      = {}                          unless @vars
-    if !@scope
+    if !@scope # then new Error "Scope required for Engine"      
       @scope = GSS.getter.getRootScope()
-    if @scope.tagName is "HEAD" then @scope = document
-    @getter    = new GSS.Getter(@scope)  unless @getter
-    @setter    = new GSS.Setter(@scope)  unless @setter
+    if @scope.tagName is "HEAD" then @scope = document    
     @workerURL = GSS.workerURL               unless @workerURL
     # id is always gssid of scope
     @id        = GSS.setupScopeId @scope
@@ -47,21 +45,32 @@ class Engine
     @workerMessageHistory = []
     @lastWorkerCommands = null
     @queryCache = {}    
-    @observer = new MutationObserver @_handleMutations
-    #
-    GSS.engines.push @
-    engines.byId[@id] = @
+    @observer = new MutationObserver @_handleMutations    
     #
     @cssDump = null
-    LOG "constructor() @", @
-    #
-    if @is_root
-      engines.root = @
+    LOG "constructor() @", @    
+    # 
     if @scope is GSS.Getter.getRootScope()
       @queryScope = document
     else
       @queryScope = @scope
-    #@boot o
+    @getter    = new GSS.Getter(@queryScope)  unless @getter
+    @setter    = new GSS.Setter(@queryScope)  unless @setter
+    # 
+    @childEngines = [] 
+    @parentEngine = null
+    if @is_root
+      engines.root = @
+    else
+      @parentEngine = GSS.get.nearestEngine @scope, true      
+      if !@parentEngine
+        throw new Error "ParentEngine missing, WTF"
+      @parentEngine.childEngines.push @
+        
+    #
+    GSS.engines.push @
+    engines.byId[@id] = @
+    
     @
   
   is_running: false
@@ -194,6 +203,9 @@ class Engine
     @commander.destroy()
     @getter.destroy?() 
     @setter.destroy?()
+    # update engine hierarchy
+    @parentEngine.childEngines.splice(@parentEngine.childEngines.indexOf(@),1)
+    @parentEngine = null
     #
     @unobserve()
     @observer = null

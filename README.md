@@ -1,7 +1,7 @@
 GSS engine [![Build Status](https://travis-ci.org/the-gss/engine.png?branch=master)](https://travis-ci.org/the-gss/engine)
 ==========
 
-**WARNING: GSS is highly unstable right now, there be dragons...**
+**WARNING: GSS is highly unstable right now, there be dragons...** 
 
 This library processes parsed GSS constraints, solves them using Cassowary, and updates CSS accordingly.
 

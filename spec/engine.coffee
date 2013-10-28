@@ -141,6 +141,9 @@ describe 'GSS Engine with styleNode', ->
     fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
+  
+  after ->
+    container.remove()
 
   describe 'Engine::styleNode', ->
     
@@ -176,6 +179,8 @@ describe 'GSS Engine Life Cycle', ->
     fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
+  
+  
 
   describe 'Asynchronous existentialism (one engine for life of container)', ->
     engine1 = null
@@ -305,6 +310,9 @@ describe 'CSS Dump /', ->
     fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
+  
+  after ->
+    container.remove()
 
   describe 'Asynchronous existentialism (one engine for life of container)', ->
     engine = null
@@ -357,8 +365,8 @@ describe 'Nested Engine', ->
       """
     containerEngine = GSS(container)
     wrap = document.getElementById('wrap')
-    wrapEngine = GSS(wrap)    
-
+    wrapEngine = GSS(wrap)
+  
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
     chai.expect(wrapEngine.scope).to.equal wrap
@@ -377,13 +385,94 @@ describe 'Nested Engine', ->
 
 describe 'Engine Hierarchy', ->  
   
+  
   describe 'root engine', ->
     root = null
+    fixtures = null
+    before ->
+      fixtures = document.getElementById 'fixtures'
     it 'is initialized', ->
       root = GSS.engines.root
       chai.expect(root).to.exist
     it 'is root element', ->
       chai.expect(root.scope).to.equal GSS.Getter.getRootScope()
+    it 'gss style tags direct descendants of <body> are run in root engine', () ->
+      document.body.insertAdjacentHTML 'afterbegin', """
+        <style id="root-styles" type="text/gss-ast">
+        </style>
+      """
+      style = document.getElementById "root-styles"
+      scope = GSS.get.scopeFor style
+      chai.expect(scope).to.equal document.body
+      style.remove()
+  describe 'nesting', ->
+    style1  = null
+    style2  = null
+    style3  = null
+    scope1  = null
+    scope2  = null
+    scope3  = null
+    engine1 = null
+    engine2 = null
+    engine3 = null
+      
+    before ->    
+      document.body.insertAdjacentHTML 'afterbegin', """
+        <style id="root-styles-1" type="text/gss-ast">
+        </style>
+        <section id="scope2">
+          <style id="root-styles-2" type="text/gss-ast">
+          </style>
+          <div>
+            <div id="scope3">
+              <style id="root-styles-3" type="text/gss-ast">
+              </style>
+            </div>
+          </div>
+        </section>
+      """
+    it 'nested style tags have correct scope', () ->      
+      style1 = document.getElementById "root-styles-1"
+      scope1 = GSS.get.scopeFor style1
+      chai.expect(scope1).to.equal document.body
+      style2 = document.getElementById "root-styles-2"
+      scope2 = GSS.get.scopeFor style2
+      chai.expect(scope2).to.equal document.getElementById "scope2"
+      style3 = document.getElementById "root-styles-3"
+      scope3 = GSS.get.scopeFor style3
+      chai.expect(scope3).to.equal document.getElementById "scope3"
+    
+    it 'correct parent-child engine relationships', ->
+      engine1 = GSS scope:scope1
+      engine2 = GSS scope:scope2
+      engine3 = GSS scope:scope3
+      chai.expect(GSS.engines.root).to.equal engine1
+      chai.expect(engine2.parentEngine).to.equal engine1
+      chai.expect(engine3.parentEngine).to.equal engine2      
+      chai.expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
+      chai.expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
+    
+    it 'parent-child engine relationships update even w/o styles', (done) ->      
+      style1.remove()
+      style2.remove()
+      style3.remove()
+      scope3.remove()
+      GSS._.defer ->
+        chai.expect(engine3.is_destroyed).to.be.true
+        chai.expect(engine3.parentEngine).to.not.exist
+        chai.expect(engine2.childEngines.indexOf(engine3)).to.equal -1
+        scope2.remove()        
+        GSS._.defer ->
+          chai.expect(engine2.is_destroyed).to.be.true
+          chai.expect(engine2.parentEngine).to.not.exist
+          chai.expect(engine1.childEngines.indexOf(engine2)).to.equal -1
+          done()
+    
+    
+    #it 'nested engines parent child relationships', () ->
+      
+
+
     
   
   ###
@@ -442,7 +531,7 @@ describe 'Engine Hierarchy', ->
       wrap.addEventListener 'solved', wListener
   ###
 
-      
+###
 describe '::This framed view', ->  
   container = null
   containerEngine = null
@@ -470,7 +559,10 @@ describe '::This framed view', ->
       """
     containerEngine = GSS(container)
     wrap = document.getElementById('wrap')
-    wrapEngine = GSS(wrap)    
+    wrapEngine = GSS(wrap)
+  
+  after ->
+    container.remove()
 
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
@@ -478,10 +570,12 @@ describe '::This framed view', ->
     chai.expect(containerEngine.scope).to.equal container
   
   it 'correct values', (done) ->
-    listener = (e) ->           
+    listener = (e) ->      
+      wrap.removeEventListener 'solved', listener     
       chai.expect(wrapEngine.vars).to.eql 
         "$boo[width]": 100
-        "$wrap[width]": 100
-      wrap.removeEventListener 'solved', listener
+        "$wrap[width]": 100      
       done()
     wrap.addEventListener 'solved', listener
+###
+  

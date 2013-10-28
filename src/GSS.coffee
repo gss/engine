@@ -11,7 +11,7 @@ GSS = (o) ->
   # if dom element, return engine
   if o is document or o is window 
     return GSS.engines.root
-  if o.tagName
+  if o.tagName    
     engine = GSS.getEngine(o)
     if engine then return engine
     return new GSS.Engine({scope:o})
@@ -22,9 +22,7 @@ GSS = (o) ->
     # does engine exist for this scope?
     if o.scope
       engine = GSS.getEngine(o.scope)      
-      if engine 
-        engine.boot o
-        return engine      
+      if engine then return engine
   
     # return new engine for chaining
     return new GSS.Engine(o)
@@ -41,7 +39,7 @@ GSS.boot = () ->
 # Config
 
 GSS.config = 
-  resizeDebounce: 30
+  resizeDebounce: 32 # ~ 30 fps
 
 # overwrite config if provided
 if GSS_CONFIG?
@@ -52,11 +50,14 @@ if GSS_CONFIG?
 # Engines
 
 GSS.getEngine = (el) ->
-  return GSS.engines.byId[@getId(el)]
+  return GSS.get.engine(el)
 
 # Utils
 
 GSS._ = {}
+
+GSS._.defer = (func) ->
+  setTimeout func, 1
 
 getTime = Date.now or ->
   return new Date().getTime()
@@ -108,5 +109,6 @@ for key, val of require("./dom/IdMixin.js")
 
 GSS.getter = new GSS.Getter()
 getter = GSS.getter
+GSS.get = GSS.getter
 
 GSS.observer = require("./dom/Observer.js")

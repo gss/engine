@@ -18,14 +18,14 @@ styleQuery = GSS.styleQuery = new GSS.Query
     if @changedLastUpdate
       for id in @lastAddedIds
         node = GSS.getById id
-        if GSS.getter.isStyleNode node
-          scope = GSS.getter.getEngineScopeForStyleNode node
+        if GSS.get.isStyleNode node
+          scope = GSS.get.scopeForStyleNode node
           if _scopesToLoad.indexOf(scope) is -1 and scope
-            _scopesToLoad.push GSS.getter.getEngineScopeForStyleNode node
+            _scopesToLoad.push GSS.get.scopeForStyleNode node
       for id in @lastRemovedIds
         node = GSS.getById id
-        if GSS.getter.isStyleNode node
-          scope = GSS.getter.getEngineScopeForStyleNode node
+        if GSS.get.isStyleNode node
+          scope = GSS.get.scopeForStyleNode node
           if _scopesToLoad.indexOf(scope) is -1 and scope?.parentNode?
             _scopesToLoad.push scope
       #
@@ -54,8 +54,8 @@ observer = new MutationObserver (mutations) ->
           GSS.getEngine(node).destroy()      
         ###
         # scopes with removed ASTs
-        if GSS.getter.isStyleNode node
-          scope = GSS.getter.getEngineScopeForStyleNode node
+        if GSS.get.isStyleNode node
+          scope = GSS.get.scopeForStyleNode node
           if scopesToLoad.indexOf(scope) is -1 and scope
             scopesToLoad.push scope  
         ###
@@ -65,8 +65,8 @@ observer = new MutationObserver (mutations) ->
     if m.addedNodes.length > 0 # nodelist are weird?
       for node in m.addedNodes        
         # scopes with new ASTs        
-        if GSS.getter.isStyleNode node
-          scope = GSS.getter.getEngineScopeForStyleNode node
+        if GSS.get.isStyleNode node
+          scope = GSS.get.scopeForStyleNode node
           if scopesToLoad.indexOf(scope) is -1
             scopesToLoad.push scope
 
@@ -79,9 +79,9 @@ observer = new MutationObserver (mutations) ->
 GSS.loadAndRun = () ->
   # finds all GSS style nodes and runs their engines
   scopesToLoad = []
-  for node in GSS.getter.getAllStyleNodes()
-    if GSS.getter.isStyleNode node
-      scope = GSS.getter.getEngineScopeForStyleNode node
+  for node in GSS.get.getAllStyleNodes()
+    if GSS.get.isStyleNode node
+      scope = GSS.get.scopeForStyleNode node
       if scopesToLoad.indexOf(scope) is -1
         scopesToLoad.push scope
   for scope in scopesToLoad

@@ -67,17 +67,41 @@ class Getter
       if AST then ASTs.push AST
     return ASTs
   
+  scopeFor: (node) ->
+    if @isStyleNode node
+      return @scopeForStyleNode node
+    else
+      return @nearestScope node
+  
   isStyleNode: (node) ->  
     if node?.tagName is "STYLE"
       mime = node.getAttribute?("type")
       if mime
         return (mime.indexOf("text/gss") is 0)
-    return false
+    return false      
   
-  #getNearestEngine:
-  
-  getEngineScopeForStyleNode: (node) ->
+  scopeForStyleNode: (node) ->
     return node.parentElement
+  
+  isScope: (el) ->
+    return !!el?._gss_is_scope
+  
+  nearestScope: (el, skipSelf = false) ->
+    if skipSelf
+      el = el.parentElement
+    while el.parentElement 
+      if @isScope(el) then return el
+      el = el.parentElement
+    return null  
+    
+  nearestEngine: (el, skipSelf = false) ->
+    scope = @nearestScope el, skipSelf
+    if scope then return @engine scope
+    return null
+  
+  engine: (el) ->
+    return GSS.engines.byId[GSS.getId(el)]
+    
   
   # returns null if not a styleNode, returns {} if styleNode is empty    
   readAST: (node) ->
@@ -98,6 +122,7 @@ class Getter
     
   'readAST:text/gss': (node) ->
     throw new Error "did not include GSS's compilers"
+  
 
 Getter.getRootScope = ->
   return document.body
