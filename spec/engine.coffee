@@ -510,8 +510,7 @@ describe 'Engine Hierarchy', ->
       chai.expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
       chai.expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
     
-    it 'parent-child engine relationships update larger removal', (done) ->      
-
+    it 'engine destruction cascades', (done) ->      
       scope2.remove()
       GSS._.defer ->
         chai.expect(engine3.is_destroyed).to.be.true

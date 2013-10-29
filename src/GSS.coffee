@@ -12,7 +12,7 @@ GSS = (o) ->
   if o is document or o is window 
     return GSS.engines.root
   if o.tagName    
-    engine = GSS.getEngine(o)
+    engine = GSS.get.engine(o)
     if engine then return engine
     return new GSS.Engine({scope:o})
     
@@ -21,7 +21,7 @@ GSS = (o) ->
     
     # does engine exist for this scope?
     if o.scope
-      engine = GSS.getEngine(o.scope)      
+      engine = GSS.get.engine(o.scope)      
       if engine then return engine
   
     # return new engine for chaining
@@ -31,10 +31,6 @@ GSS = (o) ->
     throw new Error ""
 
 #GSS.worker = '../browser/gss-engine/worker/gss-solver.js'
-
-GSS.boot = () ->
-  # setup root engine
-  GSS({scope:GSS.Getter.getRootScope(), is_root:true})
 
 # Config
 
@@ -47,51 +43,10 @@ if GSS_CONFIG?
     GSS.config[key] = val
     
 
-# Engines
-
-GSS.getEngine = (el) ->
-  return GSS.get.engine(el)
-
-# Utils
-
-GSS._ = {}
-
-GSS._.defer = (func) ->
-  setTimeout func, 1
-
-getTime = Date.now or ->
-  return new Date().getTime()
-
-# Returns a function, that, as long as it continues to be invoked, will not
-# be triggered. The function will be called after it stops being called for
-# N milliseconds. If `immediate` is passed, trigger the function on the
-# leading edge, instead of the trailing.
-GSS._.debounce = (func, wait, immediate) ->
-  timeout = undefined
-  args = undefined
-  context = undefined
-  timestamp = undefined
-  result = undefined
-  ->
-    context = this
-    args = [arguments...]
-    timestamp = getTime()
-    later = ->
-      last = getTime() - timestamp
-      if last < wait
-        timeout = setTimeout(later, wait - last)
-      else
-        timeout = null
-        result = func.apply(context, args)  unless immediate
-
-    callNow = immediate and not timeout
-    timeout = setTimeout(later, wait)  unless timeout
-    result = func.apply(context, args)  if callNow
-    result
-
 # Requires
 
 window.GSS = GSS
+GSS._ = require("./_.js")
 GSS.workerURL = require("./WorkerBlobUrl.js")
 GSS.Getter = require("./dom/Getter.js")
 GSS.Commander = require("./Commander.js")
@@ -112,3 +67,14 @@ getter = GSS.getter
 GSS.get = GSS.getter
 
 GSS.observer = require("./dom/Observer.js")
+
+
+# Layout run time
+
+GSS.boot = () ->
+  # setup root engine
+  GSS({scope:GSS.Getter.getRootScope(), is_root:true})
+
+GSS.update = () ->
+
+GSS.updateEngines = () ->

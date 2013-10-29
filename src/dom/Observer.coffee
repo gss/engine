@@ -13,7 +13,7 @@ styleQuery = GSS.styleQuery = new GSS.Query
   createNodeList: () ->
     return document.getElementsByTagName "style"
   afterChange: () ->
-    LOG "afterChange"    
+    LOG "afterStyleChange"    
     _scopesToLoad = []
     if @changedLastUpdate
       for id in @lastAddedIds
@@ -51,7 +51,7 @@ observer = new MutationObserver (mutations) ->
       for node in m.removedNodes
         # destroy engines
         if node._gss_is_scope
-          GSS.getEngine(node).destroy()      
+          GSS.get.engine(node).destroy()      
         ###
         # scopes with removed ASTs
         if GSS.get.isStyleNode node
