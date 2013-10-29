@@ -197,7 +197,15 @@ class Engine
   
   is_destroyed: false
   
+  destroyChildren: () ->
+    for e in @childEngines
+      if !e.is_destroyed
+        e.destroy()
+  
   destroy: ->
+    # cascade destruction
+    @destroyChildren()
+    #
     @is_destroyed = true
     @is_running   = null
     @commander.destroy()
@@ -206,6 +214,12 @@ class Engine
     # update engine hierarchy
     @parentEngine.childEngines.splice(@parentEngine.childEngines.indexOf(@),1)
     @parentEngine = null
+    # remove from GSS.engines
+    i = engines.indexOf @
+    if i > -1 then engines.splice(i, 1)
+    delete engines.byId[@id]
+    # release ids
+    GSS._ids_killed([@id]) # TODO(D4): release children node ids?
     #
     @unobserve()
     @observer = null
@@ -231,11 +245,7 @@ class Engine
     for selector, query of @queryCache
       query.destroy()
       @queryCache[selector] = null
-    @queryCache = null
-    # remove from GSS.engines
-    i = engines.indexOf @
-    if i > -1 then engines.splice(i, 1)
-    delete engines.byId[@id]
+    @queryCache = null    
     @
   
   is_observing: false
@@ -291,7 +301,10 @@ class Engine
               removes.push("$" + gid)
               trigger = true
               trigger_removesFromScope = true
-              
+      
+      # clean up ids
+      GSS._ids_killed removes
+      
       # els that may need remeasuring      
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
         if m.type is "characterData"
@@ -305,8 +318,7 @@ class Engine
             trigger = true
             invalidMeasures.push(gid)
         
-    # clean up ids
-    GSS._ids_killed removes
+    
 
     # els added or removed from queries
     selectorsWithAdds = []

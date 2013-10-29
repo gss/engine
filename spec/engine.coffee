@@ -367,6 +367,9 @@ describe 'Nested Engine', ->
     wrap = document.getElementById('wrap')
     wrapEngine = GSS(wrap)
   
+  after ->
+    
+  
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
     chai.expect(wrapEngine.scope).to.equal wrap
@@ -405,6 +408,7 @@ describe 'Engine Hierarchy', ->
       scope = GSS.get.scopeFor style
       chai.expect(scope).to.equal document.body
       style.remove()
+      
   describe 'nesting', ->
     style1  = null
     style2  = null
@@ -467,6 +471,56 @@ describe 'Engine Hierarchy', ->
           chai.expect(engine2.parentEngine).to.not.exist
           chai.expect(engine1.childEngines.indexOf(engine2)).to.equal -1
           done()
+  
+  describe 'nesting round 2', ->
+    style2  = null
+    style3  = null
+    scope1  = null
+    scope2  = null
+    scope3  = null
+    engine1 = null
+    engine2 = null
+    engine3 = null
+      
+    before ->    
+      document.body.insertAdjacentHTML 'afterbegin', """
+        <section id="scope2">
+          <style id="root-styles-2" type="text/gss-ast">
+          </style>
+          <div>
+            <div id="scope3">
+              <style id="root-styles-3" type="text/gss-ast">
+              </style>
+            </div>
+          </div>
+        </section>
+      """      
+      style2 = document.getElementById "root-styles-2"
+      scope2 = GSS.get.scopeFor style2
+      style3 = document.getElementById "root-styles-3"
+      scope3 = GSS.get.scopeFor style3
+      engine1 = GSS.engines.root
+      engine2 = GSS scope:scope2
+      engine3 = GSS scope:scope3
+    
+    it 'correct parent-child engine relationships', ->
+      chai.expect(GSS.engines.root).to.equal engine1
+      chai.expect(engine2.parentEngine).to.equal engine1
+      chai.expect(engine3.parentEngine).to.equal engine2      
+      chai.expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
+      chai.expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
+    
+    it 'parent-child engine relationships update larger removal', (done) ->      
+
+      scope2.remove()
+      GSS._.defer ->
+        chai.expect(engine3.is_destroyed).to.be.true
+        chai.expect(engine3.parentEngine).to.not.exist
+        chai.expect(engine2.childEngines.indexOf(engine3)).to.equal -1
+        chai.expect(engine2.is_destroyed).to.be.true
+        chai.expect(engine2.parentEngine).to.not.exist
+        chai.expect(engine1.childEngines.indexOf(engine2)).to.equal -1
+        done()
     
     
     #it 'nested engines parent child relationships', () ->

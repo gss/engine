@@ -37,7 +37,7 @@ IdMixin =
       el.setAttribute('data-gss-id', gid)
       el.style['box-sizing'] = 'border-box'
       el._gss_id = gid 
-      if @_byIdCache[gid]? then throw new Error "Only one element can have a given gss-id: #{gid}"
+      if @_byIdCache[gid]? then console.warn "element by id cache replaced gss-id: #{gid}"
     @_byIdCache[gid] = el
     return gid
 

@@ -10,6 +10,7 @@ describe 'GSS commands', ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
+    
   beforeEach ->
     engine = new Engine 
       scope:scope
