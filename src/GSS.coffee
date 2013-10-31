@@ -33,6 +33,7 @@ GSS = (o) ->
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
   debug: false
+  perf: false
   roundBeforeSet: false
   processBeforeSet: null # function
 
@@ -74,11 +75,11 @@ LOG_PASS = (pass, bg="green") ->
   GSS.deblog "%c#{pass}", "color:white; padding:2px; font-size:14px; background:#{bg};"
     
 TIME = () ->
-  if GSS.config.debug
+  if GSS.config.perf
     console.time arguments...
     
 TIME_END = () ->
-  if GSS.config.debug
+  if GSS.config.perf
     console.timeEnd arguments...
 
 # Layout Runtime

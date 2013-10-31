@@ -20,6 +20,13 @@ cleanAndSnatch = (frm, to) ->
   return to
 
 
+TIME = () ->
+  if GSS.config.perf
+    console.time arguments...
+    
+TIME_END = () ->
+  if GSS.config.perf
+    console.timeEnd arguments...
 
 LOG= () ->
   GSS.deblog "Engine", arguments...
@@ -233,6 +240,7 @@ class Engine
     # move css dumping here!
     @observe()
     @dispatch "solved", {values:@vars}
+    TIME_END "#{@id} DISPLAY PASS"
     #    
     @layoutSubTreeIfNeeded()
     
@@ -387,6 +395,7 @@ class Engine
   
   solve: () ->
     LOG @id,".solve()", @workerCommands
+    TIME "#{@id} DISPLAY PASS"
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
     unless @worker
