@@ -138,6 +138,45 @@ class Commander
       @engine.registerCommand ['eq', ['get', '::window[y]'], ['number', 0], 'required']
     #else
     #  throw new Error "Not sure how to bind to window prop: #{prop}"
+  
+  parentEngineWithVarId: (key) ->
+    parentEngine = @engine.parentEngine
+    while parentEngine
+      if parentEngine.varKeys.indexOf(key) > -1
+        return parentEngine
+      parentEngine = parentEngine.parentEngine
+    return null
+  
+  spawnForScope: (prop) ->  
+    key = "$"+GSS.getId(@engine.scope)+"[#{prop}]"
+    framingEngine = @parentEngineWithVarId key      
+    if framingEngine      
+      val = framingEngine.vars[key]
+      if val        
+        @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
+      @engine.beforeLayout = =>
+        val = framingEngine.vars[key]
+        @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']      
+      #framingEngine.scope.addEventListener "solved", =>
+      #  console.log "framingEngine.scope.addEventListener _____=++++   #{framingEngine.vars[key]}"
+      #  val = framingEngine.vars[key]
+      #  @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
+      
+  bindToScope: (prop) ->    
+    @spawnForScope(prop)
+    
+    #if @boundScopeProps.indexOf(prop) is -1
+    #  @boundScopeProps.push prop
+    ###
+    if prop is 'width' or prop is 'height'
+      if prop is 'width' then @spawnForScopeWidth() else @spawnForScopeHeight()
+    else if prop is 'x'
+      @engine.registerCommand ['eq', ['get', '::scope[x]'], ['number', 0], 'required']      
+    else if prop is 'y'
+      @engine.registerCommand ['eq', ['get', '::scope[y]'], ['number', 0], 'required']
+    #else
+    #  throw new Error "Not sure how to bind to window prop: #{prop}"
+    ###
 
   registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->    
     if !root._is_bound
@@ -253,9 +292,12 @@ class Commander
       # for tracking w/in Cassowary Thread
       self.push "%%" + query.selector + "%%"
     @registerSpawn(self, varId, prop, query, true)
-    if query is 'window'
-      @bindToWindow prop
-      query = null
+    if query
+      if query is 'window'
+        @bindToWindow prop
+        query = null
+      else if query.__is_scope
+        @bindToScope prop
 
   'varexp': (self, varId, expression, zzz) =>
     # clean all but first three
@@ -354,11 +396,13 @@ class Commander
       #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
       #  return ""
     
-    else if sel is 'this'
+    else if sel is 'this' or sel is 'scope'
       engine = @engine
-      query = @engine.registerDomQuery selector:"::"+"this", isMulti:false, isLive:true, createNodeList:() ->
-        return [engine.scope]        
+      query = @engine.registerDomQuery selector:"::"+sel, isMulti:false, isLive:true, createNodeList:() ->
+        return [engine.scope]
+      query.__is_scope = true       
       bindRoot root, query
+      return query
     else
       throw new Error "$reserved selectors not yet handled: #{sel}"
     return query

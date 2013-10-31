@@ -368,7 +368,7 @@ describe 'Nested Engine', ->
     wrapEngine = GSS(wrap)
   
   after ->
-    
+    container.remove()
   
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
@@ -528,61 +528,68 @@ describe 'Engine Hierarchy', ->
 
     
   
-  ###
-  describe 'nesting', ->
-    container = null
-    containerEngine = null
-    wrap = null
-    wrapEngine = null
-    
-    before ->
-      fixtures = document.getElementById 'fixtures'
-      container = document.createElement 'div'
-      fixtures.appendChild container
-      #        
-      container.innerHTML =  """
+  
+describe 'framed scopes', ->
+  container = null
+  containerEngine = null
+  wrap = null
+  wrapEngine = null
+  
+  before ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    container.id = "wrap-container"
+    fixtures.appendChild container
+    #        
+    container.innerHTML =  """
+        <style type="text/gss-ast">
+        {
+          "commands": [
+            ["var", "#wrap[width]", "width", ["$id","wrap"]],
+            ["eq", ["get","#wrap[width]","#wrap"], ["number",69]]
+          ]
+        }
+        </style>
+        <div id="wrap" style="width:100px;" data-gss-id="wrap">
           <style type="text/gss-ast">
           {
             "commands": [
-              ["var", "#wrap[width]", "width", ["$id","wrap"]],
-              ["eq", ["get","#wrap[width]","#wrap"], ["number",555]]
+              ["var", "#boo[width]", "width", ["$id","boo"]],
+              ["var", "::scope[width]", "width", ["$reserved","scope"]],
+              ["eq", ["get","#boo[width]","#boo"], ["get","::scope[width]"]]
             ]
           }
           </style>
-          <div id="wrap" style="width:100px;" data-gss-id="wrap">
-            <style type="text/gss-ast">
-            {
-              "commands": [
-                ["var", "#boo[width]", "width", ["$id","boo"]],
-                ["var", "::this[width]", "width", ["$reserved","this"]],
-                ["eq", ["get","#boo[width]","#boo"], ["get","::this[width]"]]
-              ]
-            }
-            </style>
-            <div id="boo" data-gss-id="boo"></div>
-          </div>
-        """
-      containerEngine = GSS(container)
-      wrap = document.getElementById('wrap')
-      wrapEngine = GSS(wrap)    
+          <div id="boo" data-gss-id="boo"></div>
+        </div>
+      """
+    containerEngine = GSS(container)
+    wrap = document.getElementById('wrap')
+    wrapEngine = GSS(wrap)    
 
-    it 'engines are attached to correct element', () ->
-      chai.expect(wrapEngine).to.not.equal containerEngine
-      chai.expect(wrapEngine.scope).to.equal wrap
-      chai.expect(containerEngine.scope).to.equal container
+  it 'engines are attached to correct element', () ->
+    chai.expect(wrapEngine).to.not.equal containerEngine
+    chai.expect(wrapEngine.scope).to.equal wrap
+    chai.expect(containerEngine.scope).to.equal container    
+
+  it 'correct values', (done) ->
+    #GSS.config.debug = true
+    #debugger
+    cListener = (e) ->           
+      container.removeEventListener 'solved', cListener
+      
+    container.addEventListener 'solved', cListener
+    count = 0
+    wListener = (e) ->     
+      wrap.removeEventListener 'solved', wListener      
+      count++
+      if count is 1
+        chai.expect(wrapEngine.vars).to.eql 
+          "$boo[width]": 69
+          "$wrap[width]": 69
+        done()      
+    wrap.addEventListener 'solved', wListener
   
-    it 'correct values', (done) ->
-      #GSS.config.debug = true
-      #debugger
-      cListener = (e) ->           
-        console.log 'container'
-        #wrap.removeEventListener 'solved', cListener
-      container.addEventListener 'solved', cListener
-      wListener = (e) ->           
-        console.log 'wrap'
-        #wrap.removeEventListener 'solved', wListener
-      wrap.addEventListener 'solved', wListener
-  ###
 
 ###
 describe '::This framed view', ->  
@@ -602,8 +609,8 @@ describe '::This framed view', ->
           {
             "commands": [
               ["var", "#boo[width]", "width", ["$id","boo"]],
-              ["var", "::this[width]", "width", ["$reserved","this"]],
-              ["eq", ["get","#boo[width]","#boo"], ["get","::this[width]"]]
+              ["var", "::scope[width]", "width", ["$reserved","scope"]],
+              ["eq", ["get","#boo[width]","#boo"], ["get","::scope[width]"]]
             ]
           }
           </style>
@@ -631,4 +638,3 @@ describe '::This framed view', ->
       done()
     wrap.addEventListener 'solved', listener
 ###
-  

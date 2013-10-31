@@ -1,8 +1,4 @@
-# Polyfills
 require("customevent-polyfill")
-
-unless window.MutationObserver
-  window.MutationObserver = window.JsMutationObserver
 
 if window.GSS then throw new Error "Only one GSS object per window"
 
@@ -36,12 +32,20 @@ GSS = (o) ->
 
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
+  debug: false # ""
 
 # overwrite config if provided
 if GSS_CONFIG?
   for key, val of GSS_CONFIG
     GSS.config[key] = val
-    
+
+# Log
+
+#GSS.log = log = () ->
+#  console?.log arguments...
+  
+GSS.deblog = () ->
+  if GSS.config.debug then console.log(arguments...)  
 
 # Requires
 
@@ -53,6 +57,7 @@ GSS.Commander = require("./Commander.js")
 GSS.Query = require("./dom/Query.js")
 GSS.Setter = require("./dom/Setter.js")
 GSS.Engine = require("./Engine.js")
+
 
 # ID stuff
 
@@ -68,13 +73,165 @@ GSS.get = GSS.getter
 
 GSS.observer = require("./dom/Observer.js")
 
+LOG_PASS = (pass, bg="green") ->
+  GSS.deblog "%c#{pass}", "color:white; padding:2px; font-size:14px; background:#{bg};"
+    
+TIME = () ->
+  if GSS.config.debug
+    console.time arguments...
+    
+TIME_END = () ->
+  if GSS.config.debug
+    console.timeEnd arguments...
 
-# Layout run time
+# Layout Runtime
+# ======================
 
 GSS.boot = () ->
   # setup root engine
   GSS({scope:GSS.Getter.getRootScope(), is_root:true})
 
-GSS.update = () ->
+#GSS.refresh = () ->
 
-GSS.updateEngines = () ->
+GSS.load = () ->
+  # dirty load
+  GSS.loadEngines()
+
+GSS.update = () ->
+  GSS.loadEngines()
+  GSS.render()
+  
+GSS.render = () ->  
+  TIME "RENDER"
+  # force synchronous first two passes
+  GSS.updateIfNeeded()
+  GSS.layoutIfNeeded()  
+  # async -> display
+
+# Update pass
+# ------------------------
+#
+# - updates constraint commands for engines
+# - measurements
+#
+
+GSS.needsUpdate = false
+
+GSS.setNeedsUpdate = (bool) ->
+  if bool
+    if !GSS.needsUpdate
+      GSS._.defer GSS.updateIfNeeded
+    GSS.needsUpdate = true    
+  else
+    GSS.needsUpdate = false
+
+GSS.updateIfNeeded = () ->
+  if GSS.needsUpdate
+    LOG_PASS "Update Pass", "orange"
+    TIME "update pass"
+    GSS.engines.root.updateIfNeeded()
+    GSS.setNeedsUpdate false
+    TIME_END "update pass"
+  
+
+# Layout pass
+# -------------------------
+#
+# - solvers solve
+#
+
+GSS.needsLayout = false
+
+GSS.setNeedsLayout = (bool) ->  
+  if bool
+    if !GSS.needsLayout 
+      GSS._.defer GSS.layoutIfNeeded
+    GSS.needsLayout = true    
+  else
+    GSS.needsLayout = false
+  
+  
+GSS.layoutIfNeeded = () ->  
+  if GSS.needsLayout
+    LOG_PASS "Layout Pass", "green"
+    TIME "layout pass"
+    GSS.engines.root.layoutIfNeeded()
+    GSS.setNeedsLayout false
+    TIME_END "layout pass"
+  
+
+# Display pass
+# -----------------------
+#
+# - write to dom
+#
+
+GSS.needsDisplay = false
+
+
+
+GSS.setNeedsDisplay = (bool) ->
+  if bool
+    if !GSS.needsDisplay
+      GSS._.defer GSS.displayIfNeeded
+    GSS.needsDisplay = true        
+    #GSS.lazyDisplayIfNeeded()
+  else
+    GSS.needsDisplay = false
+
+GSS.displayIfNeeded = () ->
+  if GSS.needsDisplay
+    LOG_PASS "Display Pass", "violet"
+    TIME "display pass"
+    GSS.engines.root.displayIfNeeded()
+    GSS.setNeedsDisplay false
+    TIME_END "display pass"
+    TIME_END "RENDER"
+    
+#GSS.lazyDisplayIfNeeded = GSS._.debounce GSS.displayIfNeeded, 8, false # 1/2 frame (60fps)
+
+_scopesToLoad = null
+
+styleQuery = GSS.styleQuery = new GSS.Query
+  selector:"style"
+  isLive: true
+  isMulti: true
+  createNodeList: () ->
+    return document.getElementsByTagName "style"
+  afterChange: () ->
+    #LOG "afterStyleChange"    
+    _scopesToLoad = []
+    if @changedLastUpdate
+      for id in @lastAddedIds
+        node = GSS.getById id
+        if GSS.get.isStyleNode node
+          scope = GSS.get.scopeForStyleNode node
+          if _scopesToLoad.indexOf(scope) is -1 and scope
+            _scopesToLoad.push GSS.get.scopeForStyleNode node
+      for id in @lastRemovedIds
+        node = GSS.getById id
+        if GSS.get.isStyleNode node
+          scope = GSS.get.scopeForStyleNode node
+          if _scopesToLoad.indexOf(scope) is -1 and scope?.parentNode?
+            _scopesToLoad.push scope
+      #
+      for scope in _scopesToLoad
+        engine = GSS.get.engine(scope)
+        if engine then engine.loadASTs()
+        #LOG "afterUpdate scopeToLoad", scope          
+
+GSS.loadEngines = () ->  
+  i = 0
+  engine = GSS.engines[i]
+  while !!engine
+    if i > 0
+      # destroy engines with detached scopes
+      if !document.documentElement.contains engine.scope
+        engine.destroyChildren()
+        engine.destroy()
+    # TODO(D4): update engines with modified styles
+    i++
+    engine = GSS.engines[i]
+  # update engines with added or removed style tags
+  styleQuery.update()  
+

@@ -19,9 +19,10 @@ cleanAndSnatch = (frm, to) ->
   frm = undefined
   return to
 
-LOG = () ->
-  if GSS.config.debug
-    console.log "Engine::", arguments...
+
+
+LOG= () ->
+  GSS.deblog "Engine", arguments...
 
 GSS.engines = engines = []
 engines.byId = {}
@@ -32,8 +33,10 @@ class Engine
   constructor: (o) ->
     {@scope, @workerURL, @vars, @getter, @setter, @is_root} = o
     @vars      = {}                          unless @vars
-    if !@scope # then new Error "Scope required for Engine"      
-      @scope = GSS.getter.getRootScope()
+    @varKeysByTacker = {}
+    @varKeys = []
+    if !@scope then new Error "Scope required for Engine"      
+    #  @scope = 
     if @scope.tagName is "HEAD" then @scope = document    
     @workerURL = GSS.workerURL               unless @workerURL
     # id is always gssid of scope
@@ -45,7 +48,7 @@ class Engine
     @workerMessageHistory = []
     @lastWorkerCommands = null
     @queryCache = {}    
-    @observer = new MutationObserver @_handleMutations    
+    @observer = new MutationObserver @handleMutations    
     #
     @cssDump = null
     LOG "constructor() @", @    
@@ -69,24 +72,10 @@ class Engine
         
     #
     GSS.engines.push @
-    engines.byId[@id] = @
-    
+    engines.byId[@id] = @    
     @
   
   is_running: false
-  
-  ###
-  run: (ast) ->
-    if ast.commands
-      @is_running = true
-      # digest
-      @execute ast.commands      
-      #debounced = () =>
-      @solve()
-      #setTimeout debounced, 1
-      @observe()
-    @
-  ###
   
   run: (asts) ->
     LOG @id,".run(asts)",asts
@@ -95,69 +84,208 @@ class Engine
       for ast in asts        
         @_run ast
     else 
-      @_run asts
-    # if commands were found & executed
-    if @workerCommands.length > 0
-      @is_running = true
-      @solve()
-    
-  
+      @_run asts   
+    #@layoutIfNeeded()
+      
   _run: (ast) ->
     if ast.css      
-      @unobserve()
-      @setupCSSDumpIfNeeded()
-      @cssDump.insertAdjacentHTML "beforeend", ast.css
-      @observe()
+      @cssToDump = ast.css
+      # When is best time to dump css?
+      # Early in prep for intrinsics?
+      # Or, should intrinsics be deferred any way?
+      @dumpCSSIfNeeded()
     if ast.commands
       @execute ast.commands    
-      
+    
+  execute: (commands) =>
+    # digests or transforms commands
+    @commander.execute commands
+  
+  # CSSDumper
+  # -----------------------
+  
+  cssToDump: null
+  
+  cssDump: null
+  
   setupCSSDumpIfNeeded: () ->
     if !@cssDump
       #@scope.insertAdjacentHTML "afterbegin", ""
       @cssDump = document.createElement "style"
       @cssDump.id = "gss-css-dump-" + @id 
       @scope.appendChild @cssDump
-      #@cssDump.classList.add("gss-css-dump")
+      #@cssDump.classList.add("gss-css-dump")     
   
-  # digests or transforms commands
-  execute: (commands) =>
-    @commander.execute commands
+  dumpCSSIfNeeded: () ->
+    if @cssToDump
+      @setupCSSDumpIfNeeded()
+      @cssDump.insertAdjacentHTML "beforeend", @cssToDump
+      @cssToDump = null
+
+  CSSDumper_clean: () ->    
+    @cssToDump = null
+    @cssDump?.innerHTML = ""
   
-  loadAndRun: () ->
-    LOG @id,".loadAndRun()"
+  CSSDumper_destroy: () ->
+    @cssToDump = null
+    #@cssDump?.remove()
+    @cssDump = null
+              
+  
+  # Update pass
+  # ------------------------
+  #
+  # - updates constraint commands for engines
+  # - measurements
+  #
+  
+  needsUpdate: false
+  
+  setNeedsUpdate: (bool) ->
+    LOG @id,".setNeedsUpdate( #{bool} )"
+    if bool
+      GSS.setNeedsUpdate true
+      @needsUpdate = true
+    else
+      @needsUpdate = false
+  
+  updateIfNeeded: () ->
+    LOG @id,".updateIfNeeded()"
+    # digest ASTs
+    if @needsUpdate
+      if !@ASTs then throw new Error "ASTs needed for update"
+      @run @ASTs
+      @ASTs = null    
+      @setNeedsUpdate false
+    for child in @childEngines
+      child.updateIfNeeded()
+  
+  # Layout pass
+  # -------------------------
+  #
+  # - solvers solve
+  #
+      
+  needsLayout: false
+  
+  setNeedsLayout: (bool) ->
+    LOG @id,".setNeedsLayout( #{bool} )"
+    if bool 
+      if !@needsLayout
+        GSS.setNeedsLayout true
+        @needsLayout = true
+    else
+      @needsLayout = false
+  
+  beforeLayout: () ->
+  
+  layout: () ->
+    LOG @id,".layout()"
+    @beforeLayout()
+    @is_running = true
+    @waitingToLayoutSubtree = true
+    @solve()
+    @setNeedsLayout false
+    
+  layoutIfNeeded: () ->    
+    LOG @id,".layoutIfNeeded()"
+    # if commands were found & executed
+    if @needsLayout # @workerCommands.length > 0
+      @layout()
+    else if !@waitingToLayoutSubtree
+      @layoutSubTreeIfNeeded()
+  
+  waitingToLayoutSubtree: false
+  
+  layoutSubTreeIfNeeded: () ->
+    @waitingToLayoutSubtree = false
+    for child in @childEngines
+      child.layoutIfNeeded()
+  
+  # Display pass
+  # -----------------------
+  #
+  # - write to dom
+  #
+  
+  needsDisplay: false
+  
+  setNeedsDisplay: (bool) ->
+    LOG @id,".setNeedsDisplay( #{bool} )"
+    if bool
+      GSS.setNeedsDisplay true
+      @needsDisplay = true
+    else
+      @needsDisplay = false
+  
+  displayIfNeeded: () ->
+    #console.log @, "displayIfNeeded"
+    if @needsDisplay #@workerCommands.length > 0
+      @display()      
+      @setNeedsDisplay false
+    for child in @childEngines
+      child.displayIfNeeded()
+      
+  display: () ->
+    LOG @id,".display()"    
+    @setter.set @vars
+    # TODO!!!!!!!!!!!!!!!!!!
+    # move css dumping here!
+    @observe()
+    @dispatch "solved", {values:@vars}
+    #    
+    @layoutSubTreeIfNeeded()
+    
+    
+  
+  loadASTs: () =>
+    LOG @id,".loadASTs()"
     if @is_running
       @clean()
     #@run( @getter.readAllASTs() )
     ASTs = []
     for node in @getter.getAllStyleNodes()
-      AST = @getter.readAST node
-      if AST then ASTs.push AST
+      # TODO: coordinate with global style query better
+      if @scope is GSS.get.scopeForStyleNode node
+        AST = @getter.readAST node
+        if AST then ASTs.push AST
       ###
       if node.isContentEditable and !node._isFixingSelfFromBullShit
         node._isFixingSelfFromBullShit = true
         node.addEventListener "input", @onEditableStyleInput    
-      ###
-    @run ASTs
+      ###          
+    @ASTs = ASTs
+    #
+    @setNeedsUpdate true
+    #@run ASTs
     @
+  
+
+      
   
   ###
   onEditableStyleInput: (e) =>
     @unobserve()
     e.target.innerHTML = e.target.innerText
     @observe()
-    @loadAndRun()
+    @loadASTs()
   ###
     
   
   # clean when scope insides changes, but if scope changes must destroy
   clean: () ->
     LOG @id,".clean()"
+    #
+    @setNeedsLayout  false
+    @setNeedsDisplay false
+    @setNeedsLayout  false
+    @waitingToLayoutSubtree = false
     #@unobserve()
     @commander.clean()
     @getter.clean?() 
     @setter.clean?()
     #
-    @cssDump?.innerHTML = ""
+    @CSSDumper_clean()
     # clean vars
     @workerCommands = []
     #@workerMessageHistory = [] keep history
@@ -165,6 +293,8 @@ class Engine
     #
     for key, val of @vars
       delete @vars[key]
+    @varKeysByTacker = {}
+    @varKeys = []
     #
     if @worker
       @worker.terminate()
@@ -179,20 +309,8 @@ class Engine
   stopped: false
   
   stop: ->
-    console.warn "Stop deprecated for destroyed"
+    console.warn "Stop deprecated for destroy"
     @destroy()
-    ###
-    if @stopped then return @
-    @stopped = true
-    @unobserve()
-    if @worker
-      @worker.terminate()
-      delete @worker
-    for selector, query of @queryCache
-      query.destroy()
-      @queryCache[selector] = null
-    @queryCache = {}
-    ###
     @
   
   is_destroyed: false
@@ -203,9 +321,14 @@ class Engine
         e.destroy()
   
   destroy: ->
-    # cascade destruction
-    @destroyChildren()
+    LOG @id,".destroy()"
+    # cascade destruction?
+    #@destroyChildren()
     #
+    @setNeedsLayout  false
+    @setNeedsDisplay false
+    @setNeedsLayout  false
+    @waitingToLayoutSubtree = false
     @is_destroyed = true
     @is_running   = null
     @commander.destroy()
@@ -224,8 +347,7 @@ class Engine
     @unobserve()
     @observer = null
     #
-    #@cssDump?.remove()
-    @cssDump = null
+    @CSSDumper_destroy()
     # release vars
     @ast    = null    
     @getter = null
@@ -237,6 +359,8 @@ class Engine
     @lastWorkerCommands = null
     #
     @vars   = null
+    @varKeysByTacker = null
+    @varKeys = null
     #
     if @worker
       @worker.terminate()
@@ -262,7 +386,7 @@ class Engine
     @
   
   solve: () ->
-    LOG @id,".solve()",@workerCommands
+    LOG @id,".solve()", @workerCommands
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
     unless @worker
@@ -270,41 +394,64 @@ class Engine
       @worker.addEventListener "message", @handleWorkerMessage, false
       @worker.addEventListener "error", @handleError, false
     @worker.postMessage workerMessage
-    @resetWorkerCommands()
-
-  _handleMutations: (mutations=[]) =>
-    LOG @id,"._handleMutations(m)",m
-    trigger = false
-    trigger_scopeRemoved = false
-    trigger_removes = false
-    trigger_removesFromScope = false
-
+    # resetWorkerCommands
+    @lastWorkerCommands = @workerCommands
+    @workerCommands = []
+  
+  # els added or removed from queries
+  updateChildList: =>        
+    selectorsWithAdds = []
     removes = []    
+    globalRemoves = []
+    trigger = false
+    # selectorsWithShuffles = []
+    # shufflesByQuery = {} ?
+    for selector, query of @queryCache
+      query.update()
+      # TODO: callback?
+      if query.changedLastUpdate
+        if query.lastAddedIds.length > 0
+          selectorsWithAdds.push selector
+  #addsBySelector[selector] = query.lastAddedIds
+          trigger = true
+        if query.lastRemovedIds.length > 0
+          trigger = true
+          removedIds = query.lastRemovedIds          
+          for rid in removedIds
+            # prevent redundant removes...
+            if globalRemoves.indexOf(rid) is -1
+              el = GSS.getById(rid)
+              # el removed completely
+              if document.documentElement.contains el
+                globalRemoves.push rid
+                removes.push( selector + "$" + rid ) # .box$3454
+              else # el removed just from selector
+                removes.push( "$" + rid )      
+      # clean up ids
+      GSS._ids_killed globalRemoves
+      if trigger
+        @commander.handleRemoves removes
+        @commander.handleSelectorsWithAdds selectorsWithAdds
+      return trigger
+    
+  handleMutations: (mutations=[]) =>
+    LOG @id,".handleMutations()" #,mutations    
+    trigger = false 
     invalidMeasures = []    
-
+    
+    #console.log (@needsLayout or @needsDisplay or @needsUpdate or GSS.needsLayout or GSS.needsDisplay or GSS.needsUpdate)
+    #if (@needsLayout or @needsDisplay or @needsUpdate or GSS.needsLayout or GSS.needsDisplay or GSS.needsUpdate)
+    #  return null
+    
+    
     for m in mutations
       # style tag was modified then stop & reload everything
       if m.type is "characterData" 
         if @getter.isStyleNode(m.target.parentElement)
-          return @loadAndRun()
+          @loadASTs()
+          return null #@update()
       
-      # els removed from scope
-      if m.removedNodes.length > 0 # nodelist are weird?
-        for node in m.removedNodes
-          # if scope is removed...
-          if node is @scope
-            console.log "handle engine scope removed"
-          #
-          gid = GSS.getId node
-          if gid?
-            if GSS.getById gid
-              removes.push("$" + gid)
-              trigger = true
-              trigger_removesFromScope = true
-      
-      # clean up ids
-      GSS._ids_killed removes
-      
+      #
       # els that may need remeasuring      
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
         if m.type is "characterData"
@@ -317,32 +464,7 @@ class Engine
             #if GSS.getById gid
             trigger = true
             invalidMeasures.push(gid)
-        
-    
-
-    # els added or removed from queries
-    selectorsWithAdds = []
-    # selectorsWithShuffles = []
-    # shufflesByQuery = {} ?
-    for selector, query of @queryCache
-      query.update()
-      # TODO: callback?
-      if query.changedLastUpdate
-        if query.lastAddedIds.length > 0
-          selectorsWithAdds.push selector
-          #addsBySelector[selector] = query.lastAddedIds
-          trigger = true
-        if query.lastRemovedIds.length > 0
-          trigger = true
-          removedIds = query.lastRemovedIds
-          # ignore redudant removes
-          for rid in removedIds
-            rid = "$" + rid
-            if trigger_removesFromScope
-              if removes.indexOf(rid) is -1
-                removes.push(selector + rid) # .box$3454
-            else
-              removes.push(selector + rid)
+      #
     
     ###
     if trigger
@@ -357,33 +479,29 @@ class Engine
         cancelable: true
       @scope.dispatchEvent e
     ###
-
     
-    if trigger
-      @commander.handleRemoves removes
-      @commander.handleSelectorsWithAdds selectorsWithAdds
-      @commander.handleInvalidMeasures invalidMeasures
-      @solve()
-
-    #console.log "query.observer selector:#{selector}, mutations:", mutations
-    #console.log "removesFromScope:", removesFromScope, ", addsBySelector:", addsBySelector, ", removesBySelector:", removesBySelector, ", selectorsWithAdds:", selectorsWithAdds    
+    # TODO: Make smarter!!!!!!!!!!!!
+    if !GSS.needsDisplay and !GSS.needsLayout and !GSS.needsDisplay
+      if trigger
+        @commander.handleInvalidMeasures invalidMeasures
+      childListTrigger = @updateChildList()        
 
   measureByGssId: (id, prop) ->
     LOG @id,".measureByGssId()",@workerCommands
     el = GSS.getById id
     @getter.measure(el, prop)
 
-  resetWorkerCommands: () =>
-    @lastWorkerCommands = @workerCommands
-    @workerCommands = []
-
   handleWorkerMessage: (message) =>
     LOG @id,".handleWorkerMessage()",@workerCommands
     @unobserve()
     cleanAndSnatch message.data.values, @vars
-    @setter.set @vars
-    @observe()
-    @dispatch "solved", {values:@vars}
+    
+    #@setNeedsDisplay(true)
+    @display()
+    
+    #@setter.set @vars
+    #@observe()
+    #@dispatch "solved", {values:@vars}  
 
   dispatch: (eName, oDetail = {}, bubbles = true, cancelable = true) =>
     oDetail.engine = @
@@ -398,17 +516,37 @@ class Engine
   handleError: (error) ->
     return @onError error if @onError
     throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"    
-    
-  _addVarCommandsForElements: (elements) ->
-    @workerCommands.push "var", el.id + prop
 
   registerCommands: (commands) ->
     for command in commands
       @registerCommand command
 
+  handleRemoves: (removes) ->
+    keys = null
+    i = null
+    for tracker in removes
+      keys = @varKeysByTacker[tracker] 
+      if keys
+        for key in keys
+          i = @varKeys.indexOf key
+          if i > -1 then @varKeys.splice(i,1)          
+      @varKeysByTacker[tracker] = null
+    
   registerCommand: (command) ->    
+    if command[0] is 'var'
+      key = command[1]
+      @varKeys.push key
+      tracker = command[2]
+      if tracker
+        if !@varKeysByTacker[tracker] then @varKeysByTacker[tracker] = []
+        @varKeysByTacker[tracker].push key
+    else if command[0] is 'remove' 
+      @handleRemoves command[1...command.length]...
     # TODO: treat commands as strings and check cache for dups?
     @workerCommands.push command
+    #
+    @setNeedsLayout true
+    @
 
   registerDomQuery: (o) ->    
     selector = o.selector
@@ -420,18 +558,5 @@ class Engine
       query.update()
       @queryCache[selector] = query
       return query
-###
-Engine::loadAllASTs = () ->
-  @ASTs = @getter.readAllASTs()
-
-Engine::addAST = (ast) ->
-  @ASTs.push ast
-  @run ast  
-
-Engine::removeAST = (ast) ->  
-  @clean()
-  @ASTs.splice @ASTs.indexOf(ast), 1
-  @run @ASTs
-###
 
 module.exports = Engine

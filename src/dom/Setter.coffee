@@ -48,7 +48,7 @@ class Setter
       offsets.y += element.offsetTop
       break unless element.offsetParent
       element = element.offsetParent
-    return offsets
+    return offsets  
 
   setWidth: (element, value) ->
     element.style.width = "#{value}px"

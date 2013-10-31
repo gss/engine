@@ -250,7 +250,7 @@ describe 'GSS commands', ->
             ['var', '.box[x]', 'x', ['$class','box']]
             ['eq', ['get','.box[x]','.box'], ['number',100]]
           ]
-        chai.expect(engine.lastWorkerCommands).to.eql [
+        chai.expect(engine.workerCommands).to.eql [
             ['var', '$12322[x]', '$12322']
             ['var', '$34222[x]', '$34222']
             ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
@@ -279,7 +279,7 @@ describe 'GSS commands', ->
             ['var', '.box[x]', 'x', ['$class','box']]
             ['eq', ['get','.box[x]','.box'], ['number',100]]
           ]
-        chai.expect(engine.lastWorkerCommands).to.eql [
+        chai.expect(engine.workerCommands).to.eql [
             ['var', '$12322[x]', '$12322']
             ['var', '$34222[x]', '$34222']
             ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
@@ -308,7 +308,7 @@ describe 'GSS commands', ->
             ['var', '.box[x]', 'x', ['$class','box']]
             ['eq', ['get','.box[x]','.box'], ['number',100]]
           ]
-        chai.expect(engine.lastWorkerCommands).to.eql [
+        chai.expect(engine.workerCommands).to.eql [
             ['var', '$12322[x]', '$12322']
             ['var', '$34222[x]', '$34222']
             ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]

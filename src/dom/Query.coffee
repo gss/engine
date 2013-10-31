@@ -11,9 +11,8 @@ arrayAddsRemoves = (old, neu) ->
       removes.push o
   return {adds:adds,removes:removes}
 
-LOG = () ->
-  if GSS.config.debug
-    console.log "Query::", arguments...
+LOG= () ->
+  GSS.deblog "Query", arguments...
 
 class Query
   
@@ -30,8 +29,7 @@ class Query
     @ids = o.ids or []
     @lastAddedIds = []
     @lastRemovedIds = []
-    LOG "constructor() @", @
-    #@lastLocalRemovedIds = []
+    LOG "constructor() @", @    
     #@update() # have to manuall call update
     @
   
@@ -74,6 +72,5 @@ class Query
     @createNodeList     = null
     @nodeList           = null
     @changedLastUpdate  = null    
-    
 
 module.exports = Query
