@@ -10,6 +10,7 @@ class Setter
   destroy: () ->
     
   set: (vars) ->
+    if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
     for key,val of vars
       if key[0] is "$"
         gid = key.substring(1, key.indexOf("["))
@@ -17,6 +18,7 @@ class Setter
         element = GSS.getById gid
         if element
           #element.style[dimension] = val
+          if GSS.config.roundBeforeSet then val = Math.round(val)
           @elementSet element, dimension, val
         else
           console.log "Element wasn't found"

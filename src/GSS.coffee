@@ -32,7 +32,9 @@ GSS = (o) ->
 
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
-  debug: false # ""
+  debug: false
+  roundBeforeSet: false
+  processBeforeSet: null # function
 
 # overwrite config if provided
 if GSS_CONFIG?
@@ -58,18 +60,13 @@ GSS.Query = require("./dom/Query.js")
 GSS.Setter = require("./dom/Setter.js")
 GSS.Engine = require("./Engine.js")
 
-
-# ID stuff
-
 for key, val of require("./dom/IdMixin.js")
   if GSS[key] then throw new Error "IdMixin key clash: #{key}"
   GSS[key] = val
 
 # 
 
-GSS.getter = new GSS.Getter()
-getter = GSS.getter
-GSS.get = GSS.getter
+GSS.get = new GSS.Getter()
 
 GSS.observer = require("./dom/Observer.js")
 

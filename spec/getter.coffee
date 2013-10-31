@@ -1,4 +1,4 @@
-Getter = GSS.getter #require 'gss-engine/lib/dom/Getter.js'
+Getter = new GSS.Getter() #require 'gss-engine/lib/dom/Getter.js'
 
 describe 'DOM Getter', ->
   container = null
