@@ -35,9 +35,10 @@ GSS.engines = engines = []
 engines.byId = {}
 engines.root = null
 
-class Engine
+class Engine extends GSS.EventTrigger
 
   constructor: (o) ->
+    super
     {@scope, @workerURL, @vars, @getter, @setter, @is_root} = o
     @vars      = {}                          unless @vars
     @varKeysByTacker = {}
@@ -99,8 +100,7 @@ class Engine
       @cssToDump = ast.css
       # When is best time to dump css?
       # Early in prep for intrinsics?
-      # Or, should intrinsics be deferred any way?
-      @dumpCSSIfNeeded()
+      # Or, should intrinsics be deferred any way?      
     if ast.commands
       @execute ast.commands    
     
@@ -184,15 +184,16 @@ class Engine
     else
       @needsLayout = false
   
-  beforeLayout: () ->
+  _beforeLayoutCalls:null
   
   layout: () ->
     LOG @id,".layout()"
-    @beforeLayout()
+    @trigger "beforeLayout", @
     @is_running = true
     @waitingToLayoutSubtree = true
     @solve()
     @setNeedsLayout false
+    #@trigger "afterLayout", @
     
   layoutIfNeeded: () ->    
     LOG @id,".layoutIfNeeded()"
@@ -234,7 +235,8 @@ class Engine
       child.displayIfNeeded()
       
   display: () ->
-    LOG @id,".display()"    
+    LOG @id,".display()"
+    @dumpCSSIfNeeded()
     @setter.set @vars
     # TODO!!!!!!!!!!!!!!!!!!
     # move css dumping here!
@@ -242,11 +244,10 @@ class Engine
     @dispatch "solved", {values:@vars}
     TIME_END "#{@id} DISPLAY PASS"
     #    
-    @layoutSubTreeIfNeeded()
-    
+    @layoutSubTreeIfNeeded()    
     
   
-  loadASTs: () =>
+  load: () =>
     LOG @id,".loadASTs()"
     if @is_running
       @clean()
@@ -257,32 +258,17 @@ class Engine
       if @scope is GSS.get.scopeForStyleNode node
         AST = @getter.readAST node
         if AST then ASTs.push AST
-      ###
-      if node.isContentEditable and !node._isFixingSelfFromBullShit
-        node._isFixingSelfFromBullShit = true
-        node.addEventListener "input", @onEditableStyleInput    
-      ###          
     @ASTs = ASTs
     #
     @setNeedsUpdate true
     #@run ASTs
     @
-  
-
-      
-  
-  ###
-  onEditableStyleInput: (e) =>
-    @unobserve()
-    e.target.innerHTML = e.target.innerText
-    @observe()
-    @loadASTs()
-  ###
     
-  
   # clean when scope insides changes, but if scope changes must destroy
   clean: () ->
     LOG @id,".clean()"
+    # event listeners
+    @offAll()
     #
     @setNeedsLayout  false
     @setNeedsDisplay false
@@ -332,6 +318,8 @@ class Engine
     LOG @id,".destroy()"
     # cascade destruction?
     #@destroyChildren()
+    # event listeners
+    @offAll()
     #
     @setNeedsLayout  false
     @setNeedsDisplay false
@@ -410,7 +398,7 @@ class Engine
   # els added or removed from queries
   updateChildList: =>        
     selectorsWithAdds = []
-    removes = []    
+    removes = []
     globalRemoves = []
     trigger = false
     # selectorsWithShuffles = []
@@ -444,20 +432,15 @@ class Engine
       return trigger
     
   handleMutations: (mutations=[]) =>
-    LOG @id,".handleMutations()" #,mutations    
-    trigger = false 
-    invalidMeasures = []    
-    
-    #console.log (@needsLayout or @needsDisplay or @needsUpdate or GSS.needsLayout or GSS.needsDisplay or GSS.needsUpdate)
-    #if (@needsLayout or @needsDisplay or @needsUpdate or GSS.needsLayout or GSS.needsDisplay or GSS.needsUpdate)
-    #  return null
-    
+    LOG @id,".handleMutations()", mutations
+    trigger = false
+    invalidMeasures = []
     
     for m in mutations
       # style tag was modified then stop & reload everything
       if m.type is "characterData" 
         if @getter.isStyleNode(m.target.parentElement)
-          @loadASTs()
+          @load()
           return null #@update()
       
       #

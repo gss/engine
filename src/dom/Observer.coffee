@@ -40,11 +40,11 @@ observer = new MutationObserver (mutations) ->
     #        scopesToLoad.push scope
     #
     #for scope in scopesToLoad
-    #  GSS(scope).loadASTs()
+    #  GSS(scope).load()
   ###
     
   # end for mutation
-  GSS.update()
+  GSS.load()
 
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
@@ -53,7 +53,7 @@ document.addEventListener "DOMContentLoaded", (e) ->
   # The event "DOMContentLoaded" will be fired when the document has been parsed completely, that is without stylesheets* and additional images. If you need to wait for images and stylesheets, use "load" instead.
   observer.observe(document, {subtree: true, childList: true, attributes: false, characterData: false})
   #GSS.loadAndRun()
-  GSS.update()
+  GSS.load()
   
 
 

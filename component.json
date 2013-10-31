@@ -6,6 +6,7 @@
   "scripts": [
     "lib/GSS.js",
     "lib/_.js",
+    "lib/EventTrigger.js",
     "lib/dom/Query.js",
     "lib/dom/Observer.js",
     "lib/Engine.js",

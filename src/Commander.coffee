@@ -74,8 +74,7 @@ class Commander
     @intrinsicRegistersById = null
     @boundWindowProps = null
     @bindCache = null
-    @unlisten()
-  
+    @unlisten()  
   
   # `var` & `varexp` cache binds for `get`
   _checkCache: (root,cacheKey) =>
@@ -132,7 +131,7 @@ class Commander
       if !@_bound_to_window_resize
         window.addEventListener("resize", @lazySpawnForWindowSize, false)
         @_bound_to_window_resize = true
-    else if prop is 'x'      
+    else if prop is 'x'
       @engine.registerCommand ['eq', ['get', '::window[x]'], ['number', 0], 'required']      
     else if prop is 'y'
       @engine.registerCommand ['eq', ['get', '::window[y]'], ['number', 0], 'required']
@@ -151,10 +150,7 @@ class Commander
     key = "$"+GSS.getId(@engine.scope)+"[#{prop}]"
     framingEngine = @parentEngineWithVarId key      
     if framingEngine      
-      val = framingEngine.vars[key]
-      if val        
-        @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
-      @engine.beforeLayout = =>
+      @engine.on "beforeLayout", =>
         val = framingEngine.vars[key]
         @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']      
       #framingEngine.scope.addEventListener "solved", =>

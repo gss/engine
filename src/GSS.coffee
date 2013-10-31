@@ -33,7 +33,7 @@ GSS = (o) ->
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
   debug: false
-  perf: false
+  perf: true
   roundBeforeSet: false
   processBeforeSet: null # function
 
@@ -54,6 +54,7 @@ GSS.deblog = () ->
 
 window.GSS = GSS
 GSS._ = require("./_.js")
+GSS.EventTrigger = require("./EventTrigger.js")
 GSS.workerURL = require("./WorkerBlobUrl.js")
 GSS.Getter = require("./dom/Getter.js")
 GSS.Commander = require("./Commander.js")
@@ -93,13 +94,10 @@ GSS.boot = () ->
 
 GSS.load = () ->
   # dirty load
-  GSS.loadEngines()
-
-GSS.update = () ->
-  GSS.loadEngines()
+  GSS.dirtyLoadEngines()
   GSS.render()
   
-GSS.render = () ->  
+GSS.render = () ->
   TIME "RENDER"
   # force synchronous first two passes
   GSS.updateIfNeeded()
@@ -215,10 +213,10 @@ styleQuery = GSS.styleQuery = new GSS.Query
       #
       for scope in _scopesToLoad
         engine = GSS.get.engine(scope)
-        if engine then engine.loadASTs()
+        if engine then engine.load()
         #LOG "afterUpdate scopeToLoad", scope          
 
-GSS.loadEngines = () ->  
+GSS.dirtyLoadEngines = () ->  
   i = 0
   engine = GSS.engines[i]
   while !!engine
