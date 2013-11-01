@@ -44,10 +44,10 @@ describe 'GSS commands', ->
 
     it 'var with class & static ids', ->
       scope.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
-        <div class="box" data-gss-id="35346">One</div>
-        <div class="box" data-gss-id="89347">One</div>
+        <div class="box" id="12322">One</div>
+        <div class="box" id="34222">One</div>
+        <div class="box" id="35346">One</div>
+        <div class="box" id="89347">One</div>
       """
       engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
@@ -61,10 +61,10 @@ describe 'GSS commands', ->
 
     it 'varexp with class', ->
       scope.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
-        <div class="box" data-gss-id="35346">One</div>
-        <div class="box" data-gss-id="89347">One</div>
+        <div class="box" id="12322">One</div>
+        <div class="box" id="34222">One</div>
+        <div class="box" id="35346">One</div>
+        <div class="box" id="89347">One</div>
       """
       engine.execute [
         ['var', '.box[x]', 'x', ['$class','box']]
@@ -88,8 +88,8 @@ describe 'GSS commands', ->
     
     it 'stay with class & static ids', ->
       scope.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
+        <div class="box" id="12322">One</div>
+        <div class="box" id="34222">One</div>
       """
       engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
@@ -104,8 +104,8 @@ describe 'GSS commands', ->
     
     it 'multiple stays', ->
       scope.innerHTML = """
-        <div class="box block" data-gss-id="12322">One</div>
-        <div class="box block" data-gss-id="34222">One</div>
+        <div class="box block" id="12322">One</div>
+        <div class="box block" id="34222">One</div>
       """
       engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
@@ -133,8 +133,8 @@ describe 'GSS commands', ->
     
     it 'eq with class', ->
       scope.innerHTML = """
-        <div class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
+        <div class="box" id="12322">One</div>
+        <div class="box" id="34222">One</div>
       """
       engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
@@ -153,9 +153,9 @@ describe 'GSS commands', ->
 
     it 'lte for class & id selectos', ->
       scope.innerHTML = """
-        <div id="box1" class="box" data-gss-id="12322">One</div>
-        <div class="box" data-gss-id="34222">One</div>
-        <div class="box" data-gss-id="35346">One</div>
+        <div id="box1" class="box">One</div>
+        <div class="box" id="34222">One</div>
+        <div class="box" id="35346">One</div>
       """
       engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
@@ -163,20 +163,20 @@ describe 'GSS commands', ->
         ['lte', ['get','.box[width]','.box'],['get','#box1[width]','#box1']]
       ]
       chai.expect(engine.workerCommands).to.eql [
-        ['var', '$12322[width]', '$12322']
+        ['var', '$box1[width]', '$box1']
         ['var', '$34222[width]', '$34222']
         ['var', '$35346[width]', '$35346']
-        ['var', '$12322[width]', '$12322'] # duplicates resolved by worker?
-        ['lte', ['get','$12322[width]','.box$12322'],['get','$12322[width]','#box1$12322']]
-        ['lte', ['get','$34222[width]','.box$34222'],['get','$12322[width]','#box1$12322']]
-        ['lte', ['get','$35346[width]','.box$35346'],['get','$12322[width]','#box1$12322']]
+        ['var', '$box1[width]', '$box1'] # duplicates resolved by worker?
+        ['lte', ['get','$box1[width]','.box$box1'],['get','$box1[width]','#box1$box1']]
+        ['lte', ['get','$34222[width]','.box$34222'],['get','$box1[width]','#box1$box1']]
+        ['lte', ['get','$35346[width]','.box$35346'],['get','$box1[width]','#box1$box1']]
       ]
 
     it 'intrinsic-width with class', ->
       scope.innerHTML = """
-        <div style="width:111px;" class="box" data-gss-id="12322">One</div>
-        <div style="width:222px;" class="box" data-gss-id="34222">One</div>
-        <div style="width:333px;" class="box" data-gss-id="35346">One</div>
+        <div style="width:111px;" class="box" id="12322">One</div>
+        <div style="width:222px;" class="box" id="34222">One</div>
+        <div style="width:333px;" class="box" id="35346">One</div>
       """
       engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
@@ -200,7 +200,7 @@ describe 'GSS commands', ->
 
     it '.box[width] == ::window[width]', ->
       scope.innerHTML = """
-        <div style="width:111px;" class="box" data-gss-id="12322">One</div>
+        <div style="width:111px;" class="box" id="12322">One</div>
       """
       engine.execute [
         ['var', '.box[width]', 'width', ['$class','box']]
@@ -216,7 +216,7 @@ describe 'GSS commands', ->
 
     it '::window props', ->
       scope.innerHTML = """
-        <div style="width:111px;" class="box" data-gss-id="12322">One</div>
+        <div style="width:111px;" class="box" id="12322">One</div>
       """
       engine.execute [
         ['var', '::window[x]', 'x', ['$reserved','window']]
@@ -243,8 +243,8 @@ describe 'GSS commands', ->
     describe 'adds & removes -', ->
       it 'add to class', (done) ->
         scope.innerHTML = """
-          <div class="box" data-gss-id="12322">One</div>
-          <div class="box" data-gss-id="34222">One</div>
+          <div class="box" id="12322">One</div>
+          <div class="box" id="34222">One</div>
         """
         engine.run commands: [
             ['var', '.box[x]', 'x', ['$class','box']]
@@ -260,7 +260,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            scope.insertAdjacentHTML('beforeend', '<div class="box" data-gss-id="35346">One</div>')
+            scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['var', '$35346[x]', '$35346']
@@ -272,8 +272,8 @@ describe 'GSS commands', ->
 
       it 'removed from dom', (done) ->
         scope.innerHTML = """
-          <div class="box" data-gss-id="12322">One</div>
-          <div class="box" data-gss-id="34222">One</div>
+          <div class="box" id="12322">One</div>
+          <div class="box" id="34222">One</div>
         """
         engine.run commands: [
             ['var', '.box[x]', 'x', ['$class','box']]
@@ -301,8 +301,8 @@ describe 'GSS commands', ->
 
       it 'removed from selector', (done) ->
         scope.innerHTML = """
-          <div class="box" data-gss-id="12322">One</div>
-          <div class="box" data-gss-id="34222">One</div>
+          <div class="box" id="12322">One</div>
+          <div class="box" id="34222">One</div>
         """
         engine.run commands: [
             ['var', '.box[x]', 'x', ['$class','box']]
@@ -351,7 +351,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = scope.querySelector('[data-gss-id="111"]')            
+            el = scope.querySelector('#box1')            
             el.style.width = 1110+"px"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
@@ -369,8 +369,8 @@ describe 'GSS commands', ->
       
       it 'element resized by inserting child', (done) ->
         scope.innerHTML = """
-          <div style="width:111px;" id="box1" class="box" data-gss-id="111">One</div>
-          <div style="width:222px;" id="box2" class="box" data-gss-id="222">One</div>
+          <div style="width:111px;" id="box1" class="box">One</div>
+          <div style="width:222px;" id="box2" class="box">One</div>
         """
         engine.run commands: [
           ['var', '.box[height]', 'height', ['$class','box']]
@@ -381,7 +381,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = scope.querySelector('[data-gss-id="111"]')            
+            el = scope.querySelector('#box1')            
             el.innerHTML = "<div></div>"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
@@ -389,7 +389,7 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$box1[intrinsic-width]'], ['number', 111], 'required']
               ]
             scope.removeEventListener 'solved', listener
             done()
@@ -440,18 +440,18 @@ describe 'GSS commands', ->
       count = 0
 
       innerHTML = """
-          <div class='box' data-gss-id='35346#{count++}'>One</div>     <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>    <div class='box' data-gss-id='35346#{count++}'>One</div>   <div class='box' data-gss-id='35346#{count++}'>One</div>
-          <div class='box' data-gss-id='21823#{count++}'>One</div>     <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>    <div class='box' data-gss-id='21823#{count++}'>One</div>   <div class='box' data-gss-id='21823#{count++}'>One</div>
-          <div class='box' data-gss-id='21423#{count++}'>One</div>     <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>    <div class='box' data-gss-id='21423#{count++}'>One</div>   <div class='box' data-gss-id='21423#{count++}'>One</div>
-          <div class='box' data-gss-id='35246#{count++}'>One</div>     <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>    <div class='box' data-gss-id='35246#{count++}'>One</div>   <div class='box' data-gss-id='35246#{count++}'>One</div>
-          <div class='box' data-gss-id='24123#{count++}'>One</div>     <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>    <div class='box' data-gss-id='24123#{count++}'>One</div>   <div class='box' data-gss-id='24123#{count++}'>One</div>
-          <div class='box' data-gss-id='25123#{count++}'>One</div>     <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>    <div class='box' data-gss-id='25123#{count++}'>One</div>   <div class='box' data-gss-id='25123#{count++}'>One</div>
-          <div class='box' data-gss-id='36346#{count++}'>One</div>     <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>    <div class='box' data-gss-id='36346#{count++}'>One</div>   <div class='box' data-gss-id='36346#{count++}'>One</div>
-          <div class='box' data-gss-id='27123#{count++}'>One</div>     <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>    <div class='box' data-gss-id='27123#{count++}'>One</div>   <div class='box' data-gss-id='27123#{count++}'>One</div>
-          <div class='box' data-gss-id='28123#{count++}'>One</div>     <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>    <div class='box' data-gss-id='28123#{count++}'>One</div>   <div class='box' data-gss-id='28123#{count++}'>One</div>
-          <div class='box' data-gss-id='39346#{count++}'>One</div>     <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>    <div class='box' data-gss-id='39346#{count++}'>One</div>   <div class='box' data-gss-id='39346#{count++}'>One</div>
-          <div class='box' data-gss-id='20123#{count++}'>One</div>     <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>    <div class='box' data-gss-id='20123#{count++}'>One</div>   <div class='box' data-gss-id='20123#{count++}'>One</div>
-          <div class='box' data-gss-id='21123#{count++}'>One</div>     <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>    <div class='box' data-gss-id='21123#{count++}'>One</div>   <div class='box' data-gss-id='21123#{count++}'>One</div>
+          <div class='box' id='35346#{count++}'>One</div>     <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>    <div class='box' id='35346#{count++}'>One</div>   <div class='box' id='35346#{count++}'>One</div>
+          <div class='box' id='21823#{count++}'>One</div>     <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>    <div class='box' id='21823#{count++}'>One</div>   <div class='box' id='21823#{count++}'>One</div>
+          <div class='box' id='21423#{count++}'>One</div>     <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>    <div class='box' id='21423#{count++}'>One</div>   <div class='box' id='21423#{count++}'>One</div>
+          <div class='box' id='35246#{count++}'>One</div>     <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>    <div class='box' id='35246#{count++}'>One</div>   <div class='box' id='35246#{count++}'>One</div>
+          <div class='box' id='24123#{count++}'>One</div>     <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>    <div class='box' id='24123#{count++}'>One</div>   <div class='box' id='24123#{count++}'>One</div>
+          <div class='box' id='25123#{count++}'>One</div>     <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>    <div class='box' id='25123#{count++}'>One</div>   <div class='box' id='25123#{count++}'>One</div>
+          <div class='box' id='36346#{count++}'>One</div>     <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>    <div class='box' id='36346#{count++}'>One</div>   <div class='box' id='36346#{count++}'>One</div>
+          <div class='box' id='27123#{count++}'>One</div>     <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>    <div class='box' id='27123#{count++}'>One</div>   <div class='box' id='27123#{count++}'>One</div>
+          <div class='box' id='28123#{count++}'>One</div>     <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>    <div class='box' id='28123#{count++}'>One</div>   <div class='box' id='28123#{count++}'>One</div>
+          <div class='box' id='39346#{count++}'>One</div>     <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>    <div class='box' id='39346#{count++}'>One</div>   <div class='box' id='39346#{count++}'>One</div>
+          <div class='box' id='20123#{count++}'>One</div>     <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>    <div class='box' id='20123#{count++}'>One</div>   <div class='box' id='20123#{count++}'>One</div>
+          <div class='box' id='21123#{count++}'>One</div>     <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>    <div class='box' id='21123#{count++}'>One</div>   <div class='box' id='21123#{count++}'>One</div>
 
 
       """
@@ -480,12 +480,12 @@ describe 'GSS commands', ->
       
       # first one here otherwise, nothing to solve
       scope.insertAdjacentHTML 'beforeend', """
-          <div class='box' data-gss-id='35346#{count}'>One</div>
+          <div class='box' id='35346#{count}'>One</div>
         """      
       listener = (e) ->        
         count++
         scope.insertAdjacentHTML 'beforeend', """
-            <div class='box' data-gss-id='35346#{count}'>One</div>
+            <div class='box' id='35346#{count}'>One</div>
           """
         #console.log count
         if count is 100

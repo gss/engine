@@ -214,9 +214,7 @@ class Commander
         for prop,register of registersByProp
           register.call @
     @
-    
-  
-  
+        
   spawnIntrinsicSuggests: (root) =>
     # only if bound to dom query
     if root._checkInstrinsics and root._intrinsicQuery?

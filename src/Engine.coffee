@@ -157,15 +157,14 @@ class Engine extends GSS.EventTrigger
       @needsUpdate = false
   
   updateIfNeeded: () ->
-    LOG @id,".updateIfNeeded()"
-    # digest ASTs
+    LOG @id,".updateIfNeeded()"    
     if @needsUpdate
-      if !@ASTs then throw new Error "ASTs needed for update"
-      @run @ASTs
-      @ASTs = null    
+      if @ASTs # then digest ASTs
+        @run @ASTs
+        @ASTs = null      
       @setNeedsUpdate false
     for child in @childEngines
-      child.updateIfNeeded()
+      child.updateIfNeeded()  
   
   # Layout pass
   # -------------------------
@@ -189,8 +188,7 @@ class Engine extends GSS.EventTrigger
   layout: () ->
     LOG @id,".layout()"
     @trigger "beforeLayout", @
-    @is_running = true
-    @waitingToLayoutSubtree = true
+    @is_running = true    
     @solve()
     @setNeedsLayout false
     #@trigger "afterLayout", @
@@ -199,7 +197,8 @@ class Engine extends GSS.EventTrigger
     LOG @id,".layoutIfNeeded()"
     # if commands were found & executed
     if @needsLayout # @workerCommands.length > 0
-      @layout()
+      @waitingToLayoutSubtree = true
+      @layout()      
     else if !@waitingToLayoutSubtree
       @layoutSubTreeIfNeeded()
   
@@ -434,15 +433,19 @@ class Engine extends GSS.EventTrigger
   handleMutations: (mutations=[]) =>
     LOG @id,".handleMutations()", mutations
     trigger = false
+    triggerUpdateChildList = false
     invalidMeasures = []
     
     for m in mutations
+      
       # style tag was modified then stop & reload everything
       if m.type is "characterData" 
         if @getter.isStyleNode(m.target.parentElement)
           @load()
           return null #@update()
       
+      if m.type is "attributes" or m.type is "childList"
+        triggerUpdateChildList = true
       #
       # els that may need remeasuring      
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
@@ -476,7 +479,8 @@ class Engine extends GSS.EventTrigger
     if !GSS.needsDisplay and !GSS.needsLayout and !GSS.needsDisplay
       if trigger
         @commander.handleInvalidMeasures invalidMeasures
-      childListTrigger = @updateChildList()        
+      if triggerUpdateChildList
+        childListTrigger = @updateChildList()        
 
   measureByGssId: (id, prop) ->
     LOG @id,".measureByGssId()",@workerCommands

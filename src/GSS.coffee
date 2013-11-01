@@ -33,7 +33,8 @@ GSS = (o) ->
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
   debug: false
-  perf: true
+  warn: false
+  perf: false
   roundBeforeSet: false
   processBeforeSet: null # function
 
@@ -49,6 +50,9 @@ if GSS_CONFIG?
   
 GSS.deblog = () ->
   if GSS.config.debug then console.log(arguments...)  
+
+GSS.warn = () ->
+  if GSS.config.warn then console.warn(arguments...)  
 
 # Requires
 
