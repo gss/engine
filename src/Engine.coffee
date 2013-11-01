@@ -236,6 +236,7 @@ class Engine extends GSS.EventTrigger
       
   display: () ->
     LOG @id,".display()"
+    @trigger "beforeDisplay", @
     #@dumpCSSIfNeeded()
     @setter.set @vars
     # TODO!!!!!!!!!!!!!!!!!!

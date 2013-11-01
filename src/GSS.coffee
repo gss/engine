@@ -168,8 +168,6 @@ GSS.layoutIfNeeded = () ->
 
 GSS.needsDisplay = false
 
-
-
 GSS.setNeedsDisplay = (bool) ->
   if bool
     if !GSS.needsDisplay

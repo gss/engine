@@ -150,7 +150,7 @@ class Commander
     key = "$"+GSS.getId(@engine.scope)+"[#{prop}]"
     framingEngine = @parentEngineWithVarId key      
     if framingEngine      
-      @engine.on "beforeLayout", =>
+      framingEngine.on "beforeDisplay", =>
         val = framingEngine.vars[key]
         @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']      
       #framingEngine.scope.addEventListener "solved", =>
