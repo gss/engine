@@ -213,10 +213,11 @@ styleQuery = GSS.styleQuery = new GSS.Query
         if GSS.get.isStyleNode node
           scope = GSS.get.scopeForStyleNode node
           if _scopesToLoad.indexOf(scope) is -1 and scope?.parentNode?
-            _scopesToLoad.push scope
+            if document.contains scope
+              _scopesToLoad.push scope
       #
       for scope in _scopesToLoad
-        engine = GSS.get.engine(scope)
+        engine = GSS(scope:scope) # make engine if needed
         if engine then engine.load()
         #LOG "afterUpdate scopeToLoad", scope          
 

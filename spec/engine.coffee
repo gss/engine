@@ -581,7 +581,7 @@ describe 'framed scopes', ->
     container.addEventListener 'solved', cListener
     count = 0
     wListener = (e) ->     
-      wrap.removeEventListener 'solved', wListener      
+      #wrap.removeEventListener 'solved', wListener      
       count++
       if count is 1
         chai.expect(wrapEngine.vars).to.eql 
