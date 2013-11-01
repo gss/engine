@@ -37,6 +37,7 @@ GSS.config =
   perf: false
   roundBeforeSet: false
   processBeforeSet: null # function
+  useOffsetParent: true
 
 # overwrite config if provided
 if GSS_CONFIG?

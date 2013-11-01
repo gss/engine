@@ -40,6 +40,11 @@ class Setter
     element.style.margin = '0px'    
 
   getOffsets: (element) ->
+    if !GSS.config.useOffsetParent 
+      return { 
+        x:0
+        y:0
+      }
     offsets =
       x: 0
       y: 0
