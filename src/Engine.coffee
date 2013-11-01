@@ -95,14 +95,15 @@ class Engine extends GSS.EventTrigger
       @_run asts   
     #@layoutIfNeeded()
       
-  _run: (ast) ->
+  _run: (ast) ->    
+    if ast.commands
+      @execute ast.commands    
     if ast.css      
       @cssToDump = ast.css
       # When is best time to dump css?
       # Early in prep for intrinsics?
       # Or, should intrinsics be deferred any way?      
-    if ast.commands
-      @execute ast.commands    
+      @dumpCSSIfNeeded()
     
   execute: (commands) =>
     # digests or transforms commands
@@ -235,7 +236,7 @@ class Engine extends GSS.EventTrigger
       
   display: () ->
     LOG @id,".display()"
-    @dumpCSSIfNeeded()
+    #@dumpCSSIfNeeded()
     @setter.set @vars
     # TODO!!!!!!!!!!!!!!!!!!
     # move css dumping here!
