@@ -43,7 +43,7 @@ IdMixin =
 
   getId: (el) ->
     if el?._gss_id then return el?._gss_id
-    if el?.getAttribute? then return el.getAttribute('data-gss-id')
+    #if el?.getAttribute? then return el.getAttribute('data-gss-id')
     return null    
 
 module.exports = IdMixin

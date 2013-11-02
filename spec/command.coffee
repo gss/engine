@@ -6,16 +6,14 @@ describe 'GSS commands', ->
   scope = null
   engine = null
 
-  before ->
+  beforeEach ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
-    
-  beforeEach ->
-    engine = new Engine 
-      scope:scope
+    engine = GSS(scope:scope)      
 
   afterEach (done) ->
+    scope.remove()
     engine.destroy()
     done()
 
@@ -25,7 +23,7 @@ describe 'GSS commands', ->
 
   describe 'command transformations -', ->
     it 'var with class & generate ids', ->
-
+      
       scope.innerHTML = """
         <div class="box">One</div>
         <div class="box">One</div>
@@ -34,12 +32,11 @@ describe 'GSS commands', ->
       engine.execute [
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
-      
       chai.expect(engine.workerCommands).to.eql [
           # $1 is engine
-          ['var', '$4[x]', '$4']
-          ['var', '$5[x]', '$5']
-          ['var', '$6[x]', '$6']
+          ["var", "$#{GSS._id_counter-3}[x]", "$#{GSS._id_counter-3}"]
+          ["var", "$#{GSS._id_counter-2}[x]", "$#{GSS._id_counter-2}"]
+          ["var", "$#{GSS._id_counter-1}[x]", "$#{GSS._id_counter-1}"]
         ]
 
     it 'var with class & static ids', ->
@@ -260,7 +257,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')
+            scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')            
           else if count is 2
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['var', '$35346[x]', '$35346']
@@ -335,11 +332,10 @@ describe 'GSS commands', ->
     #
     #
     describe 'resizing -', ->
-
       it 'element resized by style change', (done) ->
         scope.innerHTML = """
-          <div style="width:111px;" id="box1" class="box" data-gss-id="111">One</div>
-          <div style="width:222px;" id="box2" class="box" data-gss-id="222">One</div>
+          <div style="width:111px;" id="box1" class="box" >One</div>
+          <div style="width:222px;" id="box2" class="box" >One</div>
         """
         engine.run commands: [
           ['var', '.box[height]', 'height', ['$class','box']]
@@ -351,18 +347,18 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = scope.querySelector('#box1')            
-            el.style.width = 1110+"px"
+            el = document.querySelector('#box1')            
+            el.style.width = 1110+"px"            
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2            
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 1110], 'required']
+                ['suggest', ['get','$box1[intrinsic-width]'], ['number', 1110], 'required']
               ]
-            chai.expect(engine.vars['$111[intrinsic-width]']).to.equal 1110
-            chai.expect(engine.vars['$222[height]']).to.equal 1110
+            chai.expect(engine.vars['$box1[intrinsic-width]']).to.equal 1110
+            chai.expect(engine.vars['$box2[height]']).to.equal 1110
             scope.removeEventListener 'solved', listener
             done()
         scope.addEventListener 'solved', listener
@@ -397,8 +393,8 @@ describe 'GSS commands', ->
       
       it 'element resized by changing text', (done) ->
         scope.innerHTML = """
-          <div style="width:111px;" id="box1" class="box" data-gss-id="111">One</div>
-          <div style="width:222px;" id="box2" class="box" data-gss-id="222">One</div>
+          <div style="width:111px;" id="box1" class="box" >One</div>
+          <div style="width:222px;" id="box2" class="box" >One</div>
         """
         engine.run commands: [
           ['var', '.box[height]', 'height', ['$class','box']]
@@ -410,7 +406,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++          
           if count is 1
-            el = scope.querySelector('[data-gss-id="111"]')            
+            el = scope.querySelector('#box1')            
             engine.lastWorkerCommands = [] # to ensure it's reset
             el.innerHTML = "aa"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -419,13 +415,13 @@ describe 'GSS commands', ->
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2            
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$box1[intrinsic-width]'], ['number', 111], 'required']
               ]
             engine.lastWorkerCommands = [] # to ensure it's reset
             el.innerHTML = "aabbb"            
           else if count is 3
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$111[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$box1[intrinsic-width]'], ['number', 111], 'required']
               ]
             scope.removeEventListener 'solved', listener
             done()

@@ -44,7 +44,7 @@ observer = new MutationObserver (mutations) ->
   ###
     
   # end for mutation
-  GSS.load()
+  GSS.load()  
 
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->

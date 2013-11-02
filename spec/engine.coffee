@@ -157,16 +157,16 @@ describe 'GSS Engine with styleNode', ->
           ]          
         }
         </style>
-        <div id="box1" class="box" data-gss-id="12322"></div>
-        <div id="box2" class="box" data-gss-id="34222"></div>
+        <div id="box1" class="box"></div>
+        <div id="box2" class="box"></div>
         """
       engine = GSS(container)
       listener = (e) ->        
         chai.expect(engine.lastWorkerCommands).to.eql [
-            ['var', '$12322[x]', '$12322']
-            ['var', '$34222[x]', '$34222']
-            ['eq', ['get','$12322[x]','.box$12322'], ['number',100]]
-            ['eq', ['get','$34222[x]','.box$34222'], ['number',100]]
+            ['var', '$box1[x]', '$box1']
+            ['var', '$box2[x]', '$box2']
+            ['eq', ['get','$box1[x]','.box$box1'], ['number',100]]
+            ['eq', ['get','$box2[x]','.box$box2'], ['number',100]]
           ]
         container.removeEventListener 'solved', listener
         done()
@@ -572,8 +572,8 @@ describe 'framed scopes', ->
     chai.expect(wrapEngine.scope).to.equal wrap
     chai.expect(containerEngine.scope).to.equal container    
 
-  it 'correct values', (done) ->
-    #GSS.config.debug = true
+  it 'scoped value is bridged downward', (done) ->
+    GSS.config.debug = true
     #debugger
     cListener = (e) ->           
       container.removeEventListener 'solved', cListener
@@ -581,15 +581,16 @@ describe 'framed scopes', ->
     container.addEventListener 'solved', cListener
     count = 0
     wListener = (e) ->     
-      #wrap.removeEventListener 'solved', wListener      
-      count++
-      if count is 1
+      count++      
+      if count is 2
         chai.expect(wrapEngine.vars).to.eql 
           "$boo[width]": 69
           "$wrap[width]": 69
-        done()      
+        wrap.removeEventListener 'solved', wListener      
+        done()              
     wrap.addEventListener 'solved', wListener
   
+  #it 'updates to scoped value are bridged downward', (done) ->
 
 ###
 describe '::This framed view', ->  

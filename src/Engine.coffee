@@ -200,8 +200,9 @@ class Engine extends GSS.EventTrigger
     if @needsLayout # @workerCommands.length > 0
       @waitingToLayoutSubtree = true
       @layout()      
-    else if !@waitingToLayoutSubtree
-      @layoutSubTreeIfNeeded()
+    #else if !@waitingToLayoutSubtree
+    #  @layoutSubTreeIfNeeded()
+    @layoutSubTreeIfNeeded()
   
   waitingToLayoutSubtree: false
   
@@ -218,12 +219,13 @@ class Engine extends GSS.EventTrigger
   
   needsDisplay: false
   
-  setNeedsDisplay: (bool) ->
-    LOG @id,".setNeedsDisplay( #{bool} )"
+  setNeedsDisplay: (bool) ->    
     if bool
+      LOG @id,".setNeedsDisplay( #{bool} )"
       GSS.setNeedsDisplay true
       @needsDisplay = true
     else
+      LOG @id,".setNeedsDisplay( #{bool} )"
       @needsDisplay = false
   
   displayIfNeeded: () ->
@@ -238,6 +240,7 @@ class Engine extends GSS.EventTrigger
     LOG @id,".display()"
     @trigger "beforeDisplay", @
     #@dumpCSSIfNeeded()
+    @unobserve()
     @setter.set @vars
     # TODO!!!!!!!!!!!!!!!!!!
     # move css dumping here!
@@ -245,7 +248,7 @@ class Engine extends GSS.EventTrigger
     @dispatch "solved", {values:@vars}
     TIME_END "#{@id} DISPLAY PASS"
     #    
-    @layoutSubTreeIfNeeded()    
+    #@layoutSubTreeIfNeeded()    
     
   
   load: () =>
@@ -484,14 +487,14 @@ class Engine extends GSS.EventTrigger
       if triggerUpdateChildList
         childListTrigger = @updateChildList()        
 
-  measureByGssId: (id, prop) ->
-    LOG @id,".measureByGssId()",@workerCommands
+  measureByGssId: (id, prop) ->    
     el = GSS.getById id
-    @getter.measure(el, prop)
+    val = @getter.measure(el, prop)
+    LOG @id,".measureByGssId()", id, prop, val
+    return val
 
   handleWorkerMessage: (message) =>
-    LOG @id,".handleWorkerMessage()",@workerCommands
-    @unobserve()
+    LOG @id,".handleWorkerMessage()",@workerCommands    
     cleanAndSnatch message.data.values, @vars
     
     #@setNeedsDisplay(true)
@@ -550,11 +553,15 @@ class Engine extends GSS.EventTrigger
     selector = o.selector
     if @queryCache[selector]?
       return @queryCache[selector]
-    else
-      @observe()
+    else      
       query = new GSS.Query(o)
       query.update()
       @queryCache[selector] = query
+      # observe after so attri changes don't trigger
+      @observe()
       return query
+  
+  #suggest: (varid, val, strength = 'required') ->
+  #  @registerCommand ['suggest', ['get', varid], ['number', val] strength]
 
 module.exports = Engine
