@@ -68,7 +68,6 @@ class Getter
     return ASTs
   
   scopeFor: (node) ->
-    if !GSS.config.scoped then return GSS.engines.root.scope
     if @isStyleNode node
       return @scopeForStyleNode node
     else
@@ -88,7 +87,6 @@ class Getter
     return !!el?._gss_is_scope
   
   nearestScope: (el, skipSelf = false) ->
-    if !GSS.config.scoped then return GSS.engines.root.scope
     if skipSelf
       el = el.parentElement
     while el.parentElement 
@@ -97,7 +95,6 @@ class Getter
     return null  
     
   nearestEngine: (el, skipSelf = false) ->
-    if !GSS.config.scoped then return GSS.engines.root
     scope = @nearestScope el, skipSelf
     if scope then return @engine scope
     return null
