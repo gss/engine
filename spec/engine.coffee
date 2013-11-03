@@ -573,7 +573,6 @@ describe 'framed scopes', ->
     chai.expect(containerEngine.scope).to.equal container    
 
   it 'scoped value is bridged downward', (done) ->
-    GSS.config.debug = true
     #debugger
     cListener = (e) ->           
       container.removeEventListener 'solved', cListener

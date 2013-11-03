@@ -240,15 +240,34 @@ class Engine extends GSS.EventTrigger
     @trigger "beforeDisplay", @    
     GSS.unobserve()
     #@dumpCSSIfNeeded()
-    @setter.set @vars
-    # TODO!!!!!!!!!!!!!!!!!!
-    # move css dumping here!
+    @setter.set @cleanVarsForDisplay @vars
+    
+    @validate()    
+    
     GSS.observe()
     @dispatch "solved", {values:@vars}    
     TIME_END "#{@id} DISPLAY PASS"
     #    
     #@layoutSubTreeIfNeeded()    
-    
+  
+  validate: ->
+    # TODO: 
+    # - validate only when intrinsic opposites change?
+    # - batch validations
+    @commander.validateMeasures()
+  
+  cleanVarsForDisplay: (vars) ->
+    obj = {}
+    # if has intrinsic-width, don't set width
+    keysToKill = []
+    for key, val of vars
+      obj[key] = val
+      idx = key.indexOf "intrinsic-"
+      if idx isnt -1
+        keysToKill.push key.replace("intrinsic-","")
+    for k in keysToKill
+      delete obj[k]
+    return obj
   
   load: () =>
     LOG @id,".loadASTs()"
@@ -424,11 +443,12 @@ class Engine extends GSS.EventTrigger
     el = GSS.getById id
     val = @getter.measure(el, prop)
     LOG @id,".measureByGssId()", id, prop, val
-    return val
-
+    return val              
+  
   handleWorkerMessage: (message) =>
     LOG @id,".handleWorkerMessage()",@workerCommands    
-    cleanAndSnatch message.data.values, @vars
+    #cleanAndSnatch message.data.values, @vars
+    @vars = message.data.values
     
     #@setNeedsDisplay(true)
     @display()

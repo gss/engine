@@ -365,7 +365,7 @@ describe 'GSS commands', ->
       
       it 'element resized by inserting child', (done) ->
         scope.innerHTML = """
-          <div style="width:111px;" id="box1" class="box">One</div>
+          <div style="display:inline-block;" id="box1" class="box">One</div>
           <div style="width:222px;" id="box2" class="box">One</div>
         """
         engine.run commands: [
@@ -378,7 +378,7 @@ describe 'GSS commands', ->
           count++
           if count is 1
             el = scope.querySelector('#box1')            
-            el.innerHTML = "<div></div>"
+            el.innerHTML = "<div style=\"width:111px;\"></div>"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
@@ -393,7 +393,7 @@ describe 'GSS commands', ->
       
       it 'element resized by changing text', (done) ->
         scope.innerHTML = """
-          <div style="width:111px;" id="box1" class="box" >One</div>
+          <div style="display:inline-block" id="box1" class="box" >One</div>
           <div style="width:222px;" id="box2" class="box" >One</div>
         """
         engine.run commands: [
@@ -408,7 +408,7 @@ describe 'GSS commands', ->
           if count is 1
             el = scope.querySelector('#box1')            
             engine.lastWorkerCommands = [] # to ensure it's reset
-            el.innerHTML = "aa"
+            el.innerHTML = "<div style=\"width:111px;\"></div>"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
@@ -418,14 +418,49 @@ describe 'GSS commands', ->
                 ['suggest', ['get','$box1[intrinsic-width]'], ['number', 111], 'required']
               ]
             engine.lastWorkerCommands = [] # to ensure it's reset
-            el.innerHTML = "aabbb"            
+            el.innerHTML = ""            
           else if count is 3
             chai.expect(engine.lastWorkerCommands).to.eql [
-                ['suggest', ['get','$box1[intrinsic-width]'], ['number', 111], 'required']
+                ['suggest', ['get','$box1[intrinsic-width]'], ['number', 0], 'required']
               ]
             scope.removeEventListener 'solved', listener
             done()
         scope.addEventListener 'solved', listener
+    
+    describe "text measuring", ->
+      it 'text measuring', (done) ->
+        scope.innerHTML = """
+          <p id="p-text" style="font-size:12px; line-height:16px; font-family:\"Helvetica\";">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
+        """
+        engine.run commands: [
+          ['var', '#p-text[height]', 'height', ['$id','p-text']]
+          ['var', '#p-text[width]', 'width', ['$id','p-text']]
+          ['var', '#p-text[intrinsic-height]', 'intrinsic-height', ['$id','p-text']]
+          ['eq', ['get','#p-text[width]'],['number',100]]
+          ['eq', ['get','#p-text[height]'],['get','#p-text[intrinsic-height]']]
+        ]
+        count = 0
+        el = null
+        listener = (e) ->
+          count++      
+          if count is 1
+            # don't set height b/c intrinsic-height was used
+            chai.expect(document.getElementById("p-text").style.height).to.eql ""            
+            chai.expect(engine.vars["$p-text[width]"]).to.eql 100
+            chai.expect(engine.vars["$p-text[intrinsic-height]"]).to.eql 32            
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # JSMutationObserver on Phantom doesn't trigger mutation
+            #engine._handleMutations()
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          else if count is 2            
+            chai.expect(document.getElementById("p-text").style.height).to.eql ""
+            chai.expect(engine.vars["$p-text[width]"]).to.eql 100
+            chai.expect(engine.vars["$p-text[intrinsic-height]"]).to.eql 496
+            scope.removeEventListener 'solved', listener
+            done()
+        scope.addEventListener 'solved', listener
+    
+    
       
       
 

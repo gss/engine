@@ -7,8 +7,8 @@ class Setter
   
   clean: () ->
   
-  destroy: () ->
-    
+  destroy: () ->    
+  
   set: (vars) ->
     if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
     for key,val of vars

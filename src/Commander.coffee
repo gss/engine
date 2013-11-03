@@ -205,7 +205,13 @@ class Commander
           @spawn root
           break
     @
-  
+    
+  validateMeasures: () ->
+    ids = []
+    for id of @intrinsicRegistersById
+      ids.push id
+    @handleInvalidMeasures(ids)
+      
   handleInvalidMeasures: (invalidMeasures) ->
     if (invalidMeasures.length < 1) then return @
     for id in invalidMeasures
@@ -226,11 +232,14 @@ class Commander
           if !@intrinsicRegistersById[gid] then @intrinsicRegistersById[gid] = {}              
           # only register intrinsic prop once per id          
           if !@intrinsicRegistersById[gid][prop]
+            elProp = prop.split("intrinsic-")[1]
+            k = "#{gid}[#{prop}]"
             register = () ->
-              val = @engine.measureByGssId(id, prop.split("intrinsic-")[1])        
-              # TODO(D4): make required suggestions work      
-              @engine.registerCommand ['suggest', ['get', "#{gid}[#{prop}]"], ['number', val], 'required']              
-              #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
+              val = @engine.measureByGssId(id, elProp)              
+              # don't spawn intrinsic if val is unchanged
+              if @engine.vars[k] isnt val                
+                @engine.registerCommand ['suggest', ['get', k], ['number', val], 'required']              
+                #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
 
             @intrinsicRegistersById[gid][prop] = register
             register.call @
