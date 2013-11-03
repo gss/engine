@@ -8,6 +8,7 @@ GSS = (o) ->
   if o is document or o is window 
     return GSS.engines.root
   if o.tagName    
+    if !GSS.config.scoped then return GSS.engines.root
     engine = GSS.get.engine(o)
     if engine then return engine
     return new GSS.Engine({scope:o})
@@ -36,6 +37,7 @@ GSS.config =
   debug: false
   warn: false
   perf: false
+  scoped: true
   roundBeforeSet: false
   processBeforeSet: null # function
   useOffsetParent: true
