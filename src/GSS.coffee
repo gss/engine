@@ -40,6 +40,7 @@ GSS.config =
   roundBeforeSet: false
   processBeforeSet: null # function
   useOffsetParent: true
+  workerURL: '../browser/gss-engine/worker/gss-solver.js'
 
 # overwrite config if provided
 if GSS_CONFIG?
@@ -62,7 +63,7 @@ GSS.warn = () ->
 window.GSS = GSS
 GSS._ = require("./_.js")
 GSS.EventTrigger = require("./EventTrigger.js")
-GSS.workerURL = require("./WorkerBlobUrl.js")
+#GSS.workerURL = require("./WorkerBlobUrl.js")
 GSS.Getter = require("./dom/Getter.js")
 GSS.Commander = require("./Commander.js")
 GSS.Query = require("./dom/Query.js")

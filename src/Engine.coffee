@@ -46,7 +46,7 @@ class Engine extends GSS.EventTrigger
     if !@scope then new Error "Scope required for Engine"      
     #  @scope = 
     if @scope.tagName is "HEAD" then @scope = document    
-    @workerURL = GSS.workerURL               unless @workerURL
+    @workerURL = GSS.config.workerURL               unless @workerURL
     # id is always gssid of scope
     @id        = GSS.setupScopeId @scope
     @commander = new GSS.Commander(@)

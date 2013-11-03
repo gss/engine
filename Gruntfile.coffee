@@ -88,6 +88,7 @@ module.exports = ->
       worker:
         src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
         dest: 'worker/gss-solver.js'
+      ###
       blob:
         options:
           banner: 'module.exports = window.URL.createObjectURL(new Blob(['
@@ -96,6 +97,7 @@ module.exports = ->
             return JSON.stringify(src) # only works with one file
         src: ['worker/gss-solver.min.js']
         dest: 'lib/WorkerBlobUrl.js'
+      ###
         
 
     # BDD tests on browser
