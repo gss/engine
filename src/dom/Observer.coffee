@@ -9,6 +9,60 @@ unless window.MutationObserver
 
 observer = new MutationObserver (mutations) ->
   LOG "MutationObserver"
+  scopesToLoad = []
+  nodesToIgnore = []
+  scopesToUpdateChildList = []
+  invalidMeasureIds = []
+
+  for m in mutations
+         
+    # style tag was modified then stop & reload everything
+    if m.type is "characterData" 
+      if GSS.get.isStyleNode(m.target.parentElement)
+        scope = GSS.get.scopeForStyleNode m.target.parentElement
+        if scopesToLoad.indexOf(scope) is -1
+          scopesToLoad.push scope
+        
+    # scopes that need to updatechildlist, ie update queries
+    if m.type is "attributes" or m.type is "childList"
+      if m.type is "attributes" and m.attributename is "data-gss-id"
+        # ignore if setting up node
+        # ... trusting data-gss-id is set first in setup process!
+        nodesToIgnore.push m.target
+      else if nodesToIgnore.indexOf(m.target) is -1
+        scope = GSS.get.nearestScope m.target
+        if scope
+          if scopesToUpdateChildList.indexOf(scope) is -1        
+            scopesToUpdateChildList.push scope
+    
+    gid = null
+    # els that may need remeasuring      
+    if m.type is "characterData" or m.type is "attributes" or m.type is "childList"      
+      if m.type is "characterData"
+        target = m.target.parentElement  
+        gid = "$" + GSS.getId m.target.parentElement
+      else if nodesToIgnore.indexOf(m.target) is -1
+        gid = "$" + GSS.getId m.target
+      if gid?
+        if invalidMeasureIds.indexOf(gid) is -1
+          invalidMeasureIds.push(gid)
+  
+  for scope in scopesToLoad
+    GSS.get.engine(scope).load()
+    
+  for scope in scopesToUpdateChildList
+    if scopesToLoad.indexOf(scope) is -1 # don't updateChildList if loading
+      GSS.get.engine(scope).updateChildList()
+    
+  if invalidMeasureIds.length > 0
+    for engine in GSS.engines
+      engine.commander.handleInvalidMeasures invalidMeasureIds
+      
+  scopesToLoad = null
+  nodesToIgnore = null
+  scopesToUpdateChildList = null
+  invalidMeasureIds = null
+  
   #LOG "observer(mutations)",mutations
   #GSS.checkAllStyleNodes()
   
@@ -44,16 +98,28 @@ observer = new MutationObserver (mutations) ->
   ###
     
   # end for mutation
+  #if GSS.observeStyleNodes
   GSS.load()  
 
+GSS.is_observing = false
+  
+GSS.observe = () ->
+  if !GSS.is_observing and GSS.config.observe
+    observer.observe(document.body, {subtree: true, childList: true, attributes: true, characterData: true})
+    GSS.is_observing = true
+
+GSS.unobserve = () ->  
+  observer.disconnect()
+  GSS.is_observing = false
+  
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
   GSS.boot()
   LOG "DOMContentLoaded"
-  # The event "DOMContentLoaded" will be fired when the document has been parsed completely, that is without stylesheets* and additional images. If you need to wait for images and stylesheets, use "load" instead.
-  observer.observe(document, {subtree: true, childList: true, attributes: false, characterData: false})
+  # The event "DOMContentLoaded" will be fired when the document has been parsed completely, that is without stylesheets* and additional images. If you need to wait for images and stylesheets, use "load" instead.  
   #GSS.loadAndRun()
   GSS.load()
+  GSS.observe()
   
 
 

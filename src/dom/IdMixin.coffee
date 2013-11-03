@@ -33,7 +33,7 @@ IdMixin =
     if !gid?       
       _id =  @_id_counter++
       # default id to el.id
-      gid = String(el.id or _id) # b/c el.id returns String       
+      gid = String(el.id or _id) # b/c el.id returns String     
       el.setAttribute('data-gss-id', gid)
       el.style['box-sizing'] = 'border-box'
       el._gss_id = gid 

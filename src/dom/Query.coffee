@@ -11,7 +11,7 @@ arrayAddsRemoves = (old, neu) ->
       removes.push o
   return {adds:adds,removes:removes}
 
-LOG= () ->
+LOG = () ->
   GSS.deblog "Query", arguments...
 
 class Query

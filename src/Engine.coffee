@@ -56,7 +56,6 @@ class Engine extends GSS.EventTrigger
     @workerMessageHistory = []
     @lastWorkerCommands = null
     @queryCache = {}    
-    @observer = new MutationObserver @handleMutations    
     #
     @cssDump = null
     LOG "constructor() @", @    
@@ -238,14 +237,14 @@ class Engine extends GSS.EventTrigger
       
   display: () ->
     LOG @id,".display()"
-    @trigger "beforeDisplay", @
+    @trigger "beforeDisplay", @    
+    GSS.unobserve()
     #@dumpCSSIfNeeded()
-    @unobserve()
     @setter.set @vars
     # TODO!!!!!!!!!!!!!!!!!!
     # move css dumping here!
-    @observe()
-    @dispatch "solved", {values:@vars}
+    GSS.observe()
+    @dispatch "solved", {values:@vars}    
     TIME_END "#{@id} DISPLAY PASS"
     #    
     #@layoutSubTreeIfNeeded()    
@@ -278,7 +277,7 @@ class Engine extends GSS.EventTrigger
     @setNeedsDisplay false
     @setNeedsLayout  false
     @waitingToLayoutSubtree = false
-    #@unobserve()
+    #
     @commander.clean()
     @getter.clean?() 
     @setter.clean?()
@@ -344,9 +343,6 @@ class Engine extends GSS.EventTrigger
     # release ids
     GSS._ids_killed([@id]) # TODO(D4): release children node ids?
     #
-    @unobserve()
-    @observer = null
-    #
     @CSSDumper_destroy()
     # release vars
     @ast    = null    
@@ -373,17 +369,6 @@ class Engine extends GSS.EventTrigger
     @
   
   is_observing: false
-  
-  observe:() ->
-    if !@is_observing
-      @observer.observe(@scope, {subtree: true, childList: true, attributes: true, characterData: true})
-      @is_observing = true
-    @
-
-  unobserve: () ->
-    @is_observing = false
-    @observer.disconnect()
-    @
   
   solve: () ->
     LOG @id,".solve()", @workerCommands
@@ -433,60 +418,8 @@ class Engine extends GSS.EventTrigger
       if trigger
         @commander.handleRemoves removes
         @commander.handleSelectorsWithAdds selectorsWithAdds
-      return trigger
-    
-  handleMutations: (mutations=[]) =>
-    LOG @id,".handleMutations()", mutations
-    trigger = false
-    triggerUpdateChildList = false
-    invalidMeasures = []
-    
-    for m in mutations
-      
-      # style tag was modified then stop & reload everything
-      if m.type is "characterData" 
-        if @getter.isStyleNode(m.target.parentElement)
-          @load()
-          return null #@update()
-      
-      if m.type is "attributes" or m.type is "childList"
-        triggerUpdateChildList = true
-      #
-      # els that may need remeasuring      
-      if m.type is "characterData" or m.type is "attributes" or m.type is "childList"
-        if m.type is "characterData"
-          target = m.target.parentElement          
-          gid = "$" + GSS.getId m.target.parentElement
-        else
-          gid = "$" + GSS.getId m.target
-        if gid?
-          if invalidMeasures.indexOf(gid) is -1
-            #if GSS.getById gid
-            trigger = true
-            invalidMeasures.push(gid)
-      #
-    
-    ###
-    if trigger
-      e = new CustomEvent "solverinvalidated",
-        detail:
-          addsBySelector: addsBySelector
-          removesBySelector: removesBySelector
-          removesFromScope: removesFromScope
-          selectorsWithAdds: selectorsWithAdds
-          engine: @
-        bubbles: true
-        cancelable: true
-      @scope.dispatchEvent e
-    ###
-    
-    # TODO: Make smarter!!!!!!!!!!!!
-    if !GSS.needsDisplay and !GSS.needsLayout and !GSS.needsDisplay
-      if trigger
-        @commander.handleInvalidMeasures invalidMeasures
-      if triggerUpdateChildList
-        childListTrigger = @updateChildList()        
-
+      return trigger     
+  
   measureByGssId: (id, prop) ->    
     el = GSS.getById id
     val = @getter.measure(el, prop)
@@ -501,7 +434,7 @@ class Engine extends GSS.EventTrigger
     @display()
     
     #@setter.set @vars
-    #@observe()
+
     #@dispatch "solved", {values:@vars}  
 
   dispatch: (eName, oDetail = {}, bubbles = true, cancelable = true) =>
@@ -557,8 +490,6 @@ class Engine extends GSS.EventTrigger
       query = new GSS.Query(o)
       query.update()
       @queryCache[selector] = query
-      # observe after so attri changes don't trigger
-      @observe()
       return query
   
   #suggest: (varid, val, strength = 'required') ->

@@ -32,6 +32,7 @@ GSS = (o) ->
 
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
+  observe: true
   debug: false
   warn: false
   perf: false

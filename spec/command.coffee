@@ -315,7 +315,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = scope.querySelector('[data-gss-id="34222"]')
+            el = document.getElementById("34222")
             el.className = el.classList.remove('box') #.replace(/\bbox\b/,'')
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
