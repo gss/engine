@@ -200,7 +200,8 @@ styleQuery = GSS.styleQuery = new GSS.Query
   isMulti: true
   createNodeList: () ->
     return document.getElementsByTagName "style"
-  afterChange: () ->
+
+styleQuery.on 'afterChange', () ->
     #LOG "afterStyleChange"    
     _scopesToLoad = []
     if @changedLastUpdate

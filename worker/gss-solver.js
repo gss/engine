@@ -153,11 +153,12 @@ Thread = (function() {
     }
   };
 
-  Thread.prototype.get = function(root, id, tracker) {
+  Thread.prototype.get = function(root, id, tracker, tracker2) {
     var v;
     v = this.cachedVars[id];
     if (v) {
       this._trackRootIfNeeded(root, tracker);
+      this._trackRootIfNeeded(root, tracker2);
       this._trackRootIfNeeded(root, v.tracker);
       return v;
     }

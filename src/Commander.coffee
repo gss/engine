@@ -369,7 +369,22 @@ class Commander
       cloneBinds self, stay
       @registerSpawn(stay)
     ###
-      
+  
+  'for-each': (root,query,callback) =>
+    for el in query.nodeList
+      callback.call(@engine, el, query, @engine)
+    query.on 'afterChange', () ->
+      for el in query.nodeList
+        callback.call(@engine, el, query)
+  
+  'for-all': (root,query,callback) =>
+    callback.call(@engine, query, @engine)
+    query.on 'afterChange', () =>
+      callback.call(@engine, query, @engine)
+    
+  'js': (root,js) =>
+    eval "var callback =" + js
+    return callback
 
   'strength': (root,s) =>
     return ['strength', s]

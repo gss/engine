@@ -512,7 +512,108 @@ class Engine extends GSS.EventTrigger
       @queryCache[selector] = query
       return query
   
-  #suggest: (varid, val, strength = 'required') ->
-  #  @registerCommand ['suggest', ['get', varid], ['number', val] strength]
+  
+  # Constraint Creation Helpers
+  # ----------------------------------------
+  
+  elVar: (el,key,selector,tracker2) ->
+    gid = GSS.getId el
+    if key is 'left' 
+      key = 'x'
+    else if key is 'top' 
+      key = 'y'
+    else if key is 'bottom'
+      @registerCommand ['varexp', @plus(@elVar(el,'y',selector),@elVar(el,'height',selector))] 
+    else if key is 'right'
+      @registerCommand ['varexp', @plus(@elVar(el,'x',selector),@elVar(el,'width',selector))] 
+    else if key is 'center-y'
+      @registerCommand ['varexp', 
+        @plus(
+          @elVar(el,'y',selector), 
+          @divide(@elVar(el,'height',selector),2)
+        )
+      ]
+    else if key is 'center-x'
+      @registerCommand ['varexp', 
+        @plus(
+          @elVar(el,'x',selector), 
+          @divide(@elVar(el,'width',selector),2)
+        )
+      ] 
+    else
+      varid = "$"+gid+"[#{key}]"
+      @registerCommand ['var', varid, "$"+gid]
+    #
+    tracker = null
+    ast = ['get',varid]
+    if selector 
+      ast.push selector+"$"+gid
+    if tracker2
+      ast.push tracker2
+    return ast
+    
+  var: (key) ->    
+    @registerCommand ['var', key]
+    return ['get',key]
+  
+  varexp: (key, exp, tracker) ->
+    @registerCommand ['varexp', exp, tracker]
+    return ['get',key]
+  
+  __e: (key) ->
+    if key instanceof Array then return key
+    if !!Number(key) or (Number(key) is 0) then return ['number',key]
+    return @var ket
+  
+  eq: (e1,e2,s,w) ->
+    e1 = @__e e1
+    e2 = @__e e2
+    @registerCommand ['eq', e1, e2, s, w]
+  
+  lte: (e1,e2,s,w) ->
+    e1 = @__e e1
+    e2 = @__e e2
+    @registerCommand ['lte', e1, e2, s, w]
+  
+  gte: (e1,e2,s,w) ->
+    e1 = @__e e1
+    e2 = @__e e2
+    @registerCommand ['gte', e1, e2, s, w]
+  
+  suggest: (v, val, strength = 'required') ->    
+    v = @__e v
+    @registerCommand ['suggest', v, ['number', val], strength]
+  
+  stay: (v) ->    
+    v = @__e v
+    @registerCommand ['stay', v]
+  
+  remove: (tracker) ->
+    @registerCommand ['remove', tracker]
+  
+  'number': (num) ->
+    return ['number', num]
+
+  'plus': (e1, e2) ->
+    e1 = @__e e1
+    e2 = @__e e2
+    return ['plus', e1, e2]
+
+  'minus' : (e1,e2) ->
+    e1 = @__e e1
+    e2 = @__e e2
+    return ['minus', e1, e2]
+
+  'multiply': (e1,e2) ->
+    e1 = @__e e1
+    e2 = @__e e2
+    return ['multiply', e1, e2]
+
+  'divide': (e1,e2,s,w) ->    
+    e1 = @__e e1
+    e2 = @__e e2
+    return ['divide', e1, e2]
+  
+  
 
 module.exports = Engine

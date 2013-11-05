@@ -14,14 +14,14 @@ arrayAddsRemoves = (old, neu) ->
 LOG = () ->
   GSS.deblog "Query", arguments...
 
-class Query
+class Query extends GSS.EventTrigger
   
   isQuery: true
     
-  constructor: (o={}) ->    
+  constructor: (o={}) ->
+    super 
     @selector = o.selector or throw new Error "GssQuery must have a selector"
     @createNodeList = o.createNodeList or throw new Error "GssQuery must implement createNodeList()"
-    @afterChange = o.afterChange or null
     @isMulti = o.isMulti or false
     @isLive = o.isLive or false # needs to recall createNodeList?
     #@isReserved = o.isReserved or false
@@ -59,8 +59,27 @@ class Query
     @lastRemovedIds = removes
     @ids = newIds
     if @changedLastUpdate
-      if @afterChange then @afterChange.call @
+      @trigger 'afterChange'
     @
+  
+  forEach: (callback) ->
+    for el in @nodeList
+      callback.call @, el
+      
+  first: () ->
+    return @nodeList[0]
+  
+  last: () ->
+    return @nodeList[@nodeList.length-1]
+  
+  next: (el) ->
+    return @nodeList[@indexOf(el)+1]
+    
+  prev: (el) ->
+    return @nodeList[@indexOf(el)-1]
+  
+  indexOf: (el) ->
+    return Array.prototype.indexOf.call(@nodeList,el)    
   
   is_destroyed: false
   

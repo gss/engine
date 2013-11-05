@@ -447,7 +447,7 @@ describe 'GSS commands', ->
             # don't set height b/c intrinsic-height was used
             chai.expect(document.getElementById("p-text").style.height).to.eql ""            
             chai.expect(engine.vars["$p-text[width]"]).to.eql 100
-            chai.expect(engine.vars["$p-text[intrinsic-height]"]).to.eql 32            
+            chai.expect(engine.vars["$p-text[intrinsic-height]"] % 16).to.eql 0          
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
@@ -460,6 +460,33 @@ describe 'GSS commands', ->
             done()
         scope.addEventListener 'solved', listener
     
+    
+    describe "JS layout hooks", ->
+      it 'for-all', (done) ->
+        scope.innerHTML = """
+          <div id="thing1" class="thing"></div>
+          <div id="thing2" class="thing"></div>
+        """
+        engine.run commands: [
+          [
+            'for-all', 
+            ['$class','thing'], 
+            ['js',"""function (query,e) {              
+              e.remove('for-eacher-d4');
+              var boob = "huge";
+              query.forEach(function(el){
+                e.eq(e.elVar(el,'width',query.selector,'for-eacher-d4'),100);
+              });              
+            }"""]
+          ]
+        ]
+        el = null
+        listener = (e) ->
+          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
+          chai.expect(engine.vars["$thing2[width]"]).to.eql 100
+          scope.removeEventListener 'solved', listener
+          done()
+        scope.addEventListener 'solved', listener
     
       
       

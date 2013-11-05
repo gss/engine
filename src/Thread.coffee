@@ -85,10 +85,11 @@ class Thread
       if  root._trackers.indexOf(tracker) is -1 then root._trackers.push(tracker)
   
   # The `get` command registers all trackable information to the root constraint commands
-  get: (root, id, tracker) ->
+  get: (root, id, tracker, tracker2) ->
     v = @cachedVars[id]
     if v
       @_trackRootIfNeeded root, tracker
+      @_trackRootIfNeeded root, tracker2
       @_trackRootIfNeeded root, v.tracker
       return v
     throw new Error("AST method 'get' couldn't find var with id: #{id}")
