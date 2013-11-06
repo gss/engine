@@ -383,22 +383,22 @@ class Commander
       for bridge in bridges
         bridge.call(engine,query,engine)
     
-  'eq-chain': (root,head,tail) =>
-    return @_chainer(head,tail,'eq')
+  'eq-chain': (root,head,tail,s,w) =>
+    return @_chainer('eq',head,tail,s,w)
   
-  'lte-chain': (root,head,tail) =>
-    return @_chainer(head,tail,'lte')
+  'lte-chain': (root,head,tail,s,w) =>
+    return @_chainer('lte',head,tail,s,w)
   
   'gte-chain': (root,head,tail) =>
-    return @_chainer(head,tail,'gte')
+    return @_chainer('gte',head,tail,s,w)
   
   'lt-chain': (root,head,tail) =>
-    return @_chainer(head,tail,'lt')
+    return @_chainer('lt',head,tail,s,w)
   
   'gt-chain': (root,head,tail) =>
-    return @_chainer(head,tail,'gt')  
+    return @_chainer('gt',head,tail,s,w)  
   
-  _chainer: (head,tail,op) =>
+  _chainer: (op,head,tail,s,w) =>
 
     tracker = "eq-chain-" + GSS._id_counter++
     engine = @engine
@@ -416,7 +416,7 @@ class Commander
         return unless nextEl        
         e1 = _e_for_chain( el,     head, query, tracker, el, nextEl)
         e2 = _e_for_chain( nextEl, tail, query, tracker, el, nextEl)
-        e[op] e1, e2
+        e[op] e1, e2, s, w
   
   'plus-chain': (root,head,tail) =>    
     return @_chainer_math(head,tail,'plus')

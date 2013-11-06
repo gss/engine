@@ -548,7 +548,6 @@ class Engine extends GSS.EventTrigger
     else
       @registerCommand ['var', varid, "$"+gid]
     #
-    tracker = null
     ast = ['get',varid]
     if selector 
       ast.push selector+"$"+gid
