@@ -160,7 +160,7 @@ describe 'GSS Engine with styleNode', ->
         <div id="box1" class="box"></div>
         <div id="box2" class="box"></div>
         """
-      engine = GSS(container)
+      engine = GSS(container)      
       listener = (e) ->        
         chai.expect(engine.lastWorkerCommands).to.eql [
             ['var', '$box1[x]', '$box1']
