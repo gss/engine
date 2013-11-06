@@ -461,6 +461,55 @@ describe 'GSS commands', ->
         scope.addEventListener 'solved', listener
     
     
+    describe "Chain", ->
+      
+      it '@chain .thing width()', (done) ->
+        scope.innerHTML = """
+          <div id="thing1" class="thing"></div>
+          <div id="thing2" class="thing"></div>
+        """
+        engine.run commands: [
+          [
+            'chain', 
+            ['$class','thing'], 
+            ['eq-chain', 'width', 100],
+            ['eq-chain', 100, 'width']
+          ]
+        ]
+        el = null
+        listener = (e) ->
+          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
+          chai.expect(engine.vars["$thing2[width]"]).to.eql 100
+          scope.removeEventListener 'solved', listener
+          done()
+        scope.addEventListener 'solved', listener
+
+      
+      it '@chain .box width(+[hgap]*2)', (done) ->
+        scope.innerHTML = """
+          <div id="thing1" class="thing"></div>
+          <div id="thing2" class="thing"></div>
+        """
+        engine.run commands: [  
+              ['var','[hgap]']
+              ['eq', ['get','[hgap]'],20]
+              ['var','#thing1[width]','width',['$id','thing1']]
+              ['eq', ['get','#thing1[width]'],100]
+              [
+                'chain', 
+                ['$class', 'thing'], 
+                ['eq-chain',['plus-chain','width',['multiply',['get','[hgap]'],['number',2]]],'width']
+              ]
+            ]
+        el = null
+        listener = (e) ->
+          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
+          chai.expect(engine.vars["$thing2[width]"]).to.eql 140
+          scope.removeEventListener 'solved', listener
+          done()
+        scope.addEventListener 'solved', listener
+    
+    
     describe "JS layout hooks", ->
       it 'for-all', (done) ->
         scope.innerHTML = """
@@ -473,7 +522,6 @@ describe 'GSS commands', ->
             ['$class','thing'], 
             ['js',"""function (query,e) {              
               e.remove('for-eacher-d4');
-              var boob = "huge";
               query.forEach(function(el){
                 e.eq(e.elVar(el,'width',query.selector,'for-eacher-d4'),100);
               });              

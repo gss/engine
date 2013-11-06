@@ -369,6 +369,98 @@ class Commander
       cloneBinds self, stay
       @registerSpawn(stay)
     ###
+    
+  # Chains
+  # -----------------------------  
+  
+  'chain': (root,query,bridgessssss) =>    
+    args = [arguments...]
+    bridges = [args[2...args.length]...]
+    engine = @engine
+    for bridge in bridges
+      bridge.call(engine,query,engine)
+    query.on 'afterChange', () ->
+      for bridge in bridges
+        bridge.call(engine,query,engine)
+    
+  'eq-chain': (root,head,tail) =>
+    return @_chainer(head,tail,'eq')
+  
+  'lte-chain': (root,head,tail) =>
+    return @_chainer(head,tail,'lte')
+  
+  'gte-chain': (root,head,tail) =>
+    return @_chainer(head,tail,'gte')
+  
+  'lt-chain': (root,head,tail) =>
+    return @_chainer(head,tail,'lt')
+  
+  'gt-chain': (root,head,tail) =>
+    return @_chainer(head,tail,'gt')  
+  
+  _chainer: (head,tail,op) =>
+
+    tracker = "eq-chain-" + GSS._id_counter++
+    engine = @engine
+    _e_for_chain = @_e_for_chain  
+    
+    # return query 'afterChange' callback
+    return (query,e) ->
+      
+      # refresh when query changes 
+      e.remove tracker            
+      
+      # add constraints to each element
+      query.forEach (el) ->
+        nextEl = query.next(el)
+        return unless nextEl        
+        e1 = _e_for_chain( el,     head, query, tracker, el, nextEl)
+        e2 = _e_for_chain( nextEl, tail, query, tracker, el, nextEl)
+        e[op] e1, e2
+  
+  'plus-chain': (root,head,tail) =>    
+    return @_chainer_math(head,tail,'plus')
+  
+  'minus-chain': (root,head,tail) =>
+    return @_chainer_math(head,tail,'minus')
+  
+  'multiply-chain': (root,head,tail) =>
+    return @_chainer_math(head,tail,'multiply')
+  
+  'divide-chain': (root,head,tail) =>
+    return @_chainer_math(head,tail,'divide')
+  
+  _chainer_math: (head, tail, op) =>
+    # hoisted vars
+    # - `el`
+    # - `nextEl`
+    engine = @engine
+    _e_for_chain = @_e_for_chain
+    return (el, nextEl, query, tracker) ->
+      e1 = _e_for_chain( el,     head, query, tracker)
+      e2 = _e_for_chain( nextEl, tail, query, tracker)
+      return engine[op] e1, e2
+  
+  
+  _e_for_chain: (el, exp, query, tracker, currentEl, nextEl) =>
+    if typeof exp is "string"
+      e1 = @engine.elVar(el,exp,query.selector)
+    else if typeof exp is "function" # chainer-math
+      e1 = exp.call(@, currentEl, nextEl, query, tracker)
+    else
+      e1 = exp
+    return e1
+    
+    
+    
+      
+        
+        
+    
+  
+  
+  # JavaScript for-loop hooks
+  # -----------------------------
   
   'for-each': (root,query,callback) =>
     for el in query.nodeList
@@ -390,7 +482,7 @@ class Commander
     return ['strength', s]
 
   # Selector Commands
-  # ------------------------
+  # ---------------------------
 
   # mutli
   '$class': (root,sel) =>

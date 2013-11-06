@@ -38,6 +38,7 @@ class Query extends GSS.EventTrigger
   changedLastUpdate: false
   
   update: () ->
+    @offAll()
     LOG "update() @", @
     if @is_destroyed then throw new Error "Can't update destroyed query: #{selector}"
     @changedLastUpdate = false    
