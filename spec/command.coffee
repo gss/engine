@@ -508,6 +508,29 @@ describe 'GSS commands', ->
           scope.removeEventListener 'solved', listener
           done()
         scope.addEventListener 'solved', listener
+      
+      it '@chain .thing right()left', (done) ->
+        scope.innerHTML = """
+          <div id="thing1" class="thing"></div>
+          <div id="thing2" class="thing"></div>
+        """
+        engine.run commands: [
+          ['var','#thing1[x]','x', ['$id','thing1']]
+          ['var','#thing2[x]','x', ['$id','thing2']]
+          ['eq', ['get','#thing1[x]'],10]
+          ['eq', ['get','#thing2[x]'],110]
+          [
+            'chain', 
+            ['$class','thing'], 
+            ['eq-chain', 'right', 'left'],
+          ]
+        ]
+        el = null
+        listener = (e) ->
+          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
+          scope.removeEventListener 'solved', listener
+          done()
+        scope.addEventListener 'solved', listener
     
     
     describe "JS layout hooks", ->

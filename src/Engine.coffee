@@ -517,31 +517,35 @@ class Engine extends GSS.EventTrigger
   # ----------------------------------------
   
   elVar: (el,key,selector,tracker2) ->
-    gid = GSS.getId el
-    if key is 'left' 
+    gid = GSS.getId el    
+    # normalize key names
+    if key is 'left'
       key = 'x'
     else if key is 'top' 
       key = 'y'
-    else if key is 'bottom'
-      @registerCommand ['varexp', @plus(@elVar(el,'y',selector),@elVar(el,'height',selector))] 
-    else if key is 'right'
-      @registerCommand ['varexp', @plus(@elVar(el,'x',selector),@elVar(el,'width',selector))] 
+    varid = "$"+gid+"[#{key}]"
+    # varexps
+    if key is 'bottom'
+      @registerCommand ['varexp', varid, @plus(@elVar(el,'y',selector),@elVar(el,'height',selector))] 
+    else if key is 'right'      
+      @registerCommand ['varexp', varid, @plus(@elVar(el,'x',selector),@elVar(el,'width',selector))] 
     else if key is 'center-y'
       @registerCommand ['varexp', 
+        varid,
         @plus(
           @elVar(el,'y',selector), 
           @divide(@elVar(el,'height',selector),2)
         )
       ]
     else if key is 'center-x'
-      @registerCommand ['varexp', 
+      @registerCommand ['varexp',
+        varid,
         @plus(
           @elVar(el,'x',selector), 
           @divide(@elVar(el,'width',selector),2)
         )
       ] 
     else
-      varid = "$"+gid+"[#{key}]"
       @registerCommand ['var', varid, "$"+gid]
     #
     tracker = null
@@ -563,7 +567,7 @@ class Engine extends GSS.EventTrigger
   __e: (key) ->
     if key instanceof Array then return key
     if !!Number(key) or (Number(key) is 0) then return ['number',key]
-    return @var ket
+    return @var key
   
   eq: (e1,e2,s,w) ->
     e1 = @__e e1
