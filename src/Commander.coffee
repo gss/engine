@@ -138,25 +138,17 @@ class Commander
     #else
     #  throw new Error "Not sure how to bind to window prop: #{prop}"
   
-  parentEngineWithVarId: (key) ->
-    parentEngine = @engine.parentEngine
-    while parentEngine
-      if parentEngine.varKeys.indexOf(key) > -1
-        return parentEngine
-      parentEngine = parentEngine.parentEngine
-    return null
-  
+
   spawnForScope: (prop) ->  
     key = "$"+GSS.getId(@engine.scope)+"[#{prop}]"
-    framingEngine = @parentEngineWithVarId key      
-    if framingEngine      
-      framingEngine.on "beforeDisplay", =>
-        val = framingEngine.vars[key]
-        @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']      
-      #framingEngine.scope.addEventListener "solved", =>
-      #  console.log "framingEngine.scope.addEventListener _____=++++   #{framingEngine.vars[key]}"
-      #  val = framingEngine.vars[key]
-      #  @engine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
+    thisEngine = @engine
+    # TODO:
+    # - only listen once, not for each prop
+    GSS.on "engine:beforeDisplay", (engine) ->
+      val = engine.vars[key]
+      if val
+        if thisEngine.isDescendantOf engine
+          thisEngine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
       
   bindToScope: (prop) ->    
     @spawnForScope(prop)
@@ -221,10 +213,14 @@ class Commander
           register.call @
     @
         
-  spawnIntrinsicSuggests: (root) =>
+  spawnMeasurements: (root) =>
     # only if bound to dom query
-    if root._checkInstrinsics and root._intrinsicQuery?
-      prop = root._prop
+    return unless root._intrinsicQuery?
+    
+    prop = root._prop
+
+    # intrinsic measurements
+    if root._checkInstrinsics      
       if prop.indexOf("intrinsic-") is 0
         # closure for inner `register` callback vars
         root._intrinsicQuery.lastAddedIds.forEach (id) =>          
@@ -276,10 +272,13 @@ class Commander
         for splitter, joiner of replaces
           command = command.split "%%" + splitter + "%%"
           command = command.join "$" + joiner
-        @engine.registerCommand eval command
-
+        @engine.registerCommand eval command    
+    
+    
+    
     # generate intrinsic commands
-    @spawnIntrinsicSuggests root
+    @spawnMeasurements root
+    @
 
 
   # Variable Commands

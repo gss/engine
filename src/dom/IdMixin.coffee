@@ -8,11 +8,19 @@ IdMixin =
   
   _id_counter: 1
 
-  _byIdCache: []
+  _byIdCache: {}
+  
+  # todo:
+  #_dataById: {}
 
   _ids_killed: (ids) ->
     for id in ids
-      delete @_byIdCache[id]
+      @_id_killed id
+  
+  _id_killed: (id) ->
+    @_byIdCache[id] = null
+    delete @_byIdCache[id]
+    GSS.View.byId[id]?.recycle?()
 
   getById: (id) ->
     if @_byIdCache[id] then return @_byIdCache[id]
@@ -37,6 +45,7 @@ IdMixin =
       el.setAttribute('data-gss-id', gid)
       el.style['box-sizing'] = 'border-box'
       el._gss_id = gid 
+      GSS.View.new({el:el,id:gid})
       if @_byIdCache[gid]? then GSS.warn("element by id cache replaced gss-id: #{gid}")
     @_byIdCache[gid] = el
     return gid      

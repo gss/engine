@@ -31,7 +31,7 @@ class Getter
       when "$tag"
         return @scope.getElementsByTagName identifier
     @scope.querySelectorAll identifier  
-      
+  
   measure: (node, dimension) ->
     switch dimension
       when 'width', 'w'
@@ -53,6 +53,20 @@ class Getter
         return @measure(node, 'left') + @measure(node, 'width') / 2
       when 'centerY'
         return @measure(node, 'top') + @measure(node, 'height') / 2
+  
+  offsets: (element) ->
+    offsets =
+      x: 0
+      y: 0
+    return offsets unless element.offsetParent
+    element = element.offsetParent
+    loop
+      offsets.x += element.offsetLeft
+      offsets.y += element.offsetTop
+      break unless element.offsetParent
+      element = element.offsetParent
+    return offsets
+  
   
   getAllStyleNodes: () ->
     # get live nodeList only once
@@ -98,6 +112,9 @@ class Getter
     scope = @nearestScope el, skipSelf
     if scope then return @engine scope
     return null
+  
+  descdendantNodes: (el) ->
+    return el.getElementsByTagName("*")
   
   engine: (el) ->
     return GSS.engines.byId[GSS.getId(el)]

@@ -32,5 +32,5 @@ _ =
       timeout = setTimeout(later, wait)  unless timeout
       result = func.apply(context, args)  if callNow
       result
-
+  
 module.exports = _

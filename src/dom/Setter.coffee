@@ -9,8 +9,9 @@ class Setter
   
   destroy: () ->    
   
-  set: (vars) ->
+  setOLD: (vars) ->
     if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
+    vars = @cleanVarsForDisplay vars
     for key,val of vars
       if key[0] is "$"
         gid = key.substring(1, key.indexOf("["))
@@ -22,6 +23,40 @@ class Setter
           @elementSet element, dimension, val
         else
           console.log "Element wasn't found"
+  
+  set: (vars) ->
+    if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
+    varsById = @varsByViewId @cleanVarsForDisplay vars
+    # batch potential DOM reads
+    for id, obj of varsById
+      GSS.View.byId[id]?.setCSS?(obj)
+    # batch DOM writes
+    for id, obj of varsById
+      GSS.View.byId[id]?.display?()
+  
+  varsByViewId: (vars) ->
+    varsById = {}
+    for key,val of vars
+      if key[0] is "$"
+        gid = key.substring(1, key.indexOf("["))
+        if !varsById[gid] then varsById[gid] = {}
+        prop = key.substring(key.indexOf("[")+1, key.indexOf("]"))
+        varsById[gid][prop] = val
+    return varsById
+      
+  cleanVarsForDisplay: (vars) ->
+    obj = {}
+    # if has intrinsic-width, don't set width
+    keysToKill = []
+    for key, val of vars      
+      idx = key.indexOf "intrinsic-"
+      if idx isnt -1
+        keysToKill.push key.replace("intrinsic-","")
+      else
+        obj[key] = val
+    for k in keysToKill
+      delete obj[k]
+    return obj
 
   elementSet: (element, dimension, value) ->
     offsets = null
@@ -36,8 +71,10 @@ class Setter
         @setTop element, value
   
   makePositioned: (element) ->
+    return if element._gss_posititioned
+    element._gss_posititioned = true
     element.style.position = 'absolute'
-    element.style.margin = '0px'    
+    element.style.margin = '0px'
 
   getOffsets: (element) ->
     if !GSS.config.useOffsetParent 

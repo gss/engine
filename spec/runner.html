@@ -9,6 +9,18 @@
         margin-left: -1000px;
       }
     </style>
+    <script src="../vendor/Modernizr-custom.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../browser/gss-engine.js"></script>
+    <script>
+      //GSS_CONFIG = {debug:true};
+      require("gss-engine");
+    </script>
+    <script src="../vendor/c.js"></script>
+    <!--script src="../../../cloned/cassowary.js/bin/c.js"></script-->
+    <script src="../vendor/sidetable.js"></script>
+    <script src="../vendor/MutationObserver.js"></script>
+    <script src="../vendor/observe.js"></script>
+    <script src="../lib/Thread.js"></script>
   </head>
   <body>
     <div id="mocha"></div>
@@ -22,17 +34,7 @@
     <!--div id="measurer" style="position:fixed; top:0px; left:0px; overflow:visible; width:50px; height:30px; display:inline; border:1px solid red;">
       <img id="measured" src="http://logicalawesome.com/logical_awesome.jpg" />
     </div-->    
-    <script src="../browser/gss-engine.js"></script>
-    <script>
-      //GSS_CONFIG = {debug:true};
-      require("gss-engine");
-    </script>
-    <script src="../vendor/c.js"></script>
-    <!--script src="../../../cloned/cassowary.js/bin/c.js"></script-->
-    <script src="../vendor/sidetable.js"></script>
-    <script src="../vendor/MutationObserver.js"></script>
-    <script src="../vendor/observe.js"></script>
-    <script src="../lib/Thread.js"></script>
+    
     <!--script src="http://chaijs.com/chai.js"></script-->
     <script src="../node_modules/chai/chai.js"></script>
     <script src="../node_modules/mocha/mocha.js"></script>

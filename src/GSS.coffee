@@ -69,12 +69,15 @@ GSS.Commander = require("./Commander.js")
 GSS.Query = require("./dom/Query.js")
 GSS.Setter = require("./dom/Setter.js")
 GSS.Engine = require("./Engine.js")
+GSS.View = require("./dom/View.js")
 
 for key, val of require("./dom/IdMixin.js")
   if GSS[key] then throw new Error "IdMixin key clash: #{key}"
   GSS[key] = val
 
 # 
+
+GSS.EventTrigger.make(GSS)
 
 GSS.get = new GSS.Getter()
 

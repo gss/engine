@@ -8,6 +8,7 @@
     "lib/_.js",
     "lib/EventTrigger.js",
     "lib/dom/Query.js",
+    "lib/dom/View.js",
     "lib/dom/Observer.js",
     "lib/Engine.js",
     "lib/Commander.js",  

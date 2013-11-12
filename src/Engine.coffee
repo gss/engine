@@ -41,8 +41,8 @@ class Engine extends GSS.EventTrigger
     super
     {@scope, @workerURL, @vars, @getter, @setter, @is_root} = o
     @vars      = {}                          unless @vars
-    @varKeysByTacker = {}
-    @varKeys = []
+    #@varKeysByTacker = {}
+    #@varKeys = []
     if !@scope then new Error "Scope required for Engine"      
     #  @scope = 
     if @scope.tagName is "HEAD" then @scope = document    
@@ -81,6 +81,17 @@ class Engine extends GSS.EventTrigger
     GSS.engines.push @
     engines.byId[@id] = @    
     @
+  
+  isDescendantOf: (engine) ->
+    parentEngine = @parentEngine
+    while parentEngine
+      if parentEngine is engine
+        return true
+      parentEngine = parentEngine.parentEngine
+    return false
+  
+  isAscendantOf: (engine) ->
+    # todo
   
   is_running: false
   
@@ -137,7 +148,13 @@ class Engine extends GSS.EventTrigger
     @cssToDump = null
     #@cssDump?.remove()
     @cssDump = null
-              
+  
+
+  # Trigger event on self then GSS.engines.
+  # Allows ev delegation for engine lifecycle.
+  hoistedTrigger: (ev,obj) ->
+    @trigger ev, obj
+    GSS.trigger "engine:"+ev, obj
   
   # Update pass
   # ------------------------
@@ -187,11 +204,11 @@ class Engine extends GSS.EventTrigger
   
   layout: () ->
     LOG @id,".layout()"
-    @trigger "beforeLayout", @
+    @hoistedTrigger "beforeLayout", @
     @is_running = true    
     @solve()
     @setNeedsLayout false
-    #@trigger "afterLayout", @
+    #@hoistedTrigger "afterLayout", @
     
   layoutIfNeeded: () ->    
     LOG @id,".layoutIfNeeded()"
@@ -237,10 +254,11 @@ class Engine extends GSS.EventTrigger
       
   display: () ->
     LOG @id,".display()"
-    @trigger "beforeDisplay", @    
+    @hoistedTrigger "beforeDisplay", @    
     GSS.unobserve()
     #@dumpCSSIfNeeded()
-    @setter.set @cleanVarsForDisplay @vars
+    
+    @setter.set @vars
     
     @validate()    
     
@@ -254,20 +272,7 @@ class Engine extends GSS.EventTrigger
     # TODO: 
     # - validate only when intrinsic opposites change?
     # - batch validations
-    @commander.validateMeasures()
-  
-  cleanVarsForDisplay: (vars) ->
-    obj = {}
-    # if has intrinsic-width, don't set width
-    keysToKill = []
-    for key, val of vars
-      obj[key] = val
-      idx = key.indexOf "intrinsic-"
-      if idx isnt -1
-        keysToKill.push key.replace("intrinsic-","")
-    for k in keysToKill
-      delete obj[k]
-    return obj
+    @commander.validateMeasures()    
   
   load: () =>
     LOG @id,".loadASTs()"
@@ -309,8 +314,8 @@ class Engine extends GSS.EventTrigger
     #
     for key, val of @vars
       delete @vars[key]
-    @varKeysByTacker = {}
-    @varKeys = []
+    #@varKeysByTacker = {}
+    #@varKeys = []
     #
     if @worker
       @worker.terminate()
@@ -338,6 +343,13 @@ class Engine extends GSS.EventTrigger
   
   destroy: ->
     LOG @id,".destroy()"
+    @hoistedTrigger "beforeDestroy", @
+    # kill all descdendant el tracking b/c memory
+    descdendants = GSS.get.descdendantNodes @scope
+    for d in descdendants
+      kill = d._gss_id
+      if kill then GSS._id_killed kill
+              
     # cascade destruction?
     #@destroyChildren()
     # event listeners
@@ -374,8 +386,8 @@ class Engine extends GSS.EventTrigger
     @lastWorkerCommands = null
     #
     @vars   = null
-    @varKeysByTacker = null
-    @varKeys = null
+    #@varKeysByTacker = null
+    #@varKeys = null
     #
     if @worker
       @worker.terminate()
@@ -474,28 +486,8 @@ class Engine extends GSS.EventTrigger
   registerCommands: (commands) ->
     for command in commands
       @registerCommand command
-
-  handleRemoves: (removes) ->
-    keys = null
-    i = null
-    for tracker in removes
-      keys = @varKeysByTacker[tracker] 
-      if keys
-        for key in keys
-          i = @varKeys.indexOf key
-          if i > -1 then @varKeys.splice(i,1)          
-      @varKeysByTacker[tracker] = null
     
   registerCommand: (command) ->    
-    if command[0] is 'var'
-      key = command[1]
-      @varKeys.push key
-      tracker = command[2]
-      if tracker
-        if !@varKeysByTacker[tracker] then @varKeysByTacker[tracker] = []
-        @varKeysByTacker[tracker].push key
-    else if command[0] is 'remove' 
-      @handleRemoves command[1...command.length]...
     # TODO: treat commands as strings and check cache for dups?
     @workerCommands.push command
     #

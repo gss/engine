@@ -180,7 +180,8 @@ describe 'GSS Engine Life Cycle', ->
     container = document.createElement 'div'
     fixtures.appendChild container
   
-  
+  after ->
+    container.remove()
 
   describe 'Asynchronous existentialism (one engine for life of container)', ->
     engine1 = null
@@ -221,8 +222,7 @@ describe 'GSS Engine Life Cycle', ->
             ["suggest", "[col-width-11]", 1111]
           ]          
         }
-      """
-        
+      """        
       listener = (e) ->
         engine2 = GSS(container)
         chai.expect(engine1).to.equal engine2
@@ -302,6 +302,8 @@ describe 'GSS Engine Life Cycle', ->
       fixtures.appendChild container
       engine3 = GSS(container)
       chai.expect(engine1).to.not.equal engine3
+      # cleanup
+      container.remove()
 
 describe 'CSS Dump /', ->  
   container = null
@@ -503,6 +505,9 @@ describe 'Engine Hierarchy', ->
       engine2 = GSS scope:scope2
       engine3 = GSS scope:scope3
     
+    after ->
+      scope2.remove()
+    
     it 'correct parent-child engine relationships', ->
       chai.expect(GSS.engines.root).to.equal engine1
       chai.expect(engine2.parentEngine).to.equal engine1
@@ -565,7 +570,10 @@ describe 'framed scopes', ->
       """
     containerEngine = GSS(container)
     wrap = document.getElementById('wrap')
-    wrapEngine = GSS(wrap)    
+    wrapEngine = GSS(wrap)
+  
+  after ->
+    container.remove()
 
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
@@ -588,6 +596,28 @@ describe 'framed scopes', ->
         wrap.removeEventListener 'solved', wListener      
         done()              
     wrap.addEventListener 'solved', wListener
+
+describe "Engine memory management", ->
+  it "engines are destroyed", (done)->
+    GSS._.defer ->
+      chai.expect(GSS.engines.length).to.equal(1)
+      done()
+  it "views are recycled", (done) ->
+    margin_of_error = 2
+    GSS._.defer ->
+      count = 0
+      for key of GSS.View.byId
+        count++
+      chai.assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
+      done()
+  it "_byIdCache is cleared", (done) ->
+    margin_of_error = 2
+    GSS._.defer ->
+      count = 0
+      for key of GSS._byIdCache
+        count++
+      chai.assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
+      done()
   
   #it 'updates to scoped value are bridged downward', (done) ->
 
