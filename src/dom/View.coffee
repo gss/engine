@@ -55,8 +55,8 @@ class View
   is_positioned: false
   
   setupForPositioning: () ->
+    @updateOffsets()
     if !@is_positioned
-      @updateOffsets()
       @style.position = 'absolute'
       @style.margin = '0px'
     @is_positioned = true
@@ -95,11 +95,13 @@ class View
     
     if (o.x?) or (o.y?) # assuming left & top are normalized
       @setupForPositioning()      
-      @style.transformPrefix = ""
+      #@style[transformPrefix] = ""
       if o.x
-        @style.transformPrefix += "translateX(#{o.x - @offsets.x}px)"
+        @style.left = o.x - @offsets.x + "px"
+        #@style[transformPrefix] += "translateX(#{o.x - @offsets.x}px)"
       if o.y
-        @style.transformPrefix += " translateY(#{o.y - @offsets.x}px)"
+        @style.top = o.y - @offsets.y + "px"
+        #@style[transformPrefix] += " translateY(#{o.y - @offsets.y}px)"
         
     if o.width?
       @style.width = o.width + "px"
