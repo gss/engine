@@ -74,10 +74,10 @@ class View
     o = @values
     #if o
     if o.x? or o.y?
-      @style[transformPrefix] = ""
+      @style[transformPrefix] = "" # " translateZ(0px)"
       if o.x
         #@style.left = o.x - offsets.x + "px"
-        @style[transformPrefix] += "translateX(#{o.x - offsets.x}px)"
+        @style[transformPrefix] += " translateX(#{o.x - offsets.x}px)"
       if o.y
         #@style.top = o.y - offsets.y + "px"
         @style[transformPrefix] += " translateY(#{o.y - offsets.y}px)"        

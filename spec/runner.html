@@ -51,12 +51,17 @@
     <script src="./getter.js"></script>
     <script src="./setter.js"></script>    
     <script src="./engine.js"></script>
+    <script src="./eventtrigger.js"></script>
+    
     <script>
+    GSS.once("afterLoaded", function(){
       if (window.mochaPhantomJS) {
         mochaPhantomJS.run();
       } else {
         mocha.run();
       }
+    })
+      
     </script>
   </body>
 </html>

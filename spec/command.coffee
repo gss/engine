@@ -1,6 +1,7 @@
 Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 
-
+remove = (el) ->
+  el.parentNode.removeChild(el)
 
 describe 'GSS commands', ->
   scope = null
@@ -13,7 +14,7 @@ describe 'GSS commands', ->
     engine = GSS(scope:scope)      
 
   afterEach (done) ->
-    scope.remove()
+    remove(scope)
     engine.destroy()
     done()
 

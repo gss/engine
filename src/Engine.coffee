@@ -43,6 +43,8 @@ class Engine extends GSS.EventTrigger
     @vars      = {}                          unless @vars
     #@varKeysByTacker = {}
     #@varKeys = []
+    
+    # Todo: allow scopeless engines
     if !@scope then new Error "Scope required for Engine"      
     #  @scope = 
     if @scope.tagName is "HEAD" then @scope = document    
@@ -480,8 +482,8 @@ class Engine extends GSS.EventTrigger
     e = new CustomEvent eName, o
     @scope.dispatchEvent e
 
-  handleError: (error) ->
-    return @onError error if @onError
+  handleError: (event) ->
+    return @onError event if @onError
     throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"    
 
   registerCommands: (commands) ->

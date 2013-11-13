@@ -1,20 +1,22 @@
 Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 
+remove = (el) ->
+  el?.parentNode?.removeChild(el)
+
 describe 'GSS engine', ->
   container = null
-  engine = null
-  
-  before ->
-    fixtures = document.getElementById 'fixtures'
-    container = document.createElement 'div'
-    fixtures.appendChild container
-    engine = GSS(container)
-
-  after (done) ->
-    container.remove()
-    done()
+  engine = null  
 
   describe 'when initialized', ->
+    before ->
+      fixtures = document.getElementById 'fixtures'
+      container = document.createElement 'div'
+      fixtures.appendChild container
+      engine = GSS(container)
+
+    after (done) ->
+      remove(container)
+      done()
     it 'should be bound to the DOM scope', ->
       chai.expect(engine.scope).to.eql container
     it 'should not hold a worker', ->
@@ -27,6 +29,15 @@ describe 'GSS engine', ->
       chai.expect(engine.setter.scope).to.eql engine.scope
   
   describe 'with rule #button1[width] == #button2[width]', ->
+    before ->
+      fixtures = document.getElementById 'fixtures'
+      container = document.createElement 'div'
+      fixtures.appendChild container
+      engine = GSS(container)
+
+    after (done) ->
+      remove(container)
+      done()
     
     ast =
       selectors: [
@@ -66,6 +77,35 @@ describe 'GSS engine', ->
         done()
       engine.run ast
   
+  describe 'Math', ->
+    before ->
+      fixtures = document.getElementById 'fixtures'
+      container = document.createElement 'div'
+      fixtures.appendChild container
+      engine = GSS(container)
+
+    after (done) ->
+      remove(container)
+      done()
+    
+    it 'var == var * (num / num)', (done) ->
+      engine.run 
+        commands: [
+          ['var', '[x]']
+          ['var', '[y]']
+          ['eq', ['get', '[y]'], ['number',10]]
+          ['eq', ['get', '[x]'], ['multiply',['get','[y]'],['divide',['number',1],['number',2]]] ]
+        ]
+      onSolved =  (e) ->
+        values = e.detail.values
+        chai.expect(values).to.eql engine.vars
+        chai.expect(values).to.eql 
+          '[x]': 5
+          '[y]': 10
+        container.removeEventListener 'solved', onSolved
+        done()
+      container.addEventListener 'solved', onSolved
+  
 describe 'Engine::vars', ->
   engine = null
   container = null
@@ -77,18 +117,16 @@ describe 'Engine::vars', ->
     engine = GSS(container)
 
   afterEach (done) ->
-    container.remove()
+    remove(container)
     done()
     
   it 'engine.vars are set', (done) ->
-    engine.run 
-      commands: [
+    engine.registerCommands [
         ['var', '[col-width]']
         ['var', '[row-height]']
         ['eq', ['get', '[col-width]'], ['number',100]]
         ['eq', ['get', '[row-height]'], ['number',50]]
       ]
-    container.innerHTML = ""
     onSolved =  (e) ->
       values = e.detail.values
       chai.expect(values).to.eql engine.vars
@@ -98,17 +136,16 @@ describe 'Engine::vars', ->
       container.removeEventListener 'solved', onSolved
       done()
     container.addEventListener 'solved', onSolved
+    
   it 'engine.vars are updated after many suggests', (done) ->
-    engine.run 
-      commands: [
+    engine.registerCommands [
         ['var', '[col-width]']
         ['var', '[row-height]']
-        ['eq', ['get', '[col-width]'], ['number',100], 'strong']
-        ['eq', ['get', '[row-height]'], ['number',50], 'strong']
+        ['eq', ['get', '[col-width]'], ['number',100], 'medium']
+        ['eq', ['get', '[row-height]'], ['number',50], 'medium']
         ['suggest', ['get', '[col-width]'], 10]
         ['suggest', '[row-height]', 5]
       ]
-    container.innerHTML = ""
     count = 0
     onSolved =  (e) ->        
       count++
@@ -119,11 +156,7 @@ describe 'Engine::vars', ->
         rowheight = engine.vars['[row-height]']
         chai.assert colwidth is 10, "fist step [col-width] == #{colwidth}"
         chai.assert rowheight , "fist step [row-height] == #{rowheight}"
-        chai.expect(engine.vars).to.eql 
-          '[col-width]': 10
-          '[row-height]': 5
-        engine.run 
-          commands: [
+        engine.registerCommands [
             ['suggest', '[col-width]', 1]
             ['suggest', ['get', '[row-height]'], .5]
           ]
@@ -131,8 +164,7 @@ describe 'Engine::vars', ->
         chai.expect(engine.vars).to.eql 
           '[col-width]': 1
           '[row-height]': .5
-        engine.run 
-          commands: [
+        engine.registerCommands [
             ['suggest', '[col-width]', 333]
             ['suggest', '[row-height]', 222]
           ]
@@ -157,7 +189,7 @@ describe 'GSS Engine with styleNode', ->
     fixtures.appendChild container
   
   after ->
-    container.remove()
+    remove(container)
 
   describe 'Engine::styleNode', ->
     
@@ -195,7 +227,7 @@ describe 'GSS Engine Life Cycle', ->
     fixtures.appendChild container
   
   after ->
-    container.remove()
+    remove(container)
 
   describe 'Asynchronous existentialism (one engine for life of container)', ->
     engine1 = null
@@ -305,7 +337,7 @@ describe 'GSS Engine Life Cycle', ->
       container.addEventListener 'solved', listener
     
     it 'Engine after container removed', (done) ->
-      container.remove()
+      remove(container)
       wait = ->
         chai.expect(engine1.is_destroyed).to.equal true
         chai.expect(GSS.engines.byId[GSS.getId(container)]?).to.equal false
@@ -316,8 +348,6 @@ describe 'GSS Engine Life Cycle', ->
       fixtures.appendChild container
       engine3 = GSS(container)
       chai.expect(engine1).to.not.equal engine3
-      # cleanup
-      container.remove()
 
 describe 'CSS Dump /', ->  
   container = null
@@ -328,7 +358,7 @@ describe 'CSS Dump /', ->
     fixtures.appendChild container
   
   after ->
-    container.remove()
+    remove(container)
 
   describe 'Asynchronous existentialism (one engine for life of container)', ->
     engine = null
@@ -384,7 +414,7 @@ describe 'Nested Engine', ->
     wrapEngine = GSS(wrap)
   
   after ->
-    container.remove()
+    remove(container)
   
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
@@ -404,7 +434,6 @@ describe 'Nested Engine', ->
 
 describe 'Engine Hierarchy', ->  
   
-  
   describe 'root engine', ->
     root = null
     fixtures = null
@@ -423,7 +452,7 @@ describe 'Engine Hierarchy', ->
       style = document.getElementById "root-styles"
       scope = GSS.get.scopeFor style
       chai.expect(scope).to.equal document.body
-      style.remove()
+      remove(style)
       
   describe 'nesting', ->
     style1  = null
@@ -473,15 +502,15 @@ describe 'Engine Hierarchy', ->
       chai.expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
     
     it 'parent-child engine relationships update even w/o styles', (done) ->      
-      style1.remove()
-      style2.remove()
-      style3.remove()
-      scope3.remove()
+      remove(style1)
+      remove(style2)
+      remove(style3)
+      remove(scope3)
       GSS._.defer ->
         chai.expect(engine3.is_destroyed).to.be.true
         chai.expect(engine3.parentEngine).to.not.exist
         chai.expect(engine2.childEngines.indexOf(engine3)).to.equal -1
-        scope2.remove()        
+        remove(scope2)
         GSS._.defer ->
           chai.expect(engine2.is_destroyed).to.be.true
           chai.expect(engine2.parentEngine).to.not.exist
@@ -520,7 +549,7 @@ describe 'Engine Hierarchy', ->
       engine3 = GSS scope:scope3
     
     after ->
-      scope2.remove()
+      remove(scope2)
     
     it 'correct parent-child engine relationships', ->
       chai.expect(GSS.engines.root).to.equal engine1
@@ -530,7 +559,7 @@ describe 'Engine Hierarchy', ->
       chai.expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
     
     it 'engine destruction cascades', (done) ->      
-      scope2.remove()
+      remove(scope2)
       GSS._.defer ->
         chai.expect(engine3.is_destroyed).to.be.true
         chai.expect(engine3.parentEngine).to.not.exist
@@ -587,7 +616,7 @@ describe 'framed scopes', ->
     wrapEngine = GSS(wrap)
   
   after ->
-    container.remove()
+    remove(container)
 
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine
@@ -666,7 +695,7 @@ describe '::This framed view', ->
     wrapEngine = GSS(wrap)
   
   after ->
-    container.remove()
+    remove(container)
 
   it 'engines are attached to correct element', () ->
     chai.expect(wrapEngine).to.not.equal containerEngine

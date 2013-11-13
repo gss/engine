@@ -16,24 +16,43 @@ class EventTrigger
     @
     
   _getListeners: (type) ->
-    if @_listenersByType[type] then return @_listenersByType[type]
-    @_listenersByType[type] = []
-    return @_listenersByType[type]
+    if @_listenersByType[type]
+      byType = @_listenersByType[type]
+    else
+      byType = @_listenersByType[type] = []
+    return byType
   
   on: (type, listener) ->
     listeners = @_getListeners type    
     if listeners.indexOf(listener) is -1 then listeners.push(listener)
     @
   
+  once: (type, listener) ->
+    wrap = null
+    that = this
+    wrap = (o) ->
+      listener.call that, o
+      that.off type, wrap
+    @on type, wrap
+    @
+  
   off: (type, listener) ->
     listeners = @_getListeners type
     i = listeners.indexOf(listener)
-    if i isnt -1 then listeners.slice(i, 1)
+    if i isnt -1 then listeners.splice(i, 1)
     @
   
-  offAll: (type) ->
-    if type
-      @_listenersByType[type] = []
+  offAll: (target) ->    
+    # all event names
+    if typeof target is "string"
+      if target
+        @_listenersByType[target] = []
+    # all listeners
+    else if typeof target is "function"
+      for type, listeners of @_listenersByType
+        i = listeners.indexOf(target)
+        if i isnt -1 then listeners.splice(i, 1)
+    # everything
     else
       @_listenersByType = {}
     @
@@ -42,6 +61,8 @@ class EventTrigger
     for listener in @_getListeners type
       listener.call @, o
     @
+  
+  
 
 EventTrigger.make = (obj = {}) ->
   EventTrigger::constructor.call obj
