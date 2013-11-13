@@ -14,33 +14,15 @@ transformPrefix = firstSupportedStylePrefix(["transform", "msTransform", "MozTra
 class View  
   
   constructor: () ->
+    @values = {}
     @
     
   attach: (@el,@id) =>
+    
     if !@el then throw new Error "View needs el"
     if !@id then throw new Error "View needs id"
     View.byId[@id] = @
     @is_positioned = false
-    ###
-    @engine = GSS.get.nearestEngine(@el)
-    console.log GSS.get.nearestEngine(@el)
-    @engine.on "beforeDestroy", @onEngineDestroy
-    ###
-    
-    #@engine = null
-  
-  # first to set owns...
-  ###
-  setEngineIfNeeded: (engine) ->
-    if !@engine
-      @engine = engine
-      @engine.on "beforeDestroy", @onEngineDestroy
-  ###
-        
-  onEngineDestroy: =>
-    @engine.off "beforeDestroy", @onEngineDestroy
-    GSS._id_killed(@id) # -> @recycle()
-
   
   recycle: () =>
     @scope = null
@@ -50,12 +32,13 @@ class View
     @id = null
     @offsets = null
     @style = null    
+    @values = {}
     View.recycled.push @
       
   is_positioned: false
   
   setupForPositioning: () ->
-    @updateOffsets()
+    #@updateOffsets()
     if !@is_positioned
       @style.position = 'absolute'
       @style.margin = '0px'
@@ -83,31 +66,77 @@ class View
       el = el.offsetParent
     return offsets
 
-  display: () ->
-    for key, val of @style
-      @el.style[key] = val
-  
-  # - digests css intentions to be used for `display()`
-  # - used to batch last minute DOM reads (offsetParent)
-  setCSS: (o) ->
+  needsDisplay: false
 
-    @style = {}    
-    
-    if (o.x?) or (o.y?) # assuming left & top are normalized
-      @setupForPositioning()      
-      #@style[transformPrefix] = ""
+  display: (offsets) ->
+    o = @values
+    #if o
+    if o.x or o.y
+      @style[transformPrefix] = ""
       if o.x
-        @style.left = o.x - @offsets.x + "px"
-        #@style[transformPrefix] += "translateX(#{o.x - @offsets.x}px)"
+        #@style.left = o.x - offsets.x + "px"
+        @style[transformPrefix] += "translateX(#{o.x - offsets.x}px)"
       if o.y
-        @style.top = o.y - @offsets.y + "px"
-        #@style[transformPrefix] += " translateY(#{o.y - @offsets.y}px)"
-        
+        #@style.top = o.y - offsets.y + "px"
+        @style[transformPrefix] += " translateY(#{o.y - offsets.y}px)"        
     if o.width?
       @style.width = o.width + "px"
     if o.height?
       @style.height = o.height + "px"
+    for key, val of @style
+      @el.style[key] = val
+  
+  displayIfNeeded: (offsets = {x:0,y:0}) ->
+    if @needsDisplay 
+      @display(offsets)      
+      @setNeedsDisplay false
+    offsets =
+      x:0
+      y:0
+    if @values.x
+      offsets.x += @values.x
+    if @values.y
+      offsets.y += @values.y
+    @_displayChildrenIfNeeded(offsets)
+  
+  setNeedsDisplay: (bool) ->    
+    if bool
+      @needsDisplay = true
+    else
+      @needsDisplay = false
+  
+  _displayChildrenIfNeeded: (offsets) ->
+    for child in @el.children
+      view = GSS.get.view(child)
+      if view
+        view.display(offsets)    
+  
+  # - digests css intentions to be used for `display()`
+  # - used to batch last minute DOM reads (offsetParent)
+  updateValues: (o) ->
+    @values = o
+    
+    # reset style
+    @style = {}
+
+    if (o.x?) or (o.y?) # assuming left & top are normalized
+      @setupForPositioning()
+      
+    @setNeedsDisplay true           
+
     @
+  
+  getParentView: () ->
+    el = @el.parentElement
+    loop
+      gid = el._gss_id
+      if gid
+        return View.byId[gid]
+      break unless el.parentElement
+      el = el.parentElement
+  
+
+
 
 View.byId = {}
 

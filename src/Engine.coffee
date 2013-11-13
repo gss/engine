@@ -258,6 +258,7 @@ class Engine extends GSS.EventTrigger
     GSS.unobserve()
     #@dumpCSSIfNeeded()
     
+    #@setter.set @cleanVarsForDisplay @vars
     @setter.set @vars
     
     @validate()    

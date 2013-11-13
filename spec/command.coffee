@@ -588,8 +588,10 @@ describe 'GSS commands', ->
 
       engine.run commands: [
           ['var', '.box[width]', 'width', ['$class','box']]
+          #['var', '.box[x]', 'x', ['$class','box']]
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
           ['eq', ['get','.box[width]','box'],['get','.box[intrinsic-width]','.box']]
+          #['eq', ['get','.box[width]','box'],['get','.box[x]','.box']]
         ]
       
       listener = (e) ->
@@ -601,8 +603,10 @@ describe 'GSS commands', ->
       scope.innerHTML = ""
       engine.run commands: [
           ['var', '.box[width]', 'width', ['$class','box']]
+          #['var', '.box[x]', 'x', ['$class','box']]
           ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
-          ['eq', ['get','.box[width]','.box'],['get','.box[intrinsic-width]','.box']]
+          ['eq', ['get','.box[width]','box'],['get','.box[intrinsic-width]','.box']]
+          #['eq', ['get','.box[width]','box'],['get','.box[x]','.box']]
         ]
 
       count = 1

@@ -8,13 +8,10 @@ describe 'GSS engine', ->
     fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
-  
-  beforeEach ->
-    engine = new Engine 
-      scope: container
+    engine = GSS(container)
 
-  afterEach (done) ->
-    engine.destroy()
+  after (done) ->
+    container.remove()
     done()
 
   describe 'when initialized', ->
@@ -69,66 +66,83 @@ describe 'GSS engine', ->
         done()
       engine.run ast
   
-  describe 'Engine::vars', ->
-    it 'engine.vars are set', (done) ->
-      engine.run 
-        commands: [
-          ['var', '[col-width]']
-          ['var', '[row-height]']
-          ['eq', ['get', '[col-width]'], ['number',100]]
-          ['eq', ['get', '[row-height]'], ['number',50]]
-        ]
-      container.innerHTML = ""
-      onSolved =  (e) ->
+describe 'Engine::vars', ->
+  engine = null
+  container = null
+  
+  beforeEach ->
+    fixtures = document.getElementById 'fixtures'
+    container = document.createElement 'div'
+    fixtures.appendChild container
+    engine = GSS(container)
+
+  afterEach (done) ->
+    container.remove()
+    done()
+    
+  it 'engine.vars are set', (done) ->
+    engine.run 
+      commands: [
+        ['var', '[col-width]']
+        ['var', '[row-height]']
+        ['eq', ['get', '[col-width]'], ['number',100]]
+        ['eq', ['get', '[row-height]'], ['number',50]]
+      ]
+    container.innerHTML = ""
+    onSolved =  (e) ->
+      values = e.detail.values
+      chai.expect(values).to.eql engine.vars
+      chai.expect(values).to.eql 
+        '[col-width]': 100
+        '[row-height]': 50
+      container.removeEventListener 'solved', onSolved
+      done()
+    container.addEventListener 'solved', onSolved
+  it 'engine.vars are updated after many suggests', (done) ->
+    engine.run 
+      commands: [
+        ['var', '[col-width]']
+        ['var', '[row-height]']
+        ['eq', ['get', '[col-width]'], ['number',100], 'strong']
+        ['eq', ['get', '[row-height]'], ['number',50], 'strong']
+        ['suggest', ['get', '[col-width]'], 10]
+        ['suggest', '[row-height]', 5]
+      ]
+    container.innerHTML = ""
+    count = 0
+    onSolved =  (e) ->        
+      count++
+      if count is 1
         values = e.detail.values
         chai.expect(values).to.eql engine.vars
-        chai.expect(values).to.eql 
-          '[col-width]': 100
-          '[row-height]': 50
+        colwidth = engine.vars['[col-width]']
+        rowheight = engine.vars['[row-height]']
+        chai.assert colwidth is 10, "fist step [col-width] == #{colwidth}"
+        chai.assert rowheight , "fist step [row-height] == #{rowheight}"
+        chai.expect(engine.vars).to.eql 
+          '[col-width]': 10
+          '[row-height]': 5
+        engine.run 
+          commands: [
+            ['suggest', '[col-width]', 1]
+            ['suggest', ['get', '[row-height]'], .5]
+          ]
+      else if count is 2
+        chai.expect(engine.vars).to.eql 
+          '[col-width]': 1
+          '[row-height]': .5
+        engine.run 
+          commands: [
+            ['suggest', '[col-width]', 333]
+            ['suggest', '[row-height]', 222]
+          ]
+      else if count is 3
+        chai.expect(engine.vars).to.eql 
+          '[col-width]': 333
+          '[row-height]': 222
         container.removeEventListener 'solved', onSolved
         done()
-      container.addEventListener 'solved', onSolved
-    it 'engine.vars are updated after many suggests', (done) ->
-      engine.run 
-        commands: [
-          ['var', '[col-width]']
-          ['var', '[row-height]']
-          ['eq', ['get', '[col-width]'], ['number',100], 'strong']
-          ['eq', ['get', '[row-height]'], ['number',50], 'strong']
-          ['suggest', ['get', '[col-width]'], 10]
-          ['suggest', '[row-height]', 5]
-        ]
-      container.innerHTML = ""
-      count = 0
-      onSolved =  (e) ->        
-        count++
-        if count is 1
-          values = e.detail.values
-          chai.expect(values).to.eql engine.vars        
-          chai.expect(engine.vars).to.eql 
-            '[col-width]': 10
-            '[row-height]': 5
-          engine.run 
-            commands: [
-              ['suggest', '[col-width]', 1]
-              ['suggest', ['get', '[row-height]'], .5]
-            ]
-        else if count is 2
-          chai.expect(engine.vars).to.eql 
-            '[col-width]': 1
-            '[row-height]': .5
-          engine.run 
-            commands: [
-              ['suggest', '[col-width]', 333]
-              ['suggest', '[row-height]', 222]
-            ]
-        else if count is 3
-          chai.expect(engine.vars).to.eql 
-            '[col-width]': 333
-            '[row-height]': 222
-          container.removeEventListener 'solved', onSolved
-          done()
-      container.addEventListener 'solved', onSolved
+    container.addEventListener 'solved', onSolved
       
   
   

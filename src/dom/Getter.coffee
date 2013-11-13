@@ -66,7 +66,9 @@ class Getter
       break unless element.offsetParent
       element = element.offsetParent
     return offsets
-  
+    
+  view: (node) ->
+    return GSS.View.byId[GSS.getId(node)]
   
   getAllStyleNodes: () ->
     # get live nodeList only once

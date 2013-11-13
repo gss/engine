@@ -29,10 +29,11 @@ class Setter
     varsById = @varsByViewId @cleanVarsForDisplay vars
     # batch potential DOM reads
     for id, obj of varsById
-      GSS.View.byId[id]?.setCSS?(obj)
-    # batch DOM writes
-    for id, obj of varsById
-      GSS.View.byId[id]?.display?()
+      GSS.View.byId[id]?.updateValues?(obj)
+    # batch DOM writes top -> down
+    GSS.get.view(@scope).displayIfNeeded()
+    #for id, obj of varsById
+    #  GSS.View.byId[id]?.display?()
   
   varsByViewId: (vars) ->
     varsById = {}
