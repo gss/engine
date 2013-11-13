@@ -42,6 +42,8 @@ class View
     if !@is_positioned
       @style.position = 'absolute'
       @style.margin = '0px'
+      @style.top = '0px'
+      @style.left = '0px'
     @is_positioned = true
         
   updateOffsets: () ->
@@ -71,7 +73,7 @@ class View
   display: (offsets) ->
     o = @values
     #if o
-    if o.x or o.y
+    if o.x? or o.y?
       @style[transformPrefix] = ""
       if o.x
         #@style.left = o.x - offsets.x + "px"
@@ -109,7 +111,7 @@ class View
     for child in @el.children
       view = GSS.get.view(child)
       if view
-        view.display(offsets)    
+        view.displayIfNeeded(offsets)    
   
   # - digests css intentions to be used for `display()`
   # - used to batch last minute DOM reads (offsetParent)

@@ -64,8 +64,8 @@ class Engine extends GSS.EventTrigger
       @queryScope = document
     else
       @queryScope = @scope
-    @getter    = new GSS.Getter(@queryScope)  unless @getter
-    @setter    = new GSS.Setter(@queryScope)  unless @setter
+    @getter    = new GSS.Getter(@scope)  unless @getter
+    @setter    = new GSS.Setter(@scope)  unless @setter
     # 
     @childEngines = [] 
     @parentEngine = null
