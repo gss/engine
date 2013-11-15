@@ -2,6 +2,9 @@ require("customevent-polyfill")
 
 if window.GSS then throw new Error "Only one GSS object per window"
 
+# GSS
+# =================================================
+
 GSS = (o) ->
   
   # if dom element, return engine
@@ -26,9 +29,8 @@ GSS = (o) ->
   else
     throw new Error ""
 
-#GSS.worker = '../browser/gss-engine/worker/gss-solver.js'
-
 # Config
+# ------------------------------------------------
 
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
@@ -40,49 +42,23 @@ GSS.config =
   roundBeforeSet: false
   processBeforeSet: null # function
   useOffsetParent: true
+  useWorker: !!window.Worker
   workerURL: '../browser/gss-engine/worker/gss-solver.js'
 
 # overwrite config if provided
 if GSS_CONFIG?
   for key, val of GSS_CONFIG
     GSS.config[key] = val
-
-# Log
-
-#GSS.log = log = () ->
-#  console?.log arguments...
+    
+# Debuging
+# ------------------------------------------------
   
 GSS.deblog = () ->
   if GSS.config.debug then console.log(arguments...)  
 
 GSS.warn = () ->
   if GSS.config.warn then console.warn(arguments...)  
-
-# Requires
-
-window.GSS = GSS
-GSS._ = require("./_.js")
-GSS.EventTrigger = require("./EventTrigger.js")
-#GSS.workerURL = require("./WorkerBlobUrl.js")
-GSS.Getter = require("./dom/Getter.js")
-GSS.Commander = require("./Commander.js")
-GSS.Query = require("./dom/Query.js")
-GSS.Setter = require("./dom/Setter.js")
-GSS.Engine = require("./Engine.js")
-GSS.View = require("./dom/View.js")
-
-for key, val of require("./dom/IdMixin.js")
-  if GSS[key] then throw new Error "IdMixin key clash: #{key}"
-  GSS[key] = val
-
-# 
-
-GSS.EventTrigger.make(GSS)
-
-GSS.get = new GSS.Getter()
-
-GSS.observer = require("./dom/Observer.js")
-
+  
 LOG_PASS = (pass, bg="green") ->
   GSS.deblog "%c#{pass}", "color:white; padding:2px; font-size:14px; background:#{bg};"
     
@@ -94,8 +70,32 @@ TIME_END = () ->
   if GSS.config.perf
     console.timeEnd arguments...
 
-# Layout Runtime
-# ======================
+# Modules
+# ------------------------------------------------
+
+window.GSS = GSS
+GSS._ = require("./_.js")
+GSS.EventTrigger = require("./EventTrigger.js")
+#GSS.workerURL = require("./WorkerBlobUrl.js")
+GSS.Getter = require("./dom/Getter.js")
+GSS.Commander = require("./Commander.js")
+GSS.Query = require("./dom/Query.js")
+GSS.Thread = require("./Thread.js")
+GSS.Engine = require("./Engine.js")
+GSS.View = require("./dom/View.js")
+
+for key, val of require("./dom/IdMixin.js")
+  if GSS[key] then throw new Error "IdMixin key clash: #{key}"
+  GSS[key] = val
+
+GSS.EventTrigger.make(GSS)
+
+GSS.get = new GSS.Getter()
+
+GSS.observer = require("./dom/Observer.js")
+
+# Runtime
+# ------------------------------------------------
 
 GSS.boot = () ->
   # setup root engine
@@ -116,7 +116,7 @@ GSS.render = () ->
   # async -> display
 
 # Update pass
-# ------------------------
+# ------------------------------------------------
 #
 # - updates constraint commands for engines
 # - measurements
@@ -142,7 +142,7 @@ GSS.updateIfNeeded = () ->
   
 
 # Layout pass
-# -------------------------
+# ------------------------------------------------
 #
 # - solvers solve
 #
@@ -168,7 +168,7 @@ GSS.layoutIfNeeded = () ->
   
 
 # Display pass
-# -----------------------
+# ------------------------------------------------
 #
 # - write to dom
 #
@@ -192,8 +192,11 @@ GSS.displayIfNeeded = () ->
     GSS.setNeedsDisplay false
     TIME_END "display pass"
     TIME_END "RENDER"
-    
-#GSS.lazyDisplayIfNeeded = GSS._.debounce GSS.displayIfNeeded, 8, false # 1/2 frame (60fps)
+#GSS.lazyDisplayIfNeeded = GSS._.debounce GSS.displayIfNeeded, 8, false     
+
+
+# Style tags loading
+# ------------------------------------------------
 
 _scopesToLoad = null
 
@@ -232,10 +235,11 @@ GSS.dirtyLoadEngines = () ->
   engine = GSS.engines[i]
   while !!engine
     if i > 0
-      # destroy engines with detached scopes
-      if !document.documentElement.contains engine.scope
-        engine.destroyChildren()
-        engine.destroy()
+      if engine.scope
+        # destroy engines with detached scopes
+        if !document.documentElement.contains engine.scope
+          engine.destroyChildren()
+          engine.destroy()
     # TODO(D4): update engines with modified styles
     i++
     engine = GSS.engines[i]

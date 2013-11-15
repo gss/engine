@@ -1,23 +1,50 @@
 class Thread
 
   constructor: ->
-    @cachedVars = {}
-    solver = new c.SimplexSolver()
-    @__editVarNames = []
-    solver.autoSolve = false
-    @solver = solver
-    @constraintsByTracker = {}
-    @varIdsByTracker = {}
     @
+  
+  needsSetup: true
+  
+  setupIfNeeded: () ->
+    return @ unless @needsSetup
+    @needsSetup           = false
+    @solver               = new c.SimplexSolver()
+    @solver.autoSolve     = false
+    @cachedVars           = {}          
+    @constraintsByTracker = {}
+    @varIdsByTracker      = {}
+    @__editVarNames       = []
+    @  
+  
+  # Worker interface
+  # ------------------------------------------------
     
+  postMessage: (message) ->
+    # wrapper to make easier to work without webworkers    
+    @execute message
+    @
+  
+  terminate: () ->
+    @needsSetup           = true
+    @solver               = null
+    @cachedVars           = null    
+    @constraintsByTracker = null
+    @varIdsByTracker      = null
+    @__editVarNames       = null
+    @   
+      
+  # API
+  # ------------------------------------------------
+  
   execute: (message) =>
+    @setupIfNeeded()
     for command in message.commands
       @_execute command, command
-    #
     #for vs in message.vars
     #  @_execute vs
     #for cs in message.constraints
     #  @solver.addConstraint @_execute cs
+    @
 
   _execute: (command, root) =>
     node = command
@@ -30,13 +57,16 @@ class Thread
         node.splice i+1,1,@_execute sub, root
     return func.call @, root, node[1...node.length]...
 
-  _getValues: () ->
+  getValues: () ->
     #@solver.resolve()
     @solver.solve()
     o = {}
     for id of @cachedVars
       o[id] = @cachedVars[id].value
     return o
+    
+  # Cassowary Commands
+  # ------------------------------------------------
 
   number: (root, num) ->
     return Number(num)
@@ -204,4 +234,5 @@ class Thread
       for id in @varIdsByTracker[tracker]
         delete @cachedVars[id]
       delete @varIdsByTracker[tracker]
-      
+
+if module?.exports then module.exports = Thread

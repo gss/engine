@@ -1,5 +1,5 @@
 Setter = GSS.Setter #require 'gss-engine/lib/dom/Setter.js'
-
+###
 describe 'DOM Setter', ->
   container = null
   set = null
@@ -65,3 +65,4 @@ describe 'DOM Setter', ->
       chai.expect(button.offsetTop).to.equal 10
       # Offset relative to document
       chai.expect(Math.floor(button.getBoundingClientRect().top)).to.equal 50
+###

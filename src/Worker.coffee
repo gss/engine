@@ -1,11 +1,9 @@
-w = new Thread()
+thread = new Thread()
 
 self.onmessage = (m) ->
-  message = m.data
+  thread.postMessage m.data
   
-  w.execute message
-  
-  self.postMessage({values:w._getValues()})
+  self.postMessage({values:thread.getValues()})
   
   ###
   if ast isnt null

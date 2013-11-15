@@ -52,7 +52,12 @@ makeTemplateFromVarId = (varId) ->
     _templateVarIdCache[varId] = templ
   return templ
 
+
+# Commander
+# ======================================================== 
+#
 # transforms & generates needed commands for engine
+
 class Commander
   
   constructor: (@engine) ->
@@ -140,7 +145,7 @@ class Commander
   
 
   spawnForScope: (prop) ->  
-    key = "$"+GSS.getId(@engine.scope)+"[#{prop}]"
+    key = "$"+@engine.id+"[#{prop}]"
     thisEngine = @engine
     # TODO:
     # - only listen once, not for each prop
@@ -272,17 +277,15 @@ class Commander
         for splitter, joiner of replaces
           command = command.split "%%" + splitter + "%%"
           command = command.join "$" + joiner
-        @engine.registerCommand eval command    
-    
-    
+        @engine.registerCommand eval command        
     
     # generate intrinsic commands
     @spawnMeasurements root
     @
-
+    
 
   # Variable Commands
-  # ------------------------
+  # ------------------------------------------------
 
   'var': (self, varId, prop, query) =>    
     # clean all but first two
@@ -332,8 +335,8 @@ class Commander
   'divide': (root, e1,e2,s,w) ->
     return ['divide', e1, e2]
 
-  # Constraints Commands
-  # ------------------------
+  # Constraint Commands
+  # ------------------------------------------------
 
   'suggest': () =>
     # pass through
@@ -370,7 +373,7 @@ class Commander
     ###
     
   # Chains
-  # -----------------------------  
+  # ------------------------------------------------
   
   'chain': (root,query,bridgessssss) =>    
     args = [arguments...]
@@ -399,7 +402,7 @@ class Commander
   
   _chainer: (op,head,tail,s,w) =>
 
-    tracker = "eq-chain-" + GSS._id_counter++
+    tracker = "eq-chain-" + GSS.uid()
     engine = @engine
     _e_for_chain = @_e_for_chain  
     
@@ -450,16 +453,9 @@ class Commander
       e1 = exp
     return e1
     
-    
-    
-      
-        
-        
-    
-  
   
   # JavaScript for-loop hooks
-  # -----------------------------
+  # ------------------------------------------------
   
   'for-each': (root,query,callback) =>
     for el in query.nodeList
@@ -481,7 +477,7 @@ class Commander
     return ['strength', s]
 
   # Selector Commands
-  # ---------------------------
+  # ------------------------------------------------
 
   # mutli
   '$class': (root,sel) =>

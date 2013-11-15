@@ -38,26 +38,49 @@ Thread = (function() {
     this._addConstraint = __bind(this._addConstraint, this);
     this._execute = __bind(this._execute, this);
     this.execute = __bind(this.execute, this);
-    var solver;
-    this.cachedVars = {};
-    solver = new c.SimplexSolver();
-    this.__editVarNames = [];
-    solver.autoSolve = false;
-    this.solver = solver;
-    this.constraintsByTracker = {};
-    this.varIdsByTracker = {};
     this;
   }
 
+  Thread.prototype.needsSetup = true;
+
+  Thread.prototype.setupIfNeeded = function() {
+    if (!this.needsSetup) {
+      return this;
+    }
+    this.needsSetup = false;
+    this.solver = new c.SimplexSolver();
+    this.solver.autoSolve = false;
+    this.cachedVars = {};
+    this.constraintsByTracker = {};
+    this.varIdsByTracker = {};
+    this.__editVarNames = [];
+    return this;
+  };
+
+  Thread.prototype.postMessage = function(message) {
+    this.execute(message);
+    return this;
+  };
+
+  Thread.prototype.terminate = function() {
+    this.needsSetup = true;
+    this.solver = null;
+    this.cachedVars = null;
+    this.constraintsByTracker = null;
+    this.varIdsByTracker = null;
+    this.__editVarNames = null;
+    return this;
+  };
+
   Thread.prototype.execute = function(message) {
-    var command, _i, _len, _ref, _results;
+    var command, _i, _len, _ref;
+    this.setupIfNeeded();
     _ref = message.commands;
-    _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       command = _ref[_i];
-      _results.push(this._execute(command, command));
+      this._execute(command, command);
     }
-    return _results;
+    return this;
   };
 
   Thread.prototype._execute = function(command, root) {
@@ -77,7 +100,7 @@ Thread = (function() {
     return func.call.apply(func, [this, root].concat(__slice.call(node.slice(1, node.length))));
   };
 
-  Thread.prototype._getValues = function() {
+  Thread.prototype.getValues = function() {
     var id, o;
     this.solver.solve();
     o = {};
@@ -312,16 +335,18 @@ Thread = (function() {
 
 })();
 
-var w;
+if (typeof module !== "undefined" && module !== null ? module.exports : void 0) {
+  module.exports = Thread;
+}
 
-w = new Thread();
+var thread;
+
+thread = new Thread();
 
 self.onmessage = function(m) {
-  var message;
-  message = m.data;
-  w.execute(message);
+  thread.postMessage(m.data);
   return self.postMessage({
-    values: w._getValues()
+    values: thread.getValues()
   });
   /*
   if ast isnt null

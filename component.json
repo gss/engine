@@ -2,7 +2,7 @@
   "name": "gss-engine",
   "repo": "the-gss/engine",
   "description": "GSS styling engine",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": [
     "lib/GSS.js",
     "lib/_.js",
@@ -11,15 +11,16 @@
     "lib/dom/View.js",
     "lib/dom/Observer.js",
     "lib/Engine.js",
-    "lib/Commander.js",  
+    "lib/Commander.js",
+    "lib/Thread.js", 
     "lib/dom/Getter.js",
-    "lib/dom/Setter.js",
     "lib/dom/IdMixin.js"
   ],
   "dependencies": {
     "d4tocchini/customevent-polyfill": "*"
   },
   "files": [
+    "vendor/c.js",
     "vendor/observe.js",
     "vendor/sidetable.js",
     "vendor/MutationObserver.js",

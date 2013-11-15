@@ -6,6 +6,9 @@
 
 IdMixin = 
   
+  uid: () ->
+    @_id_counter++
+    
   _id_counter: 1
 
   _byIdCache: {}
@@ -39,7 +42,7 @@ IdMixin =
     return null unless el
     gid = @getId el
     if !gid?       
-      _id =  @_id_counter++
+      _id =  @uid()
       # default id to el.id
       gid = String(el.id or _id) # b/c el.id returns String     
       el.setAttribute('data-gss-id', gid)

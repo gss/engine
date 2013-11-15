@@ -18,7 +18,7 @@ setupObserver = () ->
     LOG "MutationObserver"
     scopesToLoad = []
     nodesToIgnore = []
-    scopesToUpdateChildList = []
+    needsUpdateQueries = []
     invalidMeasureIds = []
 
     for m in mutations
@@ -30,7 +30,7 @@ setupObserver = () ->
           if scopesToLoad.indexOf(scope) is -1
             scopesToLoad.push scope
         
-      # scopes that need to updatechildlist, ie update queries
+      # scopes that need to updateQueries, ie update queries
       if m.type is "attributes" or m.type is "childList"
         if m.type is "attributes" and m.attributename is "data-gss-id"
           # ignore if setting up node
@@ -39,8 +39,8 @@ setupObserver = () ->
         else if nodesToIgnore.indexOf(m.target) is -1
           scope = GSS.get.nearestScope m.target
           if scope
-            if scopesToUpdateChildList.indexOf(scope) is -1        
-              scopesToUpdateChildList.push scope
+            if needsUpdateQueries.indexOf(scope) is -1        
+              needsUpdateQueries.push scope
     
       gid = null
       # els that may need remeasuring      
@@ -57,9 +57,9 @@ setupObserver = () ->
     for scope in scopesToLoad
       GSS.get.engine(scope).load()
     
-    for scope in scopesToUpdateChildList
-      if scopesToLoad.indexOf(scope) is -1 # don't updateChildList if loading
-        GSS.get.engine(scope).updateChildList()
+    for scope in needsUpdateQueries
+      if scopesToLoad.indexOf(scope) is -1 # don't updateQueries if loading
+        GSS.get.engine(scope).updateQueries()
     
     if invalidMeasureIds.length > 0
       for engine in GSS.engines
@@ -67,7 +67,7 @@ setupObserver = () ->
       
     scopesToLoad = null
     nodesToIgnore = null
-    scopesToUpdateChildList = null
+    needsUpdateQueries = null
     invalidMeasureIds = null
   
     #LOG "observer(mutations)",mutations

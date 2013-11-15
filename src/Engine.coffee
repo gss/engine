@@ -1,24 +1,6 @@
 if !GSS? then throw new Error "GSS object needed for Engine"
 
-cleanAndSnatch = (frm, to) ->
-  # - `to` object cleans itself & steals props from & deletes the `frm` object
-  # - useful for keeping single object in memory for getters & setters
-  # - FYI, getters & setters for `o.key` work after `delete o.key`
-  for key, val of to
-    # delete if not on `frm` object
-    if !frm[key]?
-      delete to[key]
-    # snatch shared keys
-    else      
-      to[key] = frm[key]
-      delete frm[key]
-  # snatch new keys
-  for key, val of frm    
-    to[key] = frm[key]
-    #delete frm[key]
-  frm = undefined
-  return to
-
+_ = GSS._
 
 TIME = () ->
   if GSS.config.perf
@@ -28,7 +10,7 @@ TIME_END = () ->
   if GSS.config.perf
     console.timeEnd arguments...
 
-LOG= () ->
+LOG = () ->
   GSS.deblog "Engine", arguments...
 
 GSS.engines = engines = []
@@ -37,52 +19,55 @@ engines.root = null
 
 class Engine extends GSS.EventTrigger
 
-  constructor: (o) ->
-    super
-    {@scope, @workerURL, @vars, @getter, @setter, @is_root} = o
-    @vars      = {}                          unless @vars
-    #@varKeysByTacker = {}
-    #@varKeys = []
+  constructor: (o={}) ->
+    super    
+    {@scope, @workerURL, @vars, @getter, @is_root, @useWorker} = o
     
-    # Todo: allow scopeless engines
-    if !@scope then new Error "Scope required for Engine"      
-    #  @scope = 
-    if @scope.tagName is "HEAD" then @scope = document    
-    @workerURL = GSS.config.workerURL               unless @workerURL
-    # id is always gssid of scope
-    @id        = GSS.setupScopeId @scope
-    @commander = new GSS.Commander(@)
+    @vars = {} unless @vars
+    
+    if !GSS.config.useWorker
+      @useWorker = false
+    else      
+      @useWorker = true unless @useWorker?
     @worker    = null
-    #    
     @workerCommands = []
     @workerMessageHistory = []
+    @workerURL = GSS.config.workerURL unless @workerURL
+
+    if @scope 
+      if @scope.tagName is "HEAD" then @scope = document          
+      @id = GSS.setupScopeId @scope # id is always gssid of scope
+      if @scope is GSS.Getter.getRootScope()
+        @queryScope = document
+      else
+        @queryScope = @scope
+    else
+      @id = GSS.uid()
+      @queryScope = document
+      
+    @getter    = new GSS.Getter(@scope) unless @getter    
+    @commander = new GSS.Commander(@)    
     @lastWorkerCommands = null
     @queryCache = {}    
-    #
     @cssDump = null
-    LOG "constructor() @", @    
-    # 
-    if @scope is GSS.Getter.getRootScope()
-      @queryScope = document
-    else
-      @queryScope = @scope
-    @getter    = new GSS.Getter(@scope)  unless @getter
-    @setter    = new GSS.Setter(@scope)  unless @setter
-    # 
-    @childEngines = [] 
-    @parentEngine = null
-    if @is_root
-      engines.root = @
-    else
-      @parentEngine = GSS.get.nearestEngine @scope, true      
-      if !@parentEngine
-        throw new Error "ParentEngine missing, WTF"
-      @parentEngine.childEngines.push @
-        
-    #
+    
     GSS.engines.push @
-    engines.byId[@id] = @    
+    engines.byId[@id] = @
+    
+    @_Hierarchy_setup()
+
+    LOG "constructor() @", @
     @
+        
+      
+  getVarsById: () ->
+    vars = @vars
+    if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
+    varsById = _.varsByViewId(_.filterVarsForDisplay(vars))
+  
+  
+  # Hierarchy
+  # ------------------------------------------------
   
   isDescendantOf: (engine) ->
     parentEngine = @parentEngine
@@ -92,20 +77,36 @@ class Engine extends GSS.EventTrigger
       parentEngine = parentEngine.parentEngine
     return false
   
-  isAscendantOf: (engine) ->
-    # todo
+  _Hierarchy_setup: -> 
+    @childEngines = [] 
+    @parentEngine = null    
+    if @is_root
+      engines.root = @
+    else if @scope
+      @parentEngine = GSS.get.nearestEngine @scope, true            
+    else
+      @parentEngine = engines.root
+    if !@parentEngine and !@is_root then throw new Error "ParentEngine missing, WTF"
+    @parentEngine?.childEngines.push @
+  
+  _Hierarchy_destroy: ->        
+    # update engine hierarchy
+    @parentEngine.childEngines.splice(@parentEngine.childEngines.indexOf(@),1)
+    @parentEngine = null
+  
+  
+  # Commands
+  # ------------------------------------------------
   
   is_running: false
   
   run: (asts) ->
     LOG @id,".run(asts)",asts
-    # if array, batch execute then solve
     if asts instanceof Array
       for ast in asts        
         @_run ast
     else 
       @_run asts   
-    #@layoutIfNeeded()
       
   _run: (ast) ->    
     if ast.commands
@@ -118,22 +119,43 @@ class Engine extends GSS.EventTrigger
       @dumpCSSIfNeeded()
     
   execute: (commands) =>
-    # digests or transforms commands
+    # digests & transforms commands into @workerCommands    
     @commander.execute commands
   
+  load: () =>
+    # Load commands from style nodes.    
+    LOG @id,".loadASTs()"
+    if !@scope then throw new Error "can't load scopeless engine"
+    if @is_running
+      @clean()
+    #@run( @getter.readAllASTs() )
+    ASTs = []
+    for node in @getter.getAllStyleNodes()
+      # TODO: coordinate with global style query better
+      if @scope is GSS.get.scopeForStyleNode node
+        AST = @getter.readAST node
+        if AST then ASTs.push AST
+    @ASTs = ASTs
+    #
+    @setNeedsUpdate true
+    #@run ASTs
+    @
+  
+  
   # CSSDumper
-  # -----------------------
+  # ------------------------------------------------
   
   cssToDump: null
   
   cssDump: null
   
   setupCSSDumpIfNeeded: () ->
+    dumpNode = @scope or document.body
     if !@cssDump
       #@scope.insertAdjacentHTML "afterbegin", ""
       @cssDump = document.createElement "style"
       @cssDump.id = "gss-css-dump-" + @id 
-      @scope.appendChild @cssDump
+      dumpNode.appendChild @cssDump
       #@cssDump.classList.add("gss-css-dump")     
   
   dumpCSSIfNeeded: () ->
@@ -142,24 +164,18 @@ class Engine extends GSS.EventTrigger
       @cssDump.insertAdjacentHTML "beforeend", @cssToDump
       @cssToDump = null
 
-  CSSDumper_clean: () ->    
+  _CSSDumper_clean: () ->    
     @cssToDump = null
     @cssDump?.innerHTML = ""
   
-  CSSDumper_destroy: () ->
+  _CSSDumper_destroy: () ->
     @cssToDump = null
     #@cssDump?.remove()
-    @cssDump = null
+    @cssDump = null    
   
-
-  # Trigger event on self then GSS.engines.
-  # Allows ev delegation for engine lifecycle.
-  hoistedTrigger: (ev,obj) ->
-    @trigger ev, obj
-    GSS.trigger "engine:"+ev, obj
   
   # Update pass
-  # ------------------------
+  # ------------------------------------------------
   #
   # - updates constraint commands for engines
   # - measurements
@@ -185,8 +201,9 @@ class Engine extends GSS.EventTrigger
     for child in @childEngines
       child.updateIfNeeded()  
   
+  
   # Layout pass
-  # -------------------------
+  # ------------------------------------------------
   #
   # - solvers solve
   #
@@ -216,7 +233,7 @@ class Engine extends GSS.EventTrigger
     LOG @id,".layoutIfNeeded()"
     # if commands were found & executed
     if @needsLayout # @workerCommands.length > 0
-      @waitingToLayoutSubtree = true
+      #@waitingToLayoutSubtree = true
       @layout()      
     #else if !@waitingToLayoutSubtree
     #  @layoutSubTreeIfNeeded()
@@ -229,8 +246,9 @@ class Engine extends GSS.EventTrigger
     for child in @childEngines
       child.layoutIfNeeded()
   
+  
   # Display pass
-  # -----------------------
+  # ------------------------------------------------
   #
   # - write to dom
   #
@@ -247,7 +265,7 @@ class Engine extends GSS.EventTrigger
       @needsDisplay = false
   
   displayIfNeeded: () ->
-    #console.log @, "displayIfNeeded"
+    LOG @, "displayIfNeeded"
     if @needsDisplay #@workerCommands.length > 0
       @display()      
       @setNeedsDisplay false
@@ -256,156 +274,60 @@ class Engine extends GSS.EventTrigger
       
   display: () ->
     LOG @id,".display()"
-    @hoistedTrigger "beforeDisplay", @    
+    @hoistedTrigger "beforeDisplay", @        
     GSS.unobserve()
+    
     #@dumpCSSIfNeeded()
     
-    #@setter.set @cleanVarsForDisplay @vars
-    @setter.set @vars
+    varsById = @getVarsById()
+    
+    # batch potential DOM reads
+    needsToDisplayViews = false
+    for id, obj of varsById
+      needsToDisplayViews = true
+      GSS.View.byId[id]?.updateValues?(obj)
+    
+    # batch DOM writes top -> down
+    if needsToDisplayViews
+      if @scope 
+        GSS.get.view(@scope).displayIfNeeded()
+    # else, w/o scope, engine does not write, just read    
     
     @validate()    
     
-    GSS.observe()
-    @dispatch "solved", {values:@vars}    
+    GSS.observe()    
+    @dispatchedTrigger "solved", {values:@vars} 
     TIME_END "#{@id} DISPLAY PASS"
-    #    
+        
     #@layoutSubTreeIfNeeded()    
+    
+    @    
+  
+  
+  # Measurement
+  # ------------------------------------------------
   
   validate: ->
     # TODO: 
     # - validate only when intrinsic opposites change?
     # - batch validations
-    @commander.validateMeasures()    
+    @commander.validateMeasures()
   
-  load: () =>
-    LOG @id,".loadASTs()"
-    if @is_running
-      @clean()
-    #@run( @getter.readAllASTs() )
-    ASTs = []
-    for node in @getter.getAllStyleNodes()
-      # TODO: coordinate with global style query better
-      if @scope is GSS.get.scopeForStyleNode node
-        AST = @getter.readAST node
-        if AST then ASTs.push AST
-    @ASTs = ASTs
-    #
-    @setNeedsUpdate true
-    #@run ASTs
-    @
+  measureByGssId: (id, prop) ->    
+    el = GSS.getById id
+    val = @getter.measure(el, prop)
+    LOG @id,".measureByGssId()", id, prop, val
+    return val
     
-  # clean when scope insides changes, but if scope changes must destroy
-  clean: () ->
-    LOG @id,".clean()"
-    # event listeners
-    @offAll()
-    #
-    @setNeedsLayout  false
-    @setNeedsDisplay false
-    @setNeedsLayout  false
-    @waitingToLayoutSubtree = false
-    #
-    @commander.clean()
-    @getter.clean?() 
-    @setter.clean?()
-    #
-    @CSSDumper_clean()
-    # clean vars
-    @workerCommands = []
-    #@workerMessageHistory = [] keep history
-    @lastWorkerCommands = null    
-    #
-    for key, val of @vars
-      delete @vars[key]
-    #@varKeysByTacker = {}
-    #@varKeys = []
-    #
-    if @worker
-      @worker.terminate()
-      @worker = null
-    #
-    for selector, query of @queryCache
-      query.destroy()
-      @queryCache[selector] = null
-    @queryCache = {}
-    @
   
-  stopped: false
-  
-  stop: ->
-    console.warn "Stop deprecated for destroy"
-    @destroy()
-    @
-  
-  is_destroyed: false
-  
-  destroyChildren: () ->
-    for e in @childEngines
-      if !e.is_destroyed
-        e.destroy()
-  
-  destroy: ->
-    LOG @id,".destroy()"
-    @hoistedTrigger "beforeDestroy", @
-    # kill all descdendant el tracking b/c memory
-    descdendants = GSS.get.descdendantNodes @scope
-    for d in descdendants
-      kill = d._gss_id
-      if kill then GSS._id_killed kill
-              
-    # cascade destruction?
-    #@destroyChildren()
-    # event listeners
-    @offAll()
-    #
-    @setNeedsLayout  false
-    @setNeedsDisplay false
-    @setNeedsLayout  false
-    @waitingToLayoutSubtree = false
-    @is_destroyed = true
-    @is_running   = null
-    @commander.destroy()
-    @getter.destroy?() 
-    @setter.destroy?()
-    # update engine hierarchy
-    @parentEngine.childEngines.splice(@parentEngine.childEngines.indexOf(@),1)
-    @parentEngine = null
-    # remove from GSS.engines
-    i = engines.indexOf @
-    if i > -1 then engines.splice(i, 1)
-    delete engines.byId[@id]
-    # release ids
-    GSS._ids_killed([@id]) # TODO(D4): release children node ids?
-    #
-    @CSSDumper_destroy()
-    # release vars
-    @ast    = null    
-    @getter = null
-    @setter = null
-    @scope = null
-    @commander = null
-    @workerCommands = null
-    @workerMessageHistory = null
-    @lastWorkerCommands = null
-    #
-    @vars   = null
-    #@varKeysByTacker = null
-    #@varKeys = null
-    #
-    if @worker
-      @worker.terminate()
-      @worker = null
-    #
-    for selector, query of @queryCache
-      query.destroy()
-      @queryCache[selector] = null
-    @queryCache = null    
-    @
-  
-  is_observing: false
+  # Worker
+  # ------------------------------------------------
   
   solve: () ->
-    LOG @id,".solve()", @workerCommands
+    if @useWorker then @solveWithWorker() else @solveWithoutWorker()
+    
+  solveWithWorker: () ->
+    LOG @id,".solveWithWorker()", @workerCommands
     TIME "#{@id} DISPLAY PASS"
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
@@ -418,8 +340,65 @@ class Engine extends GSS.EventTrigger
     @lastWorkerCommands = @workerCommands
     @workerCommands = []
   
-  # els added or removed from queries
-  updateChildList: =>        
+  solveWithoutWorker: () ->
+    LOG @id,".solveWithoutWorker()", @workerCommands
+    workerMessage = {commands:@workerCommands}
+    @workerMessageHistory.push workerMessage    
+    unless @worker
+      @worker = new GSS.Thread()
+    @worker.postMessage workerMessage    
+    @handleWorkerMessage {data:values:@worker.getValues()}
+    # resetWorkerCommands
+    @lastWorkerCommands = @workerCommands
+    @workerCommands = []
+  
+  handleWorkerMessage: (message) =>
+    LOG @id,".handleWorkerMessage()",@workerCommands    
+        
+    @vars = message.data.values
+    
+    #@setNeedsDisplay(true)
+    
+    @display()    
+
+    #@dispatch "solved", {values:@vars} 
+  
+  handleError: (event) ->
+    return @onError event if @onError
+    throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"
+  
+  _Worker_destroy: () ->
+    if @worker
+      @worker.terminate()
+      @worker = null
+    @workerCommands = null
+    @workerMessageHistory = null
+    @lastWorkerCommands = null
+  
+  _Worker_clean: () ->
+    @workerCommands = []
+    #@workerMessageHistory = [] keep history
+    @lastWorkerCommands = null
+    if @worker
+      @worker.terminate()
+      @worker = null
+    
+  
+  # Queries
+  # ----------------------------------------
+  
+  registerDomQuery: (o) ->    
+    selector = o.selector
+    if @queryCache[selector]?
+      return @queryCache[selector]
+    else      
+      query = new GSS.Query(o)
+      query.update()
+      @queryCache[selector] = query
+      return query
+    
+  updateQueries: =>        
+    # els added or removed from queries
     selectorsWithAdds = []
     removes = []
     globalRemoves = []
@@ -452,27 +431,35 @@ class Engine extends GSS.EventTrigger
       if trigger
         @commander.handleRemoves removes
         @commander.handleSelectorsWithAdds selectorsWithAdds
-      return trigger     
+      return trigger                     
   
-  measureByGssId: (id, prop) ->    
-    el = GSS.getById id
-    val = @getter.measure(el, prop)
-    LOG @id,".measureByGssId()", id, prop, val
-    return val              
+  _Queries_destroy: () ->
+    for selector, query of @queryCache
+      query.destroy()
+      @queryCache[selector] = null
+    @queryCache = null
   
-  handleWorkerMessage: (message) =>
-    LOG @id,".handleWorkerMessage()",@workerCommands    
-    #cleanAndSnatch message.data.values, @vars
-    @vars = message.data.values
+  _Queries_clean: () ->    
+    for selector, query of @queryCache
+      query.destroy()
+      @queryCache[selector] = null
+    @queryCache = {}
+  
+  # Events
+  # ----------------------------------------
     
-    #@setNeedsDisplay(true)
-    @display()
-    
-    #@setter.set @vars
-
-    #@dispatch "solved", {values:@vars}  
-
+  hoistedTrigger: (ev,obj) ->
+    # Trigger event on self then GSS.engines.
+    # Allows ev delegation for engine lifecycle.
+    @trigger ev, obj
+    GSS.trigger "engine:"+ev, obj
+  
+  dispatchedTrigger: (e, o, b, c)->
+    @trigger e, o
+    @dispatch e, o, b, c
+  
   dispatch: (eName, oDetail = {}, bubbles = true, cancelable = true) =>
+    return unless @scope
     oDetail.engine = @
     o = {
       detail:oDetail
@@ -481,10 +468,6 @@ class Engine extends GSS.EventTrigger
     }
     e = new CustomEvent eName, o
     @scope.dispatchEvent e
-
-  handleError: (event) ->
-    return @onError event if @onError
-    throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"    
 
   registerCommands: (commands) ->
     for command in commands
@@ -495,18 +478,96 @@ class Engine extends GSS.EventTrigger
     @workerCommands.push command
     #
     @setNeedsLayout true
-    @
-
-  registerDomQuery: (o) ->    
-    selector = o.selector
-    if @queryCache[selector]?
-      return @queryCache[selector]
-    else      
-      query = new GSS.Query(o)
-      query.update()
-      @queryCache[selector] = query
-      return query
+    @  
   
+  
+  # Clean
+  # ------------------------------------------------
+  #
+  # clean when scope insides changes, but if scope changes must destroy
+  
+  clean: () ->    
+    LOG @id,".clean()"
+    
+    # event listeners
+    @offAll()
+    
+    for key, val of @vars
+      delete @vars[key]
+
+    @setNeedsLayout  false
+    @setNeedsDisplay false
+    @setNeedsLayout  false
+    @waitingToLayoutSubtree = false        
+    
+    @commander.clean()
+    @getter.clean?()
+    
+    @_CSSDumper_clean()
+    @_Worker_clean()
+    @_Queries_clean()
+        
+    @
+  
+  # Destruction
+  # ------------------------------------------------
+  
+  is_destroyed: false
+  
+  destroyChildren: () ->
+    for e in @childEngines
+      if !e.is_destroyed
+        e.destroy()
+  
+  destroy: ->
+    LOG @id,".destroy()"
+    @hoistedTrigger "beforeDestroy", @        
+    
+    # release ids
+    GSS._ids_killed([@id]) # TODO(D4): release children node ids?
+    
+    # release children ids
+    if @scope
+      descdendants = GSS.get.descdendantNodes @scope
+      for d in descdendants
+        kill = d._gss_id
+        if kill then GSS._id_killed kill
+    
+    # remove from GSS.engines
+    i = engines.indexOf @
+    if i > -1 then engines.splice(i, 1)
+    delete engines.byId[@id]
+        
+    # cascade destruction?
+    #@destroyChildren()        
+              
+    # event listeners
+    @offAll()
+    
+    @setNeedsLayout  false
+    @setNeedsDisplay false
+    @setNeedsLayout  false
+    @waitingToLayoutSubtree = false    
+    
+    @commander.destroy()    
+    @getter.destroy?()     
+            
+    @vars   = null
+    @ast    = null    
+    @getter = null
+    @scope = null
+    @commander = null    
+    
+    @_Hierarchy_destroy()
+    @_CSSDumper_destroy()
+    @_Worker_destroy()
+    @_Queries_destroy()
+    
+    @is_running   = null
+    @is_destroyed = true
+      
+    @
+    
   
   # Constraint Creation Helpers
   # ----------------------------------------
