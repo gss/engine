@@ -1,3 +1,4 @@
+Thread = GSS.Thread
 
 describe 'Cassowary Thread', ->
   it 'should instantiate', ->
