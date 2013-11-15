@@ -88,15 +88,14 @@ module.exports = ->
       worker:
         src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
         dest: 'worker/gss-solver.js'
-      
-      vendorless:
-        src: ['browser/gss-engine.js']
-        dest: 'browser/gss-engine-vendorless.js'
-      
-      dist:
-        src: ['browser/gss-engine.js', 'vendor/c.js', 'vendor/sidetable.js', 'vendor/MutationObserver.js']
-        dest: 'browser/gss-engine.js'
-      
+      ###
+      vendors:
+        options:
+          banner: 'module.exports = function(){'
+          footer: '};'
+        src: ['vendor/c.js', 'vendor/sidetable.js', 'vendor/MutationObserver.js']
+        dest: 'lib/vendor.js'
+      ###
       ###
       blob:
         options:
@@ -161,7 +160,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build', ['coffee', 'uglify:worker', 'concat:worker', 'component', 'component_build', 'concat:vendorless', 'concat:dist', 'uglify:engine']
+  @registerTask 'build', ['coffee', 'uglify:worker', 'concat:worker', 'component', 'component_build', 'uglify:engine']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

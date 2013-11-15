@@ -17,7 +17,8 @@
     "lib/dom/IdMixin.js"
   ],
   "dependencies": {
-    "d4tocchini/customevent-polyfill": "*"
+    "d4tocchini/customevent-polyfill": "*",
+    "slightlyoff/cassowary.js": "*"
   },
   "files": [
     "vendor/c.js",
