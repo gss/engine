@@ -50,9 +50,7 @@ GSS.config =
 # overwrite config if provided
 if GSS_CONFIG?  
   for key, val of GSS_CONFIG
-    console.log key, val
     GSS.config[key] = val
-    console.log GSS.config[key]
     
 # Debuging
 # ------------------------------------------------
