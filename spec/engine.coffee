@@ -79,12 +79,8 @@ describe 'GSS engine', ->
   
   describe 'scopeless & no web workers via GSS.config', ->
     e = null
-    before ->
-      GSS.config.useWorker = false
-    after ->
-      GSS.config.useWorker = true
     it 'should initialize', ->
-      e = new GSS.Engine()
+      e = new GSS.Engine({useWorker:false})
       assert e.useWorker? and !e.useWorker,"set useWorker"
     it 'engine hierarchy', ->
       assert(e.parentEngine is GSS.engines.root)
@@ -108,54 +104,63 @@ describe 'GSS engine', ->
     
   
   describe 'with rule #button1[width] == #button2[width]', ->
-    before ->
-      fixtures = document.getElementById 'fixtures'
-      container = document.createElement 'div'
-      fixtures.appendChild container
-      engine = GSS(container)
-
-    after (done) ->
-      remove(container)
-      done()
     
-    ast =
-      selectors: [
-        '#button1'
-        '#button2'
-      ]
-      commands: [
-        ['var', '#button1[width]', 'width', ['$id', 'button1']]
-        ['var', '#button2[width]', 'width', ['$id', 'button2']]
-        ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
-        ['eq', ['get', '#button1[width]'], ['number', '100']]
-      ]
-    button1 = null
-    button2 = null
-    it 'before solving the second button should be wider', ->
-      container.innerHTML = """
-        <button id="button1">One</button>
-        <button id="button2">Second</button>
-        <button id="button3">Three</button>
-        <button id="button4">4</button>
-      """
-      button1 = container.querySelector '#button1'
-      button2 = container.querySelector '#button2'
-      expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
-    it 'after solving the buttons should be of equal width', (done) ->
-      onSolved = (e) ->
-        values = e.detail.values
-        expect(values).to.be.an 'object'
-        expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
-        expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
-        container.removeEventListener 'solved', onSolved
-        done()
-      container.addEventListener 'solved', onSolved
-      engine.onError = (error) ->
-        assert("#{event.message} (#{event.filename}:#{event.lineno})").to.equal ''
-        engine.onError = null
-        done()
-      engine.run ast
-  
+    test = (useWorker) ->
+      engine = null
+      container = null
+      describe "useWorker: #{useWorker}", ->
+        before ->
+          fixtures = document.getElementById 'fixtures'
+          container = document.createElement 'div'
+          fixtures.appendChild container
+          engine = GSS({scope:container, useWorker:useWorker})
+          container.innerHTML = """
+            <button id="button1">One</button>
+            <button id="button2">Second</button>
+            <button id="button3">Three</button>
+            <button id="button4">4</button>
+          """
+        after (done) ->
+          remove(container)
+          # have to manually destroy, otherwise there is some clash!
+          engine.destroy()
+          done()
+    
+        ast =
+          selectors: [
+            '#button1'
+            '#button2'
+          ]
+          commands: [
+            ['var', '#button1[width]', 'width', ['$id', 'button1']]
+            ['var', '#button2[width]', 'width', ['$id', 'button2']]
+            ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
+            ['eq', ['get', '#button1[width]'], ['number', '100']]
+          ]
+        button1 = null
+        button2 = null
+        it 'should useWorker or not', ->
+          if GSS.config is useWorker
+            assert useWorker is engine.useWorker
+            
+        it 'before solving the second button should be wider', ->
+          button1 = container.querySelector '#button1'
+          button2 = container.querySelector '#button2'
+          expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
+        it 'after solving the buttons should be of equal width', (done) ->
+          onSolved = (e) ->
+            values = e.detail.values
+            expect(values).to.be.an 'object'
+            expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
+            expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
+            container.removeEventListener 'solved', onSolved
+            done()
+          container.addEventListener 'solved', onSolved
+          engine.run ast
+          
+    test(true)
+    test(false)
+    
   describe 'Math', ->
     before ->
       fixtures = document.getElementById 'fixtures'

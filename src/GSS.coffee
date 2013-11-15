@@ -46,10 +46,13 @@ GSS.config =
   useWorker: !!window.Worker
   workerURL: '../browser/gss-engine/worker/gss-solver.js'
 
+
 # overwrite config if provided
-if GSS_CONFIG?
+if GSS_CONFIG?  
   for key, val of GSS_CONFIG
+    console.log key, val
     GSS.config[key] = val
+    console.log GSS.config[key]
     
 # Debuging
 # ------------------------------------------------

@@ -346,8 +346,10 @@ class Engine extends GSS.EventTrigger
     @workerMessageHistory.push workerMessage    
     unless @worker
       @worker = new GSS.Thread()
-    @worker.postMessage workerMessage    
-    @handleWorkerMessage {data:values:@worker.getValues()}
+    @worker.postMessage _.cloneDeep workerMessage
+    _.defer => # must simulate asynch for life cycle to work
+      if @worker
+        @handleWorkerMessage {data:values:@worker.getValues()}
     # resetWorkerCommands
     @lastWorkerCommands = @workerCommands
     @workerCommands = []

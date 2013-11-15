@@ -32,6 +32,16 @@ _ =
       timeout = setTimeout(later, wait)  unless timeout
       result = func.apply(context, args)  if callNow
       result
+  
+  cloneDeep: (obj) ->
+    return JSON.parse(JSON.stringify(obj))
+  
+  cloneObject: (obj) ->
+    target = {}
+    for i of obj
+      if obj.hasOwnProperty(i)
+        target[i] = obj[i]
+    return target
       
   filterVarsForDisplay: (vars) ->
     obj = {}
