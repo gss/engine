@@ -224,7 +224,8 @@ class Engine extends GSS.EventTrigger
   layout: () ->
     LOG @id,".layout()"
     @hoistedTrigger "beforeLayout", @
-    @is_running = true    
+    @is_running = true
+    TIME "#{@id} LAYOUT & DISPLAY"
     @solve()
     @setNeedsLayout false
     #@hoistedTrigger "afterLayout", @
@@ -297,7 +298,7 @@ class Engine extends GSS.EventTrigger
     
     GSS.observe()    
     @dispatchedTrigger "solved", {values:@vars} 
-    TIME_END "#{@id} DISPLAY PASS"
+    TIME_END "#{@id} LAYOUT & DISPLAY"
         
     #@layoutSubTreeIfNeeded()    
     
@@ -328,7 +329,7 @@ class Engine extends GSS.EventTrigger
     
   solveWithWorker: () ->
     LOG @id,".solveWithWorker()", @workerCommands
-    TIME "#{@id} DISPLAY PASS"
+    
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
     unless @worker
