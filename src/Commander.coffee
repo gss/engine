@@ -151,7 +151,7 @@ class Commander
     # - only listen once, not for each prop
     GSS.on "engine:beforeDisplay", (engine) ->
       val = engine.vars[key]
-      if val
+      if val?
         if thisEngine.isDescendantOf engine
           thisEngine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
       
@@ -481,14 +481,15 @@ class Commander
 
   # mutli
   '$class': (root,sel) =>
-    query = @engine.registerDomQuery selector:"."+sel, isMulti:true, isLive:true, createNodeList:() =>
+    query = @engine.registerDomQuery selector:"."+sel, isMulti:true, isLive:false, createNodeList:() =>
+      #return @engine.queryScope.querySelectorAll("."+sel)
       return @engine.queryScope.getElementsByClassName(sel)
     bindRoot root, query
     return query
 
   # mutli
   '$tag': (root,sel) =>
-    query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:true, createNodeList:() =>
+    query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:false, createNodeList:() =>
       return @engine.queryScope.getElementsByTagName(sel)
     bindRoot root, query
     return query

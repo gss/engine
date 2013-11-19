@@ -303,6 +303,7 @@ describe 'GSS Engine with styleNode', ->
 
 describe 'GSS Engine Life Cycle', ->  
   container = null
+  fixtures = null
   
   before ->
     fixtures = document.getElementById 'fixtures'
@@ -377,8 +378,8 @@ describe 'GSS Engine Life Cycle', ->
         """
       listener = (e) ->
         engine2 = GSS(container)
-        expect(engine1).to.equal engine2
-        expect(engine1.vars['[col-width-1]']).to.equal undefined
+        assert engine1 is engine2, "engine is maintained" 
+        assert !engine1.vars['[col-width-1]']?, "engine1.vars['[col-width-1]'] removed" 
         expect(engine1.vars['[col-width-11]']).to.equal undefined
         expect(engine1.vars['[col-width-2]']).to.equal 222
         container.removeEventListener 'solved', listener
@@ -427,8 +428,8 @@ describe 'GSS Engine Life Cycle', ->
         done()
       setTimeout wait, 1
     
-    it 'new Engine after container readded', () ->
-      fixtures.appendChild container
+    it 'new Engine after container re-added', () ->      
+      fixtures.appendChild container      
       engine3 = GSS(container)
       expect(engine1).to.not.equal engine3
 
@@ -516,6 +517,7 @@ describe 'Nested Engine', ->
 
 
 describe 'Engine Hierarchy', ->  
+  body = document.getElementsByTagName('body')[0] # for polymer b/c document.body is "unwrapped"
   
   describe 'root engine', ->
     root = null
@@ -534,7 +536,7 @@ describe 'Engine Hierarchy', ->
       """
       style = document.getElementById "root-styles"
       scope = GSS.get.scopeFor style
-      expect(scope).to.equal document.body
+      expect(scope).to.equal body
       remove(style)
       
   describe 'nesting', ->
@@ -566,7 +568,7 @@ describe 'Engine Hierarchy', ->
     it 'nested style tags have correct scope', () ->      
       style1 = document.getElementById "root-styles-1"
       scope1 = GSS.get.scopeFor style1
-      expect(scope1).to.equal document.body
+      expect(scope1).to.equal body
       style2 = document.getElementById "root-styles-2"
       scope2 = GSS.get.scopeFor style2
       expect(scope2).to.equal document.getElementById "scope2"

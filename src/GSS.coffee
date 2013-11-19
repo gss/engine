@@ -204,10 +204,10 @@ _scopesToLoad = null
 
 styleQuery = GSS.styleQuery = new GSS.Query
   selector:"style"
-  isLive: true
+  isLive: false
   isMulti: true
   createNodeList: () ->
-    return document.getElementsByTagName "style"
+    return document.querySelectorAll "style"
 
 styleQuery.on 'afterChange', () ->
     #LOG "afterStyleChange"    

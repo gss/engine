@@ -72,9 +72,10 @@ class Getter
   
   getAllStyleNodes: () ->
     # get live nodeList only once
-    if !@styleNodes
-      @styleNodes = @scope.getElementsByTagName("style")
-    return @styleNodes
+    #if !@styleNodes
+    #  @styleNodes = @scope.getElementsByTagName("style")
+    #return @styleNodes
+    return @scope.getElementsByTagName("style")
   
   readAllASTs: () ->
     ASTs = []
@@ -144,6 +145,9 @@ class Getter
   
 
 Getter.getRootScope = ->
-  return document.body
+  if !ShadowDOMPolyfill?
+    return document.body
+  else
+    return ShadowDOMPolyfill.wrap document.body
 
 module.exports = Getter
