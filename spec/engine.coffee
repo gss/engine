@@ -6,13 +6,18 @@ expect = chai.expect
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
+fixtures = null
+
+it "fixtures", ->
+  fixtures = document.getElementById 'fixtures'
+  assert !!fixtures, "fixtures are there"
+
 describe 'GSS engine', ->
   container = null
   engine = null  
 
   describe 'when initialized', ->
     before ->
-      fixtures = document.getElementById 'fixtures'
       container = document.createElement 'div'
       fixtures.appendChild container
       engine = GSS(container)
@@ -108,9 +113,11 @@ describe 'GSS engine', ->
     test = (useWorker) ->
       engine = null
       container = null
+      button1 = null
+      button2 = null
+      
       describe "useWorker: #{useWorker}", ->
         before ->
-          fixtures = document.getElementById 'fixtures'
           container = document.createElement 'div'
           fixtures.appendChild container
           engine = GSS({scope:container, useWorker:useWorker})
@@ -137,8 +144,7 @@ describe 'GSS engine', ->
             ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
             ['eq', ['get', '#button1[width]'], ['number', '100']]
           ]
-        button1 = null
-        button2 = null
+        
         it 'should useWorker or not', ->
           if GSS.config is useWorker
             assert useWorker is engine.useWorker
@@ -160,10 +166,70 @@ describe 'GSS engine', ->
           
     test(true)
     test(false)
+  
+  describe 'with rule h1[line-height] == h1[font-size] == 42', ->
     
+    test = (useWorker) ->
+      engine = null
+      container = null
+      text1 = null
+      text2 = null
+      
+      describe "useWorker: #{useWorker}", ->
+        before ->
+          container = document.createElement 'div'
+          fixtures.appendChild container
+          engine = GSS({scope:container, useWorker:useWorker})
+          container.innerHTML = """
+            <h1 style="line-height:12px;font-size:12px;">One</h1>
+            <h1 style="line-height:12px;font-size:12px;">Two</h1>
+          """
+          
+        after (done) ->
+          remove(container)
+          # have to manually destroy, otherwise there is some clash!
+          engine.destroy()
+          done()
+    
+        ast =
+          selectors: [
+            '#text'
+          ]
+          commands: [
+            ['var', 'h1[line-height]', 'line-height', ['$tag', 'h1']]
+            ['var', 'h1[font-size]', 'font-size', ['$tag', 'h1']]
+            ['eq', ['get', 'h1[line-height]'], ['get', 'h1[font-size]']]
+            ['eq', ['get', 'h1[line-height]'], ['number', '42']]
+          ]
+        
+        it 'should useWorker or not', ->
+          if GSS.config is useWorker
+            assert useWorker is engine.useWorker
+            
+        it 'before solving', ->
+          text1 = container.getElementsByTagName('h1')[0]
+          text2 = container.getElementsByTagName('h1')[1]
+          assert text1.style['line-height'] is "12px"
+          assert text2.style['line-height'] is "12px"
+          assert text1.style['font-size'] is "12px"
+          assert text2.style['font-size'] is "12px"          
+        it 'after solving', (done) ->
+          onSolved = (e) ->
+            values = e.detail.values
+            assert text1.style['line-height'] is "42px"
+            assert text2.style['line-height'] is "42px"
+            assert text1.style['font-size'] is "42px"
+            assert text2.style['font-size'] is "42px"
+            container.removeEventListener 'solved', onSolved
+            done()
+          container.addEventListener 'solved', onSolved
+          engine.run ast
+          
+    test(true)
+  
+  
   describe 'Math', ->
     before ->
-      fixtures = document.getElementById 'fixtures'
       container = document.createElement 'div'
       fixtures.appendChild container
       engine = GSS(container)
@@ -195,7 +261,6 @@ describe 'GSS engine', ->
     container = null
   
     beforeEach ->
-      fixtures = document.getElementById 'fixtures'
       container = document.createElement 'div'
       fixtures.appendChild container
       engine = GSS(container)
@@ -267,7 +332,6 @@ describe 'GSS Engine with styleNode', ->
   fixtures = null
   
   before ->
-    fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
   
@@ -306,7 +370,6 @@ describe 'GSS Engine Life Cycle', ->
   fixtures = null
   
   before ->
-    fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
   
@@ -437,7 +500,6 @@ describe 'CSS Dump /', ->
   container = null
   
   before ->
-    fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
   
@@ -474,7 +536,6 @@ describe 'Nested Engine', ->
   wrapEngine = null
   
   before ->
-    fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
     #        
@@ -521,9 +582,6 @@ describe 'Engine Hierarchy', ->
   
   describe 'root engine', ->
     root = null
-    fixtures = null
-    before ->
-      fixtures = document.getElementById 'fixtures'
     it 'is initialized', ->
       root = GSS.engines.root
       expect(root).to.exist
@@ -669,7 +727,6 @@ describe 'framed scopes', ->
   wrapEngine = null
   
   before ->
-    fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     container.id = "wrap-container"
     fixtures.appendChild container
@@ -757,7 +814,6 @@ describe '::This framed view', ->
   wrapEngine = null
   
   before ->
-    fixtures = document.getElementById 'fixtures'
     container = document.createElement 'div'
     fixtures.appendChild container
     #        

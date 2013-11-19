@@ -71,20 +71,29 @@ class View
   needsDisplay: false
 
   display: (offsets) ->
-    o = @values
-    #if o
+    #o = @values
+    return unless @values
+    o = {}
+    for key, val of @values
+      o[key] = val
     if o.x? or o.y?
       @style[transformPrefix] = "" # " translateZ(0px)"
       if o.x?
         #@style.left = o.x - offsets.x + "px"
         @style[transformPrefix] += " translateX(#{o.x - offsets.x}px)"
+        delete o.x
       if o.y?
         #@style.top = o.y - offsets.y + "px"
         @style[transformPrefix] += " translateY(#{o.y - offsets.y}px)"        
+        delete o.y
     if o.width?
       @style.width = o.width + "px"
+      delete o.width
     if o.height?
       @style.height = o.height + "px"
+      delete o.height
+    for key,val of o
+      @style[key] = val + "px"
     for key, val of @style
       @el.style[key] = val
   
