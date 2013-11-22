@@ -1,0 +1,19 @@
+<polymer-element name="poly-test" lightdom>
+  <template>
+    <section>
+      <div class="poly-test-child poly-test-child1">
+        <form>
+          <div class="poly-test-child poly-test-child2">      
+          </div>
+        </form>
+      </div>
+    </section>
+  </template>
+  <script>  
+    Polymer('poly-test', {
+      ready: function() {
+        this.fire("bangbang", {msg:'boo'});
+      }
+    });
+  </script>
+</polymer-element>
