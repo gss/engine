@@ -11,7 +11,9 @@ firstSupportedStylePrefix = (prefixedPropertyNames) ->
 
 transformPrefix = firstSupportedStylePrefix(["transform", "msTransform", "MozTransform", "WebkitTransform", "OTransform"])
 
-class View  
+class View
+  
+  @transformPrefix: transformPrefix
   
   constructor: () ->
     @values = {}
@@ -30,14 +32,14 @@ class View
     @el = null
     delete View.byId[@id]
     @id = null
-    @offsets = null
+    @parentOffsets = null
     @style = null    
     @values = {}
     View.recycled.push @
       
   is_positioned: false
   
-  setupForPositioning: () ->
+  positionIfNeeded: () ->
     #@updateOffsets()
     if !@is_positioned
       @style.position = 'absolute'
@@ -46,16 +48,26 @@ class View
       @style.left = '0px'
     @is_positioned = true
         
-  updateOffsets: () ->
-    @offsets = @getOffsets()
-    
-  getOffsets: () ->
+  updateParentOffsets: () ->
+    @parentOffsets = @getParentOffsets()
+  
+  getParentOffsets: () ->
+    box = @el.getBoundingClientRect()
+    return {
+      y: box.top + (window.pageYOffset or document.documentElement.scrollTop) - (document.documentElement.clientTop or 0),
+      x: box.left + (window.pageXOffset or document.documentElement.scrollLeft) - (document.documentElement.clientLeft or 0)
+    }
+  
+  getParentOffsets__: () ->
+    # http://jsperf.com/offset-vs-getboundingclientrect/7
     el = @el
+    ###
     if !GSS.config.useOffsetParent 
       return { 
         x:0
         y:0
       }
+    ###
     offsets =
       x: 0
       y: 0
@@ -67,16 +79,19 @@ class View
       break unless el.offsetParent
       el = el.offsetParent
     return offsets
-
+  
   needsDisplay: false
-
+  
   display: (offsets) ->
-    #o = @values
+    #o = @values    
     return unless @values
     o = {}
     for key, val of @values
       o[key] = val
     if o.x? or o.y?
+      if @parentOffsets
+        offsets.x += @parentOffsets.x
+        offsets.y += @parentOffsets.y
       @style[transformPrefix] = "" # " translateZ(0px)"
       if o.x?
         #@style.left = o.x - offsets.x + "px"
@@ -86,18 +101,30 @@ class View
         #@style.top = o.y - offsets.y + "px"
         @style[transformPrefix] += " translateY(#{o.y - offsets.y}px)"        
         delete o.y
+    
+    if o['z-index']?
+      @style['z-index'] = o['z-index']
+      delete o['z-index']
+    ###   
+    if o['line-height']?
+      @style['line-height'] = o['line-height']
+      delete o['line-height']
+    ###
+    ###
     if o.width?
       @style.width = o.width + "px"
       delete o.width
     if o.height?
       @style.height = o.height + "px"
       delete o.height
+    ###
     for key,val of o
       @style[key] = val + "px"
     for key, val of @style
       @el.style[key] = val
+    @
   
-  displayIfNeeded: (offsets = {x:0,y:0}) ->
+  displayIfNeeded: (offsets = {x:0,y:0}, pass_to_children=true) ->
     if @needsDisplay 
       @display(offsets)      
       @setNeedsDisplay false
@@ -107,8 +134,9 @@ class View
     if @values.x
       offsets.x += @values.x
     if @values.y
-      offsets.y += @values.y
-    @_displayChildrenIfNeeded(offsets)
+      offsets.y += @values.y    
+    if pass_to_children
+      @displayChildrenIfNeeded(offsets)
   
   setNeedsDisplay: (bool) ->    
     if bool
@@ -116,22 +144,31 @@ class View
     else
       @needsDisplay = false
   
-  _displayChildrenIfNeeded: (offsets) ->
-    for child in @el.children
-      view = GSS.get.view(child)
-      if view
-        view.displayIfNeeded(offsets)    
+  displayChildrenIfNeeded: (offsets) ->
+    @_displayChildrenIfNeeded(@el, offsets, 0)
   
+  _displayChildrenIfNeeded: (el, offsets, recurseLevel) ->    
+    if recurseLevel <= GSS.config.maxDisplayRecursionDepth
+      for child in el.children
+        view = GSS.get.view(child)
+        if view
+          view.displayIfNeeded(offsets)
+        else
+          @_displayChildrenIfNeeded child, offsets, recurseLevel+1
+                
   # - digests css intentions to be used for `display()`
   # - used to batch last minute DOM reads (offsetParent)
   updateValues: (o) ->
-    @values = o
+    @values = o  
     
     # reset style
     @style = {}
+        
+    if @el.getAttribute('gss-parent-offsets')?
+      @updateParentOffsets()
 
     if (o.x?) or (o.y?) # assuming left & top are normalized
-      @setupForPositioning()
+      @positionIfNeeded()
       
     @setNeedsDisplay true           
 
@@ -147,7 +184,7 @@ class View
       el = el.parentElement
   
 
-
+# Pooling
 
 View.byId = {}
 

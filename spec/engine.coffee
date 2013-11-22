@@ -13,6 +13,7 @@ it "fixtures", ->
   assert !!fixtures, "fixtures are there"
 
 describe 'GSS engine', ->
+
   container = null
   engine = null  
 
@@ -225,8 +226,7 @@ describe 'GSS engine', ->
           container.addEventListener 'solved', onSolved
           engine.run ast
           
-    test(true)
-  
+    test(true)              
   
   describe 'Math', ->
     before ->

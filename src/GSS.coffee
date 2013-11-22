@@ -43,6 +43,7 @@ GSS.config =
   roundBeforeSet: false
   processBeforeSet: null # function
   useOffsetParent: true
+  maxDisplayRecursionDepth: 30
   useWorker: !!window.Worker
   workerURL: '../browser/gss-engine/worker/gss-solver.js'
 
