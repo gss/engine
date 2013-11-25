@@ -40,7 +40,7 @@ class Query extends GSS.EventTrigger
   update: () ->    
     LOG "update() @", @
     if @is_destroyed then throw new Error "Can't update destroyed query: #{selector}"
-    @changedLastUpdate = false    
+    @changedLastUpdate = false
     if !@isLive or !@_updated_once          
       @nodeList = @createNodeList()
       @_updated_once = true

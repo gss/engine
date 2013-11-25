@@ -253,7 +253,7 @@ class Commander
     ready = true
 
     for q in queries
-      if q.lastAddedIds.length < 0
+      if q.lastAddedIds.length <= 0
         ready = false
         break
       if q isnt queries.multi
@@ -518,7 +518,7 @@ class Commander
     query = @engine.registerDomQuery selector:"#"+sel, isMulti:false, isLive:false, createNodeList:() =>
       # TODO: handle scope.getElementById for web components?
       el = document.getElementById(sel)
-      return [el]
+      if el then return [el] else return []
     bindRoot root, query
     return query
 

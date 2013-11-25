@@ -3,6 +3,12 @@ Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 assert = chai.assert
 expect = chai.expect
 
+$  = () ->
+  return document.querySelector arguments...
+  
+$$ = () -> 
+  return document.querySelectorAll arguments...
+
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 
@@ -20,7 +26,7 @@ describe 'GSS engine', ->
   describe 'when initialized', ->
     before ->
       container = document.createElement 'div'
-      fixtures.appendChild container
+      $('#fixtures').appendChild container
       engine = GSS(container)
 
     after (done) ->
@@ -120,7 +126,7 @@ describe 'GSS engine', ->
       describe "useWorker: #{useWorker}", ->
         before ->
           container = document.createElement 'div'
-          fixtures.appendChild container
+          $('#fixtures').appendChild container
           engine = GSS({scope:container, useWorker:useWorker})
           container.innerHTML = """
             <button id="button1">One</button>
@@ -179,7 +185,7 @@ describe 'GSS engine', ->
       describe "useWorker: #{useWorker}", ->
         before ->
           container = document.createElement 'div'
-          fixtures.appendChild container
+          $('#fixtures').appendChild container
           engine = GSS({scope:container, useWorker:useWorker})
           container.innerHTML = """
             <h1 style="line-height:12px;font-size:12px;">One</h1>
@@ -228,10 +234,90 @@ describe 'GSS engine', ->
           
     test(true)              
   
+  describe 'Before IDs exist', ->
+    engine = null
+    container = null
+    button1 = null
+    button2 = null
+    
+    before ->
+      container = document.createElement 'div'
+      $('#fixtures').appendChild container
+      engine = GSS({scope:container})
+      container.innerHTML = """
+      """
+    
+    after (done) ->
+      remove(container)
+      # have to manually destroy, otherwise there is some clash!
+      engine.destroy()
+      done()
+    
+    ast =
+      selectors: [
+        '#button1'
+        '#button2'
+      ]
+      commands: [
+        ['var', '#button1[width]', 'width', ['$id', 'button1']]
+        ['var', '#button2[width]', 'width', ['$id', 'button2']]
+        ['eq', ['get', '#button2[width]'], ['number', '222']]
+        ['eq', ['get', '#button1[width]'], ['number', '111']]        
+      ]
+    
+    it 'before solving buttons dont exist', ->
+      button1 = container.querySelector '#button1'
+      button2 = container.querySelector '#button2'
+      assert !button1, "button1 doesn't exist"
+      assert !button2, "button2 doesn't exist"
+    
+    it 'engine remains idle',  ->      
+      engine.run ast
+      assert engine.workerCommands.length is 0, 'engine has no commands for worker'
+      assert engine.workerMessageHistory.length is 0, 'engine sent nothing to worker'
+    
+    it 'after solving the buttons should be of equal width', (done) ->
+      onSolved = (e) ->
+        values = e.detail.values
+        expect(values).to.be.an 'object'
+        w = Math.round(button1.getBoundingClientRect().width)
+        assert w is 111, "button1 width: #{w}"
+        w = Math.round(button2.getBoundingClientRect().width)
+        assert w is 222, "button2 width: #{w}"
+        container.removeEventListener 'solved', onSolved
+        done()
+      container.addEventListener 'solved', onSolved
+      container.innerHTML = """
+        <button id="button2">Second</button>
+        <button id="button1">One</button>        
+      """
+      button1 = container.querySelector '#button1'
+      button2 = container.querySelector '#button2'
+    
+    ###
+    it 'before solving buttons dont exist', ->
+      button1 = container.querySelector '#button1'
+      button2 = container.querySelector '#button2'
+      assert button1, "button1 doesn't exist"
+      assert button2, "button2 doesn't exist"
+      
+    it 'after solving the buttons should be of equal width', (done) ->
+      onSolved = (e) ->
+        values = e.detail.values
+        expect(values).to.be.an 'object'
+        expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
+        expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
+        container.removeEventListener 'solved', onSolved
+        done()
+      container.addEventListener 'solved', onSolved
+      engine.run ast
+    ###
+    
+  
   describe 'Math', ->
     before ->
       container = document.createElement 'div'
-      fixtures.appendChild container
+      $('#fixtures').appendChild container
       engine = GSS(container)
 
     after (done) ->
@@ -262,7 +348,7 @@ describe 'GSS engine', ->
   
     beforeEach ->
       container = document.createElement 'div'
-      fixtures.appendChild container
+      $('#fixtures').appendChild container
       engine = GSS(container)
 
     afterEach (done) ->
@@ -329,11 +415,10 @@ describe 'GSS engine', ->
 describe 'GSS Engine with styleNode', ->
   container = null
   engine = null
-  fixtures = null
   
   before ->
     container = document.createElement 'div'
-    fixtures.appendChild container
+    $('#fixtures').appendChild container
   
   after ->
     remove(container)
@@ -367,11 +452,10 @@ describe 'GSS Engine with styleNode', ->
 
 describe 'GSS Engine Life Cycle', ->  
   container = null
-  fixtures = null
   
   before ->
     container = document.createElement 'div'
-    fixtures.appendChild container
+    $('#fixtures').appendChild container
   
   after ->
     remove(container)
@@ -492,7 +576,7 @@ describe 'GSS Engine Life Cycle', ->
       setTimeout wait, 1
     
     it 'new Engine after container re-added', () ->      
-      fixtures.appendChild container      
+      $('#fixtures').appendChild container      
       engine3 = GSS(container)
       expect(engine1).to.not.equal engine3
 
@@ -501,7 +585,7 @@ describe 'CSS Dump /', ->
   
   before ->
     container = document.createElement 'div'
-    fixtures.appendChild container
+    $('#fixtures').appendChild container
   
   after ->
     remove(container)
@@ -537,7 +621,7 @@ describe 'Nested Engine', ->
   
   before ->
     container = document.createElement 'div'
-    fixtures.appendChild container
+    $('#fixtures').appendChild container
     #        
     container.innerHTML =  """
       <section>
@@ -729,7 +813,7 @@ describe 'framed scopes', ->
   before ->
     container = document.createElement 'div'
     container.id = "wrap-container"
-    fixtures.appendChild container
+    $('#fixtures').appendChild container
     #        
     container.innerHTML =  """
         <style type="text/gss-ast">
@@ -815,7 +899,7 @@ describe '::This framed view', ->
   
   before ->
     container = document.createElement 'div'
-    fixtures.appendChild container
+    $('#fixtures').appendChild container
     #        
     container.innerHTML =  """
         <div id="wrap" style="width:100px;" data-gss-id="wrap">

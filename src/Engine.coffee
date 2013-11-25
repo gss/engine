@@ -429,12 +429,12 @@ class Engine extends GSS.EventTrigger
                 removes.push( selector + "$" + rid ) # .box$3454
               else # el removed just from selector
                 removes.push( "$" + rid )      
-      # clean up ids
-      GSS._ids_killed globalRemoves
-      if trigger
-        @commander.handleRemoves removes
-        @commander.handleSelectorsWithAdds selectorsWithAdds
-      return trigger                     
+    # clean up ids
+    GSS._ids_killed globalRemoves
+    if trigger
+      @commander.handleRemoves removes
+      @commander.handleSelectorsWithAdds selectorsWithAdds
+    return trigger                     
   
   _Queries_destroy: () ->
     for selector, query of @queryCache
