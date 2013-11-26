@@ -266,17 +266,17 @@ describe 'GSS engine', ->
       ]
     
     it 'before solving buttons dont exist', ->
+      engine.run ast
       button1 = container.querySelector '#button1'
       button2 = container.querySelector '#button2'
       assert !button1, "button1 doesn't exist"
       assert !button2, "button2 doesn't exist"
     
-    it 'engine remains idle',  ->      
-      engine.run ast
+    it 'engine remains idle',  ->            
       assert engine.workerCommands.length is 0, 'engine has no commands for worker'
       assert engine.workerMessageHistory.length is 0, 'engine sent nothing to worker'
     
-    it 'after solving the buttons should be of equal width', (done) ->
+    it 'after solving the buttons should have right', (done) ->
       onSolved = (e) ->
         values = e.detail.values
         expect(values).to.be.an 'object'
@@ -288,31 +288,79 @@ describe 'GSS engine', ->
         done()
       container.addEventListener 'solved', onSolved
       container.innerHTML = """
+      <div>        
         <button id="button2">Second</button>
         <button id="button1">One</button>        
+      </div>
       """
       button1 = container.querySelector '#button1'
       button2 = container.querySelector '#button2'
     
-    ###
-    it 'before solving buttons dont exist', ->
-      button1 = container.querySelector '#button1'
-      button2 = container.querySelector '#button2'
-      assert button1, "button1 doesn't exist"
-      assert button2, "button2 doesn't exist"
-      
-    it 'after solving the buttons should be of equal width', (done) ->
+  describe 'Before IDs exist - advanced', ->
+    engine = null
+    container = null
+    
+    before ->
+      container = document.createElement 'div'
+      $('#fixtures').appendChild container
+      engine = GSS({scope:container})
+      container.innerHTML = """
+        <div id="w">        
+        </div>
+      """
+    
+    after (done) ->
+      remove(container)
+      # have to manually destroy, otherwise there is some clash!
+      engine.destroy()
+      done()
+    
+
+    ast =
+      selectors: ["#b1", "#b2"]
+      commands: [
+        ["var", "#b1[x]", "x", ["$id", "b1"]]
+        ["var", "#b1[width]", "width", ["$id", "b1"]]
+        ['varexp', '#b1[right]', ['plus',['get','#b1[x]'],['get','#b1[width]']], ['$id','b1']]
+        ["var", "#b2[x]", "x", ["$id", "b2"]]
+        ["eq", ["get", "#b1[right]"], ["get", "#b2[x]"]]
+        
+        ["var", "#b2[width]", "width", ["$id", "b2"]]
+        ['varexp', '#b2[right]', ['plus',['get','#b2[x]'],['get','#b2[width]']], ['$id','b2']]
+        
+        ["var", "#w[x]", "x", ["$id", "w"]]        
+        ["var", "#w[width]", "width", ["$id", "w"]]
+        ['varexp', '#w[right]', ['plus',['get','#w[x]'],['get','#w[width]']], ['$id','w']]
+        
+        ['var', '[target]']
+        
+        ["eq", ["get", "#w[width]"], ["number", "200"]]
+        ["eq", ["get", "#w[x]"], ["get", '[target]']]
+        ["eq", ["get", "#b2[right]"], ["get", "#w[right]"]]
+        ["eq", ["get", "#b1[x]"], ["get", "[target]"]]        
+        ["eq", ["get", "#b1[width]"], ["get", "#b2[width]"]]
+        
+        ["eq", ["get", "[target]"], 0]
+      ]
+    
+    it 'after solving should have right size', (done) ->
       onSolved = (e) ->
-        values = e.detail.values
-        expect(values).to.be.an 'object'
-        expect(Math.round(button1.getBoundingClientRect().width)).to.equal 100
-        expect(Math.round(button2.getBoundingClientRect().width)).to.equal 100
+        w = Math.round($("#w").getBoundingClientRect().width)
+        assert w is 200, "w width: #{w}"
+        w = Math.round($('#b1').getBoundingClientRect().width)
+        assert w is 100, "button1 width: #{w}"
+        w = Math.round($('#b2').getBoundingClientRect().width)
+        assert w is 100, "button2 width: #{w}"
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-      engine.run ast
-    ###
-    
+      $('#w').innerHTML = """
+      <div>        
+           <div id="b1"></div>
+           <div id="b2"></div>
+      </div>
+      """
+      engine.run ast      
   
   describe 'Math', ->
     before ->
@@ -410,6 +458,41 @@ describe 'GSS engine', ->
           container.removeEventListener 'solved', onSolved
           done()
       container.addEventListener 'solved', onSolved
+      
+      
+  describe "Display pre-computed constraint values", ->
+    engine = null
+    container = null
+  
+    beforeEach ->
+      container = document.createElement 'div'
+      container.innerHTML = """
+        <div id="d1"></div>
+        <div id="d2"></div>
+        <div id="d3"></div>
+      """
+      $('#fixtures').appendChild container
+      engine = GSS(container)
+
+    afterEach (done) ->
+      remove(container)
+      done()
+      
+    it "force display on un-queried views", (done)->
+      onSolved = (e) ->
+        w = Math.round($('#d1').getBoundingClientRect().width)
+        assert w is 1, "d1 width: #{w}"
+        w = Math.round($('#d2').getBoundingClientRect().width)
+        assert w is 2, "d2 width: #{w}"
+        w = Math.round($('#d3').getBoundingClientRect().width)
+        assert w is 3, "d3 width: #{w}"
+        container.removeEventListener 'solved', onSolved
+        done()
+      container.addEventListener 'solved', onSolved
+      
+      engine.display {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}, true
+      
+    
 
   
 describe 'GSS Engine with styleNode', ->

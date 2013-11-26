@@ -60,8 +60,7 @@ class Engine extends GSS.EventTrigger
     @
         
       
-  getVarsById: () ->
-    vars = @vars
+  getVarsById: (vars) ->
     if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
     varsById = _.varsByViewId(_.filterVarsForDisplay(vars))
   
@@ -265,28 +264,34 @@ class Engine extends GSS.EventTrigger
       LOG @id,".setNeedsDisplay( #{bool} )"
       @needsDisplay = false
   
+  ###
   displayIfNeeded: () ->
     LOG @, "displayIfNeeded"
     if @needsDisplay #@workerCommands.length > 0
-      @display()      
+      @display(@vars)      
       @setNeedsDisplay false
     for child in @childEngines
       child.displayIfNeeded()
-      
-  display: () ->
+  ###
+   
+  display: (vars, forceViewCacheById=false) ->
     LOG @id,".display()"
     @hoistedTrigger "beforeDisplay", @        
     GSS.unobserve()
     
     #@dumpCSSIfNeeded()
     
-    varsById = @getVarsById()
+    varsById = @getVarsById(vars)
     
     # batch potential DOM reads
     needsToDisplayViews = false
     for id, obj of varsById
       needsToDisplayViews = true
-      GSS.View.byId[id]?.updateValues?(obj)
+      if forceViewCacheById
+        el = document.getElementById(id)
+        if el
+          GSS.setupId el
+      GSS.View.byId[id]?.updateValues?(obj)      
     
     # batch DOM writes top -> down
     if needsToDisplayViews
@@ -297,13 +302,15 @@ class Engine extends GSS.EventTrigger
     @validate()    
     
     GSS.observe()    
-    @dispatchedTrigger "solved", {values:@vars} 
+    @dispatchedTrigger "solved", {values:vars} 
     TIME_END "#{@id} LAYOUT & DISPLAY"
         
     #@layoutSubTreeIfNeeded()    
     
-    @    
+    @
   
+  forceDisplay: (vars) ->
+    
   
   # Measurement
   # ------------------------------------------------
@@ -362,7 +369,7 @@ class Engine extends GSS.EventTrigger
     
     #@setNeedsDisplay(true)
     
-    @display()    
+    @display(@vars)    
 
     #@dispatch "solved", {values:@vars} 
   
