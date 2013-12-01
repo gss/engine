@@ -391,13 +391,13 @@ class Commander
   'lte-chain': (root,head,tail,s,w) =>
     return @_chainer('lte',head,tail,s,w)
   
-  'gte-chain': (root,head,tail) =>
+  'gte-chain': (root,head,tail,s,w) =>
     return @_chainer('gte',head,tail,s,w)
   
-  'lt-chain': (root,head,tail) =>
+  'lt-chain': (root,head,tail,s,w) =>
     return @_chainer('lt',head,tail,s,w)
   
-  'gt-chain': (root,head,tail) =>
+  'gt-chain': (root,head,tail,s,w) =>
     return @_chainer('gt',head,tail,s,w)  
   
   _chainer: (op,head,tail,s,w) =>
