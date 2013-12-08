@@ -1,39 +1,42 @@
 
-#transformPrefix = Modernizr.prefixed('transform')
+transformPrefix = GSS._.transformPrefix
 
-# from: http://blogs.msdn.com/b/ie/archive/2011/10/28/a-best-practice-for-programming-with-vendor-prefixes.aspx
-firstSupportedStylePrefix = (prefixedPropertyNames) ->
-  tempDiv = document.createElement("div")
-  for name in prefixedPropertyNames
-    if (typeof tempDiv.style[name] != 'undefined')
-      return name
-  return null
-
-transformPrefix = firstSupportedStylePrefix(["transform", "msTransform", "MozTransform", "WebkitTransform", "OTransform"])
-
-class View
+class View  
   
-  @transformPrefix: transformPrefix
-  
-  constructor: () ->
+  constructor: () ->    
     @values = {}
     @
-    
-  attach: (@el,@id) =>
-    
+  
+  matrixType: null
+  
+  attach: (@el,@id) =>    
     if !@el then throw new Error "View needs el"
     if !@id then throw new Error "View needs id"
     View.byId[@id] = @
-    @is_positioned = false
+    @is_positioned = false   
+    
+    GSS.trigger 'view:attach', @
+    
+    if !@matrixType
+      @matrixType = GSS.config.defaultMatrixType
+    @Matrix = GSS.glMatrix[@matrixType] or throw new Error "View matrixType not found: #{@matrixType}"
+    if !@matrix # create once      
+      @matrix = @Matrix.create()
+    @
   
   recycle: () =>
+    
+    GSS.trigger 'view:detach', @
+    
     @scope = null
     @is_positioned = false
     @el = null
     delete View.byId[@id]
     @id = null
     @parentOffsets = null
-    @style = null    
+    @style = null
+    @Matrix.identity(@matrix)
+    @matrixType = null
     @values = {}
     View.recycled.push @
       
@@ -80,7 +83,7 @@ class View
       el = el.offsetParent
     return offsets
   
-  needsDisplay: false
+  needsDisplay: false  
   
   display: (offsets) ->
     #o = @values    
@@ -88,19 +91,24 @@ class View
     o = {}
     for key, val of @values
       o[key] = val
-    if o.x? or o.y?
+    if o.x? or o.y?      
       if @parentOffsets
         offsets.x += @parentOffsets.x
         offsets.y += @parentOffsets.y
-      @style[transformPrefix] = "" # " translateZ(0px)"
-      if o.x?
-        #@style.left = o.x - offsets.x + "px"
-        @style[transformPrefix] += " translateX(#{o.x - offsets.x}px)"
+      if o.x?        
+        xLocal = o.x - offsets.x
         delete o.x
+      else
+        xLocal = 0
       if o.y?
-        #@style.top = o.y - offsets.y + "px"
-        @style[transformPrefix] += " translateY(#{o.y - offsets.y}px)"        
-        delete o.y
+        yLocal = o.y - offsets.y
+        delete o.y 
+      else
+        yLocal = 0
+      #if o.z?
+      @values.xLocal = xLocal
+      @values.yLocal = yLocal      
+      @_positionMatrix(xLocal, yLocal)
     
     if o['z-index']?
       @style['z-index'] = o['z-index']
@@ -124,6 +132,16 @@ class View
       @el.style[key] = val
     @
   
+  ###
+  _positionTranslate: (xLocal, yLocal) ->
+    @style[transformPrefix] += " translateX(#{@xLocal}px)"
+    @style[transformPrefix] += " translateY(#{@yLocal}px)"        
+  ###
+  
+  _positionMatrix: (xLocal, yLocal) ->
+    @Matrix.translate(@matrix,@matrix,[xLocal,yLocal,0])
+    @style[transformPrefix] = GSS._[@matrixType + "ToCSS"]( @matrix )
+  
   displayIfNeeded: (offsets = {x:0,y:0}, pass_to_children=true) ->
     if @needsDisplay 
       @display(offsets)      
@@ -138,7 +156,7 @@ class View
     if pass_to_children
       @displayChildrenIfNeeded(offsets)
   
-  setNeedsDisplay: (bool) ->    
+  setNeedsDisplay: (bool) ->
     if bool
       @needsDisplay = true
     else
@@ -158,11 +176,12 @@ class View
                 
   # - digests css intentions to be used for `display()`
   # - used to batch last minute DOM reads (offsetParent)
-  updateValues: (o) ->
+  updateValues: (o) ->        
     @values = o  
     
-    # reset style
+    # reset style & matrix
     @style = {}
+    @Matrix.identity(@matrix)
         
     if @el.getAttribute('gss-parent-offsets')?
       @updateParentOffsets()

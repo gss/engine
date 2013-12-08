@@ -35,7 +35,9 @@ GSS = (o) ->
 
 GSS.config = 
   resizeDebounce: 32 # ~ 30 fps
+  defaultMatrixType: 'mat4' # 'mat2d'
   observe: true
+  observerOptions: {subtree: true, childList: true, attributes: true, characterData: true}
   debug: false
   warn: false
   perf: false
@@ -78,6 +80,7 @@ TIME_END = () ->
 
 window.GSS = GSS
 GSS._ = require("./_.js")
+GSS.glMatrix = require '../vendor/gl-matrix'
 GSS.EventTrigger = require("./EventTrigger.js")
 #GSS.workerURL = require("./WorkerBlobUrl.js")
 GSS.Getter = require("./dom/Getter.js")

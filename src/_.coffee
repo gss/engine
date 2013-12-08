@@ -1,8 +1,21 @@
 getTime = Date.now or ->
   return new Date().getTime()
 
-_ = 
+#transformPrefix = Modernizr.prefixed('transform')
 
+# from: http://blogs.msdn.com/b/ie/archive/2011/10/28/a-best-practice-for-programming-with-vendor-prefixes.aspx
+
+firstSupportedStylePrefix = (prefixedPropertyNames) ->
+  tempDiv = document.createElement("div")
+  for name in prefixedPropertyNames
+    if (typeof tempDiv.style[name] != 'undefined')
+      return name
+  return null
+
+_ = 
+  
+  transformPrefix: firstSupportedStylePrefix(["transform", "msTransform", "MozTransform", "WebkitTransform", "OTransform"])
+  
   defer: (func) ->
     setTimeout func, 1
     
@@ -66,6 +79,16 @@ _ =
         prop = key.substring(key.indexOf("[")+1, key.indexOf("]"))
         varsById[gid][prop] = val
     return varsById
+  
+  mat4ToCSS: (a) ->
+    return 'matrix3d(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
+      a[4] + ', ' + a[5] + ', ' + a[6] + ', ' + a[7] + ', ' +
+      a[8] + ', ' + a[9] + ', ' + a[10] + ', ' + a[11] + ', ' + 
+      a[12] + ', ' + a[13] + ', ' + a[14] + ', ' + a[15] + ')'
+  
+  mat2dToCSS: (a) ->
+    return 'matrix(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + 
+      a[3] + ', ' + a[4] + ', ' + a[5] + ')'
        
   #
   #cleanAndSnatch = (frm, to) ->

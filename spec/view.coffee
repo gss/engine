@@ -63,7 +63,7 @@ describe "GSS.View", ->
       container.addEventListener 'solved', onSolved
       engine.run ast
   
-  describe 'Display Pass passes down tranlated offsets', ->
+  describe 'Display passes down translated offsets, matrix3d & view:attach event', ->
     
     engine = null
     container = null
@@ -100,15 +100,26 @@ describe "GSS.View", ->
       q = document.getElementsByClassName('target')
       target1 = q[0]
       target2 = q[1]
-    it 'after solving', (done) ->
+    it 'matrix3d & view:attach event', (done) ->
+      
+      GSS.config.defaultMatrixType = 'mat4'
+      didAttach = false
+      
       onSolved = (e) ->
         values = e.detail.values
         assert e.detail.values['$target1[y]'] is 100, "solved value is 100. #{}"
-        assert e.detail.values['$target2[y]'] is 100, "solved value is 100. #{}"
-        assert target1.style[GSS.View.transformPrefix] is "translateY(100px)","target1.style[#{GSS.View.transformPrefix}] should be 100px, not: #{target1.style[GSS.View.transformPrefix]}"        
-        assert target2.style[GSS.View.transformPrefix] is "translateY(0px)","target2.style[#{GSS.View.transformPrefix}] should be 0px, not: #{target2.style[GSS.View.transformPrefix]}"        
+        assert e.detail.values['$target2[y]'] is 100, "solved value is 100. #{}"                
+        m1 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 100, 0, 1)"
+        m2 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"
+        assert target1.style[GSS._.transformPrefix] is m1,"target1.style[#{GSS._.transformPrefix}] should be 100px, not: #{target1.style[GSS._.transformPrefix]}"        
+        assert target2.style[GSS._.transformPrefix] is m2,"target2.style[#{GSS._.transformPrefix}] should be 0px, not: #{target2.style[GSS._.transformPrefix]}"        
         container.removeEventListener 'solved', onSolved
+        assert didAttach, "didnt attach"
         done()
+      onViewAttached = (v) ->
+        assert v.id is 'target1' or v.id is 'target2', 'attach to right views'
+        didAttach = true
+      GSS.once 'view:attach', onViewAttached      
       container.addEventListener 'solved', onSolved
       engine.run ast
   
@@ -154,11 +165,16 @@ describe "GSS.View", ->
       q = document.getElementsByClassName('target')
       target1 = q[0]
     it 'after solving', (done) ->
+      
+      GSS.config.defaultMatrixType = 'mat2d'
+      
       onSolved = (e) ->
         values = e.detail.values
         assert e.detail.values['$target1[y]'] is 100, "solved value is 100. #{}"
-        assert target1.style[GSS.View.transformPrefix] is "translateY(92px)","wrong: #{target1.style[GSS.View.transformPrefix]}"        
+        m = "matrix(1, 0, 0, 1, 0, 92)"
+        assert target1.style[GSS._.transformPrefix] is m,"wrong: #{target1.style[GSS._.transformPrefix]}"        
         container.removeEventListener 'solved', onSolved
         done()
+        
       container.addEventListener 'solved', onSolved
       engine.run ast

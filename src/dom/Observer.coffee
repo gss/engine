@@ -112,7 +112,7 @@ GSS.is_observing = false
   
 GSS.observe = () ->
   if !GSS.is_observing and GSS.config.observe
-    observer.observe(document.body, {subtree: true, childList: true, attributes: true, characterData: true})
+    observer.observe(document.body, GSS.config.observerOptions)
     GSS.is_observing = true
 
 GSS.unobserve = () ->  

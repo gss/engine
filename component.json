@@ -14,7 +14,8 @@
     "lib/Commander.js",
     "lib/Thread.js", 
     "lib/dom/Getter.js",
-    "lib/dom/IdMixin.js"
+    "lib/dom/IdMixin.js",
+    "vendor/gl-matrix.js"
   ],
   "dependencies": {
     "d4tocchini/customevent-polyfill": "*",
