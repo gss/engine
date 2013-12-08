@@ -121,6 +121,10 @@ GSS.unobserve = () ->
   
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
+  
+  # GSS object is ready for action
+  document.dispatchEvent new CustomEvent 'GSS', {detail:GSS, bubbles:false, cancelable: false}
+  
   setupObserver()
   GSS.boot()
   LOG "DOMContentLoaded"
