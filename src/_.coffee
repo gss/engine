@@ -89,7 +89,16 @@ _ =
   mat2dToCSS: (a) ->
     return 'matrix(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + 
       a[3] + ', ' + a[4] + ', ' + a[5] + ')'
-       
+      
+  #
+  # String
+  #
+  
+  camelize: (s) ->
+    result = s.replace /[-_\s]+(.)?/g, (match, c) ->
+       (if c then c.toUpperCase() else "")
+    result
+  
   #
   #cleanAndSnatch = (frm, to) ->
   #  # - `to` object cleans itself & steals props from & deletes the `frm` object

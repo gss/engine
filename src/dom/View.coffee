@@ -111,7 +111,7 @@ class View
       @_positionMatrix(xLocal, yLocal)
     
     if o['z-index']?
-      @style['z-index'] = o['z-index']
+      @style['zIndex'] = o['z-index']
       delete o['z-index']
     ###   
     if o['line-height']?
@@ -127,6 +127,7 @@ class View
       delete o.height
     ###
     for key,val of o
+      key = GSS._.camelize( key ) # b/c Mozilla
       @style[key] = val + "px"
     for key, val of @style
       @el.style[key] = val
