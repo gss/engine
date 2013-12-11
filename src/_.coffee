@@ -5,8 +5,8 @@ getTime = Date.now or ->
 
 # from: http://blogs.msdn.com/b/ie/archive/2011/10/28/a-best-practice-for-programming-with-vendor-prefixes.aspx
 
+tempDiv = document.createElement("div")
 firstSupportedStylePrefix = (prefixedPropertyNames) ->
-  tempDiv = document.createElement("div")
   for name in prefixedPropertyNames
     if (typeof tempDiv.style[name] != 'undefined')
       return name
@@ -14,7 +14,9 @@ firstSupportedStylePrefix = (prefixedPropertyNames) ->
 
 _ = 
   
-  transformPrefix: firstSupportedStylePrefix(["transform", "msTransform", "MozTransform", "WebkitTransform", "OTransform"])
+  transformPrefix: firstSupportedStylePrefix(["transform", "WebkitTransform", "MozTransform", "OTransform", "msTransform"])
+  
+  boxSizingPrefix: firstSupportedStylePrefix(["boxSizing", "WebkitBoxSizing", "MozBoxSizing", "OBoxSizing", "msBoxSizing"])
   
   defer: (func) ->
     setTimeout func, 1
@@ -79,6 +81,10 @@ _ =
         prop = key.substring(key.indexOf("[")+1, key.indexOf("]"))
         varsById[gid][prop] = val
     return varsById
+  
+  #
+  # Matix
+  #
   
   mat4ToCSS: (a) ->
     return 'matrix3d(' + a[0] + ', ' + a[1] + ', ' + a[2] + ', ' + a[3] + ', ' +
