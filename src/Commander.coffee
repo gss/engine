@@ -88,9 +88,15 @@ class Commander
       for bind in binds
         bindRoot root, bind
 
-  execute: (commands) ->
-    for command in commands
-      @_execute command, command
+  execute: (ast) ->
+    # is statement
+    if ast.commands?
+      for command in ast.commands
+        @_execute command, command
+    # is block
+    if ast.rules?
+      for rule in ast.rules
+        @execute rule    
 
   _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
     node = command

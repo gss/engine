@@ -495,483 +495,481 @@ describe 'GSS engine', ->
     
 
   
-describe 'GSS Engine with styleNode', ->
-  container = null
-  engine = null
-  
-  before ->
-    container = document.createElement 'div'
-    $('#fixtures').appendChild container
-  
-  after ->
-    remove(container)
-
-  describe 'Engine::styleNode', ->
-    
-    it 'Runs commands from sourceNode', (done) ->
-      container.innerHTML =  """
-        <style type="text/gss-ast">
-        {
-          "commands": [
-            ["var", ".box[x]", "x", ["$class", "box"]],
-            ["eq", ["get",".box[x]",".box"], ["number",100]]
-          ]          
-        }
-        </style>
-        <div id="box1" class="box"></div>
-        <div id="box2" class="box"></div>
-        """
-      engine = GSS(container)      
-      listener = (e) ->        
-        expect(engine.lastWorkerCommands).to.eql [
-            ['var', '$box1[x]', '$box1']
-            ['var', '$box2[x]', '$box2']
-            ['eq', ['get','$box1[x]','.box$box1'], ['number',100]]
-            ['eq', ['get','$box2[x]','.box$box2'], ['number',100]]
-          ]
-        container.removeEventListener 'solved', listener
-        done()
-      container.addEventListener 'solved', listener
-
-describe 'GSS Engine Life Cycle', ->  
-  container = null
-  
-  before ->
-    container = document.createElement 'div'
-    $('#fixtures').appendChild container
-  
-  after ->
-    remove(container)
-
-  describe 'Asynchronous existentialism (one engine for life of container)', ->
-    engine1 = null
-    
-    it 'without GSS rules style tag', ->
-      engine1 = GSS(container)
-      expect(engine1.id).to.be.equal GSS.getId(container)
-      expect(engine1.scope).to.be.equal container
-    
-    it 'after receives GSS style tag', (done) ->
-      engine2 = GSS(container)
-      expect(engine1.id).to.be.equal GSS.getId(container)
-      container.innerHTML =  """
-        <style id="gssa" type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "[col-width-1]"],
-            ["suggest", "[col-width-1]", 111]
-          ]          
-        }
-        </style>
-        """
-      listener = (e) ->
-        engine2 = GSS(container)
-        expect(engine1).to.equal engine2
-        expect(engine1.vars['[col-width-1]']).to.equal 111
-        container.removeEventListener 'solved', listener
-        done()
-      container.addEventListener 'solved', listener
-    
-    it 'after modified GSS style tag', (done) ->
-      expect(engine1.id).to.be.equal GSS.getId(container)
-      styleNode = document.getElementById 'gssa'
-      styleNode.innerHTML = """
-        {
-          "commands": [
-            ["var", "[col-width-11]"],
-            ["suggest", "[col-width-11]", 1111]
-          ]          
-        }
-      """        
-      listener = (e) ->
-        engine2 = GSS(container)
-        expect(engine1).to.equal engine2
-        expect(engine1.vars['[col-width-1]']).to.equal undefined
-        expect(engine1.vars['[col-width-11]']).to.equal 1111
-        container.removeEventListener 'solved', listener
-        done()
-      container.addEventListener 'solved', listener
-    
-    it 'after replaced GSS style tag', (done) ->
-      engine2 = GSS(container)
-      expect(engine1.id).to.be.equal GSS.getId(container)
-      container.innerHTML =  """
-        <style id="gssb" type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "[col-width-2]"],
-            ["suggest", "[col-width-2]", 222]
-          ]          
-        }
-        </style>
-        <div id="box1" class="box" data-gss-id="12322"></div>
-        """
-      listener = (e) ->
-        engine2 = GSS(container)
-        assert engine1 is engine2, "engine is maintained" 
-        assert !engine1.vars['[col-width-1]']?, "engine1.vars['[col-width-1]'] removed" 
-        expect(engine1.vars['[col-width-11]']).to.equal undefined
-        expect(engine1.vars['[col-width-2]']).to.equal 222
-        container.removeEventListener 'solved', listener
-        done()
-      container.addEventListener 'solved', listener
-    
-    it 'Engine after container replaced multiple GSS style tags', (done) ->
-      engine2 = GSS(container)
-      expect(engine1.id).to.be.equal GSS.getId(container)
-      container.innerHTML =  """
-        <style id="gssc" type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "[col-width-3]"],
-            ["suggest", "[col-width-3]", 333]
-          ]          
-        }
-        </style>
-        <style id="gssd" type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "[col-width-4]"],
-            ["suggest", "[col-width-4]", 444]
-          ]          
-        }
-        </style>
-        <div id="box1" class="box" data-gss-id="12322"></div>
-        """
-      listener = (e) ->
-        engine2 = GSS(container)
-        expect(engine1).to.equal engine2
-        #expect(engine1.styleNode).to.equal document.getElementById 'gssb'
-        expect(engine1.vars['[col-width-1]']).to.equal undefined
-        expect(engine1.vars['[col-width-2]']).to.equal undefined
-        expect(engine1.vars['[col-width-3]']).to.equal 333
-        expect(engine1.vars['[col-width-4]']).to.equal 444
-        container.removeEventListener 'solved', listener
-        done()
-      container.addEventListener 'solved', listener
-    
-    it 'Engine after container removed', (done) ->
-      remove(container)
-      wait = ->
-        expect(engine1.is_destroyed).to.equal true
-        expect(GSS.engines.byId[GSS.getId(container)]?).to.equal false
-        done()
-      setTimeout wait, 1
-    
-    it 'new Engine after container re-added', () ->      
-      $('#fixtures').appendChild container      
-      engine3 = GSS(container)
-      expect(engine1).to.not.equal engine3
-
-describe 'CSS Dump /', ->  
-  container = null
-  
-  before ->
-    container = document.createElement 'div'
-    $('#fixtures').appendChild container
-  
-  after ->
-    remove(container)
-
-  describe 'Asynchronous existentialism (one engine for life of container)', ->
+  describe 'GSS Engine with styleNode', ->
+    container = null
     engine = null
-    
-    it 'CSS in AST', (done) ->
-      engine = GSS(container)
-      container.innerHTML =  """
-        <style type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "[col-width-1]"],
-            ["suggest", "[col-width-1]", 111]
-          ],
-          "css": "#box{width:100px;}#b{height:10px;}"       
-        }
-        </style>
-        """
-      listener = (e) ->           
-        expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-        expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
-        container.removeEventListener 'solved', listener
-        done()
-      container.addEventListener 'solved', listener
-
-describe 'Nested Engine', ->  
-  container = null
-  containerEngine = null
-  wrap = null
-  wrapEngine = null
   
-  before ->
-    container = document.createElement 'div'
-    $('#fixtures').appendChild container
-    #        
-    container.innerHTML =  """
-      <section>
-        <div id="wrap" style="width:100px;" data-gss-id="999">
-          <style type="text/gss-ast">
+    before ->
+      container = document.createElement 'div'
+      $('#fixtures').appendChild container
+  
+    after ->
+      remove(container)
+
+    describe 'Engine::styleNode', ->
+    
+      it 'Runs commands from sourceNode', (done) ->
+        container.innerHTML =  """
+          <style type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "#boo[width]", "width", ["$id","boo"]],
-              ["eq", ["get","#boo[width]","#boo"], ["number",100]]
-            ]
+              ["var", ".box[x]", "x", ["$class", "box"]],
+              ["eq", ["get",".box[x]",".box"], ["number",100]]
+            ]          
           }
           </style>
-          <div id="boo" data-gss-id="boo"></div>
-        </div>
-      </section>
-      """
-    containerEngine = GSS(container)
-    wrap = document.getElementById('wrap')
-    wrapEngine = GSS(wrap)
-  
-  after ->
-    remove(container)
-  
-  it 'engines are attached to correct element', () ->
-    expect(wrapEngine).to.not.equal containerEngine
-    expect(wrapEngine.scope).to.equal wrap
-    expect(containerEngine.scope).to.equal container
-  
-  it 'correct values', (done) ->
-    listener = (e) ->           
-      expect(wrapEngine.vars).to.eql 
-        "$boo[width]": 100
-      wrap.removeEventListener 'solved', listener
-      done()
-    wrap.addEventListener 'solved', listener
+          <div id="box1" class="box"></div>
+          <div id="box2" class="box"></div>
+          """
+        engine = GSS(container)      
+        listener = (e) ->        
+          expect(engine.lastWorkerCommands).to.eql [
+              ['var', '$box1[x]', '$box1']
+              ['var', '$box2[x]', '$box2']
+              ['eq', ['get','$box1[x]','.box$box1'], ['number',100]]
+              ['eq', ['get','$box2[x]','.box$box2'], ['number',100]]
+            ]
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
 
-
-
-
-describe 'Engine Hierarchy', ->  
-  body = document.getElementsByTagName('body')[0] # for polymer b/c document.body is "unwrapped"
+  describe 'GSS Engine Life Cycle', ->  
+    container = null
   
-  describe 'root engine', ->
-    root = null
-    it 'is initialized', ->
-      root = GSS.engines.root
-      expect(root).to.exist
-    it 'is root element', ->
-      expect(root.scope).to.equal GSS.Getter.getRootScope()
-    it 'gss style tags direct descendants of <body> are run in root engine', () ->
-      document.body.insertAdjacentHTML 'afterbegin', """
-        <style id="root-styles" type="text/gss-ast">
-        </style>
-      """
-      style = document.getElementById "root-styles"
-      scope = GSS.get.scopeFor style
-      expect(scope).to.equal body
-      remove(style)
-      
-  describe 'nesting', ->
-    style1  = null
-    style2  = null
-    style3  = null
-    scope1  = null
-    scope2  = null
-    scope3  = null
-    engine1 = null
-    engine2 = null
-    engine3 = null
-      
-    before ->    
-      document.body.insertAdjacentHTML 'afterbegin', """
-        <style id="root-styles-1" type="text/gss-ast">
-        </style>
-        <section id="scope2">
-          <style id="root-styles-2" type="text/gss-ast">
+    before ->
+      container = document.createElement 'div'
+      $('#fixtures').appendChild container
+  
+    after ->
+      remove(container)
+
+    describe 'Asynchronous existentialism (one engine for life of container)', ->
+      engine1 = null
+    
+      it 'without GSS rules style tag', ->
+        engine1 = GSS(container)
+        expect(engine1.id).to.be.equal GSS.getId(container)
+        expect(engine1.scope).to.be.equal container
+    
+      it 'after receives GSS style tag', (done) ->
+        engine2 = GSS(container)
+        expect(engine1.id).to.be.equal GSS.getId(container)
+        container.innerHTML =  """
+          <style id="gssa" type="text/gss-ast" scoped>
+          {
+            "commands": [
+              ["var", "[col-width-1]"],
+              ["suggest", "[col-width-1]", 111]
+            ]          
+          }
           </style>
-          <div>
-            <div id="scope3">
-              <style id="root-styles-3" type="text/gss-ast">
-              </style>
-            </div>
+          """
+        listener = (e) ->
+          engine2 = GSS(container)
+          expect(engine1).to.equal engine2
+          expect(engine1.vars['[col-width-1]']).to.equal 111
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+    
+      it 'after modified GSS style tag', (done) ->
+        expect(engine1.id).to.be.equal GSS.getId(container)
+        styleNode = document.getElementById 'gssa'
+        styleNode.innerHTML = """
+          {
+            "commands": [
+              ["var", "[col-width-11]"],
+              ["suggest", "[col-width-11]", 1111]
+            ]          
+          }
+        """        
+        listener = (e) ->
+          engine2 = GSS(container)
+          expect(engine1).to.equal engine2
+          expect(engine1.vars['[col-width-1]']).to.equal undefined
+          expect(engine1.vars['[col-width-11]']).to.equal 1111
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+    
+      it 'after replaced GSS style tag', (done) ->
+        engine2 = GSS(container)
+        expect(engine1.id).to.be.equal GSS.getId(container)
+        container.innerHTML =  """
+          <style id="gssb" type="text/gss-ast" scoped>
+          {
+            "commands": [
+              ["var", "[col-width-2]"],
+              ["suggest", "[col-width-2]", 222]
+            ]          
+          }
+          </style>
+          <div id="box1" class="box" data-gss-id="12322"></div>
+          """
+        listener = (e) ->
+          engine2 = GSS(container)
+          assert engine1 is engine2, "engine is maintained" 
+          assert !engine1.vars['[col-width-1]']?, "engine1.vars['[col-width-1]'] removed" 
+          expect(engine1.vars['[col-width-11]']).to.equal undefined
+          expect(engine1.vars['[col-width-2]']).to.equal 222
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+    
+      it 'Engine after container replaced multiple GSS style tags', (done) ->
+        engine2 = GSS(container)
+        expect(engine1.id).to.be.equal GSS.getId(container)
+        container.innerHTML =  """
+          <style id="gssc" type="text/gss-ast" scoped>
+          {
+            "commands": [
+              ["var", "[col-width-3]"],
+              ["suggest", "[col-width-3]", 333]
+            ]          
+          }
+          </style>
+          <style id="gssd" type="text/gss-ast" scoped>
+          {
+            "commands": [
+              ["var", "[col-width-4]"],
+              ["suggest", "[col-width-4]", 444]
+            ]          
+          }
+          </style>
+          <div id="box1" class="box" data-gss-id="12322"></div>
+          """
+        listener = (e) ->
+          engine2 = GSS(container)
+          expect(engine1).to.equal engine2
+          #expect(engine1.styleNode).to.equal document.getElementById 'gssb'
+          expect(engine1.vars['[col-width-1]']).to.equal undefined
+          expect(engine1.vars['[col-width-2]']).to.equal undefined
+          expect(engine1.vars['[col-width-3]']).to.equal 333
+          expect(engine1.vars['[col-width-4]']).to.equal 444
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+    
+      it 'Engine after container removed', (done) ->
+        remove(container)
+        wait = ->
+          expect(engine1.is_destroyed).to.equal true
+          expect(GSS.engines.byId[GSS.getId(container)]?).to.equal false
+          done()
+        setTimeout wait, 1
+    
+      it 'new Engine after container re-added', () ->      
+        $('#fixtures').appendChild container      
+        engine3 = GSS(container)
+        expect(engine1).to.not.equal engine3
+
+  describe 'CSS Dump /', ->  
+    container = null
+  
+    before ->
+      container = document.createElement 'div'
+      $('#fixtures').appendChild container
+  
+    after ->
+      remove(container)
+
+    describe 'Asynchronous existentialism (one engine for life of container)', ->
+      engine = null
+    
+      it 'CSS in AST', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <style type="text/gss-ast" scoped>
+          {
+            "commands": [
+              ["var", "[col-width-1]"],
+              ["suggest", "[col-width-1]", 111]
+            ],
+            "css": "#box{width:100px;}#b{height:10px;}"       
+          }
+          </style>
+          """
+        listener = (e) ->           
+          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
+          expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+
+  describe 'Nested Engine', ->  
+    container = null
+    containerEngine = null
+    wrap = null
+    wrapEngine = null
+  
+    before ->
+      container = document.createElement 'div'
+      $('#fixtures').appendChild container
+      #        
+      container.innerHTML =  """
+        <section>
+          <div id="wrap" style="width:100px;" data-gss-id="999">
+            <style type="text/gss-ast" scoped>
+            {
+              "commands": [
+                ["var", "#boo[width]", "width", ["$id","boo"]],
+                ["eq", ["get","#boo[width]","#boo"], ["number",100]]
+              ]
+            }
+            </style>
+            <div id="boo" data-gss-id="boo"></div>
           </div>
         </section>
-      """
-    it 'nested style tags have correct scope', () ->      
-      style1 = document.getElementById "root-styles-1"
-      scope1 = GSS.get.scopeFor style1
-      expect(scope1).to.equal body
-      style2 = document.getElementById "root-styles-2"
-      scope2 = GSS.get.scopeFor style2
-      expect(scope2).to.equal document.getElementById "scope2"
-      style3 = document.getElementById "root-styles-3"
-      scope3 = GSS.get.scopeFor style3
-      expect(scope3).to.equal document.getElementById "scope3"
+        """
+      containerEngine = GSS(container)
+      wrap = document.getElementById('wrap')
+      wrapEngine = GSS(wrap)
+  
+    after ->
+      remove(container)
+  
+    it 'engines are attached to correct element', () ->
+      expect(wrapEngine).to.not.equal containerEngine
+      expect(wrapEngine.scope).to.equal wrap
+      expect(containerEngine.scope).to.equal container
+  
+    it 'correct values', (done) ->
+      listener = (e) ->           
+        expect(wrapEngine.vars).to.eql 
+          "$boo[width]": 100
+        wrap.removeEventListener 'solved', listener
+        done()
+      wrap.addEventListener 'solved', listener
+
+
+
+
+  describe 'Engine Hierarchy', ->  
+    body = document.getElementsByTagName('body')[0] # for polymer b/c document.body is "unwrapped"
+  
+    describe 'root engine', ->
+      root = null
+      it 'is initialized', ->
+        root = GSS.engines.root
+        expect(root).to.exist
+      it 'is root element', ->
+        expect(root.scope).to.equal GSS.Getter.getRootScope()
+      it 'gss style tags direct descendants of <body> are run in root engine', () ->
+        document.body.insertAdjacentHTML 'afterbegin', """
+          <style id="root-styles" type="text/gss-ast" scoped>
+          </style>
+        """
+        style = document.getElementById "root-styles"
+        scope = GSS.get.scopeFor style
+        expect(scope).to.equal body
+        remove(style)
+      
+    describe 'nesting', ->
+      style1  = null
+      style2  = null
+      style3  = null
+      scope1  = null
+      scope2  = null
+      scope3  = null
+      engine1 = null
+      engine2 = null
+      engine3 = null
+      
+      before ->    
+        document.body.insertAdjacentHTML 'afterbegin', """
+          <style id="root-styles-1" type="text/gss-ast" scoped>
+          </style>
+          <section id="scope2">
+            <style id="root-styles-2" type="text/gss-ast" scoped>
+            </style>
+            <div>
+              <div id="scope3">
+                <style id="root-styles-3" type="text/gss-ast" scoped>
+                </style>
+              </div>
+            </div>
+          </section>
+        """
+      it 'nested style tags have correct scope', () ->      
+        style1 = document.getElementById "root-styles-1"
+        scope1 = GSS.get.scopeFor style1
+        expect(scope1).to.equal body
+        style2 = document.getElementById "root-styles-2"
+        scope2 = GSS.get.scopeFor style2
+        expect(scope2).to.equal document.getElementById "scope2"
+        style3 = document.getElementById "root-styles-3"
+        scope3 = GSS.get.scopeFor style3
+        expect(scope3).to.equal document.getElementById "scope3"
     
-    it 'correct parent-child engine relationships', ->
-      engine1 = GSS scope:scope1
-      engine2 = GSS scope:scope2
-      engine3 = GSS scope:scope3
-      expect(GSS.engines.root).to.equal engine1
-      expect(engine2.parentEngine).to.equal engine1
-      expect(engine3.parentEngine).to.equal engine2      
-      expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
-      expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
+      it 'correct parent-child engine relationships', ->
+        engine1 = GSS scope:scope1
+        engine2 = GSS scope:scope2
+        engine3 = GSS scope:scope3
+        expect(GSS.engines.root).to.equal engine1
+        expect(engine2.parentEngine).to.equal engine1
+        expect(engine3.parentEngine).to.equal engine2      
+        expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
+        expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
     
-    it 'parent-child engine relationships update even w/o styles', (done) ->      
-      remove(style1)
-      remove(style2)
-      remove(style3)
-      remove(scope3)
-      GSS._.defer ->
-        expect(engine3.is_destroyed).to.be.true
-        expect(engine3.parentEngine).to.not.exist
-        expect(engine2.childEngines.indexOf(engine3)).to.equal -1
+      it 'parent-child engine relationships update even w/o styles', (done) ->      
+        remove(style1)
+        remove(style2)
+        remove(style3)
+        remove(scope3)
+        GSS._.defer ->
+          expect(engine3.is_destroyed).to.be.true
+          expect(engine3.parentEngine).to.not.exist
+          expect(engine2.childEngines.indexOf(engine3)).to.equal -1
+          remove(scope2)
+          GSS._.defer ->
+            expect(engine2.is_destroyed).to.be.true
+            expect(engine2.parentEngine).to.not.exist
+            expect(engine1.childEngines.indexOf(engine2)).to.equal -1
+            done()
+  
+    describe 'nesting round 2', ->
+      style2  = null
+      style3  = null
+      scope1  = null
+      scope2  = null
+      scope3  = null
+      engine1 = null
+      engine2 = null
+      engine3 = null
+      
+      before ->    
+        document.body.insertAdjacentHTML 'afterbegin', """
+          <section id="scope2">
+            <style id="root-styles-2" type="text/gss-ast" scoped>
+            </style>
+            <div>
+              <div id="scope3">
+                <style id="root-styles-3" type="text/gss-ast" scoped>
+                </style>
+              </div>
+            </div>
+          </section>
+        """      
+        style2 = document.getElementById "root-styles-2"
+        scope2 = GSS.get.scopeFor style2
+        style3 = document.getElementById "root-styles-3"
+        scope3 = GSS.get.scopeFor style3
+        engine1 = GSS.engines.root
+        engine2 = GSS scope:scope2
+        engine3 = GSS scope:scope3
+    
+      after ->
+        remove(scope2)
+    
+      it 'correct parent-child engine relationships', ->
+        expect(GSS.engines.root).to.equal engine1
+        expect(engine2.parentEngine).to.equal engine1
+        expect(engine3.parentEngine).to.equal engine2      
+        expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
+        expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
+    
+      it 'engine destruction cascades', (done) ->      
         remove(scope2)
         GSS._.defer ->
+          expect(engine3.is_destroyed).to.be.true
+          expect(engine3.parentEngine).to.not.exist
+          expect(engine2.childEngines.indexOf(engine3)).to.equal -1
           expect(engine2.is_destroyed).to.be.true
           expect(engine2.parentEngine).to.not.exist
           expect(engine1.childEngines.indexOf(engine2)).to.equal -1
           done()
-  
-  describe 'nesting round 2', ->
-    style2  = null
-    style3  = null
-    scope1  = null
-    scope2  = null
-    scope3  = null
-    engine1 = null
-    engine2 = null
-    engine3 = null
-      
-    before ->    
-      document.body.insertAdjacentHTML 'afterbegin', """
-        <section id="scope2">
-          <style id="root-styles-2" type="text/gss-ast">
-          </style>
-          <div>
-            <div id="scope3">
-              <style id="root-styles-3" type="text/gss-ast">
-              </style>
-            </div>
-          </div>
-        </section>
-      """      
-      style2 = document.getElementById "root-styles-2"
-      scope2 = GSS.get.scopeFor style2
-      style3 = document.getElementById "root-styles-3"
-      scope3 = GSS.get.scopeFor style3
-      engine1 = GSS.engines.root
-      engine2 = GSS scope:scope2
-      engine3 = GSS scope:scope3
-    
-    after ->
-      remove(scope2)
-    
-    it 'correct parent-child engine relationships', ->
-      expect(GSS.engines.root).to.equal engine1
-      expect(engine2.parentEngine).to.equal engine1
-      expect(engine3.parentEngine).to.equal engine2      
-      expect(engine1.childEngines.indexOf(engine2) > -1).to.be.true
-      expect(engine2.childEngines.indexOf(engine3) > -1).to.be.true
-    
-    it 'engine destruction cascades', (done) ->      
-      remove(scope2)
-      GSS._.defer ->
-        expect(engine3.is_destroyed).to.be.true
-        expect(engine3.parentEngine).to.not.exist
-        expect(engine2.childEngines.indexOf(engine3)).to.equal -1
-        expect(engine2.is_destroyed).to.be.true
-        expect(engine2.parentEngine).to.not.exist
-        expect(engine1.childEngines.indexOf(engine2)).to.equal -1
-        done()
     
     
-    #it 'nested engines parent child relationships', () ->
+      #it 'nested engines parent child relationships', () ->
       
 
 
-    
   
+  describe 'framed scopes', ->
+    container = null
+    containerEngine = null
+    wrap = null
+    wrapEngine = null
   
-describe 'framed scopes', ->
-  container = null
-  containerEngine = null
-  wrap = null
-  wrapEngine = null
-  
-  before ->
-    container = document.createElement 'div'
-    container.id = "wrap-container"
-    $('#fixtures').appendChild container
-    #        
-    container.innerHTML =  """
-        <style type="text/gss-ast">
-        {
-          "commands": [
-            ["var", "#wrap[width]", "width", ["$id","wrap"]],
-            ["eq", ["get","#wrap[width]","#wrap"], ["number",69]]
-          ]
-        }
-        </style>
-        <div id="wrap" style="width:100px;" data-gss-id="wrap">
-          <style type="text/gss-ast">
+    before ->
+      container = document.createElement 'div'
+      container.id = "wrap-container"
+      $('#fixtures').appendChild container
+      #        
+      container.innerHTML =  """
+          <style type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "#boo[width]", "width", ["$id","boo"]],
-              ["var", "::scope[width]", "width", ["$reserved","scope"]],
-              ["eq", ["get","#boo[width]","#boo"], ["get","::scope[width]"]]
+              ["var", "#wrap[width]", "width", ["$id","wrap"]],
+              ["eq", ["get","#wrap[width]","#wrap"], ["number",69]]
             ]
           }
           </style>
-          <div id="boo" data-gss-id="boo"></div>
-        </div>
-      """
-    containerEngine = GSS(container)
-    wrap = document.getElementById('wrap')
-    wrapEngine = GSS(wrap)
+          <div id="wrap" style="width:100px;" data-gss-id="wrap">
+            <style type="text/gss-ast" scoped>
+            {
+              "commands": [
+                ["var", "#boo[width]", "width", ["$id","boo"]],
+                ["var", "::scope[width]", "width", ["$reserved","scope"]],
+                ["eq", ["get","#boo[width]","#boo"], ["get","::scope[width]"]]
+              ]
+            }
+            </style>
+            <div id="boo" data-gss-id="boo"></div>
+          </div>
+        """
+      containerEngine = GSS(container)
+      wrap = document.getElementById('wrap')
+      wrapEngine = GSS(wrap)
   
-  after ->
-    remove(container)
+    after ->
+      remove(container)
 
-  it 'engines are attached to correct element', () ->
-    expect(wrapEngine).to.not.equal containerEngine
-    expect(wrapEngine.scope).to.equal wrap
-    expect(containerEngine.scope).to.equal container    
+    it 'engines are attached to correct element', () ->
+      expect(wrapEngine).to.not.equal containerEngine
+      expect(wrapEngine.scope).to.equal wrap
+      expect(containerEngine.scope).to.equal container    
 
-  it 'scoped value is bridged downward', (done) ->
-    #debugger
-    cListener = (e) ->           
-      container.removeEventListener 'solved', cListener
+    it 'scoped value is bridged downward', (done) ->
+      #debugger
+      cListener = (e) ->           
+        container.removeEventListener 'solved', cListener
       
-    container.addEventListener 'solved', cListener
-    count = 0
-    wListener = (e) ->     
-      count++      
-      if count is 2
-        expect(wrapEngine.vars).to.eql 
-          "$boo[width]": 69
-          "$wrap[width]": 69
-        wrap.removeEventListener 'solved', wListener      
-        done()              
-    wrap.addEventListener 'solved', wListener
+      container.addEventListener 'solved', cListener
+      count = 0
+      wListener = (e) ->     
+        count++      
+        if count is 2
+          expect(wrapEngine.vars).to.eql 
+            "$boo[width]": 69
+            "$wrap[width]": 69
+          wrap.removeEventListener 'solved', wListener      
+          done()              
+      wrap.addEventListener 'solved', wListener
 
-describe "Engine memory management", ->
-  it "engines are destroyed", (done)->
-    GSS._.defer ->
-      expect(GSS.engines.length).to.equal(1)
-      done()
-  it "views are recycled", (done) ->
-    margin_of_error = 2
-    GSS._.defer ->
-      count = 0
-      for key of GSS.View.byId
-        count++
-      assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
-      done()
-  it "_byIdCache is cleared", (done) ->
-    margin_of_error = 2
-    GSS._.defer ->
-      count = 0
-      for key of GSS._byIdCache
-        count++
-      assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
-      done()
+  describe "Engine memory management", ->
+    it "engines are destroyed", (done)->
+      GSS._.defer ->
+        expect(GSS.engines.length).to.equal(1)
+        done()
+    it "views are recycled", (done) ->
+      margin_of_error = 2
+      GSS._.defer ->
+        count = 0
+        for key of GSS.View.byId
+          count++
+        assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
+        done()
+    it "_byIdCache is cleared", (done) ->
+      margin_of_error = 2
+      GSS._.defer ->
+        count = 0
+        for key of GSS._byIdCache
+          count++
+        assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
+        done()
   
-  #it 'updates to scoped value are bridged downward', (done) ->
+    #it 'updates to scoped value are bridged downward', (done) ->
 
 ###
 describe '::This framed view', ->  
@@ -986,7 +984,7 @@ describe '::This framed view', ->
     #        
     container.innerHTML =  """
         <div id="wrap" style="width:100px;" data-gss-id="wrap">
-          <style type="text/gss-ast">
+          <style type="text/gss-ast" scoped>
           {
             "commands": [
               ["var", "#boo[width]", "width", ["$id","boo"]],

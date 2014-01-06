@@ -30,7 +30,7 @@ describe 'GSS commands', ->
         <div class="box">One</div>
         <div class="box">One</div>
       """
-      engine.execute [
+      engine.run commands: [
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
       chai.expect(engine.workerCommands).to.eql [
@@ -47,7 +47,9 @@ describe 'GSS commands', ->
         <div class="box" id="35346">One</div>
         <div class="box" id="89347">One</div>
       """
-      engine.execute [
+      engine.run
+        uuid: '555-555-55'
+        commands: [
           ['var', '.box[x]', 'x', ['$class','box']]
         ]
       chai.expect(engine.workerCommands).to.eql [
@@ -64,7 +66,7 @@ describe 'GSS commands', ->
         <div class="box" id="35346">One</div>
         <div class="box" id="89347">One</div>
       """
-      engine.execute [
+      engine.run commands: [
         ['var', '.box[x]', 'x', ['$class','box']]
         ['var', '.box[width]', 'width', ['$class','box']]
         ['varexp', '.box[right]', ['plus',['get','.box[x]'],['get','.box[width]']], ['$class','box']]
@@ -89,7 +91,7 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.execute [
+      engine.run commands: [
           ['var', '.box[x]', 'x', ['$class','box']]
           ['stay', ['get','.box[x]','.box']]
         ]
@@ -105,7 +107,7 @@ describe 'GSS commands', ->
         <div class="box block" id="12322">One</div>
         <div class="box block" id="34222">One</div>
       """
-      engine.execute [
+      engine.run commands: [
           ['var', '.box[x]', 'x', ['$class','box']]
           ['var', '.box[y]', 'y', ['$class','box']]
           ['var', '.block[width]', 'width', ['$class','block']]
@@ -134,7 +136,7 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.execute [
+      engine.run commands: [
         ['var', '.box[width]', 'width', ['$class','box']]
         ['var', '[grid-col]']
         ['eq', ['get','.box[width]','.box'],['get','[grid-col]']]
@@ -155,7 +157,7 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
         <div class="box" id="35346">One</div>
       """
-      engine.execute [
+      engine.run commands: [
         ['var', '.box[width]', 'width', ['$class','box']]
         ['var', '#box1[width]', 'width', ['$id','box1']]
         ['lte', ['get','.box[width]','.box'],['get','#box1[width]','#box1']]
@@ -176,11 +178,13 @@ describe 'GSS commands', ->
         <div style="width:222px;" class="box" id="34222">One</div>
         <div style="width:333px;" class="box" id="35346">One</div>
       """
-      engine.execute [
-        ['var', '.box[width]', 'width', ['$class','box']]
-        ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
-        ['eq', ['get','.box[width]','.box'],['get','.box[intrinsic-width]','.box']]
-      ]
+      engine.run         
+        _uuid: '55-55-55'
+        commands: [
+          ['var', '.box[width]', 'width', ['$class','box']]
+          ['var', '.box[intrinsic-width]', 'intrinsic-width', ['$class','box']]
+          ['eq', ['get','.box[width]','.box'],['get','.box[intrinsic-width]','.box']]
+        ]
       chai.expect(engine.workerCommands).to.eql [
         ['var', '$12322[width]', '$12322']
         ['var', '$34222[width]', '$34222']
@@ -200,7 +204,7 @@ describe 'GSS commands', ->
       scope.innerHTML = """
         <div style="width:111px;" class="box" id="12322">One</div>
       """
-      engine.execute [
+      engine.run commands: [
         ['var', '.box[width]', 'width', ['$class','box']]
         ['var', '::window[width]', 'width', ['$reserved','window']]
         ['eq', ['get','.box[width]','.box'],['get','::window[width]']]
@@ -216,7 +220,7 @@ describe 'GSS commands', ->
       scope.innerHTML = """
         <div style="width:111px;" class="box" id="12322">One</div>
       """
-      engine.execute [
+      engine.run commands: [
         ['var', '::window[x]', 'x', ['$reserved','window']]
         ['var', '::window[y]', 'y', ['$reserved','window']]
         ['var', '::window[width]', 'width', ['$reserved','window']]

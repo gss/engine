@@ -223,6 +223,8 @@ styleQuery.on 'afterChange', () ->
           scope = GSS.get.scopeForStyleNode node
           if _scopesToLoad.indexOf(scope) is -1 and scope
             _scopesToLoad.push GSS.get.scopeForStyleNode node
+      
+      # TODO: Isn't needed....  
       for id in @lastRemovedIds
         node = GSS.getById id
         if GSS.get.isStyleNode node

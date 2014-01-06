@@ -107,19 +107,17 @@ class Engine extends GSS.EventTrigger
     else 
       @_run asts   
       
-  _run: (ast) ->    
-    if ast.commands
-      @execute ast.commands    
+  _run: (ast) ->
+    # digests & transforms commands into @workerCommands    
+    @commander.execute ast
+    #if ast.commands      
+    #  @commander.execute ast.commands
     if ast.css      
       @cssToDump = ast.css
       # When is best time to dump css?
       # Early in prep for intrinsics?
       # Or, should intrinsics be deferred any way?      
-      @dumpCSSIfNeeded()
-    
-  execute: (commands) =>
-    # digests & transforms commands into @workerCommands    
-    @commander.execute commands
+      @dumpCSSIfNeeded()            
   
   load: () =>
     # Load commands from style nodes.    
@@ -138,6 +136,17 @@ class Engine extends GSS.EventTrigger
     #
     @setNeedsUpdate true
     #@run ASTs
+    @
+  
+  registerCommands: (commands) ->
+    for command in commands
+      @registerCommand command
+    
+  registerCommand: (command) ->    
+    # TODO: treat commands as strings and check cache for dups?
+    @workerCommands.push command
+    #
+    @setNeedsLayout true
     @
   
   
@@ -477,18 +486,7 @@ class Engine extends GSS.EventTrigger
       cancelable: cancelable
     }
     e = new CustomEvent eName, o
-    @scope.dispatchEvent e
-
-  registerCommands: (commands) ->
-    for command in commands
-      @registerCommand command
-    
-  registerCommand: (command) ->    
-    # TODO: treat commands as strings and check cache for dups?
-    @workerCommands.push command
-    #
-    @setNeedsLayout true
-    @  
+    @scope.dispatchEvent e  
   
   
   # Clean

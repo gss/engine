@@ -98,7 +98,11 @@ class Getter
     return false      
   
   scopeForStyleNode: (node) ->
-    return node.parentElement
+    scoped = node.getAttribute 'scoped'
+    if scoped? and scoped isnt "false"
+      return node.parentElement
+    else
+      return Getter.getRootScope()
   
   isScope: (el) ->
     return !!el?._gss_is_scope
