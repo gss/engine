@@ -114,17 +114,50 @@ class Thread
       if !root._trackers then root._trackers = []
       if  root._trackers.indexOf(tracker) is -1 then root._trackers.push(tracker)
   
+  get$: (root, prop, elId, selector) ->
+        
+    @_trackRootIfNeeded root, elId    
+    if selector
+      @_trackRootIfNeeded root, selector + elId    
+    
+    return @_get$ prop, elId
+    
+        
+  _get$: (prop, elId) ->
+    varId = elId + "[#{prop}]"        
+    switch prop
+      when "right"
+        exp = c.plus( @_get$("x", elId), @_get$("width", elId) )
+        return @varexp null, varId, exp, elId
+      when "bottom"
+        exp = c.plus( @_get$("y", elId), @_get$("height", elId) )
+        return @varexp null, varId, exp, elId
+      when "center-x"
+        exp = c.plus( @_get$("x", elId), c.divide(@_get$("width", elId),2) )
+        return @varexp null, varId, exp, elId
+      when "center-y"
+        exp = c.plus( @_get$("y", elId), c.divide(@_get$("height", elId),2) )
+        return @varexp null, varId, exp, elId        
+      else
+        return @var null, varId, elId
+    
+    
+  
   # The `get` command registers all trackable information to the root constraint commands
-  get: (root, id, tracker, tracker2) ->
-    v = @cachedVars[id]
-    if v
+  get: (root, id, tracker) ->
+    if tracker 
       @_trackRootIfNeeded root, tracker
-      @_trackRootIfNeeded root, tracker2
+    v = @cachedVars[id]
+    if v      
       @_trackRootIfNeeded root, v.tracker
       return v
+    else 
+      v = @var null, id
+      return v
+      
     throw new Error("AST method 'get' couldn't find var with id: #{id}")
 
-  plus: (root,e1, e2) ->
+  plus: (root, e1, e2) ->
     return c.plus e1, e2
 
   minus : (root,e1,e2) ->
@@ -218,7 +251,7 @@ class Thread
     for tracker in trackers
       @_remove tracker
       
-  _remove: (tracker) =>    
+  _remove: (tracker) =>
     delete @__editVarNames[tracker]
     # remove constraints
     if @constraintsByTracker[tracker]

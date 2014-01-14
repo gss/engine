@@ -79,16 +79,19 @@ TIME_END = () ->
 # ------------------------------------------------
 
 window.GSS = GSS
-GSS._ = require("./_.js")
-GSS.glMatrix = require '../vendor/gl-matrix'
-GSS.EventTrigger = require("./EventTrigger.js")
-#GSS.workerURL = require("./WorkerBlobUrl.js")
-GSS.Getter = require("./dom/Getter.js")
-GSS.Commander = require("./Commander.js")
-GSS.Query = require("./dom/Query.js")
-GSS.Thread = require("./Thread.js")
-GSS.Engine = require("./Engine.js")
-GSS.View = require("./dom/View.js")
+GSS._             = require("./_.js")
+GSS.glMatrix      = require '../vendor/gl-matrix'
+GSS.EventTrigger  = require("./EventTrigger.js")
+#GSS.workerURL    = require("./WorkerBlobUrl.js")
+GSS.Getter        = require("./dom/Getter.js")
+GSS.Commander     = require("./Commander.js")
+GSS.Query         = require("./dom/Query.js")
+GSS.Thread        = require("./Thread.js")
+GSS.Engine        = require("./Engine.js")
+GSS.View          = require("./dom/View.js")
+GSS.Node          = require("./gssom/Node.js")
+GSS.Rule          = require("./gssom/Rule.js")
+GSS.StyleSheet    = require("./gssom/StyleSheet.js")
 
 for key, val of require("./dom/IdMixin.js")
   if GSS[key] then throw new Error "IdMixin key clash: #{key}"
@@ -99,6 +102,8 @@ GSS.EventTrigger.make(GSS)
 GSS.get = new GSS.Getter()
 
 GSS.observer = require("./dom/Observer.js")
+
+GSS.styleSheets = new GSS.StyleSheet.Collection()
 
 # Runtime
 # ------------------------------------------------
@@ -202,7 +207,7 @@ GSS.displayIfNeeded = () ->
 
 
 # Style tags loading
-# ------------------------------------------------
+# ------------------------------------------------  
 
 _scopesToLoad = null
 
@@ -235,7 +240,7 @@ styleQuery.on 'afterChange', () ->
       #
       for scope in _scopesToLoad
         engine = GSS(scope:scope) # make engine if needed
-        if engine then engine.load()
+        if engine then engine.reload()
         #LOG "afterUpdate scopeToLoad", scope          
 
 GSS.dirtyLoadEngines = () ->  

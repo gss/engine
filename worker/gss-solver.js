@@ -176,13 +176,46 @@ Thread = (function() {
     }
   };
 
-  Thread.prototype.get = function(root, id, tracker, tracker2) {
+  Thread.prototype.get$ = function(root, prop, elId, selector) {
+    this._trackRootIfNeeded(root, elId);
+    if (selector) {
+      this._trackRootIfNeeded(root, selector + elId);
+    }
+    return this._get$(prop, elId);
+  };
+
+  Thread.prototype._get$ = function(prop, elId) {
+    var exp, varId;
+    varId = elId + ("[" + prop + "]");
+    switch (prop) {
+      case "right":
+        exp = c.plus(this._get$("x", elId), this._get$("width", elId));
+        return this.varexp(null, varId, exp, elId);
+      case "bottom":
+        exp = c.plus(this._get$("y", elId), this._get$("height", elId));
+        return this.varexp(null, varId, exp, elId);
+      case "center-x":
+        exp = c.plus(this._get$("x", elId), c.divide(this._get$("width", elId), 2));
+        return this.varexp(null, varId, exp, elId);
+      case "center-y":
+        exp = c.plus(this._get$("y", elId), c.divide(this._get$("height", elId), 2));
+        return this.varexp(null, varId, exp, elId);
+      default:
+        return this["var"](null, varId, elId);
+    }
+  };
+
+  Thread.prototype.get = function(root, id, tracker) {
     var v;
+    if (tracker) {
+      this._trackRootIfNeeded(root, tracker);
+    }
     v = this.cachedVars[id];
     if (v) {
-      this._trackRootIfNeeded(root, tracker);
-      this._trackRootIfNeeded(root, tracker2);
       this._trackRootIfNeeded(root, v.tracker);
+      return v;
+    } else {
+      v = this["var"](null, id);
       return v;
     }
     throw new Error("AST method 'get' couldn't find var with id: " + id);

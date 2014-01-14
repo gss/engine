@@ -3,6 +3,10 @@ Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
 remove = (el) ->
   el.parentNode.removeChild(el)
 
+stringify = JSON.stringify
+expect = chai.expect
+assert = chai.assert
+
 describe 'GSS commands', ->
   scope = null
   engine = null
@@ -142,7 +146,7 @@ describe 'GSS commands', ->
         ['eq', ['get','.box[width]','.box'],['get','[grid-col]']]
         ['eq', ['number','100'],['get','[grid-col]']]
       ]
-      chai.expect(engine.workerCommands).to.eql [
+      chai.expect(stringify(engine.workerCommands)).to.eql stringify [
         ['var', '$12322[width]', '$12322']
         ['var', '$34222[width]', '$34222']
         ['var', '[grid-col]']
@@ -209,7 +213,7 @@ describe 'GSS commands', ->
         ['var', '::window[width]', 'width', ['$reserved','window']]
         ['eq', ['get','.box[width]','.box'],['get','::window[width]']]
       ]
-      chai.expect(engine.workerCommands).to.eql [
+      chai.expect(stringify(engine.workerCommands)).to.eql stringify [
         ['var', '$12322[width]', '$12322']
         ['var', '::window[width]']
         ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
@@ -226,7 +230,7 @@ describe 'GSS commands', ->
         ['var', '::window[width]', 'width', ['$reserved','window']]
         ['var', '::window[height]', 'height', ['$reserved','window']]
       ]
-      chai.expect(engine.workerCommands).to.eql [
+      chai.expect(stringify(engine.workerCommands)).to.eql stringify [
         ['var', '::window[x]']
         ['eq', ['get','::window[x]'],['number',0], 'required']
         ['var', '::window[y]']

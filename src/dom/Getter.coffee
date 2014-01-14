@@ -102,7 +102,7 @@ class Getter
     if scoped? and scoped isnt "false"
       return node.parentElement
     else
-      return Getter.getRootScope()
+      return Getter.getRootScope()  
   
   isScope: (el) ->
     return !!el?._gss_is_scope

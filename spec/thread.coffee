@@ -1,5 +1,8 @@
 Thread = GSS.Thread
 
+expect = chai.expect
+assert = chai.assert
+
 describe 'Cassowary Thread', ->
   it 'should instantiate', ->
     thread = new Thread()
@@ -8,9 +11,6 @@ describe 'Cassowary Thread', ->
     thread.execute
       commands:
         [
-          ['var', 'x']
-          ['var', 'y']
-          ['var', 'z']
           ['eq',
             ['get', 'z'],
             ['minus', ['get', 'x'], ['get', 'y'] ]
@@ -47,9 +47,6 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
     thread.execute
       commands:[
-        ['var', '$12322[width]']
-        ['var', '$34222[width]']
-        ['var', '[grid-col]']
         ['eq', ['get','$12322[width]'],['get','[grid-col]']]
         ['eq', ['get','$34222[width]'],['get','[grid-col]']]
         ['eq', ['number','100'],['get','[grid-col]']]
@@ -64,9 +61,6 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
     thread.execute
       commands:[
-        ['var', '[actual-width]']
-        ['var', '[target-width]']
-        ['var', '[pad]']
         ['eq', ['plus',['get','[target-width]'],['get','[pad]']], ['get','[actual-width]']]
         ['eq', ['get','[target-width]'],['number',100], 'required']
         ['suggest', ['get','[pad]'],1]
@@ -99,8 +93,6 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
     thread.execute
       commands:[
-        ['var', '[width]']
-        ['var', '[intrinsic-width]']        
         ['eq', ['get','[width]'],['number','100'], 'weak']
         ['eq', ['get','[width]'],['get','[intrinsic-width]'], 'require']        
         ['suggest', ['get','[intrinsic-width]'], ['number','999']]
@@ -136,7 +128,6 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
     thread.execute
       commands:[
-        ['var', '[x]']
         ['eq', ['get','[x]','x-tracker'],['number','100'],'strong']
         ['eq', ['get','[x]'],['number','10'],'weak']
       ]
@@ -155,7 +146,6 @@ describe 'Cassowary Thread', ->
     thread.execute
       commands:[
         ['var', '[x]', 'x-tracker']
-        ['var', '[y]']
         ['eq', ['get','[x]'],['number','100'],'strong']
         ['eq', ['get','[x]'],['number','10'],'weak']
         ['eq', ['get','[y]'],['number','50'],'strong']
@@ -170,6 +160,92 @@ describe 'Cassowary Thread', ->
     chai.expect(thread.getValues()).to.eql
       "[y]": 50
     done()
+    
+    
+  # DOM Prop Helpers
+  # ---------------------------------------------------------------------
+  
+  describe 'dom prop helpers', ->
+    
+    it 'varexp - right', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','x','$112','.box'],['number','10']]
+          ['eq', ['get$','right','$112','.box'],['number','100']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 10
+        "$112[width]": 90
+        
+    it 'varexp - center-x', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','x','$112','.box'],['number','10']]
+          ['eq', ['get$','center-x','$112','.box'],['number','110']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 10
+        "$112[width]": 200
+        
+    it 'varexp - bottom', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','height','$112','.box'],['number','10']]
+          ['eq', ['get$','bottom','$112','.box'],['number','100']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[height]": 10
+        "$112[y]": 90
+        
+    it 'varexp - center-y', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','height','$112','.box'],['number','100']]
+          ['eq', ['get$','center-y','$112','.box'],['number','51']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[height]": 100
+        "$112[y]": 1
+        
+    it 'tracking by id', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','line-height','$222'],['number','1.6']]
+          ['eq', ['get$','x','$112','.box'],['number','10']]
+          ['eq', ['get$','right','$112','.box'],['number','100']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$222[line-height]": 1.6
+        "$112[x]": 10
+        "$112[width]": 90
+      thread.execute
+        commands:[
+          ['remove', '$112']
+        ]
+      expect(thread.getValues()).to.eql
+        "$222[line-height]": 1.6
+    
+    it 'tracking by selector', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','x','$112','.big-box'],['number','1000']]
+          ['eq', ['get$','x','$112','.box'],['number','50'],'strong']
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 1000
+      thread.execute
+        commands:[
+          ['remove', '.big-box$112']
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 50
+      
   
 
 

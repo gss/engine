@@ -55,6 +55,8 @@ class Engine extends GSS.EventTrigger
     engines.byId[@id] = @
     
     @_Hierarchy_setup()
+    
+    @_StyleSheets_setup()
 
     LOG "constructor() @", @
     @
@@ -117,9 +119,24 @@ class Engine extends GSS.EventTrigger
       # When is best time to dump css?
       # Early in prep for intrinsics?
       # Or, should intrinsics be deferred any way?      
-      @dumpCSSIfNeeded()            
+      @dumpCSSIfNeeded()                    
   
-  load: () =>
+  _StyleSheets_setup: ->
+    @styleSheets = []    
+  
+  load: ->    
+    if !@scope then throw new Error "can't load scopeless engine"
+    if @is_running
+      @clean()
+    for sheet in @styleSheets
+      sheet.execute()
+  
+  #load: (asts) ->
+  #  for s in GSS.styleSheets
+  #    if s.engine is @
+        
+  
+  reload: () =>
     # Load commands from style nodes.    
     LOG @id,".loadASTs()"
     if !@scope then throw new Error "can't load scopeless engine"

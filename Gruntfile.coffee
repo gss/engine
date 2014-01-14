@@ -63,17 +63,10 @@ module.exports = ->
           bare: true
         expand: true
         cwd: 'src'
-        src: ['**.coffee']
+        src: ['**.coffee', '**/*.coffee']
         dest: 'lib'
         ext: '.js'
-      dom:
-        options:
-          bare: true
-        expand: true
-        cwd: 'src/dom'
-        src: ['**.coffee']
-        dest: 'lib/dom'
-        ext: '.js'
+
       spec:
         options:
           bare: true

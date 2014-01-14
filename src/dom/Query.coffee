@@ -1,4 +1,14 @@
-# Encapsulates Dom Queries used in GSS rules
+
+###
+
+Encapsulates Dom Queries used in GSS rules
+
+JSPerf debunking *big* perf gain from liveNodeLists: 
+
+- http://jsperf.com/getelementsbyclassname-vs-queryselectorall/70
+- http://jsperf.com/queryselectorall-vs-getelementsbytagname/77
+
+###
 
 arrayAddsRemoves = (old, neu) ->
   adds = []

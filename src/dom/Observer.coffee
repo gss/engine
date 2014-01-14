@@ -55,7 +55,7 @@ setupObserver = () ->
             invalidMeasureIds.push(gid)
   
     for scope in scopesToLoad      
-      GSS.get.engine(scope).load()
+      GSS.get.engine(scope).reload()
     
     for scope in needsUpdateQueries
       if scopesToLoad.indexOf(scope) is -1 # don't updateQueries if loading

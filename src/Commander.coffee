@@ -91,12 +91,17 @@ class Commander
   execute: (ast) ->
     # is statement
     if ast.commands?
-      for command in ast.commands
+      for command in ast.commands        
+        
+        if ast.context
+          command.context = ast.context
         @_execute command, command
     # is block
+    ###
     if ast.rules?
       for rule in ast.rules
-        @execute rule    
+        @execute rule   
+    ###
 
   _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
     node = command
@@ -507,8 +512,20 @@ class Commander
       return 'window'    
       #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
       #  return ""
-    
-    else if sel is 'this' or sel is 'scope'
+    else if sel is 'this' 
+      engine = @engine
+      if root.context
+        elId = root.context.elId
+      else
+        throw new Error "::this query requires command context"
+        
+      query = @engine.registerDomQuery selector:"#"+elId, isMulti:false, isLive:false, createNodeList:() ->
+        # TODO: Fix this shit, make queries handle just ids?  
+        el = GSS.getById(elId)
+        if el then return [el] else return []     
+      bindRoot root, query
+      return query
+    else if sel is 'scope'
       engine = @engine
       query = @engine.registerDomQuery selector:"::"+sel, isMulti:false, isLive:true, createNodeList:() ->
         return [engine.scope]
