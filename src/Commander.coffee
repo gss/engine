@@ -55,13 +55,6 @@ class Commander
     @boundWindowProps = null
     @bindCache = null
     @unlisten()  
-  
-  # `var` & `varexp` cache binds for `get`
-  _checkCache: (root,cacheKey) =>
-    binds = @bindCache[cacheKey]
-    if binds?
-      for bind in binds
-        bindRoot root, bind
 
   execute: (ast) ->
     # is statement
@@ -136,6 +129,7 @@ class Commander
     thisEngine = @engine
     # TODO:
     # - only listen once, not for each prop
+    # - use get$?
     GSS.on "engine:beforeDisplay", (engine) ->
       val = engine.vars[key]
       if val?
@@ -290,13 +284,10 @@ class Commander
   # ------------------------------------------------
   
   'get': (root, varId, tracker) =>
-    @_checkCache root, varId
-    if tracker and (tracker isnt "::window")
-      return ['get', makeTemplateFromVarId(varId),tracker+"%%"+tracker+"%%"]
-    else if root._is_bound
-      return ['get', makeTemplateFromVarId(varId)]
-    else
-      return ['get', varId]
+    command = ['get', varId]
+    if tracker 
+      command.push tracker
+    return command
   
   
   'get$':(root, prop, query) =>        
@@ -308,8 +299,11 @@ class Commander
       @bindToWindow prop
       return ['get',"::window[#{prop}]"] 
     
+    # scope
+    if query.isScopeBound
+      @bindToScope prop
+    
     # 
-    console.log prop, query
     selector = query.selector
     isMulti = query.isMulti
     isContextBound = query.isContextBound
@@ -545,6 +539,7 @@ class Commander
       if !parentRule
         throw new Error "::this query requires parent rule for context"    
       query = parentRule.getContextQuery()
+      query.isContextBound = true
       bindRoot root, query
       return query
 
@@ -552,7 +547,7 @@ class Commander
       engine = @engine
       query = @engine.registerDomQuery selector:"::"+sel, isMulti:false, isLive:true, createNodeList:() ->
         return [engine.scope]
-      query.__is_scope = true       
+      query.isScopeBound = true       
       bindRoot root, query
       return query
     else

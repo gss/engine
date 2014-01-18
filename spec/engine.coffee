@@ -310,7 +310,7 @@ describe 'GSS engine', ->
     ast =
       selectors: ["#b1", "#b2"]
       commands: [
-        ["eq", ["get$","right",["$id","b1"]], ["get","x",["$id","b2"]]]
+        ["eq", ["get$","right",["$id","b1"]], ["get$","x",["$id","b2"]]]
         
         ["eq", ["get$","width",["$id","w"]]  , ["number",200]]
         ["eq", ["get$","x",    ["$id","w"]]  , ["get",'[target]']]
