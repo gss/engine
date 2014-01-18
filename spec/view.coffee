@@ -44,8 +44,7 @@ describe "GSS.View", ->
         '#text'
       ]
       commands: [
-        ['var', '.target[width]', 'width', ['$class', 'target']]
-        ['eq', ['get', '.target[width]'], ['number', '88']]
+        ['eq', ['get$','width',['$class', 'target']], ['number',88]]
       ]        
     it 'before solving', ->
       q = document.getElementsByClassName('target')
@@ -93,8 +92,7 @@ describe "GSS.View", ->
         '#text'
       ]
       commands: [
-        ['var', '.target[y]', 'y', ['$class', 'target']]
-        ['eq', ['get', '.target[y]'], ['number', '100']]
+        ['eq', ['get$','y',['$class','target']], ['number', '100']]
       ]        
     it 'before solving', ->
       q = document.getElementsByClassName('target')
@@ -158,8 +156,7 @@ describe "GSS.View", ->
         '#text'
       ]
       commands: [
-        ['var', '.target[y]', 'y', ['$class', 'target']]
-        ['eq', ['get', '.target[y]'], ['number', '100']]
+        ['eq', ['get$','y',['$class', 'target']], ['number', '100']]
       ]        
     it 'before solving', ->
       q = document.getElementsByClassName('target')

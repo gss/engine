@@ -598,50 +598,25 @@ class Engine extends GSS.EventTrigger
   # ----------------------------------------
   
   elVar: (el,key,selector,tracker2) ->
-    gid = GSS.getId el    
+    gid = "$" + GSS.getId el    
     # normalize key names
     if key is 'left'
       key = 'x'
     else if key is 'top' 
       key = 'y'
-    varid = "$"+gid+"[#{key}]"
-    # varexps
-    if key is 'bottom'
-      @registerCommand ['varexp', varid, @plus(@elVar(el,'y',selector),@elVar(el,'height',selector))] 
-    else if key is 'right'      
-      @registerCommand ['varexp', varid, @plus(@elVar(el,'x',selector),@elVar(el,'width',selector))] 
-    else if key is 'center-y'
-      @registerCommand ['varexp', 
-        varid,
-        @plus(
-          @elVar(el,'y',selector), 
-          @divide(@elVar(el,'height',selector),2)
-        )
-      ]
-    else if key is 'center-x'
-      @registerCommand ['varexp',
-        varid,
-        @plus(
-          @elVar(el,'x',selector), 
-          @divide(@elVar(el,'width',selector),2)
-        )
-      ] 
-    else
-      @registerCommand ['var', varid, "$"+gid]
+    varid = gid+"[#{key}]"
     #
-    ast = ['get',varid]
-    if selector 
-      ast.push selector+"$"+gid
+    ast = ['get$',key,gid,selector]
     if tracker2
       ast.push tracker2
     return ast
     
   var: (key) ->    
-    @registerCommand ['var', key]
+    #@registerCommand ['var', key]
     return ['get',key]
   
   varexp: (key, exp, tracker) ->
-    @registerCommand ['varexp', exp, tracker]
+    #@registerCommand ['varexp', exp, tracker]
     return ['get',key]
   
   __e: (key) ->

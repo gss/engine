@@ -54,7 +54,6 @@ describe 'GSS engine', ->
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run commands: [
-          ['var', '[x]'],
           ['eq', ['get','[x]'], ['number',222]]
         ]
     it 'should destroy', (done)->
@@ -79,7 +78,6 @@ describe 'GSS engine', ->
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run commands: [
-          ['var', '[x]'],
           ['eq', ['get','[x]'], ['number',222]]
         ]
     it 'should destroy', (done)->
@@ -104,7 +102,6 @@ describe 'GSS engine', ->
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run commands: [
-          ['var', '[x]'],
           ['eq', ['get','[x]'], ['number',222]]
         ]
     it 'should destroy', (done)->
@@ -146,10 +143,8 @@ describe 'GSS engine', ->
             '#button2'
           ]
           commands: [
-            ['var', '#button1[width]', 'width', ['$id', 'button1']]
-            ['var', '#button2[width]', 'width', ['$id', 'button2']]
-            ['eq', ['get', '#button1[width]'], ['get', '#button2[width]']]
-            ['eq', ['get', '#button1[width]'], ['number', '100']]
+            ['eq', ['get$', 'width', ['$id','button1']], ['get$', 'width', ['$id','button2']]]
+            ['eq', ['get$', 'width', ['$id','button1']], ['number', '100']]
           ]
         
         it 'should useWorker or not', ->
@@ -203,10 +198,8 @@ describe 'GSS engine', ->
             '#text'
           ]
           commands: [
-            ['var', 'h1[line-height]', 'line-height', ['$tag', 'h1']]
-            ['var', 'h1[font-size]', 'font-size', ['$tag', 'h1']]
-            ['eq', ['get', 'h1[line-height]'], ['get', 'h1[font-size]']]
-            ['eq', ['get', 'h1[line-height]'], ['number', '42']]
+            ['eq', ['get$','line-height',['$tag','h1']], ['get$','font-size',['$tag','h1']]]
+            ['eq', ['get$','line-height',['$tag','h1']], ['number', '42']]
           ]
         
         it 'should useWorker or not', ->
@@ -259,10 +252,8 @@ describe 'GSS engine', ->
         '#button2'
       ]
       commands: [
-        ['var', '#button1[width]', 'width', ['$id', 'button1']]
-        ['var', '#button2[width]', 'width', ['$id', 'button2']]
-        ['eq', ['get', '#button2[width]'], ['number', '222']]
-        ['eq', ['get', '#button1[width]'], ['number', '111']]        
+        ['eq', ['get$','width',['$id','button2']], ['number', '222']]
+        ['eq', ['get$','width',['$id','button1']], ['number', '111']]        
       ]
     
     it 'before solving buttons dont exist', ->
@@ -319,26 +310,14 @@ describe 'GSS engine', ->
     ast =
       selectors: ["#b1", "#b2"]
       commands: [
-        ["var", "#b1[x]", "x", ["$id", "b1"]]
-        ["var", "#b1[width]", "width", ["$id", "b1"]]
-        ['varexp', '#b1[right]', ['plus',['get','#b1[x]'],['get','#b1[width]']], ['$id','b1']]
-        ["var", "#b2[x]", "x", ["$id", "b2"]]
-        ["eq", ["get", "#b1[right]"], ["get", "#b2[x]"]]
+        ["eq", ["get$","right",["$id","b1"]], ["get","x",["$id","b2"]]]
         
-        ["var", "#b2[width]", "width", ["$id", "b2"]]
-        ['varexp', '#b2[right]', ['plus',['get','#b2[x]'],['get','#b2[width]']], ['$id','b2']]
-        
-        ["var", "#w[x]", "x", ["$id", "w"]]        
-        ["var", "#w[width]", "width", ["$id", "w"]]
-        ['varexp', '#w[right]', ['plus',['get','#w[x]'],['get','#w[width]']], ['$id','w']]
-        
-        ['var', '[target]']
-        
-        ["eq", ["get", "#w[width]"], ["number", "200"]]
-        ["eq", ["get", "#w[x]"], ["get", '[target]']]
-        ["eq", ["get", "#b2[right]"], ["get", "#w[right]"]]
-        ["eq", ["get", "#b1[x]"], ["get", "[target]"]]        
-        ["eq", ["get", "#b1[width]"], ["get", "#b2[width]"]]
+        ["eq", ["get$","width",["$id","w"]]  , ["number",200]]
+        ["eq", ["get$","x",    ["$id","w"]]  , ["get",'[target]']]
+        ["eq", ["get$","right",["$id","b2"]] , ["get$","right",["$id","w"]]] 
+        # b2[right] -> 200
+        ["eq", ["get$","x",    ["$id","b1"]] , ["get","[target]"]]        
+        ["eq", ["get$","width",["$id","b1"]] , ["get$","width",["$id","b2"]]]
         
         ["eq", ["get", "[target]"], 0]
       ]
@@ -375,8 +354,6 @@ describe 'GSS engine', ->
     it 'var == var * (num / num)', (done) ->
       engine.run 
         commands: [
-          ['var', '[x]']
-          ['var', '[y]']
           ['eq', ['get', '[y]'], ['number',10]]
           ['eq', ['get', '[x]'], ['multiply',['get','[y]'],['divide',['number',1],['number',2]]] ]
         ]
@@ -405,8 +382,6 @@ describe 'GSS engine', ->
     
     it 'engine.vars are set', (done) ->
       engine.registerCommands [
-          ['var', '[col-width]']
-          ['var', '[row-height]']
           ['eq', ['get', '[col-width]'], ['number',100]]
           ['eq', ['get', '[row-height]'], ['number',50]]
         ]
@@ -422,8 +397,6 @@ describe 'GSS engine', ->
     
     it 'engine.vars are updated after many suggests', (done) ->
       engine.registerCommands [
-          ['var', '[col-width]']
-          ['var', '[row-height]']
           ['eq', ['get', '[col-width]'], ['number',100], 'medium']
           ['eq', ['get', '[row-height]'], ['number',50], 'medium']
           ['suggest', ['get', '[col-width]'], 10]
@@ -513,8 +486,7 @@ describe 'GSS engine', ->
           <style type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", ".box[x]", "x", ["$class", "box"]],
-              ["eq", ["get",".box[x]",".box"], ["number",100]]
+              ["eq", ["get$","x",["$class", "box"]], ["number",100]]
             ]          
           }
           </style>
@@ -524,10 +496,8 @@ describe 'GSS engine', ->
         engine = GSS(container)      
         listener = (e) ->        
           expect(engine.lastWorkerCommands).to.eql [
-              ['var', '$box1[x]', '$box1']
-              ['var', '$box2[x]', '$box2']
-              ['eq', ['get','$box1[x]','.box$box1'], ['number',100]]
-              ['eq', ['get','$box2[x]','.box$box2'], ['number',100]]
+              ['eq', ['get$','x','$box1','.box'], ['number',100]]
+              ['eq', ['get$','x','$box2','.box'], ['number',100]]
             ]
           container.removeEventListener 'solved', listener
           done()
@@ -558,7 +528,6 @@ describe 'GSS engine', ->
           <style id="gssa" type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "[col-width-1]"],
               ["suggest", "[col-width-1]", 111]
             ]          
           }
@@ -578,7 +547,6 @@ describe 'GSS engine', ->
         styleNode.innerHTML = """
           {
             "commands": [
-              ["var", "[col-width-11]"],
               ["suggest", "[col-width-11]", 1111]
             ]          
           }
@@ -599,7 +567,6 @@ describe 'GSS engine', ->
           <style id="gssb" type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "[col-width-2]"],
               ["suggest", "[col-width-2]", 222]
             ]          
           }
@@ -623,7 +590,6 @@ describe 'GSS engine', ->
           <style id="gssc" type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "[col-width-3]"],
               ["suggest", "[col-width-3]", 333]
             ]          
           }
@@ -631,7 +597,6 @@ describe 'GSS engine', ->
           <style id="gssd" type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "[col-width-4]"],
               ["suggest", "[col-width-4]", 444]
             ]          
           }
@@ -682,7 +647,6 @@ describe 'GSS engine', ->
           <style type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "[col-width-1]"],
               ["suggest", "[col-width-1]", 111]
             ],
             "css": "#box{width:100px;}#b{height:10px;}"       
@@ -712,8 +676,7 @@ describe 'GSS engine', ->
             <style type="text/gss-ast" scoped>
             {
               "commands": [
-                ["var", "#boo[width]", "width", ["$id","boo"]],
-                ["eq", ["get","#boo[width]","#boo"], ["number",100]]
+                ["eq", ["get$","width",["$id","boo"]], ["number",100]]
               ]
             }
             </style>
@@ -900,8 +863,7 @@ describe 'GSS engine', ->
           <style type="text/gss-ast" scoped>
           {
             "commands": [
-              ["var", "#wrap[width]", "width", ["$id","wrap"]],
-              ["eq", ["get","#wrap[width]","#wrap"], ["number",69]]
+              ["eq", ["get$","width",["$id","wrap"]], ["number",69]]
             ]
           }
           </style>
@@ -909,9 +871,7 @@ describe 'GSS engine', ->
             <style type="text/gss-ast" scoped>
             {
               "commands": [
-                ["var", "#boo[width]", "width", ["$id","boo"]],
-                ["var", "::scope[width]", "width", ["$reserved","scope"]],
-                ["eq", ["get","#boo[width]","#boo"], ["get","::scope[width]"]]
+                ["eq", ["get$","width",["$id","boo"]], ["get$","width",["$reserved","scope"]]]
               ]
             }
             </style>

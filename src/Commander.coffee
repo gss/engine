@@ -6,51 +6,26 @@ to match live results of query.
 ###
 
 bindRoot = (root, query) ->
-  root._is_bound = true
-  if !root._binds?
-    root._binds = []
-    root._boundSelectors = []
-  if root._binds.indexOf(query) is -1
-    root._binds.push query
-    root._boundSelectors.push query.selector
-    if query.isMulti
-      if root._binds.multi
-        throw new Error "Multi el queries only allowed once per statement"
-      root._binds.multi = query
-
-cloneBinds = (from, to) ->
-  if from._is_bound = true
-    for query in from._binds
-      bindRoot to, query
-  return to
-
-# - preload cache for pass-throughs
-# - global cache, kinda dangerous?
-# TODO:
-# - replace with smarter parser
-_templateVarIdCache = {
-  "::window[width]":"::window[width]"
-  "::window[height]":"::window[height]"
-  "::window[x]":"::window[x]"
-  "::window[y]":"::window[y]"
-  "::window[center-x]":"::window[center-x]"
-  "::window[center-y]":"::window[center-y]"
-}
-window._templateVarIdCache = _templateVarIdCache
-
-makeTemplateFromVarId = (varId) ->
-  # Ad Hoc Templating!
-  if _templateVarIdCache[varId] then return _templateVarIdCache[varId]
-  #if varId.indexOf("::window") is 0 then return varId
-  #
-  templ = varId
-  y = varId.split("[")
-  if y[0].length > 1
-    # template just the last []'s, to protect prop selectors
-    y[y.length-2] += "%%"
-    templ = "%%" + y.join("[")
-    _templateVarIdCache[varId] = templ
-  return templ
+  root.isQueryBound = true    
+  
+  if !root.queries 
+    root.queries = [query]
+  else if root.queries.indexOf(query) is -1
+    root.queries.push query
+  else
+    return root # already setup
+  
+  isMulti = query.isMulti
+  isContextBound = query.isContextBound
+  
+  if isMulti and !isContextBound
+    if root.queries.multi and root.queries.multi isnt query then throw new Error "bindRoot:: only one multiquery per statement"
+    root.queries.multi = query
+  
+  if isContextBound
+    root.isContextBound = true
+    
+  return root
 
 
 # Commander
@@ -93,8 +68,9 @@ class Commander
     if ast.commands?
       for command in ast.commands        
         
-        if ast.context
-          command.context = ast.context
+        if ast.isRule
+          command.parentRule = ast
+          
         @_execute command, command
     # is block
     ###
@@ -182,21 +158,6 @@ class Commander
     #  throw new Error "Not sure how to bind to window prop: #{prop}"
     ###
 
-  registerSpawn: (root, varid, prop, intrinsicQuery, checkInstrinsics) ->    
-    if !root._is_bound
-      # just pass root through
-      @engine.registerCommand root
-    else
-      if varid
-        @bindCache[varid] = root._binds
-      root._template = JSON.stringify(root)
-      root._varid = varid
-      root._prop = prop
-      if checkInstrinsics
-        root._checkInstrinsics = checkInstrinsics
-        root._intrinsicQuery = intrinsicQuery
-      @spawnableRoots.push root
-      @spawn root
 
   handleRemoves: (removes) ->
     if (removes.length < 1) then return @    
@@ -207,9 +168,10 @@ class Commander
 
   handleSelectorsWithAdds: (selectorsWithAdds) ->
     if (selectorsWithAdds.length < 1) then return @
+    # TODO: cache lookup, can be many spawnableRoots
     for root in @spawnableRoots
-      for boundSelector in root._boundSelectors
-        if selectorsWithAdds.indexOf(boundSelector) isnt -1
+      for query in root.queries
+        if selectorsWithAdds.indexOf(query.selector) isnt -1
           @spawn root
           break
     @
@@ -256,72 +218,77 @@ class Commander
             @intrinsicRegistersById[gid][prop] = register
             register.call @
     @
-
-  spawn: (root) ->
-    queries = root._binds
-    rootString = root._template
-    replaces = {}
+  
+  
+  # Command Spawning
+  # ------------------------------------------------
+  
+  registerSpawn: (node) ->
+    if !node.isQueryBound
+      # just pass root through
+      @engine.registerCommand node
+    else
+      @spawnableRoots.push node
+      @spawn node    
+  
+  spawn: (node) ->
+    queries = node.queries
     ready = true
-
     for q in queries
       if q.lastAddedIds.length <= 0
         ready = false
         break
-      if q isnt queries.multi
-        replaces[q.selector] = q.lastAddedIds[0] # only should be 1 el
-
+            
     if ready
-
-      # generate commands bound to plural selector
-      if queries.multi
-        template = rootString.split "%%" + queries.multi.selector + "%%"
-        for id in queries.multi.lastAddedIds
-          command = template.join "$" + id
-          for splitter, joiner of replaces
-            command = command.split "%%" + splitter + "%%"
-            command = command.join "$" + joiner
-          @engine.registerCommand eval command
-
-      # generate command bound to singular selector
+      if node.isContextBound        
+        for context_id in node.parentRule.getContextQuery().lastAddedIds
+          @_spawnCommandFromBase node, context_id
       else
-        command = rootString
-        for splitter, joiner of replaces
-          command = command.split "%%" + splitter + "%%"
-          command = command.join "$" + joiner
-        @engine.registerCommand eval command        
+        @_spawnCommandFromBase node
     
     # generate intrinsic commands
-    @spawnMeasurements root
+    ### TODO
+    @spawnMeasurements node
     @
+    ###
+                            
+  _spawnCommandFromBase: (command, contextId) ->
+    newCommand = []
+    commands = []
+    hasPlural = false
+    pluralPartLookup = {}
+    plural = null
+    pluralLength = 0
+    for part, i in command      
+      if part
+        if part.spawn?
+          newPart = part.spawn(  contextId  )
+          newCommand.push newPart
+          if part.isPlural
+            hasPlural = true
+            pluralPartLookup[i] = newPart
+            pluralLength = newPart.length
+        else
+          newCommand.push part
+               
+    if hasPlural      
+      for j in [0...pluralLength]
+        pluralCommand = []
+        for part, i in newCommand
+          if pluralPartLookup[i]
+            pluralCommand.push pluralPartLookup[i][j]
+          else
+            pluralCommand.push part
+        commands.push pluralCommand
+      return @engine.registerCommands commands        
+    else
+      return @engine.registerCommand newCommand
     
 
+  
   # Variable Commands
   # ------------------------------------------------
-
-  'var': (self, varId, prop, query) =>    
-    # clean all but first two
-    self.splice(2,10)
-    if self._is_bound # query?
-      # mark for gssId replacement
-      self[1] = makeTemplateFromVarId varId
-      # add selector to end of command & tag
-      # for tracking w/in Cassowary Thread
-      self.push "%%" + query.selector + "%%"
-    @registerSpawn(self, varId, prop, query, true)
-    if query
-      if query is 'window'
-        @bindToWindow prop
-        query = null
-      else if query.__is_scope
-        @bindToScope prop
-
-  'varexp': (self, varId, expression, zzz) =>
-    # clean all but first three
-    self.splice(3,10)
-    # mark for gssId replacement
-    self[1] = makeTemplateFromVarId varId
-    @registerSpawn(self, varId)
-
+  
   'get': (root, varId, tracker) =>
     @_checkCache root, varId
     if tracker and (tracker isnt "::window")
@@ -330,7 +297,66 @@ class Commander
       return ['get', makeTemplateFromVarId(varId)]
     else
       return ['get', varId]
+  
+  
+  'get$':(root, prop, query) =>        
+            
+    # TODO: cache returned objects by prop & selector
+    
+    # window  
+    if query is 'window'
+      @bindToWindow prop
+      return ['get',"::window[#{prop}]"] 
+    
+    # 
+    console.log prop, query
+    selector = query.selector
+    isMulti = query.isMulti
+    isContextBound = query.isContextBound
+    
+    # intrinsics
+    # TODO: should be called only once
+    if prop.indexOf("intrinsic-") is 0
+      query.lastAddedIds.forEach (id) =>
+        gid = "$" + id
+        if !@intrinsicRegistersById[gid] then @intrinsicRegistersById[gid] = {}              
+        # only register intrinsic prop once per id          
+        if !@intrinsicRegistersById[gid][prop]
+          elProp = prop.split("intrinsic-")[1]
+          k = "#{gid}[#{prop}]"
+          register = () ->
+            val = @engine.measureByGssId(id, elProp)              
+            # don't spawn intrinsic if val is unchanged
+            if @engine.vars[k] isnt val                
+              @engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              
+              #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
 
+          @intrinsicRegistersById[gid][prop] = register
+          register.call @    
+        
+    if isContextBound
+      return {
+        isQueryBound: true
+        isPlural: false
+        query: query      
+        spawn: (id) ->
+          return ['get$', prop, "$"+id, selector]
+      }
+      
+    return {
+        isQueryBound: true
+        isPlural: isMulti
+        query: query      
+        spawn: () ->
+          if !isMulti
+            id = query.lastAddedIds[query.lastAddedIds.length-1]
+            return ['get$', prop, "$"+id, selector]
+          nodes = []
+          for id in query.lastAddedIds
+            nodes.push ['get$', prop, "$"+id, selector]
+          return nodes
+      }      
+  
   'number': (root, num) ->
     return ['number', num]
 
@@ -346,14 +372,15 @@ class Commander
   'divide': (root, e1,e2,s,w) ->
     return ['divide', e1, e2]
 
+
   # Constraint Commands
   # ------------------------------------------------
 
   'suggest': () =>
     # pass through
     args = [arguments...]
-    @engine.registerCommand ['suggest', args[1...args.length]...]
-
+    @engine.registerCommand ['suggest', args[1...args.length]...]                
+  
   'eq': (self,e1,e2,s,w) =>
     @registerSpawn(self)
 
@@ -512,19 +539,15 @@ class Commander
       return 'window'    
       #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
       #  return ""
-    else if sel is 'this' 
+    else if sel is '::this' or sel is 'this'
       engine = @engine
-      if root.context
-        elId = root.context.elId
-      else
-        throw new Error "::this query requires command context"
-        
-      query = @engine.registerDomQuery selector:"#"+elId, isMulti:false, isLive:false, createNodeList:() ->
-        # TODO: Fix this shit, make queries handle just ids?  
-        el = GSS.getById(elId)
-        if el then return [el] else return []     
+      parentRule = root.parentRule
+      if !parentRule
+        throw new Error "::this query requires parent rule for context"    
+      query = parentRule.getContextQuery()
       bindRoot root, query
       return query
+
     else if sel is 'scope'
       engine = @engine
       query = @engine.registerDomQuery selector:"::"+sel, isMulti:false, isLive:true, createNodeList:() ->
