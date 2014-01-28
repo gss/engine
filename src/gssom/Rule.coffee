@@ -1,15 +1,24 @@
 
 Node = GSS.Node
 
+rule_cid = 0
+
 class Rule extends Node
   
-  isRule: true
+  isRule: true    
   
   constructor: (o) ->
+    rule_cid++
+    @cid = rule_cid
     
     for key, val of o
       @[key] = val
-      
+    
+    @boundConditionals = []
+    
+    if @name is 'else' or @name is 'elseif' or @name is "if"
+      @isConditional = true
+    
     ###
     @rules
     @commands
@@ -28,6 +37,36 @@ class Rule extends Node
     @
   
   _selectorContext: null
+  
+  install: () ->
+    if @commands then @engine.run @ #install?
+  
+  uninstall: ()->
+  
+  update: () ->    
+    @Type.update.call(@)
+  
+  update___: () ->
+    if @commands
+      @engine.run @
+    @Type.update.call(@)
+  
+  
+  # Tree traversal
+  # -----------------------------------------
+  
+  nextSibling: () ->
+    i = @parent.rules.indexOf @
+    return @parent.rules[i+1]
+    
+  prevSibling: () ->
+    i = @parent.rules.indexOf @
+    return @parent.rules[i-1]
+    
+    
+  
+  # Selector Context
+  # -----------------------------------------
   
   getSelectorContext: ->
     # TODO: invalidate & recompute?
@@ -66,28 +105,52 @@ class Rule extends Node
     engine = @engine
     @query = engine.registerDomQuery selector:effectiveSelector, isMulti:true, isLive:false, createNodeList:() ->
       return engine.queryScope.querySelectorAll(effectiveSelector)
-    
-  
-  update: () ->
-    if @commands
       
-      @engine.run @ #install?              
-
-    @Type.update.call(@)
+  # conditionals
+  # ----------------------------------
   
-  update___: () ->
-    if @commands
-      @engine.run @
-    @Type.update.call(@)
-    
-    
+  gatherCondCommand: ->
+    command = ["cond"]    
+    next = @
+    nextIsConditional = true
+    while nextIsConditional
+      command.push next.getClauseCommand()
+      next = next.nextSibling()
+      nextIsConditional = next?.isConditional
+    return command
+      
+  getClauseCommand: ->
+    return ["clause", @clause, @getClauseTracker()]
+  
+  getClauseTracker: ->
+    return "cond:#{@cid}"
+  
+  injectChildrenCondtionals: (conditional) ->
+    for rule in @rules
+      rule.boundConditionals.push conditional
+      rule.isCondtionalBound = true
+      rule.injectChildrenCondtionals()
+  
+  
 Rule.types =
   
   directive: 
+    
     update: ->
+      if @name is 'else' or @name is 'elseif'
+        @injectChildrenCondtionals(@)
+        return @
+      else if @name is 'if'
+        @commands = [@gatherCondCommand()]
+        @injectChildrenCondtionals(@)
+        @install()
+      else        
+        @install()        
+  
   
   constraint: 
-    update: ->      
+    update: -> 
+      @install()    
   
   style: 
     update: ->

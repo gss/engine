@@ -13,6 +13,7 @@ class Thread
     @cachedVars           = {}          
     @constraintsByTracker = {}
     @varIdsByTracker      = {}
+    @conditionals         = []
     @__editVarNames       = []
     @  
   
@@ -30,6 +31,7 @@ class Thread
     @cachedVars           = null    
     @constraintsByTracker = null
     @varIdsByTracker      = null
+    @conditionals         = null
     @__editVarNames       = null
     @   
       
@@ -38,7 +40,11 @@ class Thread
   
   execute: (message) =>
     @setupIfNeeded()
+    uuid = null
+    if message.uuid
+      uuid = message.uuid
     for command in message.commands
+      @_trackRootIfNeeded command, uuid
       @_execute command, command
     #for vs in message.vars
     #  @_execute vs
@@ -51,21 +57,197 @@ class Thread
     func = @[node[0]]
     if !func?
       throw new Error("Thread.execute broke, couldn't find method: #{node[0]}")
+          
     # recursive excution
-    for sub, i in node[1..node.length]
+    # negative while loop allows for splicing out ignored commands
+    i = node.length - 1
+    while i > 0 # skip 0
+      sub = node[i]
       if sub instanceof Array # then recurse
-        node.splice i+1,1,@_execute sub, root
+        subResult = @_execute sub, root
+        if subResult is "IGNORE"
+          node.splice i, 1
+        else
+          node.splice i, 1, subResult
+      i--        
+    
     return func.call @, root, node[1...node.length]...
 
   getValues: () ->
     #@solver.resolve()
-    @solver.solve()
+    @_solve()
     o = {}
     for id of @cachedVars
       o[id] = @cachedVars[id].value
     return o
+  
+  _solve: (recurses = 0) ->
+    @solver.solve()  
     
-  # Cassowary Commands
+    # TODO: handle recurses better to catch cyclic clauses
+    
+    if @conditionals.length > 0 and recurses is 0
+      for conditional in @conditionals
+        conditional.update()
+      recurses++
+      @_solve(recurses)
+  
+  # Tracking
+  # ------------------------------------------------
+  
+  'track': (root, tracker) ->
+    @_trackRootIfNeeded root, tracker
+    return 'IGNORE'
+    
+  _trackRootIfNeeded: (root,tracker) ->
+    if tracker
+      root._is_tracked = true
+      if !root._trackers then root._trackers = []
+      if  root._trackers.indexOf(tracker) is -1 then root._trackers.push(tracker)      
+  
+  
+  # Removal
+  # ------------------------------------------------
+  
+  'remove': (self, trackersss) => # (tacker, tracker, tracker...)
+    args = [arguments...]
+    trackers = [args[1...args.length]...]
+    for tracker in trackers
+      @_remove tracker
+      
+  _remove: (tracker) =>
+    @_removeConstraintByTracker tracker
+    @_removeVarByTracker tracker
+      
+  _removeVarByTracker: (tracker) ->
+    delete @__editVarNames[tracker]    
+    # clean up varcache
+    if @varIdsByTracker[tracker]
+      for id in @varIdsByTracker[tracker]
+        delete @cachedVars[id]
+      delete @varIdsByTracker[tracker]
+
+  _removeConstraintByTracker: (tracker, permenant = true) ->
+    if @constraintsByTracker[tracker]
+      for constraint in @constraintsByTracker[tracker]
+        try 
+          @solver.removeConstraint constraint
+        catch error
+          #throw new Error "cant remove constraint by tracker: #{tracker}"
+          movealong = 'please'
+      if permenant
+        @constraintsByTracker[tracker] = null
+  
+  _addConstraintByTracker: (tracker) ->
+    if @constraintsByTracker[tracker]
+      for constraint in @constraintsByTracker[tracker]
+        @solver.addConstraint constraint
+    
+  
+  # Conditionals
+  # ------------------------------------------------
+  
+  # TODO: 
+  # - remove conditional?  
+  # - remove trackers from conditional???
+  # - nested conditionals??? 
+  
+  'where': (root,label) ->
+    root._condition_bound = true
+    @_trackRootIfNeeded root, label
+    return "IGNORE"
+  
+  'cond': (self,ifffff) ->    
+    args = [arguments...]
+    clauses = []
+    for clause in args[1...args.length]
+      clauses.push clause
+      
+    that = this
+    
+    @conditionals.push {
+      clauses: clauses
+      activeLabel: null      
+      update: ->
+        found = false
+        oldLabel = @activeLabel
+        for clause in clauses
+          newLabel = clause.test()
+          if newLabel
+            found = true
+            break
+        if found
+          if oldLabel isnt newLabel
+            if oldLabel?
+              that._removeConstraintByTracker oldLabel, false
+            that._addConstraintByTracker newLabel
+            @activeLabel = newLabel
+        else
+          if oldLabel?
+            that._removeConstraintByTracker oldLabel, false          
+    }
+  
+  # Conditional Clauses
+  
+  'clause': (root, condition, label) ->
+    return {
+      label: label
+      test: ->
+        if !condition then return label
+        if condition.call @
+          return label
+        else
+          return null
+    }
+    
+  
+  # Conditional Expressions
+  
+  _valueOf: (e) ->
+    val = e.value
+    if val then return val
+    val = Number(e)
+    if val then return val        
+  
+  '?>=' : (root,e1,e2) ->
+    _valueOf = @_valueOf
+    return ->      
+      return _valueOf(e1) >= _valueOf(e2)
+    
+  '?<=' : (root,e1,e2) ->
+    _valueOf = @_valueOf
+    return ->
+      return _valueOf(e1) <= _valueOf(e2)
+  
+  '?==' : (root,e1,e2) ->
+    _valueOf = @_valueOf
+    return -> 
+      return _valueOf(e1) is _valueOf(e2)
+  
+  '?>' : (root,e1,e2) ->
+    _valueOf = @_valueOf
+    return ->      
+      return _valueOf(e1) > _valueOf(e2)
+    
+  '?<' : (root,e1,e2) ->
+    _valueOf = @_valueOf
+    return ->
+      return _valueOf(e1) < _valueOf(e2)
+  
+  '?!=' : (root,e1,e2) ->
+    _valueOf = @_valueOf
+    return -> 
+      return _valueOf(e1) isnt _valueOf(e2)
+    
+  '&&'  : (root,c1,c2) ->
+    # getter value ->
+    return c1 and c2
+    
+  '||'  : (root,c1,c2) ->
+    return c1 or c2
+  
+  
+  # Variables
   # ------------------------------------------------
 
   number: (root, num) ->
@@ -106,13 +288,7 @@ class Thread
           clone._is_tracked = true
         # TODO: Add value getter to expressions...
         return clone
-    return expression
-  
-  _trackRootIfNeeded: (root,tracker) ->
-    if tracker
-      root._is_tracked = true
-      if !root._trackers then root._trackers = []
-      if  root._trackers.indexOf(tracker) is -1 then root._trackers.push(tracker)
+    return expression      
   
   get$: (root, prop, elId, selector) ->
         
@@ -139,9 +315,7 @@ class Thread
         exp = c.plus( @_get$("y", elId), c.divide(@_get$("height", elId),2) )
         return @varexp null, varId, exp, elId        
       else
-        return @var null, varId, elId
-    
-    
+        return @var null, varId, elId        
   
   # The `get` command registers all trackable information to the root constraint commands
   get: (root, id, tracker) ->
@@ -156,7 +330,11 @@ class Thread
       return v
       
     throw new Error("AST method 'get' couldn't find var with id: #{id}")
-
+  
+  
+  # Expressions
+  # ------------------------------------------------
+  
   plus: (root, e1, e2) ->
     return c.plus e1, e2
 
@@ -168,7 +346,11 @@ class Thread
 
   divide: (root,e1,e2,s,w) ->
     return c.divide e1, e2
-
+  
+  
+  # Constraints
+  # ------------------------------------------------
+  
   _strength: (s='required') ->
     if typeof s is 'string'
       if s is 'require' then s = 'required'
@@ -185,7 +367,8 @@ class Thread
   
   #
   _addConstraint: (root, constraint) =>
-    @solver.addConstraint constraint
+    if !root._condition_bound
+      @solver.addConstraint constraint
     if root._is_tracked
       for tracker in root._trackers
         if !@constraintsByTracker[tracker] then @constraintsByTracker[tracker] = []
@@ -242,30 +425,6 @@ class Thread
     for v in args[1...args.length]
       @solver.addStay v
     return @solver
-  
-  # Remove Commands
-  
-  'remove': (self) => # (tacker, tracker, tracker...)
-    args = [arguments...]
-    trackers = [args[1...args.length]...]
-    for tracker in trackers
-      @_remove tracker
       
-  _remove: (tracker) =>
-    delete @__editVarNames[tracker]
-    # remove constraints
-    if @constraintsByTracker[tracker]
-      for constraint in @constraintsByTracker[tracker]
-        try 
-          @solver.removeConstraint constraint
-        catch error
-          #throw new Error "cant remove constraint by tracker: #{tracker}"
-          movealong = 'please'
-      delete @constraintsByTracker[tracker]
-    # clean up varcache
-    if @varIdsByTracker[tracker]
-      for id in @varIdsByTracker[tracker]
-        delete @cachedVars[id]
-      delete @varIdsByTracker[tracker]
 
 if module?.exports then module.exports = Thread

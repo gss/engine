@@ -25,8 +25,6 @@ var Thread,
 
 Thread = (function() {
   function Thread() {
-    this._remove = __bind(this._remove, this);
-    this['remove'] = __bind(this['remove'], this);
     this.stay = __bind(this.stay, this);
     this.suggest = __bind(this.suggest, this);
     this._editvar = __bind(this._editvar, this);
@@ -36,6 +34,8 @@ Thread = (function() {
     this.lte = __bind(this.lte, this);
     this.eq = __bind(this.eq, this);
     this._addConstraint = __bind(this._addConstraint, this);
+    this._remove = __bind(this._remove, this);
+    this['remove'] = __bind(this['remove'], this);
     this._execute = __bind(this._execute, this);
     this.execute = __bind(this.execute, this);
     this;
@@ -53,6 +53,7 @@ Thread = (function() {
     this.cachedVars = {};
     this.constraintsByTracker = {};
     this.varIdsByTracker = {};
+    this.conditionals = [];
     this.__editVarNames = [];
     return this;
   };
@@ -68,46 +69,289 @@ Thread = (function() {
     this.cachedVars = null;
     this.constraintsByTracker = null;
     this.varIdsByTracker = null;
+    this.conditionals = null;
     this.__editVarNames = null;
     return this;
   };
 
   Thread.prototype.execute = function(message) {
-    var command, _i, _len, _ref;
+    var command, uuid, _i, _len, _ref;
     this.setupIfNeeded();
+    uuid = null;
+    if (message.uuid) {
+      uuid = message.uuid;
+    }
     _ref = message.commands;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       command = _ref[_i];
+      this._trackRootIfNeeded(command, uuid);
       this._execute(command, command);
     }
     return this;
   };
 
   Thread.prototype._execute = function(command, root) {
-    var func, i, node, sub, _i, _len, _ref;
+    var func, i, node, sub, subResult;
     node = command;
     func = this[node[0]];
     if (func == null) {
       throw new Error("Thread.execute broke, couldn't find method: " + node[0]);
     }
-    _ref = node.slice(1, +node.length + 1 || 9e9);
-    for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-      sub = _ref[i];
+    i = node.length - 1;
+    while (i > 0) {
+      sub = node[i];
       if (sub instanceof Array) {
-        node.splice(i + 1, 1, this._execute(sub, root));
+        subResult = this._execute(sub, root);
+        if (subResult === "IGNORE") {
+          node.splice(i, 1);
+        } else {
+          node.splice(i, 1, subResult);
+        }
       }
+      i--;
     }
     return func.call.apply(func, [this, root].concat(__slice.call(node.slice(1, node.length))));
   };
 
   Thread.prototype.getValues = function() {
     var id, o;
-    this.solver.solve();
+    this._solve();
     o = {};
     for (id in this.cachedVars) {
       o[id] = this.cachedVars[id].value;
     }
     return o;
+  };
+
+  Thread.prototype._solve = function(recurses) {
+    var conditional, _i, _len, _ref;
+    if (recurses == null) {
+      recurses = 0;
+    }
+    this.solver.solve();
+    if (this.conditionals.length > 0 && recurses === 0) {
+      _ref = this.conditionals;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        conditional = _ref[_i];
+        conditional.update();
+      }
+      recurses++;
+      return this._solve(recurses);
+    }
+  };
+
+  Thread.prototype['track'] = function(root, tracker) {
+    this._trackRootIfNeeded(root, tracker);
+    return 'IGNORE';
+  };
+
+  Thread.prototype._trackRootIfNeeded = function(root, tracker) {
+    if (tracker) {
+      root._is_tracked = true;
+      if (!root._trackers) {
+        root._trackers = [];
+      }
+      if (root._trackers.indexOf(tracker) === -1) {
+        return root._trackers.push(tracker);
+      }
+    }
+  };
+
+  Thread.prototype['remove'] = function(self, trackersss) {
+    var args, tracker, trackers, _i, _len, _results;
+    args = __slice.call(arguments);
+    trackers = __slice.call(args.slice(1, args.length));
+    _results = [];
+    for (_i = 0, _len = trackers.length; _i < _len; _i++) {
+      tracker = trackers[_i];
+      _results.push(this._remove(tracker));
+    }
+    return _results;
+  };
+
+  Thread.prototype._remove = function(tracker) {
+    this._removeConstraintByTracker(tracker);
+    return this._removeVarByTracker(tracker);
+  };
+
+  Thread.prototype._removeVarByTracker = function(tracker) {
+    var id, _i, _len, _ref;
+    delete this.__editVarNames[tracker];
+    if (this.varIdsByTracker[tracker]) {
+      _ref = this.varIdsByTracker[tracker];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        id = _ref[_i];
+        delete this.cachedVars[id];
+      }
+      return delete this.varIdsByTracker[tracker];
+    }
+  };
+
+  Thread.prototype._removeConstraintByTracker = function(tracker, permenant) {
+    var constraint, error, movealong, _i, _len, _ref;
+    if (permenant == null) {
+      permenant = true;
+    }
+    if (this.constraintsByTracker[tracker]) {
+      _ref = this.constraintsByTracker[tracker];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        constraint = _ref[_i];
+        try {
+          this.solver.removeConstraint(constraint);
+        } catch (_error) {
+          error = _error;
+          movealong = 'please';
+        }
+      }
+      if (permenant) {
+        return this.constraintsByTracker[tracker] = null;
+      }
+    }
+  };
+
+  Thread.prototype._addConstraintByTracker = function(tracker) {
+    var constraint, _i, _len, _ref, _results;
+    if (this.constraintsByTracker[tracker]) {
+      _ref = this.constraintsByTracker[tracker];
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        constraint = _ref[_i];
+        _results.push(this.solver.addConstraint(constraint));
+      }
+      return _results;
+    }
+  };
+
+  Thread.prototype['where'] = function(root, label) {
+    root._condition_bound = true;
+    this._trackRootIfNeeded(root, label);
+    return "IGNORE";
+  };
+
+  Thread.prototype['cond'] = function(self, ifffff) {
+    var args, clause, clauses, that, _i, _len, _ref;
+    args = __slice.call(arguments);
+    clauses = [];
+    _ref = args.slice(1, args.length);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      clause = _ref[_i];
+      clauses.push(clause);
+    }
+    that = this;
+    return this.conditionals.push({
+      clauses: clauses,
+      activeLabel: null,
+      update: function() {
+        var found, newLabel, oldLabel, _j, _len1;
+        found = false;
+        oldLabel = this.activeLabel;
+        for (_j = 0, _len1 = clauses.length; _j < _len1; _j++) {
+          clause = clauses[_j];
+          newLabel = clause.test();
+          if (newLabel) {
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          if (oldLabel !== newLabel) {
+            if (oldLabel != null) {
+              that._removeConstraintByTracker(oldLabel, false);
+            }
+            that._addConstraintByTracker(newLabel);
+            return this.activeLabel = newLabel;
+          }
+        } else {
+          if (oldLabel != null) {
+            return that._removeConstraintByTracker(oldLabel, false);
+          }
+        }
+      }
+    });
+  };
+
+  Thread.prototype['clause'] = function(root, condition, label) {
+    return {
+      label: label,
+      test: function() {
+        if (!condition) {
+          return label;
+        }
+        if (condition.call(this)) {
+          return label;
+        } else {
+          return null;
+        }
+      }
+    };
+  };
+
+  Thread.prototype._valueOf = function(e) {
+    var val;
+    val = e.value;
+    if (val) {
+      return val;
+    }
+    val = Number(e);
+    if (val) {
+      return val;
+    }
+  };
+
+  Thread.prototype['?>='] = function(root, e1, e2) {
+    var _valueOf;
+    _valueOf = this._valueOf;
+    return function() {
+      return _valueOf(e1) >= _valueOf(e2);
+    };
+  };
+
+  Thread.prototype['?<='] = function(root, e1, e2) {
+    var _valueOf;
+    _valueOf = this._valueOf;
+    return function() {
+      return _valueOf(e1) <= _valueOf(e2);
+    };
+  };
+
+  Thread.prototype['?=='] = function(root, e1, e2) {
+    var _valueOf;
+    _valueOf = this._valueOf;
+    return function() {
+      return _valueOf(e1) === _valueOf(e2);
+    };
+  };
+
+  Thread.prototype['?>'] = function(root, e1, e2) {
+    var _valueOf;
+    _valueOf = this._valueOf;
+    return function() {
+      return _valueOf(e1) > _valueOf(e2);
+    };
+  };
+
+  Thread.prototype['?<'] = function(root, e1, e2) {
+    var _valueOf;
+    _valueOf = this._valueOf;
+    return function() {
+      return _valueOf(e1) < _valueOf(e2);
+    };
+  };
+
+  Thread.prototype['?!='] = function(root, e1, e2) {
+    var _valueOf;
+    _valueOf = this._valueOf;
+    return function() {
+      return _valueOf(e1) !== _valueOf(e2);
+    };
+  };
+
+  Thread.prototype['&&'] = function(root, c1, c2) {
+    return c1 && c2;
+  };
+
+  Thread.prototype['||'] = function(root, c1, c2) {
+    return c1 || c2;
   };
 
   Thread.prototype.number = function(root, num) {
@@ -162,18 +406,6 @@ Thread = (function() {
       }
     });
     return expression;
-  };
-
-  Thread.prototype._trackRootIfNeeded = function(root, tracker) {
-    if (tracker) {
-      root._is_tracked = true;
-      if (!root._trackers) {
-        root._trackers = [];
-      }
-      if (root._trackers.indexOf(tracker) === -1) {
-        return root._trackers.push(tracker);
-      }
-    }
   };
 
   Thread.prototype.get$ = function(root, prop, elId, selector) {
@@ -261,7 +493,9 @@ Thread = (function() {
 
   Thread.prototype._addConstraint = function(root, constraint) {
     var tracker, _i, _len, _ref;
-    this.solver.addConstraint(constraint);
+    if (!root._condition_bound) {
+      this.solver.addConstraint(constraint);
+    }
     if (root._is_tracked) {
       _ref = root._trackers;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -324,44 +558,6 @@ Thread = (function() {
       this.solver.addStay(v);
     }
     return this.solver;
-  };
-
-  Thread.prototype['remove'] = function(self) {
-    var args, tracker, trackers, _i, _len, _results;
-    args = __slice.call(arguments);
-    trackers = __slice.call(args.slice(1, args.length));
-    _results = [];
-    for (_i = 0, _len = trackers.length; _i < _len; _i++) {
-      tracker = trackers[_i];
-      _results.push(this._remove(tracker));
-    }
-    return _results;
-  };
-
-  Thread.prototype._remove = function(tracker) {
-    var constraint, error, id, movealong, _i, _j, _len, _len1, _ref, _ref1;
-    delete this.__editVarNames[tracker];
-    if (this.constraintsByTracker[tracker]) {
-      _ref = this.constraintsByTracker[tracker];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        constraint = _ref[_i];
-        try {
-          this.solver.removeConstraint(constraint);
-        } catch (_error) {
-          error = _error;
-          movealong = 'please';
-        }
-      }
-      delete this.constraintsByTracker[tracker];
-    }
-    if (this.varIdsByTracker[tracker]) {
-      _ref1 = this.varIdsByTracker[tracker];
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        id = _ref1[_j];
-        delete this.cachedVars[id];
-      }
-      return delete this.varIdsByTracker[tracker];
-    }
   };
 
   return Thread;

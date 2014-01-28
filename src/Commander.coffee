@@ -47,14 +47,14 @@ class Commander
     @spawnableRoots = []
     @intrinsicRegistersById = {}
     @boundWindowProps = []
-    @bindCache = {}
+    @get$cache = {}
   
   destroy: () ->
     @spawnableRoots = null
     @intrinsicRegistersById = null
     @boundWindowProps = null
-    @bindCache = null
-    @unlisten()  
+    @get$cache = null
+    @unlisten()
 
   execute: (ast) ->
     # is statement
@@ -217,10 +217,26 @@ class Commander
   # Command Spawning
   # ------------------------------------------------
   
-  registerSpawn: (node) ->
+  registerSpawn: (node) ->      
+    
+    # TODO: REGISTER FOR CONDITIONAL ITSELF????
+    
+    # Condtional Bound
+    rule = node.parentRule 
+    if rule
+      if rule.isCondtionalBound & !rule.isConditional
+        whereCommand = ["where"]
+        for cond in rule.boundConditionals
+          whereCommand.push cond.getClauseTracker()
+        node.push whereCommand
+    
     if !node.isQueryBound
-      # just pass root through
-      @engine.registerCommand node
+      # just pass root through      
+      # TODO: not have to clone...
+      newCommand = []
+      for part in node
+       newCommand.push part
+      @engine.registerCommand newCommand
     else
       @spawnableRoots.push node
       @spawn node    
@@ -231,22 +247,33 @@ class Commander
     for q in queries
       if q.lastAddedIds.length <= 0
         ready = false
-        break
-            
-    if ready
-      if node.isContextBound        
-        for context_id in node.parentRule.getContextQuery().lastAddedIds
-          @_spawnCommandFromBase node, context_id
+        break        
+    
+    if ready      
+      rule = node.parentRule 
+      
+      # Context Bound
+      if node.isContextBound
+        contextQuery = rule.getContextQuery()
+        
+        for context_id in contextQuery.lastAddedIds            
+          @installCommandFromBase node, context_id
+        
+      
+      # Not Context Bound                    
       else
-        @_spawnCommandFromBase node
+        @installCommandFromBase node
+          
     
     # generate intrinsic commands
     ### TODO
     @spawnMeasurements node
     @
     ###
+  
+  #uninstallCommandFromBase: (node, context_id, tracker) ->
                             
-  _spawnCommandFromBase: (command, contextId) ->
+  installCommandFromBase: (command, contextId, tracker) ->
     newCommand = []
     commands = []
     hasPlural = false
@@ -264,6 +291,8 @@ class Commander
             pluralLength = newPart.length
         else
           newCommand.push part
+    
+    if tracker then newCommand.push tracker
                
     if hasPlural      
       for j in [0...pluralLength]
@@ -276,6 +305,7 @@ class Commander
         commands.push pluralCommand
       return @engine.registerCommands commands        
     else
+      
       return @engine.registerCommand newCommand
     
 
@@ -288,11 +318,17 @@ class Commander
     if tracker 
       command.push tracker
     return command
-  
-  
-  'get$':(root, prop, query) =>        
-            
-    # TODO: cache returned objects by prop & selector
+    
+  'get$':(root, prop, query) =>     
+    key = query.selector + prop
+    val = @get$cache[key]
+    if !val
+      val = @_get$(root, prop, query)
+      @get$cache[key] = val
+    return val
+    
+  '_get$':(root, prop, query) =>  
+    # runs only once for a given selector + prop
     
     # window  
     if query is 'window'
@@ -309,7 +345,6 @@ class Commander
     isContextBound = query.isContextBound
     
     # intrinsics
-    # TODO: should be called only once
     if prop.indexOf("intrinsic-") is 0
       query.lastAddedIds.forEach (id) =>
         gid = "$" + id
@@ -513,14 +548,18 @@ class Commander
 
   # mutli
   '$class': (root,sel) =>
-    query = @engine.registerDomQuery selector:"."+sel, isMulti:true, isLive:false, createNodeList:() =>
-      #return @engine.queryScope.querySelectorAll("."+sel)
-      return @engine.queryScope.getElementsByClassName(sel)
+    selector = "."+sel
+    query = @engine.getDomQuery(selector)
+    if !query
+      query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
+        #return @engine.queryScope.querySelectorAll("."+sel)
+        return @engine.queryScope.getElementsByClassName(sel)
     bindRoot root, query
     return query
 
   # mutli
   '$tag': (root,sel) =>
+    
     query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:false, createNodeList:() =>
       return @engine.queryScope.getElementsByTagName(sel)
     bindRoot root, query
@@ -562,6 +601,38 @@ class Commander
       if el then return [el] else return []
     bindRoot root, query
     return query
+    
+  
+  # Conditional Commands
+  # ------------------------------------------------
+  
+  "cond": (self) =>  
+    args = [arguments...]
+    @engine.registerCommand ['cond', args[1...args.length]...]
+  
+  "where": (root,name) ->
+    return ['where',name]
+  
+  "clause": (root,cond,label) ->
+    return ["clause",cond,label]
+  
+  "?>=": (root,e1,e2) ->
+    return ["?>=",e1,e2]
+  
+  "?<=": (root,e1,e2) ->
+    return ["?<=",e1,e2]
+  
+  "?==": (root,e1,e2) ->
+    return ["?==",e1,e2]
+    
+  "?!=": (root,e1,e2) ->
+    return ["?!=",e1,e2]
+  
+  "?>": (root,e1,e2) ->
+    return ["?>",e1,e2]
+  
+  "?<": (root,e1,e2) ->
+    return ["?<",e1,e2]
 
 
 module.exports = Commander

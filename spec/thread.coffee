@@ -210,7 +210,25 @@ describe 'Cassowary Thread', ->
       expect(thread.getValues()).to.eql
         "$112[height]": 100
         "$112[y]": 1
-        
+    
+    it 'varexp - right', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get$','x','$112','.box'],['number','10']]
+          ['eq', ['get$','right','$112','.box'],['number','100']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 10
+        "$112[width]": 90
+    
+    
+  
+  # Tracking
+  # ---------------------------------------------------------------------
+  
+  describe 'Tracking', ->
+    
     it 'tracking by id', () ->
       thread = new Thread()
       thread.execute
@@ -245,7 +263,92 @@ describe 'Cassowary Thread', ->
         ]
       expect(thread.getValues()).to.eql
         "$112[x]": 50
-      
+    
+    it 'tracking constraints with track command', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq',['get$','x','$112','.big-box'],['number','1000'],['track','111']]        
+          ['eq', ['get$','x','$112','.box'],['number','50'],'strong',['track','222']]
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 1000
+      thread.execute
+        commands:[
+          ['remove', '111']
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 50
+    
+    it 'tracking constraints with track command - order independence', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['track','111'],['get$','x','$112','.big-box'],['number','1000']]
+          ['eq', ['get$','x','$112','.box'],['number','50'],['track','222'],'strong']
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 1000
+      thread.execute
+        commands:[
+          ['remove', '111']
+        ]
+      expect(thread.getValues()).to.eql
+        "$112[x]": 50
+        
   
 
+  # Conditionals
+  # ---------------------------------------------------------------------
+
+  describe 'Conditionals', ->
+    
+    describe 'if else', () ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq',['get','[target]'],200,'weak']        
+          ['cond',
+            ['clause',
+              ['?>=',['get','[target]'],100],'if:big']
+            ['clause',
+              ['?>=',['get','[target]'],50],'if:med']
+            ['clause',null,'if:small']
+          ]        
+          ['eq', ['get$','x','$112','.big-box'],['number','12'],['where','if:small']] 
+          ['eq', ['get$','x','$112','.box'],['number','69'],'strong',['where','if:med']]                 
+          ['eq', ['get$','x','$112','.box'],['number','1000'],'strong',['where','if:big']]
+        ]
+        
+      it "step 1", ->
+        expect(thread.getValues()).to.eql
+          '[target]': 200
+          "$112[x]": 1000
+          
+      it "step 2", ->
+        thread.execute
+          commands:[
+            ['suggest', ['get','[target]'],0]
+          ]
+        expect(thread.getValues()).to.eql
+          '[target]': 0
+          "$112[x]": 12
+          
+      it "step 3", ->
+        thread.execute
+          commands:[
+            ['suggest', ['get','[target]'],50]
+          ]
+        expect(thread.getValues()).to.eql
+          '[target]': 50
+          "$112[x]": 69      
+          
+      it "step 4", ->
+        thread.execute
+          commands:[
+            ['suggest', ['get','[target]'],101]
+          ]
+        expect(thread.getValues()).to.eql
+          '[target]': 101
+          "$112[x]": 1000
 

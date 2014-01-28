@@ -423,15 +423,17 @@ class Engine extends GSS.EventTrigger
   # Queries
   # ----------------------------------------
   
+  getDomQuery: (selector) ->
+    return @queryCache[selector]
+    
   registerDomQuery: (o) ->    
     selector = o.selector
-    if @queryCache[selector]?
-      return @queryCache[selector]
-    else      
+    query = @getDomQuery selector
+    if !query      
       query = new GSS.Query(o)
       query.update()
       @queryCache[selector] = query
-      return query
+    return query
     
   updateQueries: =>        
     # els added or removed from queries
