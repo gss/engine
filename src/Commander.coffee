@@ -11,21 +11,19 @@ bindRoot = (root, query) ->
   if !root.queries 
     root.queries = [query]
   else if root.queries.indexOf(query) is -1
-    root.queries.push query
-  else
-    return root # already setup
+    root.queries.push query  
+  return root 
   
-  isMulti = query.isMulti
-  isContextBound = query.isContextBound
+bindRootAsMulti = (root, query) ->
+  bindRoot(root, query)
   
-  if isMulti and !isContextBound
-    if root.queries.multi and root.queries.multi isnt query then throw new Error "bindRoot:: only one multiquery per statement"
-    root.queries.multi = query
+  if root.queries.multi and root.queries.multi isnt query then throw new Error "bindRoot:: only one multiquery per statement"
+  root.queries.multi = query
   
-  if isContextBound
-    root.isContextBound = true
-    
-  return root
+bindRootAsContext = (root, query) ->
+  bindRoot(root, query)
+  
+  root.isContextBound = true
 
 
 # Commander
@@ -48,12 +46,14 @@ class Commander
     @intrinsicRegistersById = {}
     @boundWindowProps = []
     @get$cache = {}
+    @queryCommandCache = {}
   
   destroy: () ->
     @spawnableRoots = null
     @intrinsicRegistersById = null
     @boundWindowProps = null
     @get$cache = null
+    @queryCommandCache = null
     @unlisten()
 
   execute: (ast) ->
@@ -339,8 +339,8 @@ class Commander
       return ['get',"::window[#{prop}]"] 
     
     isMulti = query.isMulti    
-    isContextBound = query.isContextBound
     
+    isContextBound = queryObject.isContextBound    
     isScopeBound = queryObject.isScopeBound    
     
     
@@ -559,94 +559,120 @@ class Commander
   # mutli
   '$class': (root,sel) =>
     selector = "."+sel
-    query = @engine.getDomQuery(selector)
-    if !query
+    o = @queryCommandCache[selector]
+    if !o
       query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
         #return @engine.queryScope.querySelectorAll("."+sel)
-        return @engine.queryScope.getElementsByClassName(sel)
-    bindRoot root, query
-    return {
-      query:query
-      selector:selector
-    }
+        return @engine.queryScope.getElementsByClassName(sel)    
+      o = {
+        query:query
+        selector:selector
+      }
+      @queryCommandCache[selector] = o
+    bindRootAsMulti root, o.query
+    return o
 
   # mutli
   '$tag': (root,sel) =>    
-    query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:false, createNodeList:() =>
-      return @engine.queryScope.getElementsByTagName(sel)
-    bindRoot root, query
-    return {
-      query:query
-      selector:sel
-    }
-
+    selector = sel
+    o = @queryCommandCache[selector]
+    if !o
+      query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
+        return @engine.queryScope.getElementsByTagName(sel)
+      o = {
+        query:query
+        selector:selector
+      }
+      @queryCommandCache[selector] = o
+    bindRootAsMulti root, o.query
+    return o
+  
+  '$id': (root,sel) =>
+    selector = "#"+sel
+    o = @queryCommandCache[selector]
+    if !o
+      query = @engine.registerDomQuery selector:selector, isMulti:false, isLive:false, createNodeList:() =>
+        # TODO: handle scope.getElementById for web components?
+        el = document.getElementById(sel)
+        if el then return [el] else return []    
+      o = {
+        query:query
+        selector:selector
+      }
+      @queryCommandCache[selector] = o
+    bindRoot root, o.query
+    return o
+  
   # 
   '$reserved': (root, sel) =>
-    query = null
+
     if sel is 'window'
-      return {
-        selector:'window'    
-        query: null
-      }
-      #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
-      #  return ""
+      selector = 'window'
+      o = @queryCommandCache[selector]
+      if !o        
+        o = {
+          selector:selector    
+          query: null
+        }
+        @queryCommandCache[selector] = o
+      # bindRoot() not needed
+      return o
     
     engine = @engine
     
     if sel is '::this' or sel is 'this'      
       parentRule = root.parentRule
       if !parentRule then throw new Error "::this query requires parent rule for context"    
-      query = parentRule.getContextQuery()
-      query.isContextBound = true
-      bindRoot root, query
-      return {
-        query:query
-        selector:query.selector
-      }
+      query = parentRule.getContextQuery()            
+      selector = query.selector
+      o = @queryCommandCache[selector]
+      if !o
+        o = {
+          query:query
+          selector:selector
+          isContextBound: true
+        }
+        @queryCommandCache[selector] = o
+      bindRootAsContext root, query
+      return o
     
     else if sel is '::parent'
       parentRule = root.parentRule
       if !parentRule then throw new Error "::this query requires parent rule for context"    
       query = parentRule.getContextQuery()
-      query.isContextBound = true
-      
-      # TODO: BINDING WON'T WORK WITH ::Parent!!!!!
-      
-      bindRoot root, query
-      return {
-        query:query
-        selector:query.selector + "::parent"        
-        idProcessor: (id) ->
-          # TODO... fix this shit
-          return GSS.setupId(GSS.getById(id).parentElement)
-      }
+      selector = query.selector + "::parent"      
+      o = @queryCommandCache[selector]
+      if !o
+        o = {
+          query:query
+          selector:selector
+          isContextBound: true
+          idProcessor: (id) ->
+            # TODO... fix this shit
+            return GSS.setupId(GSS.getById(id).parentElement)
+        }      
+        @queryCommandCache[selector] = o
+      bindRootAsContext root, query
+      return o
     
     else if sel is 'scope'
       selector = "::"+sel
-      query = engine.registerDomQuery selector:selector, isMulti:false, isLive:true, createNodeList:() ->
-        return [engine.scope]
-      bindRoot root, query
-      return {
-        query:query
-        selector:selector
-        isScopeBound: true
-      }
+      o = @queryCommandCache[selector]
+      if !o
+        query = engine.registerDomQuery selector:selector, isMulti:false, isLive:true, createNodeList:() ->
+          return [engine.scope]
+        o = {
+          query:query
+          selector:selector
+          isScopeBound: true
+        }
+        @queryCommandCache[selector] = o
+      bindRoot root, o.query
+      return o
       
     
     throw new Error "$reserved selectors not yet handled: #{sel}"          
-
-  # singular
-  '$id': (root,sel) =>
-    selector = "#"+sel
-    query = @engine.registerDomQuery selector:selector, isMulti:false, isLive:false, createNodeList:() =>
-      # TODO: handle scope.getElementById for web components?
-      el = document.getElementById(sel)
-      if el then return [el] else return []
-    bindRoot root, query
-    return {
-      query:query
-      selector:selector
-    }
+  
     
   
   # Conditional Commands
