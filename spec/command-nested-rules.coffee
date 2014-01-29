@@ -59,7 +59,7 @@ describe 'Nested Rules', ->
           rules: rules
         GSS.styleSheets.update()
     
-    describe '1 level', ->
+    describe '1 level w/ ::', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
@@ -92,6 +92,51 @@ describe 'Nested Rules', ->
           expect(engine.lastWorkerCommands).to.eql [
               ['eq', ['get$','x','$box1', '.vessel .box'], ['number',100]]
               ['eq', ['get$','x','$box2', '.vessel .box'], ['number',100]]
+            ]
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+        
+        engine = GSS(container)
+        #engine.run rules
+        GSS.styleSheets.add
+          engine: engine
+          rules: rules
+        GSS.styleSheets.update()
+    
+    describe '1 level w/ ::parent', ->
+    
+      it 'Runs commands from sourceNode', (done) ->
+        rules = [
+          {
+            type:'ruleset'
+            selectors: ['.vessel .box']
+            rules: [
+              {
+                type:'constraint', 
+                cssText:'::[width] == ::parent[width]', 
+                commands: [
+                  ["lte", ["get$","width",["$reserved","::this"]], ["get$","width",["$reserved","::parent"]]]
+                ]
+              }
+            ]
+          }
+        ]
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div id="vessel1" class="vessel">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div id="box3" class="box"></div>
+          <div id="box4" class="box"></div>
+          """
+                              
+        listener = (e) ->        
+
+          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+              ['lte', ['get$','width','$box1', '.vessel .box'], ['get$','width','$vessel1','.vessel .box::parent']]
+              ['lte', ['get$','width','$box2', '.vessel .box'], ['get$','width','$vessel1','.vessel .box::parent']]
             ]
           container.removeEventListener 'solved', listener
           done()
@@ -171,7 +216,7 @@ describe 'Nested Rules', ->
   
     describe 'basic', ->
     
-      it 'Runs commands from sourceNode', (done) ->
+      it 'step 1', (done) ->
         rules = [
           {
              type: "constraint",

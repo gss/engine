@@ -319,30 +319,34 @@ class Commander
       command.push tracker
     return command
     
-  'get$':(root, prop, query) =>     
-    key = query.selector + prop
+  'get$':(root, prop, queryObject) =>     
+    key = queryObject.selector + prop
     val = @get$cache[key]
     if !val
-      val = @_get$(root, prop, query)
+      val = @_get$(root, prop, queryObject)
       @get$cache[key] = val
     return val
     
-  '_get$':(root, prop, query) =>  
+  '_get$':(root, prop, queryObject) =>  
     # runs only once for a given selector + prop
     
+    query = queryObject.query
+    selector = queryObject.selector
+    
     # window  
-    if query is 'window'
+    if selector is 'window'
       @bindToWindow prop
       return ['get',"::window[#{prop}]"] 
     
-    # scope
-    if query.isScopeBound
-      @bindToScope prop
-    
-    # 
-    selector = query.selector
-    isMulti = query.isMulti
+    isMulti = query.isMulti    
     isContextBound = query.isContextBound
+    
+    isScopeBound = queryObject.isScopeBound    
+    
+    
+    # scope
+    if isScopeBound
+      @bindToScope prop         
     
     # intrinsics
     if prop.indexOf("intrinsic-") is 0
@@ -364,11 +368,14 @@ class Commander
           register.call @    
         
     if isContextBound
+      idProcessor = queryObject.idProcessor
       return {
         isQueryBound: true
         isPlural: false
         query: query      
         spawn: (id) ->
+          if idProcessor
+            id = idProcessor(id)
           return ['get$', prop, "$"+id, selector]
       }
       
@@ -442,7 +449,8 @@ class Commander
   # Chains
   # ------------------------------------------------
   
-  'chain': (root,query,bridgessssss) =>    
+  'chain': (root,queryObject,bridgessssss) =>    
+    query = queryObject.query
     args = [arguments...]
     bridges = [args[2...args.length]...]
     engine = @engine
@@ -524,14 +532,16 @@ class Commander
   # JavaScript for-loop hooks
   # ------------------------------------------------
   
-  'for-each': (root,query,callback) =>
+  'for-each': (root,queryObject,callback) =>
+    query = queryObject.query
     for el in query.nodeList
       callback.call(@engine, el, query, @engine)
     query.on 'afterChange', () ->
       for el in query.nodeList
         callback.call(@engine, el, query)
   
-  'for-all': (root,query,callback) =>
+  'for-all': (root,queryObject,callback) =>
+    query = queryObject.query
     callback.call(@engine, query, @engine)
     query.on 'afterChange', () =>
       callback.call(@engine, query, @engine)
@@ -555,52 +565,88 @@ class Commander
         #return @engine.queryScope.querySelectorAll("."+sel)
         return @engine.queryScope.getElementsByClassName(sel)
     bindRoot root, query
-    return query
+    return {
+      query:query
+      selector:selector
+    }
 
   # mutli
-  '$tag': (root,sel) =>
-    
+  '$tag': (root,sel) =>    
     query = @engine.registerDomQuery selector:sel, isMulti:true, isLive:false, createNodeList:() =>
       return @engine.queryScope.getElementsByTagName(sel)
     bindRoot root, query
-    return query
+    return {
+      query:query
+      selector:sel
+    }
 
-  # singular
+  # 
   '$reserved': (root, sel) =>
     query = null
     if sel is 'window'
-      return 'window'    
+      return {
+        selector:'window'    
+        query: null
+      }
       #query = @engine.registerDomQuery selector:"::"+"window", isMulti:false, isImmutable:true, ids:['$::window'], createNodeList:() =>
       #  return ""
-    else if sel is '::this' or sel is 'this'
-      engine = @engine
+    
+    engine = @engine
+    
+    if sel is '::this' or sel is 'this'      
       parentRule = root.parentRule
-      if !parentRule
-        throw new Error "::this query requires parent rule for context"    
+      if !parentRule then throw new Error "::this query requires parent rule for context"    
       query = parentRule.getContextQuery()
       query.isContextBound = true
       bindRoot root, query
-      return query
-
-    else if sel is 'scope'
-      engine = @engine
-      query = @engine.registerDomQuery selector:"::"+sel, isMulti:false, isLive:true, createNodeList:() ->
-        return [engine.scope]
-      query.isScopeBound = true       
+      return {
+        query:query
+        selector:query.selector
+      }
+    
+    else if sel is '::parent'
+      parentRule = root.parentRule
+      if !parentRule then throw new Error "::this query requires parent rule for context"    
+      query = parentRule.getContextQuery()
+      query.isContextBound = true
+      
+      # TODO: BINDING WON'T WORK WITH ::Parent!!!!!
+      
       bindRoot root, query
-      return query
-    else
-      throw new Error "$reserved selectors not yet handled: #{sel}"
-    return query
+      return {
+        query:query
+        selector:query.selector + "::parent"        
+        idProcessor: (id) ->
+          # TODO... fix this shit
+          return GSS.setupId(GSS.getById(id).parentElement)
+      }
+    
+    else if sel is 'scope'
+      selector = "::"+sel
+      query = engine.registerDomQuery selector:selector, isMulti:false, isLive:true, createNodeList:() ->
+        return [engine.scope]
+      bindRoot root, query
+      return {
+        query:query
+        selector:selector
+        isScopeBound: true
+      }
+      
+    
+    throw new Error "$reserved selectors not yet handled: #{sel}"          
 
   # singular
   '$id': (root,sel) =>
-    query = @engine.registerDomQuery selector:"#"+sel, isMulti:false, isLive:false, createNodeList:() =>
+    selector = "#"+sel
+    query = @engine.registerDomQuery selector:selector, isMulti:false, isLive:false, createNodeList:() =>
       # TODO: handle scope.getElementById for web components?
       el = document.getElementById(sel)
       if el then return [el] else return []
     bindRoot root, query
-    return query
+    return {
+      query:query
+      selector:selector
+    }
     
   
   # Conditional Commands
