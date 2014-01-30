@@ -6,7 +6,7 @@
     "Dan Tocchini <d4@thegrid.io>"
   ],
   "description": "Grid Style Sheets Runtime",
-  "main": "browser/gss.js",
+  "main": ["browser/gss.js","browser/gss.min.js"],
   "keywords": [
     "gss"
   ],
