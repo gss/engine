@@ -15,6 +15,9 @@
     "components",
     "node_modules",
     "bower_components",
+    "vendor",
+    "worker",
+    ".gitignore",
     "src",
     "lib",
     "spec",
@@ -28,6 +31,6 @@
     "package.json",
     "Gruntfile.coffee",
     "index.html",
-    ".travis.yml"
+    ".travis.yml"    
   ]
 }
