@@ -484,16 +484,19 @@ describe 'GSS engine', ->
       it 'Runs commands from sourceNode', (done) ->
         container.innerHTML =  """
           <style type="text/gss-ast" scoped>
-          {
-            "commands": [
-              ["eq", ["get$","x",["$class", "box"]], ["number",100]]
-            ]          
-          }
+          [
+            { 
+              "type":"constraint",
+              "commands": [
+                ["eq", ["get$","x",["$class", "box"]], ["number",100]]
+              ]          
+            }
+          ]
           </style>
           <div id="box1" class="box"></div>
           <div id="box2" class="box"></div>
           """
-        engine = GSS(container)      
+        engine = GSS(container)
         listener = (e) ->        
           expect(engine.lastWorkerCommands).to.eql [
               ['eq', ['get$','x','$box1','.box'], ['number',100]]
@@ -526,11 +529,12 @@ describe 'GSS engine', ->
         expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
           <style id="gssa" type="text/gss-ast" scoped>
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["suggest", "[col-width-1]", 111]
             ]          
-          }
+          }]
           </style>
           """
         listener = (e) ->
@@ -545,11 +549,12 @@ describe 'GSS engine', ->
         expect(engine1.id).to.be.equal GSS.getId(container)
         styleNode = document.getElementById 'gssa'
         styleNode.innerHTML = """
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["suggest", "[col-width-11]", 1111]
             ]          
-          }
+          }]
         """        
         listener = (e) ->
           engine2 = GSS(container)
@@ -565,11 +570,12 @@ describe 'GSS engine', ->
         expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
           <style id="gssb" type="text/gss-ast" scoped>
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["suggest", "[col-width-2]", 222]
             ]          
-          }
+          }]
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
@@ -588,18 +594,20 @@ describe 'GSS engine', ->
         expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
           <style id="gssc" type="text/gss-ast" scoped>
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["suggest", "[col-width-3]", 333]
             ]          
-          }
+          }]
           </style>
           <style id="gssd" type="text/gss-ast" scoped>
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["suggest", "[col-width-4]", 444]
             ]          
-          }
+          }]
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
@@ -645,12 +653,13 @@ describe 'GSS engine', ->
         engine = GSS(container)
         container.innerHTML =  """
           <style type="text/gss-ast" scoped>
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["suggest", "[col-width-1]", 111]
             ],
             "css": "#box{width:100px;}#b{height:10px;}"       
-          }
+          }]
           </style>
           """
         listener = (e) ->           
@@ -674,11 +683,12 @@ describe 'GSS engine', ->
         <section>
           <div id="wrap" style="width:100px;" data-gss-id="999">
             <style type="text/gss-ast" scoped>
-            {
+            [{
+              "type":"constraint",
               "commands": [
                 ["eq", ["get$","width",["$id","boo"]], ["number",100]]
               ]
-            }
+            }]
             </style>
             <div id="boo" data-gss-id="boo"></div>
           </div>
@@ -861,19 +871,21 @@ describe 'GSS engine', ->
       #        
       container.innerHTML =  """
           <style type="text/gss-ast" scoped>
-          {
+          [{
+            "type":"constraint",
             "commands": [
               ["eq", ["get$","width",["$id","wrap"]], ["number",69]]
             ]
-          }
+          }]
           </style>
           <div id="wrap" style="width:100px;" data-gss-id="wrap">
             <style type="text/gss-ast" scoped>
-            {
+            [{
+              "type":"constraint",
               "commands": [
                 ["eq", ["get$","width",["$id","boo"]], ["get$","width",["$reserved","scope"]]]
               ]
-            }
+            }]
             </style>
             <div id="boo" data-gss-id="boo"></div>
           </div>

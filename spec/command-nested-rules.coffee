@@ -53,11 +53,12 @@ describe 'Nested Rules', ->
         container.addEventListener 'solved', listener
         
         engine = GSS(container)
-        #engine.run rules
-        GSS.styleSheets.add
+
+        sheet = new GSS.StyleSheet
           engine: engine
           rules: rules
-        GSS.styleSheets.update()
+          
+        sheet.install()
     
     describe '1 level w/ ::', ->
     
@@ -98,11 +99,12 @@ describe 'Nested Rules', ->
         container.addEventListener 'solved', listener
         
         engine = GSS(container)
-        #engine.run rules
-        GSS.styleSheets.add
+
+        sheet = new GSS.StyleSheet
           engine: engine
           rules: rules
-        GSS.styleSheets.update()
+          
+        sheet.install()
     
     describe '1 level w/ ::parent', ->
     
@@ -143,11 +145,12 @@ describe 'Nested Rules', ->
         container.addEventListener 'solved', listener
         
         engine = GSS(container)
-        #engine.run rules
-        GSS.styleSheets.add
+
+        sheet = new GSS.StyleSheet
           engine: engine
           rules: rules
-        GSS.styleSheets.update()
+          
+        sheet.install()
         
     
     describe '2 level', ->
@@ -196,11 +199,12 @@ describe 'Nested Rules', ->
         container.addEventListener 'solved', listener
         
         engine = GSS(container)
-        #engine.run rules
-        GSS.styleSheets.add
+
+        sheet = new GSS.StyleSheet
           engine: engine
           rules: rules
-        GSS.styleSheets.update()
+          
+        sheet.install()
   
   describe '@if @else', ->
     
@@ -322,9 +326,10 @@ describe 'Nested Rules', ->
         container.addEventListener 'solved', listener
         
         engine = GSS(container)
-        #engine.run rules
-        GSS.styleSheets.add
+
+        sheet = new GSS.StyleSheet
           engine: engine
           rules: rules
-        GSS.styleSheets.update()
+          
+        sheet.install()
 

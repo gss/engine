@@ -3,9 +3,10 @@ Node = GSS.Node
 
 class StyleSheet extends Node
   
-  isScoped: false    
+  isScoped: false        
+  
   ###    
-  ownerNode:  Node
+  el:  Node
   engine:     Engine
   rules:      []
   isScoped:   Boolean  
@@ -15,21 +16,77 @@ class StyleSheet extends Node
       @[key] = val  
     
     if !@engine then throw new Error "StyleSheet needs engine"
-    
-    
+      
     @engine.styleSheets.push @
     
-    if o.isScoped?
-      @isScoped = o.isScoped
+    GSS.styleSheets.push @
     
     @styleSheet = @
     
     @rules = []
     if o.rules      
       @addRules o.rules
+      
+    return @      
+  
+  
+  needsInstall: true           
+  
+  install: () ->
+    if @needsInstall
+      @needsInstall = false
+      for rule in @rules
+        console.log rule.install?
+        rule.install()
+    @
+  
+  reset: ->    
+    @needsInstall = true
+    for rule in @rules
+      rule.reset()
+  
+  loadRulesFromNode: ->
+    #@destroyRules()
+    @rules = []
+    rules = GSS.get.readAST @el
+    @addRules rules    
+  
+  destroyRules: ->
+    for rule in @rules
+      rule.destroy()
+    @rules = []
+  
+  destroy: () ->
+    i = @engine.styleSheets.indexOf @
+    @engine.styleSheets.splice i, 1
     
-  update: ->
-    # do nothing      
+    i = GSS.styleSheets.indexOf @
+    GSS.styleSheets.splice i, 1
+    
+    #...
+  
+  isRemoved: ->
+    if @el and !document.contains @el
+      return true
+    return false
+
+StyleSheet.fromNode = (node) ->
+  if node.gssStyleSheet then return node.gssStyleSheet
+  if !GSS.get.isStyleNode(node) then return null    
+    
+  engine = GSS(scope: GSS.get.scopeForStyleNode(node))
+  
+  sheet = new GSS.StyleSheet {
+    el: node
+    engine: engine
+    engineId: engine.id
+  }
+  sheet.loadRulesFromNode()
+  node.gssStyleSheet = sheet
+  return sheet
+
+
+  
 
 
 class StyleSheet.Collection
@@ -40,34 +97,27 @@ class StyleSheet.Collection
       collection[key] = val
     return collection
     
-  update: ->
+  install: ->
     for sheet in @
-      sheet.updateIfNeeded()
+      sheet.install()
+    @
   
-  queryAll: () ->
+  findAndInstall: () ->
     nodes = document.querySelectorAll "style"
     for node in nodes
-      @addStyleNode node
+      sheet = GSS.StyleSheet.fromNode node
+      sheet?.install()
+    @
   
-  addStyleNode: (node) ->
-    if node.gssStyleSheet then return null    
-    if !GSS.get.isStyleNode(node) then return null    
-    engine = GSS(scope:scope)
-    rules = @getter.readAST node
-    styleSheet = @add {
-      ownerNode: node
-      engine: engine
-      engineId: engine.id
-      rules: rules
-    }
-    node.gssStyleSheet = styleSheet
-    styleSheet
-  
-  add: (o) ->
-    styleSheet = new GSS.StyleSheet o
-    @push styleSheet
-    styleSheet      
-  
-  remove: () ->
-  
+  findAllRemoved: ->
+    removed = []
+    for sheet in @
+      if sheet.isRemoved() then removed.push sheet
+    return removed
+    
+
+GSS.StyleSheet = StyleSheet
+
+GSS.styleSheets = new GSS.StyleSheet.Collection()
+
 module.exports = StyleSheet

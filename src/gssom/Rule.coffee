@@ -38,19 +38,26 @@ class Rule extends Node
   
   _selectorContext: null
   
-  install: () ->
-    if @commands then @engine.run @ #install?
+  needsInstall: true
   
+  install: ->
+    if @needsInstall
+      @needsInstall = false
+      @Type.install.call(@)      
+    for rule in @rules
+      rule.install()
+    @
+      
   uninstall: ()->
   
-  update: () ->    
-    @Type.update.call(@)
+  reset: ->
+    @needsInstall = true
+    @boundConditionals = []
+    for rule in @rules
+      rule.reset()
   
-  update___: () ->
-    if @commands
-      @engine.run @
-    @Type.update.call(@)
-  
+  executeCommands: () ->
+    if @commands then @engine.run @ #install?
   
   # Tree traversal
   # -----------------------------------------
@@ -136,26 +143,26 @@ Rule.types =
   
   directive: 
     
-    update: ->
+    install: ->
       if @name is 'else' or @name is 'elseif'
         @injectChildrenCondtionals(@)
         return @
       else if @name is 'if'
         @commands = [@gatherCondCommand()]
         @injectChildrenCondtionals(@)
-        @install()
+        @executeCommands()
       else        
-        @install()        
+        @executeCommands()
   
   
   constraint: 
-    update: -> 
-      @install()    
+    install: -> 
+      @executeCommands()
   
   style: 
-    update: ->
+    install: ->
   
   ruleset: 
-    update: ->
+    install: ->
 
 module.exports = Rule      

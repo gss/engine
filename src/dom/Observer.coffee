@@ -16,7 +16,7 @@ setupObserver = () ->
 
   observer = new MutationObserver (mutations) ->
     LOG "MutationObserver"
-    scopesToLoad = []
+    enginesToReset = []
     nodesToIgnore = []
     needsUpdateQueries = []
     invalidMeasureIds = []
@@ -24,11 +24,13 @@ setupObserver = () ->
     for m in mutations
          
       # style tag was modified then stop & reload everything
-      if m.type is "characterData" 
-        if GSS.get.isStyleNode(m.target.parentElement)
-          scope = GSS.get.scopeForStyleNode m.target.parentElement
-          if scopesToLoad.indexOf(scope) is -1
-            scopesToLoad.push scope
+      if m.type is "characterData"
+        sheet =  m.target.parentElement.gssStyleSheet
+        if sheet
+          sheet.loadRulesFromNode()
+          e = sheet.engine
+          if enginesToReset.indexOf(e) is -1
+            enginesToReset.push e
         
       # scopes that need to updateQueries, ie update queries
       if m.type is "attributes" or m.type is "childList"
@@ -53,19 +55,46 @@ setupObserver = () ->
         if gid?
           if invalidMeasureIds.indexOf(gid) is -1
             invalidMeasureIds.push(gid)
-  
-    for scope in scopesToLoad      
-      GSS.get.engine(scope).reload()
+    
+    # sheets that should be removed b/c no longer in dom
+    removed = GSS.styleSheets.findAllRemoved()
+    for sheet in removed
+      sheet.destroy()
+      e = sheet.engine
+      if enginesToReset.indexOf(e) is -1
+        enginesToReset.push e
+    
+    # destroy engines with detached scopes
+    i = 0
+    engine = GSS.engines[i]
+    while !!engine
+      if i > 0
+        if engine.scope
+          # destroy engines with detached scopes
+          if !document.documentElement.contains engine.scope
+            engine.destroyChildren()
+            engine.destroy()
+      # TODO(D4): update engines with modified styles
+      i++
+      engine = GSS.engines[i]
+    
+    for e in enginesToReset
+      if !e.is_destroyed    
+        e.reset()
     
     for scope in needsUpdateQueries
-      if scopesToLoad.indexOf(scope) is -1 # don't updateQueries if loading
-        GSS.get.engine(scope).updateQueries()
+      e = GSS.get.engine(scope)
+      if e
+        if !e.is_destroyed
+          if enginesToReset.indexOf(e) is -1 # don't updateQueries if loading
+            e.updateQueries()
     
     if invalidMeasureIds.length > 0
-      for engine in GSS.engines
-        engine.commander.handleInvalidMeasures invalidMeasureIds
+      for e in GSS.engines
+        if !e.is_destroyed
+          e.commander.handleInvalidMeasures invalidMeasureIds
       
-    scopesToLoad = null
+    enginesToReset = null
     nodesToIgnore = null
     needsUpdateQueries = null
     invalidMeasureIds = null

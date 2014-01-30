@@ -90,7 +90,8 @@ GSS.Engine        = require("./Engine.js")
 GSS.View          = require("./dom/View.js")
 GSS.Node          = require("./gssom/Node.js")
 GSS.Rule          = require("./gssom/Rule.js")
-GSS.StyleSheet    = require("./gssom/StyleSheet.js")
+
+require("./gssom/StyleSheet.js")
 
 for key, val of require("./dom/IdMixin.js")
   if GSS[key] then throw new Error "IdMixin key clash: #{key}"
@@ -101,8 +102,6 @@ GSS.EventTrigger.make(GSS)
 GSS.get = new GSS.Getter()
 
 GSS.observer = require("./dom/Observer.js")
-
-GSS.styleSheets = new GSS.StyleSheet.Collection()
 
 # Runtime
 # ------------------------------------------------
@@ -115,7 +114,7 @@ GSS.boot = () ->
 
 GSS.load = () ->
   # dirty load
-  GSS.dirtyLoadEngines()
+  GSS.styleSheets.findAndInstall()
   GSS.render()
   
 GSS.render = () ->
@@ -203,58 +202,4 @@ GSS.displayIfNeeded = () ->
     TIME_END "display pass"
     TIME_END "RENDER"
 #GSS.lazyDisplayIfNeeded = GSS._.debounce GSS.displayIfNeeded, 8, false     
-
-
-# Style tags loading
-# ------------------------------------------------  
-
-_scopesToLoad = null
-
-styleQuery = GSS.styleQuery = new GSS.Query
-  selector:"style"
-  isLive: false
-  isMulti: true
-  createNodeList: () ->
-    return document.querySelectorAll "style"
-
-styleQuery.on 'afterChange', () ->
-    #LOG "afterStyleChange"    
-    _scopesToLoad = []
-    if @changedLastUpdate
-      for id in @lastAddedIds
-        node = GSS.getById id
-        if GSS.get.isStyleNode node
-          scope = GSS.get.scopeForStyleNode node
-          if _scopesToLoad.indexOf(scope) is -1 and scope
-            _scopesToLoad.push GSS.get.scopeForStyleNode node
-      
-      # TODO: Isn't needed....  
-      for id in @lastRemovedIds
-        node = GSS.getById id
-        if GSS.get.isStyleNode node
-          scope = GSS.get.scopeForStyleNode node
-          if _scopesToLoad.indexOf(scope) is -1 and scope?.parentNode?
-            if document.contains scope
-              _scopesToLoad.push scope
-      #
-      for scope in _scopesToLoad
-        engine = GSS(scope:scope) # make engine if needed
-        if engine then engine.reload()
-        #LOG "afterUpdate scopeToLoad", scope          
-
-GSS.dirtyLoadEngines = () ->  
-  i = 0
-  engine = GSS.engines[i]
-  while !!engine
-    if i > 0
-      if engine.scope
-        # destroy engines with detached scopes
-        if !document.documentElement.contains engine.scope
-          engine.destroyChildren()
-          engine.destroy()
-    # TODO(D4): update engines with modified styles
-    i++
-    engine = GSS.engines[i]
-  # update engines with added or removed style tags
-  styleQuery.update()  
 

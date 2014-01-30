@@ -34,7 +34,7 @@ module.exports = ->
           './worker/gss-solver.min.js': ['./worker/gss-solver.js']
       engine:
         files:
-          './browser/gss-engine.min.js': ['./browser/gss-engine.js']      
+          './browser/gss.min.js': ['./browser/gss.js']      
 
     # Automated recompilation and testing when developing
     watch:      

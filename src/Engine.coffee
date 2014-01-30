@@ -136,21 +136,21 @@ class Engine extends GSS.EventTrigger
   #    if s.engine is @
         
   
-  reload: () =>
+  reset: () =>
     # Load commands from style nodes.    
-    LOG @id,".loadASTs()"
-    if !@scope then throw new Error "can't load scopeless engine"
+    LOG @id,".reset()"
+    if !@scope then throw new Error "can't reset scopeless engine"
+    
+    # keep styleSheets around...
+    styleSheets = @styleSheets
+    
     if @is_running
-      @clean()
-    #@run( @getter.readAllASTs() )
-    ASTs = []
-    for node in @getter.getAllStyleNodes()
-      # TODO: coordinate with global style query better
-      if @scope is GSS.get.scopeForStyleNode node
-        AST = @getter.readAST node
-        if AST then ASTs.push AST
-    @ASTs = ASTs
-    #
+      @clean()    
+      
+    @styleSheets = styleSheets
+    for sheet in styleSheets
+      sheet.reset()
+    
     @setNeedsUpdate true
     #@run ASTs
     @
