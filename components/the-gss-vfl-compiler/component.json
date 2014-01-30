@@ -1,0 +1,14 @@
+{
+  "name": "vfl-compiler",
+  "description": "Visual Format Language compiler",
+  "version": "0.0.1",
+  "dependencies": {
+    "the-gss/ccss-compiler": "*"
+  },
+  "scripts": [
+    "lib/vfl-compiler.js",
+    "lib/compiler.js"
+  ],
+  "main": "lib/compiler.js",
+  "repo": "https://raw.github.com/the-gss/vfl-compiler"
+}

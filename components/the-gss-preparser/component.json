@@ -1,0 +1,10 @@
+{
+  "name": "gss-preparser",
+  "description": "GSS preparser",
+  "version": "0.5.0",
+  "scripts": [
+    "lib/gss-preparser.js"
+  ],
+  "main": "lib/gss-preparser.js",
+  "repo": "https://raw.github.com/the-gss/preparser"
+}

@@ -8,12 +8,22 @@ module.exports = ->
       install:
         options:
           action: 'install'
+          
     component_build:
-      'gss-engine':
+      'gss':
         output: './browser/'
         config: './component.json'
+        standalone: true
+        scripts: true
+        styles: false        
+      ### TODO: build components with & without compiler
+      'gss-with-compiler':
+        output: './browser/'
+        config: './component-with-compiler.json'
+        standalone: true
         scripts: true
         styles: false
+      ### 
 
     # JavaScript minification for the browser
     uglify:
@@ -27,7 +37,10 @@ module.exports = ->
           './browser/gss-engine.min.js': ['./browser/gss-engine.js']      
 
     # Automated recompilation and testing when developing
-    watch:
+    watch:      
+      'build-fast':
+        files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
+        tasks: ['build-fast']
       build:
         files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
         tasks: ['build']
@@ -55,7 +68,7 @@ module.exports = ->
             level: 'ignore'
           'no_backticks':
             level: 'ignore'
-
+    
     # CoffeeScript compilation
     coffee:
       src:
@@ -153,7 +166,8 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build', ['coffee', 'uglify:worker', 'concat:worker', 'component', 'component_build', 'uglify:engine']
+  @registerTask 'build-fast', ['coffee', 'concat:worker', 'component', 'component_build']
+  @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'component', 'component_build', 'uglify:engine']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']

@@ -1,0 +1,15 @@
+{
+  "name": "gss-compiler",
+  "description": "GSS rule compiler",
+  "version": "0.0.1",
+  "scripts": [
+    "lib/gss-compiler.js"
+  ],
+  "dependencies": {
+    "the-gss/preparser": "*",
+    "the-gss/ccss-compiler": "*",
+    "the-gss/vfl-compiler": "*"
+  },
+  "main": "lib/gss-compiler.js",
+  "repo": "https://raw.github.com/the-gss/compiler"
+}

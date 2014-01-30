@@ -6,7 +6,7 @@ if window.GSS then throw new Error "Only one GSS object per window"
 # GSS
 # =================================================
 
-GSS = (o) ->
+GSS = window.GSS = (o) ->
   
   # if dom element, return engine
   if o is document or o is window 
@@ -47,7 +47,7 @@ GSS.config =
   useOffsetParent: true
   maxDisplayRecursionDepth: 30
   useWorker: !!window.Worker
-  workerURL: '../browser/gss-engine/worker/gss-solver.js'
+  workerURL: '../browser/gss/worker/gss-solver.js'
 
 
 # overwrite config if provided
@@ -78,7 +78,6 @@ TIME_END = () ->
 # Modules
 # ------------------------------------------------
 
-window.GSS = GSS
 GSS._             = require("./_.js")
 GSS.glMatrix      = require '../vendor/gl-matrix'
 GSS.EventTrigger  = require("./EventTrigger.js")

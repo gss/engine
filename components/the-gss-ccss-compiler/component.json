@@ -1,0 +1,10 @@
+{
+  "name": "ccss-compiler",
+  "description": "Constraint Cascading Style Sheets compiler",
+  "version": "0.2.0",
+  "scripts": [
+    "lib/ccss-compiler.js"
+  ],
+  "main": "lib/ccss-compiler.js",
+  "repo": "https://raw.github.com/the-gss/ccss-compiler"
+}
