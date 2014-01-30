@@ -1,0 +1,33 @@
+{
+  "name": "gss",
+  "version": "0.5.0",
+  "homepage": "http://gridstylesheets.org/",
+  "authors": [
+    "Dan Tocchini <d4@thegrid.io>"
+  ],
+  "description": "Grid Style Sheets Runtime",
+  "main": "browser/gss.js",
+  "keywords": [
+    "gss"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "components",
+    "node_modules",
+    "bower_components",
+    "src",
+    "lib",
+    "spec",
+    "demo",
+    "docs",
+    "_layouts",
+    "_includes",
+    "_config.yml",
+    "CNAME",
+    "component.json",
+    "package.json",
+    "Gruntfile.coffee",
+    "index.html",
+    ".travis.yml"
+  ]
+}
