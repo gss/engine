@@ -1,5 +1,6 @@
-compiler = require("gss-compiler")
+
 require("./GSS.js")
+Compiler = GSS.Compiler = require("gss-compiler")
 
 # Monkey patching compiling powers
 
@@ -7,7 +8,7 @@ GSS.compile = (rules) ->
   ast = {}
   if typeof rules is "string"
     try
-      ast = compiler.compile(rules)
+      ast = Compiler.compile(rules)
     catch e
       console.warn "compiler error", e
       ast = {}

@@ -36,7 +36,6 @@ class StyleSheet extends Node
     if @needsInstall
       @needsInstall = false
       for rule in @rules
-        console.log rule.install?
         rule.install()
     @
   

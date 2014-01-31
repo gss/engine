@@ -1,7 +1,7 @@
 {
   "name": "gss-compiler",
   "description": "GSS rule compiler",
-  "version": "0.0.1",
+  "version": "0.5.0",
   "scripts": [
     "lib/gss-compiler.js"
   ],
