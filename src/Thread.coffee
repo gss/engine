@@ -278,12 +278,13 @@ class Thread
     # Return new instance of expression everytime it is accessed.
     # Unlike `c.Variable`s, `c.Expression` need to be cloned to work properly
     # because... math =)
-    Object.defineProperty cv, id,
+    that = this
+    Object.defineProperty cv, id,      
       get: ->
         clone = expression.clone()
         # varexps can only have one tracker
         if tracker
-          @_trackVarId id, tracker
+          that._trackVarId id, tracker
           clone._tracker = tracker
           clone._is_tracked = true
         # TODO: Add value getter to expressions...

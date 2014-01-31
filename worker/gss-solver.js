@@ -385,7 +385,7 @@ Thread = (function() {
   };
 
   Thread.prototype.varexp = function(self, id, expression, tracker) {
-    var cv;
+    var cv, that;
     cv = this.cachedVars;
     if (cv[id]) {
       return cv[id];
@@ -393,12 +393,13 @@ Thread = (function() {
     if (!(expression instanceof c.Expression)) {
       throw new Error("Thread `varexp` requires an instance of c.Expression");
     }
+    that = this;
     Object.defineProperty(cv, id, {
       get: function() {
         var clone;
         clone = expression.clone();
         if (tracker) {
-          this._trackVarId(id, tracker);
+          that._trackVarId(id, tracker);
           clone._tracker = tracker;
           clone._is_tracked = true;
         }
