@@ -83,11 +83,10 @@ class Rule extends Node
   
   _computeSelectorContext: () ->    
     selectorContext = []
-    
     rule = @
     while rule.parent
       parent = rule.parent
-      if parent?.selectors
+      if parent?.selectors?.length > 0
         if selectorContext.length is 0
           for $ in parent.selectors
             selectorContext.push $
@@ -136,7 +135,7 @@ class Rule extends Node
     for rule in @rules
       rule.boundConditionals.push conditional
       rule.isCondtionalBound = true
-      rule.injectChildrenCondtionals()
+      rule.injectChildrenCondtionals(conditional)
   
   
 Rule.types =

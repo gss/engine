@@ -390,9 +390,9 @@ class Engine extends GSS.EventTrigger
   
   handleWorkerMessage: (message) =>
     LOG @id,".handleWorkerMessage()",@workerCommands    
-        
+
     @vars = message.data.values
-    
+
     #@setNeedsDisplay(true)
     
     @display(@vars)    
@@ -517,7 +517,7 @@ class Engine extends GSS.EventTrigger
     LOG @id,".clean()"
     
     # event listeners
-    @offAll()
+    #@offAll()
     
     for key, val of @vars
       delete @vars[key]

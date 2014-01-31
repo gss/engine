@@ -15433,7 +15433,8 @@ EventTrigger = (function() {
     if (this._listenersByType[type]) {
       byType = this._listenersByType[type];
     } else {
-      byType = this._listenersByType[type] = [];
+      byType = [];
+      this._listenersByType[type] = byType;
     }
     return byType;
   };
@@ -16483,23 +16484,23 @@ Rule = (function(_super) {
   };
 
   Rule.prototype._computeSelectorContext = function() {
-    var $, $$, parent, rule, selectorContext, _context, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
+    var $, $$, parent, rule, selectorContext, _context, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
     selectorContext = [];
     rule = this;
     while (rule.parent) {
       parent = rule.parent;
-      if (parent != null ? parent.selectors : void 0) {
+      if ((parent != null ? (_ref = parent.selectors) != null ? _ref.length : void 0 : void 0) > 0) {
         if (selectorContext.length === 0) {
-          _ref = parent.selectors;
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            $ = _ref[_i];
+          _ref1 = parent.selectors;
+          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+            $ = _ref1[_i];
             selectorContext.push($);
           }
         } else {
           _context = [];
-          _ref1 = parent.selectors;
-          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-            $ = _ref1[_j];
+          _ref2 = parent.selectors;
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            $ = _ref2[_j];
             for (_k = 0, _len2 = selectorContext.length; _k < _len2; _k++) {
               $$ = selectorContext[_k];
               _context.push($ + " " + $$);
@@ -16564,7 +16565,7 @@ Rule = (function(_super) {
       rule = _ref[_i];
       rule.boundConditionals.push(conditional);
       rule.isCondtionalBound = true;
-      _results.push(rule.injectChildrenCondtionals());
+      _results.push(rule.injectChildrenCondtionals(conditional));
     }
     return _results;
   };
@@ -17206,7 +17207,6 @@ Engine = (function(_super) {
   Engine.prototype.clean = function() {
     var key, val, _base, _ref;
     LOG(this.id, ".clean()");
-    this.offAll();
     _ref = this.vars;
     for (key in _ref) {
       val = _ref[key];

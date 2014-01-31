@@ -19,7 +19,8 @@ class EventTrigger
     if @_listenersByType[type]
       byType = @_listenersByType[type]
     else
-      byType = @_listenersByType[type] = []
+      byType =  []
+      @_listenersByType[type] = byType 
     return byType
   
   on: (type, listener) ->
@@ -58,7 +59,7 @@ class EventTrigger
     @
   
   trigger: (type, o) ->
-    for listener in @_getListeners type
+    for listener in @_getListeners type      
       listener.call @, o
     @
   
