@@ -640,7 +640,7 @@ class Commander
       bindRootAsContext root, query
       return o
     
-    else if sel is '::parent'
+    else if sel is '::parent' or sel is 'parent'
       parentRule = root.parentRule
       if !parentRule then throw new Error "::this query requires parent rule for context"    
       query = parentRule.getContextQuery()
