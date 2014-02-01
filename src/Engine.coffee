@@ -159,7 +159,7 @@ class Engine extends GSS.EventTrigger
     for command in commands
       @registerCommand command
     
-  registerCommand: (command) ->    
+  registerCommand: (command) -> 
     # TODO: treat commands as strings and check cache for dups?
     @workerCommands.push command
     #

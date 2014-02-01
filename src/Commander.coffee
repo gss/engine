@@ -63,7 +63,6 @@ class Commander
         
         if ast.isRule
           command.parentRule = ast
-          
         @_execute command, command
     # is block
     ###
@@ -256,13 +255,15 @@ class Commander
       if node.isContextBound
         contextQuery = rule.getContextQuery()
         
-        for context_id in contextQuery.lastAddedIds            
-          @installCommandFromBase node, context_id
+        for contextId in contextQuery.lastAddedIds            
+          @engine.registerCommands @expandSpawnable node, true, contextId
+          #@installCommandFromBase node, context_id
         
       
       # Not Context Bound                    
       else
-        @installCommandFromBase node
+        @engine.registerCommands @expandSpawnable node, true
+        #@installCommandFromBase node
           
     
     # generate intrinsic commands
@@ -272,15 +273,17 @@ class Commander
     ###
   
   #uninstallCommandFromBase: (node, context_id, tracker) ->
-                            
-  installCommandFromBase: (command, contextId, tracker) ->
+  
+  expandSpawnable: (command, isRoot, contextId, tracker) ->
+  
     newCommand = []
     commands = []
     hasPlural = false
     pluralPartLookup = {}
     plural = null
     pluralLength = 0
-    for part, i in command      
+  
+    for part, i in command
       if part
         if part.spawn?
           newPart = part.spawn(  contextId  )
@@ -290,10 +293,11 @@ class Commander
             pluralPartLookup[i] = newPart
             pluralLength = newPart.length
         else
-          newCommand.push part
-    
-    if tracker then newCommand.push tracker
-               
+          newCommand.push part        
+  
+    if isRoot
+      if tracker then newCommand.push tracker
+           
     if hasPlural      
       for j in [0...pluralLength]
         pluralCommand = []
@@ -303,11 +307,71 @@ class Commander
           else
             pluralCommand.push part
         commands.push pluralCommand
-      return @engine.registerCommands commands        
-    else
-      
-      return @engine.registerCommand newCommand
+      return commands        
     
+    else      
+      if isRoot 
+        return [newCommand]
+      return newCommand
+  
+  makeNonRootSpawnableIfNeeded: (command) ->
+    for part in command
+      if part
+        if part.spawn?
+          isSpawnable = true
+          if part.isPlural
+            isPlural = true  
+  
+    if !isSpawnable
+      return command    
+  
+    return {
+      isPlural: isPlural
+      spawn: (contextId) =>
+        return @expandSpawnable command, contextId, false
+    }
+    
+  installCommandFromBase: (command, contextId, tracker) ->
+    newCommand = []
+    commands = []
+    hasPlural = false
+    pluralPartLookup = {}
+    plural = null
+    pluralLength = 0
+    
+    # TOOD: must be recursive for things like ["plus"]    
+    
+    
+    buildNewCommand = (command) ->
+      for part, i in command
+        if part
+          if part.spawn?
+            newPart = part.spawn(  contextId  )
+            newCommand.push newPart
+            if part.isPlural
+              hasPlural = true
+              pluralPartLookup[i] = newPart
+              pluralLength = newPart.length
+          else
+            newCommand.push part        
+      
+      if tracker then newCommand.push tracker
+               
+      if hasPlural      
+        for j in [0...pluralLength]
+          pluralCommand = []
+          for part, i in newCommand
+            if pluralPartLookup[i]
+              pluralCommand.push pluralPartLookup[i][j]
+            else
+              pluralCommand.push part
+          commands.push pluralCommand
+        return commands        
+      else
+      
+        return [newCommand]
+    
+    @engine.registerCommands buildNewCommand(command)
 
   
   # Variable Commands
@@ -396,22 +460,25 @@ class Commander
   'number': (root, num) ->
     return ['number', num]
 
-  'plus': (root, e1, e2) ->
-    return ['plus', e1, e2]
+  'plus': (root, e1, e2) =>
+    return @makeNonRootSpawnableIfNeeded ['plus', e1, e2]
+  
+  'minus' : (root, e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ['minus', e1, e2]
 
-  'minus' : (root, e1,e2) ->
-    return ['minus', e1, e2]
+  'multiply': (root, e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ['multiply', e1, e2]
 
-  'multiply': (root, e1,e2) ->
-    return ['multiply', e1, e2]
-
-  'divide': (root, e1,e2,s,w) ->
-    return ['divide', e1, e2]
+  'divide': (root, e1,e2,s,w) =>
+    return @makeNonRootSpawnableIfNeeded ['divide', e1, e2]
 
 
   # Constraint Commands
   # ------------------------------------------------
-
+  
+  'strength': (root,s) =>
+    return ['strength', s]
+  
   'suggest': () =>
     # pass through
     args = [arguments...]
@@ -444,114 +511,8 @@ class Commander
       stay.push get
       cloneBinds self, stay
       @registerSpawn(stay)
-    ###
-    
-  # Chains
-  # ------------------------------------------------
+    ###      
   
-  'chain': (root,queryObject,bridgessssss) =>    
-    query = queryObject.query
-    args = [arguments...]
-    bridges = [args[2...args.length]...]
-    engine = @engine
-    for bridge in bridges
-      bridge.call(engine,query,engine)
-    query.on 'afterChange', () ->
-      for bridge in bridges
-        bridge.call(engine,query,engine)
-    
-  'eq-chain': (root,head,tail,s,w) =>
-    return @_chainer('eq',head,tail,s,w)
-  
-  'lte-chain': (root,head,tail,s,w) =>
-    return @_chainer('lte',head,tail,s,w)
-  
-  'gte-chain': (root,head,tail,s,w) =>
-    return @_chainer('gte',head,tail,s,w)
-  
-  'lt-chain': (root,head,tail,s,w) =>
-    return @_chainer('lt',head,tail,s,w)
-  
-  'gt-chain': (root,head,tail,s,w) =>
-    return @_chainer('gt',head,tail,s,w)  
-  
-  _chainer: (op,head,tail,s,w) =>
-
-    tracker = "eq-chain-" + GSS.uid()
-    engine = @engine
-    _e_for_chain = @_e_for_chain  
-    
-    # return query 'afterChange' callback
-    return (query,e) ->
-      
-      # refresh when query changes 
-      e.remove tracker            
-      
-      # add constraints to each element
-      query.forEach (el) ->
-        nextEl = query.next(el)
-        return unless nextEl        
-        e1 = _e_for_chain( el,     head, query, tracker, el, nextEl)
-        e2 = _e_for_chain( nextEl, tail, query, tracker, el, nextEl)
-        e[op] e1, e2, s, w
-  
-  'plus-chain': (root,head,tail) =>    
-    return @_chainer_math(head,tail,'plus')
-  
-  'minus-chain': (root,head,tail) =>
-    return @_chainer_math(head,tail,'minus')
-  
-  'multiply-chain': (root,head,tail) =>
-    return @_chainer_math(head,tail,'multiply')
-  
-  'divide-chain': (root,head,tail) =>
-    return @_chainer_math(head,tail,'divide')
-  
-  _chainer_math: (head, tail, op) =>
-    # hoisted vars
-    # - `el`
-    # - `nextEl`
-    engine = @engine
-    _e_for_chain = @_e_for_chain
-    return (el, nextEl, query, tracker) ->
-      e1 = _e_for_chain( el,     head, query, tracker)
-      e2 = _e_for_chain( nextEl, tail, query, tracker)
-      return engine[op] e1, e2
-  
-  
-  _e_for_chain: (el, exp, query, tracker, currentEl, nextEl) =>
-    if typeof exp is "string"
-      e1 = @engine.elVar(el,exp,query.selector)
-    else if typeof exp is "function" # chainer-math
-      e1 = exp.call(@, currentEl, nextEl, query, tracker)
-    else
-      e1 = exp
-    return e1
-    
-  
-  # JavaScript for-loop hooks
-  # ------------------------------------------------
-  
-  'for-each': (root,queryObject,callback) =>
-    query = queryObject.query
-    for el in query.nodeList
-      callback.call(@engine, el, query, @engine)
-    query.on 'afterChange', () ->
-      for el in query.nodeList
-        callback.call(@engine, el, query)
-  
-  'for-all': (root,queryObject,callback) =>
-    query = queryObject.query
-    callback.call(@engine, query, @engine)
-    query.on 'afterChange', () =>
-      callback.call(@engine, query, @engine)
-    
-  'js': (root,js) =>
-    eval "var callback =" + js
-    return callback
-
-  'strength': (root,s) =>
-    return ['strength', s]
 
   # Selector Commands
   # ------------------------------------------------
@@ -673,8 +634,7 @@ class Commander
     
     throw new Error "$reserved selectors not yet handled: #{sel}"          
   
-    
-  
+      
   # Conditional Commands
   # ------------------------------------------------
   
@@ -705,6 +665,110 @@ class Commander
   
   "?<": (root,e1,e2) ->
     return ["?<",e1,e2]
+  
+  # Chains
+  # ------------------------------------------------
+  
+  'chain': (root,queryObject,bridgessssss) =>    
+    query = queryObject.query
+    args = [arguments...]
+    bridges = [args[2...args.length]...]
+    engine = @engine
+    for bridge in bridges
+      bridge.call(engine,query,engine)
+    query.on 'afterChange', () ->
+      for bridge in bridges
+        bridge.call(engine,query,engine)
+    
+  'eq-chain': (root,head,tail,s,w) =>
+    return @_chainer('eq',head,tail,s,w)
+  
+  'lte-chain': (root,head,tail,s,w) =>
+    return @_chainer('lte',head,tail,s,w)
+  
+  'gte-chain': (root,head,tail,s,w) =>
+    return @_chainer('gte',head,tail,s,w)
+  
+  'lt-chain': (root,head,tail,s,w) =>
+    return @_chainer('lt',head,tail,s,w)
+  
+  'gt-chain': (root,head,tail,s,w) =>
+    return @_chainer('gt',head,tail,s,w)  
+  
+  _chainer: (op,head,tail,s,w) =>
+
+    tracker = "eq-chain-" + GSS.uid()
+    engine = @engine
+    _e_for_chain = @_e_for_chain  
+    
+    # return query 'afterChange' callback
+    return (query,e) ->
+      
+      # refresh when query changes 
+      e.remove tracker            
+      
+      # add constraints to each element
+      query.forEach (el) ->
+        nextEl = query.next(el)
+        return unless nextEl        
+        e1 = _e_for_chain( el,     head, query, tracker, el, nextEl)
+        e2 = _e_for_chain( nextEl, tail, query, tracker, el, nextEl)
+        e[op] e1, e2, s, w
+  
+  'plus-chain': (root,head,tail) =>    
+    return @_chainer_math(head,tail,'plus')
+  
+  'minus-chain': (root,head,tail) =>
+    return @_chainer_math(head,tail,'minus')
+  
+  'multiply-chain': (root,head,tail) =>
+    return @_chainer_math(head,tail,'multiply')
+  
+  'divide-chain': (root,head,tail) =>
+    return @_chainer_math(head,tail,'divide')
+  
+  _chainer_math: (head, tail, op) =>
+    # hoisted vars
+    # - `el`
+    # - `nextEl`
+    engine = @engine
+    _e_for_chain = @_e_for_chain
+    return (el, nextEl, query, tracker) ->
+      e1 = _e_for_chain( el,     head, query, tracker)
+      e2 = _e_for_chain( nextEl, tail, query, tracker)
+      return engine[op] e1, e2
+  
+  
+  _e_for_chain: (el, exp, query, tracker, currentEl, nextEl) =>
+    if typeof exp is "string"
+      e1 = @engine.elVar(el,exp,query.selector)
+    else if typeof exp is "function" # chainer-math
+      e1 = exp.call(@, currentEl, nextEl, query, tracker)
+    else
+      e1 = exp
+    return e1
+    
+  
+  # JavaScript for-loop hooks
+  # ------------------------------------------------
+  
+  'for-each': (root,queryObject,callback) =>
+    query = queryObject.query
+    for el in query.nodeList
+      callback.call(@engine, el, query, @engine)
+    query.on 'afterChange', () ->
+      for el in query.nodeList
+        callback.call(@engine, el, query)
+  
+  'for-all': (root,queryObject,callback) =>
+    query = queryObject.query
+    callback.call(@engine, query, @engine)
+    query.on 'afterChange', () =>
+      callback.call(@engine, query, @engine)
+    
+  'js': (root,js) =>
+    eval "var callback =" + js
+    return callback
 
 
 module.exports = Commander

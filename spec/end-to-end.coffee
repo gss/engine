@@ -37,24 +37,19 @@ describe 'End - to - End', ->
           "[t]": 500
           "[x]": 1
         done()     
-        engine.off 'solved', listen
                      
-      engine.on 'solved', listen
+      engine.once 'solved', listen
     
       container.innerHTML =  """
           <style type="text/gss">
           [t] == 500;
         
-          @if [t] >= 960 {
-          
+          @if [t] >= 960 {          
             [x] == 96;
-
           }
 
-          @else {
-  
-            [x] == 1;
-  
+          @else {  
+            [x] == 1;  
           }
           </style>
         """
@@ -91,7 +86,7 @@ describe 'End - to - End', ->
           }
           </style>
         """
-      engine.on 'solved', listen
+      engine.once 'solved', listen
       
   
   describe 'top level @if @else w/ complex queries', ->
@@ -100,8 +95,7 @@ describe 'End - to - End', ->
       listen = (e) ->     
         expect(engine.vars).to.be.ok
         done()          
-        engine.off 'solved', listen                    
-    
+      
       container.innerHTML =  """
           <div class="section"></div>
           <div class="section"></div>
@@ -131,4 +125,63 @@ describe 'End - to - End', ->
           }
           </style>
         """
-      engine.on 'solved', listen
+      engine.once 'solved', listen
+  
+  describe 'simple VFL', ->
+  
+    it 'should compute values', (done) ->
+      listen = (e) ->     
+        expect(engine.vars).to.eql
+          "$s1[x]":100
+          "$s1[width]":10
+          "$s2[width]":10
+          "$s2[x]":210
+          
+        done()          
+    
+      container.innerHTML =  """
+          <div id="s1"></div>
+          <div id="s2"></div>
+          <style type="text/gss">
+          
+          #s1[x] == 100;
+          @horizontal [#s1(==10)]-[#s2(==10)] gap(100);
+          
+          </style>
+        """
+      engine.once 'solved', listen
+  
+  describe 'top level @if @else w/ nested VFLs', ->
+  
+    it 'should compute values', (done) ->
+      listen = (e) ->     
+        expect(engine.vars).to.eql
+          "[Wwin]": 100
+          "$s1[x]":50
+          "$s1[width]":1
+          "$s2[width]":1
+          "$s2[x]":56         
+        done()          
+    
+      container.innerHTML =  """
+          <div id="s1"></div>
+          <div id="s2"></div>
+          <style type="text/gss">
+          [Wwin] == 100;          
+          
+          @if [Wwin] > 960 {
+                        
+            #s1[x] == 100;
+            @horizontal [#s1(==10)]-[#s2(==10)] gap(100);
+
+          }
+
+          @else {
+  
+            #s1[x] == 50;
+            @horizontal [#s1(==1)]-[#s2(==1)] gap(5);
+  
+          }
+          </style>
+        """
+      engine.once 'solved', listen
