@@ -59,9 +59,8 @@ class Commander
   execute: (ast) ->
     # is statement
     if ast.commands?
-      for command in ast.commands        
-        
-        if ast.isRule
+      for command in ast.commands     
+        if ast.isRule          
           command.parentRule = ast
         @_execute command, command
     # is block
@@ -216,18 +215,24 @@ class Commander
   # Command Spawning
   # ------------------------------------------------
   
-  registerSpawn: (node) ->      
-    
-    # TODO: REGISTER FOR CONDITIONAL ITSELF????
-    
-    # Condtional Bound
-    rule = node.parentRule 
+  getWhereCommandIfNeeded: (rule) ->    
+    # Condtional Bound`
     if rule
       if rule.isCondtionalBound & !rule.isConditional
         whereCommand = ["where"]
         for cond in rule.boundConditionals
           whereCommand.push cond.getClauseTracker()
-        node.push whereCommand
+        return whereCommand
+    else 
+      return null
+  
+  registerSpawn: (node) ->      
+    
+    # TODO: REGISTER FOR CONDITIONAL ITSELF????
+    
+    # Condtional Bound
+    whereCommand = @getWhereCommandIfNeeded node.parentRule
+    if whereCommand then node.push whereCommand
     
     if !node.isQueryBound
       # just pass root through      
@@ -315,6 +320,7 @@ class Commander
       return newCommand
   
   makeNonRootSpawnableIfNeeded: (command) ->
+    isPlural = false
     for part in command
       if part
         if part.spawn?
@@ -328,9 +334,10 @@ class Commander
     return {
       isPlural: isPlural
       spawn: (contextId) =>
-        return @expandSpawnable command, contextId, false
+        return @expandSpawnable command, false, contextId
     }
-    
+  
+  ###
   installCommandFromBase: (command, contextId, tracker) ->
     newCommand = []
     commands = []
@@ -372,7 +379,7 @@ class Commander
         return [newCommand]
     
     @engine.registerCommands buildNewCommand(command)
-
+  ###
   
   # Variable Commands
   # ------------------------------------------------
@@ -383,8 +390,10 @@ class Commander
       command.push tracker
     return command
     
-  'get$':(root, prop, queryObject) =>     
-    key = queryObject.selector + prop
+  'get$':(root, prop, queryObject) =>
+    key = queryObject.selectorKey
+    if !key then key = queryObject.selector
+    key += prop
     val = @get$cache[key]
     if !val
       val = @_get$(root, prop, queryObject)
@@ -430,7 +439,7 @@ class Commander
 
           @intrinsicRegistersById[gid][prop] = register
           register.call @    
-        
+    
     if isContextBound
       idProcessor = queryObject.idProcessor
       return {
@@ -472,7 +481,39 @@ class Commander
   'divide': (root, e1,e2,s,w) =>
     return @makeNonRootSpawnableIfNeeded ['divide', e1, e2]
 
-
+    
+  # Conditional Commands
+  # ------------------------------------------------
+  
+  "cond": (self) =>  
+    @registerSpawn self
+    #args = [arguments...]
+    #@engine.registerCommand ['cond', args[1...args.length]...]
+  
+  "where": (root,name) =>
+    return ['where',name]
+  
+  "clause": (root,cond,label) =>
+    return @makeNonRootSpawnableIfNeeded ["clause",cond,label]
+  
+  "?>=": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["?>=",e1,e2]
+  
+  "?<=": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["?<=",e1,e2]
+  
+  "?==": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["?==",e1,e2]
+    
+  "?!=": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["?!=",e1,e2]
+  
+  "?>": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["?>",e1,e2]
+  
+  "?<": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["?<",e1,e2]
+    
   # Constraint Commands
   # ------------------------------------------------
   
@@ -586,14 +627,16 @@ class Commander
       if !parentRule then throw new Error "::this query requires parent rule for context"    
       query = parentRule.getContextQuery()            
       selector = query.selector
-      o = @queryCommandCache[selector]
+      selectorKey = selector+"::this"
+      o = @queryCommandCache[selectorKey]
       if !o
         o = {
           query:query
           selector:selector
+          selectorKey:selectorKey
           isContextBound: true
         }
-        @queryCommandCache[selector] = o
+        @queryCommandCache[selectorKey] = o
       bindRootAsContext root, query
       return o
     
@@ -635,36 +678,7 @@ class Commander
     throw new Error "$reserved selectors not yet handled: #{sel}"          
   
       
-  # Conditional Commands
-  # ------------------------------------------------
   
-  "cond": (self) =>  
-    args = [arguments...]
-    @engine.registerCommand ['cond', args[1...args.length]...]
-  
-  "where": (root,name) ->
-    return ['where',name]
-  
-  "clause": (root,cond,label) ->
-    return ["clause",cond,label]
-  
-  "?>=": (root,e1,e2) ->
-    return ["?>=",e1,e2]
-  
-  "?<=": (root,e1,e2) ->
-    return ["?<=",e1,e2]
-  
-  "?==": (root,e1,e2) ->
-    return ["?==",e1,e2]
-    
-  "?!=": (root,e1,e2) ->
-    return ["?!=",e1,e2]
-  
-  "?>": (root,e1,e2) ->
-    return ["?>",e1,e2]
-  
-  "?<": (root,e1,e2) ->
-    return ["?<",e1,e2]
   
   # Chains
   # ------------------------------------------------
@@ -674,11 +688,17 @@ class Commander
     args = [arguments...]
     bridges = [args[2...args.length]...]
     engine = @engine
+    
+    more = null
+    whereCommand = @getWhereCommandIfNeeded root.parentRule
+    if whereCommand 
+      more = [whereCommand]    
+    
     for bridge in bridges
-      bridge.call(engine,query,engine)
+      bridge.call(engine,query,engine,more)
     query.on 'afterChange', () ->
       for bridge in bridges
-        bridge.call(engine,query,engine)
+        bridge.call(engine,query,engine,more)
     
   'eq-chain': (root,head,tail,s,w) =>
     return @_chainer('eq',head,tail,s,w)
@@ -693,16 +713,15 @@ class Commander
     return @_chainer('lt',head,tail,s,w)
   
   'gt-chain': (root,head,tail,s,w) =>
-    return @_chainer('gt',head,tail,s,w)  
+    return @_chainer('gt',head,tail,s,w) 
   
   _chainer: (op,head,tail,s,w) =>
-
     tracker = "eq-chain-" + GSS.uid()
     engine = @engine
     _e_for_chain = @_e_for_chain  
     
     # return query 'afterChange' callback
-    return (query,e) ->
+    return (query,e,more) ->
       
       # refresh when query changes 
       e.remove tracker            
@@ -713,7 +732,7 @@ class Commander
         return unless nextEl        
         e1 = _e_for_chain( el,     head, query, tracker, el, nextEl)
         e2 = _e_for_chain( nextEl, tail, query, tracker, el, nextEl)
-        e[op] e1, e2, s, w
+        e[op] e1, e2, s, w, more
   
   'plus-chain': (root,head,tail) =>    
     return @_chainer_math(head,tail,'plus')

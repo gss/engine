@@ -369,6 +369,7 @@ class Engine extends GSS.EventTrigger
       @worker = new Worker @workerURL
       @worker.addEventListener "message", @handleWorkerMessage, false
       @worker.addEventListener "error", @handleError, false
+
     @worker.postMessage workerMessage
     # resetWorkerCommands
     @lastWorkerCommands = @workerCommands
@@ -626,20 +627,25 @@ class Engine extends GSS.EventTrigger
     if !!Number(key) or (Number(key) is 0) then return ['number',key]
     return @var key
   
-  eq: (e1,e2,s,w) ->
+  _addconstraint: (op,e1,e2,s,w,more) ->
     e1 = @__e e1
     e2 = @__e e2
-    @registerCommand ['eq', e1, e2, s, w]
+    command = ['eq', e1, e2]
+    if s then command.push s
+    if w then command.push w
+    if more
+      for m in more
+        command.push m
+    @registerCommand command
   
-  lte: (e1,e2,s,w) ->
-    e1 = @__e e1
-    e2 = @__e e2
-    @registerCommand ['lte', e1, e2, s, w]
+  eq:  (e1,e2,s,w,more) ->
+    @_addconstraint('eq',e1,e2,s,w,more)
   
-  gte: (e1,e2,s,w) ->
-    e1 = @__e e1
-    e2 = @__e e2
-    @registerCommand ['gte', e1, e2, s, w]
+  lte: (e1,e2,s,w,more) ->
+    @_addconstraint('lte',e1,e2,s,w,more)
+  
+  gte: (e1,e2,s,w,more) ->
+    @_addconstraint('gte',e1,e2,s,w,more)
   
   suggest: (v, val, strength = 'required') ->    
     v = @__e v

@@ -156,7 +156,7 @@ describe 'End - to - End', ->
     it 'should compute values', (done) ->
       listen = (e) ->     
         expect(engine.vars).to.eql
-          "[Wwin]": 100
+          "[Wwin]":100
           "$s1[x]":50
           "$s1[width]":1
           "$s2[width]":1
@@ -184,4 +184,119 @@ describe 'End - to - End', ->
           }
           </style>
         """
-      engine.once 'solved', listen
+      engine.once 'solved', listen    
+  
+  
+  describe '@if @else w/ dynamic VFLs', ->
+  
+    it 'should compute values', (done) ->
+      listen = (e) ->     
+        expect(engine.vars).to.eql
+          "$container[width]": 100,
+          "$s1[height]": 100,
+          "$s2[height]": 100,
+          "$s1[width]": 100,
+          "$s2[width]": 100,
+          "$s1[x]": 0,
+          "$s2[x]": 100,
+          "$s1[y]": 0,
+          "$s2[y]": 0          
+   
+        done()          
+    
+      container.innerHTML =  """
+          <div id="s1" class="section"></div>
+          <div id="s2" class="section"></div>
+          <div id="container"></div>
+          <style type="text/gss">
+
+          #container {
+            width: == 100;
+          }
+          .section {
+            height: == 100;
+            width: == 100;
+            x: >= 0;
+            y: >= 0;
+          }       
+          
+          @if #container[width] > 960 {
+            
+            @vertical .section;     
+
+          }
+          
+          @else {
+            @horizontal .section;     
+          }
+
+
+          </style>
+        """
+      engine.once 'solved', listen  
+
+
+  describe '[::] VFLs', ->
+  
+    it 'should compute', (done) ->
+      listen = (e) ->     
+        expect(engine.vars).to.eql      
+          "$s1[x]": 20,
+          "$container[x]": 10,
+          "$s2[x]": 20,
+          "$container[width]": 100,
+          "$s1[width]": 80,
+          "$s2[width]": 80     
+        done()          
+    
+      container.innerHTML =  """
+          <div id="s1" class="section"></div>
+          <div id="s2" class="section"></div>
+          <div id="container"></div>
+          <style type="text/gss">                        
+                      
+            .section {
+              @horizontal |-[::this]-| gap(10) in(#container);
+            }
+            
+            #container {
+              x: == 10;
+              width: == 100;
+            }                        
+  
+          </style>
+        """
+      engine.once 'solved', listen    
+      
+
+  describe '[::] VFLs II', ->
+  
+    it 'should compute', (done) ->
+      listen = (e) ->     
+        expect(engine.vars).to.eql      
+          "$s1[x]": 20,
+          "$container[x]": 10,
+          "$s2[x]": 20,
+          "$container[width]": 100,
+          "$s1[width]": 80,
+          "$s2[width]": 80     
+        done()          
+    
+      container.innerHTML =  """
+          <div id="s1" class="section"></div>
+          <div id="s2" class="section"></div>
+          <div id="container"></div>
+          <style type="text/gss">                        
+            
+            #container {
+              x: == 10;
+              width: == 100;
+            } 
+                     
+            .section {
+              @horizontal |-[::this]-| gap(10) in(#container);
+            }                                           
+  
+          </style>
+        """
+      engine.once 'solved', listen    

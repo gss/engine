@@ -17320,22 +17320,36 @@ Engine = (function(_super) {
     return this["var"](key);
   };
 
-  Engine.prototype.eq = function(e1, e2, s, w) {
+  Engine.prototype._addconstraint = function(op, e1, e2, s, w, more) {
+    var command, m, _i, _len;
     e1 = this.__e(e1);
     e2 = this.__e(e2);
-    return this.registerCommand(['eq', e1, e2, s, w]);
+    command = ['eq', e1, e2];
+    if (s) {
+      command.push(s);
+    }
+    if (w) {
+      command.push(w);
+    }
+    if (more) {
+      for (_i = 0, _len = more.length; _i < _len; _i++) {
+        m = more[_i];
+        command.push(m);
+      }
+    }
+    return this.registerCommand(command);
   };
 
-  Engine.prototype.lte = function(e1, e2, s, w) {
-    e1 = this.__e(e1);
-    e2 = this.__e(e2);
-    return this.registerCommand(['lte', e1, e2, s, w]);
+  Engine.prototype.eq = function(e1, e2, s, w, more) {
+    return this._addconstraint('eq', e1, e2, s, w, more);
   };
 
-  Engine.prototype.gte = function(e1, e2, s, w) {
-    e1 = this.__e(e1);
-    e2 = this.__e(e2);
-    return this.registerCommand(['gte', e1, e2, s, w]);
+  Engine.prototype.lte = function(e1, e2, s, w, more) {
+    return this._addconstraint('lte', e1, e2, s, w, more);
+  };
+
+  Engine.prototype.gte = function(e1, e2, s, w, more) {
+    return this._addconstraint('gte', e1, e2, s, w, more);
   };
 
   Engine.prototype.suggest = function(v, val, strength) {
@@ -17443,7 +17457,6 @@ Commander = (function() {
     this['lte-chain'] = __bind(this['lte-chain'], this);
     this['eq-chain'] = __bind(this['eq-chain'], this);
     this['chain'] = __bind(this['chain'], this);
-    this["cond"] = __bind(this["cond"], this);
     this['$reserved'] = __bind(this['$reserved'], this);
     this['$id'] = __bind(this['$id'], this);
     this['$tag'] = __bind(this['$tag'], this);
@@ -17456,6 +17469,15 @@ Commander = (function() {
     this['eq'] = __bind(this['eq'], this);
     this['suggest'] = __bind(this['suggest'], this);
     this['strength'] = __bind(this['strength'], this);
+    this["?<"] = __bind(this["?<"], this);
+    this["?>"] = __bind(this["?>"], this);
+    this["?!="] = __bind(this["?!="], this);
+    this["?=="] = __bind(this["?=="], this);
+    this["?<="] = __bind(this["?<="], this);
+    this["?>="] = __bind(this["?>="], this);
+    this["clause"] = __bind(this["clause"], this);
+    this["where"] = __bind(this["where"], this);
+    this["cond"] = __bind(this["cond"], this);
     this['divide'] = __bind(this['divide'], this);
     this['multiply'] = __bind(this['multiply'], this);
     this['minus'] = __bind(this['minus'], this);
@@ -17713,9 +17735,8 @@ Commander = (function() {
     return this;
   };
 
-  Commander.prototype.registerSpawn = function(node) {
-    var cond, newCommand, part, rule, whereCommand, _i, _j, _len, _len1, _ref;
-    rule = node.parentRule;
+  Commander.prototype.getWhereCommandIfNeeded = function(rule) {
+    var cond, whereCommand, _i, _len, _ref;
     if (rule) {
       if (rule.isCondtionalBound & !rule.isConditional) {
         whereCommand = ["where"];
@@ -17724,13 +17745,23 @@ Commander = (function() {
           cond = _ref[_i];
           whereCommand.push(cond.getClauseTracker());
         }
-        node.push(whereCommand);
+        return whereCommand;
       }
+    } else {
+      return null;
+    }
+  };
+
+  Commander.prototype.registerSpawn = function(node) {
+    var newCommand, part, whereCommand, _i, _len;
+    whereCommand = this.getWhereCommandIfNeeded(node.parentRule);
+    if (whereCommand) {
+      node.push(whereCommand);
     }
     if (!node.isQueryBound) {
       newCommand = [];
-      for (_j = 0, _len1 = node.length; _j < _len1; _j++) {
-        part = node[_j];
+      for (_i = 0, _len = node.length; _i < _len; _i++) {
+        part = node[_i];
         newCommand.push(part);
       }
       return this.engine.registerCommand(newCommand);
@@ -17827,6 +17858,7 @@ Commander = (function() {
   Commander.prototype.makeNonRootSpawnableIfNeeded = function(command) {
     var isPlural, isSpawnable, part, _i, _len,
       _this = this;
+    isPlural = false;
     for (_i = 0, _len = command.length; _i < _len; _i++) {
       part = command[_i];
       if (part) {
@@ -17844,60 +17876,55 @@ Commander = (function() {
     return {
       isPlural: isPlural,
       spawn: function(contextId) {
-        return _this.expandSpawnable(command, contextId, false);
+        return _this.expandSpawnable(command, false, contextId);
       }
     };
   };
 
-  Commander.prototype.installCommandFromBase = function(command, contextId, tracker) {
-    var buildNewCommand, commands, hasPlural, newCommand, plural, pluralLength, pluralPartLookup;
-    newCommand = [];
-    commands = [];
-    hasPlural = false;
-    pluralPartLookup = {};
-    plural = null;
-    pluralLength = 0;
-    buildNewCommand = function(command) {
-      var i, j, newPart, part, pluralCommand, _i, _j, _k, _len, _len1;
-      for (i = _i = 0, _len = command.length; _i < _len; i = ++_i) {
-        part = command[i];
-        if (part) {
-          if (part.spawn != null) {
-            newPart = part.spawn(contextId);
-            newCommand.push(newPart);
-            if (part.isPlural) {
-              hasPlural = true;
-              pluralPartLookup[i] = newPart;
-              pluralLength = newPart.length;
-            }
-          } else {
-            newCommand.push(part);
-          }
-        }
-      }
-      if (tracker) {
-        newCommand.push(tracker);
-      }
-      if (hasPlural) {
-        for (j = _j = 0; 0 <= pluralLength ? _j < pluralLength : _j > pluralLength; j = 0 <= pluralLength ? ++_j : --_j) {
-          pluralCommand = [];
-          for (i = _k = 0, _len1 = newCommand.length; _k < _len1; i = ++_k) {
-            part = newCommand[i];
-            if (pluralPartLookup[i]) {
-              pluralCommand.push(pluralPartLookup[i][j]);
-            } else {
-              pluralCommand.push(part);
-            }
-          }
-          commands.push(pluralCommand);
-        }
-        return commands;
-      } else {
-        return [newCommand];
-      }
-    };
-    return this.engine.registerCommands(buildNewCommand(command));
-  };
+  /*
+  installCommandFromBase: (command, contextId, tracker) ->
+    newCommand = []
+    commands = []
+    hasPlural = false
+    pluralPartLookup = {}
+    plural = null
+    pluralLength = 0
+    
+    # TOOD: must be recursive for things like ["plus"]    
+    
+    
+    buildNewCommand = (command) ->
+      for part, i in command
+        if part
+          if part.spawn?
+            newPart = part.spawn(  contextId  )
+            newCommand.push newPart
+            if part.isPlural
+              hasPlural = true
+              pluralPartLookup[i] = newPart
+              pluralLength = newPart.length
+          else
+            newCommand.push part        
+      
+      if tracker then newCommand.push tracker
+               
+      if hasPlural      
+        for j in [0...pluralLength]
+          pluralCommand = []
+          for part, i in newCommand
+            if pluralPartLookup[i]
+              pluralCommand.push pluralPartLookup[i][j]
+            else
+              pluralCommand.push part
+          commands.push pluralCommand
+        return commands        
+      else
+      
+        return [newCommand]
+    
+    @engine.registerCommands buildNewCommand(command)
+  */
+
 
   Commander.prototype['get'] = function(root, varId, tracker) {
     var command;
@@ -17910,7 +17937,11 @@ Commander = (function() {
 
   Commander.prototype['get$'] = function(root, prop, queryObject) {
     var key, val;
-    key = queryObject.selector + prop;
+    key = queryObject.selectorKey;
+    if (!key) {
+      key = queryObject.selector;
+    }
+    key += prop;
     val = this.get$cache[key];
     if (!val) {
       val = this._get$(root, prop, queryObject);
@@ -18009,6 +18040,42 @@ Commander = (function() {
 
   Commander.prototype['divide'] = function(root, e1, e2, s, w) {
     return this.makeNonRootSpawnableIfNeeded(['divide', e1, e2]);
+  };
+
+  Commander.prototype["cond"] = function(self) {
+    return this.registerSpawn(self);
+  };
+
+  Commander.prototype["where"] = function(root, name) {
+    return ['where', name];
+  };
+
+  Commander.prototype["clause"] = function(root, cond, label) {
+    return this.makeNonRootSpawnableIfNeeded(["clause", cond, label]);
+  };
+
+  Commander.prototype["?>="] = function(root, e1, e2) {
+    return this.makeNonRootSpawnableIfNeeded(["?>=", e1, e2]);
+  };
+
+  Commander.prototype["?<="] = function(root, e1, e2) {
+    return this.makeNonRootSpawnableIfNeeded(["?<=", e1, e2]);
+  };
+
+  Commander.prototype["?=="] = function(root, e1, e2) {
+    return this.makeNonRootSpawnableIfNeeded(["?==", e1, e2]);
+  };
+
+  Commander.prototype["?!="] = function(root, e1, e2) {
+    return this.makeNonRootSpawnableIfNeeded(["?!=", e1, e2]);
+  };
+
+  Commander.prototype["?>"] = function(root, e1, e2) {
+    return this.makeNonRootSpawnableIfNeeded(["?>", e1, e2]);
+  };
+
+  Commander.prototype["?<"] = function(root, e1, e2) {
+    return this.makeNonRootSpawnableIfNeeded(["?<", e1, e2]);
   };
 
   Commander.prototype['strength'] = function(root, s) {
@@ -18136,7 +18203,7 @@ Commander = (function() {
   };
 
   Commander.prototype['$reserved'] = function(root, sel) {
-    var engine, o, parentRule, query, selector;
+    var engine, o, parentRule, query, selector, selectorKey;
     if (sel === 'window') {
       selector = 'window';
       o = this.queryCommandCache[selector];
@@ -18157,14 +18224,16 @@ Commander = (function() {
       }
       query = parentRule.getContextQuery();
       selector = query.selector;
-      o = this.queryCommandCache[selector];
+      selectorKey = selector + "::this";
+      o = this.queryCommandCache[selectorKey];
       if (!o) {
         o = {
           query: query,
           selector: selector,
+          selectorKey: selectorKey,
           isContextBound: true
         };
-        this.queryCommandCache[selector] = o;
+        this.queryCommandCache[selectorKey] = o;
       }
       bindRootAsContext(root, query);
       return o;
@@ -18214,60 +18283,27 @@ Commander = (function() {
     throw new Error("$reserved selectors not yet handled: " + sel);
   };
 
-  Commander.prototype["cond"] = function(self) {
-    var args;
-    args = __slice.call(arguments);
-    return this.engine.registerCommand(['cond'].concat(__slice.call(args.slice(1, args.length))));
-  };
-
-  Commander.prototype["where"] = function(root, name) {
-    return ['where', name];
-  };
-
-  Commander.prototype["clause"] = function(root, cond, label) {
-    return ["clause", cond, label];
-  };
-
-  Commander.prototype["?>="] = function(root, e1, e2) {
-    return ["?>=", e1, e2];
-  };
-
-  Commander.prototype["?<="] = function(root, e1, e2) {
-    return ["?<=", e1, e2];
-  };
-
-  Commander.prototype["?=="] = function(root, e1, e2) {
-    return ["?==", e1, e2];
-  };
-
-  Commander.prototype["?!="] = function(root, e1, e2) {
-    return ["?!=", e1, e2];
-  };
-
-  Commander.prototype["?>"] = function(root, e1, e2) {
-    return ["?>", e1, e2];
-  };
-
-  Commander.prototype["?<"] = function(root, e1, e2) {
-    return ["?<", e1, e2];
-  };
-
   Commander.prototype['chain'] = function(root, queryObject, bridgessssss) {
-    var args, bridge, bridges, engine, query, _i, _len;
+    var args, bridge, bridges, engine, more, query, whereCommand, _i, _len;
     query = queryObject.query;
     args = __slice.call(arguments);
     bridges = __slice.call(args.slice(2, args.length));
     engine = this.engine;
+    more = null;
+    whereCommand = this.getWhereCommandIfNeeded(root.parentRule);
+    if (whereCommand) {
+      more = [whereCommand];
+    }
     for (_i = 0, _len = bridges.length; _i < _len; _i++) {
       bridge = bridges[_i];
-      bridge.call(engine, query, engine);
+      bridge.call(engine, query, engine, more);
     }
     return query.on('afterChange', function() {
       var _j, _len1, _results;
       _results = [];
       for (_j = 0, _len1 = bridges.length; _j < _len1; _j++) {
         bridge = bridges[_j];
-        _results.push(bridge.call(engine, query, engine));
+        _results.push(bridge.call(engine, query, engine, more));
       }
       return _results;
     });
@@ -18298,7 +18334,7 @@ Commander = (function() {
     tracker = "eq-chain-" + GSS.uid();
     engine = this.engine;
     _e_for_chain = this._e_for_chain;
-    return function(query, e) {
+    return function(query, e, more) {
       e.remove(tracker);
       return query.forEach(function(el) {
         var e1, e2, nextEl;
@@ -18308,7 +18344,7 @@ Commander = (function() {
         }
         e1 = _e_for_chain(el, head, query, tracker, el, nextEl);
         e2 = _e_for_chain(nextEl, tail, query, tracker, el, nextEl);
-        return e[op](e1, e2, s, w);
+        return e[op](e1, e2, s, w, more);
       });
     };
   };
