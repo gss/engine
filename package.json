@@ -17,7 +17,7 @@
     "chai": "~1.5.0",
     "mocha": "~1.9.0",
     "grunt-contrib-watch": "~0.3.1",
-    "grunt-mocha-phantomjs": "~0.2.8",
+    "grunt-mocha-phantomjs": "~0.4.0",
     "grunt-contrib-uglify": "~0.2.1",
     "grunt-contrib-coffee": "~0.7.0",
     "grunt-contrib-concat": "~0.3.0",

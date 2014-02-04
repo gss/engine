@@ -165,6 +165,6 @@ module.exports = ->
   @registerTask 'build-fast', ['coffee', 'concat:worker', 'exec:component_build']
   @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
-  @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
+  @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']
   @registerTask 'nuke', ['clean']
