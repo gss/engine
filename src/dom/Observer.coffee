@@ -25,6 +25,7 @@ setupObserver = () ->
          
       # style tag was modified then stop & reload everything
       if m.type is "characterData"
+        continue unless m.target.parentElement
         sheet =  m.target.parentElement.gssStyleSheet
         if sheet
           sheet.loadRulesFromNode()
