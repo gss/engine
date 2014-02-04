@@ -239,7 +239,7 @@ class Commander
       # TODO: not have to clone...
       newCommand = []
       for part in node
-       newCommand.push part
+        newCommand.push part
       @engine.registerCommand newCommand
     else
       @spawnableRoots.push node
@@ -453,17 +453,17 @@ class Commander
       }
       
     return {
-        isQueryBound: true
-        isPlural: isMulti
-        query: query      
-        spawn: () ->
-          if !isMulti
-            id = query.lastAddedIds[query.lastAddedIds.length-1]
-            return ['get$', prop, "$"+id, selector]
-          nodes = []
-          for id in query.lastAddedIds
-            nodes.push ['get$', prop, "$"+id, selector]
-          return nodes
+      isQueryBound: true
+      isPlural: isMulti
+      query: query      
+      spawn: () ->
+        if !isMulti
+          id = query.lastAddedIds[query.lastAddedIds.length-1]
+          return ['get$', prop, "$"+id, selector]
+        nodes = []
+        for id in query.lastAddedIds
+          nodes.push ['get$', prop, "$"+id, selector]
+        return nodes
       }      
   
   'number': (root, num) ->

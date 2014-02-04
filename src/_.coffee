@@ -102,7 +102,7 @@ _ =
   
   camelize: (s) ->
     result = s.replace /[-_\s]+(.)?/g, (match, c) ->
-       (if c then c.toUpperCase() else "")
+      (if c then c.toUpperCase() else "")
     result
   
   #

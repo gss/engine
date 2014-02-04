@@ -3,27 +3,19 @@ module.exports = ->
   @initConfig
     pkg: @file.readJSON 'package.json'
 
-    # Build the browser Component
-    component:
-      install:
-        options:
-          action: 'install'
-          
-    component_build:
-      'gss':
-        output: './browser/'
-        config: './component.json'
-        standalone: true
-        scripts: true
-        styles: false        
-      ### TODO: build components with & without compiler
-      'gss-with-compiler':
-        output: './browser/'
-        config: './component-with-compiler.json'
-        standalone: true
-        scripts: true
-        styles: false
-      ### 
+    clean:
+      nuke_components:
+        src: ['components/*/']
+      nuke_bower:
+        src: ['bower_components']
+      nuke_built:
+        src: ['browser']
+
+    exec:
+      component_install:
+        command: 'node ./node_modules/component/bin/component install'
+      component_build:
+        command: 'node ./node_modules/component/bin/component build -o browser -n gss -s gss -c'
 
     # JavaScript minification for the browser
     uglify:
@@ -34,10 +26,10 @@ module.exports = ->
           './worker/gss-solver.min.js': ['./worker/gss-solver.js']
       engine:
         files:
-          './browser/gss.min.js': ['./browser/gss.js']      
+          './browser/gss.min.js': ['./browser/gss.js']
 
     # Automated recompilation and testing when developing
-    watch:      
+    watch:
       'build-fast':
         files: ['spec/*.coffee','spec/**/*.coffee', 'src/*.coffee', 'src/**/*.coffee']
         tasks: ['build-fast']
@@ -90,7 +82,7 @@ module.exports = ->
         ext: '.js'
 
     # Worker process concatenation
-    concat:      
+    concat:
       worker:
         src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
         dest: 'worker/gss-solver.js'
@@ -143,6 +135,10 @@ module.exports = ->
             browserName: 'internet explorer'
             platform: 'WIN8'
             version: '10'
+          ,
+            browserName: 'internet explorer'
+            platform: 'WIN7'
+            version: '9'
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS engine browser tests'
@@ -151,11 +147,11 @@ module.exports = ->
           detailedError: true
 
   # Grunt plugins used for building
-  @loadNpmTasks 'grunt-component'
   @loadNpmTasks 'grunt-contrib-coffee'
   @loadNpmTasks 'grunt-contrib-concat'
-  @loadNpmTasks 'grunt-component-build'
   @loadNpmTasks 'grunt-contrib-uglify'
+  @loadNpmTasks 'grunt-contrib-clean'
+  @loadNpmTasks 'grunt-exec'
 
   # Grunt plugins used for testing
   @loadNpmTasks 'grunt-coffeelint'
@@ -166,8 +162,9 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build-fast', ['coffee', 'concat:worker', 'component', 'component_build']
-  @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'component', 'component_build', 'uglify:engine']
+  @registerTask 'build-fast', ['coffee', 'concat:worker', 'exec:component_build']
+  @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['test', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']
+  @registerTask 'nuke', ['clean']

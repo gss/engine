@@ -1,5 +1,5 @@
-require("customevent-polyfill");
-require("cassowary");
+require "customevent-polyfill"
+require "cassowary"
 
 if window.GSS then throw new Error "Only one GSS object per window"
 
