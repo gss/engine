@@ -7,6 +7,3 @@ This library processes parsed GSS constraints, solves them using Cassowary, and 
 
 [![Cross-browser testing status](https://saucelabs.com/browser-matrix/gss-engine.svg)](https://saucelabs.com/u/gss-engine)
 
-## Usage
-
-Please refer to <http://gridstylesheets.org/docs/engine/>.
