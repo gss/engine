@@ -32,7 +32,7 @@ class Engine extends GSS.EventTrigger
     @worker    = null
     @workerCommands = []
     @workerMessageHistory = []
-    @workerURL = GSS.config.workerURL unless @workerURL
+    @workerURL = GSS.config.worker unless @workerURL
 
     if @scope 
       if @scope.tagName is "HEAD" then @scope = document          

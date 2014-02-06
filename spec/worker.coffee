@@ -10,7 +10,7 @@ describe 'Cassowary Web Worker', ->
     done()
 
   it 'should be possible to instantiate', ->
-    worker = new Worker(GSS.config.workerURL)
+    worker = new Worker(GSS.config.worker)
     expect(worker).to.be.an 'object'
   it 'should solve a set of simple constraints', (done) ->
     onMessage = (m) ->

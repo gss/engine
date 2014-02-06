@@ -40,14 +40,14 @@ GSS.config =
   observerOptions: {subtree: true, childList: true, attributes: true, characterData: true}
   debug: false
   warn: false
-  perf: false
-  scoped: true
+  perf: false  
   roundBeforeSet: false
-  processBeforeSet: null # function
-  useOffsetParent: true
+  processBeforeSet: null # function  
   maxDisplayRecursionDepth: 30
   useWorker: !!window.Worker
-  workerURL: '../browser/gss/worker/gss-solver.js'
+  worker: '../dist/worker.js'
+  # not being used correctly:
+  useOffsetParent: true
 
 
 # overwrite config if provided

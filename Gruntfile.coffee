@@ -11,7 +11,7 @@ module.exports = ->
           
     component_build:
       'gss':
-        output: './browser/'
+        output: './dist/'
         config: './component.json'
         standalone: true
         scripts: true
@@ -31,10 +31,10 @@ module.exports = ->
         report: 'min'
       worker:
         files:
-          './worker/gss-solver.min.js': ['./worker/gss-solver.js']
+          './dist/worker.min.js': ['./dist/worker.js']
       engine:
         files:
-          './browser/gss.min.js': ['./browser/gss.js']      
+          './dist/gss.min.js': ['./dist/gss.js']      
 
     # Automated recompilation and testing when developing
     watch:      
@@ -93,7 +93,7 @@ module.exports = ->
     concat:      
       worker:
         src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
-        dest: 'worker/gss-solver.js'
+        dest: 'dist/worker.js'
       ###
       vendors:
         options:
@@ -109,7 +109,7 @@ module.exports = ->
           footer: '],{type:"text/javascript"}));'
           process: (src, filepath) ->
             return JSON.stringify(src) # only works with one file
-        src: ['worker/gss-solver.min.js']
+        src: ['worker/gss-worker.min.js']
         dest: 'lib/WorkerBlobUrl.js'
       ###
         

@@ -30,9 +30,7 @@
     "vendor/c.js",
     "vendor/observe.js",
     "vendor/sidetable.js",
-    "vendor/MutationObserver.js",
-    "worker/gss-solver.js",
-    "worker/gss-solver.min.js"
+    "vendor/MutationObserver.js"
   ],
   "main": "lib/GSS-with-compiler.js"
 }
