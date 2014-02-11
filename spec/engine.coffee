@@ -209,17 +209,17 @@ describe 'GSS engine', ->
         it 'before solving', ->
           text1 = container.getElementsByTagName('h1')[0]
           text2 = container.getElementsByTagName('h1')[1]
-          assert text1.style['line-height'] is "12px"
-          assert text2.style['line-height'] is "12px"
-          assert text1.style['font-size'] is "12px"
-          assert text2.style['font-size'] is "12px"          
+          assert text1.style['lineHeight'] is "12px"
+          assert text2.style['lineHeight'] is "12px"
+          assert text1.style['fontSize'] is "12px"
+          assert text2.style['fontSize'] is "12px"          
         it 'after solving', (done) ->
           onSolved = (e) ->
             values = e.detail.values
-            assert text1.style['line-height'] is "42px"
-            assert text2.style['line-height'] is "42px"
-            assert text1.style['font-size'] is "42px"
-            assert text2.style['font-size'] is "42px"
+            assert text1.style['lineHeight'] is "42px"
+            assert text2.style['lineHeight'] is "42px"
+            assert text1.style['fontSize'] is "42px"
+            assert text2.style['fontSize'] is "42px"
             container.removeEventListener 'solved', onSolved
             done()
           container.addEventListener 'solved', onSolved
