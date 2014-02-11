@@ -15181,8 +15181,6 @@ GSS.Engine = require("./Engine.js");
 
 GSS.View = require("./dom/View.js");
 
-GSS.Node = require("./gssom/Node.js");
-
 GSS.Rule = require("./gssom/Rule.js");
 
 require("./gssom/StyleSheet.js");
@@ -16175,44 +16173,15 @@ module.exports = observer;
 
 });
 require.register("gss/lib/gssom/Node.js", function(exports, require, module){
-var Node;
 
-Node = (function() {
-  function Node() {}
-
-  Node.prototype.addRules = function(rules) {
-    var r, rule, _i, _len, _results;
-    _results = [];
-    for (_i = 0, _len = rules.length; _i < _len; _i++) {
-      r = rules[_i];
-      r.parent = this;
-      r.styleSheet = this.styleSheet;
-      r.engine = this.engine;
-      rule = new GSS.Rule(r);
-      _results.push(this.rules.push(rule));
-    }
-    return _results;
-  };
-
-  return Node;
-
-})();
-
-module.exports = Node;
 
 });
 require.register("gss/lib/gssom/StyleSheet.js", function(exports, require, module){
-var Node, Rule, StyleSheet,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var Rule, StyleSheet;
 
 Rule = GSS.Rule;
 
-Node = GSS.Node;
-
-StyleSheet = (function(_super) {
-  __extends(StyleSheet, _super);
-
+StyleSheet = (function() {
   StyleSheet.prototype.isScoped = false;
 
   /*    
@@ -16237,13 +16206,26 @@ StyleSheet = (function(_super) {
     }
     this.engine.styleSheets.push(this);
     GSS.styleSheets.push(this);
-    this.styleSheet = this;
     this.rules = [];
     if (o.rules) {
       this.addRules(o.rules);
     }
     return this;
   }
+
+  StyleSheet.prototype.addRules = function(rules) {
+    var r, rule, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = rules.length; _i < _len; _i++) {
+      r = rules[_i];
+      r.parent = this;
+      r.styleSheet = this;
+      r.engine = this.engine;
+      rule = new GSS.Rule(r);
+      _results.push(this.rules.push(rule));
+    }
+    return _results;
+  };
 
   StyleSheet.prototype.needsInstall = true;
 
@@ -16306,7 +16288,7 @@ StyleSheet = (function(_super) {
 
   return StyleSheet;
 
-})(Node);
+})();
 
 StyleSheet.fromNode = function(node) {
   var engine, sheet;
@@ -16386,23 +16368,17 @@ module.exports = StyleSheet;
 
 });
 require.register("gss/lib/gssom/Rule.js", function(exports, require, module){
-var Node, Rule, rule_cid,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var Rule, _rule_cid;
 
-Node = GSS.Node;
+_rule_cid = 0;
 
-rule_cid = 0;
-
-Rule = (function(_super) {
-  __extends(Rule, _super);
-
+Rule = (function() {
   Rule.prototype.isRule = true;
 
   function Rule(o) {
     var key, val;
-    rule_cid++;
-    this.cid = rule_cid;
+    _rule_cid++;
+    this.cid = _rule_cid;
     for (key in o) {
       val = o[key];
       this[key] = val;
@@ -16430,6 +16406,20 @@ Rule = (function(_super) {
     })();
     this;
   }
+
+  Rule.prototype.addRules = function(rules) {
+    var r, rule, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = rules.length; _i < _len; _i++) {
+      r = rules[_i];
+      r.parent = this;
+      r.styleSheet = this.styleSheet;
+      r.engine = this.engine;
+      rule = new GSS.Rule(r);
+      _results.push(this.rules.push(rule));
+    }
+    return _results;
+  };
 
   Rule.prototype._selectorContext = null;
 
@@ -16578,7 +16568,7 @@ Rule = (function(_super) {
 
   return Rule;
 
-})(Node);
+})();
 
 Rule.types = {
   directive: {
@@ -18457,6 +18447,7 @@ Thread = (function() {
     this['remove'] = __bind(this['remove'], this);
     this._execute = __bind(this._execute, this);
     this.execute = __bind(this.execute, this);
+    this.setupIfNeeded();
     this;
   }
 

@@ -38,6 +38,7 @@ Thread = (function() {
     this['remove'] = __bind(this['remove'], this);
     this._execute = __bind(this._execute, this);
     this.execute = __bind(this.execute, this);
+    this.setupIfNeeded();
     this;
   }
 

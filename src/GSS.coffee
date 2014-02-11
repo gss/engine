@@ -88,7 +88,6 @@ GSS.Query         = require("./dom/Query.js")
 GSS.Thread        = require("./Thread.js")
 GSS.Engine        = require("./Engine.js")
 GSS.View          = require("./dom/View.js")
-GSS.Node          = require("./gssom/Node.js")
 GSS.Rule          = require("./gssom/Rule.js")
 
 require("./gssom/StyleSheet.js")

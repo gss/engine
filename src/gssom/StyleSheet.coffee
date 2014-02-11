@@ -1,7 +1,6 @@
 Rule = GSS.Rule
-Node = GSS.Node
 
-class StyleSheet extends Node
+class StyleSheet
   
   isScoped: false        
   
@@ -21,14 +20,19 @@ class StyleSheet extends Node
     
     GSS.styleSheets.push @
     
-    @styleSheet = @
-    
     @rules = []
     if o.rules      
       @addRules o.rules
       
     return @      
-  
+    
+  addRules: (rules) ->
+    for r in rules
+      r.parent = @
+      r.styleSheet = @      
+      r.engine = @engine
+      rule = new GSS.Rule r
+      @rules.push rule
   
   needsInstall: true           
   

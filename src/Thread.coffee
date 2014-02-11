@@ -1,6 +1,7 @@
 class Thread
 
   constructor: ->
+    @setupIfNeeded()
     @
   
   needsSetup: true

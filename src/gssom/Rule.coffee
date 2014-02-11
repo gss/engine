@@ -1,16 +1,14 @@
+_rule_cid = 0
 
-Node = GSS.Node
-
-rule_cid = 0
-
-class Rule extends Node
+class Rule
   
   isRule: true    
   
   constructor: (o) ->
-    rule_cid++
-    @cid = rule_cid
+    _rule_cid++
+    @cid = _rule_cid
     
+    # TODO: unroll
     for key, val of o
       @[key] = val
     
@@ -35,6 +33,14 @@ class Rule extends Node
     
     @Type = Rule.types[@type] or throw new Error "Rule type, #{type}, not found"
     @
+  
+  addRules: (rules) ->
+    for r in rules
+      r.parent = @
+      r.styleSheet = @styleSheet      
+      r.engine = @engine
+      rule = new GSS.Rule r
+      @rules.push rule
   
   _selectorContext: null
   
