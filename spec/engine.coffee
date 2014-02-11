@@ -928,7 +928,7 @@ describe 'GSS engine', ->
       margin_of_error = 2
       GSS._.defer ->
         count = 0
-        for key of GSS.View.byId
+        for key of GSS.View.byId          
           count++
         assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
         done()

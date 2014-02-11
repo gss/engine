@@ -85,7 +85,7 @@ module.exports = ->
     # Worker process concatenation
     concat:
       worker:
-        src: ['vendor/c.js', 'lib/Thread.js', 'lib/Worker.js']
+        src: ['components/slightlyoff-cassowary.js/bin/c.js', 'lib/Thread.js', 'lib/Worker.js']
         dest: 'dist/worker.js'
       ###
       vendors:

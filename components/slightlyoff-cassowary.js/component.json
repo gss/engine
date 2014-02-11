@@ -22,5 +22,8 @@
     "src/Timer.js",
     "src/parser/parser.js",
     "src/parser/api.js"
+  ],
+  "files": [
+    "bin/c.js"
   ]
 }

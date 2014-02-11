@@ -27,7 +27,6 @@
     "slightlyoff/cassowary.js": "*"
   },
   "files": [
-    "vendor/c.js",
     "vendor/observe.js",
     "vendor/sidetable.js",
     "vendor/MutationObserver.js"
