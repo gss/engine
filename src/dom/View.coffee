@@ -220,5 +220,4 @@ View.new = ({el,id}) ->
     view = new View()
   view.attach el, id
 
-
 module.exports = View
