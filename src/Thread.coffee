@@ -1,6 +1,13 @@
 class Thread
 
-  constructor: ->
+  constructor: (o={}) ->
+    
+    defaultStrength  = o.defaultStrength or 'required'
+    @defaultStrength = c.Strength[defaultStrength]
+    if !@defaultStrength then @defaultStrength = c.Strength['required']
+    
+    @defaultWeight   = o.defaultWeight or 0
+    
     @setupIfNeeded()
     @
   
@@ -39,7 +46,7 @@ class Thread
   # API
   # ------------------------------------------------
   
-  execute: (message) =>
+  execute: (message) ->
     @setupIfNeeded()
     uuid = null
     if message.uuid
@@ -53,7 +60,7 @@ class Thread
     #  @solver.addConstraint @_execute cs
     @
 
-  _execute: (command, root) =>
+  _execute: (command, root) ->
     node = command
     func = @[node[0]]
     if !func?
@@ -110,13 +117,13 @@ class Thread
   # Removal
   # ------------------------------------------------
   
-  'remove': (self, trackersss) => # (tacker, tracker, tracker...)
+  'remove': (self, trackersss) -> # (tacker, tracker, tracker...)
     args = [arguments...]
     trackers = [args[1...args.length]...]
     for tracker in trackers
       @_remove tracker
       
-  _remove: (tracker) =>
+  _remove: (tracker) ->
     @_removeConstraintByTracker tracker
     @_removeVarByTracker tracker
       
@@ -353,22 +360,20 @@ class Thread
   # Constraints
   # ------------------------------------------------
   
-  _strength: (s='required') ->
+  _strength: (s) ->
     if typeof s is 'string'
       if s is 'require' then s = 'required'
       strength = c.Strength[s]
-      #if !strength? then throw new Error("Strength unrecognized: #{s}")
-      return strength
-    return s
-    ###   
-    if strength.symbolicWeight?
-      return strength
-    else
-      throw new Error("Unrecognized Strength: #{s}")
-    ###
+      if strength then return strength
+    return @defaultStrength
+    
+  _weight: (w) ->
+    if typeof w is 'number'
+      return w
+    return @defaultWeight
   
   #
-  _addConstraint: (root, constraint) =>
+  _addConstraint: (root, constraint) ->
     if !root._condition_bound
       @solver.addConstraint constraint
     if root._is_tracked
@@ -379,30 +384,30 @@ class Thread
   
   # Equation Constraints
 
-  eq:  (self,e1,e2,s,w) =>
-    return @_addConstraint(self, new c.Equation(e1, e2, @_strength(s), w))
+  eq:  (self,e1,e2,s,w) ->
+    return @_addConstraint(self, new c.Equation(e1, e2, @_strength(s), @_weight(w)))
 
-  lte: (self,e1,e2,s,w) =>
-    return @_addConstraint(self, new c.Inequality(e1, c.LEQ, e2, @_strength(s), w))
+  lte: (self,e1,e2,s,w) ->
+    return @_addConstraint(self, new c.Inequality(e1, c.LEQ, e2, @_strength(s), @_weight(w)))
 
-  gte: (self,e1,e2,s,w) =>
-    return @_addConstraint(self, new c.Inequality(e1, c.GEQ, e2, @_strength(s), w))
+  gte: (self,e1,e2,s,w) ->
+    return @_addConstraint(self, new c.Inequality(e1, c.GEQ, e2, @_strength(s), @_weight(w)))
 
-  lt:  (self,e1,e2,s,w) =>
-    return @_addConstraint(self, new c.Inequality(e1, c.LEQ, e2, @_strength(s), w))
+  lt:  (self,e1,e2,s,w) ->
+    return @_addConstraint(self, new c.Inequality(e1, c.LEQ, e2, @_strength(s), @_weight(w)))
 
-  gt:  (self,e1,e2,s,w) =>
-    return @_addConstraint(self, new c.Inequality(e1, c.GEQ, e2, @_strength(s), w))
+  gt:  (self,e1,e2,s,w) ->
+    return @_addConstraint(self, new c.Inequality(e1, c.GEQ, e2, @_strength(s), @_weight(w)))
 
   # Edit / Stay Constraints
 
-  _editvar: (varr, s, w) =>
+  _editvar: (varr, s, w) ->
     if @__editVarNames.indexOf(varr.name) is -1
       @__editVarNames.push(varr.name)
-      @solver.addEditVar varr, @_strength(s), w
+      @solver.addEditVar varr, @_strength(s), @_weight(w)
     @  
   
-  suggest: (self, varr, val, s='strong', w) =>
+  suggest: (self, varr, val, s='strong', w) ->
     # Todo
     # - Debounce solver resolution or batch suggest
     # - track edit constraints... c.EditConstraint
@@ -422,7 +427,7 @@ class Thread
 
   # Todo
   # - track stay constraints... c.StayConstraint
-  stay: (self) =>
+  stay: (self) ->
     args = [arguments...]
     for v in args[1...args.length]
       @solver.addStay v

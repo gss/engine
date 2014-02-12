@@ -28,6 +28,29 @@ describe 'End - to - End', ->
 
   afterEach ->
     remove(container)
+    
+  describe 'default Strength with GSS.config', ->
+    
+    it 'should compute', (done) ->
+      oldDefault = GSS.config.defaultStrength
+      GSS.config.defaultStrength = "strong"
+      
+      listen = (e) ->     
+        expect(engine.vars).to.eql 
+          "[m]": 2
+        GSS.config.defaultStrength = oldDefault
+        done()     
+                     
+      engine.once 'solved', listen
+    
+      container.innerHTML =  """
+          <style type="text/gss">
+          [m] == 1;
+          [m] == 2;
+          [m] == 3;
+          </style>
+        """
+      
   
   describe 'flat @if @else w/o queries', ->
   

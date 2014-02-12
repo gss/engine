@@ -296,8 +296,8 @@ describe 'Cassowary Thread', ->
       expect(thread.getValues()).to.eql
         "$112[x]": 50
         
-  
 
+  
   # Conditionals
   # ---------------------------------------------------------------------
 
@@ -305,20 +305,22 @@ describe 'Cassowary Thread', ->
     
     describe 'if else', () ->
       thread = new Thread()
-      thread.execute
-        commands:[
-          ['eq',['get','[target]'],200,'weak']        
-          ['cond',
-            ['clause',
-              ['?>=',['get','[target]'],100],'if:big']
-            ['clause',
-              ['?>=',['get','[target]'],50],'if:med']
-            ['clause',null,'if:small']
-          ]        
-          ['eq', ['get$','x','$112','.big-box'],['number','12'],['where','if:small']] 
-          ['eq', ['get$','x','$112','.box'],['number','69'],'strong',['where','if:med']]                 
-          ['eq', ['get$','x','$112','.box'],['number','1000'],'strong',['where','if:big']]
-        ]
+      
+      it 'should execute', ->
+        thread.execute
+          commands:[
+            ['eq',['get','[target]'],200,'weak']        
+            ['cond',
+              ['clause',
+                ['?>=',['get','[target]'],100],'if:big']
+              ['clause',
+                ['?>=',['get','[target]'],50],'if:med']
+              ['clause',null,'if:small']
+            ]        
+            ['eq', ['get$','x','$112','.big-box'],['number','12'],['where','if:small']] 
+            ['eq', ['get$','x','$112','.box'],['number','69'],'strong',['where','if:med']]                 
+            ['eq', ['get$','x','$112','.box'],['number','1000'],'strong',['where','if:big']]
+          ]
         
       it "step 1", ->
         expect(thread.getValues()).to.eql
@@ -351,4 +353,85 @@ describe 'Cassowary Thread', ->
         expect(thread.getValues()).to.eql
           '[target]': 101
           "$112[x]": 1000
+          
+  
+  # Config
+  # ---------------------------------------------------------------------
+
+  describe 'Thread Config', ->
+    
+    describe 'Default Strength: strong', () ->
+      thread = new Thread {
+        defaultStrength: "strong"
+      }      
+        
+      it "should execute", ->
+        thread.execute
+          commands:[
+            ['eq',['get','[defaulttester]'],100,'weak']
+            ['eq',['get','[defaulttester]'],1]
+            ['eq',['get','[defaulttester]'],2]                                    
+            ['eq',['get','[defaulttester]'],3]
+          ]
+          
+      it "should solve", ->
+        expect(thread.getValues()).to.eql
+          '[defaulttester]': 2
+    
+    describe 'Default Strength: medium', () ->
+      thread = new Thread {
+        defaultStrength: "medium"
+      }      
+        
+      it "should execute", ->
+        thread.execute
+          commands:[
+            ['eq',['get','[defaulttester]'],100,'weak']
+            ['eq',['get','[defaulttester]'],1]
+            ['eq',['get','[defaulttester]'],2]                                    
+            ['eq',['get','[defaulttester]'],3]
+          ]
+          
+      it "should solve", ->
+        expect(thread.getValues()).to.eql
+          '[defaulttester]': 2
+    
+    
+    describe 'Default Strength: weak', () ->
+      thread = new Thread {
+        defaultStrength: "weak"
+      }      
+        
+      it "should execute", ->
+        thread.execute
+          commands:[
+            ['eq',['get','[defaulttester]'],100,'weak']
+            ['eq',['get','[defaulttester]'],1]
+            ['eq',['get','[defaulttester]'],2]                                    
+            ['eq',['get','[defaulttester]'],3]
+          ]
+          
+      it "should solve", ->
+        expect(thread.getValues()).to.eql
+          '[defaulttester]': 3
+        
+    
+    describe 'Default Weight', () ->
+      thread = new Thread {
+        defaultStrength: "strong"
+        defaultWeight: 100
+      }      
+        
+      it "should execute", ->
+        thread.execute
+          commands:[
+            ['eq',['get','[defaulttester]'],100  ]
+            ['eq',['get','[defaulttester]'],1,"strong",10]
+            ['eq',['get','[defaulttester]'],2,"strong",10]
+          ]
+          
+      it "should solve", ->
+        expect(thread.getValues()).to.eql
+          '[defaulttester]': 100
+   
 

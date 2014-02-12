@@ -110,7 +110,6 @@ describe 'GSS engine', ->
       #assert expect(e.childEngines).to.be.eql([])
       assert GSS.engines.root.childEngines.indexOf(e) is -1, "e is still child of root"
       done()
-    
   
   describe 'with rule #button1[width] == #button2[width]', ->
     

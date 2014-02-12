@@ -1,8 +1,12 @@
-thread = new Thread()
+thread = null 
 
 self.onmessage = (m) ->
-  thread.postMessage m.data
   
+  if !thread
+    config = m.data.config or {}
+    thread = new Thread(config)
+      
+  thread.postMessage m.data  
   self.postMessage({values:thread.getValues()})
   
   ###

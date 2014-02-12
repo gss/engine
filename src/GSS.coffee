@@ -34,6 +34,8 @@ GSS = window.GSS = (o) ->
 # ------------------------------------------------
 
 GSS.config = 
+  defaultStrength: 'required'
+  defaultWeight: 0
   resizeDebounce: 32 # ~ 30 fps
   defaultMatrixType: 'mat4' # 'mat2d'
   observe: true
@@ -43,7 +45,7 @@ GSS.config =
   perf: false  
   roundBeforeSet: false
   processBeforeSet: null # function  
-  maxDisplayRecursionDepth: 30
+  maxDisplayRecursionDepth: 30  
   useWorker: !!window.Worker
   worker: '../dist/worker.js'
   # not being used correctly:
@@ -81,7 +83,6 @@ TIME_END = () ->
 GSS._             = require("./_.js")
 GSS.glMatrix      = require '../vendor/gl-matrix'
 GSS.EventTrigger  = require("./EventTrigger.js")
-#GSS.workerURL    = require("./WorkerBlobUrl.js")
 GSS.Getter        = require("./dom/Getter.js")
 GSS.Commander     = require("./Commander.js")
 GSS.Query         = require("./dom/Query.js")

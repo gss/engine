@@ -20,24 +20,20 @@ var l=this.rows.get(this._objective);l.setVariable(i,b.strength.symbolicWeight.v
 );
 
 var Thread,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __slice = [].slice;
 
 Thread = (function() {
-  function Thread() {
-    this.stay = __bind(this.stay, this);
-    this.suggest = __bind(this.suggest, this);
-    this._editvar = __bind(this._editvar, this);
-    this.gt = __bind(this.gt, this);
-    this.lt = __bind(this.lt, this);
-    this.gte = __bind(this.gte, this);
-    this.lte = __bind(this.lte, this);
-    this.eq = __bind(this.eq, this);
-    this._addConstraint = __bind(this._addConstraint, this);
-    this._remove = __bind(this._remove, this);
-    this['remove'] = __bind(this['remove'], this);
-    this._execute = __bind(this._execute, this);
-    this.execute = __bind(this.execute, this);
+  function Thread(o) {
+    var defaultStrength;
+    if (o == null) {
+      o = {};
+    }
+    defaultStrength = o.defaultStrength || 'required';
+    this.defaultStrength = c.Strength[defaultStrength];
+    if (!this.defaultStrength) {
+      this.defaultStrength = c.Strength['required'];
+    }
+    this.defaultWeight = o.defaultWeight || 0;
     this.setupIfNeeded();
     this;
   }
@@ -473,24 +469,23 @@ Thread = (function() {
 
   Thread.prototype._strength = function(s) {
     var strength;
-    if (s == null) {
-      s = 'required';
-    }
     if (typeof s === 'string') {
       if (s === 'require') {
         s = 'required';
       }
       strength = c.Strength[s];
-      return strength;
+      if (strength) {
+        return strength;
+      }
     }
-    return s;
-    /*   
-    if strength.symbolicWeight?
-      return strength
-    else
-      throw new Error("Unrecognized Strength: #{s}")
-    */
+    return this.defaultStrength;
+  };
 
+  Thread.prototype._weight = function(w) {
+    if (typeof w === 'number') {
+      return w;
+    }
+    return this.defaultWeight;
   };
 
   Thread.prototype._addConstraint = function(root, constraint) {
@@ -512,29 +507,29 @@ Thread = (function() {
   };
 
   Thread.prototype.eq = function(self, e1, e2, s, w) {
-    return this._addConstraint(self, new c.Equation(e1, e2, this._strength(s), w));
+    return this._addConstraint(self, new c.Equation(e1, e2, this._strength(s), this._weight(w)));
   };
 
   Thread.prototype.lte = function(self, e1, e2, s, w) {
-    return this._addConstraint(self, new c.Inequality(e1, c.LEQ, e2, this._strength(s), w));
+    return this._addConstraint(self, new c.Inequality(e1, c.LEQ, e2, this._strength(s), this._weight(w)));
   };
 
   Thread.prototype.gte = function(self, e1, e2, s, w) {
-    return this._addConstraint(self, new c.Inequality(e1, c.GEQ, e2, this._strength(s), w));
+    return this._addConstraint(self, new c.Inequality(e1, c.GEQ, e2, this._strength(s), this._weight(w)));
   };
 
   Thread.prototype.lt = function(self, e1, e2, s, w) {
-    return this._addConstraint(self, new c.Inequality(e1, c.LEQ, e2, this._strength(s), w));
+    return this._addConstraint(self, new c.Inequality(e1, c.LEQ, e2, this._strength(s), this._weight(w)));
   };
 
   Thread.prototype.gt = function(self, e1, e2, s, w) {
-    return this._addConstraint(self, new c.Inequality(e1, c.GEQ, e2, this._strength(s), w));
+    return this._addConstraint(self, new c.Inequality(e1, c.GEQ, e2, this._strength(s), this._weight(w)));
   };
 
   Thread.prototype._editvar = function(varr, s, w) {
     if (this.__editVarNames.indexOf(varr.name) === -1) {
       this.__editVarNames.push(varr.name);
-      this.solver.addEditVar(varr, this._strength(s), w);
+      this.solver.addEditVar(varr, this._strength(s), this._weight(w));
     }
     return this;
   };
@@ -572,9 +567,14 @@ if (typeof module !== "undefined" && module !== null ? module.exports : void 0) 
 
 var thread;
 
-thread = new Thread();
+thread = null;
 
 self.onmessage = function(m) {
+  var config;
+  if (!thread) {
+    config = m.data.config || {};
+    thread = new Thread(config);
+  }
   thread.postMessage(m.data);
   return self.postMessage({
     values: thread.getValues()

@@ -361,15 +361,16 @@ class Engine extends GSS.EventTrigger
     if @useWorker then @solveWithWorker() else @solveWithoutWorker()
     
   solveWithWorker: () ->
-    LOG @id,".solveWithWorker()", @workerCommands
-    
+    LOG @id,".solveWithWorker()", @workerCommands    
     workerMessage = {commands:@workerCommands}
     @workerMessageHistory.push workerMessage
     unless @worker
       @worker = new Worker @workerURL
       @worker.addEventListener "message", @handleWorkerMessage, false
       @worker.addEventListener "error", @handleError, false
-
+      workerMessage.config = 
+        defaultStrength: GSS.config.defaultStrength
+        defaultWeight: GSS.config.defaultWeight
     @worker.postMessage workerMessage
     # resetWorkerCommands
     @lastWorkerCommands = @workerCommands
@@ -378,13 +379,21 @@ class Engine extends GSS.EventTrigger
   solveWithoutWorker: () ->
     LOG @id,".solveWithoutWorker()", @workerCommands
     workerMessage = {commands:@workerCommands}
-    @workerMessageHistory.push workerMessage    
+    @workerMessageHistory.push workerMessage
     unless @worker
-      @worker = new GSS.Thread()
+      @worker = new GSS.Thread {
+        defaultStrength: GSS.config.defaultStrength
+        defaultWeight: GSS.config.defaultWeight
+      }
+          
+    # too bad we don't have immutables...
     @worker.postMessage _.cloneDeep workerMessage
-    _.defer => # must simulate asynch for life cycle to work
+    
+    # must simulate asynch for life cycle to work
+    _.defer => 
       if @worker
         @handleWorkerMessage {data:values:@worker.getValues()}
+        
     # resetWorkerCommands
     @lastWorkerCommands = @workerCommands
     @workerCommands = []
