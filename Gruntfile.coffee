@@ -123,7 +123,7 @@ module.exports = ->
         options:
           urls: ['http://127.0.0.1:9999/spec/runner.html']
           browsers: [
-            browserName: 'chrome'
+            browserName: 'googlechrome'
             version: '31'
           ,
             browserName: 'firefox'
@@ -142,10 +142,9 @@ module.exports = ->
             version: '9'
           ]
           build: process.env.TRAVIS_JOB_ID
-          testname: 'GSS engine browser tests'
+          testname: 'GSS browser tests'
           tunnelTimeout: 5
           concurrency: 3
-          detailedError: true
 
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-contrib-coffee'
