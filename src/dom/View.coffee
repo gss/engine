@@ -169,7 +169,9 @@ class View
   
   _displayChildrenIfNeeded: (el, offsets, recurseLevel) ->    
     if recurseLevel <= GSS.config.maxDisplayRecursionDepth
-      for child in el.children
+      children = el.children
+      return null if !children
+      for child in children
         view = GSS.get.view(child)
         if view
           view.displayIfNeeded(offsets)
