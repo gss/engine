@@ -43,7 +43,7 @@ GSS.config =
   debug: false
   warn: false
   perf: false  
-  roundBeforeSet: false
+  fractionalPixels: true
   processBeforeSet: null # function  
   maxDisplayRecursionDepth: 30  
   useWorker: !!window.Worker

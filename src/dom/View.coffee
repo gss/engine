@@ -106,8 +106,11 @@ class View
       else
         yLocal = 0
       #if o.z?
+      if !GSS.config.fractionalPixels
+        xLocal = Math.round xLocal
+        yLocal = Math.round yLocal
       @values.xLocal = xLocal
-      @values.yLocal = yLocal      
+      @values.yLocal = yLocal
       @_positionMatrix(xLocal, yLocal)
     
     if o['z-index']?
@@ -118,14 +121,12 @@ class View
       @style['line-height'] = o['line-height']
       delete o['line-height']
     ###
-    ###
-    if o.width?
-      @style.width = o.width + "px"
-      delete o.width
-    if o.height?
-      @style.height = o.height + "px"
-      delete o.height
-    ###
+    
+    if !GSS.config.fractionalPixels
+      if o.width?  then o.width  = Math.round o.width
+      if o.height? then o.height = Math.round o.height
+      
+      
     for key,val of o
       key = GSS._.camelize( key ) # b/c Mozilla
       @style[key] = val + "px"

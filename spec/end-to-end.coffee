@@ -30,28 +30,50 @@ describe 'End - to - End', ->
     remove(container)
     
   
+  describe 'config', ->
   
-  describe 'default Strength with GSS.config', ->
+    describe 'defaultStrength: strong', ->
     
-    it 'should compute', (done) ->
-      oldDefault = GSS.config.defaultStrength
-      GSS.config.defaultStrength = "strong"
+      it 'should compute', (done) ->
+        oldDefault = GSS.config.defaultStrength
+        GSS.config.defaultStrength = "strong"
       
-      listen = (e) ->     
-        expect(engine.vars).to.eql 
-          "[m]": 2
-        GSS.config.defaultStrength = oldDefault
-        done()     
+        listen = (e) ->     
+          expect(engine.vars).to.eql 
+            "[m]": 2
+          GSS.config.defaultStrength = oldDefault
+          done()     
                      
-      engine.once 'solved', listen
+        engine.once 'solved', listen
     
-      container.innerHTML =  """
-          <style type="text/gss">
-          [m] == 1;
-          [m] == 2;
-          [m] == 3;
-          </style>
-        """
+        container.innerHTML =  """
+            <style type="text/gss">
+            [m] == 1;
+            [m] == 2;
+            [m] == 3;
+            </style>
+          """
+    describe 'fractionalPixels: false', ->
+    
+      it 'should compute', (done) ->
+        old = GSS.config.fractionalPixels
+        GSS.config.fractionalPixels = false
+      
+        listen = (e) -> 
+          el = document.getElementById("nofractional")
+          expect(el.style.height).to.equal "10px"
+          GSS.config.fractionalPixels = true
+          done()     
+                     
+        engine.once 'solved', listen
+    
+        container.innerHTML =  """
+            <div id="nofractional"></div>
+            <style type="text/gss">
+              #nofractional[x] == 99.999999999999;
+              #nofractional[height] == 9.999999999999;
+            </style>
+          """
   
   
   
