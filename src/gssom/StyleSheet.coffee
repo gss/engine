@@ -20,6 +20,14 @@ class StyleSheet
     
     GSS.styleSheets.push @
     
+    @isRemote = false
+    @remoteSourceText = null
+    if @el
+      tagName = @el.tagName
+      if tagName is "LINK"
+        @isRemote = true    
+    
+    
     @rules = []
     if o.rules      
       @addRules o.rules
@@ -39,20 +47,49 @@ class StyleSheet
   install: () ->
     if @needsInstall
       @needsInstall = false
+      @_install()
+    @
+  
+  reinstall: () ->
+    @_install()
+  
+  installNewRules: (rules) ->
+    @rules = []
+    @addRules rules
+    for rule in @rules
+      rule.install()
+  
+  _install: ->    
+    if @isRemote
+      @_installRemote()
+    else if @el
+      @_installInline()
+    else 
       for rule in @rules
         rule.install()
-    @
+  
+  _installInline: ->
+    #@destroyRules()
+    @installNewRules GSS.get.readAST @el
+  
+  _installRemote: () ->
+    if @remoteSourceText
+      return @installNewRules GSS.compile @remoteSourceText
+    url = @el.getAttribute('href')
+    if !url then return null
+    req = new XMLHttpRequest
+    req.onreadystatechange = () =>
+      return unless req.readyState is 4
+      return unless req.status is 200
+      @remoteSourceText = req.responseText.trim()
+      @installNewRules GSS.compile @remoteSourceText
+    req.open 'GET', url, true
+    req.send null
   
   reset: ->    
     @needsInstall = true
     for rule in @rules
-      rule.reset()
-  
-  loadRulesFromNode: ->
-    #@destroyRules()
-    @rules = []
-    rules = GSS.get.readAST @el
-    @addRules rules    
+      rule.reset()     
   
   destroyRules: ->
     for rule in @rules
@@ -75,21 +112,19 @@ class StyleSheet
 
 StyleSheet.fromNode = (node) ->
   if node.gssStyleSheet then return node.gssStyleSheet
-  if !GSS.get.isStyleNode(node) then return null    
+  #if !GSS.get.isStyleNode(node) then return null    
     
-  engine = GSS(scope: GSS.get.scopeForStyleNode(node))
+  engine = GSS(scope: GSS.get.scopeForStyleNode(node))  
   
   sheet = new GSS.StyleSheet {
     el: node
     engine: engine
     engineId: engine.id
   }
-  sheet.loadRulesFromNode()
   node.gssStyleSheet = sheet
   return sheet
 
 
-  
 
 
 class StyleSheet.Collection
@@ -106,11 +141,12 @@ class StyleSheet.Collection
     @
   
   findAndInstall: () ->
-    nodes = document.querySelectorAll "style"
+    nodes = document.querySelectorAll '[type="text/gss"], [type="text/gss-ast"]'
     for node in nodes
       sheet = GSS.StyleSheet.fromNode node
       sheet?.install()
     @
+  
   
   findAllRemoved: ->
     removed = []
@@ -118,6 +154,8 @@ class StyleSheet.Collection
       if sheet.isRemoved() then removed.push sheet
     return removed
     
+
+
 
 GSS.StyleSheet = StyleSheet
 

@@ -31,16 +31,3 @@ GSS.Getter::['readAST:text/gss'] = (node) ->
   #  console.error "Parsing compiled gss error", console.dir e
   return ast
 
-runRemotes = (url) ->
-  req = new XMLHttpRequest
-  req.onreadystatechange = ->
-    return unless req.readyState is 4
-    return unless req.status is 200
-    engine = GSS document
-    engine.compile req.responseText
-  req.open 'GET', url, true
-  req.send null
-
-remoteGSS = document.querySelectorAll 'link[rel="stylesheet"][type="text/gss"]'
-if remoteGSS
-  runRemotes link.getAttribute('href') for link in remoteGSS

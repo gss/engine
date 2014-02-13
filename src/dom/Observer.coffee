@@ -28,7 +28,7 @@ setupObserver = () ->
         continue unless m.target.parentElement
         sheet =  m.target.parentElement.gssStyleSheet
         if sheet
-          sheet.loadRulesFromNode()
+          sheet.reinstall()
           e = sheet.engine
           if enginesToReset.indexOf(e) is -1
             enginesToReset.push e

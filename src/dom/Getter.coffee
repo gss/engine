@@ -91,7 +91,8 @@ class Getter
       return @nearestScope node
   
   isStyleNode: (node) ->  
-    if node?.tagName is "STYLE"
+    tagName = node?.tagName
+    if tagName is "STYLE" or tagName is "LINK"
       mime = node.getAttribute?("type")
       if mime
         return (mime.indexOf("text/gss") is 0)

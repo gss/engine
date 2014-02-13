@@ -29,6 +29,8 @@ describe 'End - to - End', ->
   afterEach ->
     remove(container)
     
+  
+  
   describe 'default Strength with GSS.config', ->
     
     it 'should compute', (done) ->
@@ -50,7 +52,29 @@ describe 'End - to - End', ->
           [m] == 3;
           </style>
         """
+  
+  
+  
+  describe 'Loading external sheet', ->
+    
+    it 'should compute', (done) ->
+      oldDefault = GSS.config.defaultStrength
+      GSS.config.defaultStrength = "strong"
       
+      listen = (e) ->     
+        expect(engine.vars).to.eql 
+          "[external-file]": 1000
+        GSS.config.defaultStrength = oldDefault
+        done()     
+                     
+      engine.once 'solved', listen
+    
+      container.innerHTML =  """
+          <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
+        """
+  
+  
+     
   
   describe 'flat @if @else w/o queries', ->
   
