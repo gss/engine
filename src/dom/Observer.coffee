@@ -5,6 +5,26 @@ LOG= () ->
 
 observer = null
 
+GSS.is_observing = false
+  
+GSS.observe = () ->
+  if !GSS.is_observing and GSS.config.observe
+    observer.observe(document.body, GSS.config.observerOptions)
+    GSS.is_observing = true
+
+GSS.unobserve = () ->  
+  observer.disconnect()
+  GSS.is_observing = false
+
+GSS._unobservedElements = _unobservedElements = []
+
+GSS.observeElement = (el) ->
+  _unobservedElements.push(el) if _unobservedElements.indexOf(el) is -1
+  
+GSS.unobserveElement = (el) ->
+  i = _unobservedElements.indexOf(el)
+  _unobservedElements.splice( i, 1 ) if i > -1
+
 setupObserver = () ->
 
   # Polyfill
@@ -20,9 +40,16 @@ setupObserver = () ->
     nodesToIgnore = []
     needsUpdateQueries = []
     invalidMeasureIds = []
-
+    
+    observableMutation = false
+    
     for m in mutations
-         
+      
+      if _unobservedElements.indexOf(m.target) isnt -1
+        continue
+      else
+        observableMutation = true
+      
       # style tag was modified then stop & reload everything
       if m.type is "characterData"
         continue unless m.target.parentElement
@@ -56,6 +83,9 @@ setupObserver = () ->
         if gid?
           if invalidMeasureIds.indexOf(gid) is -1
             invalidMeasureIds.push(gid)
+    
+    # only continue if mutation should be observed
+    return null if !observableMutation
     
     # sheets that should be removed b/c no longer in dom
     removed = GSS.styleSheets.findAllRemoved()
@@ -137,17 +167,7 @@ setupObserver = () ->
     # end for mutation
     #if GSS.observeStyleNodes
     GSS.load()  
-
-GSS.is_observing = false
   
-GSS.observe = () ->
-  if !GSS.is_observing and GSS.config.observe
-    observer.observe(document.body, GSS.config.observerOptions)
-    GSS.is_observing = true
-
-GSS.unobserve = () ->  
-  observer.disconnect()
-  GSS.is_observing = false
   
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->

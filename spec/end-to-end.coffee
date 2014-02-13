@@ -53,6 +53,7 @@ describe 'End - to - End', ->
             [m] == 3;
             </style>
           """
+          
     describe 'fractionalPixels: false', ->
     
       it 'should compute', (done) ->
