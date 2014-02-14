@@ -27,7 +27,7 @@ module.exports = ->
           './dist/worker.min.js': ['./dist/worker.js']
       engine:
         files:
-          './dist/gss.min.js': ['./dist/gss.js']      
+          './dist/gss.min.js': ['./dist/gss.js']
 
     # Automated recompilation and testing when developing
     watch:
@@ -123,31 +123,28 @@ module.exports = ->
         options:
           urls: ['http://127.0.0.1:9999/spec/runner.html']
           browsers: [
-            browserName: 'chrome'
+            browserName: 'googlechrome'
+            version: '31'
           ,
             browserName: 'firefox'
-            platform: 'WIN8'
             version: '26'
           ,
             browserName: 'safari'
-            platform: 'OS X 10.8'
             version: '6'
           ,
             browserName: 'opera'
+            version: '12'
           ,
             browserName: 'internet explorer'
-            platform: 'WIN8'
             version: '10'
           ,
             browserName: 'internet explorer'
-            platform: 'WIN7'
             version: '9'
           ]
           build: process.env.TRAVIS_JOB_ID
-          testname: 'GSS engine browser tests'
+          testname: 'GSS browser tests'
           tunnelTimeout: 5
-          concurrency: 3
-          detailedError: true
+          concurrency: 6
 
   # Grunt plugins used for building
   @loadNpmTasks 'grunt-contrib-coffee'
