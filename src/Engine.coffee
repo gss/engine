@@ -325,10 +325,17 @@ class Engine extends GSS.EventTrigger
         GSS.get.view(@scope).displayIfNeeded()
     # else, w/o scope, engine does not write, just read    
     
-    @validate()    
+    if !@isMeasuring and @needsMeasure
+      @measureIfNeeded()
+    else
+      # stops potential infinite measure loop      
+      @trigger "display"
+      GSS.trigger "display"
+      @isMeasuring = false
+      
     
-    GSS.observe()    
-    @dispatchedTrigger "solved", {values:vars} 
+    GSS.observe()
+    @dispatchedTrigger "solved", {values:vars}
     TIME_END "#{@id} LAYOUT & DISPLAY"
         
     #@layoutSubTreeIfNeeded()    
@@ -341,10 +348,29 @@ class Engine extends GSS.EventTrigger
   # Measurement
   # ------------------------------------------------
   
-  validate: ->
+  isMeasuring: false
+  
+  needsMeasure: false
+  
+  setNeedsMeasure: (bool) ->    
+    if bool
+      #LOG @id,".setNeedsMeasure( #{bool} )"
+      # GSS.setNeedsMeasure true
+      @needsMeasure = true
+    else
+      #LOG @id,".setNeedsMeasure( #{bool} )"
+      @needsMeasure = false
+  
+  measureIfNeeded: ->
     # TODO: 
     # - validate only when intrinsic opposites change?
-    # - batch validations
+    # - batch validations?
+    if @needsMeasure
+      @isMeasuring = true
+      @needsMeasure = false
+      @measure()
+      
+  measure: ->
     @commander.validateMeasures()
   
   measureByGssId: (id, prop) ->    
@@ -535,6 +561,8 @@ class Engine extends GSS.EventTrigger
     @setNeedsLayout  false
     @setNeedsDisplay false
     @setNeedsLayout  false
+    @setNeedsMeasure false
+    @isMeasuring = false
     @waitingToLayoutSubtree = false        
     
     @commander.clean()

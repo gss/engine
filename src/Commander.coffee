@@ -167,7 +167,7 @@ class Commander
           @spawn root
           break
     @
-    
+      
   validateMeasures: () ->
     ids = []
     for id of @intrinsicRegistersById
@@ -183,33 +183,6 @@ class Commander
           register.call @
     @
         
-  spawnMeasurements: (root) =>
-    # only if bound to dom query
-    return unless root._intrinsicQuery?
-    
-    prop = root._prop
-
-    # intrinsic measurements
-    if root._checkInstrinsics      
-      if prop.indexOf("intrinsic-") is 0
-        # closure for inner `register` callback vars
-        root._intrinsicQuery.lastAddedIds.forEach (id) =>          
-          gid = "$" + id
-          if !@intrinsicRegistersById[gid] then @intrinsicRegistersById[gid] = {}              
-          # only register intrinsic prop once per id          
-          if !@intrinsicRegistersById[gid][prop]
-            elProp = prop.split("intrinsic-")[1]
-            k = "#{gid}[#{prop}]"
-            register = () ->
-              val = @engine.measureByGssId(id, elProp)              
-              # don't spawn intrinsic if val is unchanged
-              if @engine.vars[k] isnt val                
-                @engine.registerCommand ['suggest', ['get', k], ['number', val], 'required']              
-                #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
-
-            @intrinsicRegistersById[gid][prop] = register
-            register.call @
-    @
   
   
   # Command Spawning
@@ -270,12 +243,6 @@ class Commander
         @engine.registerCommands @expandSpawnable node, true
         #@installCommandFromBase node
           
-    
-    # generate intrinsic commands
-    ### TODO
-    @spawnMeasurements node
-    @
-    ###
   
   #uninstallCommandFromBase: (node, context_id, tracker) ->
   
@@ -436,7 +403,10 @@ class Commander
             if @engine.vars[k] isnt val                
               @engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              
               #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
-
+            
+            # intrinsics always need remeasurement
+            @engine.setNeedsMeasure true
+            
           @intrinsicRegistersById[gid][prop] = register
           register.call @    
     

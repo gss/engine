@@ -76,6 +76,49 @@ describe 'End - to - End', ->
             </style>
           """
   
+  describe 'Vanilla CSS', ->  
+
+    describe 'gss-ast', ->
+      engine = null
+    
+      it 'should dump', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <style type="text/gss-ast" scoped>
+          [{
+            "type":"constraint",
+            "commands": [
+              ["suggest", "[col-width-1]", 111]
+            ],
+            "css": "#box{width:100px;}#b{height:10px;}"       
+          }]
+          </style>
+          """
+        listener = (e) ->           
+          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
+          expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
+          done()
+        engine.once 'solved', listener
+    
+    ###  
+    describe 'gss, simple', ->
+      engine = null
+    
+      it 'should dump', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <style type="text/gss" scoped>
+            #css-simple-dump {
+              width: 50px;
+            }
+          </style>
+          """
+        listener = (e) ->           
+          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
+          expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
+          done()
+        engine.once 'solved', listener
+    ###
   
   
   describe 'Loading external sheet', ->

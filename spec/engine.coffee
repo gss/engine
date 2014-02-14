@@ -634,39 +634,7 @@ describe 'GSS engine', ->
         $('#fixtures').appendChild container      
         engine3 = GSS(container)
         expect(engine1).to.not.equal engine3
-
-  describe 'CSS Dump /', ->  
-    container = null
   
-    before ->
-      container = document.createElement 'div'
-      $('#fixtures').appendChild container
-  
-    after ->
-      remove(container)
-
-    describe 'Asynchronous existentialism (one engine for life of container)', ->
-      engine = null
-    
-      it 'CSS in AST', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <style type="text/gss-ast" scoped>
-          [{
-            "type":"constraint",
-            "commands": [
-              ["suggest", "[col-width-1]", 111]
-            ],
-            "css": "#box{width:100px;}#b{height:10px;}"       
-          }]
-          </style>
-          """
-        listener = (e) ->           
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal "#box{width:100px;}#b{height:10px;}"
-          container.removeEventListener 'solved', listener
-          done()
-        container.addEventListener 'solved', listener
 
   describe 'Nested Engine', ->  
     container = null

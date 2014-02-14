@@ -17043,7 +17043,13 @@ Engine = (function(_super) {
         GSS.get.view(this.scope).displayIfNeeded();
       }
     }
-    this.validate();
+    if (!this.isMeasuring && this.needsMeasure) {
+      this.measureIfNeeded();
+    } else {
+      this.trigger("display");
+      GSS.trigger("display");
+      this.isMeasuring = false;
+    }
     GSS.observe();
     this.dispatchedTrigger("solved", {
       values: vars
@@ -17054,7 +17060,27 @@ Engine = (function(_super) {
 
   Engine.prototype.forceDisplay = function(vars) {};
 
-  Engine.prototype.validate = function() {
+  Engine.prototype.isMeasuring = false;
+
+  Engine.prototype.needsMeasure = false;
+
+  Engine.prototype.setNeedsMeasure = function(bool) {
+    if (bool) {
+      return this.needsMeasure = true;
+    } else {
+      return this.needsMeasure = false;
+    }
+  };
+
+  Engine.prototype.measureIfNeeded = function() {
+    if (this.needsMeasure) {
+      this.isMeasuring = true;
+      this.needsMeasure = false;
+      return this.measure();
+    }
+  };
+
+  Engine.prototype.measure = function() {
     return this.commander.validateMeasures();
   };
 
@@ -17279,6 +17305,8 @@ Engine = (function(_super) {
     this.setNeedsLayout(false);
     this.setNeedsDisplay(false);
     this.setNeedsLayout(false);
+    this.setNeedsMeasure(false);
+    this.isMeasuring = false;
     this.waitingToLayoutSubtree = false;
     this.commander.clean();
     if (typeof (_base = this.getter).clean === "function") {
@@ -17549,7 +17577,6 @@ Commander = (function() {
     this['_get$'] = __bind(this['_get$'], this);
     this['get$'] = __bind(this['get$'], this);
     this['get'] = __bind(this['get'], this);
-    this.spawnMeasurements = __bind(this.spawnMeasurements, this);
     this.spawnForWindowSize = __bind(this.spawnForWindowSize, this);
     this._execute = __bind(this._execute, this);
     this.lazySpawnForWindowSize = GSS._.debounce(this.spawnForWindowSize, GSS.config.resizeDebounce, false);
@@ -17765,40 +17792,6 @@ Commander = (function() {
     return this;
   };
 
-  Commander.prototype.spawnMeasurements = function(root) {
-    var prop,
-      _this = this;
-    if (root._intrinsicQuery == null) {
-      return;
-    }
-    prop = root._prop;
-    if (root._checkInstrinsics) {
-      if (prop.indexOf("intrinsic-") === 0) {
-        root._intrinsicQuery.lastAddedIds.forEach(function(id) {
-          var elProp, gid, k, register;
-          gid = "$" + id;
-          if (!_this.intrinsicRegistersById[gid]) {
-            _this.intrinsicRegistersById[gid] = {};
-          }
-          if (!_this.intrinsicRegistersById[gid][prop]) {
-            elProp = prop.split("intrinsic-")[1];
-            k = "" + gid + "[" + prop + "]";
-            register = function() {
-              var val;
-              val = this.engine.measureByGssId(id, elProp);
-              if (this.engine.vars[k] !== val) {
-                return this.engine.registerCommand(['suggest', ['get', k], ['number', val], 'required']);
-              }
-            };
-            _this.intrinsicRegistersById[gid][prop] = register;
-            return register.call(_this);
-          }
-        });
-      }
-    }
-    return this;
-  };
-
   Commander.prototype.getWhereCommandIfNeeded = function(rule) {
     var cond, whereCommand, _i, _len, _ref;
     if (rule) {
@@ -17861,11 +17854,6 @@ Commander = (function() {
         return this.engine.registerCommands(this.expandSpawnable(node, true));
       }
     }
-    /* TODO
-    @spawnMeasurements node
-    @
-    */
-
   };
 
   Commander.prototype.expandSpawnable = function(command, isRoot, contextId, tracker) {
@@ -18043,8 +18031,9 @@ Commander = (function() {
             var val;
             val = this.engine.measureByGssId(id, elProp);
             if (this.engine.vars[k] !== val) {
-              return this.engine.registerCommand(['suggest', ['get$', prop, gid, selector], ['number', val], 'required']);
+              this.engine.registerCommand(['suggest', ['get$', prop, gid, selector], ['number', val], 'required']);
             }
+            return this.engine.setNeedsMeasure(true);
           };
           _this.intrinsicRegistersById[gid][prop] = register;
           return register.call(_this);
