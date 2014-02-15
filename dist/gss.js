@@ -15078,7 +15078,7 @@ GSS = window.GSS = function(o) {
 };
 
 GSS.config = {
-  defaultStrength: 'required',
+  defaultStrength: 'weak',
   defaultWeight: 0,
   resizeDebounce: 32,
   defaultMatrixType: 'mat4',
