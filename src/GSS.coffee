@@ -36,6 +36,8 @@ GSS = window.GSS = (o) ->
 GSS.config = 
   defaultStrength: 'weak'
   defaultWeight: 0
+  verticalScroll: true
+  horizontalScroll: false
   resizeDebounce: 32 # ~ 30 fps
   defaultMatrixType: 'mat4' # 'mat2d'
   observe: true

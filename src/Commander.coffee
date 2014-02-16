@@ -90,12 +90,14 @@ class Commander
   
   spawnForWindowWidth: () ->
     w = window.innerWidth
+    w = w - GSS.get.scrollbarWidth() if GSS.config.verticalScroll
     if @engine.vars["::window[width]"] isnt w
       @engine.registerCommand ['suggest', ['get', "::window[width]"], ['number', w], 'required']
       #@engine.registerCommand ['stay', ['get', "::window[width]"]]
 
   spawnForWindowHeight: () ->
-    h = window.innerHeight
+    h = window.innerHeight 
+    h = h - GSS.get.scrollbarWidth() if GSS.config.horizontalScroll
     if @engine.vars["::window[height]"] isnt h
       @engine.registerCommand ['suggest', ['get', "::window[height]"], ['number', h], 'required']
       #@engine.registerCommand ['stay', ['get', "::window[width]"]]

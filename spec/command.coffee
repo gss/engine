@@ -135,7 +135,7 @@ describe 'GSS commands', ->
         ['eq', ['get$','width',['$class','box']],['get$','width',['$reserved','window']]]
       ]
       chai.expect(stringify(engine.workerCommands)).to.eql stringify [
-        ['suggest', ['get','::window[width]'], ['number', window.innerWidth], 'required']
+        ['suggest', ['get','::window[width]'], ['number', window.innerWidth - GSS.get.scrollbarWidth()], 'required']
         ['eq', ['get$','width','$12322','.box'],['get','::window[width]']]
       ]
 
@@ -160,7 +160,7 @@ describe 'GSS commands', ->
         ['suggest', ['get','::window[height]'], ['number', window.innerHeight], 'required']
         ['gte',     ['get','[hhh]'],            ['get','::window[height]']]
         
-        ['suggest', ['get','::window[width]'],  ['number', window.innerWidth], 'required']
+        ['suggest', ['get','::window[width]'],  ['number', window.innerWidth - GSS.get.scrollbarWidth()], 'required']
         ['lte',     ['get','[www]'],            ['get','::window[width]']]        
         
       ]
