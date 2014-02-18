@@ -24,6 +24,7 @@ class Engine extends GSS.EventTrigger
     {@scope, @workerURL, @vars, @getter, @is_root, @useWorker} = o
     
     @vars = {} unless @vars
+    @clauses = null
     
     if !GSS.config.useWorker
       @useWorker = false
@@ -107,19 +108,14 @@ class Engine extends GSS.EventTrigger
       for ast in asts        
         @_run ast
     else 
-      @_run asts   
+      @_run asts          
       
   _run: (ast) ->
     # digests & transforms commands into @workerCommands    
     @commander.execute ast
     #if ast.commands      
     #  @commander.execute ast.commands
-    if ast.css      
-      @cssToDump = ast.css
-      # When is best time to dump css?
-      # Early in prep for intrinsics?
-      # Or, should intrinsics be deferred any way?      
-      @dumpCSSIfNeeded()                    
+                 
   
   _StyleSheets_setup: ->
     @styleSheets = []    
@@ -183,19 +179,34 @@ class Engine extends GSS.EventTrigger
       dumpNode.appendChild @cssDump
       #@cssDump.classList.add("gss-css-dump")     
   
+  needsDumpCSS: false
+  
+  setNeedsDumpCSS: (bool) ->
+    if bool
+      @setNeedsLayout true
+      @needsDumpCSS = true
+    else
+      @needsDumpCSS = false
+  
   dumpCSSIfNeeded: () ->
-    if @cssToDump
+    if @needsDumpCSS
+      @needsDumpCSS = false
       @setupCSSDumpIfNeeded()
-      @cssDump.insertAdjacentHTML "beforeend", @cssToDump
-      @cssToDump = null
+      css = ""
+      for sheet in @styleSheets
+        css = css + sheet.dumpCSSIfNeeded()
+      if css.length > 0
+        @cssDump.innerHTML = css
+      #@cssDump.insertAdjacentHTML "beforeend", @cssToDump
+      #@cssToDump = null
 
-  _CSSDumper_clean: () ->    
-    @cssToDump = null
+  _CSSDumper_clean: () ->
     @cssDump?.innerHTML = ""
+    #@needsDumpCSS = false
   
   _CSSDumper_destroy: () ->
-    @cssToDump = null
     #@cssDump?.remove()
+    @needsDumpCSS = false
     @cssDump = null    
   
   
@@ -251,6 +262,10 @@ class Engine extends GSS.EventTrigger
     @hoistedTrigger "beforeLayout", @
     @is_running = true
     TIME "#{@id} LAYOUT & DISPLAY"
+    
+    # When is best time to dump css?
+    #@dumpCSSIfNeeded()
+    
     @solve()
     @setNeedsLayout false
     #@hoistedTrigger "afterLayout", @
@@ -300,12 +315,11 @@ class Engine extends GSS.EventTrigger
       child.displayIfNeeded()
   ###
    
-  display: (vars, forceViewCacheById=false) ->
+  display: (data, forceViewCacheById=false) ->
+    vars = data.values
     LOG @id,".display()"
     @hoistedTrigger "beforeDisplay", @        
     GSS.unobserve()
-    
-    #@dumpCSSIfNeeded()
     
     varsById = @getVarsById(vars)
     
@@ -318,6 +332,13 @@ class Engine extends GSS.EventTrigger
         if el
           GSS.setupId el
       GSS.View.byId[id]?.updateValues?(obj)      
+    
+    # write clauses to html.classes    
+    #if data.clauses
+    #  @updateClauses data.clauses
+    
+    # When is best time to dump css?
+    @dumpCSSIfNeeded()
     
     # batch DOM writes top -> down
     if needsToDisplayViews
@@ -343,6 +364,22 @@ class Engine extends GSS.EventTrigger
     @
   
   forceDisplay: (vars) ->
+  
+  updateClauses: (clauses) ->
+    html = GSS.html
+    old = @clauses
+    nue = clauses
+    if old
+      for clause in old
+        if nue.indexOf(clause) is -1
+          html.classList.remove clause
+      for clause in nue        
+        if old.indexOf(clause) is -1
+          html.classList.add clause
+    else
+      for clause in nue
+        html.classList.add clause
+    @clauses = nue
     
   
   # Measurement
@@ -418,7 +455,7 @@ class Engine extends GSS.EventTrigger
     # must simulate asynch for life cycle to work
     _.defer => 
       if @worker
-        @handleWorkerMessage {data:values:@worker.getValues()}
+        @handleWorkerMessage {data:@worker.output()}
         
     # resetWorkerCommands
     @lastWorkerCommands = @workerCommands
@@ -426,12 +463,12 @@ class Engine extends GSS.EventTrigger
   
   handleWorkerMessage: (message) =>
     LOG @id,".handleWorkerMessage()",@workerCommands    
-
+    
     @vars = message.data.values
-
+    
     #@setNeedsDisplay(true)
     
-    @display(@vars)    
+    @display(message.data)    
 
     #@dispatch "solved", {values:@vars} 
   
@@ -616,8 +653,9 @@ class Engine extends GSS.EventTrigger
     
     @commander.destroy()    
     @getter.destroy?()     
-            
+          
     @vars   = null
+    @clauses = null
     @ast    = null    
     @getter = null
     @scope = null

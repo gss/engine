@@ -90,18 +90,19 @@ class Rule
   _computeSelectorContext: () ->    
     selectorContext = []
     rule = @
-    while rule.parent
+    while rule.parent      
       parent = rule.parent
-      if parent?.selectors?.length > 0
-        if selectorContext.length is 0
-          for $ in parent.selectors
-            selectorContext.push $
-        else
-          _context = []
-          for $ in parent.selectors       
-            for $$ in selectorContext
-              _context.push( $ + " " + $$ )
-          selectorContext = _context
+      if !parent.isConditional # conditionals don't add to selector context
+        if parent?.selectors?.length > 0
+          if selectorContext.length is 0
+            for $ in parent.selectors
+              selectorContext.push $
+          else
+            _context = []
+            for $ in parent.selectors       
+              for $$ in selectorContext
+                _context.push( $ + " " + $$ )
+            selectorContext = _context
       rule = parent
         
     @selectorContext = selectorContext
@@ -135,14 +136,31 @@ class Rule
     return ["clause", @clause, @getClauseTracker()]
   
   getClauseTracker: ->
-    return "cond:#{@cid}"
+    return "gss-cond-#{@cid}"
   
   injectChildrenCondtionals: (conditional) ->
     for rule in @rules
       rule.boundConditionals.push conditional
+      if rule.commands
+        for command in rule.commands
+          command.push ["where", conditional.getClauseTracker()]
       rule.isCondtionalBound = true
       rule.injectChildrenCondtionals(conditional)
   
+  # CSS dumping
+  # ----------------------------------------
+  
+  setNeedsDumpCSS: (bool) ->
+    if bool
+      @styleSheet.setNeedsDumpCSS true
+  
+  dumpCSS: ->
+    css = @Type.dumpCSS?.call(@)
+    for rule in @rules
+      ruleCSS = rule.dumpCSS()
+      css = css + ruleCSS if ruleCSS
+    return css
+    
   
 Rule.types =
   
@@ -153,6 +171,7 @@ Rule.types =
         @injectChildrenCondtionals(@)
         return @
       else if @name is 'if'
+        
         @commands = [@gatherCondCommand()]
         @injectChildrenCondtionals(@)
         @executeCommands()
@@ -164,10 +183,26 @@ Rule.types =
     install: -> 
       @executeCommands()
   
-  style: 
+  style:
     install: ->
+      @setNeedsDumpCSS(true)
+    dumpCSS: ->
   
   ruleset: 
     install: ->
-
+    dumpCSS: ->
+      foundStyle = false
+      css = ""
+      effectiveSelector = null
+      for rule in @rules
+        if rule.type is "style"
+          if !foundStyle
+            effectiveSelector = rule.getSelectorContext().join(", ")
+            foundStyle = true
+          css = css + rule.key + ":" + rule.val + ";"   
+      if foundStyle        
+        # TODO: conditionals?
+        css = effectiveSelector + "{" + css + "}"
+      return css
+          
 module.exports = Rule      

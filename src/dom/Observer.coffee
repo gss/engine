@@ -172,6 +172,9 @@ setupObserver = () ->
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
   
+  GSS.body = document.body or GSS.getElementsByTagName('body')[0]
+  GSS.html = GSS.body.parentNode
+  
   # GSS object is ready for action
   document.dispatchEvent new CustomEvent 'GSS', {detail:GSS, bubbles:false, cancelable: false}
   

@@ -462,7 +462,7 @@ describe 'GSS engine', ->
         done()
       container.addEventListener 'solved', onSolved
       
-      engine.display {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}, true
+      engine.display {values:{"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}}, true
       
     
 

@@ -190,7 +190,9 @@ class Commander
   # Command Spawning
   # ------------------------------------------------
   
+  ###
   getWhereCommandIfNeeded: (rule) ->    
+    
     # Condtional Bound`
     if rule
       if rule.isCondtionalBound & !rule.isConditional
@@ -200,14 +202,15 @@ class Commander
         return whereCommand
     else 
       return null
+  ###
   
   registerSpawn: (node) ->      
     
     # TODO: REGISTER FOR CONDITIONAL ITSELF????
     
     # Condtional Bound
-    whereCommand = @getWhereCommandIfNeeded node.parentRule
-    if whereCommand then node.push whereCommand
+    #whereCommand = @getWhereCommandIfNeeded node.parentRule
+    #if whereCommand then node.push whereCommand
     
     if !node.isQueryBound
       # just pass root through      
@@ -256,7 +259,7 @@ class Commander
     pluralPartLookup = {}
     plural = null
     pluralLength = 0
-  
+
     for part, i in command
       if part
         if part.spawn?
@@ -306,49 +309,6 @@ class Commander
         return @expandSpawnable command, false, contextId
     }
   
-  ###
-  installCommandFromBase: (command, contextId, tracker) ->
-    newCommand = []
-    commands = []
-    hasPlural = false
-    pluralPartLookup = {}
-    plural = null
-    pluralLength = 0
-    
-    # TOOD: must be recursive for things like ["plus"]    
-    
-    
-    buildNewCommand = (command) ->
-      for part, i in command
-        if part
-          if part.spawn?
-            newPart = part.spawn(  contextId  )
-            newCommand.push newPart
-            if part.isPlural
-              hasPlural = true
-              pluralPartLookup[i] = newPart
-              pluralLength = newPart.length
-          else
-            newCommand.push part        
-      
-      if tracker then newCommand.push tracker
-               
-      if hasPlural      
-        for j in [0...pluralLength]
-          pluralCommand = []
-          for part, i in newCommand
-            if pluralPartLookup[i]
-              pluralCommand.push pluralPartLookup[i][j]
-            else
-              pluralCommand.push part
-          commands.push pluralCommand
-        return commands        
-      else
-      
-        return [newCommand]
-    
-    @engine.registerCommands buildNewCommand(command)
-  ###
   
   # Variable Commands
   # ------------------------------------------------
@@ -399,17 +359,21 @@ class Commander
         if !@intrinsicRegistersById[gid][prop]
           elProp = prop.split("intrinsic-")[1]
           k = "#{gid}[#{prop}]"
+          engine = @engine
           register = () ->
-            val = @engine.measureByGssId(id, elProp)              
+            val = engine.measureByGssId(id, elProp)              
             # don't spawn intrinsic if val is unchanged
-            if @engine.vars[k] isnt val                
-              @engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              
+            if engine.vars[k] isnt val
+              engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              
               #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
             
             # intrinsics always need remeasurement
-            @engine.setNeedsMeasure true
+            engine.setNeedsMeasure true
             
           @intrinsicRegistersById[gid][prop] = register
+          
+          #@engine.setNeedsMeasure true
+          # should call intrinsics here? b/c invalid until first pass anyway...
           register.call @    
     
     if isContextBound
@@ -462,11 +426,45 @@ class Commander
     #args = [arguments...]
     #@engine.registerCommand ['cond', args[1...args.length]...]
   
+  ###
   "where": (root,name) =>
     return ['where',name]
   
   "clause": (root,cond,label) =>
     return @makeNonRootSpawnableIfNeeded ["clause",cond,label]
+  ###
+  
+  "where": (root,name) =>
+    if root.isContextBound
+      command = [
+        "where",
+        name,
+        # TODO: somehow make less brain mushy
+        # name suffix that is optionally tracked...
+        {
+          spawn: (contextId)->
+            return "-context-" + contextId
+        }
+      ]
+    else
+      command = ["where",name]
+    return @makeNonRootSpawnableIfNeeded command
+  
+  "clause": (root,cond,name) =>
+    if root.isContextBound
+      command = [
+        "clause",
+        cond,
+        {
+          spawn: (contextId)->
+            if contextId
+              return name + "-context-" + contextId
+            return name          
+        }
+      ]
+    else
+      command = ["clause",cond,name]
+    return @makeNonRootSpawnableIfNeeded command
   
   "?>=": (root,e1,e2) =>
     return @makeNonRootSpawnableIfNeeded ["?>=",e1,e2]
@@ -662,12 +660,20 @@ class Commander
     engine = @engine
     
     more = null
-    whereCommand = @getWhereCommandIfNeeded root.parentRule
-    if whereCommand 
-      more = [whereCommand]    
+    #whereCommand = @getWhereCommandIfNeeded root.parentRule
+    #if whereCommand 
+    #  more = [whereCommand]    
     
+    # TODO: dangerous... what if bridge is a spawn object?
+    for bridge in bridges
+      if typeof bridge isnt "function"
+        more = [] if !more
+        more.push bridge
+        bridges.splice bridges.indexOf(bridge), 1
+
     for bridge in bridges
       bridge.call(engine,query,engine,more)
+      
     query.on 'afterChange', () ->
       for bridge in bridges
         bridge.call(engine,query,engine,more)

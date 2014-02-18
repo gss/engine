@@ -7,7 +7,7 @@ self.onmessage = (m) ->
     thread = new Thread(config)
       
   thread.postMessage m.data  
-  self.postMessage({values:thread.getValues()})
+  self.postMessage(thread.output())
   
   ###
   if ast isnt null

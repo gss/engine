@@ -22,6 +22,7 @@ class Thread
     @constraintsByTracker = {}
     @varIdsByTracker      = {}
     @conditionals         = []
+    @activeClauses        = []
     @__editVarNames       = []
     @  
   
@@ -40,11 +41,15 @@ class Thread
     @constraintsByTracker = null
     @varIdsByTracker      = null
     @conditionals         = null
+    @activeClauses        = null
     @__editVarNames       = null
     @   
       
   # API
   # ------------------------------------------------
+  
+  output: () ->
+    return {values:@getValues(),clauses:@activeClauses}
   
   execute: (message) ->
     @setupIfNeeded()
@@ -86,7 +91,7 @@ class Thread
     @_solve()
     o = {}
     for id of @cachedVars
-      o[id] = @cachedVars[id].value
+      o[id] = @cachedVars[id].value    
     return o
   
   _solve: (recurses = 0) ->
@@ -160,9 +165,11 @@ class Thread
   # - remove trackers from conditional???
   # - nested conditionals??? 
   
-  'where': (root,label) ->
+  'where': (root,label,labelSuffix) ->
     root._condition_bound = true
     @_trackRootIfNeeded root, label
+    # TODO: shouldnt have to track twice
+    @_trackRootIfNeeded root, label + labelSuffix
     return "IGNORE"
   
   'cond': (self,ifffff) ->    
@@ -187,11 +194,14 @@ class Thread
         if found
           if oldLabel isnt newLabel
             if oldLabel?
+              that.activeClauses.splice that.activeClauses.indexOf(oldLabel), 1
               that._removeConstraintByTracker oldLabel, false
             that._addConstraintByTracker newLabel
+            that.activeClauses.push newLabel
             @activeLabel = newLabel
         else
           if oldLabel?
+            that.activeClauses.splice that.activeClauses.indexOf(oldLabel), 1
             that._removeConstraintByTracker oldLabel, false          
     }
   
@@ -201,6 +211,9 @@ class Thread
     return {
       label: label
       test: ->
+        # if label is not present, condition must be label
+        if !label then return condition
+        # if condition is null value
         if !condition then return label
         if condition.call @
           return label

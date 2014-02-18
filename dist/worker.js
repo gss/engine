@@ -51,6 +51,7 @@ Thread = (function() {
     this.constraintsByTracker = {};
     this.varIdsByTracker = {};
     this.conditionals = [];
+    this.activeClauses = [];
     this.__editVarNames = [];
     return this;
   };
@@ -67,8 +68,16 @@ Thread = (function() {
     this.constraintsByTracker = null;
     this.varIdsByTracker = null;
     this.conditionals = null;
+    this.activeClauses = null;
     this.__editVarNames = null;
     return this;
+  };
+
+  Thread.prototype.output = function() {
+    return {
+      values: this.getValues(),
+      clauses: this.activeClauses
+    };
   };
 
   Thread.prototype.execute = function(message) {
@@ -219,9 +228,10 @@ Thread = (function() {
     }
   };
 
-  Thread.prototype['where'] = function(root, label) {
+  Thread.prototype['where'] = function(root, label, labelSuffix) {
     root._condition_bound = true;
     this._trackRootIfNeeded(root, label);
+    this._trackRootIfNeeded(root, label + labelSuffix);
     return "IGNORE";
   };
 
@@ -253,13 +263,16 @@ Thread = (function() {
         if (found) {
           if (oldLabel !== newLabel) {
             if (oldLabel != null) {
+              that.activeClauses.splice(that.activeClauses.indexOf(oldLabel), 1);
               that._removeConstraintByTracker(oldLabel, false);
             }
             that._addConstraintByTracker(newLabel);
+            that.activeClauses.push(newLabel);
             return this.activeLabel = newLabel;
           }
         } else {
           if (oldLabel != null) {
+            that.activeClauses.splice(that.activeClauses.indexOf(oldLabel), 1);
             return that._removeConstraintByTracker(oldLabel, false);
           }
         }
@@ -271,6 +284,9 @@ Thread = (function() {
     return {
       label: label,
       test: function() {
+        if (!label) {
+          return condition;
+        }
         if (!condition) {
           return label;
         }
@@ -576,9 +592,7 @@ self.onmessage = function(m) {
     thread = new Thread(config);
   }
   thread.postMessage(m.data);
-  return self.postMessage({
-    values: thread.getValues()
-  });
+  return self.postMessage(thread.output());
   /*
   if ast isnt null
     #if c.Equation isnt null

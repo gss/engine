@@ -109,6 +109,32 @@ class StyleSheet
     if @el and !document.contains @el
       return true
     return false
+    
+  
+  # CSS dumping
+  # ----------------------------------------
+  
+  needsDumpCSS: false
+  
+  setNeedsDumpCSS: (bool) ->
+    if bool
+      @engine.setNeedsDumpCSS true
+      @needsDumpCSS = true
+    else
+      @needsDumpCSS = false
+    
+  
+  dumpCSSIfNeeded: ->
+    if @needsDumpCSS
+      #@needsDumpCSS = false
+      @dumpCSS()
+    
+  dumpCSS: ->
+    css = ""
+    for rule in @rules
+      ruleCSS = rule.dumpCSS()
+      css = css + ruleCSS if ruleCSS
+    return css
 
 StyleSheet.fromNode = (node) ->
   if node.gssStyleSheet then return node.gssStyleSheet
