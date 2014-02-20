@@ -109,6 +109,27 @@ class Commander
       @engine.solve()
 
   bindToWindow: (prop) ->
+    if prop is "center-x" 
+      @bindToWindow("width")
+      #@bindToWindow("x")
+      @engine.registerCommand ['eq', ['get','::window[center-x]'], ['divide',['get','::window[width]'],2], 'required']
+      return null
+    else if prop is "right"
+      @bindToWindow("width")
+      #@bindToWindow("x")
+      @engine.registerCommand ['eq', ['get','::window[right]'], ['get','::window[width]'], 'required']
+      return null
+    else if prop is "center-y" 
+      @bindToWindow("height")
+      #@bindToWindow("y")
+      @engine.registerCommand ['eq', ['get','::window[center-y]'], ['divide',['get','::window[height]'],2], 'required']
+      return null
+    else if prop is "bottom"
+      @bindToWindow("width")
+      #@bindToWindow("x")
+      @engine.registerCommand ['eq', ['get','::window[bottom]'], ['get','::window[height]'], 'required']
+      return null
+      
     if @boundWindowProps.indexOf(prop) is -1
       @boundWindowProps.push prop
     if prop is 'width' or prop is 'height'

@@ -143,7 +143,52 @@ describe 'End - to - End', ->
         engine.once 'solved', listener
         
   
+  describe "::window", ->
   
+    describe 'center values', ->  
+      it 'should compute values', (done) ->
+        engine.once 'solved', (e) ->     
+          w = (window.innerWidth - GSS.get.scrollbarWidth())
+          cx = w / 2
+          h = (window.innerHeight)
+          cy = h / 2
+          expect(engine.vars).to.eql 
+            "::window[width]": w
+            "::window[center-x]": cx
+            "[center-x]": cx
+            "::window[height]": h
+            "::window[center-y]": cy            
+            "[center-y]": cy
+          done()                             
+        container.innerHTML =  """
+            <style type="text/gss">
+              [center-x] == ::window[center-x];
+              [center-y] == ::window[center-y];
+            </style>
+          """
+    describe 'position values', ->  
+      it 'should compute values', (done) ->
+        engine.once 'solved', (e) ->     
+          w = (window.innerWidth - GSS.get.scrollbarWidth())
+          h = (window.innerHeight)
+          expect(engine.vars).to.eql 
+            "::window[y]": 0
+            "[top]": 0
+            "::window[width]": w
+            "[right]": w
+            "::window[height]": h
+            "[bottom]": h
+            "::window[x]": 0
+            "[left]": 0
+          done()                             
+        container.innerHTML =  """
+            <style type="text/gss">
+              [top] == ::window[top];
+              [right] == ::window[right];
+              [bottom] == ::window[bottom];
+              [left] == ::window[left];
+            </style>
+          """
   
   describe 'External .gss files', ->
     
