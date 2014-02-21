@@ -194,7 +194,8 @@ class Engine extends GSS.EventTrigger
       @setupCSSDumpIfNeeded()
       css = ""
       for sheet in @styleSheets
-        css = css + sheet.dumpCSSIfNeeded()
+        sheetCSS = sheet.dumpCSSIfNeeded()
+        css = css + sheetCSS if sheetCSS
       if css.length > 0
         @cssDump.innerHTML = css
       #@cssDump.insertAdjacentHTML "beforeend", @cssToDump

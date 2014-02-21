@@ -16989,7 +16989,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.dumpCSSIfNeeded = function() {
-    var css, sheet, _i, _len, _ref;
+    var css, sheet, sheetCSS, _i, _len, _ref;
     if (this.needsDumpCSS) {
       this.needsDumpCSS = false;
       this.setupCSSDumpIfNeeded();
@@ -16997,7 +16997,10 @@ Engine = (function(_super) {
       _ref = this.styleSheets;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         sheet = _ref[_i];
-        css = css + sheet.dumpCSSIfNeeded();
+        sheetCSS = sheet.dumpCSSIfNeeded();
+        if (sheetCSS) {
+          css = css + sheetCSS;
+        }
       }
       if (css.length > 0) {
         return this.cssDump.innerHTML = css;

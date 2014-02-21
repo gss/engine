@@ -135,6 +135,9 @@ describe 'End - to - End', ->
               }
             }
           </style>
+          <style type="text/gss" scoped>
+            [x] == 500;
+          </style>
           """
         listener = (e) ->           
           expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
