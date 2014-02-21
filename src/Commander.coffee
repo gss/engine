@@ -505,6 +505,12 @@ class Commander
   "?<": (root,e1,e2) =>
     return @makeNonRootSpawnableIfNeeded ["?<",e1,e2]
     
+  "&&": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["&&",e1,e2]
+  
+  "||": (root,e1,e2) =>
+    return @makeNonRootSpawnableIfNeeded ["||",e1,e2]
+    
   # Constraint Commands
   # ------------------------------------------------
   

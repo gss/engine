@@ -161,7 +161,7 @@ describe 'End - to - End', ->
             "[center-y]": cy
           done()                             
         container.innerHTML =  """
-            <style type="text/gss">
+            <style type="text/gss">              
               [center-x] == ::window[center-x];
               [center-y] == ::window[center-y];
             </style>
