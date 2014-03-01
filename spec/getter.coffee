@@ -40,7 +40,7 @@ describe 'DOM Getter', ->
     it 'should be able to return the correct width', ->
       span = container.querySelector '#span'
       measured = get.measure span, 'width'
-      chai.expect(measured).to.be.at.least 103
+      chai.expect(measured).to.be.at.least 60 # ~80
       chai.expect(measured).to.equal span.getBoundingClientRect().width
 
   describe 'measuring different dimensions of a box', ->

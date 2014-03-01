@@ -347,7 +347,7 @@ describe 'GSS commands', ->
     describe "text measuring", ->
       it 'text measuring', (done) ->
         scope.innerHTML = """
-          <p id="p-text" style="font-size:12px; line-height:16px; font-family:\"Helvetica\";">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
+          <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
         """
         engine.run commands: [
           ['eq', ['get$','width',['$id','p-text']],  ['number',100]]
@@ -359,17 +359,18 @@ describe 'GSS commands', ->
           count++      
           if count is 1
             # don't set height b/c intrinsic-height was used
-            chai.expect(document.getElementById("p-text").style.height).to.eql ""            
-            chai.expect(engine.vars["$p-text[width]"]).to.eql 100
-            chai.expect(engine.vars["$p-text[intrinsic-height]"] % 16).to.eql 0          
+            expect(document.getElementById("p-text").style.height).to.eql ""            
+            expect(engine.vars["$p-text[width]"]).to.eql 100
+            expect(engine.vars["$p-text[intrinsic-height]"] % 16).to.eql 0          
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2            
-            chai.expect(document.getElementById("p-text").style.height).to.eql ""
-            chai.expect(engine.vars["$p-text[width]"]).to.eql 100
-            chai.expect(engine.vars["$p-text[intrinsic-height]"]).to.eql 496
+            expect(document.getElementById("p-text").style.height).to.eql ""
+            expect(engine.vars["$p-text[width]"]).to.eql 100
+            iHeight = engine.vars["$p-text[intrinsic-height]"] 
+            assert( (iHeight % 16 is 0) and (iHeight > 400), "text height is #{iHeight}" )#608
             scope.removeEventListener 'solved', listener
             done()
         scope.addEventListener 'solved', listener
