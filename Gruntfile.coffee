@@ -29,6 +29,21 @@ module.exports = ->
         files:
           './dist/gss.min.js': ['./dist/gss.js']
 
+    # Adding version information to the generated files
+    banner: '/* <%= pkg.name %> - version <%= pkg.version %> (<%= grunt.template.today("dd-mm-yyyy") %>) - http://gridstylesheets.org */'
+    usebanner:
+      dist:
+        options:
+          position: 'top'
+          banner: '<%= banner %>'
+        files:
+          src: [
+            'dist/worker.js'
+            'dist/worker.min.js'
+            'dist/gss.js'
+            'dist/gss.min.js'
+          ]
+
     # Automated recompilation and testing when developing
     watch:
       'build-fast':
@@ -152,6 +167,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-uglify'
   @loadNpmTasks 'grunt-contrib-clean'
   @loadNpmTasks 'grunt-exec'
+  @loadNpmTasks 'grunt-banner'
 
   # Grunt plugins used for testing
   @loadNpmTasks 'grunt-coffeelint'
@@ -163,7 +179,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-saucelabs'
 
   @registerTask 'build-fast', ['coffee', 'concat:worker', 'exec:component_build']
-  @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine']
+  @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine', 'usebanner']
   @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'saucelabs-mocha']
   @registerTask 'default', ['build']
