@@ -38,7 +38,7 @@ setupObserver = () ->
       window.MutationObserver = window.JsMutationObserver
 
   observer = new MutationObserver (mutations) ->
-    LOG "MutationObserver"
+    LOG "MutationObserver", mutations
     enginesToReset = []
     nodesToIgnore = []
     needsUpdateQueries = []
@@ -47,7 +47,6 @@ setupObserver = () ->
     observableMutation = false
     
     for m in mutations
-      
       if _unobservedElements.indexOf(m.target) isnt -1
         continue
       else
@@ -64,7 +63,7 @@ setupObserver = () ->
             enginesToReset.push e
         
       # scopes that need to updateQueries, ie update queries
-      if m.type is "attributes" or m.type is "childList"
+      if m.type is "attributes" or m.type is "childList"        
         if m.type is "attributes" and m.attributename is "data-gss-id"
           # ignore if setting up node
           # ... trusting data-gss-id is set first in setup process!
@@ -126,12 +125,14 @@ setupObserver = () ->
     if invalidMeasureIds.length > 0
       for e in GSS.engines
         if !e.is_destroyed
-          e.commander.handleInvalidMeasures invalidMeasureIds
-      
+          e.commander.handleInvalidMeasures invalidMeasureIds    
+    
     enginesToReset = null
     nodesToIgnore = null
     needsUpdateQueries = null
     invalidMeasureIds = null
+        
+    GSS.load()
   
     #LOG "observer(mutations)",mutations
     #GSS.checkAllStyleNodes()
@@ -169,7 +170,7 @@ setupObserver = () ->
     
     # end for mutation
     #if GSS.observeStyleNodes
-    GSS.load()  
+      
 
 
 # On Display

@@ -382,7 +382,7 @@ class Commander
           k = "#{gid}[#{prop}]"
           engine = @engine
           register = () ->
-            val = engine.measureByGssId(id, elProp)              
+            val = engine.measureByGssId(id, elProp)
             # don't spawn intrinsic if val is unchanged
             if engine.vars[k] isnt val
               engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              

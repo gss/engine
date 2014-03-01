@@ -348,14 +348,13 @@ class Engine extends GSS.EventTrigger
     # else, w/o scope, engine does not write, just read    
     
     if !@isMeasuring and @needsMeasure
-      @measureIfNeeded()
+      @measureIfNeeded()      
+      # just in case measuring didn't need cause 2nd layout pass
+      @_didDisplay() if !@needsLayout        
     else
-      # stops potential infinite measure loop      
-      @trigger "display"      
-      GSS.onDisplay()
-      @isMeasuring = false
-      
-    
+      # stops potential infinite measure loop
+      @_didDisplay()
+          
     GSS.observe()
     @dispatchedTrigger "solved", {values:vars}
     TIME_END "#{@id} LAYOUT & DISPLAY"
@@ -363,6 +362,11 @@ class Engine extends GSS.EventTrigger
     #@layoutSubTreeIfNeeded()    
     
     @
+  
+  _didDisplay: ->
+    @trigger "display"      
+    GSS.onDisplay()
+    @isMeasuring = false
   
   forceDisplay: (vars) ->
   

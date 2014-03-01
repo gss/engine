@@ -16022,7 +16022,7 @@ setupObserver = function() {
   }
   return observer = new MutationObserver(function(mutations) {
     var e, engine, enginesToReset, gid, i, invalidMeasureIds, m, needsUpdateQueries, nodesToIgnore, observableMutation, removed, scope, sheet, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref;
-    LOG("MutationObserver");
+    LOG("MutationObserver", mutations);
     enginesToReset = [];
     nodesToIgnore = [];
     needsUpdateQueries = [];
@@ -16131,6 +16131,7 @@ setupObserver = function() {
     nodesToIgnore = null;
     needsUpdateQueries = null;
     invalidMeasureIds = null;
+    return GSS.load();
     /*
     for m in mutations
       # els removed from scope
@@ -16161,7 +16162,6 @@ setupObserver = function() {
       #  GSS(scope).load()
     */
 
-    return GSS.load();
   });
 };
 
@@ -17164,10 +17164,11 @@ Engine = (function(_super) {
     }
     if (!this.isMeasuring && this.needsMeasure) {
       this.measureIfNeeded();
+      if (!this.needsLayout) {
+        this._didDisplay();
+      }
     } else {
-      this.trigger("display");
-      GSS.onDisplay();
-      this.isMeasuring = false;
+      this._didDisplay();
     }
     GSS.observe();
     this.dispatchedTrigger("solved", {
@@ -17175,6 +17176,12 @@ Engine = (function(_super) {
     });
     TIME_END("" + this.id + " LAYOUT & DISPLAY");
     return this;
+  };
+
+  Engine.prototype._didDisplay = function() {
+    this.trigger("display");
+    GSS.onDisplay();
+    return this.isMeasuring = false;
   };
 
   Engine.prototype.forceDisplay = function(vars) {};
