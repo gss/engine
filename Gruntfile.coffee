@@ -30,7 +30,7 @@ module.exports = ->
           './dist/gss.min.js': ['./dist/gss.js']
 
     # Adding version information to the generated files
-    banner: '/* <%= pkg.name %> - version <%= pkg.version %> (<%= grunt.template.today("dd-mm-yyyy") %>) - http://gridstylesheets.org */'
+    banner: '/* <%= pkg.name %> - version <%= pkg.version %> (<%= grunt.template.today("yyyy-mm-dd") %>) - http://gridstylesheets.org */'
     usebanner:
       dist:
         options:
