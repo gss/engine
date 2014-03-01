@@ -15095,6 +15095,7 @@ GSS.config = {
   warn: false,
   perf: false,
   fractionalPixels: true,
+  readyClass: true,
   processBeforeSet: null,
   maxDisplayRecursionDepth: 30,
   useWorker: !!window.Worker,
@@ -16163,9 +16164,24 @@ setupObserver = function() {
   });
 };
 
+GSS.isDisplayed = false;
+
+GSS.onDisplay = function() {
+  GSS.trigger("display");
+  if (GSS.isDisplayed) {
+    return;
+  }
+  GSS.isDisplayed = true;
+  if (GSS.config.readyClass) {
+    GSS.html.classList.add("gss-ready");
+    return GSS.html.classList.remove("gss-not-ready");
+  }
+};
+
 document.addEventListener("DOMContentLoaded", function(e) {
+  var html;
   GSS.body = document.body || GSS.getElementsByTagName('body')[0];
-  GSS.html = GSS.body.parentNode;
+  GSS.html = html = GSS.body.parentNode;
   document.dispatchEvent(new CustomEvent('GSS', {
     detail: GSS,
     bubbles: false,
@@ -17021,7 +17037,6 @@ Engine = (function(_super) {
   Engine.prototype.needsUpdate = false;
 
   Engine.prototype.setNeedsUpdate = function(bool) {
-    LOG(this.id, ".setNeedsUpdate( " + bool + " )");
     if (bool) {
       GSS.setNeedsUpdate(true);
       return this.needsUpdate = true;
@@ -17032,7 +17047,6 @@ Engine = (function(_super) {
 
   Engine.prototype.updateIfNeeded = function() {
     var child, _i, _len, _ref, _results;
-    LOG(this.id, ".updateIfNeeded()");
     if (this.needsUpdate) {
       if (this.ASTs) {
         this.run(this.ASTs);
@@ -17052,7 +17066,6 @@ Engine = (function(_super) {
   Engine.prototype.needsLayout = false;
 
   Engine.prototype.setNeedsLayout = function(bool) {
-    LOG(this.id, ".setNeedsLayout( " + bool + " )");
     if (bool) {
       if (!this.needsLayout) {
         GSS.setNeedsLayout(true);
@@ -17066,7 +17079,6 @@ Engine = (function(_super) {
   Engine.prototype._beforeLayoutCalls = null;
 
   Engine.prototype.layout = function() {
-    LOG(this.id, ".layout()");
     this.hoistedTrigger("beforeLayout", this);
     this.is_running = true;
     TIME("" + this.id + " LAYOUT & DISPLAY");
@@ -17075,7 +17087,6 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.layoutIfNeeded = function() {
-    LOG(this.id, ".layoutIfNeeded()");
     if (this.needsLayout) {
       this.layout();
     }
@@ -17100,11 +17111,9 @@ Engine = (function(_super) {
 
   Engine.prototype.setNeedsDisplay = function(bool) {
     if (bool) {
-      LOG(this.id, ".setNeedsDisplay( " + bool + " )");
       GSS.setNeedsDisplay(true);
       return this.needsDisplay = true;
     } else {
-      LOG(this.id, ".setNeedsDisplay( " + bool + " )");
       return this.needsDisplay = false;
     }
   };
@@ -17156,7 +17165,7 @@ Engine = (function(_super) {
       this.measureIfNeeded();
     } else {
       this.trigger("display");
-      GSS.trigger("display");
+      GSS.onDisplay();
       this.isMeasuring = false;
     }
     GSS.observe();

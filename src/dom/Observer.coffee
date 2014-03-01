@@ -1,7 +1,10 @@
 # Encapsulates observing DOM & knowing when to look for GSS styles
 
-LOG= () ->
+LOG = () ->
   GSS.deblog "Observer", arguments...                     
+
+# Mutation Observing
+# ====================================================
 
 observer = null
 
@@ -167,13 +170,33 @@ setupObserver = () ->
     # end for mutation
     #if GSS.observeStyleNodes
     GSS.load()  
+
+
+# On Display
+# ====================================================
+
+GSS.isDisplayed = false
+
+GSS.onDisplay = ->
+  GSS.trigger "display"
+  return if GSS.isDisplayed
+  GSS.isDisplayed = true
   
-  
+  # Ready Class
+  # ------------------------------------------------
+  if GSS.config.readyClass
+    GSS.html.classList.add "gss-ready"
+    GSS.html.classList.remove "gss-not-ready"
+
+
+# On Document Ready
+# ====================================================
+
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
   
   GSS.body = document.body or GSS.getElementsByTagName('body')[0]
-  GSS.html = GSS.body.parentNode
+  GSS.html = html = GSS.body.parentNode
   
   # GSS object is ready for action
   document.dispatchEvent new CustomEvent 'GSS', {detail:GSS, bubbles:false, cancelable: false}

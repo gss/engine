@@ -46,8 +46,9 @@ GSS.config =
   warn: false
   perf: false  
   fractionalPixels: true
+  readyClass: true
   processBeforeSet: null # function  
-  maxDisplayRecursionDepth: 30  
+  maxDisplayRecursionDepth: 30
   useWorker: !!window.Worker
   worker: '../dist/worker.js'
   # not being used correctly:
@@ -104,6 +105,7 @@ GSS.EventTrigger.make(GSS)
 GSS.get = new GSS.Getter()
 
 GSS.observer = require("./dom/Observer.js")
+
 
 # Runtime
 # ------------------------------------------------

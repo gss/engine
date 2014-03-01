@@ -221,7 +221,7 @@ class Engine extends GSS.EventTrigger
   needsUpdate: false
   
   setNeedsUpdate: (bool) ->
-    LOG @id,".setNeedsUpdate( #{bool} )"
+    #LOG @id,".setNeedsUpdate( #{bool} )"
     if bool
       GSS.setNeedsUpdate true
       @needsUpdate = true
@@ -229,7 +229,7 @@ class Engine extends GSS.EventTrigger
       @needsUpdate = false
   
   updateIfNeeded: () ->
-    LOG @id,".updateIfNeeded()"    
+    #LOG @id,".updateIfNeeded()"    
     if @needsUpdate
       if @ASTs # then digest ASTs
         @run @ASTs
@@ -248,7 +248,7 @@ class Engine extends GSS.EventTrigger
   needsLayout: false
   
   setNeedsLayout: (bool) ->
-    LOG @id,".setNeedsLayout( #{bool} )"
+    #LOG @id,".setNeedsLayout( #{bool} )"
     if bool 
       if !@needsLayout
         GSS.setNeedsLayout true
@@ -259,7 +259,7 @@ class Engine extends GSS.EventTrigger
   _beforeLayoutCalls:null
   
   layout: () ->
-    LOG @id,".layout()"
+    #LOG @id,".layout()"
     @hoistedTrigger "beforeLayout", @
     @is_running = true
     TIME "#{@id} LAYOUT & DISPLAY"
@@ -272,7 +272,7 @@ class Engine extends GSS.EventTrigger
     #@hoistedTrigger "afterLayout", @
     
   layoutIfNeeded: () ->    
-    LOG @id,".layoutIfNeeded()"
+    #LOG @id,".layoutIfNeeded()"
     # if commands were found & executed
     if @needsLayout # @workerCommands.length > 0
       #@waitingToLayoutSubtree = true
@@ -299,11 +299,11 @@ class Engine extends GSS.EventTrigger
   
   setNeedsDisplay: (bool) ->    
     if bool
-      LOG @id,".setNeedsDisplay( #{bool} )"
+      #LOG @id,".setNeedsDisplay( #{bool} )"
       GSS.setNeedsDisplay true
       @needsDisplay = true
     else
-      LOG @id,".setNeedsDisplay( #{bool} )"
+      #LOG @id,".setNeedsDisplay( #{bool} )"
       @needsDisplay = false
   
   ###
@@ -351,8 +351,8 @@ class Engine extends GSS.EventTrigger
       @measureIfNeeded()
     else
       # stops potential infinite measure loop      
-      @trigger "display"
-      GSS.trigger "display"
+      @trigger "display"      
+      GSS.onDisplay()
       @isMeasuring = false
       
     
