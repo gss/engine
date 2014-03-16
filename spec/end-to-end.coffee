@@ -303,13 +303,14 @@ describe 'End - to - End', ->
           done()
         engine.once 'solved', listener
     
-    describe 'grid-template', ->
+    describe 'grid-rows & grid cols', ->
       engine = null
     
       it 'vars', (done) ->
         engine = GSS(container)
         container.innerHTML =  """
           <div id="layout"></div>
+          <div id="item"></div>
           <style type="text/gss" scoped>
             #layout {
               x: == 0;
@@ -318,11 +319,18 @@ describe 'End - to - End', ->
               height: == 10;
               @grid-rows "r1 r2";
               @grid-cols "c1-c2" gap(10);
+              @h |[#item]| in("c2");
+              @v |[#item]| in("r2");
             }
           </style>
           """
         listener = (e) ->        
-          target =           
+          target =
+            '$item[x]': 55
+            '$item[y]': 5
+            '$item[width]': 45
+            '$item[height]': 5
+            
             '$layout[x]': 0
             '$layout[y]': 0
             '$layout[width]': 100
