@@ -1,10 +1,7 @@
 {
   "name": "vfl-compiler",
   "description": "Visual Format Language compiler",
-  "version": "0.0.1",
-  "dependencies": {
-    "the-gss/ccss-compiler": "*"
-  },
+  "version": "1.0.0beta",
   "scripts": [
     "lib/vfl-compiler.js",
     "lib/compiler.js"

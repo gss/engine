@@ -430,7 +430,7 @@ class Engine extends GSS.EventTrigger
     
   solveWithWorker: () ->
     LOG @id,".solveWithWorker()", @workerCommands    
-    workerMessage = {commands:@workerCommands}
+    workerMessage = {commands:@workerCommands}    
     @workerMessageHistory.push workerMessage
     unless @worker
       @worker = new Worker @workerURL

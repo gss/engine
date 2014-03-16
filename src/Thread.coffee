@@ -18,7 +18,8 @@ class Thread
     @needsSetup           = false
     @solver               = new c.SimplexSolver()
     @solver.autoSolve     = false
-    @cachedVars           = {}          
+    @cachedVars           = {}
+    @elements             = {}
     @constraintsByTracker = {}
     @varIdsByTracker      = {}
     @conditionals         = []
@@ -69,7 +70,7 @@ class Thread
     node = command
     func = @[node[0]]
     if !func?
-      throw new Error("Thread.execute broke, couldn't find method: #{node[0]}")
+      throw new Error("Thread.execute broke - couldn't find method: #{node[0]}")
           
     # recursive excution
     # negative while loop allows for splicing out ignored commands
@@ -104,6 +105,14 @@ class Thread
         conditional.update()
       recurses++
       @_solve(recurses)
+  
+  
+  # Elements & Virtuals
+  # -----------------------------------------------z
+  
+  'virtual': (self, id, names) ->
+    return self
+    
   
   # Tracking
   # ------------------------------------------------

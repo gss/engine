@@ -1,10 +1,12 @@
-var ccss, compile, inject, parseRules, preparser, runCompiler, uuid, vfl;
+var ccss, compile, inject, parseRules, preparser, uuid, vfl, vgl;
 
 preparser = require('gss-preparser');
 
 ccss = require('ccss-compiler');
 
 vfl = require('vfl-compiler');
+
+vgl = require('vgl-compiler');
 
 uuid = function() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
@@ -15,26 +17,20 @@ uuid = function() {
   });
 };
 
-runCompiler = function(chunk) {
-  switch (chunk[0]) {
-    case 'ccss':
-      return ccss.parse(chunk[1]);
-    case 'vfl':
-      return vfl.parse(chunk[1]);
-    case 'gtl':
-      return gtl.parse(chunk[1]);
-  }
-};
-
 compile = function(gss) {
-  var rules;
-  rules = preparser.parse(gss);
+  var e, rules;
+  try {
+    rules = preparser.parse(gss.trim());
+  } catch (_error) {
+    e = _error;
+    console.log("Preparse Error", e);
+  }
   rules = parseRules(rules);
   return rules;
 };
 
 parseRules = function(rules) {
-  var chunk, css, e, key, parsed, val, _i, _len;
+  var ccssRule, ccssRules, chunk, css, e, key, parsed, subParsed, subrules, val, vflRule, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
   css = "";
   for (_i = 0, _len = rules.length; _i < _len; _i++) {
     chunk = rules[_i];
@@ -42,15 +38,75 @@ parseRules = function(rules) {
     switch (chunk.type) {
       case 'directive':
         switch (chunk.name) {
+          case 'grid-template':
+          case '-gss-grid-template':
+          case 'grid-rows':
+          case '-gss-rows':
+          case 'grid-cols':
+          case '-gss-grid-cols':
+            try {
+              subrules = vgl.parse("@" + chunk.name + " " + chunk.terms);
+            } catch (_error) {
+              e = _error;
+              console.log("VGL Parse Error: @" + chunk.name + " " + chunk.terms, e);
+            }
+            parsed = {
+              selectors: [],
+              commands: []
+            };
+            _ref = subrules.ccss;
+            for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+              ccssRule = _ref[_j];
+              try {
+                subParsed = ccss.parse(ccssRule);
+              } catch (_error) {
+                e = _error;
+                console.log("VGL generated CCSS parse Error", e);
+              }
+              parsed.selectors = parsed.selectors.concat(subParsed.selectors);
+              parsed.commands = parsed.commands.concat(subParsed.commands);
+            }
+            _ref1 = subrules.vfl;
+            for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
+              vflRule = _ref1[_k];
+              try {
+                subParsed = ccss.parse(vfl.parse(vflRule).join("; "));
+              } catch (_error) {
+                e = _error;
+                console.log("VGL generated VFL parse Error", e);
+              }
+              parsed.selectors = parsed.selectors.concat(subParsed.selectors);
+              parsed.commands = parsed.commands.concat(subParsed.commands);
+            }
+            break;
           case 'horizontal':
           case 'vertical':
           case '-gss-horizontal':
           case '-gss-vertical':
+          case 'h':
+          case 'v':
+          case '-gss-h':
+          case '-gss-v':
             try {
-              parsed = vfl.parse("@" + chunk.name + " " + chunk.terms);
+              ccssRules = vfl.parse("@" + chunk.name + " " + chunk.terms);
             } catch (_error) {
               e = _error;
-              console.log("VFL Parse Error", e);
+              console.log("VFL Parse Error: @" + chunk.name + " " + chunk.terms, e);
+            }
+            parsed = {
+              selectors: [],
+              commands: []
+            };
+            for (_l = 0, _len3 = ccssRules.length; _l < _len3; _l++) {
+              ccssRule = ccssRules[_l];
+              try {
+                subParsed = ccss.parse(ccssRule);
+              } catch (_error) {
+                e = _error;
+                console.log("VFL generated CCSS parse Error", e);
+              }
+              parsed.selectors = parsed.selectors.concat(subParsed.selectors);
+              parsed.commands = parsed.commands.concat(subParsed.commands);
             }
             break;
           case 'if':

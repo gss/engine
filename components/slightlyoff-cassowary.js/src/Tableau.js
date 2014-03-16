@@ -33,7 +33,8 @@ c.Tableau = c.inherit({
   // Variable v has been removed from an Expression.  If the Expression is in a
   // tableau the corresponding basic variable is subject (or if subject is nil
   // then it's in the objective function). Update the column cross-indices.
-  noteRemovedVariable: function(v /*c.AbstractVariable*/, subject /*c.AbstractVariable*/) {
+  noteRemovedVariable: function(v /*c.AbstractVariable*/,
+                                subject /*c.AbstractVariable*/) {
     c.trace && console.log("c.Tableau::noteRemovedVariable: ", v, subject);
     var column = this.columns.get(v);
     if (subject && column) {
@@ -89,7 +90,8 @@ c.Tableau = c.inherit({
   // Convenience function to insert a variable into
   // the set of rows stored at columns[param_var],
   // creating a new set if needed
-  insertColVar: function(param_var /*Variable*/, rowvar /*Variable*/) {
+  insertColVar: function(param_var /*c.Variable*/,
+                         rowvar /*c.Variable*/) {
     var rowset = /* Set */ this.columns.get(param_var);
     if (!rowset) {
       rowset = new c.HashSet();
@@ -98,7 +100,8 @@ c.Tableau = c.inherit({
     rowset.add(rowvar);
   },
 
-  addRow: function(aVar /*c.AbstractVariable*/, expr /*c.Expression*/) {
+  addRow: function(aVar /*c.AbstractVariable*/,
+                   expr /*c.Expression*/) {
     if (c.trace) c.fnenterprint("addRow: " + aVar + ", " + expr);
     this.rows.set(aVar, expr);
     expr.terms.each(function(clv, coeff) {
@@ -151,7 +154,8 @@ c.Tableau = c.inherit({
     return expr;
   },
 
-  substituteOut: function(oldVar /*c.AbstractVariable*/, expr /*c.Expression*/) {
+  substituteOut: function(oldVar /*c.AbstractVariable*/,
+                          expr /*c.Expression*/) {
     if (c.trace) c.fnenterprint("substituteOut:" + oldVar + ", " + expr);
     if (c.trace) c.traceprint(this.toString());
 

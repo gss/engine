@@ -1836,13 +1836,13 @@ module.exports = (function(){
         var result0;
         
         reportFailures++;
-        if (/^[a-zA-Z0-9_#.[\]\-]/.test(input.charAt(pos))) {
+        if (/^[a-zA-Z0-9_#.[\]\-""']/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
           if (reportFailures === 0) {
-            matchFailed("[a-zA-Z0-9_#.[\\]\\-]");
+            matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"']");
           }
         }
         reportFailures--;
@@ -1855,13 +1855,13 @@ module.exports = (function(){
       function parse_anychar() {
         var result0;
         
-        if (/^[a-zA-Z0-9 .,#:+?!^=()_\-$*\/\\]/.test(input.charAt(pos))) {
+        if (/^[a-zA-Z0-9 .,#:+?!^=()_\-$*\/\\""']/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
           if (reportFailures === 0) {
-            matchFailed("[a-zA-Z0-9 .,#:+?!^=()_\\-$*\\/\\\\]");
+            matchFailed("[a-zA-Z0-9 .,#:+?!^=()_\\-$*\\/\\\\\"\"']");
           }
         }
         return result0;

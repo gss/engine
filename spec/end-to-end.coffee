@@ -30,6 +30,9 @@ describe 'End - to - End', ->
     remove(container)
     
   
+  # Config
+  # ===========================================================
+  
   describe 'config', ->
   
     describe 'defaultStrength: strong', ->
@@ -75,6 +78,10 @@ describe 'End - to - End', ->
               #nofractional[height] == 9.999999999999;
             </style>
           """
+  
+  
+  # Vanilla CSS
+  # ===========================================================
   
   describe 'Vanilla CSS', ->  
     
@@ -144,7 +151,10 @@ describe 'End - to - End', ->
           expect(engine.cssDump.innerHTML).to.equal ".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;}.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}"
           done()
         engine.once 'solved', listener
-        
+  
+  
+  # Window
+  # ===========================================================      
   
   describe "::window", ->
   
@@ -193,6 +203,9 @@ describe 'End - to - End', ->
             </style>
           """
   
+  # .gss files
+  # ===========================================================
+  
   describe 'External .gss files', ->
     
     describe "basics", ->
@@ -213,6 +226,135 @@ describe 'End - to - End', ->
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
           """
   
+  
+  # Virtual Elements
+  # ===========================================================
+  
+  describe 'Virtual Elements', ->  
+    
+    describe 'basic', ->
+      engine = null
+    
+      it 'vars', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" scoped>
+            #ship {
+              @virtual "mast";
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+            }
+          </style>
+          """
+        listener = (e) ->
+          expect(stringify(engine.vars)).to.equal stringify
+            '$ship"mast"[y]': 0
+            '$ship"mast"[height]': 100
+            '$ship"mast"[x]': 10
+            '$ship"mast"[width]': 10
+          done()
+        engine.once 'solved', listener
+  
+  
+  # VGL
+  # ===========================================================
+  
+  describe 'VGL', ->  
+    
+    describe 'grid-template', ->
+      engine = null
+    
+      it 'vars', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="layout"></div>
+          <style type="text/gss" scoped>
+            #layout {
+              x: == 0;
+              y: == 0;
+              width: == 100;
+              height: == 10;
+              @grid-template a
+                "12";
+            }
+          </style>
+          """
+        listener = (e) ->        
+          target =           
+            '$layout[x]': 0
+            '$layout[y]': 0
+            '$layout[width]': 100
+            '$layout[height]': 10
+            '$layout[a-md-width]': 50
+            '$layout[a-md-height]': 10
+            '$layout"a-1"[width]': 50
+            '$layout"a-2"[width]': 50
+            '$layout"a-1"[height]': 10
+            '$layout"a-2"[height]': 10
+            '$layout"a-1"[x]': 0
+            '$layout"a-2"[x]': 50
+            '$layout"a-1"[y]': 0
+            '$layout"a-2"[y]': 0
+          for key, val of target
+            expect(engine.vars[key]).to.equal val          
+          done()
+        engine.once 'solved', listener
+    
+    describe 'grid-template', ->
+      engine = null
+    
+      it 'vars', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="layout"></div>
+          <style type="text/gss" scoped>
+            #layout {
+              x: == 0;
+              y: == 0;
+              width: == 100;
+              height: == 10;
+              @grid-rows "r1 r2";
+              @grid-cols "c1-c2" gap(10);
+            }
+          </style>
+          """
+        listener = (e) ->        
+          target =           
+            '$layout[x]': 0
+            '$layout[y]': 0
+            '$layout[width]': 100
+            '$layout[height]': 10
+            
+            '$layout"r1"[width]': 100
+            '$layout"r1"[height]': 5
+            '$layout"r1"[x]': 0
+            '$layout"r1"[y]': 0
+            
+            '$layout"r2"[width]': 100
+            '$layout"r2"[height]': 5
+            '$layout"r2"[x]': 0
+            '$layout"r2"[y]': 5
+            
+            '$layout"c1"[width]': 45
+            '$layout"c1"[height]': 10
+            '$layout"c1"[x]': 0
+            '$layout"c1"[y]': 0
+
+            '$layout"c2"[width]': 45
+            '$layout"c2"[height]': 10
+            '$layout"c2"[x]': 55
+            '$layout"c2"[y]': 0
+          for key, val of target
+            assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
+          done()
+        engine.once 'solved', listener
+  
+  
+  # @if @else
+  # ===========================================================
   
   describe "@if @else", ->
   
@@ -516,6 +658,10 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', listen  
   
+  
+  
+  # VFL
+  # ===========================================================
   
   describe "VFL", ->
   

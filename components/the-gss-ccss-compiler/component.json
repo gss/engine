@@ -1,7 +1,7 @@
 {
   "name": "ccss-compiler",
   "description": "Constraint Cascading Style Sheets compiler",
-  "version": "0.2.0",
+  "version": "1.0.0beta",
   "scripts": [
     "lib/ccss-compiler.js"
   ],

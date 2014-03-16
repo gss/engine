@@ -226,8 +226,7 @@ class Commander
   ###
   
   registerSpawn: (node) ->      
-    
-    # TODO: REGISTER FOR CONDITIONAL ITSELF????
+    # TODO: REGISTER FOR CONDITIONAL ITSELF???? 
     
     # Condtional Bound
     #whereCommand = @getWhereCommandIfNeeded node.parentRule
@@ -259,7 +258,7 @@ class Commander
       if node.isContextBound
         contextQuery = rule.getContextQuery()
         
-        for contextId in contextQuery.lastAddedIds            
+        for contextId in contextQuery.lastAddedIds
           @engine.registerCommands @expandSpawnable node, true, contextId
           #@installCommandFromBase node, context_id
         
@@ -280,10 +279,9 @@ class Commander
     pluralPartLookup = {}
     plural = null
     pluralLength = 0
-
     for part, i in command
       if part
-        if part.spawn?
+        if part.spawn?          
           newPart = part.spawn(  contextId  )
           newCommand.push newPart
           if part.isPlural
@@ -355,7 +353,7 @@ class Commander
     
     query = queryObject.query
     selector = queryObject.selector
-    
+
     # window  
     if selector is 'window'
       @bindToWindow prop
@@ -554,7 +552,33 @@ class Commander
 
   # Selector Commands
   # ------------------------------------------------
-
+  
+  'virtual': (self,idGetter,names) =>
+    @registerSpawn(self)
+  
+  '$virtual': (root,name) =>
+    parentRule = root.parentRule
+    if !parentRule then throw new Error "::this query requires parent rule for context"    
+    query = parentRule.getContextQuery()
+    selector = query.selector
+    selectorKey = query.selector + " ::virtual(#{name})"
+    o = @queryCommandCache[selectorKey]
+    if !o
+      o = {
+        query:query
+        selector:selector
+        selectorKey:selectorKey
+        isContextBound: true
+        #isVirtualBound: true
+        idProcessor: (id) ->
+          # TODO... fix this shit          
+          return id + '"' + name + '"'
+      }      
+      @queryCommandCache[selectorKey] = o
+    bindRootAsContext root, query
+    return o
+    
+  
   # mutli
   '$class': (root,sel) =>
     selector = "."+sel
@@ -622,7 +646,7 @@ class Commander
     if sel is '::this' or sel is 'this'      
       parentRule = root.parentRule
       if !parentRule then throw new Error "::this query requires parent rule for context"    
-      query = parentRule.getContextQuery()            
+      query = parentRule.getContextQuery()        
       selector = query.selector
       selectorKey = selector+"::this"
       o = @queryCommandCache[selectorKey]

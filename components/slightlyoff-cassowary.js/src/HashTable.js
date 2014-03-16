@@ -223,9 +223,11 @@ if (false && typeof Map != "undefined") {
 
       var store = this._store;
       var keyMap = this._keyStrMap;
-      Object.keys(this._store).forEach(function(k){
-        callback.call(scope||null, keyMap[k], store[k]);
-      }, this);
+      for (var x in this._store) {
+        if (this._store.hasOwnProperty(x)) {
+          callback.call(scope||null, keyMap[x], store[x]);
+        }
+      }
     },
 
     escapingEach: function(callback, scope) {

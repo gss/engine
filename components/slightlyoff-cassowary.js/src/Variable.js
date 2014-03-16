@@ -33,6 +33,8 @@ c.AbstractVariable = c.inherit({
   name: "",
   value: 0,
 
+  valueOf: function() { return this.value; },
+
   toJSON: function() {
     var o = {};
     if (this._t) {

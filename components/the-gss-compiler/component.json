@@ -8,7 +8,8 @@
   "dependencies": {
     "the-gss/preparser": "*",
     "the-gss/ccss-compiler": "*",
-    "the-gss/vfl-compiler": "*"
+    "the-gss/vfl-compiler": "*",
+    "the-gss/vgl-compiler": "*"
   },
   "main": "lib/gss-compiler.js",
   "repo": "https://raw.github.com/the-gss/compiler"

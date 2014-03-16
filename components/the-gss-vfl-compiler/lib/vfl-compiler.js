@@ -354,7 +354,7 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, d, head, tail, o) {
-              var connection, view2, result, ccss, headView, chainedViews;      
+              var connection, view2, result, ccss, headView, chainedViews, withContainer;      
               result = head;      
               headView = head.view;
               chainedViews = [];      
@@ -371,8 +371,9 @@ module.exports = (function(){
                   result,
                   view2
                 ];
+                withContainer = ( headView =="|" || view2 === "|");
                 ccss = p.getLeftVar(headView, d, o) + " " 
-                  + p.getConnectionString(connection, d, o) + " " 
+                  + p.getConnectionString(connection, d, o, withContainer) + " " 
                   + p.getRightVar(view2, d, o)   
                   + p.getTrailingOptions(o)
                   + p.getSW(o);
@@ -520,6 +521,17 @@ module.exports = (function(){
                 matchFailed("\"@-gss-h\"");
               }
             }
+            if (result0 === null) {
+              if (input.substr(pos, 2) === "@h") {
+                result0 = "@h";
+                pos += 2;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"@h\"");
+                }
+              }
+            }
           }
         }
         if (result0 !== null) {
@@ -557,6 +569,17 @@ module.exports = (function(){
                 result0 = null;
                 if (reportFailures === 0) {
                   matchFailed("\"@-gss-v\"");
+                }
+              }
+              if (result0 === null) {
+                if (input.substr(pos, 2) === "@v") {
+                  result0 = "@v";
+                  pos += 2;
+                } else {
+                  result0 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("\"@v\"");
+                  }
                 }
               }
             }
@@ -1167,6 +1190,7 @@ module.exports = (function(){
         var result0, result1, result2, result3;
         var pos0, pos1;
         
+        reportFailures++;
         pos0 = pos;
         pos1 = pos;
         if (input.charCodeAt(pos) === 91) {
@@ -1243,6 +1267,10 @@ module.exports = (function(){
           if (result0 === null) {
             pos = pos0;
           }
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("VFL Element");
         }
         return result0;
       }
@@ -1394,6 +1422,7 @@ module.exports = (function(){
       function parse_PredExpression() {
         var result0, result1;
         
+        reportFailures++;
         result1 = parse_PredOp();
         if (result1 === null) {
           result1 = parse_PredLiteral();
@@ -1427,6 +1456,10 @@ module.exports = (function(){
           }
         } else {
           result0 = null;
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("Predicate Expression");
         }
         return result0;
       }
@@ -1843,6 +1876,7 @@ module.exports = (function(){
         var result0, result1, result2;
         var pos0, pos1;
         
+        reportFailures++;
         pos0 = pos;
         pos1 = pos;
         if (input.charCodeAt(pos) === 45) {
@@ -2048,12 +2082,17 @@ module.exports = (function(){
             }
           }
         }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("VFL Connection");
+        }
         return result0;
       }
       
       function parse_GapChars() {
         var result0;
         
+        reportFailures++;
         if (/^[a-zA-Z0-9#._$]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
@@ -2063,6 +2102,10 @@ module.exports = (function(){
             matchFailed("[a-zA-Z0-9#._$]");
           }
         }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("VFL Connection Gap");
+        }
         return result0;
       }
       
@@ -2070,6 +2113,7 @@ module.exports = (function(){
         var result0, result1, result2, result3;
         var pos0, pos1;
         
+        reportFailures++;
         pos0 = pos;
         pos1 = pos;
         if (input.charCodeAt(pos) === 33) {
@@ -2200,6 +2244,10 @@ module.exports = (function(){
           if (result0 === null) {
             pos = pos0;
           }
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("Strength / Weight");
         }
         return result0;
       }
@@ -2412,13 +2460,13 @@ module.exports = (function(){
       function parse_NameChars() {
         var result0;
         
-        if (/^[a-zA-Z0-9#.\-_$:]/.test(input.charAt(pos))) {
+        if (/^[a-zA-Z0-9#.\-_$:""]/.test(input.charAt(pos))) {
           result0 = input.charAt(pos);
           pos++;
         } else {
           result0 = null;
           if (reportFailures === 0) {
-            matchFailed("[a-zA-Z0-9#.\\-_$:]");
+            matchFailed("[a-zA-Z0-9#.\\-_$:\"\"]");
           }
         }
         return result0;
@@ -3338,15 +3386,16 @@ module.exports = (function(){
         };
       
         parser.getLeftVar = function (view, dimension, o) {
-          var varName;
+          var varName, viewName;
           if (view === "|") {
-            view = getSuperViewName(o);
+            viewName = getSuperViewName(o);
             varName = superLeftVarNames[dimension];
           }
           else {
+            viewName = view;
             varName = leftVarNames[dimension];
           }
-          return view + "[" + varName + "]";
+          return viewName + "[" + varName + "]";
         };
         
         parser.getRightVar = function (view, dimension, o) {
@@ -3365,11 +3414,13 @@ module.exports = (function(){
         
         standardGapNames = ["[hgap]", "[vgap]"];
         
-        getGapString = function (g,d,o) {
+        getGapString = function (g,d,o,withContainer) {
           if (g === undefined) {return "";}
           if (g === "__STANDARD__") {
-            // use gap if given with `gap()`
-            if (o.gap) {
+            // use gap if given with `gap()` or `outer-gap`
+            if (withContainer && o['outer-gap']) {
+              g = o['outer-gap'];
+            } else if (o.gap) {
               g = o.gap;
             // else use standard var
             } else {
@@ -3379,9 +3430,9 @@ module.exports = (function(){
           return "+ " + g;
         };
       
-        parser.getConnectionString = function (c, d, o) {
+        parser.getConnectionString = function (c, d, o, withContainer) {
           
-          return (getGapString(c.gap,d,o) + " " + c.op).trim();
+          return (getGapString(c.gap,d,o,withContainer) + " " + c.op).trim();
         };
         
           
@@ -3404,9 +3455,7 @@ module.exports = (function(){
         
       
         parser.getResults = function () {
-          return [
-            ["ccss"].concat(this.cs)
-          ];
+          return this.cs;
         };
       
         parser.error = function (m,l,c) {
