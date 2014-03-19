@@ -249,14 +249,13 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        listener = (e) ->
+        engine.once 'solved', (e) ->
           expect(stringify(engine.vars)).to.equal stringify
             '$ship"mast"[y]': 0
             '$ship"mast"[height]': 100
             '$ship"mast"[x]': 10
             '$ship"mast"[width]': 10
           done()
-        engine.once 'solved', listener
   
   
   # VGL
@@ -298,67 +297,100 @@ describe 'End - to - End', ->
             '$layout"a-2"[x]': 50
             '$layout"a-1"[y]': 0
             '$layout"a-2"[y]': 0
+          
           for key, val of target
-            expect(engine.vars[key]).to.equal val          
+            assert(engine.vars[key] is val, "#{engine.vars[key]} should be #{val}")
           done()
         engine.once 'solved', listener
     
     describe 'grid-rows & grid cols', ->
       engine = null
-    
-      it 'vars', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <div id="layout"></div>
-          <div id="item"></div>
-          <style type="text/gss" scoped>
-            #layout {
-              x: == 0;
-              y: == 0;
-              width: == 100;
-              height: == 10;
-              @grid-rows "r1 r2";
-              @grid-cols "c1-c2" gap(10);
-              @h |[#item]| in("c2");
-              @v |[#item]| in("r2");
-            }
-          </style>
-          """
-        listener = (e) ->        
-          target =
-            '$item[x]': 55
-            '$item[y]': 5
-            '$item[width]': 45
-            '$item[height]': 5
-            
-            '$layout[x]': 0
-            '$layout[y]': 0
-            '$layout[width]': 100
-            '$layout[height]': 10
-            
-            '$layout"r1"[width]': 100
-            '$layout"r1"[height]': 5
-            '$layout"r1"[x]': 0
-            '$layout"r1"[y]': 0
-            
-            '$layout"r2"[width]': 100
-            '$layout"r2"[height]': 5
-            '$layout"r2"[x]': 0
-            '$layout"r2"[y]': 5
-            
-            '$layout"c1"[width]': 45
-            '$layout"c1"[height]': 10
-            '$layout"c1"[x]': 0
-            '$layout"c1"[y]': 0
+      target =
+        '$item[x]': 55
+        '$item[y]': 5
+        '$item[width]': 45
+        '$item[height]': 5
+        
+        '$layout[x]': 0
+        '$layout[y]': 0
+        '$layout[width]': 100
+        '$layout[height]': 10
+        
+        '$layout"r1"[width]': 100
+        '$layout"r1"[height]': 5
+        '$layout"r1"[x]': 0
+        '$layout"r1"[y]': 0
+        
+        '$layout"r2"[width]': 100
+        '$layout"r2"[height]': 5
+        '$layout"r2"[x]': 0
+        '$layout"r2"[y]': 5
+        
+        '$layout"c1"[width]': 45
+        '$layout"c1"[height]': 10
+        '$layout"c1"[x]': 0
+        '$layout"c1"[y]': 0
 
-            '$layout"c2"[width]': 45
-            '$layout"c2"[height]': 10
-            '$layout"c2"[x]': 55
-            '$layout"c2"[y]': 0
-          for key, val of target
-            assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
-          done()
-        engine.once 'solved', listener
+        '$layout"c2"[width]': 45
+        '$layout"c2"[height]': 10
+        '$layout"c2"[x]': 55
+        '$layout"c2"[y]': 0
+      
+      describe 'flat', ->
+        it ' vars', (done) ->
+          engine = GSS(container)
+          container.innerHTML =  """
+            <div id="layout"></div>
+            <div id="item"></div>
+            <style type="text/gss" scoped>
+              #layout {
+                x: == 0;
+                y: == 0;
+                width: == 100;
+                height: == 10;
+                @grid-rows "r1 r2";
+                @grid-cols "c1-c2" gap(10);
+                @h |[#item]| in("c2");
+                @v |[#item]| in("r2");
+              }
+            </style>
+            """
+          listener = (e) ->        
+          
+            for key, val of target
+              assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
+            done()
+          engine.once 'solved', listener
+      ###
+      describe 'nested', ->
+        it 'vars', (done) ->
+          engine = GSS(container)
+          container.innerHTML =  """
+            <div id="layout"></div>
+            <div id="item"></div>
+            <style type="text/gss" scoped>
+              #layout {
+                x: == 0;
+                y: == 0;
+                width: == 100;
+                height: == 10;
+                @grid-rows "r1 r2";
+                @grid-cols "c1-c2" gap(10);
+                #item {
+                  @h |[::]| in("c2");
+                  @v |[::]| in("r2");
+                }
+              }
+            </style>
+            """
+          listener = (e) ->        
+            console.log engine.vars
+            for key, val of target
+              assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
+            done()
+          engine.once 'solved', listener
+      ###
+      
   
   
   # @if @else

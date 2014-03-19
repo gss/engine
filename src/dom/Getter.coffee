@@ -101,6 +101,7 @@ class Getter
     return offsets
     
   view: (node) ->
+    if typeof node is "string" then return GSS.View.byId[node]
     return GSS.View.byId[GSS.getId(node)]
   
   getAllStyleNodes: () ->

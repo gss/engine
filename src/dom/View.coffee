@@ -5,18 +5,26 @@ class View
   
   constructor: () ->    
     @values = {}
+        
+    # V8:
+    # Declaring vars in constructor to limit anonymous classes
+    @is_positioned = false
+    @el = null
+    @id = null
+    @parentOffsets = null
+    @style = null
+    @Matrix = null
+    @matrixType = null
+    @virtuals = null
     @
   
-  matrixType: null
-  
-  attach: (@el,@id) =>    
+  attach: (@el,@id) => 
     if !@el then throw new Error "View needs el"
     if !@id then throw new Error "View needs id"
     View.byId[@id] = @
     @is_positioned = false   
     
-    GSS.trigger 'view:attach', @
-    
+    GSS.trigger 'view:attach', @    
     if !@matrixType
       @matrixType = GSS.config.defaultMatrixType
     @Matrix = GSS.glMatrix[@matrixType] or throw new Error "View matrixType not found: #{@matrixType}"
@@ -28,7 +36,7 @@ class View
     
     GSS.trigger 'view:detach', @
     
-    @scope = null
+    #@scope = null
     @is_positioned = false
     @el = null
     delete View.byId[@id]
@@ -37,10 +45,9 @@ class View
     @style = null
     @Matrix.identity(@matrix)
     @matrixType = null
+    @virtuals = null
     @values = {}
     View.recycled.push @
-      
-  is_positioned: false
   
   positionIfNeeded: () ->
     #@updateOffsets()
@@ -206,8 +213,42 @@ class View
       break unless el.parentElement
       el = el.parentElement
   
+  
+  # Virtuals
+  # -----------------------------------------------------------------------
+  
+  addVirtuals: (names) ->
+    if !@virtuals then return @virtuals = [].concat(names)
+    for name in names
+      @addVirtual name
+    null
+    
+  addVirtual: (name) ->
+    if !@virtuals then return @virtuals = [name]
+    if @virtuals.indexOf(name) is -1 then @virtuals.push name
+    null
+  
+  hasVirtual: (name) ->
+    if !@virtuals
+      return false
+    else if @virtuals.indexOf(name) is -1
+      return false
+    return true
+  
+  nearestViewWithVirtual: (name) ->
+    # Todo:
+    # - timing edge-cases until deferred & batched query changes
+    # - top level resolution
+    ancestor = @
+    while ancestor
+      if ancestor.hasVirtual name
+        return ancestor
+      ancestor = ancestor.parentElement
+    return null
+  
 
-# Pooling
+# View Pooling
+# ============================================================================
 
 View.byId = {}
 

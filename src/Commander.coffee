@@ -353,6 +353,7 @@ class Commander
     
     query = queryObject.query
     selector = queryObject.selector
+    
 
     # window  
     if selector is 'window'
@@ -362,8 +363,7 @@ class Commander
     isMulti = query.isMulti    
     
     isContextBound = queryObject.isContextBound    
-    isScopeBound = queryObject.isScopeBound    
-    
+    isScopeBound = queryObject.isScopeBound        
     
     # scope
     if isScopeBound
@@ -553,15 +553,31 @@ class Commander
   # Selector Commands
   # ------------------------------------------------
   
-  'virtual': (self,idGetter,names) =>
+  'virtual': (self,namesssss) =>
+    ### TODO: register virtuals to DOM elements
+    parentRule = self.parentRule
+    if !parentRule then throw new 'Error virtual element "#{name}" requires parent rule for context'
+    query = parentRule.getContextQuery()
+    args = [arguments...]
+    names = [args[1...args.length]...]
+    query.on 'afterChange', ->
+      for id in query.lastAddedIds
+        view = GSS.get.view(id)
+        view.addVirtuals names 
+    for id in query.lastAddedIds
+      view = GSS.get.view(id)
+      view.addVirtuals names
+      
     @registerSpawn(self)
+    ###
   
   '$virtual': (root,name) =>
     parentRule = root.parentRule
-    if !parentRule then throw new Error "::this query requires parent rule for context"    
+    if !parentRule then throw new 'Error virtual element "#{name}" requires parent rule for context'
     query = parentRule.getContextQuery()
     selector = query.selector
     selectorKey = query.selector + " ::virtual(#{name})"
+    
     o = @queryCommandCache[selectorKey]
     if !o
       o = {
@@ -571,8 +587,17 @@ class Commander
         isContextBound: true
         #isVirtualBound: true
         idProcessor: (id) ->
-          # TODO... fix this shit          
           return id + '"' + name + '"'
+          ### TODO: allow virtual lookup from down DOM tree
+          # 
+          console.log id
+          nearestWithV = GSS.get.view(id).nearestViewWithVirtual(name)
+          if nearestWithV
+            id = nearestWithV.id            
+            return id + '"' + name + '"'
+          else
+            console.error "Virtual with name #{name} not found up tree"
+          ###
       }      
       @queryCommandCache[selectorKey] = o
     bindRootAsContext root, query

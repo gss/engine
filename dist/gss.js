@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.0beta (2014-03-19) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20316,10 +20317,16 @@ View = (function() {
     this.recycle = __bind(this.recycle, this);
     this.attach = __bind(this.attach, this);
     this.values = {};
+    this.is_positioned = false;
+    this.el = null;
+    this.id = null;
+    this.parentOffsets = null;
+    this.style = null;
+    this.Matrix = null;
+    this.matrixType = null;
+    this.virtuals = null;
     this;
   }
-
-  View.prototype.matrixType = null;
 
   View.prototype.attach = function(el, id) {
     this.el = el;
@@ -20347,7 +20354,6 @@ View = (function() {
 
   View.prototype.recycle = function() {
     GSS.trigger('view:detach', this);
-    this.scope = null;
     this.is_positioned = false;
     this.el = null;
     delete View.byId[this.id];
@@ -20356,11 +20362,10 @@ View = (function() {
     this.style = null;
     this.Matrix.identity(this.matrix);
     this.matrixType = null;
+    this.virtuals = null;
     this.values = {};
     return View.recycled.push(this);
   };
-
-  View.prototype.is_positioned = false;
 
   View.prototype.positionIfNeeded = function() {
     if (!this.is_positioned) {
@@ -20585,6 +20590,49 @@ View = (function() {
       }
       el = el.parentElement;
     }
+  };
+
+  View.prototype.addVirtuals = function(names) {
+    var name, _i, _len;
+    if (!this.virtuals) {
+      return this.virtuals = [].concat(names);
+    }
+    for (_i = 0, _len = names.length; _i < _len; _i++) {
+      name = names[_i];
+      this.addVirtual(name);
+    }
+    return null;
+  };
+
+  View.prototype.addVirtual = function(name) {
+    if (!this.virtuals) {
+      return this.virtuals = [name];
+    }
+    if (this.virtuals.indexOf(name) === -1) {
+      this.virtuals.push(name);
+    }
+    return null;
+  };
+
+  View.prototype.hasVirtual = function(name) {
+    if (!this.virtuals) {
+      return false;
+    } else if (this.virtuals.indexOf(name) === -1) {
+      return false;
+    }
+    return true;
+  };
+
+  View.prototype.nearestViewWithVirtual = function(name) {
+    var ancestor;
+    ancestor = this;
+    while (ancestor) {
+      if (ancestor.hasVirtual(name)) {
+        return ancestor;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return null;
   };
 
   return View;
@@ -22990,15 +23038,31 @@ Commander = (function() {
 
   };
 
-  Commander.prototype['virtual'] = function(self, idGetter, names) {
-    return this.registerSpawn(self);
+  Commander.prototype['virtual'] = function(self, namesssss) {
+    /* TODO: register virtuals to DOM elements
+    parentRule = self.parentRule
+    if !parentRule then throw new 'Error virtual element "#{name}" requires parent rule for context'
+    query = parentRule.getContextQuery()
+    args = [arguments...]
+    names = [args[1...args.length]...]
+    query.on 'afterChange', ->
+      for id in query.lastAddedIds
+        view = GSS.get.view(id)
+        view.addVirtuals names 
+    for id in query.lastAddedIds
+      view = GSS.get.view(id)
+      view.addVirtuals names
+      
+    @registerSpawn(self)
+    */
+
   };
 
   Commander.prototype['$virtual'] = function(root, name) {
     var o, parentRule, query, selector, selectorKey;
     parentRule = root.parentRule;
     if (!parentRule) {
-      throw new Error("::this query requires parent rule for context");
+      throw new 'Error virtual element "#{name}" requires parent rule for context';
     }
     query = parentRule.getContextQuery();
     selector = query.selector;
@@ -23012,6 +23076,17 @@ Commander = (function() {
         isContextBound: true,
         idProcessor: function(id) {
           return id + '"' + name + '"';
+          /* TODO: allow virtual lookup from down DOM tree
+          # 
+          console.log id
+          nearestWithV = GSS.get.view(id).nearestViewWithVirtual(name)
+          if nearestWithV
+            id = nearestWithV.id            
+            return id + '"' + name + '"'
+          else
+            console.error "Virtual with name #{name} not found up tree"
+          */
+
         }
       };
       this.queryCommandCache[selectorKey] = o;
@@ -24032,6 +24107,9 @@ Getter = (function() {
   };
 
   Getter.prototype.view = function(node) {
+    if (typeof node === "string") {
+      return GSS.View.byId[node];
+    }
     return GSS.View.byId[GSS.getId(node)];
   };
 
