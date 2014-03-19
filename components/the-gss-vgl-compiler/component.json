@@ -1,0 +1,11 @@
+{
+  "name": "vgl-compiler",
+  "description": "Visual Grid Language compiler",
+  "version": "0.0.1",
+  "scripts": [
+    "lib/vgl-compiler.js",
+    "lib/compiler.js"
+  ],
+  "main": "lib/compiler.js",
+  "repo": "https://raw.github.com/the-gss/vgl-compiler"
+}
