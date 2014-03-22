@@ -1624,26 +1624,26 @@ module.exports = (function(){
         pos1 = pos;
         result0 = parse__();
         if (result0 !== null) {
-          if (/^[^@{}[\],;]/.test(input.charAt(pos))) {
+          if (/^[^@{},;]/.test(input.charAt(pos))) {
             result2 = input.charAt(pos);
             pos++;
           } else {
             result2 = null;
             if (reportFailures === 0) {
-              matchFailed("[^@{}[\\],;]");
+              matchFailed("[^@{},;]");
             }
           }
           if (result2 !== null) {
             result1 = [];
             while (result2 !== null) {
               result1.push(result2);
-              if (/^[^@{}[\],;]/.test(input.charAt(pos))) {
+              if (/^[^@{},;]/.test(input.charAt(pos))) {
                 result2 = input.charAt(pos);
                 pos++;
               } else {
                 result2 = null;
                 if (reportFailures === 0) {
-                  matchFailed("[^@{}[\\],;]");
+                  matchFailed("[^@{},;]");
                 }
               }
             }
