@@ -80,7 +80,7 @@ describe 'End - to - End', ->
           """
   
   
-  # Vanilla CSS
+  # Vanilla CSS + CCSS
   # ===========================================================
   
   describe 'Vanilla CSS', ->  
@@ -146,11 +146,51 @@ describe 'End - to - End', ->
             [x] == 500;
           </style>
           """
-        listener = (e) ->           
+        engine.once 'solved', ->           
           expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
           expect(engine.cssDump.innerHTML).to.equal ".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;}.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}"
           done()
-        engine.once 'solved', listener
+  
+  
+  # CCSS
+  # ===========================================================      
+  
+  describe "CCSS", ->
+  
+    describe 'expression chain', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">              
+              [c] == 10 !require;
+              0 <= [x] <= 500;
+              500 == [y] == 500;
+              
+              0 <= [z] == [c] + [y] !strong100;
+            </style>
+          """
+        engine.once 'solved', (e) ->     
+          expect(engine.vars).to.eql 
+            "[c]": 10
+            "[x]": 0
+            "[y]": 500
+            "[z]": 510
+          done()
+          
+    describe 'expression chain w/ queryBound connector', ->  
+      it 'should be ok', (done) ->                                 
+        container.innerHTML =  """
+            <div id="billy"></div>
+            <style type="text/gss">              
+              [grid] == 36;
+              0 <= #billy[x] == [grid];
+            </style>
+          """
+        engine.once 'solved', (e) ->     
+          expect(engine.vars).to.eql 
+            "[grid]": 36
+            "$billy[x]": 36
+          done()
+  
   
   
   # Window
@@ -361,6 +401,38 @@ describe 'End - to - End', ->
               assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
             done()
           engine.once 'solved', listener
+      
+      describe 'cross-sheet', ->
+        it ' vars', (done) ->
+          engine = GSS(container)
+          container.innerHTML =  """
+            <div id="layout"></div>
+            <div id="item"></div>
+            
+            <style type="text/gss" scoped>
+              #layout {
+                @h |[#item]| in("c2");
+                @v |[#item]| in("r2");
+              }
+            </style>
+            <style type="text/gss" scoped>
+              #layout {
+                x: == 0;
+                y: == 0;
+                width: == 100;
+                height: == 10;
+                @grid-rows "r1 r2";
+                @grid-cols "c1-c2" gap(10);
+              }
+            </style>
+            """
+          listener = (e) ->        
+          
+            for key, val of target
+              assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
+            done()
+          engine.once 'solved', listener
+      
       ###
       describe 'nested', ->
         it 'vars', (done) ->
@@ -792,4 +864,23 @@ describe 'End - to - End', ->
   
             </style>
           """
-        engine.once 'solved', listen    
+        engine.once 'solved', listen   
+    
+    describe 'VFLs w/ missing elements', ->
+  
+      it 'should compute', (done) ->
+    
+        container.innerHTML =  """
+            <div id="here"></div>
+            <div id="container"></div>
+            <style type="text/gss">                        
+              @h |-10-[#here]-[#gone]-[#gone2]-[#gone3]-10-|
+                in(#container)
+                chain-height([but_height] !strong)
+                chain-center-y(#top-nav[center-y]) 
+                !require;                                    
+            </style>
+          """
+        engine.once 'solved', (e) ->     
+          assert true
+          done()    

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.0beta (2014-03-19) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.0beta (2014-03-21) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -4631,7 +4631,9 @@ module.exports = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, sel) { sel=p.toString(sel); return {selector:"#"+sel,ast:["$id",sel]} })(pos0, result0[1]);
+          result0 = (function(offset, sel) { 
+            sel=p.toString(sel); return {selector:"#"+sel,ast:["$id",sel]} 
+          })(pos0, result0[1]);
         }
         if (result0 === null) {
           pos = pos0;
@@ -4661,7 +4663,9 @@ module.exports = (function(){
             pos = pos1;
           }
           if (result0 !== null) {
-            result0 = (function(offset, sel) {return {selector:"::"+sel,ast:["$reserved", sel]}})(pos0, result0[1]);
+            result0 = (function(offset, sel) {
+              return {selector:"::"+sel,ast:["$reserved", sel]}
+            })(pos0, result0[1]);
           }
           if (result0 === null) {
             pos = pos0;
@@ -4730,7 +4734,10 @@ module.exports = (function(){
               pos = pos1;
             }
             if (result0 !== null) {
-              result0 = (function(offset, name) {name=p.toString(name); return {isVirtual:true, ast:["$virtual", name]} })(pos0, result0[1]);
+              result0 = (function(offset, name) {
+                name=p.toString(name); 
+                return {isVirtual:true, ast:["$virtual", name]} 
+              })(pos0, result0[1]);
             }
             if (result0 === null) {
               pos = pos0;
@@ -4769,7 +4776,10 @@ module.exports = (function(){
                 pos = pos1;
               }
               if (result0 !== null) {
-                result0 = (function(offset, sel) { sel=p.toString(sel); return {selector:"."+sel,ast:["$class",sel]} })(pos0, result0[1]);
+                result0 = (function(offset, sel) { 
+                  sel=p.toString(sel); 
+                  return {selector:"."+sel,ast:["$class",sel]};
+                })(pos0, result0[1]);
               }
               if (result0 === null) {
                 pos = pos0;
@@ -4787,7 +4797,10 @@ module.exports = (function(){
                   result0 = null;
                 }
                 if (result0 !== null) {
-                  result0 = (function(offset, sel) { sel=p.toString(sel); return {selector:sel,ast:["$tag",sel]} })(pos0, result0);
+                  result0 = (function(offset, sel) { 
+                    sel=p.toString(sel); 
+                    return {selector:sel,ast:["$tag",sel]} 
+                  })(pos0, result0);
                 }
                 if (result0 === null) {
                   pos = pos0;
@@ -4855,7 +4868,9 @@ module.exports = (function(){
                     pos = pos1;
                   }
                   if (result0 !== null) {
-                    result0 = (function(offset, sel) { sel=p.toString(sel); return {selector:sel,ast:["$all",sel]} })(pos0, result0[2]);
+                    result0 = (function(offset, sel) { 
+                      sel=p.toString(sel); return {selector:sel,ast:["$all",sel]} 
+                    })(pos0, result0[2]);
                   }
                   if (result0 === null) {
                     pos = pos0;
@@ -6827,7 +6842,8 @@ module.exports = (function(){
         p.getResults = function () {
           return {
             "selectors": p.$s,
-            "commands": p.commands
+            // potential shared state from chaining
+            "commands": JSON.parse(JSON.stringify(p.commands))
             //"measures": p.measures,
             //"constraints": p.cs      
           }
@@ -22463,12 +22479,6 @@ Commander = (function() {
       }
       return _results;
     }
-    /*
-    if ast.rules?
-      for rule in ast.rules
-        @execute rule
-    */
-
   };
 
   Commander.prototype._execute = function(command, root) {

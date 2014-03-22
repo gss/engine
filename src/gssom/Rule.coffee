@@ -30,7 +30,6 @@ class Rule
     @rules = []
     if o.rules      
       @addRules o.rules
-    
     @Type = Rule.types[@type] or throw new Error "Rule type, #{type}, not found"
     @
   

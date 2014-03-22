@@ -57,21 +57,14 @@ class Commander
     @unlisten()
 
   execute: (ast) ->
-    # is statement
     if ast.commands?
-      for command in ast.commands     
+      for command in ast.commands 
         if ast.isRule          
-          command.parentRule = ast
+          command.parentRule = ast        
         @_execute command, command
-    # is block
-    ###
-    if ast.rules?
-      for rule in ast.rules
-        @execute rule   
-    ###
 
   _execute: (command, root) => # Not DRY, see Thread.coffee, design pattern WIP
-    node = command
+    node = command 
     func = @[node[0]]
     if !func?
       throw new Error("Engine Commands broke, couldn't find method: #{node[0]}")
@@ -158,8 +151,7 @@ class Commander
           thisEngine.registerCommand ['suggest', ['get', key], ['number', val], 'required']
       
   bindToScope: (prop) ->    
-    @spawnForScope(prop)
-    
+    @spawnForScope(prop)        
     #if @boundScopeProps.indexOf(prop) is -1
     #  @boundScopeProps.push prop
     ###
@@ -264,7 +256,7 @@ class Commander
         
       
       # Not Context Bound                    
-      else
+      else        
         @engine.registerCommands @expandSpawnable node, true
         #@installCommandFromBase node
           
@@ -272,7 +264,7 @@ class Commander
   #uninstallCommandFromBase: (node, context_id, tracker) ->
   
   expandSpawnable: (command, isRoot, contextId, tracker) ->
-  
+    
     newCommand = []
     commands = []
     hasPlural = false
@@ -342,7 +334,7 @@ class Commander
     key = queryObject.selectorKey
     if !key then key = queryObject.selector
     key += prop
-    val = @get$cache[key]
+    val = @get$cache[key]    
     if !val
       val = @_get$(root, prop, queryObject)
       @get$cache[key] = val
@@ -636,7 +628,7 @@ class Commander
     return o
   
   '$id': (root,sel) =>
-    selector = "#"+sel
+    selector = "#"+sel    
     o = @queryCommandCache[selector]
     if !o
       query = @engine.registerDomQuery selector:selector, isMulti:false, isLive:false, createNodeList:() =>

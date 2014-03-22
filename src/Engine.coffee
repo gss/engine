@@ -110,7 +110,7 @@ class Engine extends GSS.EventTrigger
     else 
       @_run asts          
       
-  _run: (ast) ->
+  _run: (ast) ->    
     # digests & transforms commands into @workerCommands    
     @commander.execute ast
     #if ast.commands      
@@ -155,7 +155,7 @@ class Engine extends GSS.EventTrigger
     for command in commands
       @registerCommand command
     
-  registerCommand: (command) -> 
+  registerCommand: (command) ->
     # TODO: treat commands as strings and check cache for dups?
     @workerCommands.push command
     #
@@ -429,7 +429,7 @@ class Engine extends GSS.EventTrigger
     if @useWorker then @solveWithWorker() else @solveWithoutWorker()
     
   solveWithWorker: () ->
-    LOG @id,".solveWithWorker()", @workerCommands    
+    LOG @id,".solveWithWorker()", @workerCommands
     workerMessage = {commands:@workerCommands}    
     @workerMessageHistory.push workerMessage
     unless @worker
