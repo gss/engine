@@ -1,7 +1,7 @@
 {
   "name": "gss-engine",
   "description": "GSS styling engine",
-  "version": "1.0.0beta",
+  "version": "1.0.1-beta",
   "repository": {
     "type": "git",
     "url": "git://github.com/the-gss/engine.git"

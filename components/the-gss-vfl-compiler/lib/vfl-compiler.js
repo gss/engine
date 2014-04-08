@@ -52,6 +52,7 @@ module.exports = (function(){
         "ChainPredicateItem": parse_ChainPredicateItem,
         "ChainPredVal": parse_ChainPredVal,
         "View": parse_View,
+        "Point": parse_Point,
         "Predicate": parse_Predicate,
         "PredExpression": parse_PredExpression,
         "PredEq": parse_PredEq,
@@ -354,33 +355,38 @@ module.exports = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, d, head, tail, o) {
-              var connection, view2, result, ccss, headView, chainedViews, withContainer;      
+              var connection, result, ccss, chainedViews, withContainer,
+                tailView, tailViewObj, headView, headViewObj;      
               result = head;      
-              headView = head.view;
+              headViewObj = head;
+              headView = headViewObj.view;      
               chainedViews = [];      
               if (headView !== "|") {chainedViews.push(headView);}
               parser.addPreds(headView,head.preds,d);      
               for (var i = 0; i < tail.length; i++) {        
                 connection = tail[i][1];
-                view2 = tail[i][3].view;
-                if (view2 !== "|") {chainedViews.push(view2);}
-                parser.addPreds(view2,tail[i][3].preds,d);
+                tailViewObj = tail[i][3]
+                tailView = tailViewObj.view;        
+                if (tailView !== "|") {chainedViews.push(tailView);}
+                parser.addPreds(tailView,tail[i][3].preds,d);
                 result = [
                   //"c",
                   connection,
                   result,
-                  view2
+                  tailView
                 ];
-                withContainer = ( headView =="|" || view2 === "|");
-                ccss = p.getLeftVar(headView, d, o) + " " 
-                  + p.getConnectionString(connection, d, o, withContainer) + " " 
-                  + p.getRightVar(view2, d, o)   
-                  + p.getTrailingOptions(o)
-                  + p.getSW(o);
-                parser.addC(
-                  ccss.trim()
-                );
-                headView = view2;
+                if (!(headViewObj.isPoint && tailViewObj.isPoint)) {
+                  withContainer = ( headView =="|" || tailView === "|");
+                  ccss = p.getLeftVar(headView, d, o, headViewObj) + " " 
+                    + p.getConnectionString(connection, d, o, withContainer) + " " 
+                    + p.getRightVar(tailView, d, o, tailViewObj)   
+                    + p.getTrailingOptions(o)
+                    + p.getSW(o);
+                  parser.addC(
+                    ccss.trim()
+                );}
+                headViewObj = tailViewObj;
+                headView = tailView;
               }
               parser.addChains(chainedViews,o);
               return {'vfl':d, o:o};
@@ -1188,7 +1194,7 @@ module.exports = (function(){
       
       function parse_View() {
         var result0, result1, result2, result3;
-        var pos0, pos1;
+        var pos0, pos1, pos2;
         
         reportFailures++;
         pos0 = pos;
@@ -1245,13 +1251,14 @@ module.exports = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, name, p) {return {view:name.join(""),preds:p};})(pos0, result0[1], result0[2]);
+          result0 = (function(offset, name, pred) {return {view:p.stringify(name),preds:pred};})(pos0, result0[1], result0[2]);
         }
         if (result0 === null) {
           pos = pos0;
         }
         if (result0 === null) {
           pos0 = pos;
+          pos1 = pos;
           if (input.charCodeAt(pos) === 124) {
             result0 = "|";
             pos++;
@@ -1262,15 +1269,202 @@ module.exports = (function(){
             }
           }
           if (result0 !== null) {
-            result0 = (function(offset) {return {view:"|"};})(pos0);
+            pos2 = pos;
+            if (/^[^~\-]/.test(input.charAt(pos))) {
+              result1 = input.charAt(pos);
+              pos++;
+            } else {
+              result1 = null;
+              if (reportFailures === 0) {
+                matchFailed("[^~\\-]");
+              }
+            }
+            if (result1 !== null) {
+              result3 = parse_NameChars();
+              if (result3 !== null) {
+                result2 = [];
+                while (result3 !== null) {
+                  result2.push(result3);
+                  result3 = parse_NameChars();
+                }
+              } else {
+                result2 = null;
+              }
+              if (result2 !== null) {
+                result1 = [result1, result2];
+              } else {
+                result1 = null;
+                pos = pos2;
+              }
+            } else {
+              result1 = null;
+              pos = pos2;
+            }
+            if (result1 !== null) {
+              result2 = parse_Predicate();
+              result2 = result2 !== null ? result2 : "";
+              if (result2 !== null) {
+                if (input.charCodeAt(pos) === 124) {
+                  result3 = "|";
+                  pos++;
+                } else {
+                  result3 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("\"|\"");
+                  }
+                }
+                if (result3 !== null) {
+                  result0 = [result0, result1, result2, result3];
+                } else {
+                  result0 = null;
+                  pos = pos1;
+                }
+              } else {
+                result0 = null;
+                pos = pos1;
+              }
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+          if (result0 !== null) {
+            result0 = (function(offset, name, pred) {return {view:p.stringify(name),preds:pred};})(pos0, result0[1], result0[2]);
           }
           if (result0 === null) {
             pos = pos0;
+          }
+          if (result0 === null) {
+            pos0 = pos;
+            result0 = parse_Point();
+            if (result0 !== null) {
+              result0 = (function(offset, point) {return {view:"|", isPoint:true, pos:point};})(pos0, result0);
+            }
+            if (result0 === null) {
+              pos = pos0;
+            }
+            if (result0 === null) {
+              pos0 = pos;
+              if (input.charCodeAt(pos) === 124) {
+                result0 = "|";
+                pos++;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"|\"");
+                }
+              }
+              if (result0 !== null) {
+                result0 = (function(offset) {return {view:"|"};})(pos0);
+              }
+              if (result0 === null) {
+                pos = pos0;
+              }
+            }
           }
         }
         reportFailures--;
         if (reportFailures === 0 && result0 === null) {
           matchFailed("VFL Element");
+        }
+        return result0;
+      }
+      
+      function parse_Point() {
+        var result0, result1, result2, result3, result4;
+        var pos0, pos1;
+        
+        reportFailures++;
+        pos0 = pos;
+        pos1 = pos;
+        if (input.charCodeAt(pos) === 60) {
+          result0 = "<";
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"<\"");
+          }
+        }
+        if (result0 !== null) {
+          result1 = parse__();
+          result1 = result1 !== null ? result1 : "";
+          if (result1 !== null) {
+            if (/^[^>]/.test(input.charAt(pos))) {
+              result3 = input.charAt(pos);
+              pos++;
+            } else {
+              result3 = null;
+              if (reportFailures === 0) {
+                matchFailed("[^>]");
+              }
+            }
+            if (result3 !== null) {
+              result2 = [];
+              while (result3 !== null) {
+                result2.push(result3);
+                if (/^[^>]/.test(input.charAt(pos))) {
+                  result3 = input.charAt(pos);
+                  pos++;
+                } else {
+                  result3 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("[^>]");
+                  }
+                }
+              }
+            } else {
+              result2 = null;
+            }
+            if (result2 !== null) {
+              result3 = parse__();
+              result3 = result3 !== null ? result3 : "";
+              if (result3 !== null) {
+                if (input.charCodeAt(pos) === 62) {
+                  result4 = ">";
+                  pos++;
+                } else {
+                  result4 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("\">\"");
+                  }
+                }
+                if (result4 !== null) {
+                  result0 = [result0, result1, result2, result3, result4];
+                } else {
+                  result0 = null;
+                  pos = pos1;
+                }
+              } else {
+                result0 = null;
+                pos = pos1;
+              }
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, position) {
+            return p.stringify(position);
+          })(pos0, result0[2]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        reportFailures--;
+        if (reportFailures === 0 && result0 === null) {
+          matchFailed("Point");
         }
         return result0;
       }
@@ -3385,9 +3579,12 @@ module.exports = (function(){
           return o.in;
         };
       
-        parser.getLeftVar = function (view, dimension, o) {
+        parser.getLeftVar = function (view, dimension, o, viewObj) {
           var varName, viewName;
-          if (view === "|") {
+          if (viewObj.isPoint) {
+            return viewObj.pos;
+          }
+          else if (view === "|") {
             viewName = getSuperViewName(o);
             varName = superLeftVarNames[dimension];
           }
@@ -3398,10 +3595,12 @@ module.exports = (function(){
           return viewName + "[" + varName + "]";
         };
         
-        parser.getRightVar = function (view, dimension, o) {
+        parser.getRightVar = function (view, dimension, o, viewObj) {
           var varName;
-          
-          if (view === "|") {
+          if (viewObj.isPoint) {
+            return viewObj.pos;
+          }
+          else if (view === "|") {
             view = getSuperViewName(o);
             varName = superRightVarNames[dimension];
           }
@@ -3465,10 +3664,42 @@ module.exports = (function(){
           console.error(m);
           return m;
         };
+        
+        
+        p.flatten = function (array, isShallow) {
+          
+          if (typeof array === "string") {return array;}
+          
+          var index = -1,
+            length = array ? array.length : 0,
+            result = [];
       
-        parser.join = function (a) {
+          while (++index < length) {
+            var value = array[index];
+      
+            if (value instanceof Array) {
+              Array.prototype.push.apply(result, isShallow ? value : p.flatten(value));
+            }
+            else {
+              result.push(value);
+            }
+          }
+          return result;
+        }
+      
+        p.trim = function (x) {
+          if (typeof x === "string") {return x.trim();}
+          if (x instanceof Array) {return x.join("").trim();}
+          return ""
+        };
+      
+        p.join = function (a) {
           if (a.join){return a.join("");}
           return a;
+        };
+        
+        p.stringify = function (array) {
+          return p.trim(p.join(p.flatten(array)));
         };
         
       

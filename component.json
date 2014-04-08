@@ -2,7 +2,7 @@
   "name": "gss",
   "repo": "the-gss/engine",
   "description": "GSS runtime",
-  "version": "1.0.0beta",
+  "version": "1.0.1-beta",
   "scripts": [
     "lib/GSS-with-compiler.js",
     "lib/GSS.js",

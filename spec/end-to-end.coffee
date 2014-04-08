@@ -834,6 +834,38 @@ describe 'End - to - End', ->
         engine.once 'solved', listen    
       
 
+    describe '<points>', ->
+  
+      it 'should compute', (done) ->
+        listen = (e) ->
+          console.log engine.vars
+          expect(engine.vars).to.eql                  
+            "$container[x]": 10,
+            "$container[width]": 100,
+            "[right-edge]": 200,
+            "$s1[x]": 70,
+            "$s1[width]": 120
+          done()          
+    
+        container.innerHTML =  """
+            <div id="s1"></div>
+            <div id="container"></div>
+            <style type="text/gss">                        
+            
+              #container {
+                x: == 10;
+                width: == 100;
+              }
+              
+              [right-edge] == 200;
+              
+              @h <#container[center-x]>-[#s1]-<[right-edge]> gap(10);     
+  
+            </style>
+          """
+        engine.once 'solved', listen
+    
+    
     describe '[::] VFLs II', ->
   
       it 'should compute', (done) ->
@@ -884,3 +916,30 @@ describe 'End - to - End', ->
         engine.once 'solved', (e) ->     
           assert true
           done()    
+          
+      ###
+      .dot[width] == 2 == .dot[height];
+      .dot[border-radius] == 1;
+      .dot {
+        background-color: hsla(190,100%,70%,.4)
+      }
+      @horizontal .dot-row1 gap([plan-width]-2);
+      @horizontal .dot-row2 gap([plan-width]-2);
+      @horizontal .dot-row3 gap([plan-width]-2);
+      @horizontal .dot-row4 gap([plan-width]-2);
+      @horizontal .dot-row5 gap([plan-width]-2);
+      @horizontal .dot-row6 gap([plan-width]-2);
+      .dot-first[center-x] == #p1[left];
+      .dot-row1[center-y] == #p-r1[top];
+      .dot-row2[center-y] == #p-r2[top];
+      .dot-row3[center-y] == #p-r3[top];
+      .dot-row4[center-y] == #p-r4[top];
+      .dot-row5[center-y] == #p-r5[top];
+      .dot-row6[center-y] == #p-r5[bottom];
+
+      .asterisk {
+        color:   hsl(190,100%,50%);
+        margin-right: 9px;
+      }
+      
+      ###
