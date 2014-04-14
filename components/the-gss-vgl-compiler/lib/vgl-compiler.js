@@ -2495,13 +2495,30 @@ module.exports = (function(){
                                                                                                   }
                                                                                                   if (result0 === null) {
                                                                                                     if (input.charCodeAt(pos) === 90) {
-                                                                                                      result0 = "Z";
+                                                                                                      result1 = "Z";
                                                                                                       pos++;
                                                                                                     } else {
-                                                                                                      result0 = null;
+                                                                                                      result1 = null;
                                                                                                       if (reportFailures === 0) {
                                                                                                         matchFailed("\"Z\"");
                                                                                                       }
+                                                                                                    }
+                                                                                                    if (result1 !== null) {
+                                                                                                      result0 = [];
+                                                                                                      while (result1 !== null) {
+                                                                                                        result0.push(result1);
+                                                                                                        if (input.charCodeAt(pos) === 90) {
+                                                                                                          result1 = "Z";
+                                                                                                          pos++;
+                                                                                                        } else {
+                                                                                                          result1 = null;
+                                                                                                          if (reportFailures === 0) {
+                                                                                                            matchFailed("\"Z\"");
+                                                                                                          }
+                                                                                                        }
+                                                                                                      }
+                                                                                                    } else {
+                                                                                                      result0 = null;
                                                                                                     }
                                                                                                   }
                                                                                                 }
@@ -2556,6 +2573,27 @@ module.exports = (function(){
         }
         if (result0 === null) {
           pos = pos0;
+        }
+        if (result0 === null) {
+          pos0 = pos;
+          if (input.charCodeAt(pos) === 46) {
+            result0 = ".";
+            pos++;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\".\"");
+            }
+          }
+          if (result0 !== null) {
+            result0 = (function(offset) {
+              var name = p.getBlankName();
+              return {xspan:1,name:name,x:[name]};
+            })(pos0);
+          }
+          if (result0 === null) {
+            pos = pos0;
+          }
         }
         reportFailures--;
         if (reportFailures === 0 && result0 === null) {
@@ -3902,9 +3940,16 @@ module.exports = (function(){
       }
       
       
-        var p, parser, vfls, virtuals, ccss, asts; 
+        var p, parser, vfls, virtuals, ccss, asts, blankCount; 
       
         p = parser = this;
+        
+        blankCount = 0;
+        
+        p.getBlankName = function () {
+          blankCount++;
+          return "blank-" + blankCount;
+        };
         
         p.size = ['width','height'];
         p.pos = ['x','y'];
@@ -3951,32 +3996,95 @@ module.exports = (function(){
         }
       
       
-         p.addTemplate = function (lines,name,options) {
-          var ast, prefix;
+        p.addTemplate = function (lines,name,options) {
+          var ast, prefix, container;
+          
           prefix = name+'-';
           ast = p.processHLines(lines);
           ast.name = name;
-             
-      
-          var md, mdOp, outergap;
           
-          if (options.gap || options['outer-gap']) {
-            if (options['outer-gap']) {
-              outergap = options['outer-gap'];
-            } else {
-              outergap = options.gap;
-            }
+          if (options.in) {
+            container = options.in;
+          }
+          else {
+            container = "::";
+          }
+      
+          var md, mdOp, outergap, gaps, g, hasGap;
+          
+          gaps = {};
+          hasGap = false;
+          
+          g = options.gap;
+          if (g) { 
+            hasGap = true;
+            gaps.top = g;
+            gaps.right = g;
+            gaps.bottom = g;
+            gaps.left = g;
+            gaps.h = g;
+            gaps.v = g;
+          }
+          g = options['outer-gap'];
+          if (g) { 
+            hasGap = true;
+            gaps.top = g;
+            gaps.right = g;
+            gaps.bottom = g;
+            gaps.left = g;
+          }
+          g = options['h-gap'];
+          if (g) { 
+            hasGap = true;
+            gaps.right = g;
+            gaps.left = g;
+            gaps.h = g;
+          }
+          g = options['v-gap'];
+          if (g) { 
+            hasGap = true;
+            gaps.top = g;
+            gaps.bottom = g;
+            gaps.v = g;
+          }
+          g = options['top-gap'];
+          if (g) { 
+            hasGap = true;
+            gaps.top = g;
+          }
+          g = options['right-gap']; 
+          if (g) { 
+            hasGap = true;
+            gaps.right = g;
+          }
+          g = options['bottom-gap']; 
+          if (g) { 
+            hasGap = true;
+            gaps.bottom = g;
+          }
+          g = options['left-gap']; 
+          if (g) { 
+            hasGap = true;
+            gaps.left = g;
+          }
+          
+          
+          if (hasGap) {
             mdOp = "<=";
           } else {
             mdOp = "==";
           }
            
-          md = '::['+name+'-md-width] '+mdOp+' ::[width]';
+          md = '::['+name+'-md-width] '+mdOp+' ';
+          md += container + '[width]';
+          
           if (ast.yspan > 1){md += ' / '+ast.yspan;}
           md += " !require";
           p.addCCSS(md);
         
-          md = '::['+name+'-md-height] '+mdOp+' ::[height]';
+          md = '::['+name+'-md-height] '+mdOp+' ';;
+          md += container + '[height]';
+          
           if (ast.xspan > 1){md += ' / '+ast.xspan;}
           md += " !require";
           p.addCCSS(md);
@@ -4003,18 +4111,18 @@ module.exports = (function(){
           ast.v.forEach(function(brij){
             brij = brij.split("%-v-%");
             vfl = '@v ["'+prefix+brij[0]+'"]';
-            if (options.gap) {vfl += '-';}
+            if (gaps.v) {vfl += '-';}
             vfl += '["'+prefix+brij[1]+'"]';
-            if (options.gap) {vfl += ' gap('+options.gap+')';}
+            if (gaps.v) {vfl += ' gap('+gaps.v+')';}
             p.addVFL(vfl);
           });
          
           ast.h.forEach(function(brij){
             brij = brij.split("%-h-%");
             vfl = '@h ["'+prefix+brij[0]+'"]';
-            if (options.gap) {vfl += '-';}
+            if (gaps.h) {vfl += '-';}
             vfl += '["'+prefix+brij[1]+'"]';
-            if (options.gap) {vfl += ' gap('+options.gap+')';}
+            if (gaps.h) {vfl += ' gap('+gaps.h+')';}
             p.addVFL(vfl);
           });
           
@@ -4025,9 +4133,9 @@ module.exports = (function(){
             if (edgeEls.indexOf(el) > -1) {return null;}
             edgeEls.push(el);
             vfl = '@h |';
-            if (outergap) {vfl += '-';}
-            vfl += '["'+prefix+el+'"]'+' in(::)';   
-            if (outergap) {vfl += ' gap('+outergap+')';}
+            if (gaps.left) {vfl += '-';}
+            vfl += '["'+prefix+el+'"]'+' in('+container+')';   
+            if (gaps.left) {vfl += ' gap('+gaps.left+')';}
             p.addVFL(vfl);
           });
       
@@ -4036,9 +4144,9 @@ module.exports = (function(){
             if (edgeEls.indexOf(el) > -1) {return null;}
             edgeEls.push(el);
             vfl = '@v |';
-            if (outergap) {vfl += '-';}
-            vfl += '["'+prefix+el+'"]'+' in(::)';
-            if (outergap) {vfl += ' gap('+outergap+')';}
+            if (gaps.top) {vfl += '-';}
+            vfl += '["'+prefix+el+'"]'+' in('+container+')';
+            if (gaps.top) {vfl += ' gap('+gaps.top+')';}
             p.addVFL(vfl);
           });
       
@@ -4047,9 +4155,9 @@ module.exports = (function(){
             if (edgeEls.indexOf(el) > -1) {return null;}
             edgeEls.push(el);
             vfl = '@h ["'+prefix+el+'"]';
-            if (outergap) {vfl += '-';}
-            vfl +='|'+' in(::)';
-            if (outergap) {vfl += ' gap('+outergap+')';}
+            if (gaps.right) {vfl += '-';}
+            vfl +='|'+' in('+container+')';
+            if (gaps.right) {vfl += ' gap('+gaps.right+')';}
             p.addVFL(vfl);
           });
       
@@ -4058,9 +4166,9 @@ module.exports = (function(){
             if (edgeEls.indexOf(el) > -1) {return null;}
             edgeEls.push(el);
             vfl = '@v ["'+prefix+el+'"]';
-            if (outergap) {vfl += '-';}
-            vfl += '|'+' in(::)';
-            if (outergap) {vfl += ' gap('+outergap+')';}
+            if (gaps.bottom) {vfl += '-';}
+            vfl += '|'+' in('+container+')';
+            if (gaps.bottom) {vfl += ' gap('+gaps.bottom+')';}
             p.addVFL(vfl);
           });
       
@@ -4073,13 +4181,23 @@ module.exports = (function(){
         }
       
         p.processHZones = function (zones) {
-          var xspan, curr, prev, h, x, widths;
+          var xspan, curr, prev, h, x, widths,
+            dotCounter, isDot;
           xspan = 0;
           h = [];
           widths = {};
           x = [];
+          dotCounter = 0;    
           zones.forEach(function(zone){
+            isDot = false;
             curr = zone.name;
+            
+            // "." are each treated as an empty zone
+            if (curr === "-DOT-") {
+              isDot = false;
+              dotCounter++;
+              curr += dotCounter;
+            }
             x = x.concat(zone.x);
             delete zone.x;
             if (prev && prev !== curr) {   

@@ -1,6 +1,14 @@
 GSS Engine ChangeLog
 ====================
 
+## 1.0.2-beta (April 14th 2014)
+
+- VGL: `@grid-template` empty zones can be defined with `.`
+- VGL: added `in()` to `@grid-template`
+- VGL: added `h/v/top/right/bottom/left-gap()` to `@grid-template`
+
+VGL is still undocumented & under heavy dev.
+
 ## 1.0.1-beta (April 7th 2014)
 
 - VFL: **Point** support
