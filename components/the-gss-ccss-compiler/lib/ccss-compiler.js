@@ -966,7 +966,7 @@ module.exports = (function(){
               if (result0 !== null) {
                 result1 = parse___();
                 if (result1 !== null) {
-                  result2 = parse_LinearExpression();
+                  result2 = parse_AdditiveExpression();
                   if (result2 !== null) {
                     result3 = parse___();
                     if (result3 !== null) {

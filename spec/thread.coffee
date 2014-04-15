@@ -28,8 +28,6 @@ describe 'Cassowary Thread', ->
     thread = new Thread()
     thread.execute
       commands:[
-        ['var', '[x]', 'x']
-        ['var', '[y]', 'y']
         ['eq', ['get','[x]'],['number','100'],'strong']
         ['eq', ['get','[x]'],['number','10'],'medium']
         ['eq', ['get','[x]'],['number','1'],'weak']
@@ -41,6 +39,25 @@ describe 'Cassowary Thread', ->
     chai.expect(values).to.eql
       "[x]": 100
       "[y]": 101
+    done()
+    
+  it 'order of operations', (done) ->
+    thread = new Thread()
+    thread.execute
+      commands:[
+        ['eq', ['get','[w]'],['number','100'],'required']
+        ['eq', ['get','[igap]'],['number','3'],'required']
+        ['eq', ['get','[ogap]'],['number','20'],'required']
+        ['eq', ['get','[md]'], ['divide',['minus',['get','[w]'],['multiply',['get','[ogap]'],2]]  ,['number','4']],'required']
+        ['eq', ['get','[span3]'], ['plus',['multiply',['get','[md]'],3],['multiply',['get','[igap]'],2]],'required']
+      ]
+    values = thread.getValues()
+    chai.expect(values).to.eql
+      "[w]": 100
+      "[igap]": 3
+      "[ogap]": 20
+      "[md]": 15
+      "[span3]": 51
     done()
 
   it '$12322[width] == [grid-col]; ...', (done) ->

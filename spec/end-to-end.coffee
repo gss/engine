@@ -190,6 +190,31 @@ describe 'End - to - End', ->
             "[grid]": 36
             "$billy[x]": 36
           done()
+    
+
+    describe 'order of operations', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">              
+              [w] == 100 !require;
+              [igap] == 3 !require;
+              [ogap] == 10 !require;
+              
+              [md] * 4 == [w] - [ogap] * 2 !require;
+              
+              [span3] == [md] * 3 + [igap] * 2;
+            
+            </style>
+          """
+        engine.once 'solved', (e) ->
+          expect(engine.vars).to.eql 
+            "[w]": 100
+            "[igap]": 3
+            "[ogap]": 10
+            "[md]": 20
+            "[span3]": 66
+          done()
+
   
   
   

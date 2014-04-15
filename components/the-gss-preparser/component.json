@@ -1,7 +1,7 @@
 {
   "name": "gss-preparser",
   "description": "GSS preparser",
-  "version": "1.0.0beta",
+  "version": "1.0.4-beta",
   "scripts": [
     "lib/gss-preparser.js"
   ],

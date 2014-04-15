@@ -59,7 +59,6 @@ module.exports = (function(){
         "_": parse__,
         "__": parse___,
         "space": parse_space,
-        "char": parse_char,
         "anychar": parse_anychar,
         "multitoend": parse_multitoend,
         "anytoend": parse_anytoend,
@@ -284,12 +283,28 @@ module.exports = (function(){
         pos1 = pos;
         result0 = parse__();
         if (result0 !== null) {
-          result2 = parse_char();
+          if (/^[a-zA-Z0-9_#.[\]\-""' *+\/$^~%\\()]/.test(input.charAt(pos))) {
+            result2 = input.charAt(pos);
+            pos++;
+          } else {
+            result2 = null;
+            if (reportFailures === 0) {
+              matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"' *+\\/$^~%\\\\()]");
+            }
+          }
           if (result2 !== null) {
             result1 = [];
             while (result2 !== null) {
               result1.push(result2);
-              result2 = parse_char();
+              if (/^[a-zA-Z0-9_#.[\]\-""' *+\/$^~%\\()]/.test(input.charAt(pos))) {
+                result2 = input.charAt(pos);
+                pos++;
+              } else {
+                result2 = null;
+                if (reportFailures === 0) {
+                  matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"' *+\\/$^~%\\\\()]");
+                }
+              }
             }
           } else {
             result1 = null;
@@ -1828,26 +1843,6 @@ module.exports = (function(){
         reportFailures--;
         if (reportFailures === 0 && result0 === null) {
           matchFailed("Space");
-        }
-        return result0;
-      }
-      
-      function parse_char() {
-        var result0;
-        
-        reportFailures++;
-        if (/^[a-zA-Z0-9_#.[\]\-""']/.test(input.charAt(pos))) {
-          result0 = input.charAt(pos);
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"']");
-          }
-        }
-        reportFailures--;
-        if (reportFailures === 0 && result0 === null) {
-          matchFailed("char");
         }
         return result0;
       }
