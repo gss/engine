@@ -203,6 +203,12 @@ describe 'End - to - End', ->
               [md] * 4 == [w] - [ogap] * 2 !require;
               
               [span3] == [md] * 3 + [igap] * 2;
+              
+              [blah] == [w] - 10 - 10 - 10;
+              
+              [blah2] == [w] - [ogap] - [ogap] - [ogap];
+              
+              [md2] == ([w] - [ogap] - [ogap] - [igap] * 3) / 4 !require;
             
             </style>
           """
@@ -213,6 +219,9 @@ describe 'End - to - End', ->
             "[ogap]": 10
             "[md]": 20
             "[span3]": 66
+            "[blah]": 70
+            "[blah2]": 70
+            "[md2]": 71 / 4
           done()
 
   
