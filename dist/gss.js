@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.2-beta (2014-04-15) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.2-beta (2014-04-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -246,6 +246,7 @@ module.exports = (function(){
         "nestedStatement": parse_nestedStatement,
         "nestedStatements": parse_nestedStatements,
         "ccss": parse_ccss,
+        "ccssStartChar": parse_ccssStartChar,
         "ccssOp": parse_ccssOp,
         "ContextualCCSSLine": parse_ContextualCCSSLine,
         "cssLine": parse_cssLine,
@@ -487,28 +488,12 @@ module.exports = (function(){
         pos1 = pos;
         result0 = parse__();
         if (result0 !== null) {
-          if (/^[a-zA-Z0-9_#.[\]\-""' *+\/$^~%\\()]/.test(input.charAt(pos))) {
-            result2 = input.charAt(pos);
-            pos++;
-          } else {
-            result2 = null;
-            if (reportFailures === 0) {
-              matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"' *+\\/$^~%\\\\()]");
-            }
-          }
+          result2 = parse_ccssStartChar();
           if (result2 !== null) {
             result1 = [];
             while (result2 !== null) {
               result1.push(result2);
-              if (/^[a-zA-Z0-9_#.[\]\-""' *+\/$^~%\\()]/.test(input.charAt(pos))) {
-                result2 = input.charAt(pos);
-                pos++;
-              } else {
-                result2 = null;
-                if (reportFailures === 0) {
-                  matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"' *+\\/$^~%\\\\()]");
-                }
-              }
+              result2 = parse_ccssStartChar();
             }
           } else {
             result1 = null;
@@ -861,6 +846,32 @@ module.exports = (function(){
         return result0;
       }
       
+      function parse_ccssStartChar() {
+        var result0;
+        
+        if (/^[a-zA-Z0-9_#.[\]\-""' *+\/$^~%\\()~]/.test(input.charAt(pos))) {
+          result0 = input.charAt(pos);
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("[a-zA-Z0-9_#.[\\]\\-\"\"' *+\\/$^~%\\\\()~]");
+          }
+        }
+        if (result0 === null) {
+          if (input.substr(pos, 2) === "::") {
+            result0 = "::";
+            pos += 2;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"::\"");
+            }
+          }
+        }
+        return result0;
+      }
+      
       function parse_ccssOp() {
         var result0;
         
@@ -921,7 +932,7 @@ module.exports = (function(){
       }
       
       function parse_ContextualCCSSLine() {
-        var result0, result1, result2, result3, result4, result5;
+        var result0, result1, result2, result3, result4, result5, result6;
         var pos0, pos1;
         
         reportFailures++;
@@ -956,23 +967,29 @@ module.exports = (function(){
             result1 = null;
           }
           if (result1 !== null) {
-            if (input.charCodeAt(pos) === 58) {
-              result2 = ":";
-              pos++;
-            } else {
-              result2 = null;
-              if (reportFailures === 0) {
-                matchFailed("\":\"");
-              }
-            }
+            result2 = parse__();
             if (result2 !== null) {
-              result3 = parse__();
+              if (input.charCodeAt(pos) === 58) {
+                result3 = ":";
+                pos++;
+              } else {
+                result3 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\":\"");
+                }
+              }
               if (result3 !== null) {
-                result4 = parse_ccssOp();
+                result4 = parse__();
                 if (result4 !== null) {
-                  result5 = parse_anytoend();
+                  result5 = parse_ccssOp();
                   if (result5 !== null) {
-                    result0 = [result0, result1, result2, result3, result4, result5];
+                    result6 = parse_anytoend();
+                    if (result6 !== null) {
+                      result0 = [result0, result1, result2, result3, result4, result5, result6];
+                    } else {
+                      result0 = null;
+                      pos = pos1;
+                    }
                   } else {
                     result0 = null;
                     pos = pos1;
@@ -1000,7 +1017,7 @@ module.exports = (function(){
         if (result0 !== null) {
           result0 = (function(offset, prop, op, tail) {
               return {type:'constraint', cssText: "::["+p.trim(prop)+"]"+" "+op+" "+p.stringify(tail)};
-            })(pos0, result0[1], result0[4], result0[5]);
+            })(pos0, result0[1], result0[5], result0[6]);
         }
         if (result0 === null) {
           pos = pos0;
@@ -1282,8 +1299,8 @@ module.exports = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, $, s) {
-            return {type:'ruleset',selectors:$,rules:s};
+          result0 = (function(offset, sel, s) {
+            return {type:'ruleset',selectors:sel,rules:s};
           })(pos0, result0[1], result0[2]);
         }
         if (result0 === null) {
@@ -1576,7 +1593,7 @@ module.exports = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, $, $s) {return [$].concat($s)})(pos0, result0[0], result0[1]);
+          result0 = (function(offset, sel, sels) {return [sel].concat(sels)})(pos0, result0[0], result0[1]);
         }
         if (result0 === null) {
           pos = pos0;
@@ -1622,7 +1639,7 @@ module.exports = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, $) {return $})(pos0, result0[2]);
+          result0 = (function(offset, sel) {return sel})(pos0, result0[2]);
         }
         if (result0 === null) {
           pos = pos0;
@@ -1682,7 +1699,7 @@ module.exports = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, $) {return $.join("").trim()})(pos0, result0[1]);
+          result0 = (function(offset, sel) {return sel.join("").trim()})(pos0, result0[1]);
         }
         if (result0 === null) {
           pos = pos0;
