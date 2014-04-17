@@ -122,16 +122,21 @@ module.exports = ->
       ###
         
 
-    # BDD tests on browser
-    mocha_phantomjs:
-      all: ['spec/runner.html']
-
     # Cross-browser testing
     connect:
       server:
         options:
           base: ''
           port: 9999
+
+    # BDD tests on browser
+    mocha_phantomjs:
+      options:
+        output: 'spec/result.xml'
+        reporter: 'spec'
+      all:
+        options:
+          urls: ['http://127.0.0.1:9999/spec/runner.html']
 
     'saucelabs-mocha':
       all:
