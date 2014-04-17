@@ -39,7 +39,7 @@ setupObserver = () ->
     else
       window.MutationObserver = window.JsMutationObserver
 
-  returh unless window.MutationObserver
+  return unless window.MutationObserver
 
   observer = new MutationObserver (mutations) ->
     LOG "MutationObserver", mutations
