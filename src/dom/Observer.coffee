@@ -11,11 +11,13 @@ observer = null
 GSS.is_observing = false
   
 GSS.observe = () ->
+  return unless observer
   if !GSS.is_observing and GSS.config.observe
     observer.observe(document.body, GSS.config.observerOptions)
     GSS.is_observing = true
 
 GSS.unobserve = () ->  
+  return unless observer
   observer.disconnect()
   GSS.is_observing = false
 
@@ -36,6 +38,8 @@ setupObserver = () ->
       window.MutationObserver = window.WebKitMutationObserver
     else
       window.MutationObserver = window.JsMutationObserver
+
+  returh unless window.MutationObserver
 
   observer = new MutationObserver (mutations) ->
     LOG "MutationObserver", mutations
