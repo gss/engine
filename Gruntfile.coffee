@@ -144,22 +144,19 @@ module.exports = ->
           urls: ['http://127.0.0.1:9999/spec/runner.html']
           browsers: [
             browserName: 'googlechrome'
-            version: '31'
+            version: '34'
           ,
             browserName: 'firefox'
-            version: '26'
+            version: '28'
           ,
             browserName: 'safari'
             version: '6'
           ,
-            browserName: 'opera'
-            version: '12'
+            browserName: 'internet explorer'
+            version: '11'
           ,
             browserName: 'internet explorer'
             version: '10'
-          ,
-            browserName: 'internet explorer'
-            version: '9'
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
