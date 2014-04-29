@@ -2,3 +2,5 @@
 .DS_Store
 /spec/*.js
 sauce_connect.log*
+spec/*.xml
+npm-debug.log
