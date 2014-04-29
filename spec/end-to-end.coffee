@@ -299,7 +299,29 @@ describe 'End - to - End', ->
         container.innerHTML =  """
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
           """
+
+    describe "multiple files", ->
     
+      it 'should compute', (done) ->
+        oldDefault = GSS.config.defaultStrength
+        GSS.config.defaultStrength = "strong"
+      
+        listen = (e) ->     
+          expect(engine.vars).to.eql 
+            "[external-file]": 1000
+            "[external-file-2]": 2000
+            "[external-file-3]": 3000
+          GSS.config.defaultStrength = oldDefault
+          done()     
+                     
+        engine.once 'solved', listen
+    
+        container.innerHTML =  """
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-2.gss"></link>
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-3.gss"></link>
+          """
+
   
   # Virtual Elements
   # ===========================================================
@@ -872,7 +894,6 @@ describe 'End - to - End', ->
   
       it 'should compute', (done) ->
         listen = (e) ->
-          console.log engine.vars
           expect(engine.vars).to.eql                  
             "$container[x]": 10,
             "$container[width]": 100,

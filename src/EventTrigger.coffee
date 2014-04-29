@@ -60,7 +60,7 @@ class EventTrigger
   
   trigger: (type, o) ->
     for listener in @_getListeners type      
-      listener.call @, o
+      listener?.call @, o
     @
   
   

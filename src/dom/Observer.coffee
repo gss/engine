@@ -30,7 +30,7 @@ GSS.unobserveElement = (el) ->
   i = _unobservedElements.indexOf(el)
   _unobservedElements.splice( i, 1 ) if i > -1
 
-setupObserver = () ->
+GSS.setupObserver = () ->
 
   # Polyfill
   unless window.MutationObserver
@@ -61,7 +61,7 @@ setupObserver = () ->
         continue unless m.target.parentElement
         sheet =  m.target.parentElement.gssStyleSheet
         if sheet
-          sheet.reinstall()
+          sheet.reload()
           e = sheet.engine
           if enginesToReset.indexOf(e) is -1
             enginesToReset.push e
@@ -136,45 +136,16 @@ setupObserver = () ->
     needsUpdateQueries = null
     invalidMeasureIds = null
         
-    GSS.load()
+    GSS.update()
   
-    #LOG "observer(mutations)",mutations
-    #GSS.checkAllStyleNodes()
-  
-    #scopesToLoad = []
     ###
     for m in mutations
-      # els removed from scope
       if m.removedNodes.length > 0 # nodelist are weird?
         for node in m.removedNodes
-          # destroy engines
-          if node._gss_is_scope
-            GSS.get.engine(node).destroy()      
-        
-          ## scopes with removed ASTs
-          #if GSS.get.isStyleNode node
-          #  scope = GSS.get.scopeForStyleNode node
-          #  if scopesToLoad.indexOf(scope) is -1 and scope
-          #    scopesToLoad.push scope  
-          #
-        
     
-      ## els removed from scope
-      #if m.addedNodes.length > 0 # nodelist are weird?
-      #  for node in m.addedNodes        
-      #    # scopes with new ASTs        
-      #    if GSS.get.isStyleNode node
-      #      scope = GSS.get.scopeForStyleNode node
-      #      if scopesToLoad.indexOf(scope) is -1
-      #        scopesToLoad.push scope
-      #
-      #for scope in scopesToLoad
-      #  GSS(scope).load()
-    ###
-    
-    # end for mutation
-    #if GSS.observeStyleNodes
-      
+      if m.addedNodes.length > 0 # nodelist are weird?
+        for node in m.addedNodes        
+    ###  
 
 
 # On Display
@@ -198,23 +169,14 @@ GSS.onDisplay = ->
 # On Document Ready
 # ====================================================
 
+# The event "DOMContentLoaded" will be fired when the document has been parsed completely, that is without stylesheets* and additional images. If you need to wait for images and stylesheets, use "load" instead.
+
 # read all styles when shit is ready
 document.addEventListener "DOMContentLoaded", (e) ->
   
-  GSS.body = document.body or GSS.getElementsByTagName('body')[0]
-  GSS.html = html = GSS.body.parentNode
-  
-  # GSS object is ready for action
-  document.dispatchEvent new CustomEvent 'GSS', {detail:GSS, bubbles:false, cancelable: false}
-  
-  setupObserver()
   GSS.boot()
-  LOG "DOMContentLoaded"
-  # The event "DOMContentLoaded" will be fired when the document has been parsed completely, that is without stylesheets* and additional images. If you need to wait for images and stylesheets, use "load" instead.  
-  #GSS.loadAndRun()
-  GSS.load()
-  GSS.observe()
-  GSS.trigger "afterLoaded"
+  
+
   
 
 

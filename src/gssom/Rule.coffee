@@ -61,6 +61,14 @@ class Rule
     for rule in @rules
       rule.reset()
   
+  destroy: ->
+    @rules = null
+    @commands = null
+    @engine = null
+    @parent = null
+    @styleSheet = null
+    @boundConditionals = null
+  
   executeCommands: () ->
     if @commands then @engine.run @ #install?
   

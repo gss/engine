@@ -1,6 +1,6 @@
 Rule = GSS.Rule
 
-class StyleSheet
+class StyleSheet extends GSS.EventTrigger
   
   isScoped: false        
   
@@ -11,12 +11,14 @@ class StyleSheet
   isScoped:   Boolean  
   ###  
   constructor: (o = {}) ->  
+    super
+    
     for key, val of o
       @[key] = val  
     
     if !@engine then throw new Error "StyleSheet needs engine"
       
-    @engine.styleSheets.push @
+    @engine.addStyleSheet @
     
     GSS.styleSheets.push @
     
@@ -26,15 +28,17 @@ class StyleSheet
       tagName = @el.tagName
       if tagName is "LINK"
         @isRemote = true    
-    
-    
+        
     @rules = []
     if o.rules      
       @addRules o.rules
-      
+    
+    @loadIfNeeded()
+    
     return @      
     
   addRules: (rules) ->
+    @setNeedsInstall true
     for r in rules
       r.parent = @
       r.styleSheet = @      
@@ -42,16 +46,108 @@ class StyleSheet
       rule = new GSS.Rule r
       @rules.push rule
   
-  needsInstall: true           
+  # Load
+  # ---------------------------------------------
   
-  install: () ->
+  isLoading: false
+  
+  needsLoad: true  
+  
+  reload: ->
+    @destroyRules()
+    @_load()
+  
+  loadIfNeeded: () ->
+    if @needsLoad
+      @needsLoad = false
+      @_load()
+    @
+  
+  _load: ->    
+    if @isRemote
+      @_loadRemote()
+    else if @el
+      @_loadInline()
+  
+  _loadInline: ->
+    #@destroyRules()
+    @addRules GSS.get.readAST @el
+  
+  _loadRemote: () ->
+    if @remoteSourceText
+      return @addRules GSS.compile @remoteSourceText
+    url = @el.getAttribute('href')
+    if !url then return null
+    req = new XMLHttpRequest    
+    req.onreadystatechange = () =>
+      return unless req.readyState is 4
+      return unless req.status is 200
+      @remoteSourceText = req.responseText.trim()
+      @addRules GSS.compile @remoteSourceText
+      @isLoading = false
+      @trigger 'loaded'
+    @isLoading = true
+    req.open 'GET', url, true
+    req.send null
+  
+  
+  # Install
+  # ---------------------------------------------
+    
+  needsInstall: false # flagged in @addRules
+  
+  setNeedsInstall: (bool) ->
+    if bool
+      @engine.setNeedsUpdate true
+      @needsInstall = true
+    else      
+      @needsInstall = false
+    
+  install: ->
+    if @needsInstall
+      @setNeedsInstall false
+      @_install()     
+  
+  reinstall: () ->
+    @_install()
+  
+  _install: ->
+    for rule in @rules
+      rule.install()  
+  
+  reset: ->
+    @setNeedsInstall true
+    for rule in @rules
+      rule.reset()
+  
+  # Destruction
+  # ---------------------------------------------
+  
+  destroyRules: ->
+    for rule in @rules
+      rule.destroy()
+    @rules = []
+  
+  destroy: () ->
+    i = @engine.styleSheets.indexOf @
+    @engine.styleSheets.splice i, 1
+    
+    i = GSS.styleSheets.indexOf @
+    GSS.styleSheets.splice i, 1
+    
+    #...
+  
+  isRemoved: ->
+    if @el and !document.contains @el
+      return true
+    return false
+  
+  ###
+  install__OLD: () ->
     if @needsInstall
       @needsInstall = false
       @_install()
     @
-  
-  reinstall: () ->
-    @_install()
   
   installNewRules: (rules) ->
     @rules = []
@@ -85,31 +181,7 @@ class StyleSheet
       @installNewRules GSS.compile @remoteSourceText
     req.open 'GET', url, true
     req.send null
-  
-  reset: ->    
-    @needsInstall = true
-    for rule in @rules
-      rule.reset()     
-  
-  destroyRules: ->
-    for rule in @rules
-      rule.destroy()
-    @rules = []
-  
-  destroy: () ->
-    i = @engine.styleSheets.indexOf @
-    @engine.styleSheets.splice i, 1
-    
-    i = GSS.styleSheets.indexOf @
-    GSS.styleSheets.splice i, 1
-    
-    #...
-  
-  isRemoved: ->
-    if @el and !document.contains @el
-      return true
-    return false
-    
+  ###
   
   # CSS dumping
   # ----------------------------------------
@@ -164,6 +236,12 @@ class StyleSheet.Collection
   install: ->
     for sheet in @
       sheet.install()
+    @
+  
+  find: () ->
+    nodes = document.querySelectorAll '[type="text/gss"], [type="text/gss-ast"]'
+    for node in nodes
+      sheet = GSS.StyleSheet.fromNode node
     @
   
   findAndInstall: () ->

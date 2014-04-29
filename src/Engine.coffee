@@ -96,7 +96,7 @@ class Engine extends GSS.EventTrigger
   _Hierarchy_destroy: ->        
     # update engine hierarchy
     @parentEngine.childEngines.splice(@parentEngine.childEngines.indexOf(@),1)
-    @parentEngine = null
+    @parentEngine = null        
   
   
   # Commands
@@ -116,11 +116,7 @@ class Engine extends GSS.EventTrigger
     # digests & transforms commands into @workerCommands    
     @commander.execute ast
     #if ast.commands      
-    #  @commander.execute ast.commands
-                 
-  
-  _StyleSheets_setup: ->
-    @styleSheets = []    
+    #  @commander.execute ast.commands              
   
   load: ->    
     if !@scope then throw new Error "can't load scopeless engine"
@@ -149,8 +145,7 @@ class Engine extends GSS.EventTrigger
     for sheet in styleSheets
       sheet.reset()
     
-    @setNeedsUpdate true
-    #@run ASTs
+    @setNeedsUpdate true    
     @
   
   registerCommands: (commands) ->
@@ -160,85 +155,63 @@ class Engine extends GSS.EventTrigger
   registerCommand: (command) ->
     # TODO: treat commands as strings and check cache for dups?
     @workerCommands.push command
-    #
+    
     @setNeedsLayout true
     @
+      
   
   
-  # CSSDumper
+  
+  # StyleSheets
   # ------------------------------------------------
   
-  cssToDump: null
+  _StyleSheets_setup: ->
+    @styleSheets = []
   
-  cssDump: null
-  
-  setupCSSDumpIfNeeded: () ->
-    dumpNode = @scope or document.body
-    if !@cssDump
-      #@scope.insertAdjacentHTML "afterbegin", ""
-      @cssDump = document.createElement "style"
-      @cssDump.id = "gss-css-dump-" + @id 
-      dumpNode.appendChild @cssDump
-      #@cssDump.classList.add("gss-css-dump")     
-  
-  needsDumpCSS: false
-  
-  setNeedsDumpCSS: (bool) ->
-    if bool
-      @setNeedsLayout true
-      @needsDumpCSS = true
-    else
-      @needsDumpCSS = false
-  
-  dumpCSSIfNeeded: () ->
-    if @needsDumpCSS
-      @needsDumpCSS = false
-      @setupCSSDumpIfNeeded()
-      css = ""
-      for sheet in @styleSheets
-        sheetCSS = sheet.dumpCSSIfNeeded()
-        css = css + sheetCSS if sheetCSS
-      if css.length > 0
-        @cssDump.innerHTML = css
-      #@cssDump.insertAdjacentHTML "beforeend", @cssToDump
-      #@cssToDump = null
-
-  _CSSDumper_clean: () ->
-    @cssDump?.innerHTML = ""
-    #@needsDumpCSS = false
-  
-  _CSSDumper_destroy: () ->
-    #@cssDump?.remove()
-    @needsDumpCSS = false
-    @cssDump = null    
-  
+  addStyleSheet: (sheet) ->
+    @setNeedsUpdate(true)
+    @styleSheets.push sheet
   
   # Update pass
   # ------------------------------------------------
   #
-  # - updates constraint commands for engines
-  # - measurements
+  # - waits for stylesheets to fully load
+  # - installs commands from stylesheets
   #
   
   needsUpdate: false
   
   setNeedsUpdate: (bool) ->
-    #LOG @id,".setNeedsUpdate( #{bool} )"
     if bool
       GSS.setNeedsUpdate true
       @needsUpdate = true
-    else
+    else      
       @needsUpdate = false
   
   updateIfNeeded: () ->
-    #LOG @id,".updateIfNeeded()"    
     if @needsUpdate
-      if @ASTs # then digest ASTs
-        @run @ASTs
-        @ASTs = null      
+      @_whenReadyForUpdate =>
+        for sheet in @styleSheets
+          sheet.install()
+        @updateChildrenIfNeeded()
       @setNeedsUpdate false
+    else
+      @updateChildrenIfNeeded()
+  
+  _whenReadyForUpdate: (cb) ->
+    loadingCount = 0
+    for sheet in @styleSheets
+      if sheet.isLoading
+        loadingCount++
+        sheet.once "loaded", =>
+          loadingCount--
+          if loadingCount is 0 then cb.call @
+    if loadingCount is 0 then cb.call @
+    @    
+  
+  updateChildrenIfNeeded: ->
     for child in @childEngines
-      child.updateIfNeeded()  
+      child.updateIfNeeded()
   
   
   # Layout pass
@@ -449,6 +422,7 @@ class Engine extends GSS.EventTrigger
   solveWithoutWorker: () ->
     LOG @id,".solveWithoutWorker()", @workerCommands
     workerMessage = {commands:@workerCommands}
+    
     @workerMessageHistory.push workerMessage
     unless @worker
       @worker = new GSS.Thread {
@@ -547,6 +521,54 @@ class Engine extends GSS.EventTrigger
     }
     e = new CustomEvent eName, o
     @scope.dispatchEvent e  
+  
+  
+  # CSSDumper
+  # ------------------------------------------------
+  
+  cssToDump: null
+  
+  cssDump: null
+  
+  setupCSSDumpIfNeeded: () ->
+    dumpNode = @scope or document.body
+    if !@cssDump
+      #@scope.insertAdjacentHTML "afterbegin", ""
+      @cssDump = document.createElement "style"
+      @cssDump.id = "gss-css-dump-" + @id 
+      dumpNode.appendChild @cssDump
+      #@cssDump.classList.add("gss-css-dump")     
+  
+  needsDumpCSS: false
+  
+  setNeedsDumpCSS: (bool) ->
+    if bool
+      @setNeedsLayout true
+      @needsDumpCSS = true
+    else
+      @needsDumpCSS = false
+  
+  dumpCSSIfNeeded: () ->
+    if @needsDumpCSS
+      @needsDumpCSS = false
+      @setupCSSDumpIfNeeded()
+      css = ""
+      for sheet in @styleSheets
+        sheetCSS = sheet.dumpCSSIfNeeded()
+        css = css + sheetCSS if sheetCSS
+      if css.length > 0
+        @cssDump.innerHTML = css
+      #@cssDump.insertAdjacentHTML "beforeend", @cssToDump
+      #@cssToDump = null
+
+  _CSSDumper_clean: () ->
+    @cssDump?.innerHTML = ""
+    #@needsDumpCSS = false
+  
+  _CSSDumper_destroy: () ->
+    #@cssDump?.remove()
+    @needsDumpCSS = false
+    @cssDump = null
   
   
   # Clean

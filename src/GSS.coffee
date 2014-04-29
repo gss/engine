@@ -110,29 +110,31 @@ GSS.observer = require("./dom/Observer.js")
 # Runtime
 # ------------------------------------------------
 
-GSS.boot = () ->
+GSS.boot = () ->  
+  GSS.body = document.body or GSS.getElementsByTagName('body')[0]
+  GSS.html = html = GSS.body.parentNode
+  
   # setup root engine
   GSS({scope:GSS.Getter.getRootScope(), is_root:true})
-
-#GSS.refresh = () ->
-
-GSS.load = () ->
-  # dirty load
-  GSS.styleSheets.findAndInstall()
-  GSS.render()
   
-GSS.render = () ->
-  TIME "RENDER"
-  # force synchronous first two passes
+  # GSS object is ready for action
+  document.dispatchEvent new CustomEvent 'GSS', {detail:GSS, bubbles:false, cancelable: false}
+  
+  GSS.setupObserver()    
+  GSS.update()
+  GSS.observe()
+  GSS.trigger "afterLoaded"
+
+GSS.update = () ->
+  # dirty load
+  GSS.styleSheets.find()
   GSS.updateIfNeeded()
-  GSS.layoutIfNeeded()  
-  # async -> display
+  GSS.layoutIfNeeded()
 
 # Update pass
 # ------------------------------------------------
 #
-# - updates constraint commands for engines
-# - measurements
+# - stylesheets installed into engines
 #
 
 GSS.needsUpdate = false
@@ -157,7 +159,7 @@ GSS.updateIfNeeded = () ->
 # Layout pass
 # ------------------------------------------------
 #
-# - solvers solve
+# - solvers compute values
 #
 
 GSS.needsLayout = false

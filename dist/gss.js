@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.2-beta (2014-04-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20112,19 +20111,26 @@ GSS.get = new GSS.Getter();
 GSS.observer = require("./dom/Observer.js");
 
 GSS.boot = function() {
-  return GSS({
+  var html;
+  GSS.body = document.body || GSS.getElementsByTagName('body')[0];
+  GSS.html = html = GSS.body.parentNode;
+  GSS({
     scope: GSS.Getter.getRootScope(),
     is_root: true
   });
+  document.dispatchEvent(new CustomEvent('GSS', {
+    detail: GSS,
+    bubbles: false,
+    cancelable: false
+  }));
+  GSS.setupObserver();
+  GSS.update();
+  GSS.observe();
+  return GSS.trigger("afterLoaded");
 };
 
-GSS.load = function() {
-  GSS.styleSheets.findAndInstall();
-  return GSS.render();
-};
-
-GSS.render = function() {
-  TIME("RENDER");
+GSS.update = function() {
+  GSS.styleSheets.find();
   GSS.updateIfNeeded();
   return GSS.layoutIfNeeded();
 };
@@ -20408,7 +20414,9 @@ EventTrigger = (function() {
     _ref = this._getListeners(type);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       listener = _ref[_i];
-      listener.call(this, o);
+      if (listener != null) {
+        listener.call(this, o);
+      }
     }
     return this;
   };
@@ -21047,7 +21055,7 @@ module.exports = View;
 
 });
 require.register("gss/lib/dom/Observer.js", function(exports, require, module){
-var LOG, observer, setupObserver, _unobservedElements,
+var LOG, observer, _unobservedElements,
   __slice = [].slice;
 
 LOG = function() {
@@ -21092,7 +21100,7 @@ GSS.unobserveElement = function(el) {
   }
 };
 
-setupObserver = function() {
+GSS.setupObserver = function() {
   if (!window.MutationObserver) {
     if (window.WebKitMutationObserver) {
       window.MutationObserver = window.WebKitMutationObserver;
@@ -21124,7 +21132,7 @@ setupObserver = function() {
         }
         sheet = m.target.parentElement.gssStyleSheet;
         if (sheet) {
-          sheet.reinstall();
+          sheet.reload();
           e = sheet.engine;
           if (enginesToReset.indexOf(e) === -1) {
             enginesToReset.push(e);
@@ -21214,35 +21222,14 @@ setupObserver = function() {
     nodesToIgnore = null;
     needsUpdateQueries = null;
     invalidMeasureIds = null;
-    return GSS.load();
+    return GSS.update();
     /*
     for m in mutations
-      # els removed from scope
       if m.removedNodes.length > 0 # nodelist are weird?
         for node in m.removedNodes
-          # destroy engines
-          if node._gss_is_scope
-            GSS.get.engine(node).destroy()      
-        
-          ## scopes with removed ASTs
-          #if GSS.get.isStyleNode node
-          #  scope = GSS.get.scopeForStyleNode node
-          #  if scopesToLoad.indexOf(scope) is -1 and scope
-          #    scopesToLoad.push scope  
-          #
-        
     
-      ## els removed from scope
-      #if m.addedNodes.length > 0 # nodelist are weird?
-      #  for node in m.addedNodes        
-      #    # scopes with new ASTs        
-      #    if GSS.get.isStyleNode node
-      #      scope = GSS.get.scopeForStyleNode node
-      #      if scopesToLoad.indexOf(scope) is -1
-      #        scopesToLoad.push scope
-      #
-      #for scope in scopesToLoad
-      #  GSS(scope).load()
+      if m.addedNodes.length > 0 # nodelist are weird?
+        for node in m.addedNodes
     */
 
   });
@@ -21265,20 +21252,7 @@ GSS.onDisplay = function() {
 };
 
 document.addEventListener("DOMContentLoaded", function(e) {
-  var html;
-  GSS.body = document.body || GSS.getElementsByTagName('body')[0];
-  GSS.html = html = GSS.body.parentNode;
-  document.dispatchEvent(new CustomEvent('GSS', {
-    detail: GSS,
-    bubbles: false,
-    cancelable: false
-  }));
-  setupObserver();
-  GSS.boot();
-  LOG("DOMContentLoaded");
-  GSS.load();
-  GSS.observe();
-  return GSS.trigger("afterLoaded");
+  return GSS.boot();
 });
 
 module.exports = observer;
@@ -21289,11 +21263,15 @@ require.register("gss/lib/gssom/Node.js", function(exports, require, module){
 
 });
 require.register("gss/lib/gssom/StyleSheet.js", function(exports, require, module){
-var Rule, StyleSheet;
+var Rule, StyleSheet,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Rule = GSS.Rule;
 
-StyleSheet = (function() {
+StyleSheet = (function(_super) {
+  __extends(StyleSheet, _super);
+
   StyleSheet.prototype.isScoped = false;
 
   /*    
@@ -21309,6 +21287,7 @@ StyleSheet = (function() {
     if (o == null) {
       o = {};
     }
+    StyleSheet.__super__.constructor.apply(this, arguments);
     for (key in o) {
       val = o[key];
       this[key] = val;
@@ -21316,7 +21295,7 @@ StyleSheet = (function() {
     if (!this.engine) {
       throw new Error("StyleSheet needs engine");
     }
-    this.engine.styleSheets.push(this);
+    this.engine.addStyleSheet(this);
     GSS.styleSheets.push(this);
     this.isRemote = false;
     this.remoteSourceText = null;
@@ -21330,11 +21309,13 @@ StyleSheet = (function() {
     if (o.rules) {
       this.addRules(o.rules);
     }
+    this.loadIfNeeded();
     return this;
   }
 
   StyleSheet.prototype.addRules = function(rules) {
     var r, rule, _i, _len, _results;
+    this.setNeedsInstall(true);
     _results = [];
     for (_i = 0, _len = rules.length; _i < _len; _i++) {
       r = rules[_i];
@@ -21347,59 +21328,40 @@ StyleSheet = (function() {
     return _results;
   };
 
-  StyleSheet.prototype.needsInstall = true;
+  StyleSheet.prototype.isLoading = false;
 
-  StyleSheet.prototype.install = function() {
-    if (this.needsInstall) {
-      this.needsInstall = false;
-      this._install();
+  StyleSheet.prototype.needsLoad = true;
+
+  StyleSheet.prototype.reload = function() {
+    this.destroyRules();
+    return this._load();
+  };
+
+  StyleSheet.prototype.loadIfNeeded = function() {
+    if (this.needsLoad) {
+      this.needsLoad = false;
+      this._load();
     }
     return this;
   };
 
-  StyleSheet.prototype.reinstall = function() {
-    return this._install();
-  };
-
-  StyleSheet.prototype.installNewRules = function(rules) {
-    var rule, _i, _len, _ref, _results;
-    this.rules = [];
-    this.addRules(rules);
-    _ref = this.rules;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      rule = _ref[_i];
-      _results.push(rule.install());
-    }
-    return _results;
-  };
-
-  StyleSheet.prototype._install = function() {
-    var rule, _i, _len, _ref, _results;
+  StyleSheet.prototype._load = function() {
     if (this.isRemote) {
-      return this._installRemote();
+      return this._loadRemote();
     } else if (this.el) {
-      return this._installInline();
-    } else {
-      _ref = this.rules;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        rule = _ref[_i];
-        _results.push(rule.install());
-      }
-      return _results;
+      return this._loadInline();
     }
   };
 
-  StyleSheet.prototype._installInline = function() {
-    return this.installNewRules(GSS.get.readAST(this.el));
+  StyleSheet.prototype._loadInline = function() {
+    return this.addRules(GSS.get.readAST(this.el));
   };
 
-  StyleSheet.prototype._installRemote = function() {
+  StyleSheet.prototype._loadRemote = function() {
     var req, url,
       _this = this;
     if (this.remoteSourceText) {
-      return this.installNewRules(GSS.compile(this.remoteSourceText));
+      return this.addRules(GSS.compile(this.remoteSourceText));
     }
     url = this.el.getAttribute('href');
     if (!url) {
@@ -21414,15 +21376,51 @@ StyleSheet = (function() {
         return;
       }
       _this.remoteSourceText = req.responseText.trim();
-      return _this.installNewRules(GSS.compile(_this.remoteSourceText));
+      _this.addRules(GSS.compile(_this.remoteSourceText));
+      _this.isLoading = false;
+      return _this.trigger('loaded');
     };
+    this.isLoading = true;
     req.open('GET', url, true);
     return req.send(null);
   };
 
+  StyleSheet.prototype.needsInstall = false;
+
+  StyleSheet.prototype.setNeedsInstall = function(bool) {
+    if (bool) {
+      this.engine.setNeedsUpdate(true);
+      return this.needsInstall = true;
+    } else {
+      return this.needsInstall = false;
+    }
+  };
+
+  StyleSheet.prototype.install = function() {
+    if (this.needsInstall) {
+      this.setNeedsInstall(false);
+      return this._install();
+    }
+  };
+
+  StyleSheet.prototype.reinstall = function() {
+    return this._install();
+  };
+
+  StyleSheet.prototype._install = function() {
+    var rule, _i, _len, _ref, _results;
+    _ref = this.rules;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      rule = _ref[_i];
+      _results.push(rule.install());
+    }
+    return _results;
+  };
+
   StyleSheet.prototype.reset = function() {
     var rule, _i, _len, _ref, _results;
-    this.needsInstall = true;
+    this.setNeedsInstall(true);
     _ref = this.rules;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -21457,6 +21455,48 @@ StyleSheet = (function() {
     return false;
   };
 
+  /*
+  install__OLD: () ->
+    if @needsInstall
+      @needsInstall = false
+      @_install()
+    @
+  
+  installNewRules: (rules) ->
+    @rules = []
+    @addRules rules
+    for rule in @rules
+      rule.install()
+  
+  _install: ->    
+    if @isRemote
+      @_installRemote()
+    else if @el
+      @_installInline()
+    else 
+      for rule in @rules
+        rule.install()
+  
+  _installInline: ->
+    #@destroyRules()
+    @installNewRules GSS.get.readAST @el
+  
+  _installRemote: () ->
+    if @remoteSourceText
+      return @installNewRules GSS.compile @remoteSourceText
+    url = @el.getAttribute('href')
+    if !url then return null
+    req = new XMLHttpRequest
+    req.onreadystatechange = () =>
+      return unless req.readyState is 4
+      return unless req.status is 200
+      @remoteSourceText = req.responseText.trim()
+      @installNewRules GSS.compile @remoteSourceText
+    req.open 'GET', url, true
+    req.send null
+  */
+
+
   StyleSheet.prototype.needsDumpCSS = false;
 
   StyleSheet.prototype.setNeedsDumpCSS = function(bool) {
@@ -21490,7 +21530,7 @@ StyleSheet = (function() {
 
   return StyleSheet;
 
-})();
+})(GSS.EventTrigger);
 
 StyleSheet.fromNode = function(node) {
   var engine, sheet;
@@ -21525,6 +21565,16 @@ StyleSheet.Collection = (function() {
     for (_i = 0, _len = this.length; _i < _len; _i++) {
       sheet = this[_i];
       sheet.install();
+    }
+    return this;
+  };
+
+  Collection.prototype.find = function() {
+    var node, nodes, sheet, _i, _len;
+    nodes = document.querySelectorAll('[type="text/gss"], [type="text/gss-ast"]');
+    for (_i = 0, _len = nodes.length; _i < _len; _i++) {
+      node = nodes[_i];
+      sheet = GSS.StyleSheet.fromNode(node);
     }
     return this;
   };
@@ -21650,6 +21700,15 @@ Rule = (function() {
       _results.push(rule.reset());
     }
     return _results;
+  };
+
+  Rule.prototype.destroy = function() {
+    this.rules = null;
+    this.commands = null;
+    this.engine = null;
+    this.parent = null;
+    this.styleSheet = null;
+    return this.boundConditionals = null;
   };
 
   Rule.prototype.executeCommands = function() {
@@ -22009,10 +22068,6 @@ Engine = (function(_super) {
     return this.commander.execute(ast);
   };
 
-  Engine.prototype._StyleSheets_setup = function() {
-    return this.styleSheets = [];
-  };
-
   Engine.prototype.load = function() {
     var sheet, _i, _len, _ref, _results;
     if (!this.scope) {
@@ -22065,59 +22120,13 @@ Engine = (function(_super) {
     return this;
   };
 
-  Engine.prototype.cssToDump = null;
-
-  Engine.prototype.cssDump = null;
-
-  Engine.prototype.setupCSSDumpIfNeeded = function() {
-    var dumpNode;
-    dumpNode = this.scope || document.body;
-    if (!this.cssDump) {
-      this.cssDump = document.createElement("style");
-      this.cssDump.id = "gss-css-dump-" + this.id;
-      return dumpNode.appendChild(this.cssDump);
-    }
+  Engine.prototype._StyleSheets_setup = function() {
+    return this.styleSheets = [];
   };
 
-  Engine.prototype.needsDumpCSS = false;
-
-  Engine.prototype.setNeedsDumpCSS = function(bool) {
-    if (bool) {
-      this.setNeedsLayout(true);
-      return this.needsDumpCSS = true;
-    } else {
-      return this.needsDumpCSS = false;
-    }
-  };
-
-  Engine.prototype.dumpCSSIfNeeded = function() {
-    var css, sheet, sheetCSS, _i, _len, _ref;
-    if (this.needsDumpCSS) {
-      this.needsDumpCSS = false;
-      this.setupCSSDumpIfNeeded();
-      css = "";
-      _ref = this.styleSheets;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        sheet = _ref[_i];
-        sheetCSS = sheet.dumpCSSIfNeeded();
-        if (sheetCSS) {
-          css = css + sheetCSS;
-        }
-      }
-      if (css.length > 0) {
-        return this.cssDump.innerHTML = css;
-      }
-    }
-  };
-
-  Engine.prototype._CSSDumper_clean = function() {
-    var _ref;
-    return (_ref = this.cssDump) != null ? _ref.innerHTML = "" : void 0;
-  };
-
-  Engine.prototype._CSSDumper_destroy = function() {
-    this.needsDumpCSS = false;
-    return this.cssDump = null;
+  Engine.prototype.addStyleSheet = function(sheet) {
+    this.setNeedsUpdate(true);
+    return this.styleSheets.push(sheet);
   };
 
   Engine.prototype.needsUpdate = false;
@@ -22132,14 +22141,48 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.updateIfNeeded = function() {
-    var child, _i, _len, _ref, _results;
+    var _this = this;
     if (this.needsUpdate) {
-      if (this.ASTs) {
-        this.run(this.ASTs);
-        this.ASTs = null;
-      }
-      this.setNeedsUpdate(false);
+      this._whenReadyForUpdate(function() {
+        var sheet, _i, _len, _ref;
+        _ref = _this.styleSheets;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          sheet = _ref[_i];
+          sheet.install();
+        }
+        return _this.updateChildrenIfNeeded();
+      });
+      return this.setNeedsUpdate(false);
+    } else {
+      return this.updateChildrenIfNeeded();
     }
+  };
+
+  Engine.prototype._whenReadyForUpdate = function(cb) {
+    var loadingCount, sheet, _i, _len, _ref,
+      _this = this;
+    loadingCount = 0;
+    _ref = this.styleSheets;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      sheet = _ref[_i];
+      if (sheet.isLoading) {
+        loadingCount++;
+        sheet.once("loaded", function() {
+          loadingCount--;
+          if (loadingCount === 0) {
+            return cb.call(_this);
+          }
+        });
+      }
+    }
+    if (loadingCount === 0) {
+      cb.call(this);
+    }
+    return this;
+  };
+
+  Engine.prototype.updateChildrenIfNeeded = function() {
+    var child, _i, _len, _ref, _results;
     _ref = this.childEngines;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -22478,6 +22521,61 @@ Engine = (function(_super) {
     };
     e = new CustomEvent(eName, o);
     return this.scope.dispatchEvent(e);
+  };
+
+  Engine.prototype.cssToDump = null;
+
+  Engine.prototype.cssDump = null;
+
+  Engine.prototype.setupCSSDumpIfNeeded = function() {
+    var dumpNode;
+    dumpNode = this.scope || document.body;
+    if (!this.cssDump) {
+      this.cssDump = document.createElement("style");
+      this.cssDump.id = "gss-css-dump-" + this.id;
+      return dumpNode.appendChild(this.cssDump);
+    }
+  };
+
+  Engine.prototype.needsDumpCSS = false;
+
+  Engine.prototype.setNeedsDumpCSS = function(bool) {
+    if (bool) {
+      this.setNeedsLayout(true);
+      return this.needsDumpCSS = true;
+    } else {
+      return this.needsDumpCSS = false;
+    }
+  };
+
+  Engine.prototype.dumpCSSIfNeeded = function() {
+    var css, sheet, sheetCSS, _i, _len, _ref;
+    if (this.needsDumpCSS) {
+      this.needsDumpCSS = false;
+      this.setupCSSDumpIfNeeded();
+      css = "";
+      _ref = this.styleSheets;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        sheet = _ref[_i];
+        sheetCSS = sheet.dumpCSSIfNeeded();
+        if (sheetCSS) {
+          css = css + sheetCSS;
+        }
+      }
+      if (css.length > 0) {
+        return this.cssDump.innerHTML = css;
+      }
+    }
+  };
+
+  Engine.prototype._CSSDumper_clean = function() {
+    var _ref;
+    return (_ref = this.cssDump) != null ? _ref.innerHTML = "" : void 0;
+  };
+
+  Engine.prototype._CSSDumper_destroy = function() {
+    this.needsDumpCSS = false;
+    return this.cssDump = null;
   };
 
   Engine.prototype.clean = function() {
