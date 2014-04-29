@@ -32,8 +32,8 @@
     <script src="../node_modules/mocha/mocha.js"></script>
     <script>
       mocha.setup('bdd');
-      chai.Assertion.includeStack = true;
-      chai.Assertion.showDiff = true;
+      chai.config.includeStack = true;
+      chai.config.showDiff = true;
     </script>
     <script src="./perf.js"></script>
     <script src="./end-to-end.js"></script>
