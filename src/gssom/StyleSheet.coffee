@@ -142,46 +142,6 @@ class StyleSheet extends GSS.EventTrigger
       return true
     return false
   
-  ###
-  install__OLD: () ->
-    if @needsInstall
-      @needsInstall = false
-      @_install()
-    @
-  
-  installNewRules: (rules) ->
-    @rules = []
-    @addRules rules
-    for rule in @rules
-      rule.install()
-  
-  _install: ->    
-    if @isRemote
-      @_installRemote()
-    else if @el
-      @_installInline()
-    else 
-      for rule in @rules
-        rule.install()
-  
-  _installInline: ->
-    #@destroyRules()
-    @installNewRules GSS.get.readAST @el
-  
-  _installRemote: () ->
-    if @remoteSourceText
-      return @installNewRules GSS.compile @remoteSourceText
-    url = @el.getAttribute('href')
-    if !url then return null
-    req = new XMLHttpRequest
-    req.onreadystatechange = () =>
-      return unless req.readyState is 4
-      return unless req.status is 200
-      @remoteSourceText = req.responseText.trim()
-      @installNewRules GSS.compile @remoteSourceText
-    req.open 'GET', url, true
-    req.send null
-  ###
   
   # CSS dumping
   # ----------------------------------------
@@ -244,21 +204,12 @@ class StyleSheet.Collection
       sheet = GSS.StyleSheet.fromNode node
     @
   
-  findAndInstall: () ->
-    nodes = document.querySelectorAll '[type="text/gss"], [type="text/gss-ast"]'
-    for node in nodes
-      sheet = GSS.StyleSheet.fromNode node
-      sheet?.install()
-    @
-  
-  
   findAllRemoved: ->
     removed = []
     for sheet in @
       if sheet.isRemoved() then removed.push sheet
     return removed
     
-
 
 
 GSS.StyleSheet = StyleSheet

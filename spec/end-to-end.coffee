@@ -223,6 +223,24 @@ describe 'End - to - End', ->
             "[blah2]": 70
             "[md2]": 71 / 4
           done()
+    
+    describe 'async intrinsics w/ css dumping', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="sync1" class="sync"></div>
+            <style type="text/gss">                            
+              .sync, .async {
+                width: 100px !important;
+                height: == ::[intrinsic-width];
+              }
+            </style>
+          """
+        engine.once 'display', (e) ->
+          console.log engine.vars
+          expect(engine.vars).to.eql 
+            "$sync1[intrinsic-width]": 100
+            "$sync1[height]": 100            
+          done()
 
   
   

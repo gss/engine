@@ -125,17 +125,21 @@ GSS.boot = () ->
   GSS.observe()
   GSS.trigger "afterLoaded"
 
-GSS.update = () ->
-  # dirty load
-  GSS.styleSheets.find()
-  GSS.updateIfNeeded()
-  GSS.layoutIfNeeded()
+
+
 
 # Update pass
 # ------------------------------------------------
 #
-# - stylesheets installed into engines
-#
+# - stylesheet commands get installed into engines
+# - triggered automatically when engine registers new styleSheet
+# - Asynchronously top down through engine hierarchy
+
+GSS.update = () ->
+  GSS.styleSheets.find()
+  # synchronously trigger passes to speed up initial passes
+  GSS.updateIfNeeded()
+  GSS.layoutIfNeeded()
 
 GSS.needsUpdate = false
 
@@ -160,7 +164,16 @@ GSS.updateIfNeeded = () ->
 # ------------------------------------------------
 #
 # - solvers compute values
+# - triggered automatically when engine registers new command
+# - Synchronously top down through engine hierarchy
 #
+# once solved, an engine will immediedately display it's results, 
+# top down: from the engine scope's view downward
+#
+# TODO: 
+# - when an engine has depenedence on a parent one, asynchronously
+#   wait for parent engine to solve before solving...
+
 
 GSS.needsLayout = false
 
@@ -185,9 +198,9 @@ GSS.layoutIfNeeded = () ->
 # Display pass
 # ------------------------------------------------
 #
-# - write to dom
-#
-
+# - write computed values to dom
+# - top down through view hierarchy
+###
 GSS.needsDisplay = false
 
 GSS.setNeedsDisplay = (bool) ->
@@ -195,7 +208,6 @@ GSS.setNeedsDisplay = (bool) ->
     if !GSS.needsDisplay
       GSS._.defer GSS.displayIfNeeded
     GSS.needsDisplay = true        
-    #GSS.lazyDisplayIfNeeded()
   else
     GSS.needsDisplay = false
 
@@ -207,7 +219,6 @@ GSS.displayIfNeeded = () ->
     GSS.setNeedsDisplay false
     TIME_END "display pass"
     TIME_END "RENDER"
-#GSS.lazyDisplayIfNeeded = GSS._.debounce GSS.displayIfNeeded, 8, false     
-
+###
 
 

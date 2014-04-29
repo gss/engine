@@ -20181,29 +20181,27 @@ GSS.layoutIfNeeded = function() {
   }
 };
 
-GSS.needsDisplay = false;
+/*
+GSS.needsDisplay = false
 
-GSS.setNeedsDisplay = function(bool) {
-  if (bool) {
-    if (!GSS.needsDisplay) {
-      GSS._.defer(GSS.displayIfNeeded);
-    }
-    return GSS.needsDisplay = true;
-  } else {
-    return GSS.needsDisplay = false;
-  }
-};
+GSS.setNeedsDisplay = (bool) ->
+  if bool
+    if !GSS.needsDisplay
+      GSS._.defer GSS.displayIfNeeded
+    GSS.needsDisplay = true        
+  else
+    GSS.needsDisplay = false
 
-GSS.displayIfNeeded = function() {
-  if (GSS.needsDisplay) {
-    LOG_PASS("Display Pass", "violet");
-    TIME("display pass");
-    GSS.engines.root.displayIfNeeded();
-    GSS.setNeedsDisplay(false);
-    TIME_END("display pass");
-    return TIME_END("RENDER");
-  }
-};
+GSS.displayIfNeeded = () ->
+  if GSS.needsDisplay
+    LOG_PASS "Display Pass", "violet"
+    TIME "display pass"
+    GSS.engines.root.displayIfNeeded()
+    GSS.setNeedsDisplay false
+    TIME_END "display pass"
+    TIME_END "RENDER"
+*/
+
 
 });
 require.register("gss/lib/_.js", function(exports, require, module){
@@ -21455,48 +21453,6 @@ StyleSheet = (function(_super) {
     return false;
   };
 
-  /*
-  install__OLD: () ->
-    if @needsInstall
-      @needsInstall = false
-      @_install()
-    @
-  
-  installNewRules: (rules) ->
-    @rules = []
-    @addRules rules
-    for rule in @rules
-      rule.install()
-  
-  _install: ->    
-    if @isRemote
-      @_installRemote()
-    else if @el
-      @_installInline()
-    else 
-      for rule in @rules
-        rule.install()
-  
-  _installInline: ->
-    #@destroyRules()
-    @installNewRules GSS.get.readAST @el
-  
-  _installRemote: () ->
-    if @remoteSourceText
-      return @installNewRules GSS.compile @remoteSourceText
-    url = @el.getAttribute('href')
-    if !url then return null
-    req = new XMLHttpRequest
-    req.onreadystatechange = () =>
-      return unless req.readyState is 4
-      return unless req.status is 200
-      @remoteSourceText = req.responseText.trim()
-      @installNewRules GSS.compile @remoteSourceText
-    req.open 'GET', url, true
-    req.send null
-  */
-
-
   StyleSheet.prototype.needsDumpCSS = false;
 
   StyleSheet.prototype.setNeedsDumpCSS = function(bool) {
@@ -21575,19 +21531,6 @@ StyleSheet.Collection = (function() {
     for (_i = 0, _len = nodes.length; _i < _len; _i++) {
       node = nodes[_i];
       sheet = GSS.StyleSheet.fromNode(node);
-    }
-    return this;
-  };
-
-  Collection.prototype.findAndInstall = function() {
-    var node, nodes, sheet, _i, _len;
-    nodes = document.querySelectorAll('[type="text/gss"], [type="text/gss-ast"]');
-    for (_i = 0, _len = nodes.length; _i < _len; _i++) {
-      node = nodes[_i];
-      sheet = GSS.StyleSheet.fromNode(node);
-      if (sheet != null) {
-        sheet.install();
-      }
     }
     return this;
   };
@@ -22211,6 +22154,7 @@ Engine = (function(_super) {
     this.hoistedTrigger("beforeLayout", this);
     this.is_running = true;
     TIME("" + this.id + " LAYOUT & DISPLAY");
+    this.dumpCSSIfNeeded();
     this.solve();
     return this.setNeedsLayout(false);
   };
@@ -22284,7 +22228,6 @@ Engine = (function(_super) {
         }
       }
     }
-    this.dumpCSSIfNeeded();
     if (needsToDisplayViews) {
       if (this.scope) {
         GSS.get.view(this.scope).displayIfNeeded();

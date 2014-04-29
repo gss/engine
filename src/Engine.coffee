@@ -158,10 +158,7 @@ class Engine extends GSS.EventTrigger
     
     @setNeedsLayout true
     @
-      
-  
-  
-  
+            
   # StyleSheets
   # ------------------------------------------------
   
@@ -172,12 +169,13 @@ class Engine extends GSS.EventTrigger
     @setNeedsUpdate(true)
     @styleSheets.push sheet
   
+  
   # Update pass
   # ------------------------------------------------
   #
   # - waits for stylesheets to fully load
   # - installs commands from stylesheets
-  #
+  # - then tells childEngines to do same
   
   needsUpdate: false
   
@@ -218,7 +216,6 @@ class Engine extends GSS.EventTrigger
   # ------------------------------------------------
   #
   # - solvers solve
-  #
       
   needsLayout: false
   
@@ -240,7 +237,8 @@ class Engine extends GSS.EventTrigger
     TIME "#{@id} LAYOUT & DISPLAY"
     
     # When is best time to dump css?
-    #@dumpCSSIfNeeded()
+    # - unless marshall in vanilla css, should dump here so measurements get it?
+    @dumpCSSIfNeeded()
     
     @solve()
     @setNeedsLayout false
@@ -268,17 +266,15 @@ class Engine extends GSS.EventTrigger
   # ------------------------------------------------
   #
   # - write to dom
-  #
+  # 
   
   needsDisplay: false
   
   setNeedsDisplay: (bool) ->    
     if bool
-      #LOG @id,".setNeedsDisplay( #{bool} )"
       GSS.setNeedsDisplay true
       @needsDisplay = true
     else
-      #LOG @id,".setNeedsDisplay( #{bool} )"
       @needsDisplay = false
   
   ###
@@ -314,7 +310,8 @@ class Engine extends GSS.EventTrigger
     #  @updateClauses data.clauses
     
     # When is best time to dump css?
-    @dumpCSSIfNeeded()
+    # - unless marshall in vanilla css in view.display, should dump earlier
+    #@dumpCSSIfNeeded()
     
     # batch DOM writes top -> down
     if needsToDisplayViews
@@ -371,11 +368,8 @@ class Engine extends GSS.EventTrigger
   
   setNeedsMeasure: (bool) ->    
     if bool
-      #LOG @id,".setNeedsMeasure( #{bool} )"
-      # GSS.setNeedsMeasure true
       @needsMeasure = true
     else
-      #LOG @id,".setNeedsMeasure( #{bool} )"
       @needsMeasure = false
   
   measureIfNeeded: ->

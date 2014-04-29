@@ -255,6 +255,7 @@ describe 'GSS commands', ->
     #
     #
     describe 'resizing -', ->
+      
       it 'element resized by style change', (done) ->
         scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" >One</div>
