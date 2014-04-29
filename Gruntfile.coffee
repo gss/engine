@@ -133,7 +133,7 @@ module.exports = ->
     mocha_phantomjs:
       all:
         options:
-          reporter: 'dot'
+          reporter: 'node_modules/mocha/lib/reporters/spec.js'
           urls: ['http://127.0.0.1:9999/spec/runner.html']
 
     'saucelabs-mocha':
