@@ -131,11 +131,9 @@ module.exports = ->
 
     # BDD tests on browser
     mocha_phantomjs:
-      options:
-        output: 'spec/result.xml'
-        reporter: 'spec'
       all:
         options:
+          reporter: 'spec'
           urls: ['http://127.0.0.1:9999/spec/runner.html']
 
     'saucelabs-mocha':
@@ -182,7 +180,7 @@ module.exports = ->
 
   @registerTask 'build-fast', ['coffee', 'concat:worker', 'exec:component_build']
   @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine', 'usebanner']
-  @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
+  @registerTask 'test', ['build', 'coffeelint', 'connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
   @registerTask 'default', ['build']
   @registerTask 'nuke', ['clean']
