@@ -138,7 +138,7 @@ class StyleSheet extends GSS.EventTrigger
     #...
   
   isRemoved: ->
-    if @el and !document.contains @el
+    if @el and !document.body.contains(@el) and !document.head.contains(@el)
       return true
     return false
   
