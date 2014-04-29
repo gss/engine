@@ -190,8 +190,9 @@ GSS.onDisplay = ->
   # Ready Class
   # ------------------------------------------------
   if GSS.config.readyClass
-    GSS.html.classList.add "gss-ready"
-    GSS.html.classList.remove "gss-not-ready"
+    GSS._.defer ->
+      GSS.html.classList.add "gss-ready"
+      GSS.html.classList.remove "gss-not-ready"
 
 
 # On Document Ready

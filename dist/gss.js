@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.2-beta (2014-04-16) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.2-beta (2014-04-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -16218,7 +16218,6 @@ require.register("slightlyoff-cassowary.js/src/Point.js", function(exports, requ
 // Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
 
 (function(c) {
-"use strict";
 
 c.Point = c.inherit({
   initialize: function(x, y, suffix) {
@@ -20595,6 +20594,101 @@ Query = (function(_super) {
 
 })(GSS.EventTrigger);
 
+Query.Set = (function(_super) {
+  __extends(Set, _super);
+
+  function Set() {
+    Set.__super__.constructor.apply(this, arguments);
+    this.bySelector = {};
+    return this;
+  }
+
+  Set.prototype.clean = function() {
+    var query, selector, _ref;
+    _ref = this.bySelector;
+    for (selector in _ref) {
+      query = _ref[selector];
+      query.destroy();
+      this.bySelector[selector] = null;
+    }
+    return this.bySelector = {};
+  };
+
+  Set.prototype.destroy = function() {
+    var query, selector, _ref;
+    _ref = this.bySelector;
+    for (selector in _ref) {
+      query = _ref[selector];
+      query.destroy();
+      this.bySelector[selector] = null;
+    }
+    this.offAll();
+    return this.bySelector = null;
+  };
+
+  Set.prototype.add = function(o) {
+    var query, selector;
+    selector = o.selector;
+    query = this.bySelector[selector];
+    if (!query) {
+      query = new GSS.Query(o);
+      query.update();
+      this.bySelector[selector] = query;
+    }
+    return query;
+  };
+
+  Set.prototype.update = function() {
+    var el, globalRemoves, o, query, removedIds, removes, rid, selector, selectorsWithAdds, trigger, _i, _len, _ref;
+    selectorsWithAdds = [];
+    removes = [];
+    globalRemoves = [];
+    trigger = false;
+    _ref = this.bySelector;
+    for (selector in _ref) {
+      query = _ref[selector];
+      query.update();
+      if (query.changedLastUpdate) {
+        if (query.lastAddedIds.length > 0) {
+          trigger = true;
+          selectorsWithAdds.push(selector);
+        }
+        if (query.lastRemovedIds.length > 0) {
+          trigger = true;
+          removedIds = query.lastRemovedIds;
+          for (_i = 0, _len = removedIds.length; _i < _len; _i++) {
+            rid = removedIds[_i];
+            if (globalRemoves.indexOf(rid) === -1) {
+              el = GSS.getById(rid);
+              if (document.documentElement.contains(el)) {
+                globalRemoves.push(rid);
+                removes.push(selector + "$" + rid);
+              } else {
+                removes.push("$" + rid);
+              }
+            }
+          }
+        }
+      }
+    }
+    GSS._ids_killed(globalRemoves);
+    if (!trigger) {
+      return trigger;
+    }
+    if (trigger) {
+      o = {
+        removes: removes,
+        selectorsWithAdds: selectorsWithAdds
+      };
+      this.trigger('update', o);
+      return o;
+    }
+  };
+
+  return Set;
+
+})(GSS.EventTrigger);
+
 module.exports = Query;
 
 });
@@ -20965,6 +21059,9 @@ observer = null;
 GSS.is_observing = false;
 
 GSS.observe = function() {
+  if (!observer) {
+    return;
+  }
   if (!GSS.is_observing && GSS.config.observe) {
     observer.observe(document.body, GSS.config.observerOptions);
     return GSS.is_observing = true;
@@ -20972,6 +21069,9 @@ GSS.observe = function() {
 };
 
 GSS.unobserve = function() {
+  if (!observer) {
+    return;
+  }
   observer.disconnect();
   return GSS.is_observing = false;
 };
@@ -20999,6 +21099,9 @@ setupObserver = function() {
     } else {
       window.MutationObserver = window.JsMutationObserver;
     }
+  }
+  if (!window.MutationObserver) {
+    return;
   }
   return observer = new MutationObserver(function(mutations) {
     var e, engine, enginesToReset, gid, i, invalidMeasureIds, m, needsUpdateQueries, nodesToIgnore, observableMutation, removed, scope, sheet, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref;
@@ -21154,8 +21257,10 @@ GSS.onDisplay = function() {
   }
   GSS.isDisplayed = true;
   if (GSS.config.readyClass) {
-    GSS.html.classList.add("gss-ready");
-    return GSS.html.classList.remove("gss-not-ready");
+    return GSS._.defer(function() {
+      GSS.html.classList.add("gss-ready");
+      return GSS.html.classList.remove("gss-not-ready");
+    });
   }
 };
 
@@ -21831,11 +21936,11 @@ Engine = (function(_super) {
     }
     this.commander = new GSS.Commander(this);
     this.lastWorkerCommands = null;
-    this.queryCache = {};
     this.cssDump = null;
     GSS.engines.push(this);
     engines.byId[this.id] = this;
     this._Hierarchy_setup();
+    this._Queries_setup();
     this._StyleSheets_setup();
     LOG("constructor() @", this);
     this;
@@ -22312,83 +22417,33 @@ Engine = (function(_super) {
     }
   };
 
+  Engine.prototype._Queries_setup = function() {
+    var _this = this;
+    this.querySet = new GSS.Query.Set();
+    return this.querySet.on("update", function(o) {
+      _this.commander.handleRemoves(o.removes);
+      return _this.commander.handleSelectorsWithAdds(o.selectorsWithAdds);
+    });
+  };
+
   Engine.prototype.getDomQuery = function(selector) {
-    return this.queryCache[selector];
+    return this.querySet.bySelector[selector];
   };
 
   Engine.prototype.registerDomQuery = function(o) {
-    var query, selector;
-    selector = o.selector;
-    query = this.getDomQuery(selector);
-    if (!query) {
-      query = new GSS.Query(o);
-      query.update();
-      this.queryCache[selector] = query;
-    }
-    return query;
+    return this.querySet.add(o);
   };
 
   Engine.prototype.updateQueries = function() {
-    var el, globalRemoves, query, removedIds, removes, rid, selector, selectorsWithAdds, trigger, _i, _len, _ref;
-    selectorsWithAdds = [];
-    removes = [];
-    globalRemoves = [];
-    trigger = false;
-    _ref = this.queryCache;
-    for (selector in _ref) {
-      query = _ref[selector];
-      query.update();
-      if (query.changedLastUpdate) {
-        if (query.lastAddedIds.length > 0) {
-          selectorsWithAdds.push(selector);
-          trigger = true;
-        }
-        if (query.lastRemovedIds.length > 0) {
-          trigger = true;
-          removedIds = query.lastRemovedIds;
-          for (_i = 0, _len = removedIds.length; _i < _len; _i++) {
-            rid = removedIds[_i];
-            if (globalRemoves.indexOf(rid) === -1) {
-              el = GSS.getById(rid);
-              if (document.documentElement.contains(el)) {
-                globalRemoves.push(rid);
-                removes.push(selector + "$" + rid);
-              } else {
-                removes.push("$" + rid);
-              }
-            }
-          }
-        }
-      }
-    }
-    GSS._ids_killed(globalRemoves);
-    if (trigger) {
-      this.commander.handleRemoves(removes);
-      this.commander.handleSelectorsWithAdds(selectorsWithAdds);
-    }
-    return trigger;
+    return this.querySet.update();
   };
 
   Engine.prototype._Queries_destroy = function() {
-    var query, selector, _ref;
-    _ref = this.queryCache;
-    for (selector in _ref) {
-      query = _ref[selector];
-      query.destroy();
-      this.queryCache[selector] = null;
-    }
-    return this.queryCache = null;
+    return this.querySet.destroy();
   };
 
   Engine.prototype._Queries_clean = function() {
-    var query, selector, _ref;
-    _ref = this.queryCache;
-    for (selector in _ref) {
-      query = _ref[selector];
-      query.destroy();
-      this.queryCache[selector] = null;
-    }
-    return this.queryCache = {};
+    return this.querySet.clean();
   };
 
   Engine.prototype.hoistedTrigger = function(ev, obj) {

@@ -282,7 +282,7 @@ describe 'End - to - End', ->
   
   describe 'External .gss files', ->
     
-    describe "basics", ->
+    describe "single file", ->
     
       it 'should compute', (done) ->
         oldDefault = GSS.config.defaultStrength
@@ -299,7 +299,7 @@ describe 'End - to - End', ->
         container.innerHTML =  """
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
           """
-  
+    
   
   # Virtual Elements
   # ===========================================================

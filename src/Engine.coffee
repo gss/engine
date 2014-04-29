@@ -48,8 +48,8 @@ class Engine extends GSS.EventTrigger
       
     @getter    = new GSS.Getter(@scope) unless @getter    
     @commander = new GSS.Commander(@)    
-    @lastWorkerCommands = null
-    @queryCache = {}    
+    @lastWorkerCommands = null        
+    
     @cssDump = null
     
     GSS.engines.push @
@@ -57,8 +57,10 @@ class Engine extends GSS.EventTrigger
     
     @_Hierarchy_setup()
     
+    @_Queries_setup()
+    
     @_StyleSheets_setup()
-
+        
     LOG "constructor() @", @
     @
         
@@ -501,65 +503,26 @@ class Engine extends GSS.EventTrigger
   # Queries
   # ----------------------------------------
   
+  _Queries_setup: () ->
+    @querySet = new GSS.Query.Set()
+    @querySet.on "update", (o) =>
+      @commander.handleRemoves o.removes
+      @commander.handleSelectorsWithAdds o.selectorsWithAdds
+  
   getDomQuery: (selector) ->
-    return @queryCache[selector]
+    return @querySet.bySelector[selector]
     
   registerDomQuery: (o) ->    
-    selector = o.selector
-    query = @getDomQuery selector
-    if !query      
-      query = new GSS.Query(o)
-      query.update()
-      @queryCache[selector] = query
-    return query
+    @querySet.add(o)
     
-  updateQueries: =>        
-    # els added or removed from queries
-    selectorsWithAdds = []
-    removes = []
-    globalRemoves = []
-    trigger = false
-    # selectorsWithShuffles = []
-    # shufflesByQuery = {} ?
-    for selector, query of @queryCache
-      query.update()
-      # TODO: callback?
-      if query.changedLastUpdate
-        if query.lastAddedIds.length > 0
-          selectorsWithAdds.push selector
-  #addsBySelector[selector] = query.lastAddedIds
-          trigger = true
-        if query.lastRemovedIds.length > 0
-          trigger = true
-          removedIds = query.lastRemovedIds          
-          for rid in removedIds
-            # prevent redundant removes...
-            if globalRemoves.indexOf(rid) is -1
-              el = GSS.getById(rid)
-              # el removed completely
-              if document.documentElement.contains el
-                globalRemoves.push rid
-                removes.push( selector + "$" + rid ) # .box$3454
-              else # el removed just from selector
-                removes.push( "$" + rid )      
-    # clean up ids
-    GSS._ids_killed globalRemoves
-    if trigger
-      @commander.handleRemoves removes
-      @commander.handleSelectorsWithAdds selectorsWithAdds
-    return trigger                     
-  
+  updateQueries: =>
+    @querySet.update()
+
   _Queries_destroy: () ->
-    for selector, query of @queryCache
-      query.destroy()
-      @queryCache[selector] = null
-    @queryCache = null
-  
-  _Queries_clean: () ->    
-    for selector, query of @queryCache
-      query.destroy()
-      @queryCache[selector] = null
-    @queryCache = {}
+    @querySet.destroy()
+
+  _Queries_clean: () ->
+    @querySet.clean()
   
   # Events
   # ----------------------------------------

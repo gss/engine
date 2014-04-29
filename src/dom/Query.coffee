@@ -24,6 +24,10 @@ arrayAddsRemoves = (old, neu) ->
 LOG = () ->
   GSS.deblog "Query", arguments...
 
+
+# Query
+# ==============================================================
+
 class Query extends GSS.EventTrigger
   
   isQuery: true
@@ -101,6 +105,82 @@ class Query extends GSS.EventTrigger
     @lastRemovedIds     = null
     @createNodeList     = null
     @nodeList           = null
-    @changedLastUpdate  = null    
+    @changedLastUpdate  = null
+
+
+# Query Set
+# ==============================================================
+    
+class Query.Set extends GSS.EventTrigger
+  
+  constructor: ->
+    super
+    @bySelector = {}
+    return @
+  
+  clean: ->
+    #
+    for selector, query of @bySelector
+      query.destroy()
+      @bySelector[selector] = null
+    #
+    @bySelector = {}
+  
+  destroy: ->
+    #
+    for selector, query of @bySelector
+      query.destroy()
+      @bySelector[selector] = null
+    #
+    @offAll() 
+    @bySelector = null
+  
+  add: (o) ->
+    selector = o.selector
+    query = @bySelector[selector]
+    if !query      
+      query = new GSS.Query(o)
+      query.update()
+      @bySelector[selector] = query
+    return query
+  
+  update: ->
+    # els added or removed from queries
+    selectorsWithAdds = []
+    removes = []
+    globalRemoves = []
+    trigger = false
+    # selectorsWithShuffles = []
+    # shufflesByQuery = {} ?
+    for selector, query of @bySelector
+      query.update()
+      # TODO: callback?
+      if query.changedLastUpdate
+        if query.lastAddedIds.length > 0
+          trigger = true
+          selectorsWithAdds.push selector          
+        if query.lastRemovedIds.length > 0
+          trigger = true
+          removedIds = query.lastRemovedIds          
+          for rid in removedIds
+            # prevent redundant removes...
+            if globalRemoves.indexOf(rid) is -1
+              el = GSS.getById(rid)
+              # el removed completely
+              if document.documentElement.contains el
+                globalRemoves.push rid
+                removes.push( selector + "$" + rid ) # .box$3454
+              else # el removed just from selector
+                removes.push( "$" + rid )      
+    # clean up ids
+    GSS._ids_killed globalRemoves
+    if !trigger then return trigger
+    if trigger
+      o = 
+        removes: removes
+        selectorsWithAdds: selectorsWithAdds
+      @trigger 'update', o
+      return o
+  
 
 module.exports = Query
