@@ -133,7 +133,7 @@ module.exports = ->
     mocha_phantomjs:
       all:
         options:
-          reporter: 'spec'
+          reporter: 'dot'
           urls: ['http://127.0.0.1:9999/spec/runner.html']
 
     'saucelabs-mocha':
@@ -180,7 +180,8 @@ module.exports = ->
 
   @registerTask 'build-fast', ['coffee', 'concat:worker', 'exec:component_build']
   @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine', 'usebanner']
-  @registerTask 'test', ['build', 'coffeelint', 'connect', 'mocha_phantomjs']
+  @registerTask 'test', ['build', 'coffeelint', 'phantom']
+  @registerTask 'phantom', ['connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
   @registerTask 'default', ['build']
   @registerTask 'nuke', ['clean']
