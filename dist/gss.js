@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.2-beta (2014-04-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20369,8 +20370,8 @@ EventTrigger = (function() {
     wrap = null;
     that = this;
     wrap = function(o) {
-      listener.call(that, o);
-      return that.off(type, wrap);
+      that.off(type, wrap);
+      return listener.call(that, o);
     };
     this.on(type, wrap);
     return this;
@@ -21153,11 +21154,12 @@ GSS.setupObserver = function() {
       if (m.type === "characterData" || m.type === "attributes" || m.type === "childList") {
         if (m.type === "characterData") {
           target = m.target.parentElement;
-          gid = "$" + GSS.getId(m.target.parentElement);
+          gid = GSS.getId(m.target.parentElement);
         } else if (nodesToIgnore.indexOf(m.target) === -1) {
-          gid = "$" + GSS.getId(m.target);
+          gid = GSS.getId(m.target);
         }
         if (gid != null) {
+          gid = "$" + gid;
           if (invalidMeasureIds.indexOf(gid) === -1) {
             invalidMeasureIds.push(gid);
           }
@@ -23216,28 +23218,10 @@ Commander = (function() {
       this.bindToScope(prop);
     }
     if (prop.indexOf("intrinsic-") === 0) {
-      query.lastAddedIds.forEach(function(id) {
-        var elProp, engine, gid, k, register;
-        gid = "$" + id;
-        if (!_this.intrinsicRegistersById[gid]) {
-          _this.intrinsicRegistersById[gid] = {};
-        }
-        if (!_this.intrinsicRegistersById[gid][prop]) {
-          elProp = prop.split("intrinsic-")[1];
-          k = "" + gid + "[" + prop + "]";
-          engine = _this.engine;
-          register = function() {
-            var val;
-            val = engine.measureByGssId(id, elProp);
-            if (engine.vars[k] !== val) {
-              engine.registerCommand(['suggest', ['get$', prop, gid, selector], ['number', val], 'required']);
-            }
-            return engine.setNeedsMeasure(true);
-          };
-          _this.intrinsicRegistersById[gid][prop] = register;
-          return register.call(_this);
-        }
+      query.on('afterChange', function() {
+        return _this._processIntrinsics(query, selector, prop);
       });
+      this._processIntrinsics(query, selector, prop);
     }
     if (isContextBound) {
       idProcessor = queryObject.idProcessor;
@@ -23272,6 +23256,32 @@ Commander = (function() {
         return nodes;
       }
     };
+  };
+
+  Commander.prototype._processIntrinsics = function(query, selector, prop) {
+    var _this = this;
+    return query.lastAddedIds.forEach(function(id) {
+      var elProp, engine, gid, k, register;
+      gid = "$" + id;
+      if (!_this.intrinsicRegistersById[gid]) {
+        _this.intrinsicRegistersById[gid] = {};
+      }
+      if (!_this.intrinsicRegistersById[gid][prop]) {
+        elProp = prop.split("intrinsic-")[1];
+        k = "" + gid + "[" + prop + "]";
+        engine = _this.engine;
+        register = function() {
+          var val;
+          val = engine.measureByGssId(id, elProp);
+          if (engine.vars[k] !== val) {
+            engine.registerCommand(['suggest', ['get$', prop, gid, selector], ['number', val], 'required']);
+          }
+          return engine.setNeedsMeasure(true);
+        };
+        _this.intrinsicRegistersById[gid][prop] = register;
+        return register.call(_this);
+      }
+    });
   };
 
   Commander.prototype['number'] = function(root, num) {

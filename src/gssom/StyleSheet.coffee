@@ -149,6 +149,7 @@ class StyleSheet extends GSS.EventTrigger
   needsDumpCSS: false
   
   setNeedsDumpCSS: (bool) ->
+    # generally called by child rules
     if bool
       @engine.setNeedsDumpCSS true
       @needsDumpCSS = true

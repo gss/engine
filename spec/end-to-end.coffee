@@ -224,7 +224,7 @@ describe 'End - to - End', ->
             "[md2]": 71 / 4
           done()
     
-    describe 'async intrinsics w/ css dumping', ->  
+    describe 'intrinsic & measurable css in same gss block', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="sync1" class="sync"></div>
@@ -236,11 +236,61 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'display', (e) ->
-          console.log engine.vars
+
           expect(engine.vars).to.eql 
             "$sync1[intrinsic-width]": 100
             "$sync1[height]": 100            
           done()
+    
+    describe 'intrinsic & measure-impacting css in same gss block', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="sync1" class="sync"></div>
+            <style type="text/gss">                            
+              .sync, .async {
+                width: 100px !important;
+                height: == ::[intrinsic-width];
+              }
+            </style>
+          """
+        engine.once 'display', (e) ->
+          expect(engine.vars).to.eql 
+            "$sync1[intrinsic-width]": 100
+            "$sync1[height]": 100            
+          done()
+    
+    
+    describe 'async added elements w/ intrinsics', ->  
+          
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="sync1" class="sync"></div>
+            <style type="text/gss">                            
+              .sync, .async {
+                width: 100px !important;
+                height: == ::[intrinsic-width];
+                -test: == 0;
+              }
+            </style>
+          """
+        engine.once 'display', (e) ->
+          expect(engine.vars).to.eql 
+            "$sync1[intrinsic-width]": 100
+            "$sync1[height]": 100     
+            "$sync1[-test]": 0
+          # do again
+          GSS._.defer ->
+            container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
+            engine.once 'display', (e) ->
+              expect(engine.vars).to.eql 
+                "$sync1[intrinsic-width]": 100
+                "$sync1[height]": 100
+                "$sync1[-test]": 0
+                "$async1[intrinsic-width]": 100
+                "$async1[height]": 100
+                "$async1[-test]": 0
+              done()
+                  
 
   
   

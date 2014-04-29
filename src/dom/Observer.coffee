@@ -49,7 +49,7 @@ GSS.setupObserver = () ->
     invalidMeasureIds = []
     
     observableMutation = false
-    
+
     for m in mutations
       if _unobservedElements.indexOf(m.target) isnt -1
         continue
@@ -83,10 +83,11 @@ GSS.setupObserver = () ->
       if m.type is "characterData" or m.type is "attributes" or m.type is "childList"      
         if m.type is "characterData"
           target = m.target.parentElement  
-          gid = "$" + GSS.getId m.target.parentElement
+          gid = GSS.getId m.target.parentElement
         else if nodesToIgnore.indexOf(m.target) is -1
-          gid = "$" + GSS.getId m.target
+          gid = GSS.getId m.target
         if gid?
+          gid = "$" + gid
           if invalidMeasureIds.indexOf(gid) is -1
             invalidMeasureIds.push(gid)
     

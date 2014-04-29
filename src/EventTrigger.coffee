@@ -32,8 +32,8 @@ class EventTrigger
     wrap = null
     that = this
     wrap = (o) ->
-      listener.call that, o
       that.off type, wrap
+      listener.call that, o      
     @on type, wrap
     @
   

@@ -339,7 +339,7 @@ class Commander
       val = @_get$(root, prop, queryObject)
       @get$cache[key] = val
     return val
-    
+  
   '_get$':(root, prop, queryObject) =>  
     # runs only once for a given selector + prop
     
@@ -363,29 +363,9 @@ class Commander
     
     # intrinsics
     if prop.indexOf("intrinsic-") is 0
-      query.lastAddedIds.forEach (id) =>
-        gid = "$" + id
-        if !@intrinsicRegistersById[gid] then @intrinsicRegistersById[gid] = {}              
-        # only register intrinsic prop once per id          
-        if !@intrinsicRegistersById[gid][prop]
-          elProp = prop.split("intrinsic-")[1]
-          k = "#{gid}[#{prop}]"
-          engine = @engine
-          register = () ->
-            val = engine.measureByGssId(id, elProp)
-            # don't spawn intrinsic if val is unchanged
-            if engine.vars[k] isnt val
-              engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              
-              #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
-            
-            # intrinsics always need remeasurement
-            engine.setNeedsMeasure true
-            
-          @intrinsicRegistersById[gid][prop] = register
-          
-          #@engine.setNeedsMeasure true
-          # should call intrinsics here? b/c invalid until first pass anyway...
-          register.call @    
+      query.on 'afterChange', =>
+        @_processIntrinsics query, selector, prop
+      @_processIntrinsics query, selector, prop
     
     if isContextBound
       idProcessor = queryObject.idProcessor
@@ -412,6 +392,32 @@ class Commander
           nodes.push ['get$', prop, "$"+id, selector]
         return nodes
       }      
+  
+  _processIntrinsics: (query, selector, prop) ->
+    query.lastAddedIds.forEach (id) =>
+      gid = "$" + id
+      if !@intrinsicRegistersById[gid] then @intrinsicRegistersById[gid] = {}              
+      # only register intrinsic prop once per id          
+      if !@intrinsicRegistersById[gid][prop]
+        elProp = prop.split("intrinsic-")[1]
+        k = "#{gid}[#{prop}]"
+        engine = @engine
+        register = () ->
+          val = engine.measureByGssId(id, elProp)
+          # don't spawn intrinsic if val is unchanged
+          if engine.vars[k] isnt val
+            engine.registerCommand ['suggest', ['get$', prop, gid, selector], ['number', val], 'required']              
+            #@engine.registerCommand ['stay', ['get', "#{gid}[#{prop}]"]]
+          
+          # intrinsics always need remeasurement
+          engine.setNeedsMeasure true
+          
+        @intrinsicRegistersById[gid][prop] = register
+        
+        #@engine.setNeedsMeasure true
+        # should call intrinsics here? b/c invalid until first pass anyway...
+        register.call @
+    
   
   'number': (root, num) ->
     return ['number', num]
