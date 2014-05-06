@@ -1,7 +1,6 @@
 thread = null 
 
 self.onmessage = (m) ->
-  
   if !thread
     config = m.data.config or {}
     thread = new Thread(config)

@@ -1,7 +1,26 @@
+
+# Helpers
+# ------------------------------------------------
+
+valueOf = (e) ->
+  val = e.value
+  if val? then return val
+  val = Number(e)
+  if val? then return val
+  throw new Error("Thread.valueOf couldn't find value of: #{e}")  
+
+isConstraint = (root) ->
+  if root[0] is 'cond'
+    return false
+  return true
+    
+
+# Thread
+# ====================================================================
+
 class Thread
 
-  constructor: (o={}) ->
-    
+  constructor: (o={}) ->    
     defaultStrength  = o.defaultStrength or 'required'
     @defaultStrength = c.Strength[defaultStrength]
     if !@defaultStrength then @defaultStrength = c.Strength['required']
@@ -25,13 +44,13 @@ class Thread
     @conditionals         = []
     @activeClauses        = []
     @__editVarNames       = []
-    @  
+    @      
   
   # Worker interface
   # ------------------------------------------------
     
   postMessage: (message) ->
-    # wrapper to make easier to work without webworkers    
+    # wrapper to make easier to work without webworkers
     @execute message
     @
   
@@ -44,8 +63,8 @@ class Thread
     @conditionals         = null
     @activeClauses        = null
     @__editVarNames       = null
-    @   
-      
+    @       
+  
   # API
   # ------------------------------------------------
   
@@ -231,43 +250,31 @@ class Thread
     }
     
   
-  # Conditional Expressions
-  
-  _valueOf: (e) ->
-    val = e.value
-    if val then return val
-    val = Number(e)
-    if val then return val        
+  # Conditional Expressions       
   
   '?>=' : (root,e1,e2) ->
-    _valueOf = @_valueOf
     return ->      
-      return _valueOf(e1) >= _valueOf(e2)
+      return valueOf(e1) >= valueOf(e2)
     
   '?<=' : (root,e1,e2) ->
-    _valueOf = @_valueOf
     return ->
-      return _valueOf(e1) <= _valueOf(e2)
+      return valueOf(e1) <= valueOf(e2)
   
   '?==' : (root,e1,e2) ->
-    _valueOf = @_valueOf
     return -> 
-      return _valueOf(e1) is _valueOf(e2)
+      return valueOf(e1) is valueOf(e2)
   
   '?>' : (root,e1,e2) ->
-    _valueOf = @_valueOf
     return ->      
-      return _valueOf(e1) > _valueOf(e2)
+      return valueOf(e1) > valueOf(e2)
     
   '?<' : (root,e1,e2) ->
-    _valueOf = @_valueOf
     return ->
-      return _valueOf(e1) < _valueOf(e2)
+      return valueOf(e1) < valueOf(e2)
   
   '?!=' : (root,e1,e2) ->
-    _valueOf = @_valueOf
     return -> 
-      return _valueOf(e1) isnt _valueOf(e2)
+      return valueOf(e1) isnt valueOf(e2)
     
   '&&'  : (root,c1,c2) ->
     # getter value ->
@@ -367,21 +374,56 @@ class Thread
   # ------------------------------------------------
   
   plus: (root, e1, e2) ->
-    return c.plus e1, e2
-
+    if isConstraint root then return c.plus e1, e2
+    return Object.defineProperty {}, 'value',      
+      get: ->
+        return valueOf(e1) + valueOf(e2)
+    
   minus : (root,e1,e2) ->
-    return c.minus e1, e2
+    if isConstraint root then return c.minus e1, e2
+    return Object.defineProperty {}, 'value',      
+      get: ->
+        return valueOf(e1) - valueOf(e2)
 
-  multiply: (root,e1,e2) ->
-    return c.times e1, e2
+  multiply: (root,e1,e2) ->  
+    if isConstraint root then return c.times e1, e2
+    return Object.defineProperty {}, 'value',      
+      get: ->
+        return valueOf(e1) * valueOf(e2)
 
-  divide: (root,e1,e2,s,w) ->
-    return c.divide e1, e2
+  divide: (root,e1,e2) ->
+    if isConstraint root then return c.divide e1, e2
+    return Object.defineProperty {}, 'value',      
+      get: ->
+        return valueOf(e1) / valueOf(e2)
   
+  ### Todo
+  remainder: (root,e1,e2) ->
+  'Math.abs': ->  
+  'Math.acos': ->
+  'Math.asin': ->
+  'Math.atan': ->
+  'Math.atan2': ->
+  'Math.ceil': ->
+  'Math.cos': ->
+  'Math.exp': ->
+  'Math.floor': ->
+  'Math.imul': ->
+  'Math.log': ->
+  'Math.max': ->
+  'Math.min': ->
+  'Math.pow': ->
+  'Math.random': ->
+  'Math.round': ->
+  'Math.sin': ->
+  'Math.sqrt': ->
+  'Math.tan': ->
+  ###
+      
   
   # Constraints
   # ------------------------------------------------
-  
+      
   _strength: (s) ->
     if typeof s is 'string'
       if s is 'require' then s = 'required'

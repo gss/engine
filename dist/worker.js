@@ -19,8 +19,28 @@ var l=this.rows.get(this._objective);l.setVariable(i,b.strength.symbolicWeight.v
       (module.compiled = true && module) : this
 );
 
-var Thread,
+var Thread, isConstraint, valueOf,
   __slice = [].slice;
+
+valueOf = function(e) {
+  var val;
+  val = e.value;
+  if (val != null) {
+    return val;
+  }
+  val = Number(e);
+  if (val != null) {
+    return val;
+  }
+  throw new Error("Thread.valueOf couldn't find value of: " + e);
+};
+
+isConstraint = function(root) {
+  if (root[0] === 'cond') {
+    return false;
+  }
+  return true;
+};
 
 Thread = (function() {
   function Thread(o) {
@@ -304,63 +324,39 @@ Thread = (function() {
     };
   };
 
-  Thread.prototype._valueOf = function(e) {
-    var val;
-    val = e.value;
-    if (val) {
-      return val;
-    }
-    val = Number(e);
-    if (val) {
-      return val;
-    }
-  };
-
   Thread.prototype['?>='] = function(root, e1, e2) {
-    var _valueOf;
-    _valueOf = this._valueOf;
     return function() {
-      return _valueOf(e1) >= _valueOf(e2);
+      return valueOf(e1) >= valueOf(e2);
     };
   };
 
   Thread.prototype['?<='] = function(root, e1, e2) {
-    var _valueOf;
-    _valueOf = this._valueOf;
     return function() {
-      return _valueOf(e1) <= _valueOf(e2);
+      return valueOf(e1) <= valueOf(e2);
     };
   };
 
   Thread.prototype['?=='] = function(root, e1, e2) {
-    var _valueOf;
-    _valueOf = this._valueOf;
     return function() {
-      return _valueOf(e1) === _valueOf(e2);
+      return valueOf(e1) === valueOf(e2);
     };
   };
 
   Thread.prototype['?>'] = function(root, e1, e2) {
-    var _valueOf;
-    _valueOf = this._valueOf;
     return function() {
-      return _valueOf(e1) > _valueOf(e2);
+      return valueOf(e1) > valueOf(e2);
     };
   };
 
   Thread.prototype['?<'] = function(root, e1, e2) {
-    var _valueOf;
-    _valueOf = this._valueOf;
     return function() {
-      return _valueOf(e1) < _valueOf(e2);
+      return valueOf(e1) < valueOf(e2);
     };
   };
 
   Thread.prototype['?!='] = function(root, e1, e2) {
-    var _valueOf;
-    _valueOf = this._valueOf;
     return function() {
-      return _valueOf(e1) !== _valueOf(e2);
+      return valueOf(e1) !== valueOf(e2);
     };
   };
 
@@ -473,20 +469,72 @@ Thread = (function() {
   };
 
   Thread.prototype.plus = function(root, e1, e2) {
-    return c.plus(e1, e2);
+    if (isConstraint(root)) {
+      return c.plus(e1, e2);
+    }
+    return Object.defineProperty({}, 'value', {
+      get: function() {
+        return valueOf(e1) + valueOf(e2);
+      }
+    });
   };
 
   Thread.prototype.minus = function(root, e1, e2) {
-    return c.minus(e1, e2);
+    if (isConstraint(root)) {
+      return c.minus(e1, e2);
+    }
+    return Object.defineProperty({}, 'value', {
+      get: function() {
+        return valueOf(e1) - valueOf(e2);
+      }
+    });
   };
 
   Thread.prototype.multiply = function(root, e1, e2) {
-    return c.times(e1, e2);
+    if (isConstraint(root)) {
+      return c.times(e1, e2);
+    }
+    return Object.defineProperty({}, 'value', {
+      get: function() {
+        return valueOf(e1) * valueOf(e2);
+      }
+    });
   };
 
-  Thread.prototype.divide = function(root, e1, e2, s, w) {
-    return c.divide(e1, e2);
+  Thread.prototype.divide = function(root, e1, e2) {
+    if (isConstraint(root)) {
+      return c.divide(e1, e2);
+    }
+    return Object.defineProperty({}, 'value', {
+      get: function() {
+        return valueOf(e1) / valueOf(e2);
+      }
+    });
   };
+
+  /* Todo
+  remainder: (root,e1,e2) ->
+  'Math.abs': ->  
+  'Math.acos': ->
+  'Math.asin': ->
+  'Math.atan': ->
+  'Math.atan2': ->
+  'Math.ceil': ->
+  'Math.cos': ->
+  'Math.exp': ->
+  'Math.floor': ->
+  'Math.imul': ->
+  'Math.log': ->
+  'Math.max': ->
+  'Math.min': ->
+  'Math.pow': ->
+  'Math.random': ->
+  'Math.round': ->
+  'Math.sin': ->
+  'Math.sqrt': ->
+  'Math.tan': ->
+  */
+
 
   Thread.prototype._strength = function(s) {
     var strength;
