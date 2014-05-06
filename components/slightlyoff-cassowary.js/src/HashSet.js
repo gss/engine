@@ -15,11 +15,12 @@ c.HashSet = c.inherit({
   initialize: function() {
     this.storage = [];
     this.size = 0;
+    this.hashCode = c._inc();
   },
 
   add: function(item) {
     var s = this.storage, io = s.indexOf(item);
-    if (s.indexOf(item) == -1) { s.push(item); }
+    if (s.indexOf(item) == -1) { s[s.length] = item; }
     this.size = this.storage.length;
   },
 
@@ -74,7 +75,7 @@ c.HashSet = c.inherit({
   toJSON: function() {
     var d = [];
     this.each(function(e) {
-      d.push(e.toJSON());
+      d[d.length] = e.toJSON();
     });
     return {
       _t: "c.HashSet",

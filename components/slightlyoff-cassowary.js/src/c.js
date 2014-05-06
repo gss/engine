@@ -244,7 +244,7 @@ c.approx = function(a, b) {
   return (Math.abs(a - b) < Math.abs(a) * epsilon);
 };
 
-var count = 0;
+var count = 1;
 c._inc = function() { return count++; };
 
 c.parseJSON = function(str) {

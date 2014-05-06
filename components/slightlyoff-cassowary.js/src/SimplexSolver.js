@@ -113,7 +113,7 @@ c.SimplexSolver = c.inherit({
     c.assert(this._editVarMap.size > 0, "_editVarMap.size > 0");
     this._infeasibleRows.clear();
     this._resetStayConstants();
-    this._editVariableStack.push(this._editVarMap.size);
+    this._editVariableStack[this._editVariableStack.length] = this._editVarMap.size;
     return this;
   },
 
@@ -722,8 +722,8 @@ c.SimplexSolver = c.inherit({
         this.insertErrorVar(cn, eplus);
 
         if (cn.isStayConstraint) {
-          this._stayPlusErrorVars.push(eplus);
-          this._stayMinusErrorVars.push(eminus);
+          this._stayPlusErrorVars[this._stayPlusErrorVars.length] = eplus;
+          this._stayMinusErrorVars[this._stayMinusErrorVars.length] = eminus;
         } else if (cn.isEditConstraint) {
           eplus_eminus[0] = eplus;
           eplus_eminus[1] = eminus;
@@ -950,7 +950,8 @@ c.SimplexSolver = c.inherit({
   },
 
   _addCallback: function(fn) {
-    (this._callbacks || (this._callbacks = [])).push(fn);
+    var a = (this._callbacks || (this._callbacks = []));
+    a[a.length] = fn;
   },
 
   insertErrorVar: function(cn /*c.Constraint*/, aVar /*c.AbstractVariable*/) {

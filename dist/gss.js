@@ -15534,7 +15534,7 @@ c.approx = function(a, b) {
   return (Math.abs(a - b) < Math.abs(a) * epsilon);
 };
 
-var count = 0;
+var count = 1;
 c._inc = function() { return count++; };
 
 c.parseJSON = function(str) {
@@ -15602,8 +15602,7 @@ require.register("slightlyoff-cassowary.js/src/HashTable.js", function(exports, 
 "use strict";
 
 var keyCode = function(key) {
-  var kc = (!!key.hashCode) ? key.hashCode : key.toString();
-  return kc;
+  return key.hashCode;
 };
 
 var copyOwn = function(src, dest) {
@@ -15715,9 +15714,9 @@ if (false && typeof Map != "undefined") {
     },
 
     set: function(key, value) {
-      var hash = keyCode(key);
+      var hash = key.hashCode;
 
-      if (!this._store.hasOwnProperty(hash)) {
+      if (typeof this._store[hash] == "undefined") {
         // FIXME(slightlyoff): if size gooes above the V8 property limit,
         // compact or go to a tree.
         this.size++;
@@ -15729,7 +15728,7 @@ if (false && typeof Map != "undefined") {
     get: function(key) {
       if(!this.size) { return null; }
 
-      key = keyCode(key);
+      key = key.hashCode;
 
       var v = this._store[key];
       if (typeof v != "undefined") {
@@ -15756,7 +15755,7 @@ if (false && typeof Map != "undefined") {
     _perhapsCompact: function() {
       // If we have more properties than V8's fast property lookup limit, don't
       // bother
-      if (this._size > 64) return;
+      if (this._size > 30) return;
       if (this._deleted > this._compactThreshold) {
         this._compact();
         this._deleted = 0;
@@ -15764,7 +15763,7 @@ if (false && typeof Map != "undefined") {
     },
 
     delete: function(key) {
-      key = keyCode(key);
+      key = key.hashCode;
       if (!this._store.hasOwnProperty(key)) {
         return;
       }
@@ -15886,11 +15885,12 @@ c.HashSet = c.inherit({
   initialize: function() {
     this.storage = [];
     this.size = 0;
+    this.hashCode = c._inc();
   },
 
   add: function(item) {
     var s = this.storage, io = s.indexOf(item);
-    if (s.indexOf(item) == -1) { s.push(item); }
+    if (s.indexOf(item) == -1) { s[s.length] = item; }
     this.size = this.storage.length;
   },
 
@@ -15945,7 +15945,7 @@ c.HashSet = c.inherit({
   toJSON: function() {
     var d = [];
     this.each(function(e) {
-      d.push(e.toJSON());
+      d[d.length] = e.toJSON();
     });
     return {
       _t: "c.HashSet",
@@ -16218,6 +16218,7 @@ require.register("slightlyoff-cassowary.js/src/Point.js", function(exports, requ
 // Parts Copyright (C) 2011, Alex Russell (slightlyoff@chromium.org)
 
 (function(c) {
+"use strict";
 
 c.Point = c.inherit({
   initialize: function(x, y, suffix) {
@@ -16404,7 +16405,9 @@ c.Expression = c.inherit({
       cd = 1;
     }
 
+    /*
     if (c.trace) console.log("c.Expression::addVariable():", v , cd);
+    */
     var coeff = this.terms.get(v);
     if (coeff) {
       var newCoefficient = coeff + cd;
@@ -16454,10 +16457,12 @@ c.Expression = c.inherit({
                           subject /*c.AbstractVariable*/,
                           solver  /*ClTableau*/) {
 
+    /*
     if (c.trace) {
       c.fnenterprint("CLE:substituteOut: " + outvar + ", " + expr + ", " + subject + ", ...");
       c.traceprint("this = " + this);
     }
+    */
     var setVariable = this.setVariable.bind(this);
     var terms = this.terms;
     var multiplier = terms.get(outvar);
@@ -16487,7 +16492,7 @@ c.Expression = c.inherit({
         }
       }
     });
-    if (c.trace) c.traceprint("Now this is " + this);
+    // if (c.trace) c.traceprint("Now this is " + this);
   },
 
   changeSubject: function(old_subject /*c.AbstractVariable*/,
@@ -16496,7 +16501,7 @@ c.Expression = c.inherit({
   },
 
   newSubject: function(subject /*c.AbstractVariable*/) {
-    if (c.trace) c.fnenterprint("newSubject:" + subject);
+    // if (c.trace) c.fnenterprint("newSubject:" + subject);
 
     var reciprocal = 1 / this.terms.get(subject);
     this.terms.delete(subject);
@@ -17152,7 +17157,7 @@ c.SimplexSolver = c.inherit({
     c.assert(this._editVarMap.size > 0, "_editVarMap.size > 0");
     this._infeasibleRows.clear();
     this._resetStayConstants();
-    this._editVariableStack.push(this._editVarMap.size);
+    this._editVariableStack[this._editVariableStack.length] = this._editVarMap.size;
     return this;
   },
 
@@ -17761,8 +17766,8 @@ c.SimplexSolver = c.inherit({
         this.insertErrorVar(cn, eplus);
 
         if (cn.isStayConstraint) {
-          this._stayPlusErrorVars.push(eplus);
-          this._stayMinusErrorVars.push(eminus);
+          this._stayPlusErrorVars[this._stayPlusErrorVars.length] = eplus;
+          this._stayMinusErrorVars[this._stayMinusErrorVars.length] = eminus;
         } else if (cn.isEditConstraint) {
           eplus_eminus[0] = eplus;
           eplus_eminus[1] = eminus;
@@ -17989,7 +17994,8 @@ c.SimplexSolver = c.inherit({
   },
 
   _addCallback: function(fn) {
-    (this._callbacks || (this._callbacks = [])).push(fn);
+    var a = (this._callbacks || (this._callbacks = []));
+    a[a.length] = fn;
   },
 
   insertErrorVar: function(cn /*c.Constraint*/, aVar /*c.AbstractVariable*/) {

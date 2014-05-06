@@ -34,8 +34,7 @@
 "use strict";
 
 var keyCode = function(key) {
-  var kc = (!!key.hashCode) ? key.hashCode : key.toString();
-  return kc;
+  return key.hashCode;
 };
 
 var copyOwn = function(src, dest) {
@@ -147,9 +146,9 @@ if (false && typeof Map != "undefined") {
     },
 
     set: function(key, value) {
-      var hash = keyCode(key);
+      var hash = key.hashCode;
 
-      if (!this._store.hasOwnProperty(hash)) {
+      if (typeof this._store[hash] == "undefined") {
         // FIXME(slightlyoff): if size gooes above the V8 property limit,
         // compact or go to a tree.
         this.size++;
@@ -161,7 +160,7 @@ if (false && typeof Map != "undefined") {
     get: function(key) {
       if(!this.size) { return null; }
 
-      key = keyCode(key);
+      key = key.hashCode;
 
       var v = this._store[key];
       if (typeof v != "undefined") {
@@ -188,7 +187,7 @@ if (false && typeof Map != "undefined") {
     _perhapsCompact: function() {
       // If we have more properties than V8's fast property lookup limit, don't
       // bother
-      if (this._size > 64) return;
+      if (this._size > 30) return;
       if (this._deleted > this._compactThreshold) {
         this._compact();
         this._deleted = 0;
@@ -196,7 +195,7 @@ if (false && typeof Map != "undefined") {
     },
 
     delete: function(key) {
-      key = keyCode(key);
+      key = key.hashCode;
       if (!this._store.hasOwnProperty(key)) {
         return;
       }
