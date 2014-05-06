@@ -131,11 +131,9 @@ module.exports = ->
 
     # BDD tests on browser
     mocha_phantomjs:
-      options:
-        output: 'spec/result.xml'
-        reporter: 'spec'
       all:
         options:
+          reporter: 'node_modules/mocha/lib/reporters/spec.js'
           urls: ['http://127.0.0.1:9999/spec/runner.html']
 
     'saucelabs-mocha':
@@ -144,22 +142,19 @@ module.exports = ->
           urls: ['http://127.0.0.1:9999/spec/runner.html']
           browsers: [
             browserName: 'googlechrome'
-            version: '31'
+            version: '34'
           ,
             browserName: 'firefox'
-            version: '26'
+            version: '28'
           ,
             browserName: 'safari'
             version: '6'
           ,
-            browserName: 'opera'
-            version: '12'
+            browserName: 'internet explorer'
+            version: '11'
           ,
             browserName: 'internet explorer'
             version: '10'
-          ,
-            browserName: 'internet explorer'
-            version: '9'
           ]
           build: process.env.TRAVIS_JOB_ID
           testname: 'GSS browser tests'
@@ -185,7 +180,8 @@ module.exports = ->
 
   @registerTask 'build-fast', ['coffee', 'concat:worker', 'exec:component_build']
   @registerTask 'build', ['coffee', 'concat:worker', 'uglify:worker', 'exec', 'uglify:engine', 'usebanner']
-  @registerTask 'test', ['build', 'coffeelint', 'mocha_phantomjs']
+  @registerTask 'test', ['build', 'coffeelint', 'phantom']
+  @registerTask 'phantom', ['connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
   @registerTask 'default', ['build']
   @registerTask 'nuke', ['clean']
