@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.2-beta (2014-04-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21449,7 +21448,7 @@ StyleSheet = (function(_super) {
   };
 
   StyleSheet.prototype.isRemoved = function() {
-    if (this.el && !document.contains(this.el)) {
+    if (this.el && !document.body.contains(this.el) && !document.head.contains(this.el)) {
       return true;
     }
     return false;

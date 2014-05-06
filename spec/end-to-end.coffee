@@ -652,6 +652,7 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solved', listen
+        
   
 
     describe 'contextual @if @else', ->
@@ -685,6 +686,49 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solved', listen
+    
+    describe 'and / or @if @else', ->
+  
+      it 'should compute values', (done) ->
+        container.innerHTML =  """
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+            <div id="box3" class="box"></div>
+            <style type="text/gss">
+          
+            #box1[width] == 9;
+            #box2[width] == 11;
+            #box3[width] == 10;
+            #box1[height] == 9;
+            #box2[height] == 11;
+            #box3[height] == 10;
+          
+            .box {
+              @if ::[width] < 10 and ::[height] < 10 {
+                $state: == 1;
+              }
+              @else ::[width] > 10 and ::[height] > 10 {
+                $state: == 2;
+              }
+              @else ::[width] == 10 or ::[height] == 10 {
+                $state: == 3;
+              }
+            }
+          
+            </style>
+          """
+        engine.once 'solved', (e) ->     
+          expect(engine.vars).to.eql 
+            "$box1[width]": 9
+            "$box2[width]": 11
+            "$box3[width]": 10
+            "$box1[height]": 9
+            "$box2[height]": 11
+            "$box3[height]": 10
+            "$box1[$state]": 1
+            "$box2[$state]": 2
+            "$box3[$state]": 3
+          done()  
     
     ###
     describe 'TODO!!!! contextual @if @else with vanilla CSS', ->
