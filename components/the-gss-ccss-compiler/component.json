@@ -1,10 +1,17 @@
 {
   "name": "ccss-compiler",
   "description": "Constraint Cascading Style Sheets compiler",
-  "version": "1.0.6-beta",
+  "author": "Dan Tocchini <d4@thegrid.io>",
+  "repo": "the-gss/ccss-compiler",
+  "version": "1.0.7-beta",
+  "json": [
+    "component.json"
+  ],
+  "remotes": [
+    "https://raw.githubusercontent.com"
+  ],
   "scripts": [
     "lib/ccss-compiler.js"
   ],
-  "main": "lib/ccss-compiler.js",
-  "repo": "https://raw.github.com/the-gss/ccss-compiler"
+  "main": "lib/ccss-compiler.js"
 }

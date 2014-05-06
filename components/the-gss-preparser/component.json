@@ -1,10 +1,17 @@
 {
   "name": "gss-preparser",
   "description": "GSS preparser",
+  "author": "Dan Tocchini <d4@thegrid.io>",
+  "repo": "the-gss/preparser",
   "version": "1.0.5-beta",
+  "json": [
+    "component.json"
+  ],
+  "remotes": [
+    "https://raw.githubusercontent.com"
+  ],  
   "scripts": [
     "lib/gss-preparser.js"
   ],
-  "main": "lib/gss-preparser.js",
-  "repo": "https://raw.github.com/the-gss/preparser"
+  "main": "lib/gss-preparser.js"
 }

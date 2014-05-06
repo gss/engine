@@ -3,6 +3,14 @@
   "repo": "the-gss/engine",
   "description": "GSS runtime",
   "version": "1.0.2-beta",
+  "author": "Dan Tocchini <d4@thegrid.io>",
+  "repo": "the-gss/engine",
+  "json": [
+    "component.json"
+  ],
+  "remotes": [
+    "https://raw.githubusercontent.com"
+  ],
   "scripts": [
     "lib/GSS-with-compiler.js",
     "lib/GSS.js",

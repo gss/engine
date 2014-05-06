@@ -114,7 +114,7 @@ parseRules = function(rules) {
           case 'else':
             if (chunk.terms.length > 0) {
               try {
-                parsed = ccss.parse("?(" + chunk.terms + ");");
+                parsed = ccss.parse("@cond" + chunk.terms + ";");
               } catch (_error) {
                 e = _error;
                 console.log("CCSS conditional parse Error", e);

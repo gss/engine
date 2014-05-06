@@ -1,9 +1,17 @@
 {
   "name": "gss-compiler",
   "description": "GSS rule compiler",
-  "version": "0.5.0",
+  "version": "0.8.2",
+  "author": "Dan Tocchini <d4@thegrid.io>",
+  "repo": "the-gss/compiler",
   "scripts": [
     "lib/gss-compiler.js"
+  ],
+  "remotes": [
+    "https://raw.githubusercontent.com"
+  ],
+  "json": [
+    "component.json"
   ],
   "dependencies": {
     "the-gss/preparser": "*",
@@ -11,6 +19,5 @@
     "the-gss/vfl-compiler": "*",
     "the-gss/vgl-compiler": "*"
   },
-  "main": "lib/gss-compiler.js",
-  "repo": "https://raw.github.com/the-gss/compiler"
+  "main": "lib/gss-compiler.js"
 }

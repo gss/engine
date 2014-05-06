@@ -39,14 +39,19 @@ module.exports = (function(){
       var parseFunctions = {
         "start": parse_start,
         "Statement": parse_Statement,
-        "LinearExpression": parse_LinearExpression,
-        "EqOperator": parse_EqOperator,
+        "AndOrExpression": parse_AndOrExpression,
+        "AndOrOp": parse_AndOrOp,
+        "ConditionalExpression": parse_ConditionalExpression,
+        "CondOperator": parse_CondOperator,
+        "LinearConstraint": parse_LinearConstraint,
+        "LinearConstraintOperator": parse_LinearConstraintOperator,
+        "ConstraintAdditiveExpression": parse_ConstraintAdditiveExpression,
         "AdditiveExpression": parse_AdditiveExpression,
         "AdditiveOperator": parse_AdditiveOperator,
+        "ConstraintMultiplicativeExpression": parse_ConstraintMultiplicativeExpression,
         "MultiplicativeExpression": parse_MultiplicativeExpression,
         "MultiplicativeOperator": parse_MultiplicativeOperator,
-        "UnaryExpression": parse_UnaryExpression,
-        "UnaryOperator": parse_UnaryOperator,
+        "ConstraintPrimaryExpression": parse_ConstraintPrimaryExpression,
         "PrimaryExpression": parse_PrimaryExpression,
         "Measure": parse_Measure,
         "Var": parse_Var,
@@ -81,10 +86,6 @@ module.exports = (function(){
         "StayVars": parse_StayVars,
         "StayStart": parse_StayStart,
         "Conditional": parse_Conditional,
-        "AndOrExpression": parse_AndOrExpression,
-        "AndOrOp": parse_AndOrOp,
-        "ConditionalExpression": parse_ConditionalExpression,
-        "CondOperator": parse_CondOperator,
         "ForEach": parse_ForEach,
         "JavaScript": parse_JavaScript,
         "ForLooperType": parse_ForLooperType,
@@ -194,7 +195,7 @@ module.exports = (function(){
         
         pos0 = pos;
         pos1 = pos;
-        result0 = parse_LinearExpression();
+        result0 = parse_LinearConstraint();
         if (result0 !== null) {
           result1 = parse_EOS();
           if (result1 !== null) {
@@ -367,7 +368,207 @@ module.exports = (function(){
         return result0;
       }
       
-      function parse_LinearExpression() {
+      function parse_AndOrExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_ConditionalExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_AndOrOp();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_ConditionalExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_AndOrOp();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_ConditionalExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = [
+                  tail[i][1],
+                  result,
+                  tail[i][3]
+                ];
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_AndOrOp() {
+        var result0;
+        var pos0;
+        
+        pos0 = pos;
+        if (input.substr(pos, 3) === "AND") {
+          result0 = "AND";
+          pos += 3;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"AND\"");
+          }
+        }
+        if (result0 === null) {
+          if (input.substr(pos, 3) === "and") {
+            result0 = "and";
+            pos += 3;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"and\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.substr(pos, 3) === "And") {
+              result0 = "And";
+              pos += 3;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"And\"");
+              }
+            }
+            if (result0 === null) {
+              if (input.substr(pos, 2) === "&&") {
+                result0 = "&&";
+                pos += 2;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"&&\"");
+                }
+              }
+            }
+          }
+        }
+        if (result0 !== null) {
+          result0 = (function(offset) { return "&&" })(pos0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        if (result0 === null) {
+          pos0 = pos;
+          if (input.substr(pos, 2) === "OR") {
+            result0 = "OR";
+            pos += 2;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"OR\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.substr(pos, 2) === "or") {
+              result0 = "or";
+              pos += 2;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"or\"");
+              }
+            }
+            if (result0 === null) {
+              if (input.substr(pos, 2) === "Or") {
+                result0 = "Or";
+                pos += 2;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"Or\"");
+                }
+              }
+              if (result0 === null) {
+                if (input.substr(pos, 2) === "||") {
+                  result0 = "||";
+                  pos += 2;
+                } else {
+                  result0 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("\"||\"");
+                  }
+                }
+              }
+            }
+          }
+          if (result0 !== null) {
+            result0 = (function(offset) { return "||" })(pos0);
+          }
+          if (result0 === null) {
+            pos = pos0;
+          }
+        }
+        return result0;
+      }
+      
+      function parse_ConditionalExpression() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1, pos2;
         
@@ -379,7 +580,7 @@ module.exports = (function(){
           pos2 = pos;
           result2 = parse___();
           if (result2 !== null) {
-            result3 = parse_EqOperator();
+            result3 = parse_CondOperator();
             if (result3 !== null) {
               result4 = parse___();
               if (result4 !== null) {
@@ -407,11 +608,239 @@ module.exports = (function(){
             pos2 = pos;
             result2 = parse___();
             if (result2 !== null) {
-              result3 = parse_EqOperator();
+              result3 = parse_CondOperator();
               if (result3 !== null) {
                 result4 = parse___();
                 if (result4 !== null) {
                   result5 = parse_AdditiveExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = [
+                  tail[i][1],
+                  result,
+                  tail[i][3]
+                ];
+              }      
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_CondOperator() {
+        var result0;
+        var pos0;
+        
+        pos0 = pos;
+        if (input.substr(pos, 2) === "==") {
+          result0 = "==";
+          pos += 2;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"==\"");
+          }
+        }
+        if (result0 !== null) {
+          result0 = (function(offset) { return "?==" })(pos0);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        if (result0 === null) {
+          pos0 = pos;
+          if (input.substr(pos, 2) === "<=") {
+            result0 = "<=";
+            pos += 2;
+          } else {
+            result0 = null;
+            if (reportFailures === 0) {
+              matchFailed("\"<=\"");
+            }
+          }
+          if (result0 === null) {
+            if (input.substr(pos, 2) === "=<") {
+              result0 = "=<";
+              pos += 2;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\"=<\"");
+              }
+            }
+          }
+          if (result0 !== null) {
+            result0 = (function(offset) { return "?<=" })(pos0);
+          }
+          if (result0 === null) {
+            pos = pos0;
+          }
+          if (result0 === null) {
+            pos0 = pos;
+            if (input.substr(pos, 2) === ">=") {
+              result0 = ">=";
+              pos += 2;
+            } else {
+              result0 = null;
+              if (reportFailures === 0) {
+                matchFailed("\">=\"");
+              }
+            }
+            if (result0 === null) {
+              if (input.substr(pos, 2) === "=>") {
+                result0 = "=>";
+                pos += 2;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"=>\"");
+                }
+              }
+            }
+            if (result0 !== null) {
+              result0 = (function(offset) { return "?>=" })(pos0);
+            }
+            if (result0 === null) {
+              pos = pos0;
+            }
+            if (result0 === null) {
+              pos0 = pos;
+              if (input.charCodeAt(pos) === 60) {
+                result0 = "<";
+                pos++;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"<\"");
+                }
+              }
+              if (result0 !== null) {
+                result0 = (function(offset) { return "?<"  })(pos0);
+              }
+              if (result0 === null) {
+                pos = pos0;
+              }
+              if (result0 === null) {
+                pos0 = pos;
+                if (input.charCodeAt(pos) === 62) {
+                  result0 = ">";
+                  pos++;
+                } else {
+                  result0 = null;
+                  if (reportFailures === 0) {
+                    matchFailed("\">\"");
+                  }
+                }
+                if (result0 !== null) {
+                  result0 = (function(offset) { return "?>"  })(pos0);
+                }
+                if (result0 === null) {
+                  pos = pos0;
+                }
+                if (result0 === null) {
+                  pos0 = pos;
+                  if (input.substr(pos, 2) === "!=") {
+                    result0 = "!=";
+                    pos += 2;
+                  } else {
+                    result0 = null;
+                    if (reportFailures === 0) {
+                      matchFailed("\"!=\"");
+                    }
+                  }
+                  if (result0 !== null) {
+                    result0 = (function(offset) { return "?!="  })(pos0);
+                  }
+                  if (result0 === null) {
+                    pos = pos0;
+                  }
+                }
+              }
+            }
+          }
+        }
+        return result0;
+      }
+      
+      function parse_LinearConstraint() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_ConstraintAdditiveExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_LinearConstraintOperator();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_ConstraintAdditiveExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_LinearConstraintOperator();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_ConstraintAdditiveExpression();
                   if (result5 !== null) {
                     result2 = [result2, result3, result4, result5];
                   } else {
@@ -477,7 +906,7 @@ module.exports = (function(){
         return result0;
       }
       
-      function parse_EqOperator() {
+      function parse_LinearConstraintOperator() {
         var result0;
         var pos0;
         
@@ -590,6 +1019,99 @@ module.exports = (function(){
               }
             }
           }
+        }
+        return result0;
+      }
+      
+      function parse_ConstraintAdditiveExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_ConstraintMultiplicativeExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_AdditiveOperator();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_ConstraintMultiplicativeExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_AdditiveOperator();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_ConstraintMultiplicativeExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = [
+                  tail[i][1],
+                  result,
+                  tail[i][3]
+                ];
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
         }
         return result0;
       }
@@ -728,13 +1250,13 @@ module.exports = (function(){
         return result0;
       }
       
-      function parse_MultiplicativeExpression() {
+      function parse_ConstraintMultiplicativeExpression() {
         var result0, result1, result2, result3, result4, result5;
         var pos0, pos1, pos2;
         
         pos0 = pos;
         pos1 = pos;
-        result0 = parse_UnaryExpression();
+        result0 = parse_ConstraintPrimaryExpression();
         if (result0 !== null) {
           result1 = [];
           pos2 = pos;
@@ -744,7 +1266,7 @@ module.exports = (function(){
             if (result3 !== null) {
               result4 = parse___();
               if (result4 !== null) {
-                result5 = parse_UnaryExpression();
+                result5 = parse_ConstraintPrimaryExpression();
                 if (result5 !== null) {
                   result2 = [result2, result3, result4, result5];
                 } else {
@@ -772,7 +1294,100 @@ module.exports = (function(){
               if (result3 !== null) {
                 result4 = parse___();
                 if (result4 !== null) {
-                  result5 = parse_UnaryExpression();
+                  result5 = parse_ConstraintPrimaryExpression();
+                  if (result5 !== null) {
+                    result2 = [result2, result3, result4, result5];
+                  } else {
+                    result2 = null;
+                    pos = pos2;
+                  }
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, head, tail) {
+              var result = head;
+              for (var i = 0; i < tail.length; i++) {
+                result = [
+                  tail[i][1],
+                  result,
+                  tail[i][3]
+                ];
+              }
+              return result;
+            })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_MultiplicativeExpression() {
+        var result0, result1, result2, result3, result4, result5;
+        var pos0, pos1, pos2;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_PrimaryExpression();
+        if (result0 !== null) {
+          result1 = [];
+          pos2 = pos;
+          result2 = parse___();
+          if (result2 !== null) {
+            result3 = parse_MultiplicativeOperator();
+            if (result3 !== null) {
+              result4 = parse___();
+              if (result4 !== null) {
+                result5 = parse_PrimaryExpression();
+                if (result5 !== null) {
+                  result2 = [result2, result3, result4, result5];
+                } else {
+                  result2 = null;
+                  pos = pos2;
+                }
+              } else {
+                result2 = null;
+                pos = pos2;
+              }
+            } else {
+              result2 = null;
+              pos = pos2;
+            }
+          } else {
+            result2 = null;
+            pos = pos2;
+          }
+          while (result2 !== null) {
+            result1.push(result2);
+            pos2 = pos;
+            result2 = parse___();
+            if (result2 !== null) {
+              result3 = parse_MultiplicativeOperator();
+              if (result3 !== null) {
+                result4 = parse___();
+                if (result4 !== null) {
+                  result5 = parse_PrimaryExpression();
                   if (result5 !== null) {
                     result2 = [result2, result3, result4, result5];
                   } else {
@@ -862,79 +1477,70 @@ module.exports = (function(){
         return result0;
       }
       
-      function parse_UnaryExpression() {
-        var result0, result1, result2;
+      function parse_ConstraintPrimaryExpression() {
+        var result0, result1, result2, result3, result4;
         var pos0, pos1;
         
-        result0 = parse_PrimaryExpression();
+        result0 = parse_Measure();
         if (result0 === null) {
-          pos0 = pos;
-          pos1 = pos;
-          result0 = parse_UnaryOperator();
-          if (result0 !== null) {
-            result1 = parse___();
-            if (result1 !== null) {
-              result2 = parse_UnaryExpression();
-              if (result2 !== null) {
-                result0 = [result0, result1, result2];
+          result0 = parse_Var();
+          if (result0 === null) {
+            result0 = parse_Literal();
+            if (result0 === null) {
+              pos0 = pos;
+              pos1 = pos;
+              if (input.charCodeAt(pos) === 40) {
+                result0 = "(";
+                pos++;
+              } else {
+                result0 = null;
+                if (reportFailures === 0) {
+                  matchFailed("\"(\"");
+                }
+              }
+              if (result0 !== null) {
+                result1 = parse___();
+                if (result1 !== null) {
+                  result2 = parse_ConstraintAdditiveExpression();
+                  if (result2 !== null) {
+                    result3 = parse___();
+                    if (result3 !== null) {
+                      if (input.charCodeAt(pos) === 41) {
+                        result4 = ")";
+                        pos++;
+                      } else {
+                        result4 = null;
+                        if (reportFailures === 0) {
+                          matchFailed("\")\"");
+                        }
+                      }
+                      if (result4 !== null) {
+                        result0 = [result0, result1, result2, result3, result4];
+                      } else {
+                        result0 = null;
+                        pos = pos1;
+                      }
+                    } else {
+                      result0 = null;
+                      pos = pos1;
+                    }
+                  } else {
+                    result0 = null;
+                    pos = pos1;
+                  }
+                } else {
+                  result0 = null;
+                  pos = pos1;
+                }
               } else {
                 result0 = null;
                 pos = pos1;
               }
-            } else {
-              result0 = null;
-              pos = pos1;
-            }
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-          if (result0 !== null) {
-            result0 = (function(offset, operator, expression) {
-                return {
-                  type:       "UnaryExpression",
-                  operator:   operator,
-                  expression: expression
-                };
-              })(pos0, result0[0], result0[2]);
-          }
-          if (result0 === null) {
-            pos = pos0;
-          }
-        }
-        return result0;
-      }
-      
-      function parse_UnaryOperator() {
-        var result0;
-        
-        if (input.charCodeAt(pos) === 43) {
-          result0 = "+";
-          pos++;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"+\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.charCodeAt(pos) === 45) {
-            result0 = "-";
-            pos++;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"-\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.charCodeAt(pos) === 33) {
-              result0 = "!";
-              pos++;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"!\"");
+              if (result0 !== null) {
+                result0 = (function(offset, expression) { return expression; })(pos0, result0[2]);
+              }
+              if (result0 === null) {
+                pos = pos0;
               }
             }
           }
@@ -966,7 +1572,7 @@ module.exports = (function(){
               if (result0 !== null) {
                 result1 = parse___();
                 if (result1 !== null) {
-                  result2 = parse_AdditiveExpression();
+                  result2 = parse_AndOrExpression();
                   if (result2 !== null) {
                     result3 = parse___();
                     if (result3 !== null) {
@@ -2975,18 +3581,18 @@ module.exports = (function(){
       }
       
       function parse_Conditional() {
-        var result0, result1, result2, result3, result4;
+        var result0, result1, result2, result3;
         var pos0, pos1;
         
         pos0 = pos;
         pos1 = pos;
-        if (input.substr(pos, 2) === "?(") {
-          result0 = "?(";
-          pos += 2;
+        if (input.substr(pos, 5) === "@cond") {
+          result0 = "@cond";
+          pos += 5;
         } else {
           result0 = null;
           if (reportFailures === 0) {
-            matchFailed("\"?(\"");
+            matchFailed("\"@cond\"");
           }
         }
         if (result0 !== null) {
@@ -2996,21 +3602,7 @@ module.exports = (function(){
             if (result2 !== null) {
               result3 = parse___();
               if (result3 !== null) {
-                if (input.charCodeAt(pos) === 41) {
-                  result4 = ")";
-                  pos++;
-                } else {
-                  result4 = null;
-                  if (reportFailures === 0) {
-                    matchFailed("\")\"");
-                  }
-                }
-                if (result4 !== null) {
-                  result0 = [result0, result1, result2, result3, result4];
-                } else {
-                  result0 = null;
-                  pos = pos1;
-                }
+                result0 = [result0, result1, result2, result3];
               } else {
                 result0 = null;
                 pos = pos1;
@@ -3032,434 +3624,6 @@ module.exports = (function(){
         }
         if (result0 === null) {
           pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_AndOrExpression() {
-        var result0, result1, result2, result3, result4, result5;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_ConditionalExpression();
-        if (result0 !== null) {
-          result1 = [];
-          pos2 = pos;
-          result2 = parse___();
-          if (result2 !== null) {
-            result3 = parse_AndOrOp();
-            if (result3 !== null) {
-              result4 = parse___();
-              if (result4 !== null) {
-                result5 = parse_ConditionalExpression();
-                if (result5 !== null) {
-                  result2 = [result2, result3, result4, result5];
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos2 = pos;
-            result2 = parse___();
-            if (result2 !== null) {
-              result3 = parse_AndOrOp();
-              if (result3 !== null) {
-                result4 = parse___();
-                if (result4 !== null) {
-                  result5 = parse_ConditionalExpression();
-                  if (result5 !== null) {
-                    result2 = [result2, result3, result4, result5];
-                  } else {
-                    result2 = null;
-                    pos = pos2;
-                  }
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, head, tail) {
-              var result = head;
-              for (var i = 0; i < tail.length; i++) {
-                result = [
-                  tail[i][1],
-                  result,
-                  tail[i][3]
-                ];
-              }
-              return result;
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_AndOrOp() {
-        var result0;
-        var pos0;
-        
-        pos0 = pos;
-        if (input.substr(pos, 3) === "AND") {
-          result0 = "AND";
-          pos += 3;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"AND\"");
-          }
-        }
-        if (result0 === null) {
-          if (input.substr(pos, 3) === "and") {
-            result0 = "and";
-            pos += 3;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"and\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.substr(pos, 3) === "And") {
-              result0 = "And";
-              pos += 3;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"And\"");
-              }
-            }
-            if (result0 === null) {
-              if (input.substr(pos, 2) === "&&") {
-                result0 = "&&";
-                pos += 2;
-              } else {
-                result0 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\"&&\"");
-                }
-              }
-            }
-          }
-        }
-        if (result0 !== null) {
-          result0 = (function(offset) { return "&&" })(pos0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        if (result0 === null) {
-          pos0 = pos;
-          if (input.substr(pos, 2) === "OR") {
-            result0 = "OR";
-            pos += 2;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"OR\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.substr(pos, 2) === "or") {
-              result0 = "or";
-              pos += 2;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"or\"");
-              }
-            }
-            if (result0 === null) {
-              if (input.substr(pos, 2) === "Or") {
-                result0 = "Or";
-                pos += 2;
-              } else {
-                result0 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\"Or\"");
-                }
-              }
-              if (result0 === null) {
-                if (input.substr(pos, 2) === "||") {
-                  result0 = "||";
-                  pos += 2;
-                } else {
-                  result0 = null;
-                  if (reportFailures === 0) {
-                    matchFailed("\"||\"");
-                  }
-                }
-              }
-            }
-          }
-          if (result0 !== null) {
-            result0 = (function(offset) { return "||" })(pos0);
-          }
-          if (result0 === null) {
-            pos = pos0;
-          }
-        }
-        return result0;
-      }
-      
-      function parse_ConditionalExpression() {
-        var result0, result1, result2, result3, result4, result5;
-        var pos0, pos1, pos2;
-        
-        pos0 = pos;
-        pos1 = pos;
-        result0 = parse_AdditiveExpression();
-        if (result0 !== null) {
-          result1 = [];
-          pos2 = pos;
-          result2 = parse___();
-          if (result2 !== null) {
-            result3 = parse_CondOperator();
-            if (result3 !== null) {
-              result4 = parse___();
-              if (result4 !== null) {
-                result5 = parse_AdditiveExpression();
-                if (result5 !== null) {
-                  result2 = [result2, result3, result4, result5];
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          } else {
-            result2 = null;
-            pos = pos2;
-          }
-          while (result2 !== null) {
-            result1.push(result2);
-            pos2 = pos;
-            result2 = parse___();
-            if (result2 !== null) {
-              result3 = parse_CondOperator();
-              if (result3 !== null) {
-                result4 = parse___();
-                if (result4 !== null) {
-                  result5 = parse_AdditiveExpression();
-                  if (result5 !== null) {
-                    result2 = [result2, result3, result4, result5];
-                  } else {
-                    result2 = null;
-                    pos = pos2;
-                  }
-                } else {
-                  result2 = null;
-                  pos = pos2;
-                }
-              } else {
-                result2 = null;
-                pos = pos2;
-              }
-            } else {
-              result2 = null;
-              pos = pos2;
-            }
-          }
-          if (result1 !== null) {
-            result0 = [result0, result1];
-          } else {
-            result0 = null;
-            pos = pos1;
-          }
-        } else {
-          result0 = null;
-          pos = pos1;
-        }
-        if (result0 !== null) {
-          result0 = (function(offset, head, tail) {
-              var result = head;
-              for (var i = 0; i < tail.length; i++) {
-                result = [
-                  tail[i][1],
-                  result,
-                  tail[i][3]
-                ];
-              }      
-              return result;
-            })(pos0, result0[0], result0[1]);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        return result0;
-      }
-      
-      function parse_CondOperator() {
-        var result0;
-        var pos0;
-        
-        pos0 = pos;
-        if (input.substr(pos, 2) === "==") {
-          result0 = "==";
-          pos += 2;
-        } else {
-          result0 = null;
-          if (reportFailures === 0) {
-            matchFailed("\"==\"");
-          }
-        }
-        if (result0 !== null) {
-          result0 = (function(offset) { return "?==" })(pos0);
-        }
-        if (result0 === null) {
-          pos = pos0;
-        }
-        if (result0 === null) {
-          pos0 = pos;
-          if (input.substr(pos, 2) === "<=") {
-            result0 = "<=";
-            pos += 2;
-          } else {
-            result0 = null;
-            if (reportFailures === 0) {
-              matchFailed("\"<=\"");
-            }
-          }
-          if (result0 === null) {
-            if (input.substr(pos, 2) === "=<") {
-              result0 = "=<";
-              pos += 2;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\"=<\"");
-              }
-            }
-          }
-          if (result0 !== null) {
-            result0 = (function(offset) { return "?<=" })(pos0);
-          }
-          if (result0 === null) {
-            pos = pos0;
-          }
-          if (result0 === null) {
-            pos0 = pos;
-            if (input.substr(pos, 2) === ">=") {
-              result0 = ">=";
-              pos += 2;
-            } else {
-              result0 = null;
-              if (reportFailures === 0) {
-                matchFailed("\">=\"");
-              }
-            }
-            if (result0 === null) {
-              if (input.substr(pos, 2) === "=>") {
-                result0 = "=>";
-                pos += 2;
-              } else {
-                result0 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\"=>\"");
-                }
-              }
-            }
-            if (result0 !== null) {
-              result0 = (function(offset) { return "?>=" })(pos0);
-            }
-            if (result0 === null) {
-              pos = pos0;
-            }
-            if (result0 === null) {
-              pos0 = pos;
-              if (input.charCodeAt(pos) === 60) {
-                result0 = "<";
-                pos++;
-              } else {
-                result0 = null;
-                if (reportFailures === 0) {
-                  matchFailed("\"<\"");
-                }
-              }
-              if (result0 !== null) {
-                result0 = (function(offset) { return "?<"  })(pos0);
-              }
-              if (result0 === null) {
-                pos = pos0;
-              }
-              if (result0 === null) {
-                pos0 = pos;
-                if (input.charCodeAt(pos) === 62) {
-                  result0 = ">";
-                  pos++;
-                } else {
-                  result0 = null;
-                  if (reportFailures === 0) {
-                    matchFailed("\">\"");
-                  }
-                }
-                if (result0 !== null) {
-                  result0 = (function(offset) { return "?>"  })(pos0);
-                }
-                if (result0 === null) {
-                  pos = pos0;
-                }
-                if (result0 === null) {
-                  pos0 = pos;
-                  if (input.substr(pos, 2) === "!=") {
-                    result0 = "!=";
-                    pos += 2;
-                  } else {
-                    result0 = null;
-                    if (reportFailures === 0) {
-                      matchFailed("\"!=\"");
-                    }
-                  }
-                  if (result0 !== null) {
-                    result0 = (function(offset) { return "?!="  })(pos0);
-                  }
-                  if (result0 === null) {
-                    pos = pos0;
-                  }
-                }
-              }
-            }
-          }
         }
         return result0;
       }
@@ -4112,7 +4276,7 @@ module.exports = (function(){
         var pos0;
         
         pos0 = pos;
-        result0 = parse_EqOperator();
+        result0 = parse_LinearConstraintOperator();
         result0 = result0 !== null ? result0 : "";
         if (result0 !== null) {
           result0 = (function(offset, chainEq) {
