@@ -7,5 +7,5 @@
     "lib/compiler.js"
   ],
   "main": "lib/compiler.js",
-  "repo": "https://raw.github.com/the-gss/vgl-compiler"
+  "repo": "https://raw.githubusercontent.com/the-gss/vgl-compiler"
 }

@@ -224,6 +224,40 @@ describe 'End - to - End', ->
             "[md2]": 71 / 4
           done()
     
+    describe '2D sugar', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="sugar1"></div>
+            <div id="sugar2"></div>
+            <style type="text/gss">                            
+              #sugar1 {
+                width: 10px !important;
+                height: 10px !important;
+                x: == 5;
+                y: == 5;
+                size: == ::[intrinsic-size];
+              }
+              #sugar2 {
+                size: == #sugar1[size];
+              }
+              #sugar1[position] == #sugar2[center];              
+            </style>
+          """
+        engine.once 'display', (e) ->
+          console.log JSON.stringify engine.vars
+          expect(engine.vars).to.eql 
+            "$sugar1[x]": 5
+            "$sugar1[y]": 5
+            "$sugar1[intrinsic-width]": 10
+            "$sugar1[intrinsic-height]": 10
+            "$sugar1[width]": 10
+            "$sugar1[height]": 10
+            "$sugar2[width]": 10
+            "$sugar2[height]": 10
+            "$sugar2[x]": 0
+            "$sugar2[y]": 0
+          done()
+    
     describe 'intrinsic & measurable css in same gss block', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """

@@ -3,7 +3,7 @@
   "description": "Constraint Cascading Style Sheets compiler",
   "author": "Dan Tocchini <d4@thegrid.io>",
   "repo": "the-gss/ccss-compiler",
-  "version": "1.0.7-beta",
+  "version": "1.0.8-beta",
   "json": [
     "component.json"
   ],
