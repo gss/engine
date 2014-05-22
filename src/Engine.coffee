@@ -306,8 +306,8 @@ class Engine extends GSS.EventTrigger
       GSS.View.byId[id]?.updateValues?(obj)      
     
     # write clauses to html.classes    
-    #if data.clauses
-    #  @updateClauses data.clauses
+    if data.clauses
+      @updateClauses data.clauses
     
     # When is best time to dump css?
     # - unless marshall in vanilla css in view.display, should dump earlier

@@ -146,7 +146,7 @@ describe 'End - to - End', ->
             [x] == 500;
           </style>
           """
-        engine.once 'solved', ->           
+        engine.once 'solved', ->
           expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
           expect(engine.cssDump.innerHTML).to.equal ".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;}.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}"
           done()
@@ -796,6 +796,9 @@ describe 'End - to - End', ->
               @else (::[width] + ::[height] == 22) and (::[width] == 11) {
                 $state: == 2;
               }
+              @else (::[width] * ::[height] >= 99) and (::[width] == 999999) {
+                $state: == 4;
+              }
               @else (::[width] * ::[height] >= 99) and (::[width] == 10) {
                 $state: == 3;
               }
@@ -818,7 +821,7 @@ describe 'End - to - End', ->
     
   
     
-    ###
+
     describe 'TODO!!!! contextual @if @else with vanilla CSS', ->
   
       it 'should compute values', (done) ->
@@ -827,8 +830,9 @@ describe 'End - to - End', ->
             "$box1[width]": 9
             "$box2[width]": 19
           expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          # TODO
-          expect(engine.cssDump.innerHTML).to.equal ""
+          
+          expect(window.getComputedStyle(document.querySelector("#box1"),null).getPropertyValue("color")).to.equal "rgb(20,30,40)"
+          expect(window.getComputedStyle(document.querySelector("#box2"),null).getPropertyValue("color")).to.equal "rgb(50,50,50)"          
           done()          
     
         container.innerHTML =  """
@@ -836,22 +840,22 @@ describe 'End - to - End', ->
             <div id="box2" class="box"></div>
             <style type="text/gss">
           
-            #box1[width] == 9;
-            #box2[width] == 19;
+              #box1[width] == 9;
+              #box2[width] == 19;
           
-            .box {
-              @if ::[width] < 10 {
-                color: blue;
+              .box {
+                @if ::[width] < 10 {
+                  color: rgb(20,30,40);
+                }
+                @else {
+                  color: rgb(50,50,50);
+                }
               }
-              @else {
-                color: red;
-              }
-            }
           
             </style>
           """
         engine.once 'solved', listen
-    ###
+
     
     ###
     describe 'TODO!!!! contextual @if @else inner nesting', ->

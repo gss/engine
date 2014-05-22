@@ -162,11 +162,17 @@ class Rule
       @styleSheet.setNeedsDumpCSS true
   
   dumpCSS: ->
-    css = @Type.dumpCSS?.call(@)
+    dumpMethod = @Type.dumpCSS
+    if !dumpMethod
+      dumpMethod = @dumpChildrenCSS
+    return dumpMethod.call(@)
+  
+  dumpChildrenCSS: ->
+    css = ""
     for rule in @rules
       ruleCSS = rule.dumpCSS()
       css = css + ruleCSS if ruleCSS
-    return css
+    return css  
     
   
 Rule.types =
@@ -183,33 +189,51 @@ Rule.types =
         @injectChildrenCondtionals(@)
         @executeCommands()
       else        
-        @executeCommands()
+        @executeCommands()     
+    dumpCSS: ->            
+      return "" # halts recursive dumping
+      #return @dumpChildrenCSS()
   
   
   constraint: 
     install: -> 
       @executeCommands()
+    dumpCSS: ->            
+      return ""    
+    
   
   style:
     install: ->
       @setNeedsDumpCSS(true)
     dumpCSS: ->
+      return @key + ":" + @val + ";"
   
   ruleset: 
     install: ->
     dumpCSS: ->
+      foundSet = false
       foundStyle = false
       css = ""
+      innercss = ""
+      outercss = ""
       effectiveSelector = null
       for rule in @rules
-        if rule.type is "style"
+        ruleCSS = rule.dumpCSS()
+        lastChar = ruleCSS[ruleCSS.length-1]
+        if lastChar is ";"
+          innercss = innercss + ruleCSS
           if !foundStyle
             effectiveSelector = rule.getSelectorContext().join(", ")
             foundStyle = true
-          css = css + rule.key + ":" + rule.val + ";"   
+        else if lastChar is "}"
+          outercss = outercss + ruleCSS  
+          foundSet = true
+          
       if foundStyle        
-        # TODO: conditionals?
-        css = effectiveSelector + "{" + css + "}"
+        # TODO: conditionals?        
+        css = effectiveSelector + "{" + innercss + "}"
+      if foundSet 
+        css = css + outercss
       return css
           
 module.exports = Rule      
