@@ -611,6 +611,7 @@ Thread = (function() {
     if (typeof varr === 'string') {
       varr = this.get(self, varr);
     }
+    this.solver.solve();
     this._editvar(varr, s, w);
     this.solver.suggestValue(varr, val);
     return this.solver.resolve();

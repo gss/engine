@@ -483,7 +483,7 @@ class Thread
     #  @solver.beginEdit()
     
     # @solver.setEditedValue
-    
+    @solver.solve()
     @_editvar varr, s, w
     @solver.suggestValue varr, val
     @solver.resolve()
