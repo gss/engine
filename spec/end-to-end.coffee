@@ -244,7 +244,6 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'display', (e) ->
-          console.log JSON.stringify engine.vars
           expect(engine.vars).to.eql 
             "$sugar1[x]": 5
             "$sugar1[y]": 5
@@ -1127,42 +1126,10 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', listen    
       
-
-    describe '<points>', ->
-  
-      it 'should compute', (done) ->
-        listen = (e) ->
-          expect(engine.vars).to.eql                  
-            "$container[x]": 10,
-            "$container[width]": 100,
-            "[right-edge]": 200,
-            "$s1[x]": 70,
-            "$s1[width]": 120
-          done()          
-    
-        container.innerHTML =  """
-            <div id="s1"></div>
-            <div id="container"></div>
-            <style type="text/gss">                        
-            
-              #container {
-                x: == 10;
-                width: == 100;
-              }
-              
-              [right-edge] == 200;
-              
-              @h <#container[center-x]>-[#s1]-<[right-edge]> gap(10);     
-  
-            </style>
-          """
-        engine.once 'solved', listen
-    
-    
     describe '[::] VFLs II', ->
   
       it 'should compute', (done) ->
-        listen = (e) ->     
+        engine.once 'solved', (e) ->     
           expect(engine.vars).to.eql      
             "$s1[x]": 20,
             "$container[x]": 10,
@@ -1171,7 +1138,6 @@ describe 'End - to - End', ->
             "$s1[width]": 80,
             "$s2[width]": 80     
           done()          
-    
         container.innerHTML =  """
             <div id="s1" class="section"></div>
             <div id="s2" class="section"></div>
@@ -1189,7 +1155,39 @@ describe 'End - to - End', ->
   
             </style>
           """
-        engine.once 'solved', listen   
+          
+    describe '<points>', ->
+  
+      it 'should compute', (done) ->
+        engine.once 'solved', (e) ->
+          expect(engine.vars).to.eql                  
+            "$container[x]": 10,
+            "$container[width]": 100,
+            "[right-edge]": 200,
+            "$s1[x]": 70,
+            "$s1[width]": 120
+            "$s2[x]": 200,
+            "$s2[width]": 801
+          done()              
+        container.innerHTML =  """
+            <div id="s1"></div>
+            <div id="s2"></div>
+            <div id="container"></div>
+            <style type="text/gss">                        
+            
+              #container {
+                x: == 10;
+                width: == 100;
+              }
+              
+              [right-edge] == 200;
+              
+              @h <#container[center-x]>-[#s1]-<[right-edge]> [#s2] < 1000 + 1 > gap(10);     
+  
+            </style>
+          """
+    
+              
     
     describe 'VFLs w/ missing elements', ->
   
@@ -1208,7 +1206,9 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', (e) ->     
           assert true
-          done()    
+          done()  
+    
+      
           
       ###
       .dot[width] == 2 == .dot[height];
