@@ -2765,11 +2765,30 @@ module.exports = (function() {
                 var tailConstraints = parser.unpack2dConstraint(e2);
 
                 for (var i2 = 0, l2 = tailConstraints.length; i2 < l2; i2++) {
-                  parser.addC([
-                    eq,
-                    headConstraints[i2],
-                    tailConstraints[i2]
-                  ].concat(s));
+                  var headConstraint = headConstraints[i2];
+                  var tailConstraint = tailConstraints[i2];
+
+                  // Correctly handle constraints with a mix of 1D and 2D properties.
+                  //
+                  // e.g.
+                  // #box1[size] == #box2[width];
+                  //
+                  // becomes
+                  // #box1[width] == #box2[width];
+                  //
+                  if (headConstraint && tailConstraint) {
+                    if (headConstraints.length > tailConstraints.length) {
+                      headConstraint[1] = tailConstraint[1];
+                    } else if (headConstraints.length < tailConstraints.length) {
+                      tailConstraint[1] = headConstraint[1];
+                    }
+
+                    parser.addC([
+                      eq,
+                      headConstraint,
+                      tailConstraint
+                    ].concat(s));
+                  }
                 }
 
                 e1 = e2;
@@ -28895,7 +28914,7 @@ module.exports = {
   "description": "Constraint Cascading Style Sheets compiler",
   "author": "Dan Tocchini <d4@thegrid.io>",
   "repo": "the-gss/ccss-compiler",
-  "version": "1.0.8-beta",
+  "version": "1.0.9-beta",
   "json": [
     "component.json"
   ],
