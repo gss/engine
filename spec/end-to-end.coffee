@@ -1124,7 +1124,64 @@ describe 'End - to - End', ->
   
             </style>
           """
-        engine.once 'solved', listen    
+        engine.once 'solved', listen  
+    
+    describe 'Implicit VFL', ->
+  
+      it 'should compute', (done) ->
+        engine.once 'solved', (e) ->
+          expect(engine.vars).to.eql      
+            "$s1[x]": 0,
+            "$s2[x]": 60,
+            "$s1[width]": 50,
+            "$s2[width]": 50     
+          done()
+        container.innerHTML =  """
+            <div id="s1" class="implicit"></div>
+            <div id="s2" class="implicit"></div>
+            <div id="container"></div>
+            <style type="text/gss">                                                          
+            
+              .implicit {
+                x: >= 0;
+                width: == 50;
+              }                        
+              
+              @h .implicit gap(10);
+  
+            </style>
+          """
+    
+    ###
+    describe 'Implicit VFL w/ containment', ->
+  
+      it 'should compute', (done) ->
+        engine.once 'solved', (e) ->
+          console.log JSON.stringify engine.vars
+          expect(engine.vars).to.eql      
+            "$s1[x]": 10,
+            "$container[x]": 0,
+            "$s2[x]": 40,
+            "$container[width]": 90,
+            "$s1[width]": 30,
+            "$s2[width]": 30     
+          done()
+        container.innerHTML =  """
+            <div id="s1" class="implicit"></div>
+            <div id="s2" class="implicit"></div>
+            <div id="container"></div>
+            <style type="text/gss">                        
+                      
+              @h .implicit gap(10) in(#container);
+            
+              #container {
+                x: == 0;
+                width: == 90;
+              }                        
+  
+            </style>
+          """
+    ###
       
     describe '[::] VFLs II', ->
   
@@ -1185,9 +1242,7 @@ describe 'End - to - End', ->
               @h <#container[center-x]>-[#s1]-<[right-edge]> [#s2] < 1000 + 1 > gap(10);     
   
             </style>
-          """
-    
-              
+          """ 
     
     describe 'VFLs w/ missing elements', ->
   
