@@ -283,6 +283,33 @@ describe 'End - to - End', ->
             "$b4[x]": 100
           done()        
     
+    describe 'complex selectors', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <section class="section">
+              <div id="a1" class="a"></div>
+              <div id="a2" class="a"></div>
+              <div id="a3" class="a"></div>            
+              <div id="b1" class="b"></div>
+              <div id="b2" class="b"></div>
+              <div id="b3" class="b"></div>
+            </section>
+            <style type="text/gss">                            
+              [x] == 100;
+              (section.section div:not(.b))[x] == (section.section div:not(.a))[x] == [x];              
+            </style>
+          """
+        engine.once 'display', (e) ->
+          expect(engine.vars).to.eql 
+            "[x]": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$a3[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+            "$b3[x]": 100
+          done()
+    
     describe '2D sugar', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """

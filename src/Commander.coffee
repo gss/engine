@@ -614,8 +614,6 @@ class Commander
     bindRootAsContext root, query
     return o
     
-  
-  # mutli
   '$class': (root,sel) =>
     selector = "."+sel
     o = @queryCommandCache[selector]
@@ -631,13 +629,27 @@ class Commander
     bindRootAsMulti root, o.query
     return o
 
-  # mutli
   '$tag': (root,sel) =>    
     selector = sel
     o = @queryCommandCache[selector]
     if !o
       query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
         return @engine.queryScope.getElementsByTagName(sel)
+      o = {
+        query:query
+        selector:selector
+      }
+      @queryCommandCache[selector] = o
+    bindRootAsMulti root, o.query
+    return o
+  
+  '$all': (root,sel) =>    
+    selector = sel
+    o = @queryCommandCache[selector]
+    if !o
+      query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
+        # TODO: scopes are unreliable in old browsers
+        return @engine.queryScope.querySelectorAll(sel)
       o = {
         query:query
         selector:selector
