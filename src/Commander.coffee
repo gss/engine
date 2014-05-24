@@ -7,7 +7,7 @@ to match live results of query.
 
 bindRoot = (root, query) ->
   root.isQueryBound = true    
-  
+
   if !root.queries 
     root.queries = [query]
   else if root.queries.indexOf(query) is -1
@@ -15,10 +15,14 @@ bindRoot = (root, query) ->
   return root 
   
 bindRootAsMulti = (root, query) ->
-  bindRoot(root, query)
-  
-  if root.queries.multi and root.queries.multi isnt query then throw new Error "bindRoot:: only one multiquery per statement"
-  root.queries.multi = query
+  bindRoot(root, query)  
+  ### TODO
+  # - throw warning?
+  if root.queries.multi and root.queries.multi isnt query     
+    throw new Error " #{root.queries.multi.selector} & #{query.selector}"
+  ###
+  #root.queries.multi = query
+  return root
   
 bindRootAsContext = (root, query) ->
   bindRoot(root, query)
@@ -271,22 +275,31 @@ class Commander
     pluralPartLookup = {}
     plural = null
     pluralLength = 0
+    pluralSelector = null
     for part, i in command
       if part
         if part.spawn?          
           newPart = part.spawn(  contextId  )
           newCommand.push newPart
           if part.isPlural
-            hasPlural = true
+            if hasPlural              
+              if newPart.length isnt pluralLength 
+                GSS.warn "GSS: trying to constrain 2 plural selectors ('#{pluralSelector}' & '#{part.query.selector}') with different number of matching elements"
+                # use the shorter plural                
+                if newPart.length < pluralLength 
+                  pluralLength = newPart.length
+            else
+              pluralLength = newPart.length
+            hasPlural = true            
+            pluralSelector = part.query?.selector
             pluralPartLookup[i] = newPart
-            pluralLength = newPart.length
         else
           newCommand.push part        
   
     if isRoot
       if tracker then newCommand.push tracker
            
-    if hasPlural      
+    if hasPlural
       for j in [0...pluralLength]
         pluralCommand = []
         for part, i in newCommand

@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.2-beta (2014-05-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20000,7 +20001,7 @@ GSS.config = {
     characterData: true
   },
   debug: false,
-  warn: false,
+  warn: true,
   perf: false,
   fractionalPixels: true,
   readyClass: true,
@@ -20024,9 +20025,17 @@ GSS.deblog = function() {
   }
 };
 
-GSS.warn = function() {
+GSS.warn = function() {};
+
+GSS.error = function(message) {
+  GSS.trigger('error', message);
+  throw new Error(message);
+};
+
+GSS.warn = function(message) {
+  GSS.trigger('warn', message);
   if (GSS.config.warn) {
-    return console.warn.apply(console, arguments);
+    return typeof console.warn === "function" ? console.warn.apply(console, arguments) : void 0;
   }
 };
 
@@ -22755,10 +22764,13 @@ bindRoot = function(root, query) {
 
 bindRootAsMulti = function(root, query) {
   bindRoot(root, query);
-  if (root.queries.multi && root.queries.multi !== query) {
-    throw new Error("bindRoot:: only one multiquery per statement");
-  }
-  return root.queries.multi = query;
+  /* TODO
+  # - throw warning?
+  if root.queries.multi and root.queries.multi isnt query     
+    throw new Error " #{root.queries.multi.selector} & #{query.selector}"
+  */
+
+  return root;
 };
 
 bindRootAsContext = function(root, query) {
@@ -23108,13 +23120,14 @@ Commander = (function() {
   };
 
   Commander.prototype.expandSpawnable = function(command, isRoot, contextId, tracker) {
-    var commands, hasPlural, i, j, newCommand, newPart, part, plural, pluralCommand, pluralLength, pluralPartLookup, _i, _j, _k, _len, _len1;
+    var commands, hasPlural, i, j, newCommand, newPart, part, plural, pluralCommand, pluralLength, pluralPartLookup, pluralSelector, _i, _j, _k, _len, _len1, _ref;
     newCommand = [];
     commands = [];
     hasPlural = false;
     pluralPartLookup = {};
     plural = null;
     pluralLength = 0;
+    pluralSelector = null;
     for (i = _i = 0, _len = command.length; _i < _len; i = ++_i) {
       part = command[i];
       if (part) {
@@ -23122,9 +23135,19 @@ Commander = (function() {
           newPart = part.spawn(contextId);
           newCommand.push(newPart);
           if (part.isPlural) {
+            if (hasPlural) {
+              if (newPart.length !== pluralLength) {
+                GSS.warn("GSS: trying to constrain 2 plural selectors ('" + pluralSelector + "' & '" + part.query.selector + "') with different number of matching elements");
+                if (newPart.length < pluralLength) {
+                  pluralLength = newPart.length;
+                }
+              }
+            } else {
+              pluralLength = newPart.length;
+            }
             hasPlural = true;
+            pluralSelector = (_ref = part.query) != null ? _ref.selector : void 0;
             pluralPartLookup[i] = newPart;
-            pluralLength = newPart.length;
           }
         } else {
           newCommand.push(part);
@@ -24749,9 +24772,6 @@ IdMixin = {
         el: el,
         id: gid
       });
-      if (this._byIdCache[gid] != null) {
-        GSS.warn("element by id cache replaced gss-id: " + gid);
-      }
     }
     this._byIdCache[gid] = el;
     return gid;

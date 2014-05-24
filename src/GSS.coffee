@@ -43,7 +43,7 @@ GSS.config =
   observe: true
   observerOptions: {subtree: true, childList: true, attributes: true, characterData: true}
   debug: false
-  warn: false
+  warn: true
   perf: false  
   fractionalPixels: true
   readyClass: true
@@ -67,7 +67,14 @@ GSS.deblog = () ->
   if GSS.config.debug then console.log(arguments...)  
 
 GSS.warn = () ->
-  if GSS.config.warn then console.warn(arguments...)  
+    
+GSS.error = (message) ->
+  GSS.trigger 'error', message  
+  throw new Error message
+
+GSS.warn = (message) ->
+  GSS.trigger 'warn', message
+  if GSS.config.warn then console.warn?(arguments...)
   
 LOG_PASS = (pass, bg="green") ->
   GSS.deblog "%c#{pass}", "color:white; padding:2px; font-size:14px; background:#{bg};"
@@ -124,8 +131,6 @@ GSS.boot = () ->
   GSS.update()
   GSS.observe()
   GSS.trigger "afterLoaded"
-
-
 
 
 # Update pass

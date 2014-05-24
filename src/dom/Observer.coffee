@@ -51,6 +51,12 @@ GSS.setupObserver = () ->
     observableMutation = false
 
     for m in mutations
+      
+      # Should cleanup removed views here? 
+      # Currently, removes are only accounted for when queries update      
+      #if m.removedNodes.length > 0 # nodelist are weird?
+      #  for node in m.removedNodes
+      
       if _unobservedElements.indexOf(m.target) isnt -1
         continue
       else

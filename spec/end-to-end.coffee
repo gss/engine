@@ -224,6 +224,65 @@ describe 'End - to - End', ->
             "[md2]": 71 / 4
           done()
     
+    describe 'balanced plural selectors', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+            <style type="text/gss">                            
+              [x] == 100;
+              .a[x] == .b[x] == [x];              
+            </style>
+          """
+        engine.once 'display', (e) ->
+          expect(engine.vars).to.eql 
+            "[x]": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$a3[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+            "$b3[x]": 100
+          done()
+    
+    describe 'WARN: unbalanced plural selectors', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+            <div id="b4" class="b"></div>
+            <style type="text/gss">                            
+              [x] == 100;
+              .a[x] == .b[x] == [x];              
+            </style>
+          """
+        warned = false
+        onWarn = (message) ->
+          warned = message.indexOf('.a') > 0 and message.indexOf('.b') > 0
+          if warned 
+            GSS.off 'warn', onWarn          
+        GSS.on 'warn', onWarn
+        engine.once 'display', (e) ->
+          assert warned, "warn message should contain unbalanced selectors"
+          expect(engine.vars).to.eql 
+            "[x]": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$a3[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+            "$b3[x]": 100
+            "$b4[x]": 100
+          done()        
+    
     describe '2D sugar', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
@@ -269,7 +328,6 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'display', (e) ->
-
           expect(engine.vars).to.eql 
             "$sync1[intrinsic-width]": 100
             "$sync1[height]": 100            
@@ -1014,11 +1072,31 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', listen    
   
-  
+    ###
     describe '@if @else w/ dynamic VFLs', ->
-  
-      it 'should compute values', (done) ->
-        listen = (e) ->     
+      it 'should compute values', (done) ->     
+        container.innerHTML =  """
+            <div id="s1" class="section"></div>
+            <div id="s2" class="section"></div>
+            <div id="container"></div>
+            <style type="text/gss">
+              #container {
+                width: == 100;
+              }
+              .section {
+                height: == 100;
+                width: == 100;
+                x: >= 0;
+                y: >= 0;
+              }                 
+              @if #container[width] > 960 {            
+                @vertical .section;     
+              } @else {
+                @horizontal .section;     
+              }
+            </style>
+          """
+        engine.once 'solved', (e) ->     
           expect(engine.vars).to.eql
             "$container[width]": 100,
             "$s1[height]": 100,
@@ -1029,39 +1107,8 @@ describe 'End - to - End', ->
             "$s2[x]": 100,
             "$s1[y]": 0,
             "$s2[y]": 0          
-   
-          done()          
-    
-        container.innerHTML =  """
-            <div id="s1" class="section"></div>
-            <div id="s2" class="section"></div>
-            <div id="container"></div>
-            <style type="text/gss">
-
-            #container {
-              width: == 100;
-            }
-            .section {
-              height: == 100;
-              width: == 100;
-              x: >= 0;
-              y: >= 0;
-            }       
-          
-            @if #container[width] > 960 {
-            
-              @vertical .section;     
-
-            }
-          
-            @else {
-              @horizontal .section;     
-            }
-
-
-            </style>
-          """
-        engine.once 'solved', listen  
+          done()
+    ###
   
   
   
@@ -1126,6 +1173,70 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', listen  
     
+    describe 'plural selectors I', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="cont1" class="cont"></div>
+            <div id="cont2" class="cont"></div>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>            
+            <style type="text/gss">                            
+              .cont {
+                width: == 100;
+                x: == 0;
+              }
+              @h |[.a][.b]| in(.cont) chain-width;             
+            </style>
+          """
+        engine.once 'display', (e) ->
+          expect(engine.vars).to.eql 
+            "$cont1[width]": 100
+            "$cont2[width]": 100
+            "$cont1[x]": 0            
+            "$cont2[x]": 0
+            "$a1[x]": 0
+            "$a2[x]": 0
+            "$b1[x]": 50            
+            "$a1[width]": 50
+            "$b2[x]": 50
+            "$a2[width]": 50
+            "$b1[width]": 50                                    
+            "$b2[width]": 50
+          done()
+    
+    describe 'plural selectors & in(::)', ->  
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="cont1" class="cont"></div>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>            
+            <style type="text/gss">                            
+              .cont {
+                width: == 100;
+                x: == 0;
+                @h |[.a][.b]| in(::) chain-width;
+              }                           
+            </style>
+          """
+        engine.once 'display', (e) ->
+          console.log JSON.stringify engine.vars
+          expect(engine.vars).to.eql 
+            "$cont1[width]": 100
+            "$cont1[x]": 0            
+            "$a1[x]": 0
+            "$a2[x]": 0
+            "$b1[x]": 50            
+            "$a1[width]": 50
+            "$b2[x]": 50
+            "$a2[width]": 50
+            "$b1[width]": 50                                    
+            "$b2[width]": 50
+          done()
+    
     describe 'Implicit VFL', ->
   
       it 'should compute', (done) ->
@@ -1152,7 +1263,7 @@ describe 'End - to - End', ->
             </style>
           """
     
-    ###
+    ### TODO
     describe 'Implicit VFL w/ containment', ->
   
       it 'should compute', (done) ->

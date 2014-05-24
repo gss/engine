@@ -51,7 +51,7 @@ IdMixin =
       el.style[boxSizingPrefix] = 'border-box'
       el._gss_id = gid 
       GSS.View.new({el:el,id:gid})
-      if @_byIdCache[gid]? then GSS.warn("element by id cache replaced gss-id: #{gid}")
+      #if @_byIdCache[gid]? then GSS.warn("element by id cache replaced gss-id: #{gid}")
     @_byIdCache[gid] = el
     return gid      
 
