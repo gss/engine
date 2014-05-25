@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.2-beta (2014-05-24) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.3-beta (2014-05-24) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
