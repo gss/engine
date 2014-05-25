@@ -1,6 +1,29 @@
 GSS Engine ChangeLog
 ====================
 
+## 1.0.3-beta (May 24th 2014)
+
+- Selectors other than id, class & tag can now be used in CCSS when surrounded by parans:
+
+```css
+    (.section > article:not(.featured))[font-size] == 100;
+``` 
+
+- Support for plural selectors on either side of a constraint operator:
+
+```css
+    .article[font-size] == .header[font-size];    
+    
+    @h |[.a][.b]| in(.cont) chain-width;
+    
+    .container {
+      @h |[.itemA][.itemB]| in(::) chain-width;
+    }
+```
+
+- 2D sugar props: `size`, `position`, `center`, `intrinsic-size`, `top-left`, `top-right`, `bottom-left`, `bottom-right`
+
+
 ## 1.0.2-beta (April 14th 2014)
 
 - VGL: `@grid-template` empty zones can be defined with `.`
