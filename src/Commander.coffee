@@ -794,10 +794,10 @@ class Commander
           ids = command.query.ids
         for contextId in ids
           result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
-          trackers.push subtracker;
+          trackers.push subtracker
         if result.length
           result.isPlural = true
-          return result;
+          return result
     return o
 
   
