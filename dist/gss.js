@@ -28863,7 +28863,7 @@ module.exports = {
     "vendor/gl-matrix.js"
   ],
   "dependencies": {
-    "the-gss/compiler": "file://Users/invizko/Sites/the-gss/compiler/",
+    "the-gss/compiler": "*",
     "d4tocchini/customevent-polyfill": "*",
     "slightlyoff/cassowary.js": "*"
   },
