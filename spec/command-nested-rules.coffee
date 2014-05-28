@@ -30,6 +30,16 @@ describe 'Nested Rules', ->
     afterEach ->
       remove(container)
 
+
+    Scenario = (done, container, steps, i) ->
+      if steps[i]
+        container.addEventListener 'solve', callback = ->
+          steps[i]()
+          container.removeEventListener 'solve', callback
+          Scenario(done, container, steps, i + 1)
+      else
+        done()
+
     describe 'flat', ->
     
       it 'Runs commands from sourceNode', (done) ->
@@ -108,7 +118,7 @@ describe 'Nested Rules', ->
       
 
 
-      it 'Resolve selector on ::', (done) ->
+      it 'should resolve selector on ::', (done) ->
         rules = [
           {
             type:'ruleset'
@@ -137,43 +147,35 @@ describe 'Nested Rules', ->
                         
         box1 = container.getElementsByClassName('box')[1]
         vessel0 = container.getElementsByClassName('vessel')[0] 
-        TwoElementsMatch = (e) ->  
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-            ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
-            ['eq', ['get$','x','$box2', '.vessel .box$vessel0'], ['number',100]]
-          ])
-          box1.classList.remove('box')
-          container.removeEventListener 'solved', TwoElementsMatch
-          container.addEventListener 'solved', OneChildDoesntMatchAnymore
-        container.addEventListener 'solved', TwoElementsMatch
-        OneChildDoesntMatchAnymore = (e) ->  
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-            ['remove', '.vessel .box$vessel0$box1']
-          ])
-          box1.classList.add('box')
-          container.removeEventListener 'solved', OneChildDoesntMatchAnymore
-          container.addEventListener 'solved', ChildMatchesAgain
-        ChildMatchesAgain = (e) ->  
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-            ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
-          ])
-          container.removeEventListener 'solved', ChildMatchesAgain
-          container.addEventListener 'solved', ParentDoesntMatchAnyMore
-          vessel0.classList.remove('vessel')
-        ParentDoesntMatchAnyMore = (e) ->  
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-            ['remove', '.vessel$vessel0', '.vessel .box$vessel0']
-          ])
-          container.removeEventListener 'solved', ParentDoesntMatchAnyMore
-          container.addEventListener 'solved', ParentMatchesAgain
-          vessel0.classList.add('vessel')
-        ParentMatchesAgain = (e) ->  
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-            ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
-            ['eq', ['get$','x','$box2', '.vessel .box$vessel0'], ['number',100]]
-          ])
-          container.removeEventListener 'solved', ParentMatchesAgain
-          done()
+
+        Scenario done, container, [
+          TwoElementsMatch = (e) ->  
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
+              ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
+              ['eq', ['get$','x','$box2', '.vessel .box$vessel0'], ['number',100]]
+            ])
+            box1.classList.remove('box')
+          OneChildDoesntMatchAnymore = (e) ->  
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
+              ['remove', '.vessel .box$vessel0$box1']
+            ])
+            box1.classList.add('box')
+          ChildMatchesAgain = (e) ->  
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
+              ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
+            ])
+            vessel0.classList.remove('vessel')
+          ParentDoesntMatchAnyMore = (e) ->  
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
+              ['remove', '.vessel$vessel0', '.vessel .box$vessel0']
+            ])
+            vessel0.classList.add('vessel')
+          ParentMatchesAgain = (e) ->  
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
+              ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
+              ['eq', ['get$','x','$box2', '.vessel .box$vessel0'], ['number',100]]
+            ])
+        ]
         engine = GSS(container)
 
         sheet = new GSS.StyleSheet
@@ -259,82 +261,67 @@ describe 'Nested Rules', ->
         clone.innerHTML = container.innerHTML.replace /\d+/g, (d) ->
           return "1" + d
 
-
+        Scenario done, container, [
                               
-        TwoElementsMatchSelector = (e) ->        
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['lte', ['get$','width','$box2', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]],
-              ['lte', ['get$','width','$box4', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
-            ]
-          newLast = document.createElement('div')
-          newLast.id = 'box5'
-          newLast.className = 'box'
-          container.firstElementChild.appendChild(newLast)
-          container.removeEventListener 'solved', TwoElementsMatchSelector
-          container.addEventListener 'solved', NewElementReplacesAnother
-        container.addEventListener 'solved', TwoElementsMatchSelector
+          TwoElementsMatchSelector = (e) ->        
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['lte', ['get$','width','$box2', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]],
+                ['lte', ['get$','width','$box4', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
+              ]
+            newLast = document.createElement('div')
+            newLast.id = 'box5'
+            newLast.className = 'box'
+            container.firstElementChild.appendChild(newLast)
 
-        NewElementReplacesAnother = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ["remove",".group .vessel::parent .box:last-child$vessel1$box4"],
-              ['lte', ['get$','width','$box5', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
-            ]
-          container.firstElementChild.classList.remove('group')
-          container.removeEventListener 'solved', NewElementReplacesAnother
-          container.addEventListener 'solved', ParentDoesntMatchAnymore
+          , NewElementReplacesAnother = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ["remove",".group .vessel::parent .box:last-child$vessel1$box4"],
+                ['lte', ['get$','width','$box5', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
+              ]
+            container.firstElementChild.classList.remove('group')
 
-        ParentDoesntMatchAnymore = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['remove', '.group .vessel$vessel1', '.group .vessel::parent .box:last-child$vessel1']
-            ]
-          container.firstElementChild.classList.add('group')
-          container.removeEventListener 'solved', ParentDoesntMatchAnymore
-          container.addEventListener 'solved', ParentMatchesAgain
+          , ParentDoesntMatchAnymore = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['remove', '.group .vessel$vessel1', '.group .vessel::parent .box:last-child$vessel1']
+              ]
+            container.firstElementChild.classList.add('group')
 
-        ParentMatchesAgain = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['lte', ['get$','width','$box2', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]],
-              ['lte', ['get$','width','$box5', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
-            ]
-          container.removeEventListener 'solved', ParentMatchesAgain
-          container.addEventListener 'solved', ParentIsCloned
-          container.appendChild(clone)
+          , ParentMatchesAgain = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['lte', ['get$','width','$box2', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]],
+                ['lte', ['get$','width','$box5', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
+              ]
+            container.appendChild(clone)
 
-        ParentIsCloned = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['lte', ['get$','width','$box12', '.group .vessel::parent .box:last-child$vessel11'], ["number",100]],
-              ['lte', ['get$','width','$box14', '.group .vessel::parent .box:last-child$vessel11'], ["number",100]]
-            ]
-          container.removeEventListener 'solved', ParentIsCloned
-          container.addEventListener 'solved', CloneIsReplaced
-          container.replaceChild(container.firstElementChild, container.lastElementChild)
+          , ParentIsCloned = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['lte', ['get$','width','$box12', '.group .vessel::parent .box:last-child$vessel11'], ["number",100]],
+                ['lte', ['get$','width','$box14', '.group .vessel::parent .box:last-child$vessel11'], ["number",100]]
+              ]
+            container.replaceChild(container.firstElementChild, container.lastElementChild)
 
-        CloneIsReplaced = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['remove', '$vessel11', '.group .vessel$vessel11', '.group .vessel::parent .box:last-child$vessel11']
-            ]
-          box2 = container.getElementsByClassName('box')[2]
-          box2.parentNode.removeChild(box2)
-          container.removeEventListener 'solved', CloneIsReplaced
-          container.addEventListener 'solved', ChildIsRemovedAnotherMatches
+          , CloneIsReplaced = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['remove', '$vessel11', '.group .vessel$vessel11', '.group .vessel::parent .box:last-child$vessel11']
+              ]
+            box2 = container.getElementsByClassName('box')[2]
+            box2.parentNode.removeChild(box2)
 
-        ChildIsRemovedAnotherMatches = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['remove', '$box2'],
-              ['lte', ['get$', 'width', '$box1', '.group .vessel::parent .box:last-child$vessel1'],["number",100]],
-            ]
-          container.removeEventListener 'solved', ChildIsRemovedAnotherMatches
-          container.addEventListener 'solved', IntermediateElementIsRemoved
-          vessel = container.getElementsByClassName('vessel')[0]
-          vessel.parentNode.removeChild(vessel)
+          , ChildIsRemovedAnotherMatches = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['remove', '$box2'],
+                ['lte', ['get$', 'width', '$box1', '.group .vessel::parent .box:last-child$vessel1'],["number",100]],
+              ]
+            vessel = container.getElementsByClassName('vessel')[0]
+            vessel.parentNode.removeChild(vessel)
 
-        IntermediateElementIsRemoved = (e) ->
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['remove', '$vessel1', '$box1', '.group .vessel$vessel1', '.group .vessel::parent .box:last-child$vessel1'],
-            ]
-          container.removeEventListener 'solved', IntermediateElementIsRemoved
-          container.innerHTML = ""
-          done()
+          , IntermediateElementIsRemoved = (e) ->
+            expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+                ['remove', '$vessel1', '$box1', '.group .vessel$vessel1', '.group .vessel::parent .box:last-child$vessel1'],
+              ]
+            container.innerHTML = ""
+
+        ]
         
         engine = GSS(container)
 
