@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.3-beta (2014-05-24) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.3-beta (2014-05-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22762,15 +22762,39 @@ Commander = (function() {
   };
 
   Commander.prototype.handleRemoves = function(removes) {
-    var varid, _i, _len;
+    var subqueries, subquery, subtracked, subtrackers, varid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _subqueries, _subtrackers;
     if (removes.length < 1) {
       return this;
     }
-    this.engine.registerCommand(['remove'].concat(__slice.call(removes)));
     for (_i = 0, _len = removes.length; _i < _len; _i++) {
       varid = removes[_i];
-      delete this.intrinsicRegistersById[varid];
+      if (_subqueries = this._trackersById) {
+        if (subqueries = _subqueries[varid]) {
+          for (_j = 0, _len1 = subqueries.length; _j < _len1; _j++) {
+            subquery = subqueries[_j];
+            if (removes.indexOf(subquery) === -1) {
+              removes.push(subquery);
+            }
+          }
+        }
+      }
     }
+    for (_k = 0, _len2 = removes.length; _k < _len2; _k++) {
+      varid = removes[_k];
+      delete this.intrinsicRegistersById[varid];
+      if (_subtrackers = this._subtrackersByTracker) {
+        if (subtrackers = _subtrackers[varid]) {
+          for (_l = 0, _len3 = subtrackers.length; _l < _len3; _l++) {
+            subtracked = subtrackers[_l];
+            if (removes.indexOf(subtracked) === -1) {
+              removes.push(subtracked);
+            }
+          }
+          delete subtrackers[varid];
+        }
+      }
+    }
+    this.engine.registerCommand(['remove'].concat(__slice.call(removes)));
     return this;
   };
 
@@ -22786,7 +22810,7 @@ Commander = (function() {
       for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
         query = _ref1[_j];
         if (selectorsWithAdds.indexOf(query.selector) !== -1) {
-          this.spawn(root);
+          this.spawn(root, query);
           break;
         }
       }
@@ -22851,13 +22875,13 @@ Commander = (function() {
     }
   };
 
-  Commander.prototype.spawn = function(node) {
+  Commander.prototype.spawn = function(node, query) {
     var contextId, contextQuery, q, queries, ready, rule, _i, _j, _len, _len1, _ref, _results;
     queries = node.queries;
     ready = true;
     for (_i = 0, _len = queries.length; _i < _len; _i++) {
       q = queries[_i];
-      if (q.lastAddedIds.length <= 0) {
+      if ((!query || query === q) && q.lastAddedIds.length <= 0) {
         ready = false;
         break;
       }
@@ -22865,21 +22889,21 @@ Commander = (function() {
     if (ready) {
       rule = node.parentRule;
       if (node.isContextBound) {
-        contextQuery = rule.getContextQuery();
+        contextQuery = query || rule.getContextQuery();
         _ref = contextQuery.lastAddedIds;
         _results = [];
         for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
           contextId = _ref[_j];
-          _results.push(this.engine.registerCommands(this.expandSpawnable(node, true, contextId)));
+          _results.push(this.engine.registerCommands(this.expandSpawnable(node, true, contextId, null, query)));
         }
         return _results;
       } else {
-        return this.engine.registerCommands(this.expandSpawnable(node, true));
+        return this.engine.registerCommands(this.expandSpawnable(node, true, null, null, query));
       }
     }
   };
 
-  Commander.prototype.expandSpawnable = function(command, isRoot, contextId, tracker) {
+  Commander.prototype.expandSpawnable = function(command, isRoot, contextId, tracker, query) {
     var commands, hasPlural, i, j, newCommand, newPart, part, plural, pluralCommand, pluralLength, pluralPartLookup, pluralSelector, _i, _j, _k, _len, _len1, _ref;
     newCommand = [];
     commands = [];
@@ -22892,22 +22916,23 @@ Commander = (function() {
       part = command[i];
       if (part) {
         if (part.spawn != null) {
-          newPart = part.spawn(contextId);
-          newCommand.push(newPart);
-          if (part.isPlural) {
-            if (hasPlural) {
-              if (newPart.length !== pluralLength) {
-                GSS.warn("GSS: trying to constrain 2 plural selectors ('" + pluralSelector + "' & '" + part.query.selector + "') with different number of matching elements");
-                if (newPart.length < pluralLength) {
-                  pluralLength = newPart.length;
+          if (newPart = part.spawn(contextId, tracker, query)) {
+            newCommand.push(newPart);
+            if (part.isPlural || newPart.isPlural) {
+              if (hasPlural) {
+                if (newPart.length !== pluralLength) {
+                  GSS.warn("GSS: trying to constrain 2 plural selectors ('" + pluralSelector + "' & '" + part.query.selector + "') with different number of matching elements");
+                  if (newPart.length < pluralLength) {
+                    pluralLength = newPart.length;
+                  }
                 }
+              } else {
+                pluralLength = newPart.length;
               }
-            } else {
-              pluralLength = newPart.length;
+              hasPlural = true;
+              pluralSelector = (_ref = part.query) != null ? _ref.selector : void 0;
+              pluralPartLookup[i] = newPart;
             }
-            hasPlural = true;
-            pluralSelector = (_ref = part.query) != null ? _ref.selector : void 0;
-            pluralPartLookup[i] = newPart;
           }
         } else {
           newCommand.push(part);
@@ -23016,13 +23041,23 @@ Commander = (function() {
       idProcessor = queryObject.idProcessor;
       return {
         isQueryBound: true,
-        isPlural: false,
+        isPlural: root.isPlural || false,
         query: query,
-        spawn: function(id) {
-          if (idProcessor) {
-            id = idProcessor(id);
+        spawn: function(id, tracker, q) {
+          var originalId;
+          if (!q || q === query) {
+            tracker = selector;
+            if (idProcessor) {
+              originalId = id;
+              id = idProcessor(id);
+            }
+            if (root.spawn && (query === root.parentQuery || !query)) {
+              return root.spawn(id, this, originalId, q);
+            }
+          } else if (!tracker) {
+            tracker = q && q.selector || root.parentQuery.selector;
           }
-          return ['get$', prop, "$" + id, selector];
+          return ['get$', prop, '$' + id, tracker || selector];
         }
       };
     }
@@ -23324,10 +23359,10 @@ Commander = (function() {
     return o;
   };
 
-  Commander.prototype['$all'] = function(root, sel) {
+  Commander.prototype['$all'] = function(root, sel, scopeId, subtracker) {
     var o, query, selector,
       _this = this;
-    selector = sel;
+    selector = subtracker || sel;
     o = this.queryCommandCache[selector];
     if (!o) {
       query = this.engine.registerDomQuery({
@@ -23335,12 +23370,14 @@ Commander = (function() {
         isMulti: true,
         isLive: false,
         createNodeList: function() {
-          return _this.engine.queryScope.querySelectorAll(sel);
+          var scope;
+          scope = scopeId ? GSS.getById(scopeId) : _this.engine.queryScope;
+          return scope.querySelectorAll(sel);
         }
       });
       o = {
         query: query,
-        selector: selector
+        selector: subtracker || sel
       };
       this.queryCommandCache[selector] = o;
     }
@@ -23378,8 +23415,9 @@ Commander = (function() {
     return o;
   };
 
-  Commander.prototype['$reserved'] = function(root, sel) {
-    var engine, o, parentRule, query, selector, selectorKey;
+  Commander.prototype['$reserved'] = function(root, sel, subselector) {
+    var engine, o, parentRule, query, selector, selectorKey,
+      _this = this;
     if (sel === 'window') {
       selector = 'window';
       o = this.queryCommandCache[selector];
@@ -23412,7 +23450,6 @@ Commander = (function() {
         this.queryCommandCache[selectorKey] = o;
       }
       bindRootAsContext(root, query);
-      return o;
     } else if (sel === '::parent' || sel === 'parent') {
       parentRule = root.parentRule;
       if (!parentRule) {
@@ -23433,7 +23470,6 @@ Commander = (function() {
         this.queryCommandCache[selector] = o;
       }
       bindRootAsContext(root, query);
-      return o;
     } else if (sel === 'scope') {
       selector = "::" + sel;
       o = this.queryCommandCache[selector];
@@ -23454,9 +23490,42 @@ Commander = (function() {
         this.queryCommandCache[selector] = o;
       }
       bindRoot(root, o.query);
-      return o;
     }
-    throw new Error("$reserved selectors not yet handled: " + sel);
+    if (!o) {
+      throw new Error("$reserved selectors not yet handled: " + sel);
+    }
+    if (subselector) {
+      root.subselector = subselector;
+      root.parentQuery = query;
+      root.spawn = function(id, node, originalId, q) {
+        var $id, command, contextId, ids, result, subqueries, subquery, subtracker, tracker, trackers, _base, _base1, _i, _len;
+        result = [];
+        $id = "$" + (originalId || id);
+        tracker = query.selector + $id;
+        subtracker = selector + " " + subselector + $id;
+        subquery = command = _this["$all"](root, subselector, id, subtracker);
+        subqueries = (_base = (_this._trackersById || (_this._trackersById = {})))[$id] || (_base[$id] = []);
+        if (subqueries.indexOf(tracker) === -1) {
+          subqueries.push(tracker);
+        }
+        trackers = (_base1 = (_this._subtrackersByTracker || (_this._subtrackersByTracker = {})))[tracker] || (_base1[tracker] = []);
+        if (q === command.query) {
+          ids = command.query.lastAddedIds;
+        } else {
+          ids = command.query.ids;
+        }
+        for (_i = 0, _len = ids.length; _i < _len; _i++) {
+          contextId = ids[_i];
+          result.push.apply(result, _this.expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse'));
+          trackers.push(subtracker);
+        }
+        if (result.length) {
+          result.isPlural = true;
+          return result;
+        }
+      };
+    }
+    return o;
   };
 
   Commander.prototype['chain'] = function(root, queryObject, bridgessssss) {
@@ -28794,7 +28863,7 @@ module.exports = {
     "vendor/gl-matrix.js"
   ],
   "dependencies": {
-    "the-gss/compiler": "*",
+    "the-gss/compiler": "file://Users/invizko/Sites/the-gss/compiler/",
     "d4tocchini/customevent-polyfill": "*",
     "slightlyoff/cassowary.js": "*"
   },

@@ -896,7 +896,7 @@ describe 'GSS engine', ->
       # - larger b/c views activated via ::parent queries will not be cleaned up, need more robust GSS.Query
       # - async intrinsics also seem to matter...
       # - vies are not cleaned up when removed unless selector is updated!
-      margin_of_error = 25
+      margin_of_error = 25 + 5
       GSS._.defer ->
         count = 0
         for key of GSS.View.byId          
@@ -904,7 +904,7 @@ describe 'GSS engine', ->
         assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
         done()
     it "_byIdCache is cleared *MOSTLY*", (done) ->
-      margin_of_error = 25
+      margin_of_error = 25 + 5
       GSS._.defer ->
         count = 0
         for key of GSS._byIdCache

@@ -171,10 +171,26 @@ class Commander
 
 
   handleRemoves: (removes) ->
-    if (removes.length < 1) then return @    
-    @engine.registerCommand ['remove', removes...]
+    if (removes.length < 1) then return @  
+    for varid in removes
+      # Removing element from dom fires remove event with id
+      # Also added selectors to the list, if there were
+      # subselectors scoped to that element
+      if _subqueries = @_trackersById
+        if subqueries = _subqueries[varid]
+          for subquery in subqueries
+            if removes.indexOf(subquery) == -1
+              removes.push subquery
     for varid in removes
       delete @intrinsicRegistersById[varid]
+      # Detach scoped DOM queries attached to removed elements
+      if _subtrackers = @_subtrackersByTracker
+        if subtrackers = _subtrackers[varid]
+          for subtracked in subtrackers
+            if removes.indexOf(subtracked) == -1
+              removes.push subtracked
+          delete subtrackers[varid]
+    @engine.registerCommand ['remove', removes...]
     @
 
   handleSelectorsWithAdds: (selectorsWithAdds) ->
@@ -183,7 +199,7 @@ class Commander
     for root in @spawnableRoots
       for query in root.queries
         if selectorsWithAdds.indexOf(query.selector) isnt -1
-          @spawn root
+          @spawn root, query
           break
     @
       
@@ -239,35 +255,37 @@ class Commander
       @spawnableRoots.push node
       @spawn node    
   
-  spawn: (node) ->
+  spawn: (node, query) ->
     queries = node.queries
     ready = true
     for q in queries
-      if q.lastAddedIds.length <= 0
+      if (!query || query == q) && q.lastAddedIds.length <= 0
         ready = false
         break        
+
+
     
     if ready      
       rule = node.parentRule 
       
       # Context Bound
       if node.isContextBound
-        contextQuery = rule.getContextQuery()
+        contextQuery = query || rule.getContextQuery()
         
-        for contextId in contextQuery.lastAddedIds
-          @engine.registerCommands @expandSpawnable node, true, contextId
+        for contextId in contextQuery.lastAddedIds  
+          @engine.registerCommands @expandSpawnable node, true, contextId, null, query
           #@installCommandFromBase node, context_id
         
       
       # Not Context Bound                    
       else        
-        @engine.registerCommands @expandSpawnable node, true
+        @engine.registerCommands @expandSpawnable node, true, null, null, query
         #@installCommandFromBase node
           
   
   #uninstallCommandFromBase: (node, context_id, tracker) ->
   
-  expandSpawnable: (command, isRoot, contextId, tracker) ->
+  expandSpawnable: (command, isRoot, contextId, tracker, query) ->
     
     newCommand = []
     commands = []
@@ -279,20 +297,21 @@ class Commander
     for part, i in command
       if part
         if part.spawn?          
-          newPart = part.spawn(  contextId  )
-          newCommand.push newPart
-          if part.isPlural
-            if hasPlural              
-              if newPart.length isnt pluralLength 
-                GSS.warn "GSS: trying to constrain 2 plural selectors ('#{pluralSelector}' & '#{part.query.selector}') with different number of matching elements"
-                # use the shorter plural                
-                if newPart.length < pluralLength 
-                  pluralLength = newPart.length
-            else
-              pluralLength = newPart.length
-            hasPlural = true            
-            pluralSelector = part.query?.selector
-            pluralPartLookup[i] = newPart
+          if newPart = part.spawn(  contextId, tracker, query  )
+            newCommand.push newPart
+            if part.isPlural || newPart.isPlural
+              if hasPlural             
+                if newPart.length isnt pluralLength 
+                  GSS.warn "GSS: trying to constrain 2 plural selectors ('#{pluralSelector}' & '#{part.query.selector}') with different number of matching elements"
+                  # use the shorter plural                
+                  if newPart.length < pluralLength 
+                    pluralLength = newPart.length
+              else
+                pluralLength = newPart.length
+              hasPlural = true            
+              pluralSelector = part.query?.selector
+              pluralPartLookup[i] = newPart
+
         else
           newCommand.push part        
   
@@ -384,12 +403,21 @@ class Commander
       idProcessor = queryObject.idProcessor
       return {
         isQueryBound: true
-        isPlural: false
-        query: query      
-        spawn: (id) ->
-          if idProcessor
-            id = idProcessor(id)
-          return ['get$', prop, "$"+id, selector]
+        isPlural: root.isPlural || false
+        query: query
+        spawn: (id, tracker, q) -> 
+          if !q || q == query
+            tracker = selector
+            if idProcessor
+              originalId = id
+              id = idProcessor(id)
+            # Proceed with subselector
+            if root.spawn && (query == root.parentQuery || !query)
+              return root.spawn(id, @, originalId, q)
+          else if (!tracker) 
+            tracker = q && q.selector || root.parentQuery.selector
+
+          return ['get$', prop, '$'+id, tracker || selector]
       }
       
     return {
@@ -643,20 +671,22 @@ class Commander
     bindRootAsMulti root, o.query
     return o
   
-  '$all': (root,sel) =>    
-    selector = sel
+  '$all': (root,sel, scopeId, subtracker) => 
+    selector = subtracker || sel
     o = @queryCommandCache[selector]
     if !o
       query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
         # TODO: scopes are unreliable in old browsers
-        return @engine.queryScope.querySelectorAll(sel)
+        scope = if scopeId then  GSS.getById(scopeId) else @engine.queryScope
+        return scope.querySelectorAll(sel)
       o = {
         query:query
-        selector:selector
+        selector: subtracker || sel,
       }
       @queryCommandCache[selector] = o
     bindRootAsMulti root, o.query
     return o
+
   
   '$id': (root,sel) =>
     selector = "#"+sel    
@@ -675,8 +705,7 @@ class Commander
     return o
   
   # 
-  '$reserved': (root, sel) =>
-
+  '$reserved': (root, sel, subselector) =>
     if sel is 'window'
       selector = 'window'
       o = @queryCommandCache[selector]
@@ -707,13 +736,12 @@ class Commander
         }
         @queryCommandCache[selectorKey] = o
       bindRootAsContext root, query
-      return o
     
     else if sel is '::parent' or sel is 'parent'
       parentRule = root.parentRule
       if !parentRule then throw new Error "::this query requires parent rule for context"    
       query = parentRule.getContextQuery()
-      selector = query.selector + "::parent"      
+      selector = query.selector + "::parent"  
       o = @queryCommandCache[selector]
       if !o
         o = {
@@ -723,10 +751,10 @@ class Commander
           idProcessor: (id) ->
             # TODO... fix this shit
             return GSS.setupId(GSS.getById(id).parentElement)
-        }      
+        }
         @queryCommandCache[selector] = o
+
       bindRootAsContext root, query
-      return o
     
     else if sel is 'scope'
       selector = "::"+sel
@@ -741,10 +769,37 @@ class Commander
         }
         @queryCommandCache[selector] = o
       bindRoot root, o.query
-      return o
+    unless o
+      throw new Error "$reserved selectors not yet handled: #{sel}"     
       
     
-    throw new Error "$reserved selectors not yet handled: #{sel}"          
+    if subselector
+      root.subselector = subselector
+      root.parentQuery = query
+      root.spawn = (id, node, originalId, q) =>
+        result = []
+        $id = "$" + (originalId || id)
+
+        tracker = query.selector + $id
+        subtracker = selector + " " + subselector + $id
+        subquery = command = @["$all"](root, subselector, id, subtracker)
+        subqueries = (@_trackersById ||= {})[$id] ||= []
+        if subqueries.indexOf(tracker) is -1
+          subqueries.push(tracker)
+
+        trackers = (@_subtrackersByTracker ||= {})[tracker] ||= []
+        if q == command.query 
+          ids = command.query.lastAddedIds
+        else
+          ids = command.query.ids
+        for contextId in ids
+          result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
+          trackers.push subtracker;
+        if result.length
+          result.isPlural = true
+          return result;
+    return o
+
   
       
   
