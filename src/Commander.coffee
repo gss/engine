@@ -175,14 +175,14 @@ class Commander
     # Removing element from dom fires event with id
     # We also add selectors to the list, if there were
     # subselectors scoped to removed element
-    if _subqueries = @_trackersById
+    if _subqueries = @selectorKeysById
       for varid in removes
         if subqueries = _subqueries[varid]
           for subquery in subqueries
             if removes.indexOf(subquery) == -1
               removes.push subquery
           delete _subqueries[varid]
-    _subtrackers = @_subtrackersByTracker
+    _subtrackers = @selectorKeysByTracker
     for varid in removes
       delete @intrinsicRegistersById[varid]
       # Detach scoped DOM queries attached to removed elements
@@ -779,15 +779,15 @@ class Commander
         tracker = query.selector + $id
         subtracker = selector + " " + subselector + $id
         command = @["$all"](root, subselector, id, subtracker)
-        subqueries = (@_trackersById ||= {})[$id] ||= []
+        subqueries = (@selectorKeysById ||= {})[$id] ||= []
+        trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
         if subqueries.indexOf(tracker) is -1
           subqueries.push(tracker)
 
-        trackers = (@_subtrackersByTracker ||= {})[tracker] ||= []
-        if q == command.query 
-          ids = command.query.lastAddedIds
-        else
-          ids = command.query.ids
+        ids = if q == command.query 
+                command.query.lastAddedIds
+              else
+                command.query.ids
         for contextId in ids
           result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
           trackers.push subtracker

@@ -22766,7 +22766,7 @@ Commander = (function() {
     if (removes.length < 1) {
       return this;
     }
-    if (_subqueries = this._trackersById) {
+    if (_subqueries = this.selectorKeysById) {
       for (_i = 0, _len = removes.length; _i < _len; _i++) {
         varid = removes[_i];
         if (subqueries = _subqueries[varid]) {
@@ -22780,7 +22780,7 @@ Commander = (function() {
         }
       }
     }
-    _subtrackers = this._subtrackersByTracker;
+    _subtrackers = this.selectorKeysByTracker;
     for (_k = 0, _len2 = removes.length; _k < _len2; _k++) {
       varid = removes[_k];
       delete this.intrinsicRegistersById[varid];
@@ -23504,16 +23504,12 @@ Commander = (function() {
         tracker = query.selector + $id;
         subtracker = selector + " " + subselector + $id;
         command = _this["$all"](root, subselector, id, subtracker);
-        subqueries = (_base = (_this._trackersById || (_this._trackersById = {})))[$id] || (_base[$id] = []);
+        subqueries = (_base = (_this.selectorKeysById || (_this.selectorKeysById = {})))[$id] || (_base[$id] = []);
+        trackers = (_base1 = (_this.selectorKeysByTracker || (_this.selectorKeysByTracker = {})))[tracker] || (_base1[tracker] = []);
         if (subqueries.indexOf(tracker) === -1) {
           subqueries.push(tracker);
         }
-        trackers = (_base1 = (_this._subtrackersByTracker || (_this._subtrackersByTracker = {})))[tracker] || (_base1[tracker] = []);
-        if (q === command.query) {
-          ids = command.query.lastAddedIds;
-        } else {
-          ids = command.query.ids;
-        }
+        ids = q === command.query ? command.query.lastAddedIds : command.query.ids;
         for (_i = 0, _len = ids.length; _i < _len; _i++) {
           contextId = ids[_i];
           result.push.apply(result, _this.expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse'));
