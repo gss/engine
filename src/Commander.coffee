@@ -179,7 +179,7 @@ class Commander
       for varid in removes
         if subqueries = _subqueries[varid]
           for subquery in subqueries
-            if removes.indexOf(subquery) == -1
+            if removes.indexOf(subquery) is -1
               removes.push subquery
           delete _subqueries[varid]
     _subtrackers = @selectorKeysByTracker
@@ -189,7 +189,7 @@ class Commander
       if _subtrackers
         if subtrackers = _subtrackers[varid]
           for subtracked in subtrackers
-            if removes.indexOf(subtracked) == -1
+            if removes.indexOf(subtracked) is -1
               removes.push subtracked
           delete _subtrackers[varid]
     @engine.registerCommand ['remove', removes...]
