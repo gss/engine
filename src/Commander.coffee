@@ -220,7 +220,8 @@ class Commander
           register.call @
     @
         
-    
+  # Makes expression observe a given subselector
+  # inside nodes found by the query 
   bindRootSubselector: (root, o, subselector) ->
     root.subselector = subselector
     root.spawn = (id, node, originalId, q) =>
