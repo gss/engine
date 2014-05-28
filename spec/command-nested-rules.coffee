@@ -135,8 +135,8 @@ describe 'Nested Rules', ->
           <div id="box4" class="box"></div>
           """
                         
-        box1 = container.getElementsByClassName('box')[1];  
-        vessel0 = container.getElementsByClassName('vessel')[0];      
+        box1 = container.getElementsByClassName('box')[1]
+        vessel0 = container.getElementsByClassName('vessel')[0] 
         TwoElementsMatch = (e) ->  
           expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
             ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
@@ -279,7 +279,7 @@ describe 'Nested Rules', ->
               ["remove",".group .vessel::parent .box:last-child$vessel1$box4"],
               ['lte', ['get$','width','$box5', '.group .vessel::parent .box:last-child$vessel1'], ["number",100]]
             ]
-          container.firstElementChild.classList.remove('group');
+          container.firstElementChild.classList.remove('group')
           container.removeEventListener 'solved', NewElementReplacesAnother
           container.addEventListener 'solved', ParentDoesntMatchAnymore
 
@@ -287,7 +287,7 @@ describe 'Nested Rules', ->
           expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
               ['remove', '.group .vessel$vessel1', '.group .vessel::parent .box:last-child$vessel1']
             ]
-          container.firstElementChild.classList.add('group');
+          container.firstElementChild.classList.add('group')
           container.removeEventListener 'solved', ParentDoesntMatchAnymore
           container.addEventListener 'solved', ParentMatchesAgain
 
@@ -298,7 +298,7 @@ describe 'Nested Rules', ->
             ]
           container.removeEventListener 'solved', ParentMatchesAgain
           container.addEventListener 'solved', ParentIsCloned
-          container.appendChild(clone);
+          container.appendChild(clone)
 
         ParentIsCloned = (e) ->
           expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
