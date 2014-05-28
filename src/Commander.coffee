@@ -220,7 +220,33 @@ class Commander
           register.call @
     @
         
-  
+    
+  bindRootSubselector: (root, o, subselector) ->
+    root.subselector = subselector
+    root.spawn = (id, node, originalId, q) =>
+      $id = "$" + (originalId || id)
+      tracker = o.query.selector + $id
+      subtracker = o.selector + " " + subselector + $id
+      command = @["$all"](root, subselector, id, subtracker)
+
+      subqueries = (@selectorKeysById ||= {})[$id] ||= []
+      if subqueries.indexOf(tracker) is -1
+        subqueries.push(tracker)
+      trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
+      if trackers.indexOf(subtracker) is -1  
+        trackers.push subtracker
+
+      result = []
+      ids = if q == command.query 
+              command.query.lastAddedIds
+            else
+              command.query.ids
+      for contextId in ids
+        result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
+      if result.length
+        result.isPlural = true
+        return result
+
   
   # Command Spawning
   # ------------------------------------------------
@@ -769,32 +795,9 @@ class Commander
     unless o
       throw new Error "$reserved selectors not yet handled: #{sel}"     
       
-    
     if subselector
-      root.subselector = subselector
-      root.spawn = (id, node, originalId, q) =>
-        $id = "$" + (originalId || id)
-        tracker = query.selector + $id
-        subtracker = selector + " " + subselector + $id
-        command = @["$all"](root, subselector, id, subtracker)
-        
-        subqueries = (@selectorKeysById ||= {})[$id] ||= []
-        if subqueries.indexOf(tracker) is -1
-          subqueries.push(tracker)
-        trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
-        if trackers.indexOf(subtracker) is -1  
-          trackers.push subtracker
+      @bindRootSubselector(root, o, subselector)
 
-        result = []
-        ids = if q == command.query 
-                command.query.lastAddedIds
-              else
-                command.query.ids
-        for contextId in ids
-          result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
-        if result.length
-          result.isPlural = true
-          return result
     return o
 
   

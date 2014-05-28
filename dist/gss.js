@@ -22847,6 +22847,36 @@ Commander = (function() {
     return this;
   };
 
+  Commander.prototype.bindRootSubselector = function(root, o, subselector) {
+    var _this = this;
+    root.subselector = subselector;
+    return root.spawn = function(id, node, originalId, q) {
+      var $id, command, contextId, ids, result, subqueries, subtracker, tracker, trackers, _base, _base1, _i, _len;
+      $id = "$" + (originalId || id);
+      tracker = o.query.selector + $id;
+      subtracker = o.selector + " " + subselector + $id;
+      command = _this["$all"](root, subselector, id, subtracker);
+      subqueries = (_base = (_this.selectorKeysById || (_this.selectorKeysById = {})))[$id] || (_base[$id] = []);
+      if (subqueries.indexOf(tracker) === -1) {
+        subqueries.push(tracker);
+      }
+      trackers = (_base1 = (_this.selectorKeysByTracker || (_this.selectorKeysByTracker = {})))[tracker] || (_base1[tracker] = []);
+      if (trackers.indexOf(subtracker) === -1) {
+        trackers.push(subtracker);
+      }
+      result = [];
+      ids = q === command.query ? command.query.lastAddedIds : command.query.ids;
+      for (_i = 0, _len = ids.length; _i < _len; _i++) {
+        contextId = ids[_i];
+        result.push.apply(result, _this.expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse'));
+      }
+      if (result.length) {
+        result.isPlural = true;
+        return result;
+      }
+    };
+  };
+
   /*
   getWhereCommandIfNeeded: (rule) ->    
     
@@ -23419,8 +23449,7 @@ Commander = (function() {
   };
 
   Commander.prototype['$reserved'] = function(root, sel, subselector) {
-    var engine, o, parentRule, query, selector, selectorKey,
-      _this = this;
+    var engine, o, parentRule, query, selector, selectorKey;
     if (sel === 'window') {
       selector = 'window';
       o = this.queryCommandCache[selector];
@@ -23498,32 +23527,7 @@ Commander = (function() {
       throw new Error("$reserved selectors not yet handled: " + sel);
     }
     if (subselector) {
-      root.subselector = subselector;
-      root.spawn = function(id, node, originalId, q) {
-        var $id, command, contextId, ids, result, subqueries, subtracker, tracker, trackers, _base, _base1, _i, _len;
-        $id = "$" + (originalId || id);
-        tracker = query.selector + $id;
-        subtracker = selector + " " + subselector + $id;
-        command = _this["$all"](root, subselector, id, subtracker);
-        subqueries = (_base = (_this.selectorKeysById || (_this.selectorKeysById = {})))[$id] || (_base[$id] = []);
-        if (subqueries.indexOf(tracker) === -1) {
-          subqueries.push(tracker);
-        }
-        trackers = (_base1 = (_this.selectorKeysByTracker || (_this.selectorKeysByTracker = {})))[tracker] || (_base1[tracker] = []);
-        if (trackers.indexOf(subtracker) === -1) {
-          trackers.push(subtracker);
-        }
-        ids = q === command.query ? command.query.lastAddedIds : command.query.ids;
-        result = [];
-        for (_i = 0, _len = ids.length; _i < _len; _i++) {
-          contextId = ids[_i];
-          result.push.apply(result, _this.expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse'));
-        }
-        if (result.length) {
-          result.isPlural = true;
-          return result;
-        }
-      };
+      this.bindRootSubselector(root, o, subselector);
     }
     return o;
   };
