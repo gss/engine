@@ -181,6 +181,7 @@ class Commander
           for subquery in subqueries
             if removes.indexOf(subquery) == -1
               removes.push subquery
+          delete _subqueries[varid]
     _subtrackers = @_subtrackersByTracker
     for varid in removes
       delete @intrinsicRegistersById[varid]
@@ -190,7 +191,7 @@ class Commander
           for subtracked in subtrackers
             if removes.indexOf(subtracked) == -1
               removes.push subtracked
-          delete subtrackers[varid]
+          delete _subtrackers[varid]
     @engine.registerCommand ['remove', removes...]
     @
 
@@ -264,8 +265,6 @@ class Commander
         ready = false
         break        
 
-
-    
     if ready      
       rule = node.parentRule 
       

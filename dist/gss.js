@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.3-beta (2014-05-28) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.3-beta (2014-05-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22776,6 +22776,7 @@ Commander = (function() {
               removes.push(subquery);
             }
           }
+          delete _subqueries[varid];
         }
       }
     }
@@ -22791,7 +22792,7 @@ Commander = (function() {
               removes.push(subtracked);
             }
           }
-          delete subtrackers[varid];
+          delete _subtrackers[varid];
         }
       }
     }
