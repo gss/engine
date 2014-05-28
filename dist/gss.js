@@ -23498,12 +23498,12 @@ Commander = (function() {
     if (subselector) {
       root.subselector = subselector;
       root.spawn = function(id, node, originalId, q) {
-        var $id, command, contextId, ids, result, subqueries, subquery, subtracker, tracker, trackers, _base, _base1, _i, _len;
+        var $id, command, contextId, ids, result, subqueries, subtracker, tracker, trackers, _base, _base1, _i, _len;
         result = [];
         $id = "$" + (originalId || id);
         tracker = query.selector + $id;
         subtracker = selector + " " + subselector + $id;
-        subquery = command = _this["$all"](root, subselector, id, subtracker);
+        command = _this["$all"](root, subselector, id, subtracker);
         subqueries = (_base = (_this._trackersById || (_this._trackersById = {})))[$id] || (_base[$id] = []);
         if (subqueries.indexOf(tracker) === -1) {
           subqueries.push(tracker);

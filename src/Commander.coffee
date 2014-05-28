@@ -778,7 +778,7 @@ class Commander
 
         tracker = query.selector + $id
         subtracker = selector + " " + subselector + $id
-        subquery = command = @["$all"](root, subselector, id, subtracker)
+        command = @["$all"](root, subselector, id, subtracker)
         subqueries = (@_trackersById ||= {})[$id] ||= []
         if subqueries.indexOf(tracker) is -1
           subqueries.push(tracker)
