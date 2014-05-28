@@ -23497,7 +23497,6 @@ Commander = (function() {
     }
     if (subselector) {
       root.subselector = subselector;
-      root.parentQuery = query;
       root.spawn = function(id, node, originalId, q) {
         var $id, command, contextId, ids, result, subqueries, subquery, subtracker, tracker, trackers, _base, _base1, _i, _len;
         result = [];

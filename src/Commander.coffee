@@ -772,7 +772,6 @@ class Commander
     
     if subselector
       root.subselector = subselector
-      root.parentQuery = query
       root.spawn = (id, node, originalId, q) =>
         result = []
         $id = "$" + (originalId || id)
