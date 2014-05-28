@@ -23501,21 +23501,23 @@ Commander = (function() {
       root.subselector = subselector;
       root.spawn = function(id, node, originalId, q) {
         var $id, command, contextId, ids, result, subqueries, subtracker, tracker, trackers, _base, _base1, _i, _len;
-        result = [];
         $id = "$" + (originalId || id);
         tracker = query.selector + $id;
         subtracker = selector + " " + subselector + $id;
         command = _this["$all"](root, subselector, id, subtracker);
         subqueries = (_base = (_this.selectorKeysById || (_this.selectorKeysById = {})))[$id] || (_base[$id] = []);
-        trackers = (_base1 = (_this.selectorKeysByTracker || (_this.selectorKeysByTracker = {})))[tracker] || (_base1[tracker] = []);
         if (subqueries.indexOf(tracker) === -1) {
           subqueries.push(tracker);
         }
+        trackers = (_base1 = (_this.selectorKeysByTracker || (_this.selectorKeysByTracker = {})))[tracker] || (_base1[tracker] = []);
+        if (trackers.indexOf(subtracker) === -1) {
+          trackers.push(subtracker);
+        }
         ids = q === command.query ? command.query.lastAddedIds : command.query.ids;
+        result = [];
         for (_i = 0, _len = ids.length; _i < _len; _i++) {
           contextId = ids[_i];
           result.push.apply(result, _this.expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse'));
-          trackers.push(subtracker);
         }
         if (result.length) {
           result.isPlural = true;

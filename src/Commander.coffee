@@ -773,24 +773,25 @@ class Commander
     if subselector
       root.subselector = subselector
       root.spawn = (id, node, originalId, q) =>
-        result = []
         $id = "$" + (originalId || id)
-
         tracker = query.selector + $id
         subtracker = selector + " " + subselector + $id
         command = @["$all"](root, subselector, id, subtracker)
+        
         subqueries = (@selectorKeysById ||= {})[$id] ||= []
-        trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
         if subqueries.indexOf(tracker) is -1
           subqueries.push(tracker)
+        trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
+        if trackers.indexOf(subtracker) is -1  
+          trackers.push subtracker
 
+        result = []
         ids = if q == command.query 
                 command.query.lastAddedIds
               else
                 command.query.ids
         for contextId in ids
           result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
-          trackers.push subtracker
         if result.length
           result.isPlural = true
           return result
