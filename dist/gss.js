@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.3-beta (2014-05-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22765,9 +22766,9 @@ Commander = (function() {
     if (removes.length < 1) {
       return this;
     }
-    for (_i = 0, _len = removes.length; _i < _len; _i++) {
-      varid = removes[_i];
-      if (_subqueries = this._trackersById) {
+    if (_subqueries = this._trackersById) {
+      for (_i = 0, _len = removes.length; _i < _len; _i++) {
+        varid = removes[_i];
         if (subqueries = _subqueries[varid]) {
           for (_j = 0, _len1 = subqueries.length; _j < _len1; _j++) {
             subquery = subqueries[_j];
@@ -22778,10 +22779,11 @@ Commander = (function() {
         }
       }
     }
+    _subtrackers = this._subtrackersByTracker;
     for (_k = 0, _len2 = removes.length; _k < _len2; _k++) {
       varid = removes[_k];
       delete this.intrinsicRegistersById[varid];
-      if (_subtrackers = this._subtrackersByTracker) {
+      if (_subtrackers) {
         if (subtrackers = _subtrackers[varid]) {
           for (_l = 0, _len3 = subtrackers.length; _l < _len3; _l++) {
             subtracked = subtrackers[_l];

@@ -172,19 +172,20 @@ class Commander
 
   handleRemoves: (removes) ->
     if (removes.length < 1) then return @  
-    for varid in removes
-      # Removing element from dom fires remove event with id
-      # Also added selectors to the list, if there were
-      # subselectors scoped to that element
-      if _subqueries = @_trackersById
+    # Removing element from dom fires event with id
+    # We also add selectors to the list, if there were
+    # subselectors scoped to removed element
+    if _subqueries = @_trackersById
+      for varid in removes
         if subqueries = _subqueries[varid]
           for subquery in subqueries
             if removes.indexOf(subquery) == -1
               removes.push subquery
+    _subtrackers = @_subtrackersByTracker
     for varid in removes
       delete @intrinsicRegistersById[varid]
       # Detach scoped DOM queries attached to removed elements
-      if _subtrackers = @_subtrackersByTracker
+      if _subtrackers
         if subtrackers = _subtrackers[varid]
           for subtracked in subtrackers
             if removes.indexOf(subtracked) == -1
