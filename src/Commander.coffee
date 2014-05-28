@@ -408,16 +408,13 @@ class Commander
         query: query
         spawn: (id, tracker, q) -> 
           if !q || q == query
-            tracker = selector
             if idProcessor
               originalId = id
               id = idProcessor(id)
-            # Proceed with subselector
-            if root.spawn && (query == root.parentQuery || !query)
+            if root.spawn
               return root.spawn(id, @, originalId, q)
           else if (!tracker) 
-            tracker = q && q.selector || root.parentQuery.selector
-
+            tracker = (q || query).selector
           return ['get$', prop, '$'+id, tracker || selector]
       }
       
