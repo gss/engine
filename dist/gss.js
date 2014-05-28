@@ -23360,14 +23360,16 @@ Commander = (function() {
     return o;
   };
 
-  Commander.prototype['$all'] = function(root, sel, scopeId, subtracker) {
-    var o, query, selector,
+  Commander.prototype['$all'] = function(root, sel, scopeId, tracker) {
+    var o, query,
       _this = this;
-    selector = subtracker || sel;
-    o = this.queryCommandCache[selector];
+    if (!tracker) {
+      tracker = sel;
+    }
+    o = this.queryCommandCache[tracker];
     if (!o) {
       query = this.engine.registerDomQuery({
-        selector: selector,
+        selector: tracker,
         isMulti: true,
         isLive: false,
         createNodeList: function() {
@@ -23378,9 +23380,9 @@ Commander = (function() {
       });
       o = {
         query: query,
-        selector: subtracker || sel
+        selector: tracker
       };
-      this.queryCommandCache[selector] = o;
+      this.queryCommandCache[tracker] = o;
     }
     bindRootAsMulti(root, o.query);
     return o;

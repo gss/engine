@@ -668,19 +668,19 @@ class Commander
     bindRootAsMulti root, o.query
     return o
   
-  '$all': (root,sel, scopeId, subtracker) => 
-    selector = subtracker || sel
-    o = @queryCommandCache[selector]
+  '$all': (root, sel, scopeId, tracker) => 
+    tracker = sel unless tracker
+    o = @queryCommandCache[tracker]
     if !o
-      query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
+      query = @engine.registerDomQuery selector:tracker, isMulti:true, isLive:false, createNodeList:() =>
         # TODO: scopes are unreliable in old browsers
         scope = if scopeId then  GSS.getById(scopeId) else @engine.queryScope
         return scope.querySelectorAll(sel)
       o = {
         query:query
-        selector: subtracker || sel,
+        selector: tracker,
       }
-      @queryCommandCache[selector] = o
+      @queryCommandCache[tracker] = o
     bindRootAsMulti root, o.query
     return o
 
