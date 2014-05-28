@@ -123,6 +123,11 @@ class View
     if o['z-index']?
       @style['zIndex'] = o['z-index']
       delete o['z-index']
+    
+    if o['opacity']?
+      @style['opacity'] = o['opacity']
+      delete o['opacity']
+    
     ###   
     if o['line-height']?
       @style['line-height'] = o['line-height']

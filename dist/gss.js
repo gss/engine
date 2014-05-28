@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.3-beta (2014-05-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -15283,13 +15282,16 @@ c.parseJSON = function(str) {
   });
 };
 
-// For Node...not that I'm bitter. No no, not at all. Not me. Never...
-if (typeof require == "function" &&
-    typeof module != "undefined" &&
-    typeof load == "undefined") {
-  scope.exports = c;
+if (typeof define === 'function' && define.amd) {
+  // Require.js
+  define(c);
+} else if (typeof module === 'object' && module.exports) {
+  // CommonJS
+  module.exports = c;
+} else {
+  // Browser without module container
+  scope.c = c;
 }
-// ...well, hardly ever.
 
 })(this);
 
@@ -20597,6 +20599,10 @@ View = (function() {
     if (o['z-index'] != null) {
       this.style['zIndex'] = o['z-index'];
       delete o['z-index'];
+    }
+    if (o['opacity'] != null) {
+      this.style['opacity'] = o['opacity'];
+      delete o['opacity'];
     }
     /*   
     if o['line-height']?
