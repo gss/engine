@@ -230,9 +230,14 @@ class Commander
       subtracker = o.selector + " " + subselector + $id
       command = @["$all"](root, subselector, id, subtracker)
 
+      # To clean up subqueries, we need to handle 2 cases:
+      # - Element is removed from DOM, so we only know its id.
+      #   Its selector key is retrieved from this cache
       subqueries = (@selectorKeysById ||= {})[$id] ||= []
       if subqueries.indexOf(tracker) is -1
         subqueries.push(tracker)
+      # - Element doesnt match the parent selector anymore,
+      #   Subselector keys are retrieved to destroy associated subqueries  
       trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
       if trackers.indexOf(subtracker) is -1  
         trackers.push subtracker
@@ -666,13 +671,13 @@ class Commander
     bindRootAsContext root, query
     return o
     
-  '$class': (root,sel) =>
+  '$class': (root,sel, scopeId) =>
     selector = "."+sel
     o = @queryCommandCache[selector]
     if !o
       query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
         #return @engine.queryScope.querySelectorAll("."+sel)
-        return @engine.queryScope.getElementsByClassName(sel)    
+        return @engine.getQueryScopeById(scopeId).getElementsByClassName(sel)    
       o = {
         query:query
         selector:selector
@@ -681,12 +686,12 @@ class Commander
     bindRootAsMulti root, o.query
     return o
 
-  '$tag': (root,sel) =>    
+  '$tag': (root,sel, scopeId) =>    
     selector = sel
     o = @queryCommandCache[selector]
     if !o
       query = @engine.registerDomQuery selector:selector, isMulti:true, isLive:false, createNodeList:() =>
-        return @engine.queryScope.getElementsByTagName(sel)
+        return @engine.getQueryScopeById(scopeId).getElementsByTagName(sel)
       o = {
         query:query
         selector:selector
@@ -701,8 +706,7 @@ class Commander
     if !o
       query = @engine.registerDomQuery selector:tracker, isMulti:true, isLive:false, createNodeList:() =>
         # TODO: scopes are unreliable in old browsers
-        scope = if scopeId then  GSS.getById(scopeId) else @engine.queryScope
-        return scope.querySelectorAll(sel)
+        return @engine.getQueryScopeById(scopeId).querySelectorAll(sel)
       o = {
         query:query
         selector: tracker,

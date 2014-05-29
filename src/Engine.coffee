@@ -69,6 +69,11 @@ class Engine extends GSS.EventTrigger
     if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
     varsById = _.varsByViewId(_.filterVarsForDisplay(vars))
   
+  getQueryScopeById: (id) ->
+    if id
+      GSS.getById(id)
+    else
+      @queryScope
   
   # Hierarchy
   # ------------------------------------------------
