@@ -1,6 +1,7 @@
 {
   "name": "gss",
   "homepage": "http://gridstylesheets.org/",
+  "version": "1.0.4-beta",
   "authors": [
     "Dan Tocchini <d4@thegrid.io>"
   ],
