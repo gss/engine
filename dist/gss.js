@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.3-beta (2014-05-27) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-05-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -28773,7 +28773,7 @@ module.exports = {
   "name": "gss",
   "repo": "the-gss/engine",
   "description": "GSS runtime",
-  "version": "1.0.3-beta",
+  "version": "1.0.4-beta",
   "author": "Dan Tocchini <d4@thegrid.io>",
   "repo": "the-gss/engine",
   "json": [
