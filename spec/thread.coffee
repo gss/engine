@@ -265,6 +265,109 @@ describe 'Cassowary Thread', ->
       expect(thread.getValues()).to.eql
         "$222[line-height]": 1.6
     
+    describe 'add & remove inter-related, repeat x3', () ->
+      thread = new Thread()
+      for i in [1,2,3]
+        it "pass # #{i}", ->
+          thread.execute
+            commands:[
+              ['eq', ['get$','x','$1','.a'],['get$','x','$2','.a']]
+              ['eq', ['get$','x','$2','.a'],['get$','x','$1','.a']]
+              ['eq', ['get$','x','$1','.a'],['number','10']]
+              ['eq', ['get$','x','$3','.a'],['number','10']]
+            ]
+          expect(thread.getValues()).to.eql
+            "$1[x]": 10
+            "$2[x]": 10
+            "$3[x]": 10
+          thread.execute
+            commands:[
+              ['remove', '$1']
+            ]
+          expect(thread.getValues()).to.eql
+            "$2[x]": 0
+            "$3[x]": 10
+    
+    describe 'add & remove inter-related w/ varexp, repeat x3', () ->
+      thread = new Thread()
+      for i in [1,2,3]
+        it "pass # #{i}", ->
+          thread.execute
+            commands:[
+              ['eq', ['get','[blah]'],['number','55']]
+              ['eq', ['get$','x',    '$modal','#modal'],['number',0]]
+              ['eq', ['get$','right','$modal','#modal'],['number',100]]
+              ['eq', ['get$','x',    '$button','#button'],['number',0]]              
+              ['eq', ['get$','right','$button','#button'],['get$','right','$modal','.modal']]
+            ]
+          vals = thread.getValues()
+          expect(vals).to.eql
+            "[blah]": 55
+            "$modal[x]": 0
+            "$modal[width]": 100
+            "$button[x]": 0
+            "$button[width]": 100
+          thread.execute
+            commands:[
+              ['remove','$modal','$button','$modal']
+            ]
+          vals = thread.getValues()
+          expect(vals).to.eql
+            "[blah]": 55
+    
+    describe 'add & remove inter-related w/ suggest, repeat x3', () ->
+      thread = new Thread()
+      for i in [1,2,3]
+        it "pass # #{i}", ->
+          thread.execute
+            commands:[
+              ['eq', ['get$','x','$1','.a'],['get$','x','$2','.a']]
+              ['eq', ['get$','x','$2','.a'],['get$','x','$1','.a']]
+              ['suggest',['get$','x','$1','.a'],['number','10'],"required"]
+              ['eq', ['get$','x','$3','.a'],['number','10']]
+            ]
+          expect(thread.getValues()).to.eql
+            "$1[x]": 10
+            "$2[x]": 10
+            "$3[x]": 10
+          thread.execute
+            commands:[
+              ['remove', '$1']
+            ]
+          expect(thread.getValues()).to.eql
+            "$2[x]": 0
+            "$3[x]": 10
+    
+    describe 'add & remove inter-related w/ suggest & varexp, repeat x3', () ->
+      thread = new Thread()
+      for i in [1,2,3]
+        it "pass # #{i}", ->
+          thread.execute
+            commands:[
+              ['eq', ['get$','x','$1','.a'],['number','0']]
+              ['eq', ['get$','x','$2','.a'],['number','0']]
+              ['eq', ['get$','x','$3','.a'],['number','0']]
+              ['eq', ['get$','right','$1','.a'],['get$','right','$2','.a']]
+              ['eq', ['get$','right','$2','.a'],['get$','right','$1','.a']]
+              ['suggest',['get$','width','$1','.a'],['number','10'],"required"]
+              ['suggest',['get$','width','$3','.a'],['number','10'],"required"]
+            ]
+          expect(thread.getValues()).to.eql
+            "$1[x]": 0
+            "$2[x]": 0
+            "$3[x]": 0
+            "$1[width]": 10
+            "$2[width]": 10
+            "$3[width]": 10
+          thread.execute
+            commands:[
+              ['remove', '$1','$2']
+            ]
+          expect(thread.getValues()).to.eql
+            "$3[x]": 0
+            "$3[width]": 10
+
+    
     it 'tracking by selector', () ->
       thread = new Thread()
       thread.execute

@@ -264,12 +264,15 @@ c.parseJSON = function(str) {
   });
 };
 
-// For Node...not that I'm bitter. No no, not at all. Not me. Never...
-if (typeof require == "function" &&
-    typeof module != "undefined" &&
-    typeof load == "undefined") {
-  scope.exports = c;
+if (typeof define === 'function' && define.amd) {
+  // Require.js
+  define(c);
+} else if (typeof module === 'object' && module.exports) {
+  // CommonJS
+  module.exports = c;
+} else {
+  // Browser without module container
+  scope.c = c;
 }
-// ...well, hardly ever.
 
 })(this);

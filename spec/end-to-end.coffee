@@ -191,7 +191,23 @@ describe 'End - to - End', ->
             "$billy[x]": 36
           done()
     
-
+    describe 'non-pixel props', ->  
+      it 'should be ok', (done) ->                                 
+        container.innerHTML =  """
+            <div id="non-pixel"></div>
+            <style type="text/gss">              
+              #non-pixel {
+                z-index: == 10;
+                opacity: == 0.5;
+              }
+            </style>
+          """
+        engine.once 'display', (e) ->
+          style = document.getElementById('non-pixel').style          
+          assert (Number(style['z-index']) is 10) or (Number(style['zIndex']) is 10), 'correct z-index'
+          assert Number(style['opacity']) is .5, 'correct opacity'
+          done()
+          
     describe 'order of operations', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
@@ -1250,7 +1266,6 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'display', (e) ->
-          console.log JSON.stringify engine.vars
           expect(engine.vars).to.eql 
             "$cont1[width]": 100
             "$cont1[x]": 0            

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.3-beta (2014-05-29) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-05-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -15283,13 +15283,16 @@ c.parseJSON = function(str) {
   });
 };
 
-// For Node...not that I'm bitter. No no, not at all. Not me. Never...
-if (typeof require == "function" &&
-    typeof module != "undefined" &&
-    typeof load == "undefined") {
-  scope.exports = c;
+if (typeof define === 'function' && define.amd) {
+  // Require.js
+  define(c);
+} else if (typeof module === 'object' && module.exports) {
+  // CommonJS
+  module.exports = c;
+} else {
+  // Browser without module container
+  scope.c = c;
 }
-// ...well, hardly ever.
 
 })(this);
 
@@ -20609,6 +20612,10 @@ View = (function() {
       this.style['zIndex'] = o['z-index'];
       delete o['z-index'];
     }
+    if (o['opacity'] != null) {
+      this.style['opacity'] = o['opacity'];
+      delete o['opacity'];
+    }
     /*   
     if o['line-height']?
       @style['line-height'] = o['line-height']
@@ -23917,20 +23924,23 @@ Thread = (function() {
   };
 
   Thread.prototype._removeVarByTracker = function(tracker) {
-    var id, _i, _len, _ref;
-    delete this.__editVarNames[tracker];
+    var id, index, _i, _len, _ref;
     if (this.varIdsByTracker[tracker]) {
       _ref = this.varIdsByTracker[tracker];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         id = _ref[_i];
         delete this.cachedVars[id];
+        index = this.__editVarNames.indexOf(id);
+        if (index >= 0) {
+          this.__editVarNames.splice(index, 1);
+        }
       }
       return delete this.varIdsByTracker[tracker];
     }
   };
 
   Thread.prototype._removeConstraintByTracker = function(tracker, permenant) {
-    var constraint, error, movealong, _i, _len, _ref;
+    var constraint, _i, _len, _ref;
     if (permenant == null) {
       permenant = true;
     }
@@ -23938,11 +23948,9 @@ Thread = (function() {
       _ref = this.constraintsByTracker[tracker];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         constraint = _ref[_i];
-        try {
+        if (!constraint._gss_removed) {
           this.solver.removeConstraint(constraint);
-        } catch (_error) {
-          error = _error;
-          movealong = 'please';
+          constraint._gss_removed = true;
         }
       }
       if (permenant) {
@@ -24120,6 +24128,7 @@ Thread = (function() {
     }
     that = this;
     Object.defineProperty(cv, id, {
+      configurable: true,
       get: function() {
         var clone;
         clone = expression.clone();
@@ -24143,24 +24152,36 @@ Thread = (function() {
   };
 
   Thread.prototype._get$ = function(prop, elId) {
-    var exp, varId;
+    var exp, varId,
+      _this = this;
     varId = elId + ("[" + prop + "]");
     switch (prop) {
       case "right":
         exp = c.plus(this._get$("x", elId), this._get$("width", elId));
+        exp.clone = function() {
+          return c.plus(_this._get$("x", elId), _this._get$("width", elId));
+        };
         return this.varexp(null, varId, exp, elId);
       case "bottom":
         exp = c.plus(this._get$("y", elId), this._get$("height", elId));
+        exp.clone = function() {
+          return c.plus(_this._get$("y", elId), _this._get$("height", elId));
+        };
         return this.varexp(null, varId, exp, elId);
       case "center-x":
         exp = c.plus(this._get$("x", elId), c.divide(this._get$("width", elId), 2));
+        exp.clone = function() {
+          return c.plus(_this._get$("x", elId), c.divide(_this._get$("width", elId), 2));
+        };
         return this.varexp(null, varId, exp, elId);
       case "center-y":
         exp = c.plus(this._get$("y", elId), c.divide(this._get$("height", elId), 2));
+        exp.clone = function() {
+          return c.plus(_this._get$("y", elId), c.divide(_this._get$("height", elId), 2));
+        };
         return this.varexp(null, varId, exp, elId);
-      default:
-        return this["var"](null, varId, elId);
     }
+    return this["var"](null, varId, elId);
   };
 
   Thread.prototype.get = function(root, id, tracker) {
@@ -28882,7 +28903,7 @@ module.exports = {
   "name": "gss",
   "repo": "the-gss/engine",
   "description": "GSS runtime",
-  "version": "1.0.3-beta",
+  "version": "1.0.4-beta",
   "author": "Dan Tocchini <d4@thegrid.io>",
   "repo": "the-gss/engine",
   "json": [
