@@ -53,7 +53,7 @@ class Query extends GSS.EventTrigger
   
   update: () ->    
     LOG "update() @", @
-    if @is_destroyed then throw new Error "Can't update destroyed query: #{selector}"
+    if @is_destroyed then throw new Error "Can't update destroyed query: #{@selector}"
     @changedLastUpdate = false
     if !@isLive or !@_updated_once          
       @nodeList = @createNodeList()
@@ -122,7 +122,7 @@ class Query.Set extends GSS.EventTrigger
     #
     for selector, query of @bySelector
       query.destroy()
-      @bySelector[selector] = null
+      delete @bySelector[selector]
     #
     @bySelector = {}
   
@@ -144,6 +144,15 @@ class Query.Set extends GSS.EventTrigger
       @bySelector[selector] = query
     return query
   
+  remove: (o) ->
+    selector = o.selector
+    query = @bySelector[selector]
+    if query
+      query.destroy()
+      delete @bySelector[selector]
+    return query
+
+
   update: ->
     # els added or removed from queries
     selectorsWithAdds = []

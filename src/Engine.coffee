@@ -488,6 +488,9 @@ class Engine extends GSS.EventTrigger
   registerDomQuery: (o) ->    
     @querySet.add(o)
     
+  unregisterDomQuery: (o) ->    
+    @querySet.remove(o)
+    
   updateQueries: =>
     @querySet.update()
 

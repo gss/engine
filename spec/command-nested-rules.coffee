@@ -286,7 +286,7 @@ describe 'Nested Rules', ->
           
         sheet.install()
     
-      it 'Should resolve selector on ::parent', (done) ->
+      it 'should resolve selector on ::parent', (done) ->
         rules = [
           {
             type:'ruleset'

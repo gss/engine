@@ -14,6 +14,15 @@ bindRoot = (root, query) ->
     root.queries.push query  
   return root 
   
+unbindRoot = (root, query) ->
+  return unless root.queries
+  index = root.queries.indexOf(query)
+  unless index is -1
+    root.queries.splice(index, 1)
+  unless root.queries.length
+    root.isQueryBound = null
+  return root
+
 bindRootAsMulti = (root, query) ->
   bindRoot(root, query)  
   ### TODO
@@ -175,23 +184,28 @@ class Commander
     # Removing element from dom fires event with id
     # We also add selectors to the list, if there were
     # subselectors scoped to removed element
-    if _subqueries = @selectorKeysById
+    if _trackers = @trackersById
       for varid in removes
-        if subqueries = _subqueries[varid]
-          for subquery in subqueries
-            if removes.indexOf(subquery) is -1
-              removes.push subquery
-          delete _subqueries[varid]
-    _subtrackers = @selectorKeysByTracker
+        if trackers = _trackers[varid]
+          for tracker in trackers
+            if removes.indexOf(tracker) is -1
+              removes.push tracker
+          delete _trackers[varid]
+    _subqueries = @subqueriesByTracker
     for varid in removes
       delete @intrinsicRegistersById[varid]
       # Detach scoped DOM queries attached to removed elements
-      if _subtrackers
-        if subtrackers = _subtrackers[varid]
-          for subtracked in subtrackers
-            if removes.indexOf(subtracked) is -1
-              removes.push subtracked
-          delete _subtrackers[varid]
+      if _subqueries
+        if subqueries = _subqueries[varid]
+          for subquery in subqueries
+            query = subquery.query
+            if removes.indexOf(query.selector) is -1
+              removes.push query.selector
+            delete @queryCommandCache[query.selector]
+            @engine.unregisterDomQuery(query)
+            unbindRoot(subquery.root, query)
+          delete _subqueries[varid]
+
     @engine.registerCommand ['remove', removes...]
     @
 
@@ -229,18 +243,18 @@ class Commander
       tracker = o.query.selector + $id
       subtracker = o.selector + " " + subselector + $id
       command = @["$all"](root, subselector, id, subtracker)
-
+      command.root = root
       # To clean up subqueries, we need to handle 2 cases:
       # - Element is removed from DOM, so we only know its id.
       #   Its selector key is retrieved from this cache
-      subqueries = (@selectorKeysById ||= {})[$id] ||= []
+      subqueries = (@trackersById ||= {})[$id] ||= []
       if subqueries.indexOf(tracker) is -1
         subqueries.push(tracker)
       # - Element doesnt match the parent selector anymore,
       #   Subselector keys are retrieved to destroy associated subqueries  
-      trackers = (@selectorKeysByTracker ||= {})[tracker] ||= []
-      if trackers.indexOf(subtracker) is -1  
-        trackers.push subtracker
+      trackers = (@subqueriesByTracker ||= {})[tracker] ||= []
+      if trackers.indexOf(command) is -1  
+        trackers.push command
 
       result = []
       ids = if q == command.query 

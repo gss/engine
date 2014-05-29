@@ -20263,7 +20263,7 @@ Query = (function(_super) {
     var adds, el, id, newIds, oldIds, removes, _i, _len, _ref, _ref1;
     LOG("update() @", this);
     if (this.is_destroyed) {
-      throw new Error("Can't update destroyed query: " + selector);
+      throw new Error("Can't update destroyed query: " + this.selector);
     }
     this.changedLastUpdate = false;
     if (!this.isLive || !this._updated_once) {
@@ -20359,7 +20359,7 @@ Query.Set = (function(_super) {
     for (selector in _ref) {
       query = _ref[selector];
       query.destroy();
-      this.bySelector[selector] = null;
+      delete this.bySelector[selector];
     }
     return this.bySelector = {};
   };
@@ -20384,6 +20384,18 @@ Query.Set = (function(_super) {
       query = new GSS.Query(o);
       query.update();
       this.bySelector[selector] = query;
+    }
+    return query;
+  };
+
+  Set.prototype.remove = function(o) {
+    var query, selector;
+    selector = o.selector;
+    console.log("REMOVING", selector, this.bySelector);
+    query = this.bySelector[selector];
+    if (query) {
+      query.destroy();
+      delete this.bySelector[selector];
     }
     return query;
   };
@@ -21729,6 +21741,14 @@ Engine = (function(_super) {
     return varsById = _.varsByViewId(_.filterVarsForDisplay(vars));
   };
 
+  Engine.prototype.getQueryScopeById = function(id) {
+    if (id) {
+      return GSS.getById(id);
+    } else {
+      return this.queryScope;
+    }
+  };
+
   Engine.prototype.isDescendantOf = function(engine) {
     var parentEngine;
     parentEngine = this.parentEngine;
@@ -22196,6 +22216,10 @@ Engine = (function(_super) {
     return this.querySet.add(o);
   };
 
+  Engine.prototype.unregisterDomQuery = function(o) {
+    return this.querySet.remove(o);
+  };
+
   Engine.prototype.updateQueries = function() {
     return this.querySet.update();
   };
@@ -22507,7 +22531,7 @@ Root commands, if bound to a dom query, will spawn commands
 to match live results of query.
 */
 
-var Commander, bindRoot, bindRootAsContext, bindRootAsMulti,
+var Commander, bindRoot, bindRootAsContext, bindRootAsMulti, unbindRoot,
   __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
   __slice = [].slice;
 
@@ -22517,6 +22541,21 @@ bindRoot = function(root, query) {
     root.queries = [query];
   } else if (root.queries.indexOf(query) === -1) {
     root.queries.push(query);
+  }
+  return root;
+};
+
+unbindRoot = function(root, query) {
+  var index;
+  if (!root.queries) {
+    return;
+  }
+  index = root.queries.indexOf(query);
+  if (index !== -1) {
+    root.queries.splice(index, 1);
+  }
+  if (!root.queries.length) {
+    root.isQueryBound = null;
   }
   return root;
 };
@@ -22762,37 +22801,41 @@ Commander = (function() {
   };
 
   Commander.prototype.handleRemoves = function(removes) {
-    var subqueries, subquery, subtracked, subtrackers, varid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _subqueries, _subtrackers;
+    var query, subqueries, subquery, tracker, trackers, varid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _subqueries, _trackers;
     if (removes.length < 1) {
       return this;
     }
-    if (_subqueries = this.selectorKeysById) {
+    if (_trackers = this.trackersById) {
       for (_i = 0, _len = removes.length; _i < _len; _i++) {
         varid = removes[_i];
-        if (subqueries = _subqueries[varid]) {
-          for (_j = 0, _len1 = subqueries.length; _j < _len1; _j++) {
-            subquery = subqueries[_j];
-            if (removes.indexOf(subquery) === -1) {
-              removes.push(subquery);
+        if (trackers = _trackers[varid]) {
+          for (_j = 0, _len1 = trackers.length; _j < _len1; _j++) {
+            tracker = trackers[_j];
+            if (removes.indexOf(tracker) === -1) {
+              removes.push(tracker);
             }
           }
-          delete _subqueries[varid];
+          delete _trackers[varid];
         }
       }
     }
-    _subtrackers = this.selectorKeysByTracker;
+    _subqueries = this.subqueriesByTracker;
     for (_k = 0, _len2 = removes.length; _k < _len2; _k++) {
       varid = removes[_k];
       delete this.intrinsicRegistersById[varid];
-      if (_subtrackers) {
-        if (subtrackers = _subtrackers[varid]) {
-          for (_l = 0, _len3 = subtrackers.length; _l < _len3; _l++) {
-            subtracked = subtrackers[_l];
-            if (removes.indexOf(subtracked) === -1) {
-              removes.push(subtracked);
+      if (_subqueries) {
+        if (subqueries = _subqueries[varid]) {
+          for (_l = 0, _len3 = subqueries.length; _l < _len3; _l++) {
+            subquery = subqueries[_l];
+            query = subquery.query;
+            if (removes.indexOf(query.selector) === -1) {
+              removes.push(query.selector);
             }
+            delete this.queryCommandCache[query.selector];
+            this.engine.unregisterDomQuery(query);
+            unbindRoot(subquery.root, query);
           }
-          delete _subtrackers[varid];
+          delete _subqueries[varid];
         }
       }
     }
@@ -22856,13 +22899,14 @@ Commander = (function() {
       tracker = o.query.selector + $id;
       subtracker = o.selector + " " + subselector + $id;
       command = _this["$all"](root, subselector, id, subtracker);
-      subqueries = (_base = (_this.selectorKeysById || (_this.selectorKeysById = {})))[$id] || (_base[$id] = []);
+      command.root = root;
+      subqueries = (_base = (_this.trackersById || (_this.trackersById = {})))[$id] || (_base[$id] = []);
       if (subqueries.indexOf(tracker) === -1) {
         subqueries.push(tracker);
       }
-      trackers = (_base1 = (_this.selectorKeysByTracker || (_this.selectorKeysByTracker = {})))[tracker] || (_base1[tracker] = []);
-      if (trackers.indexOf(subtracker) === -1) {
-        trackers.push(subtracker);
+      trackers = (_base1 = (_this.subqueriesByTracker || (_this.subqueriesByTracker = {})))[tracker] || (_base1[tracker] = []);
+      if (trackers.indexOf(command) === -1) {
+        trackers.push(command);
       }
       result = [];
       ids = q === command.query ? command.query.lastAddedIds : command.query.ids;
@@ -23342,7 +23386,7 @@ Commander = (function() {
     return o;
   };
 
-  Commander.prototype['$class'] = function(root, sel) {
+  Commander.prototype['$class'] = function(root, sel, scopeId) {
     var o, query, selector,
       _this = this;
     selector = "." + sel;
@@ -23353,7 +23397,7 @@ Commander = (function() {
         isMulti: true,
         isLive: false,
         createNodeList: function() {
-          return _this.engine.queryScope.getElementsByClassName(sel);
+          return _this.engine.getQueryScopeById(scopeId).getElementsByClassName(sel);
         }
       });
       o = {
@@ -23366,7 +23410,7 @@ Commander = (function() {
     return o;
   };
 
-  Commander.prototype['$tag'] = function(root, sel) {
+  Commander.prototype['$tag'] = function(root, sel, scopeId) {
     var o, query, selector,
       _this = this;
     selector = sel;
@@ -23377,7 +23421,7 @@ Commander = (function() {
         isMulti: true,
         isLive: false,
         createNodeList: function() {
-          return _this.engine.queryScope.getElementsByTagName(sel);
+          return _this.engine.getQueryScopeById(scopeId).getElementsByTagName(sel);
         }
       });
       o = {
@@ -23403,9 +23447,7 @@ Commander = (function() {
         isMulti: true,
         isLive: false,
         createNodeList: function() {
-          var scope;
-          scope = scopeId ? GSS.getById(scopeId) : _this.engine.queryScope;
-          return scope.querySelectorAll(sel);
+          return _this.engine.getQueryScopeById(scopeId).querySelectorAll(sel);
         }
       });
       o = {
