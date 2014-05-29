@@ -216,7 +216,7 @@ class Commander
       for query in root.queries
         if selectorsWithAdds.indexOf(query.selector) isnt -1
           @spawn root, query
-          break
+          #break
     @
       
   validateMeasures: () ->
@@ -398,6 +398,8 @@ class Commander
         return @expandSpawnable command, false, contextId
     }
   
+  makeCommandScopedToParentRule: =>
+
   
   # Variable Commands
   # ------------------------------------------------
@@ -466,7 +468,7 @@ class Commander
     return {
       isQueryBound: true
       isPlural: isMulti
-      query: query      
+      query: query
       spawn: () ->
         if !isMulti
           id = query.lastAddedIds[query.lastAddedIds.length-1]
@@ -745,77 +747,69 @@ class Commander
       @queryCommandCache[selector] = o
     bindRoot root, o.query
     return o
-  
-  # 
-  '$reserved': (root, sel, subselector) =>
-    if sel is 'window'
-      selector = 'window'
-      o = @queryCommandCache[selector]
-      if !o        
-        o = {
-          selector:selector    
-          query: null
-        }
-        @queryCommandCache[selector] = o
-      # bindRoot() not needed
-      return o
-    
-    engine = @engine
-    
-    if sel is '::this' or sel is 'this'      
-      parentRule = root.parentRule
-      if !parentRule then throw new Error "::this query requires parent rule for context"    
-      query = parentRule.getContextQuery()        
-      selector = query.selector
-      selectorKey = selector+"::this"
-      o = @queryCommandCache[selectorKey]
-      if !o
-        o = {
-          query:query
-          selector:selector
-          selectorKey:selectorKey
-          isContextBound: true
-        }
-        @queryCommandCache[selectorKey] = o
-      bindRootAsContext root, query
-    
-    else if sel is '::parent' or sel is 'parent'
-      parentRule = root.parentRule
-      if !parentRule then throw new Error "::this query requires parent rule for context"    
-      query = parentRule.getContextQuery()
-      selector = query.selector + "::parent"  
-      o = @queryCommandCache[selector]
-      if !o
-        o = {
-          query:query
-          selector:selector
-          isContextBound: true
-          idProcessor: (id) ->
-            # TODO... fix this shit
-            return GSS.setupId(GSS.getById(id).parentElement)
-        }
-        @queryCommandCache[selector] = o
 
-      bindRootAsContext root, query
-    
-    else if sel is 'scope'
-      selector = "::"+sel
-      o = @queryCommandCache[selector]
-      if !o
-        query = engine.registerDomQuery selector:selector, isMulti:false, isLive:true, createNodeList:() ->
+
+  '::this': (root, selector, engine, path, key) ->
+    isContextBound: true
+    selectorKey: key
+    selector: path
+
+  '::parent': (root, selector, engine, path, key) ->
+    isContextBound: true
+    selector: key
+    idProcessor: (id) ->
+      # TODO... fix this shit
+      return GSS.setupId(GSS.getById(id).parentElement)
+
+  '::window': (root, selector, engine) ->
+    selector: "window"    
+    query: null
+
+  '::scope': (root, selector, engine, path, pathKey) ->
+    idProcessor: () ->
+      GSS.getId(engine.scope)
+    isContextBound: !!selector
+    isScopeBound: !selector
+    selector: pathKey
+    query:
+      !selector && engine.registerDomQuery 
+        selector: "::scope"
+        isMulti: false
+        isLive: true 
+        createNodeList:() ->
           return [engine.scope]
-        o = {
-          query:query
-          selector:selector
-          isScopeBound: true
-        }
-        @queryCommandCache[selector] = o
+
+  '$reserved': (root, keyword, selector) =>
+    if keyword.charAt(0) == ":"
+      pseudo = keyword
+      keyword = keyword.substring(2)
+    else
+      pseudo = "::" + keyword
+
+    if keyword == "window"
+      path = pathKey = keyword
+    else if keyword == "scope" && !selector
+      path = pathKey = pseudo
+    else
+      parentRule = root.parentRule
+      if !parentRule then throw new Error pseudo + " query requires parent rule for context"    
+      query = parentRule.getContextQuery()
+      path = query.selector
+      pathKey = path + pseudo
+
+    o = @queryCommandCache[pathKey]
+    if !o
+      o = @[pseudo](root, selector, @engine, path, pathKey)
+      if o.isContextBound
+        o.query = query
+      @queryCommandCache[pathKey] = o
+    if o.isContextBound
+      bindRootAsContext root, o.query
+    else if o.query
       bindRoot root, o.query
-    unless o
-      throw new Error "$reserved selectors not yet handled: #{sel}"     
-      
-    if subselector
-      @bindRootSubselector(root, o, subselector)
+
+    if selector
+      @bindRootSubselector(root, o, selector)
 
     return o
 

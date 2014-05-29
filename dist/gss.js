@@ -20391,7 +20391,6 @@ Query.Set = (function(_super) {
   Set.prototype.remove = function(o) {
     var query, selector;
     selector = o.selector;
-    console.log("REMOVING", selector, this.bySelector);
     query = this.bySelector[selector];
     if (query) {
       query.destroy();
@@ -22628,6 +22627,7 @@ Commander = (function() {
     this['_get$'] = __bind(this['_get$'], this);
     this['get$'] = __bind(this['get$'], this);
     this['get'] = __bind(this['get'], this);
+    this.makeCommandScopedToParentRule = __bind(this.makeCommandScopedToParentRule, this);
     this.spawnForWindowSize = __bind(this.spawnForWindowSize, this);
     this._execute = __bind(this._execute, this);
     this.lazySpawnForWindowSize = GSS._.debounce(this.spawnForWindowSize, GSS.config.resizeDebounce, false);
@@ -22856,7 +22856,6 @@ Commander = (function() {
         query = _ref1[_j];
         if (selectorsWithAdds.indexOf(query.selector) !== -1) {
           this.spawn(root, query);
-          break;
         }
       }
     }
@@ -23067,6 +23066,8 @@ Commander = (function() {
       }
     };
   };
+
+  Commander.prototype.makeCommandScopedToParentRule = function() {};
 
   Commander.prototype['get'] = function(root, varId, tracker) {
     var command;
@@ -23490,86 +23491,86 @@ Commander = (function() {
     return o;
   };
 
-  Commander.prototype['$reserved'] = function(root, sel, subselector) {
-    var engine, o, parentRule, query, selector, selectorKey;
-    if (sel === 'window') {
-      selector = 'window';
-      o = this.queryCommandCache[selector];
-      if (!o) {
-        o = {
-          selector: selector,
-          query: null
-        };
-        this.queryCommandCache[selector] = o;
+  Commander.prototype['::this'] = function(root, selector, engine, path, key) {
+    return {
+      isContextBound: true,
+      selectorKey: key,
+      selector: path
+    };
+  };
+
+  Commander.prototype['::parent'] = function(root, selector, engine, path, key) {
+    return {
+      isContextBound: true,
+      selector: key,
+      idProcessor: function(id) {
+        return GSS.setupId(GSS.getById(id).parentElement);
       }
-      return o;
+    };
+  };
+
+  Commander.prototype['::window'] = function(root, selector, engine) {
+    return {
+      selector: "window",
+      query: null
+    };
+  };
+
+  Commander.prototype['::scope'] = function(root, selector, engine, path, pathKey) {
+    return {
+      idProcessor: function() {
+        return GSS.getId(engine.scope);
+      },
+      isContextBound: !!selector,
+      isScopeBound: !selector,
+      selector: pathKey,
+      query: !selector && engine.registerDomQuery({
+        selector: "::scope",
+        isMulti: false,
+        isLive: true,
+        createNodeList: function() {
+          return [engine.scope];
+        }
+      })
+    };
+  };
+
+  Commander.prototype['$reserved'] = function(root, keyword, selector) {
+    var o, parentRule, path, pathKey, pseudo, query;
+    if (keyword.charAt(0) === ":") {
+      pseudo = keyword;
+      keyword = keyword.substring(2);
+    } else {
+      pseudo = "::" + keyword;
     }
-    engine = this.engine;
-    if (sel === '::this' || sel === 'this') {
+    if (keyword === "window") {
+      path = pathKey = keyword;
+    } else if (keyword === "scope" && !selector) {
+      path = pathKey = pseudo;
+    } else {
       parentRule = root.parentRule;
       if (!parentRule) {
-        throw new Error("::this query requires parent rule for context");
+        throw new Error(pseudo + " query requires parent rule for context");
       }
       query = parentRule.getContextQuery();
-      selector = query.selector;
-      selectorKey = selector + "::this";
-      o = this.queryCommandCache[selectorKey];
-      if (!o) {
-        o = {
-          query: query,
-          selector: selector,
-          selectorKey: selectorKey,
-          isContextBound: true
-        };
-        this.queryCommandCache[selectorKey] = o;
+      path = query.selector;
+      pathKey = path + pseudo;
+    }
+    o = this.queryCommandCache[pathKey];
+    if (!o) {
+      o = this[pseudo](root, selector, this.engine, path, pathKey);
+      if (o.isContextBound) {
+        o.query = query;
       }
-      bindRootAsContext(root, query);
-    } else if (sel === '::parent' || sel === 'parent') {
-      parentRule = root.parentRule;
-      if (!parentRule) {
-        throw new Error("::this query requires parent rule for context");
-      }
-      query = parentRule.getContextQuery();
-      selector = query.selector + "::parent";
-      o = this.queryCommandCache[selector];
-      if (!o) {
-        o = {
-          query: query,
-          selector: selector,
-          isContextBound: true,
-          idProcessor: function(id) {
-            return GSS.setupId(GSS.getById(id).parentElement);
-          }
-        };
-        this.queryCommandCache[selector] = o;
-      }
-      bindRootAsContext(root, query);
-    } else if (sel === 'scope') {
-      selector = "::" + sel;
-      o = this.queryCommandCache[selector];
-      if (!o) {
-        query = engine.registerDomQuery({
-          selector: selector,
-          isMulti: false,
-          isLive: true,
-          createNodeList: function() {
-            return [engine.scope];
-          }
-        });
-        o = {
-          query: query,
-          selector: selector,
-          isScopeBound: true
-        };
-        this.queryCommandCache[selector] = o;
-      }
+      this.queryCommandCache[pathKey] = o;
+    }
+    if (o.isContextBound) {
+      bindRootAsContext(root, o.query);
+    } else if (o.query) {
       bindRoot(root, o.query);
     }
-    if (!o) {
-      throw new Error("$reserved selectors not yet handled: " + sel);
-    }
-    if (subselector) {
-      this.bindRootSubselector(root, o, subselector);
+    if (selector) {
+      this.bindRootSubselector(root, o, selector);
     }
     return o;
   };
