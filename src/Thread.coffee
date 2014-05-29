@@ -161,21 +161,28 @@ class Thread
     @_removeVarByTracker tracker
       
   _removeVarByTracker: (tracker) ->
-    delete @__editVarNames[tracker]    
     # clean up varcache
     if @varIdsByTracker[tracker]
       for id in @varIdsByTracker[tracker]
+        # remove vars
         delete @cachedVars[id]
+        # remove edit vars
+        index = @__editVarNames.indexOf(id)
+        if index >= 0
+          @__editVarNames.splice(index,1)
       delete @varIdsByTracker[tracker]
 
   _removeConstraintByTracker: (tracker, permenant = true) ->
     if @constraintsByTracker[tracker]
       for constraint in @constraintsByTracker[tracker]
-        try 
+        
+        # TODO
+        # monkey-wrenching `._gss_removed` 
+        # b/c constraints are being double removed
+        if !constraint._gss_removed
           @solver.removeConstraint constraint
-        catch error
-          #throw new Error "cant remove constraint by tracker: #{tracker}"
-          movealong = 'please'
+          constraint._gss_removed = true
+
       if permenant
         @constraintsByTracker[tracker] = null
   
@@ -188,7 +195,7 @@ class Thread
   # Conditionals
   # ------------------------------------------------
   
-  # TODO: 
+  # TODO
   # - remove conditional?  
   # - remove trackers from conditional???
   # - nested conditionals??? 
@@ -316,7 +323,8 @@ class Thread
     # Unlike `c.Variable`s, `c.Expression` need to be cloned to work properly
     # because... math =)
     that = this
-    Object.defineProperty cv, id,      
+    Object.defineProperty cv, id,
+      configurable: true
       get: ->
         clone = expression.clone()
         # varexps can only have one tracker
@@ -342,18 +350,28 @@ class Thread
     switch prop
       when "right"
         exp = c.plus( @_get$("x", elId), @_get$("width", elId) )
+        # TODO
+        # hack-pattern b/c varexp aren't being properly removed frin @cachedVars
+        exp.clone = =>
+          return c.plus( @_get$("x", elId), @_get$("width", elId) )
         return @varexp null, varId, exp, elId
       when "bottom"
         exp = c.plus( @_get$("y", elId), @_get$("height", elId) )
+        exp.clone = =>        
+          return c.plus( @_get$("y", elId), @_get$("height", elId) )
         return @varexp null, varId, exp, elId
       when "center-x"
         exp = c.plus( @_get$("x", elId), c.divide(@_get$("width", elId),2) )
+        exp.clone = =>        
+          return c.plus( @_get$("x", elId), c.divide(@_get$("width", elId),2) )
         return @varexp null, varId, exp, elId
       when "center-y"
         exp = c.plus( @_get$("y", elId), c.divide(@_get$("height", elId),2) )
+        exp.clone = =>        
+          return c.plus( @_get$("y", elId), c.divide(@_get$("height", elId),2) )
         return @varexp null, varId, exp, elId        
-      else
-        return @var null, varId, elId        
+        
+    return @var null, varId, elId        
   
   # The `get` command registers all trackable information to the root constraint commands
   get: (root, id, tracker) ->
