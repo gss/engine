@@ -704,7 +704,7 @@ describe 'Nested Rules', ->
               ['eq', ['get$','x','$box1', '.vessel .box'], ['number',100]]
               ['eq', ['get$','x','$box2', '.vessel .box'], ['number',100]]
             ]
-            window.zzz = true;
+            window.zzz = true
             box1.parentNode.removeChild(box1)
           ChildIsRemoved = (e) ->
             expect(engine.lastWorkerCommands).to.eql [
