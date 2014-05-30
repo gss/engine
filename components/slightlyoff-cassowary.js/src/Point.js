@@ -5,7 +5,6 @@
 
 (function(c) {
 "use strict";
-
 c.Point = c.inherit({
   initialize: function(x, y, suffix) {
     if (x instanceof c.Variable) {
@@ -29,20 +28,20 @@ c.Point = c.inherit({
   },
 
   get x() { return this._x; },
-  set x(x) {
-    if (x instanceof c.Variable) {
-      this._x = x;
+  set x(xVar) {
+    if (xVar instanceof c.Variable) {
+      this._x = xVar;
     } else {
-      this._x.value = x;
+      this._x.value = xVar;
     }
   },
 
   get y() { return this._y; },
-  set y(y) {
-    if (y instanceof c.Variable) {
-      this._y = y;
+  set y(yVar) {
+    if (yVar instanceof c.Variable) {
+      this._y = yVar;
     } else {
-      this._y.value = y;
+      this._y.value = yVar;
     }
   },
 

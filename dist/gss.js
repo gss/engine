@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-05-29) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-05-30) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -16289,7 +16289,6 @@ require.register("slightlyoff-cassowary.js/src/Point.js", function(exports, requ
 
 (function(c) {
 "use strict";
-
 c.Point = c.inherit({
   initialize: function(x, y, suffix) {
     if (x instanceof c.Variable) {
@@ -16313,20 +16312,20 @@ c.Point = c.inherit({
   },
 
   get x() { return this._x; },
-  set x(x) {
-    if (x instanceof c.Variable) {
-      this._x = x;
+  set x(xVar) {
+    if (xVar instanceof c.Variable) {
+      this._x = xVar;
     } else {
-      this._x.value = x;
+      this._x.value = xVar;
     }
   },
 
   get y() { return this._y; },
-  set y(y) {
-    if (y instanceof c.Variable) {
-      this._y = y;
+  set y(yVar) {
+    if (yVar instanceof c.Variable) {
+      this._y = yVar;
     } else {
-      this._y.value = y;
+      this._y.value = yVar;
     }
   },
 
@@ -23253,7 +23252,11 @@ Commander = (function() {
         trackers.push(command);
       }
       result = [];
-      ids = q === command.query ? command.query.lastAddedIds : command.query.ids;
+      if (q === command.query) {
+        ids = command.query.lastAddedIds;
+      } else {
+        ids = command.query.ids;
+      }
       for (_i = 0, _len = ids.length; _i < _len; _i++) {
         contextId = ids[_i];
         result.push.apply(result, _this.expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse'));
