@@ -253,14 +253,14 @@ class Commander
       # - Element doesnt match the parent selector anymore,
       #   Subselector keys are retrieved to destroy associated subqueries  
       trackers = (@subqueriesByTracker ||= {})[tracker] ||= []
-      if trackers.indexOf(command) is -1  
+      if trackers.indexOf(command) is -1
         trackers.push command
 
       result = []
-      ids = if q == command.query 
-              command.query.lastAddedIds
-            else
-              command.query.ids
+      if q == command.query
+        ids = command.query.lastAddedIds
+      else
+        ids = command.query.ids
       for contextId in ids
         result.push.apply result, @expandSpawnable([node], false, contextId, subtracker, 'do_not_recurse')
       if result.length
