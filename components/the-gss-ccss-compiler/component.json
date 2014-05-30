@@ -11,7 +11,8 @@
     "https://raw.githubusercontent.com"
   ],
   "scripts": [
-    "lib/ccss-compiler.js"
+    "lib/ccss-compiler.js",
+    "lib/grammar.js"
   ],
   "main": "lib/ccss-compiler.js"
 }
