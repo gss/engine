@@ -25,7 +25,6 @@ describe 'End - to - End', ->
     container = document.createElement 'div'
     $('#fixtures').appendChild container
     
-
   afterEach ->
     remove(container)
     

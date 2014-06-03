@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-05-30) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20826,6 +20825,7 @@ View = (function() {
     }
     View.byId[this.id] = this;
     this.is_positioned = false;
+    this.el.gssView = this;
     GSS.trigger('view:attach', this);
     if (!this.matrixType) {
       this.matrixType = GSS.config.defaultMatrixType;
@@ -20986,6 +20986,18 @@ View = (function() {
     @style[transformPrefix] += " translateY(#{@yLocal}px)"
   */
 
+
+  View.prototype.printCss = function() {
+    var css, key, val, _ref;
+    css = "#" + this.id + "{";
+    _ref = this.style;
+    for (key in _ref) {
+      val = _ref[key];
+      css += "" + key + ": " + val + ";";
+    }
+    css += "}";
+    return css;
+  };
 
   View.prototype._positionMatrix = function(xLocal, yLocal) {
     this.Matrix.translate(this.matrix, this.matrix, [xLocal, yLocal, 0]);

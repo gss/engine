@@ -22,7 +22,8 @@ class View
     if !@el then throw new Error "View needs el"
     if !@id then throw new Error "View needs id"
     View.byId[@id] = @
-    @is_positioned = false   
+    @is_positioned = false
+    @el.gssView = @
     
     GSS.trigger 'view:attach', @    
     if !@matrixType
@@ -151,6 +152,14 @@ class View
     @style[transformPrefix] += " translateX(#{@xLocal}px)"
     @style[transformPrefix] += " translateY(#{@yLocal}px)"        
   ###
+  
+  printCss: ->
+    css = "##{@id}{"
+    for key, val of @style
+      css += "#{key}: #{val};"
+    css += "}"
+    return css
+    
   
   _positionMatrix: (xLocal, yLocal) ->
     @Matrix.translate(@matrix,@matrix,[xLocal,yLocal,0])
