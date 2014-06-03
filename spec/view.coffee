@@ -148,7 +148,15 @@ describe "GSS.View", ->
   describe 'printCss', ->
     it 'prints css', (done) ->
       container.innerHTML = """
-      <div id="ignore1"> 
+      <style type="text/gss">
+        .target[y] == 100;
+        .target[margin-right] == 55;
+        .target {
+          height: 33px;
+          height: == ::[intrinsic-height];
+        }
+      </style>
+      <div id="ignore1">
         <div id="target1" class="target">
           <div id="ignore2"> 
             <div id="target2" class="target">
@@ -156,15 +164,7 @@ describe "GSS.View", ->
           </div>
         </div>  
       </div>
-      """          
-      ast =
-        selectors: [
-          '#text'
-        ]
-        commands: [
-          ['eq', ['get$','y',['$class','target']], ['number', '100']]
-          ['eq', ['get$','margin-right',['$class','target']], ['number', '55']]
-        ]        
+      """                        
 
       q = document.getElementsByClassName('target')
       target1 = q[0]
@@ -173,7 +173,7 @@ describe "GSS.View", ->
       GSS.config.defaultMatrixType = 'mat4'
       didAttach = false
       
-      onSolved = (values) ->
+      engine.once 'display', (values) ->
         css1 = target1.gssView.printCss()
         css2 = target2.gssView.printCss()
         cssRoot = GSS.printCss()
@@ -184,6 +184,8 @@ describe "GSS.View", ->
         assert css1 is expectedCss1,"wrong css1 #{css1}"
         assert css2 is expectedCss2,"wrong css2 #{css2}"
         assert( cssRoot is (expectedCss1 + expectedCss2), "wrong cssRoot, #{cssRoot}")
+        
         done()
-      engine.once 'solved', onSolved
-      engine.run ast
+      
+
+      

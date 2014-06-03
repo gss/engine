@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-06-02) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20879,16 +20878,6 @@ View = (function() {
     return View.recycled.push(this);
   };
 
-  View.prototype.positionIfNeeded = function() {
-    if (!this.is_positioned) {
-      this.style.position = 'absolute';
-      this.style.margin = '0px';
-      this.style.top = '0px';
-      this.style.left = '0px';
-    }
-    return this.is_positioned = true;
-  };
-
   View.prototype.updateParentOffsets = function() {
     return this.parentOffsets = this.getParentOffsets();
   };
@@ -21012,9 +21001,30 @@ View = (function() {
   */
 
 
+  View.prototype.positionIfNeeded = function() {
+    if (!this.is_positioned) {
+      this.style.position = 'absolute';
+      this.style.margin = '0px';
+      this.style.top = '0px';
+      this.style.left = '0px';
+    }
+    return this.is_positioned = true;
+  };
+
+  View.prototype._positionMatrix = function(xLocal, yLocal) {
+    this.Matrix.translate(this.matrix, this.matrix, [xLocal, yLocal, 0]);
+    return this.style[transformPrefix] = GSS._[this.matrixType + "ToCSS"](this.matrix);
+  };
+
   View.prototype.printCss = function() {
     var css, found, key, val, _ref;
     css = "";
+    if (this.is_positioned) {
+      css += 'position:absolute;';
+      css += 'margin:0px;';
+      css += 'top:0px;';
+      css += 'left:0px;';
+    }
     found = false;
     _ref = this.style;
     for (key in _ref) {
@@ -21022,10 +21032,10 @@ View = (function() {
       found = true;
       css += "" + (GSS._.dasherize(key)) + ":" + val + ";";
     }
-    if (found) {
-      css = ("#" + this.id + "{") + css + "}";
+    if (!found) {
+      return "";
     }
-    return css;
+    return ("#" + this.id + "{") + css + "}";
   };
 
   View.prototype.printCssTree = function(el, recurseLevel) {
@@ -21056,11 +21066,6 @@ View = (function() {
       }
     }
     return css;
-  };
-
-  View.prototype._positionMatrix = function(xLocal, yLocal) {
-    this.Matrix.translate(this.matrix, this.matrix, [xLocal, yLocal, 0]);
-    return this.style[transformPrefix] = GSS._[this.matrixType + "ToCSS"](this.matrix);
   };
 
   View.prototype.displayIfNeeded = function(offsets, pass_to_children) {

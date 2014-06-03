@@ -48,16 +48,7 @@ class View
     @matrixType = null
     @virtuals = null
     @values = {}
-    View.recycled.push @
-  
-  positionIfNeeded: () ->
-    #@updateOffsets()
-    if !@is_positioned
-      @style.position = 'absolute'
-      @style.margin = '0px'
-      @style.top = '0px'
-      @style.left = '0px'
-    @is_positioned = true
+    View.recycled.push @  
         
   updateParentOffsets: () ->
     @parentOffsets = @getParentOffsets()
@@ -153,15 +144,32 @@ class View
     @style[transformPrefix] += " translateY(#{@yLocal}px)"        
   ###
   
+  positionIfNeeded: () ->
+    #@updateOffsets()
+    if !@is_positioned
+      @style.position = 'absolute'
+      @style.margin = '0px'
+      @style.top = '0px'
+      @style.left = '0px'
+    @is_positioned = true
+  
+  _positionMatrix: (xLocal, yLocal) ->
+    @Matrix.translate(@matrix,@matrix,[xLocal,yLocal,0])
+    @style[transformPrefix] = GSS._[@matrixType + "ToCSS"]( @matrix )
+  
   printCss: ->
     css = ""
+    if @is_positioned
+      css += 'position:absolute;'
+      css += 'margin:0px;'
+      css += 'top:0px;'
+      css += 'left:0px;'
     found = false
     for key, val of @style
       found = true
       css += "#{GSS._.dasherize(key)}:#{val};"
-    if found
-      css = "##{@id}{" + css + "}"
-    return css
+    return "" if !found
+    return "##{@id}{" + css + "}"
     
   printCssTree: (el,recurseLevel = 0) =>
 
@@ -180,15 +188,11 @@ class View
       else
         css += @printCssTree child, recurseLevel+1
     return css
-    
-  
-  _positionMatrix: (xLocal, yLocal) ->
-    @Matrix.translate(@matrix,@matrix,[xLocal,yLocal,0])
-    @style[transformPrefix] = GSS._[@matrixType + "ToCSS"]( @matrix )
+        
   
   displayIfNeeded: (offsets = {x:0,y:0}, pass_to_children=true) ->
     if @needsDisplay 
-      @display(offsets)      
+      @display(offsets)
       @setNeedsDisplay false
     offsets =
       x:0
@@ -196,7 +200,7 @@ class View
     if @values.x
       offsets.x += @values.x
     if @values.y
-      offsets.y += @values.y    
+      offsets.y += @values.y
     if pass_to_children
       @displayChildrenIfNeeded(offsets)
   
@@ -222,21 +226,21 @@ class View
                 
   # - digests css intentions to be used for `display()`
   # - used to batch last minute DOM reads (offsetParent)
-  updateValues: (o) ->        
-    @values = o  
+  updateValues: (o) ->
+    @values = o
     
-    # reset style & matrix
+    # reset style & matrix    
     @style = {}
     @Matrix.identity(@matrix)
-        
+    
     if @el.getAttribute('gss-parent-offsets')?
       @updateParentOffsets()
-
+      
     if (o.x?) or (o.y?) # assuming left & top are normalized
       @positionIfNeeded()
       
-    @setNeedsDisplay true           
-
+    @setNeedsDisplay true
+    
     @
   
   getParentView: () ->
