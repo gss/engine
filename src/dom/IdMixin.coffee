@@ -48,7 +48,7 @@ IdMixin =
       # default id to el.id
       gid = String(el.id or _id) # b/c el.id returns String     
       el.setAttribute('data-gss-id', gid)
-      el.style[boxSizingPrefix] = 'border-box'
+      GSS._.setStyle(el, boxSizingPrefix, 'border-box')
       el._gss_id = gid 
       GSS.View.new({el:el,id:gid})
       #if @_byIdCache[gid]? then GSS.warn("element by id cache replaced gss-id: #{gid}")

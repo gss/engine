@@ -141,5 +141,44 @@ _ =
   #  frm = undefined
   #  return to
   ##
+
+  dasherize: (string) ->
+    return (@dasherized ||= {})[string] ||= string.replace /[A-Z]/g, (camelCase) ->
+      return '-' + camelCase.toLowerCase()
+
+  setStyle: (el, prop, value) ->
+    if !el.__setAttribute
+      return el.style[prop] = value
+    else
+      cssText = @dasherize(prop) + ':' + value + ';'
+      old = el.style.cssText
+      if old
+        cssText = (old && (old + ';') || '') + cssText
+      el.setAttribute('style', cssText)
+
+  setStyles: (el, styles) ->
+    if !el.__setAttribute
+      for property, value of styles
+        el.style[property] = value
+    else
+      cssText = el.style.cssText
+      for property, value of styles
+        prop = @dasherize(property)
+        cssText = cssText.replace(@removeStyleRegexp(prop), '') + prop + ':' + value + ';'
+      
+      el.setAttribute('style', cssText)
+  
+  removeStyleRegexp: (property) ->
+    (@regexRemoves ||= {})[property] ||= new RegExp('(?:;|^)\\s*'+property+'\\s*:\\s*[^;]*(?:;|$)', 'g')
+  
+  removeStyle: (el, prop) ->
+    if !el.__removeAttribute
+      return el.style[prop] = value
+    else
+      old = el.style.cssText
+      cssText = @dasherize(prop) + ':;'
+      if old
+        cssText = old + ';' + cssText
+      el.setAttribute('style', cssText)
   
 module.exports = _

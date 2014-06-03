@@ -21,6 +21,9 @@ class View
   attach: (@el,@id) => 
     if !@el then throw new Error "View needs el"
     if !@id then throw new Error "View needs id"
+    if @el.ClassList
+      @el.ClassList.patch(@el)
+
     View.byId[@id] = @
     @is_positioned = false
     @el.gssView = @
@@ -38,6 +41,9 @@ class View
     GSS.trigger 'view:detach', @
     
     #@scope = null
+    if @el.ClassList
+      @el.ClassList.unpatch(@el)
+
     @is_positioned = false
     @el = null
     delete View.byId[@id]
@@ -134,8 +140,7 @@ class View
     for key,val of o
       key = GSS._.camelize( key ) # b/c Mozilla
       @style[key] = val + "px"
-    for key, val of @style
-      @el.style[key] = val
+    GSS._.setStyles(@el, @style)
     @
   
   ###

@@ -269,13 +269,14 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = document.querySelector('#box1')            
-            el.style.width = 1110+"px"            
+            el = document.querySelector('#box1')
+            GSS._.setStyle(el, "width", "1110px")
+
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # JSMutationObserver on Phantom doesn't trigger mutation
             #engine._handleMutations()
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          else if count is 2            
+          else if count is 2     
             chai.expect(engine.lastWorkerCommands).to.eql [
                 ['suggest', ['get$','intrinsic-width','$box1','#box1'],['number', 1110], 'required']
               ]

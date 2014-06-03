@@ -27,7 +27,10 @@
     "lib/Thread.js", 
     "lib/dom/Getter.js",
     "lib/dom/IdMixin.js",
-    "vendor/gl-matrix.js"
+    "vendor/gl-matrix.js",
+    "vendor/MutationObserver.js",
+    "vendor/MutationObserver.attributes.js",
+    "vendor/MutationObserver.classList.js"
   ],
   "dependencies": {
     "the-gss/compiler": "*",
@@ -36,8 +39,7 @@
   },
   "files": [
     "vendor/observe.js",
-    "vendor/sidetable.js",
-    "vendor/MutationObserver.js"
+    "vendor/sidetable.js"
   ],
   "main": "lib/GSS-with-compiler.js"
 }
