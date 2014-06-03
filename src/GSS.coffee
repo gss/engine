@@ -227,3 +227,8 @@ GSS.displayIfNeeded = () ->
 ###
 
 
+# Print CSS pass
+# ------------------------------------------------
+
+GSS.printCss = () ->
+  return GSS.get.view(GSS.engines.root.scope).printCssTree()

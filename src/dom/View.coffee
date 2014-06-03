@@ -154,10 +154,31 @@ class View
   ###
   
   printCss: ->
-    css = "##{@id}{"
+    css = ""
+    found = false
     for key, val of @style
-      css += "#{key}: #{val};"
-    css += "}"
+      found = true
+      css += "#{GSS._.dasherize(key)}:#{val};"
+    if found
+      css = "##{@id}{" + css + "}"
+    return css
+    
+  printCssTree: (el,recurseLevel = 0) =>
+
+    if !el
+      el = @el 
+      css = @printCss()
+    else
+      css = ""
+    if recurseLevel > GSS.config.maxDisplayRecursionDepth then return ""    
+    children = el.children
+    return "" if !children    
+    for child in children
+      view = GSS.get.view(child)
+      if view
+        css += view.printCssTree()
+      else
+        css += @printCssTree child, recurseLevel+1
     return css
     
   

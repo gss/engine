@@ -11,7 +11,14 @@ firstSupportedStylePrefix = (prefixedPropertyNames) ->
     if (typeof tempDiv.style[name] != 'undefined')
       return name
   return null
+  
+# String Helpers
 
+nativeTrim = String.prototype.trim
+nativeTrimRight = String.prototype.trimRight
+nativeTrimLeft = String.prototype.trimLeft
+
+# Util
 _ = 
   
   transformPrefix: firstSupportedStylePrefix(["transform", "WebkitTransform", "MozTransform", "OTransform", "msTransform"])
@@ -104,6 +111,15 @@ _ =
     result = s.replace /[-_\s]+(.)?/g, (match, c) ->
       (if c then c.toUpperCase() else "")
     result
+    
+  dasherize: (str) ->
+    @trim(str).replace(/([A-Z])/g, "-$1").replace(/[-_\s]+/g, "-").toLowerCase()
+  
+  trim: (str, characters) ->
+    return ""  unless str?
+    return nativeTrim.call(str)  if not characters and nativeTrim
+    characters = defaultToWhiteSpace(characters)
+    String(str).replace new RegExp("^" + characters + "+|" + characters + "+$", "g"), ""
   
   #
   #cleanAndSnatch = (frm, to) ->

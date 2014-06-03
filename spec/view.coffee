@@ -24,6 +24,7 @@ describe "GSS.View", ->
     
   afterEach ->
     remove(container)
+    engine.clean()
   
   describe 'Display Pass percolates downward through unconstrained views', ->
                    
@@ -71,8 +72,7 @@ describe "GSS.View", ->
           <div id="target2" class="target">
           </div>
         </div>  
-      """
-          
+      """          
       ast =
         selectors: [
           '#text'
@@ -106,8 +106,7 @@ describe "GSS.View", ->
       engine.run ast
   
   describe 'Display Pass takes in account parent offsets when requested', ->
-          
-    
+              
     it 'after solving', (done) ->
       
       container.innerHTML = """
@@ -132,8 +131,7 @@ describe "GSS.View", ->
         ]        
       
       q = document.getElementsByClassName('target')
-      target1 = q[0]
-      
+      target1 = q[0]      
       
       GSS.config.defaultMatrixType = 'mat2d'
       
@@ -146,4 +144,46 @@ describe "GSS.View", ->
         
       engine.once 'solved', onSolved
       engine.run ast
-  
+      
+  describe 'printCss', ->
+    it 'prints css', (done) ->
+      container.innerHTML = """
+      <div id="ignore1"> 
+        <div id="target1" class="target">
+          <div id="ignore2"> 
+            <div id="target2" class="target">
+            </div>
+          </div>
+        </div>  
+      </div>
+      """          
+      ast =
+        selectors: [
+          '#text'
+        ]
+        commands: [
+          ['eq', ['get$','y',['$class','target']], ['number', '100']]
+          ['eq', ['get$','margin-right',['$class','target']], ['number', '55']]
+        ]        
+
+      q = document.getElementsByClassName('target')
+      target1 = q[0]
+      target2 = q[1]
+      
+      GSS.config.defaultMatrixType = 'mat4'
+      didAttach = false
+      
+      onSolved = (values) ->
+        css1 = target1.gssView.printCss()
+        css2 = target2.gssView.printCss()
+        cssRoot = GSS.printCss()
+        m1 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 100, 0, 1)"
+        m2 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"        
+        expectedCss1 = "#target1{position:absolute;margin:0px;top:0px;left:0px;#{GSS._.dasherize(GSS._.transformPrefix)}:#{m1};margin-right:55px;}"
+        expectedCss2 = "#target2{position:absolute;margin:0px;top:0px;left:0px;#{GSS._.dasherize(GSS._.transformPrefix)}:#{m2};margin-right:55px;}"
+        assert css1 is expectedCss1,"wrong css1 #{css1}"
+        assert css2 is expectedCss2,"wrong css2 #{css2}"
+        assert( cssRoot is (expectedCss1 + expectedCss2), "wrong cssRoot, #{cssRoot}")
+        done()
+      engine.once 'solved', onSolved
+      engine.run ast

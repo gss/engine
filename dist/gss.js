@@ -20286,9 +20286,13 @@ GSS.displayIfNeeded = () ->
 */
 
 
+GSS.printCss = function() {
+  return GSS.get.view(GSS.engines.root.scope).printCssTree();
+};
+
 });
 require.register("gss/lib/_.js", function(exports, require, module){
-var firstSupportedStylePrefix, getTime, tempDiv, _,
+var firstSupportedStylePrefix, getTime, nativeTrim, nativeTrimLeft, nativeTrimRight, tempDiv, _,
   __slice = [].slice;
 
 getTime = Date.now || function() {
@@ -20307,6 +20311,12 @@ firstSupportedStylePrefix = function(prefixedPropertyNames) {
   }
   return null;
 };
+
+nativeTrim = String.prototype.trim;
+
+nativeTrimRight = String.prototype.trimRight;
+
+nativeTrimLeft = String.prototype.trimLeft;
 
 _ = {
   transformPrefix: firstSupportedStylePrefix(["transform", "WebkitTransform", "MozTransform", "OTransform", "msTransform"]),
@@ -20412,6 +20422,19 @@ _ = {
       }
     });
     return result;
+  },
+  dasherize: function(str) {
+    return this.trim(str).replace(/([A-Z])/g, "-$1").replace(/[-_\s]+/g, "-").toLowerCase();
+  },
+  trim: function(str, characters) {
+    if (str == null) {
+      return "";
+    }
+    if (!characters && nativeTrim) {
+      return nativeTrim.call(str);
+    }
+    characters = defaultToWhiteSpace(characters);
+    return String(str).replace(new RegExp("^" + characters + "+|" + characters + "+$", "g"), "");
   }
 };
 
@@ -20800,6 +20823,7 @@ transformPrefix = GSS._.transformPrefix;
 
 View = (function() {
   function View() {
+    this.printCssTree = __bind(this.printCssTree, this);
     this.recycle = __bind(this.recycle, this);
     this.attach = __bind(this.attach, this);
     this.values = {};
@@ -20988,14 +21012,48 @@ View = (function() {
 
 
   View.prototype.printCss = function() {
-    var css, key, val, _ref;
-    css = "#" + this.id + "{";
+    var css, found, key, val, _ref;
+    css = "";
+    found = false;
     _ref = this.style;
     for (key in _ref) {
       val = _ref[key];
-      css += "" + key + ": " + val + ";";
+      found = true;
+      css += "" + (GSS._.dasherize(key)) + ":" + val + ";";
     }
-    css += "}";
+    if (found) {
+      css = ("#" + this.id + "{") + css + "}";
+    }
+    return css;
+  };
+
+  View.prototype.printCssTree = function(el, recurseLevel) {
+    var child, children, css, view, _i, _len;
+    if (recurseLevel == null) {
+      recurseLevel = 0;
+    }
+    if (!el) {
+      el = this.el;
+      css = this.printCss();
+    } else {
+      css = "";
+    }
+    if (recurseLevel > GSS.config.maxDisplayRecursionDepth) {
+      return "";
+    }
+    children = el.children;
+    if (!children) {
+      return "";
+    }
+    for (_i = 0, _len = children.length; _i < _len; _i++) {
+      child = children[_i];
+      view = GSS.get.view(child);
+      if (view) {
+        css += view.printCssTree();
+      } else {
+        css += this.printCssTree(child, recurseLevel + 1);
+      }
+    }
     return css;
   };
 
