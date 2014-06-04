@@ -70,7 +70,48 @@ describe 'Nested Rules', ->
           rules: rules
           
         sheet.install()
-    
+    describe 'new stuff', ->
+      it 'should support selectors', (done) ->
+        rules = [
+          {
+            type:'constraint', 
+            cssText:'(header > h2.a ! body div)[target-size] == 100', 
+            commands: [
+              ["eq", 
+                ["get$",
+                  "[target-size]", 
+                  ['$combinator', ' ', 
+                    ['$combinator', '!', 
+                      ['$combinator', '>'
+                        ['$tag', 'header'],
+                        ['$class',
+                          'a'
+                          ['$tag', 'h2']]
+                        ], 
+                      ['$tag', 'body']], 
+                    ['$tag', 'div']]
+                ["number",100]]]
+            ]
+          }
+        ]
+        container.innerHTML =  ""
+                              
+        listener = (e) ->        
+          expect(engine.lastWorkerCommands).to.eql [
+              ["eq", ["get","[target-size]"], ["number",100]]
+            ]
+          container.removeEventListener 'solved', listener
+          done()
+        container.addEventListener 'solved', listener
+        
+        engine = GSS(container)
+
+        sheet = new GSS.StyleSheet
+          engine: engine
+          rules: rules
+          
+        sheet.install()
+
     describe '1 level w/ ::', ->
     
       it 'Runs commands from sourceNode', (done) ->
@@ -129,7 +170,15 @@ describe 'Nested Rules', ->
                 type:'constraint', 
                 cssText:'(:: .box)[x] == 100', 
                 commands: [
-                  ["eq", ["get$","x",["$reserved","::this", ".box"]], ["number",100]]
+                  ["eq", 
+                    ["get$",
+                      "x", 
+                      ['$combinator', 
+                        ' ', 
+                        ["$class", 
+                          "box", 
+                          ["$reserved","::this"]], 
+                      ["number",100]]]]
                 ]
               }
             ]
@@ -704,7 +753,7 @@ describe 'Nested Rules', ->
               ['eq', ['get$','x','$box1', '.vessel .box'], ['number',100]]
               ['eq', ['get$','x','$box2', '.vessel .box'], ['number',100]]
             ]
-            window.zzz = true
+            window.zzz = true;
             box1.parentNode.removeChild(box1)
           ChildIsRemoved = (e) ->
             expect(engine.lastWorkerCommands).to.eql [
