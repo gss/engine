@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-04) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-05) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -23001,6 +23001,194 @@ Engine = (function(_super) {
 module.exports = Engine;
 
 });
+require.register("gss/lib/Memory.js", function(exports, require, module){
+var Memory;
+
+module.exports = Memory = (function() {
+  function Memory() {
+    this._watchers = {};
+  }
+
+  Memory.prototype.watch = function(key, value) {
+    var watchers;
+    if (watchers = this._watchers[key]) {
+      if (watchers.indexOf(value) === -1) {
+        watchers.push(value);
+      }
+    } else {
+      watchers = this._watchers[key] = [value];
+    }
+    return this.object.callback(value, key, this[key]);
+  };
+
+  Memory.prototype.set = function(key, value) {
+    var watcher, watchers, _i, _len, _results;
+    this[key] = value;
+    if (watchers = this._watchers[key]) {
+      _results = [];
+      for (_i = 0, _len = watchers.length; _i < _len; _i++) {
+        watcher = watchers[_i];
+        _results.push(this.object.callback(watcher, key, this[key]));
+      }
+      return _results;
+    }
+  };
+
+  return Memory;
+
+})();
+
+});
+require.register("gss/lib/Processor.js", function(exports, require, module){
+var Memory, Processor;
+
+Memory = require('./Memory.js');
+
+Processor = (function() {
+  function Processor() {
+    this.memory = new Memory;
+    this.memory.object = this;
+    this.promises = {};
+  }
+
+  Processor.prototype.evaluate = function(op, i, context, contd) {
+    var arg, args, command, def, eager, evaluate, func, getter, group, method, path, result, scope, value, _i, _len;
+    method = op[0];
+    func = def = this[method];
+    if (def) {
+      if (typeof def === 'function') {
+        op.shift();
+        def = def.call(this, op, op[0]);
+      }
+      group = def.group;
+      if (contd && group) {
+        command = method;
+        def = this[group];
+        method = def.method;
+      }
+      func = this[def.method];
+      evaluate = def.evaluate;
+    }
+    args = [];
+    eager = false;
+    for (i = _i = 0, _len = op.length; _i < _len; i = ++_i) {
+      arg = op[i];
+      if (arg instanceof Array) {
+        arg.context = op;
+        args[i] = value = (evaluate || this.evaluate).call(this, arg, i, op);
+      } else {
+        args[i] = arg;
+        continue;
+      }
+      switch (typeof value) {
+        case "object":
+        case "number":
+          eager = value;
+          break;
+        case "string":
+          if (this[arg[0]].group !== group) {
+            eager = value;
+          }
+          break;
+        case "undefined":
+          return;
+      }
+      if (eager) {
+        console.info('@' + op[0], 'Got promise:', [eager, method]);
+        this.memory.watch(eager, op);
+        return;
+      }
+    }
+    if (!func) {
+      args.shift();
+      switch (typeof def) {
+        case "boolean":
+          return args;
+        case "number":
+        case "string":
+          return def;
+        case "object":
+          if (def.valueOf !== Object.valueOf) {
+            getter = func = def.valueOf;
+          }
+      }
+    }
+    if (group && !eager && !contd) {
+      path = this.toPath(def, args[0], args[1]);
+      this.promise(path, op);
+      console.log('promising', path, op, args.slice());
+      debugger;
+      return path;
+    }
+    if (!func) {
+      scope = args.shift();
+      if (typeof scope === 'object') {
+        func = scope && scope[method];
+      } else if (contd) {
+        scope = document;
+        func = scope[method];
+      }
+    }
+    if (func) {
+      result = func.apply(scope || this, args);
+    } else {
+      throw new Error("Engine Commands broke, couldn't find method: " + method);
+    }
+    path = this.toPath(result, command || method);
+    console.warn('publish', path, result);
+    this.memory.set(path, result);
+    return path;
+  };
+
+  Processor.prototype['toPath'] = function(command, method, path) {
+    var absolute, relative;
+    if (absolute = command.selector) {
+      return absolute;
+    }
+    relative = command.prefix || '';
+    if (method) {
+      relative += method;
+    }
+    if (command.suffix) {
+      relative += command.suffix;
+    }
+    return (path || command.path || '') + relative;
+  };
+
+  Processor.prototype.promise = function(key, op) {
+    return this.promises[key] = op;
+  };
+
+  Processor.prototype.callback = function(op, key, value) {
+    var context, i, promise, val, _i, _len, _results;
+    if (value === void 0) {
+      if (promise = this.promises[key]) {
+        return this.evaluate(promise, promise.context.indexOf(promise), promise.context, key);
+      } else {
+        return;
+      }
+    }
+    context = op.context;
+    i = context.indexOf(op);
+    if (typeof value === 'object' && value && value.length) {
+      _results = [];
+      for (_i = 0, _len = value.length; _i < _len; _i++) {
+        val = value[_i];
+        _results.push(this.evaluate(op, i, context, key, value));
+      }
+      return _results;
+    } else {
+      return this.evaluate(op, i, context, key, value);
+    }
+  };
+
+  return Processor;
+
+})();
+
+module.exports = Processor;
+
+});
 require.register("gss/lib/Commander.js", function(exports, require, module){
 /*
 
@@ -23008,11 +23196,11 @@ Root commands, if bound to a dom query, will spawn commands
 to match live results of query.
 */
 
-var Commander, Evaluator, _ref,
+var Commander, Processor, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Evaluator = require('./Evaluator.js');
+Processor = require('./Processor.js');
 
 Commander = (function(_super) {
   __extends(Commander, _super);
@@ -23395,7 +23583,7 @@ Commander = (function(_super) {
 
   return Commander;
 
-})(Evaluator);
+})(Processor);
 
 module.exports = Commander;
 
@@ -29400,6 +29588,8 @@ module.exports = {
     "lib/gssom/StyleSheet.js",
     "lib/gssom/Rule.js",
     "lib/Engine.js",
+    "lib/Memory.js", 
+    "lib/Processor.js", 
     "lib/Commander.js",
     "lib/Thread.js", 
     "lib/dom/Getter.js",

@@ -10,9 +10,9 @@ to match live results of query.
 #
 # transforms & generates needed commands for engine
 
-Evaluator = require('./Evaluator.js')
+Processor = require('./Processor.js')
 
-class Commander extends Evaluator
+class Commander extends Processor
 
   execute: (ast) ->
     if ast.commands?
