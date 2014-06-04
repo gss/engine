@@ -14,6 +14,10 @@ Processor = require('./Processor.js')
 
 class Commander extends Processor
 
+  constructor: (engine) ->
+    @engine = engine
+    super()
+
   execute: (ast) ->
     if ast.commands?
       for command in ast.commands 

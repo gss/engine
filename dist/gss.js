@@ -23022,16 +23022,15 @@ module.exports = Memory = (function() {
   };
 
   Memory.prototype.set = function(key, value) {
-    var watcher, watchers, _i, _len, _results;
+    var watcher, watchers, _i, _len;
     this[key] = value;
     if (watchers = this._watchers[key]) {
-      _results = [];
       for (_i = 0, _len = watchers.length; _i < _len; _i++) {
         watcher = watchers[_i];
-        _results.push(this.object.callback(watcher, key, this[key]));
+        this.object.callback(watcher, key, this[key]);
       }
-      return _results;
     }
+    return true;
   };
 
   return Memory;
@@ -23051,9 +23050,9 @@ Processor = (function() {
     this.promises = {};
   }
 
-  Processor.prototype.evaluate = function(op, i, context, contd) {
-    var arg, args, command, def, eager, evaluate, func, getter, group, method, path, result, scope, value, _i, _len;
-    method = op[0];
+  Processor.prototype.evaluate = function(op, i, context, contd, promised) {
+    var arg, args, command, def, eager, evaluate, func, getter, group, method, path, promise, result, scope, value, _i, _len;
+    command = method = op[0];
     func = def = this[method];
     if (def) {
       if (typeof def === 'function') {
@@ -23064,9 +23063,9 @@ Processor = (function() {
       if (contd && group) {
         command = method;
         def = this[group];
-        method = def.method;
       }
-      func = this[def.method];
+      method = def.method;
+      func = this[method];
       evaluate = def.evaluate;
     }
     args = [];
@@ -23087,15 +23086,20 @@ Processor = (function() {
           break;
         case "string":
           if (this[arg[0]].group !== group) {
-            eager = value;
+            if (value === promised) {
+              args[i] = this.memory[promised];
+            } else {
+              eager = value;
+            }
           }
           break;
         case "undefined":
           return;
       }
       if (eager) {
-        console.info('@' + op[0], 'Got promise:', [eager, method]);
-        this.memory.watch(eager, op);
+        promise = contd ? contd + command + eager : eager;
+        console.info('@[' + command, '] got promise: ', [eager, promise]);
+        this.memory.watch(promise, op);
         return;
       }
     }
@@ -23117,7 +23121,6 @@ Processor = (function() {
       path = this.toPath(def, args[0], args[1]);
       this.promise(path, op);
       console.log('promising', path, op, args.slice());
-      debugger;
       return path;
     }
     if (!func) {
@@ -23125,7 +23128,7 @@ Processor = (function() {
       if (typeof scope === 'object') {
         func = scope && scope[method];
       } else if (contd) {
-        scope = document;
+        scope = this.engine.queryScope;
         func = scope[method];
       }
     }
@@ -23134,23 +23137,27 @@ Processor = (function() {
     } else {
       throw new Error("Engine Commands broke, couldn't find method: " + method);
     }
-    path = this.toPath(result, command || method);
-    console.warn('publish', path, result);
-    this.memory.set(path, result);
+    path = this.toPath(result, command);
+    console.warn('publish', contd, path, result);
+    this.memory.set(contd || path, result);
     return path;
   };
 
   Processor.prototype['toPath'] = function(command, method, path) {
     var absolute, relative;
-    if (absolute = command.selector) {
-      return absolute;
-    }
-    relative = command.prefix || '';
-    if (method) {
-      relative += method;
-    }
-    if (command.suffix) {
-      relative += command.suffix;
+    if (command.nodeType) {
+      relative = '$' + (method || '') + GSS.setupId(command);
+    } else {
+      if (absolute = command.selector) {
+        return absolute;
+      }
+      relative = command.prefix || '';
+      if (method) {
+        relative += method;
+      }
+      if (command.suffix) {
+        relative += command.suffix;
+      }
     }
     return (path || command.path || '') + relative;
   };
@@ -23170,15 +23177,15 @@ Processor = (function() {
     }
     context = op.context;
     i = context.indexOf(op);
-    if (typeof value === 'object' && value && value.length) {
+    if (typeof value === 'object' && value && typeof value.length === 'number') {
       _results = [];
       for (_i = 0, _len = value.length; _i < _len; _i++) {
         val = value[_i];
-        _results.push(this.evaluate(op, i, context, key, value));
+        _results.push(this.evaluate(op, i, context, this.toPath(val, null, key), key));
       }
       return _results;
     } else {
-      return this.evaluate(op, i, context, key, value);
+      return this.evaluate(op, i, context, this.toPath(value, null, key), key);
     }
   };
 
@@ -23196,7 +23203,7 @@ Root commands, if bound to a dom query, will spawn commands
 to match live results of query.
 */
 
-var Commander, Processor, _ref,
+var Commander, Processor,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -23205,18 +23212,18 @@ Processor = require('./Processor.js');
 Commander = (function(_super) {
   __extends(Commander, _super);
 
-  function Commander() {
-    _ref = Commander.__super__.constructor.apply(this, arguments);
-    return _ref;
+  function Commander(engine) {
+    this.engine = engine;
+    Commander.__super__.constructor.call(this);
   }
 
   Commander.prototype.execute = function(ast) {
-    var command, _i, _len, _ref1, _results;
+    var command, _i, _len, _ref, _results;
     if (ast.commands != null) {
-      _ref1 = ast.commands;
+      _ref = ast.commands;
       _results = [];
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        command = _ref1[_i];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        command = _ref[_i];
         if (ast.isRule) {
           command.parentRule = ast;
         }
@@ -23281,11 +23288,11 @@ Commander = (function(_super) {
   Commander.prototype["$if"] = {
     prefix: "@if",
     evaluate: function(arg, i, evaluated) {
-      var _ref1;
+      var _ref;
       if (i === 0) {
         return arg;
       }
-      if (i === 1 || ((_ref1 = evaluated[1]) != null ? _ref1 : i === {
+      if (i === 1 || ((_ref = evaluated[1]) != null ? _ref : i === {
         2: i === 3
       })) {
         return this.evaluate(arg);

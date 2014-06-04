@@ -7,21 +7,22 @@ class Processor
     @memory.object = @
     @promises = {}
 
-  evaluate: (op, i, context, contd) ->
-    method = op[0]
+  evaluate: (op, i, context, contd, promised) ->
+    command = method = op[0]
     func = def = @[method]
 
-    # Run macro, check if command has custom evaluator (e.g. "if")
     if def
+      # Run macro, check if command has custom evaluator (e.g. "if")
       if typeof def == 'function'
         op.shift()
         def = def.call(@, op, op[0])
       group = def.group
+      # Use a groupping operation for lazy tokens
       if contd && group
         command = method
         def = @[group]
-        method = def.method
-      func = @[def.method]
+      method = def.method
+      func = @[method]
       evaluate = def.evaluate
 
     # Evaluate arguments. Stops if one of the values is undefined
@@ -40,15 +41,23 @@ class Processor
         # Argument is promised to be observable at the returned path
         when "string"
           if @[arg[0]].group != group
-            eager = value
+            if value == promised
+              args[i] = @memory[promised]
+            else
+              eager = value
         # The argument depends on some other values. Wait for it.
         when "undefined"
           return
 
       # Resolve promised argument if current command isnt lazy
       if eager
-        console.info('@' + op[0], 'Got promise:', [eager, method])
-        @memory.watch eager, op
+        promise =
+          if contd
+            contd + command + eager
+          else
+            eager
+        console.info('@[' + command, '] got promise: ', [eager, promise])
+        @memory.watch promise, op
         return
 
     # Handle custom commands
@@ -71,7 +80,6 @@ class Processor
       path = @toPath(def, args[0], args[1])
       @promise path, op
       console.log('promising', path, op, args.slice())
-      debugger
       return path
 
     # Look up method on the first argument
@@ -80,7 +88,7 @@ class Processor
       if typeof scope == 'object'
         func = scope && scope[method]
       else if contd
-        scope = document
+        scope = @engine.queryScope
         func = scope[method]
     # Execute the function
     if func
@@ -89,17 +97,20 @@ class Processor
       throw new Error("Engine Commands broke, couldn't find method: #{method}")
 
     # Return value path
-    path = @toPath(result, command || method)
-    console.warn('publish', path, result)
-    @memory.set path, result
+    path = @toPath(result, command)
+    console.warn('publish', contd, path, result)
+    @memory.set contd || path, result
     return path
 
   'toPath': (command, method, path) ->
-    if absolute = command.selector
-      return absolute
-    relative = command.prefix || ''
-    relative += method if method
-    relative += command.suffix if command.suffix 
+    if command.nodeType
+      relative = '$' + (method || '') + GSS.setupId(command)
+    else
+      if absolute = command.selector
+        return absolute
+      relative = command.prefix || ''
+      relative += method if method
+      relative += command.suffix if command.suffix 
     return (path || command.path || '') + relative
 
   # This operation will compute the given key *yawn* later. Maybe. It's lazy.
@@ -116,11 +127,12 @@ class Processor
 
     context = op.context
     i = context.indexOf(op)
+
     # Fork execution for each item in collection
-    if typeof value == 'object' && value && value.length
+    if typeof value == 'object' && value && typeof value.length == 'number'
       for val in value
-        @evaluate op, i, context, key, value
+        @evaluate op, i, context, @toPath(val, null, key), key
     else
-      return @evaluate op, i, context, key, value
+      return @evaluate op, i, context, @toPath(value, null, key), key
 
 module.exports = Processor

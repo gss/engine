@@ -75,26 +75,39 @@ describe 'Nested Rules', ->
         rules = [
           {
             type:'constraint', 
-            cssText:'(header > h2.a ! body div)[target-size] == 100', 
+            cssText:'(header > h2.gizoogle ! section div)[target-size] == 100', 
             commands: [
               ["eq", 
                 ["get$",
                   "[target-size]", 
-                  ['$combinator', ' ', 
-                    ['$combinator', '!', 
-                      ['$combinator', '>'
-                        ['$tag', 'header'],
-                        ['$class',
-                          'a'
-                          ['$tag', 'h2']]
-                        ], 
-                      ['$tag', 'body']], 
-                    ['$tag', 'div']]
+                  ['$tag',
+                    'div',
+                    ['$combinator', ' ', 
+                      ['$tag', 
+                        'section',
+                        ['$combinator', 
+                          '!', 
+                          ['$tag', 'header']
+                            ['$combinator', 
+                              '>'
+                              ['$class',
+                                'gizoogle'
+                                ['$tag', 'h2']]]]]]]
                 ["number",100]]]
             ]
           }
         ]
-        container.innerHTML =  ""
+        container.innerHTML =  """
+          <section>
+            <div>
+              <header>
+                <h2 class='gizoogle'>
+                </h2>
+              </header>
+            </div>
+          </section>
+        """
+        console.log(container.innerHTML, rules[0].cssText)
                               
         listener = (e) ->        
           expect(engine.lastWorkerCommands).to.eql [

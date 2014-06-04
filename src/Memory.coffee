@@ -20,3 +20,5 @@ module.exports = class Memory
     if watchers = @_watchers[key]
       for watcher in watchers
         @object.callback watcher, key, @[key]
+
+    return true
