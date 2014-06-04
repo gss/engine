@@ -59,6 +59,10 @@ GSS.config =
 if GSS_CONFIG?  
   for key, val of GSS_CONFIG
     GSS.config[key] = val
+
+# Allow overriding useWorker via URL
+if location.search?.substring(1) is 'noworker'
+  GSS.config.useWorker = false
     
 # Debuging
 # ------------------------------------------------
