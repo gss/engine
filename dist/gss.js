@@ -23011,10 +23011,12 @@ module.exports = Memory = (function() {
 
   Memory.prototype.watch = function(key, value) {
     var watchers;
+    console.log('@memory.watch', [key, value]);
     if (watchers = this._watchers[key]) {
-      if (watchers.indexOf(value) === -1) {
-        watchers.push(value);
+      if (watchers.indexOf(value) > -1) {
+        return;
       }
+      watchers.push(value);
     } else {
       watchers = this._watchers[key] = [value];
     }
@@ -23024,6 +23026,9 @@ module.exports = Memory = (function() {
   Memory.prototype.set = function(key, value) {
     var watcher, watchers, _i, _len;
     this[key] = value;
+    if (value === "get") {
+      debugger;
+    }
     if (watchers = this._watchers[key]) {
       for (_i = 0, _len = watchers.length; _i < _len; _i++) {
         watcher = watchers[_i];
@@ -23050,8 +23055,15 @@ Processor = (function() {
     this.promises = {};
   }
 
-  Processor.prototype.evaluate = function(op, i, context, contd, promised) {
-    var arg, args, command, def, eager, evaluate, func, getter, group, method, path, promise, result, scope, value, _i, _len;
+  Processor.prototype.evaluate = function(op, index, context, contd, promised, from, bubbled) {
+    var arg, args, binary, command, def, eager, evaluate, forked, func, getter, group, i, link, method, path, promise, result, scope, value, _i, _len;
+    if (context === void 0) {
+      if (context = op.context) {
+        if (index === void 0) {
+          index = context.indexOf(op);
+        }
+      }
+    }
     command = method = op[0];
     func = def = this[method];
     if (def) {
@@ -23060,9 +23072,14 @@ Processor = (function() {
         def = def.call(this, op, op[0]);
       }
       group = def.group;
-      if (contd && group) {
-        command = method;
+      if (contd && group && from === void 0) {
+        command = '';
         def = this[group];
+        if (promised) {
+          op = [op[0], group, promised];
+        } else {
+          [group, op[1]];
+        }
       }
       method = def.method;
       func = this[method];
@@ -23072,7 +23089,10 @@ Processor = (function() {
     eager = false;
     for (i = _i = 0, _len = op.length; _i < _len; i = ++_i) {
       arg = op[i];
-      if (arg instanceof Array) {
+      if (from === i) {
+        args[i] = value = contd;
+        forked = true;
+      } else if (arg instanceof Array) {
         arg.context = op;
         args[i] = value = (evaluate || this.evaluate).call(this, arg, i, op);
       } else {
@@ -23080,14 +23100,10 @@ Processor = (function() {
         continue;
       }
       switch (typeof value) {
-        case "object":
-        case "number":
-          eager = value;
-          break;
         case "string":
-          if (this[arg[0]].group !== group) {
-            if (value === promised) {
-              args[i] = this.memory[promised];
+          if (!arg.context || from === i || this[arg[0]].group !== group) {
+            if (value === promised || forked) {
+              args[i] = bubbled != null ? bubbled : this.memory[contd];
             } else {
               eager = value;
             }
@@ -23098,12 +23114,14 @@ Processor = (function() {
       }
       if (eager) {
         promise = contd ? contd + command + eager : eager;
-        console.info('@[' + command, '] got promise: ', [eager, promise]);
         this.memory.watch(promise, op);
         return;
       }
     }
     if (!func) {
+      if (!context) {
+        return this["return"](args);
+      }
       args.shift();
       switch (typeof def) {
         case "boolean":
@@ -23112,16 +23130,25 @@ Processor = (function() {
         case "string":
           return def;
         case "object":
-          if (def.valueOf !== Object.valueOf) {
+          if (def.match && args.length > (command === '' && 2 || 1)) {
+            getter = func = def.match;
+            binary = true;
+          } else if (def.valueOf !== Object.valueOf) {
             getter = func = def.valueOf;
           }
       }
     }
-    if (group && !eager && !contd) {
-      path = this.toPath(def, args[0], args[1]);
-      this.promise(path, op);
-      console.log('promising', path, op, args.slice());
-      return path;
+    if (command === " ") {
+      debugger;
+    }
+    if (context && group && !eager && !contd) {
+      if (contd) {
+        path = this.toPath(def, contd);
+      } else {
+        path = this.toPath(def, args[1], args[0], op);
+        this.promise(path, op);
+        return path;
+      }
     }
     if (!func) {
       scope = args.shift();
@@ -23133,30 +23160,63 @@ Processor = (function() {
       }
     }
     if (func) {
+      console.warn('@' + (command || method), args);
       result = func.apply(scope || this, args);
     } else {
       throw new Error("Engine Commands broke, couldn't find method: " + method);
     }
-    path = this.toPath(result, command);
-    console.warn('publish', contd, path, result);
-    this.memory.set(contd || path, result);
+    if (result && (result.length === void 0 || (typeof result[0] === 'string' && this[result[0]] === true))) {
+      link = path = contd;
+    } else {
+      path = this.toPath(result, contd, command, op);
+      if (!binary) {
+        this.memory.set(path, result);
+      }
+    }
+    if (contd && result !== void 0) {
+      if (context) {
+        this.callback(context, path, result, index, link);
+      } else {
+        return this["return"](result);
+      }
+    }
     return path;
   };
 
-  Processor.prototype['toPath'] = function(command, method, path) {
-    var absolute, relative;
-    if (command.nodeType) {
-      relative = '$' + (method || '') + GSS.setupId(command);
+  Processor.prototype['toPath'] = function(command, path, method, op, def) {
+    var absolute, relative, second, swap;
+    if (op && !def) {
+      second = op[2];
+      if (second && second.push && second[0] === this[second[0]].prefix) {
+        swap = path;
+        path = method;
+        method = swap;
+      }
+    }
+    if (command === void 0) {
+      relative = method;
     } else {
-      if (absolute = command.selector) {
-        return absolute;
-      }
-      relative = command.prefix || '';
-      if (method) {
-        relative += method;
-      }
-      if (command.suffix) {
-        relative += command.suffix;
+      if (command.nodeType) {
+        if (command.nodeType === 9) {
+          return '#document';
+        } else {
+          if (def) {
+            relative = this.toPath(def, op[1]);
+          } else {
+            relative = (method || '') + '$' + GSS.setupId(command);
+          }
+        }
+      } else {
+        if (absolute = command.selector) {
+          return absolute;
+        }
+        relative = command.prefix || '';
+        if (method) {
+          relative += method;
+        }
+        if (command.suffix) {
+          relative += command.suffix;
+        }
       }
     }
     return (path || command.path || '') + relative;
@@ -23166,26 +23226,28 @@ Processor = (function() {
     return this.promises[key] = op;
   };
 
-  Processor.prototype.callback = function(op, key, value) {
-    var context, i, promise, val, _i, _len, _results;
+  Processor.prototype.callback = function(op, key, value, from, singular) {
+    var breadcrumb, promise, result, val, _i, _len;
     if (value === void 0) {
       if (promise = this.promises[key]) {
-        return this.evaluate(promise, promise.context.indexOf(promise), promise.context, key);
+        return this.evaluate(promise, promise.context.indexOf(promise), promise.context, key, key);
       } else {
         return;
       }
     }
-    context = op.context;
-    i = context.indexOf(op);
-    if (typeof value === 'object' && value && typeof value.length === 'number') {
-      _results = [];
+    if (typeof value === 'object' && value && typeof value.length === 'number' && this[value[0]] !== true) {
+      console.groupCollapsed(key);
       for (_i = 0, _len = value.length; _i < _len; _i++) {
         val = value[_i];
-        _results.push(this.evaluate(op, i, context, this.toPath(val, null, key), key));
+        breadcrumb = this.toPath(val, key);
+        this.memory.set(breadcrumb, val);
+        this.evaluate(op, void 0, void 0, breadcrumb, key, from);
+        result = true;
       }
-      return _results;
+      console.groupEnd(key);
+      return result;
     } else {
-      return this.evaluate(op, i, context, this.toPath(value, null, key), key);
+      return this.evaluate(op, void 0, void 0, singular || this.toPath(value, key), key, from, value);
     }
   };
 
@@ -23233,6 +23295,10 @@ Commander = (function(_super) {
     }
   };
 
+  Commander.prototype["return"] = function(command) {
+    return console.error('COMMAND', command);
+  };
+
   Commander.prototype.handleRemoves = function(removes) {
     return this.evaluate("unregister", removes);
   };
@@ -23256,8 +23322,10 @@ Commander = (function(_super) {
   };
 
   Commander.prototype['_get$'] = function(context, property, command) {
-    var val;
-    if (command.absolute === 'window') {
+    var id, val;
+    if (command.nodeType) {
+      id = GSS.setupId(command);
+    } else if (command.absolute === 'window') {
       return ['get', "::window[" + prop + "]"];
     }
     if (property.indexOf("intrinsic-") === 0) {
@@ -23265,11 +23333,11 @@ Commander = (function(_super) {
         val = this.engine.measureByGssId(id, property);
         engine.setNeedsMeasure(true);
         if (engine.vars[k] !== val) {
-          return ['suggest', ['get$', property, id, void 0], ['number', val], 'required'];
+          return ['suggest', ['get', property, id, void 0], ['number', val], 'required'];
         }
       }
     }
-    return ['get$', property, '$' + id, void 0];
+    return ['get', property, '$' + id, void 0];
   };
 
   Commander.prototype["$rule"] = {
@@ -23302,8 +23370,10 @@ Commander = (function(_super) {
 
   Commander.prototype['$query'] = {
     method: "querySelectorAll",
-    match: function(value) {
-      return this.webkitMatchesSelector(value);
+    match: function(value, node) {
+      if (node.webkitMatchesSelector(value)) {
+        return node;
+      }
     },
     group: '$query'
   };
@@ -23311,8 +23381,10 @@ Commander = (function(_super) {
   Commander.prototype['$class'] = {
     prefix: '.',
     method: "getElementsByClassName",
-    match: function(value) {
-      return this.classList.contains(value);
+    match: function(value, node) {
+      if (node.classList.contains(value)) {
+        return node;
+      }
     },
     group: '$query'
   };
@@ -23321,8 +23393,10 @@ Commander = (function(_super) {
     prefix: '',
     method: "getElementsByTagName",
     group: '$query',
-    match: function(value) {
-      return this.tagName === value.toUpperCase();
+    match: function(value, node) {
+      if (node.tagName === value.toUpperCase()) {
+        return node;
+      }
     }
   };
 
@@ -23330,8 +23404,10 @@ Commander = (function(_super) {
     prefix: '#',
     method: "getElementById",
     group: '$query',
-    match: function(value) {
-      return this.id === name;
+    match: function(value, node) {
+      if (node.id === name) {
+        return node;
+      }
     }
   };
 
@@ -23356,6 +23432,10 @@ Commander = (function(_super) {
     }
   };
 
+  Commander.prototype['$pseudo'] = function(context, name) {
+    return this[name] || this[':get'];
+  };
+
   Commander.prototype['$combinator'] = function(context, name) {
     return this[name];
   };
@@ -23366,20 +23446,21 @@ Commander = (function(_super) {
 
   Commander.prototype[' '] = {
     prefix: ' ',
-    group: '$all',
-    valueOf: function() {
-      return this.getElementsByTagName("*");
+    group: '$query',
+    valueOf: function(node) {
+      return node.getElementsByTagName("*");
     }
   };
 
   Commander.prototype['!'] = {
     prefix: '!',
-    valueOf: function() {
-      var node, nodes;
-      node = this;
+    valueOf: function(node) {
+      var nodes;
       nodes = void 0;
       while (node = node.parentNode) {
-        (nodes || (nodes = [])).push(node);
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+        }
       }
       return nodes;
     }
@@ -23388,44 +23469,37 @@ Commander = (function(_super) {
   Commander.prototype['>'] = {
     prefix: '>',
     group: '$query',
-    valueOf: function() {
-      return this.children;
+    valueOf: function(node) {
+      return node.children;
     }
   };
 
   Commander.prototype['!>'] = {
     prefix: '!>',
-    valueOf: function() {
-      var node, nodes;
-      node = this;
-      nodes = void 0;
-      while (node = node.previousElementSibling) {
-        (nodes || (nodes = [])).push(node);
-      }
-      return nodes;
+    valueOf: function(node) {
+      return node.parentNode;
     }
   };
 
   Commander.prototype['+'] = {
     prefix: '+',
-    valueOf: function() {
-      return this.nextElementSibling;
+    valueOf: function(node) {
+      return node.nextElementSibling;
     }
   };
 
   Commander.prototype['!+'] = {
     prefix: '!+',
-    valueOf: function() {
-      return this.previousElementSibling;
+    valueOf: function(node) {
+      return node.previousElementSibling;
     }
   };
 
   Commander.prototype['~'] = {
     prefix: '~',
-    group: '$all',
-    valueOf: function() {
-      var node, nodes;
-      node = this;
+    group: '$query',
+    valueOf: function(node) {
+      var nodes;
       nodes = void 0;
       while (node = node.nextElementSibling) {
         (nodes || (nodes = [])).push(node);
@@ -23436,10 +23510,9 @@ Commander = (function(_super) {
 
   Commander.prototype['!~'] = {
     prefix: '~',
-    group: '$all',
-    valueOf: function() {
-      var node, nodes;
-      node = this;
+    group: '$query',
+    valueOf: function(node) {
+      var nodes;
       nodes = void 0;
       while (node = node.previousElementSibling) {
         (nodes || (nodes = [])).push(node);
@@ -23449,29 +23522,36 @@ Commander = (function(_super) {
   };
 
   Commander.prototype[':value'] = {
-    valueOf: function() {
-      return this.value;
+    valueOf: function(node) {
+      return node.value;
     },
     watch: "oninput"
   };
 
+  Commander.prototype[':get'] = {
+    valueOf: function(node, property) {
+      console.log(property);
+      return node[property];
+    }
+  };
+
   Commander.prototype['::this'] = {
     prefix: '',
-    valueOf: function() {
-      return this;
+    valueOf: function(node) {
+      return node;
     }
   };
 
   Commander.prototype['::parent'] = {
     prefix: '::parent',
-    valueOf: function() {
-      return this.parentNode;
+    valueOf: function(node) {
+      return node;
     }
   };
 
   Commander.prototype['::scope'] = {
     prefix: "::scope",
-    valueOf: function() {
+    valueOf: function(node) {
       return this.engine.scope;
     }
   };

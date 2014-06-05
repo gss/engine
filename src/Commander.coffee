@@ -25,6 +25,10 @@ class Commander extends Processor
           command.parentRule = ast
         @evaluate command, 0, ast
 
+  return: (command) ->
+    console.error('COMMAND', command)
+    # send command to thread
+
 
   # DOM Query invalidator hooks
 
@@ -50,8 +54,11 @@ class Commander extends Processor
     method: '_get$'
 
   '_get$': (context, property, command) ->
-    if command.absolute is 'window'
-      return ['get',"::window[#{prop}]"]       
+    if command.nodeType
+      id = GSS.setupId(command)
+    else if command.absolute is 'window'
+      return ['get',"::window[#{prop}]"]
+
   
     # intrinsics
     if property.indexOf("intrinsic-") is 0
@@ -60,9 +67,9 @@ class Commander extends Processor
         # intrinsics always need remeasurement
         engine.setNeedsMeasure true
         if engine.vars[k] isnt val
-          return ['suggest', ['get$', property, id, undefined], ['number', val], 'required'] 
+          return ['suggest', ['get', property, id, undefined], ['number', val], 'required'] 
       
-    return ['get$', property, '$' + id, undefined]
+    return ['get', property, '$' + id, undefined]
   
 
     
@@ -88,30 +95,30 @@ class Commander extends Processor
 
   '$query':
     method: "querySelectorAll"
-    match: (value) ->
-      return @webkitMatchesSelector(value)
+    match: (value, node) ->
+      return node if node.webkitMatchesSelector(value)
     group: '$query'
   
   '$class':
     prefix: '.'
     method: "getElementsByClassName"
-    match: (value) ->
-      return @classList.contains(value)
+    match: (value, node) ->
+      return node if node.classList.contains(value)
     group: '$query'
 
   '$tag':
     prefix: ''
     method: "getElementsByTagName"
     group: '$query'
-    match: (value) ->
-      return @tagName == value.toUpperCase()
+    match: (value, node) ->
+      return node if node.tagName == value.toUpperCase()
 
   '$id':
     prefix: '#'
     method: "getElementById"
     group: '$query'
-    match: (value) ->
-      return @id == name
+    match: (value, node) ->
+      return node if node.id == name
 
   '$virtual':
     prefix: '"'
@@ -130,6 +137,9 @@ class Commander extends Processor
 
   # Macros
 
+  '$pseudo': (context, name) ->
+    return @[name] || @[':get']
+
   '$combinator': (context, name) ->
     return @[name]
 
@@ -141,49 +151,44 @@ class Commander extends Processor
 
   ' ':
     prefix: ' '
-    group: '$all'
-    valueOf: ->
-      return @getElementsByTagName("*")
+    group: '$query'
+    valueOf: (node) ->
+      return node.getElementsByTagName("*")
 
   '!':
     prefix: '!'
-    valueOf: ->
-      node = @
+    valueOf: (node) ->
       nodes = undefined
       while node = node.parentNode
-        (nodes ||= []).push(node)
+        if node.nodeType == 1
+          (nodes ||= []).push(node)
       return nodes
 
   '>':
     prefix: '>'
     group: '$query'
-    valueOf: ->
-      return @children
+    valueOf: (node) ->
+      return node.children
 
   '!>':
     prefix: '!>'
-    valueOf: ->
-      node = @
-      nodes = undefined
-      while node = node.previousElementSibling
-        (nodes ||= []).push(node)
-      return nodes
+    valueOf: (node) ->
+      return node.parentNode
 
   '+':
     prefix: '+'
-    valueOf: ->
-      return @nextElementSibling
+    valueOf: (node) ->
+      return node.nextElementSibling
 
   '!+':
     prefix: '!+'
-    valueOf: ->
-      return @previousElementSibling
+    valueOf: (node) ->
+      return node.previousElementSibling
 
   '~':
     prefix: '~'
-    group: '$all'
-    valueOf: ->
-      node = @
+    group: '$query'
+    valueOf: (node) ->
       nodes = undefined
       while node = node.nextElementSibling
         (nodes ||= []).push(node)
@@ -191,9 +196,8 @@ class Commander extends Processor
 
   '!~':
     prefix: '~'
-    group: '$all'
-    valueOf: ->
-      node = @
+    group: '$query'
+    valueOf: (node) ->
       nodes = undefined
       while node = node.previousElementSibling
         (nodes ||= []).push(node)
@@ -202,9 +206,15 @@ class Commander extends Processor
   # Pseudo classes
 
   ':value':
-    valueOf: ->
-      return @value
+    valueOf: (node) ->
+      return node.value
     watch: "oninput"
+
+  ':get':
+    valueOf: (node, property) ->
+      console.log(property  )
+      return node[property]
+
 
 
 
@@ -212,17 +222,17 @@ class Commander extends Processor
 
   '::this':
     prefix: ''
-    valueOf: ->
-      return @
+    valueOf: (node) ->
+      return node
 
   '::parent':
     prefix: '::parent'
-    valueOf: ->
-      return @parentNode
+    valueOf: (node) ->
+      return node
 
   '::scope':
     prefix: "::scope"
-    valueOf: ->
+    valueOf: (node) ->
       return @engine.scope
 
   '::window':

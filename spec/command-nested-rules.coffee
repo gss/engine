@@ -75,25 +75,29 @@ describe 'Nested Rules', ->
         rules = [
           {
             type:'constraint', 
-            cssText:'(header > h2.gizoogle ! section div)[target-size] == 100', 
+            cssText:'(header > h2.gizoogle ! section div:get("parentNode"))[target-size] == 100', 
             commands: [
               ["eq", 
                 ["get$",
                   "[target-size]", 
-                  ['$tag',
-                    'div',
-                    ['$combinator', ' ', 
-                      ['$tag', 
-                        'section',
-                        ['$combinator', 
-                          '!', 
-                          ['$tag', 'header']
-                            ['$combinator', 
-                              '>'
-                              ['$class',
-                                'gizoogle'
-                                ['$tag', 'h2']]]]]]]
-                ["number",100]]]
+                  ['$pseudo',
+                    ':get'
+                    ['$tag',
+                      'div',
+                      ['$combinator', ' ', 
+                        ['$tag', 
+                          'section',
+                          ['$combinator', 
+                            '!', 
+                            ['$tag', 
+                              'header'
+                              ['$combinator', 
+                                '>'
+                                ['$class',
+                                  'gizoogle'
+                                  ['$tag', 'h2']]]]]]]]
+                    'parentNode']]
+                ["number",100]]
             ]
           }
         ]
@@ -107,7 +111,8 @@ describe 'Nested Rules', ->
             </div>
           </section>
         """
-        console.log(container.innerHTML, rules[0].cssText)
+        console.log(container.innerHTML)
+        console.info(rules[0].cssText)
                               
         listener = (e) ->        
           expect(engine.lastWorkerCommands).to.eql [
