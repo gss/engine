@@ -26,6 +26,7 @@ class Commander extends Processor
         @evaluate command, 0, ast
 
   return: (command) ->
+    @engine.registerCommand command
     console.error('COMMAND', command)
     # send command to thread
 
@@ -33,16 +34,16 @@ class Commander extends Processor
   # DOM Query invalidator hooks
 
   handleRemoves: (removes) ->
-    return @evaluate "unregister", removes
+    #for remove in removes
+    #  @memory.set remove
 
-  handleSelectorsWithAdds: (selectorsWithAdds) ->
-    return @evaluate "register", selectorsWithAdds, true
+  handleSelectorsWithAdds: (selectors) ->
+    #for selector in selectors
+    #  @memory.set selector
 
-  handleInvalidMeasures: (invalidMeasures) ->
-    return @evaluate "register", invalidMeasures.map( (id) ->
-      return "$" + id + '[intrinsic]'
-    , true )
-
+  handleInvalidMeasures: (ids) ->
+    #for id in ids
+    #  @memory.set "$" + id + '[intrinsic]'
 
   # Getters
   
@@ -53,11 +54,11 @@ class Commander extends Processor
     suffix: ']'
     method: '_get$'
 
-  '_get$': (context, property, command) ->
+  '_get$': (path, property, command) ->
     if command.nodeType
       id = GSS.setupId(command)
     else if command.absolute is 'window'
-      return ['get',"::window[#{prop}]"]
+      return ['get',"::window[#{prop}]", path]
 
   
     # intrinsics
@@ -67,9 +68,9 @@ class Commander extends Processor
         # intrinsics always need remeasurement
         engine.setNeedsMeasure true
         if engine.vars[k] isnt val
-          return ['suggest', ['get', property, id, undefined], ['number', val], 'required'] 
+          return ['suggest', ['get', property, id, path], ['number', val], 'required'] 
       
-    return ['get', property, '$' + id, undefined]
+    return ['get', property, '$' + id, path]
   
 
     
@@ -137,14 +138,17 @@ class Commander extends Processor
 
   # Macros
 
-  '$pseudo': (context, name) ->
+  '$pseudo': (path, name) ->
     return @[name] || @[':get']
 
-  '$combinator': (context, name) ->
+  '$combinator': (path, name) ->
     return @[name]
 
-  '$reserved': (context, name) ->
+  '$reserved': (path, name) ->
     return @[name]
+
+  'number': (path, value) ->
+    return parseFloat(value)
 
 
   # CSS Combinators with reversals

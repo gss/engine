@@ -6,7 +6,7 @@ module.exports = class Memory
     @_watchers = {}
 
   # Observe a value by key. Executes expression starting with a given token
-  watch: (key, value) ->
+  watch: (key, value, a,b,c) ->
     console.log('@memory.watch', [key, value])
     if watchers = @_watchers[key]
       return if watchers.indexOf(value) > -1
@@ -14,15 +14,15 @@ module.exports = class Memory
     else
       watchers = @_watchers[key] = [value]
 
-    return @object.callback value, key, @[key]
+    return @object.callback value, key, @[key], a,b,c
 
   # Assign a value by key, invoke callbacks
-  set: (key, value) ->
+  set: (key, value, a,b,c) ->
     @[key] = value
     if value == "get"
       debugger
     if watchers = @_watchers[key]
       for watcher in watchers
-        @object.callback watcher, key, @[key]
+        @object.callback watcher, key, value, a,b,c
 
     return true

@@ -116,7 +116,7 @@ describe 'Nested Rules', ->
                               
         listener = (e) ->        
           expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[target-size]"], ["number",100]]
+              ["eq", ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"], ["number",100]]
             ]
           container.removeEventListener 'solved', listener
           done()
