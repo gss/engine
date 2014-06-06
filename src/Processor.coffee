@@ -100,17 +100,19 @@ class Processor
       console.warn('@' + (command || method) , args)
       result = func.apply(scope || @, args)
     else
-      throw new Error("Engine Commands broke, couldn't find method: #{method}")
+      throw new Error("Engine broke, couldn't find method: #{method}")
 
     # Compute sub-path if forked, or reuse parent path
-    if result && (result.length == undefined || (typeof result[0] == 'string' && @[result[0]] == true))
-      link = path = contd
-    else
+    console.error(result, result && @isCollection(result))
+    if result && @isCollection(result)
       path = @toPath(result, contd, command, operation)
       
       # Store variable values. Functions and binary operators always recompute
       unless binary
         @memory.set path, result, index
+
+    else
+      link = path = contd
 
     # Execute parent expression if promise resolved singular value
     if contd && result != undefined
@@ -149,12 +151,18 @@ class Processor
         relative += command.suffix if command.suffix 
     return (path || command.path || '') + relative
 
+  # Should we iterate the object?
+  isCollection: (object) ->
+    if typeof object == 'object' && object.length != undefined
+      unless typeof object[0] == 'string' && @[object[0]] == true
+        return true
+
   # Continues execution of expression with given value
   callback: (operation, path, value, from, singular) ->
     return value unless operation
-    # Was the value promised?
     switch typeof value
       when "undefined"
+        # Resolve promise
         if promise = @promises[path]
           return @evaluate promise, undefined, undefined, path, path
       when "object"

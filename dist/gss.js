@@ -23150,15 +23150,16 @@ Processor = (function() {
       console.warn('@' + (command || method), args);
       result = func.apply(scope || this, args);
     } else {
-      throw new Error("Engine Commands broke, couldn't find method: " + method);
+      throw new Error("Engine broke, couldn't find method: " + method);
     }
-    if (result && (result.length === void 0 || (typeof result[0] === 'string' && this[result[0]] === true))) {
-      link = path = contd;
-    } else {
+    console.error(result, result && this.isCollection(result));
+    if (result && this.isCollection(result)) {
       path = this.toPath(result, contd, command, operation);
       if (!binary) {
         this.memory.set(path, result, index);
       }
+    } else {
+      link = path = contd;
     }
     if (contd && result !== void 0) {
       if (promised === contd && !singular) {
@@ -23202,6 +23203,14 @@ Processor = (function() {
       }
     }
     return (path || command.path || '') + relative;
+  };
+
+  Processor.prototype.isCollection = function(object) {
+    if (typeof object === 'object' && object.length !== void 0) {
+      if (!(typeof object[0] === 'string' && this[object[0]] === true)) {
+        return true;
+      }
+    }
   };
 
   Processor.prototype.callback = function(operation, path, value, from, singular) {
