@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-06) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-09) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -23005,7 +23005,8 @@ require.register("gss/lib/Memory.js", function(exports, require, module){
 var Memory;
 
 module.exports = Memory = (function() {
-  function Memory() {
+  function Memory(object) {
+    this.object = object;
     this._watchers = {};
   }
 
@@ -23020,6 +23021,7 @@ module.exports = Memory = (function() {
     } else {
       watchers = this._watchers[key] = [value];
     }
+    debugger;
     return this.object.callback(value, key, this[key], a, b, c);
   };
 
@@ -23035,7 +23037,7 @@ module.exports = Memory = (function() {
         this.object.callback(watcher, key, value, a, b, c);
       }
     }
-    return true;
+    return value;
   };
 
   return Memory;
@@ -23044,165 +23046,160 @@ module.exports = Memory = (function() {
 
 });
 require.register("gss/lib/Processor.js", function(exports, require, module){
-var Memory, Processor;
-
-Memory = require('./Memory.js');
+var Processor;
 
 Processor = (function() {
   function Processor() {
-    this.memory = new Memory;
-    this.memory.object = this;
     this.promises = {};
   }
 
-  Processor.prototype.evaluate = function(operation, index, context, contd, promised, from, bubbled, singular) {
-    var arg, args, binary, command, def, evaluate, func, getter, group, i, link, method, path, result, scope, value, _i, _len;
-    if (context === void 0) {
-      if (context = operation.context) {
-        if (index === void 0) {
-          index = context.indexOf(operation);
+  Processor.prototype.evaluate = function(operation, context, continuation, promised, from, bubbled, singular) {
+    var args, argument, eager, func, index, link, offset, path, result, scope, skip, value, _i, _len, _ref;
+    offset = (_ref = operation.offset) != null ? _ref : this.preprocess(operation).offset;
+    skip = operation.skip;
+    args = null;
+    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
+      argument = operation[index];
+      if (index === 0) {
+        if (offset) {
+          continue;
         }
-      }
-    }
-    command = method = operation[0];
-    func = def = this[method];
-    if (def) {
-      if (typeof def === 'function') {
-        operation.shift();
-        def = def.call(this, operation, operation[0]);
-      }
-      group = def.group;
-      if (contd && group && from === void 0) {
-        command = '';
-        def = this[group];
-        if (promised) {
-          operation = [operation[0], group, promised];
+        if (continuation && !operation.noop) {
+          argument = continuation;
         }
-      }
-      method = def.method;
-      func = this[method];
-      evaluate = def.evaluate;
-    }
-    args = [];
-    for (i = _i = 0, _len = operation.length; _i < _len; i = ++_i) {
-      arg = operation[i];
-      if (i === 0 && contd && def !== true) {
-        arg = contd;
-      } else if (from === i) {
-        arg = bubbled;
-      } else if (arg instanceof Array) {
-        arg.context = operation;
-        value = (evaluate || this.evaluate).call(this, arg, i, operation);
-        if (typeof value === 'string') {
-          if (!arg.context || this[arg[0]].group !== group) {
-            if (contd) {
-              value = contd + command + value;
+      } else if (skip === index) {
+        offset += 1;
+        continue;
+      } else if (from === index) {
+        argument = bubbled;
+      } else if (argument instanceof Array) {
+        argument.parent || (argument.parent = operation);
+        value = (operation.evaluate || this.evaluate).call(this, argument, args);
+        if (argument.group !== operation.group) {
+          eager = true;
+          if (typeof value === 'string') {
+            if (continuation) {
+              value = continuation + operation.command + value;
             }
-            value = this.memory.watch(value, operation);
+            value = this.memory.watch(value, operation, index);
           }
         }
-        arg = value;
+        argument = value;
       }
-      if (arg === void 0) {
+      if (argument === void 0) {
         return;
       }
-      args[i] = arg;
+      (args || (args = []))[index - offset] = argument;
     }
-    if (!func) {
-      switch (typeof def) {
-        case "boolean":
-          if (!context) {
-            return this["return"](args);
-          }
-          return args;
-        case "number":
-        case "string":
-          return def;
-        case "object":
-          if (def.match && args.length > (command === '' && 3 || 2)) {
-            getter = func = def.match;
-            binary = true;
-          } else if (def.valueOf !== Object.valueOf) {
-            getter = func = def.valueOf;
-          }
-      }
-      args.shift();
-    }
-    if (context && group && !contd) {
-      if (contd) {
-        path = this.toPath(def, contd);
+    if (operation.noop) {
+      if (operation.parent) {
+        return args;
       } else {
-        path = this.toPath(def, args[1], args[0], operation);
-        this.promises[path] = operation;
-        return path;
+        return this["return"](args);
       }
+    }
+    path = this.toPath(operation, args, continuation);
+    if (operation.group && !continuation) {
+      this.promises[path] = operation;
+      return path;
+    }
+    if (!(func = operation.func)) {
+      scope = (typeof args[0] === 'object' && args.shift()) || this.engine.queryScope;
+      func = scope && scope[operation.method];
     }
     if (!func) {
-      scope = args.shift();
-      if (typeof scope === 'object') {
-        func = scope && scope[method];
-      } else if (contd) {
-        scope = this.engine.queryScope;
-        func = scope[method];
-      }
+      throw new Error("Engine broke, couldn't find method: " + operation.method);
     }
-    if (func) {
-      console.warn('@' + (command || method), args);
-      result = func.apply(scope || this, args);
-    } else {
-      throw new Error("Engine broke, couldn't find method: " + method);
+    result = func.apply(scope || this, args);
+    console.log(this.observer, operation.combinator || operation.name === '$query');
+    if (operation.combinator || operation.name === '$query') {
+      this.observer.add(scope, operation, continuation);
     }
-    console.error(result, result && this.isCollection(result));
     if (result && this.isCollection(result)) {
-      path = this.toPath(result, contd, command, operation);
-      if (!binary) {
-        this.memory.set(path, result, index);
-      }
+      this.memory.set(path, result, operation.index);
+      return;
     } else {
-      link = path = contd;
+      link = path = continuation;
     }
-    if (contd && result !== void 0) {
-      if (promised === contd && !singular) {
+    if (continuation) {
+      if (promised === continuation && !singular) {
         return;
       }
-      return this.callback(context, path, result, index, link);
+      return this.callback(operation.parent, path, result, operation.index, link);
     }
     return path;
   };
 
-  Processor.prototype['toPath'] = function(command, path, method, operation, def) {
-    var absolute, relative, second, swap;
-    if (operation && !def) {
-      second = operation[2];
-      if (second && second.push && second[0] === this[second[0]].prefix) {
-        swap = path;
-        path = method;
-        method = swap;
+  Processor.prototype.toPath = function(operation, args, promised) {
+    var arg, index, path, prefix, subgroup, suffix, _i, _len;
+    if (subgroup = operation[1].group) {
+      if (subgroup !== operation.group) {
+        return promised;
       }
     }
-    if (command === void 0) {
-      relative = method;
-    } else {
-      if (command.nodeType) {
-        if (command.nodeType === 9) {
-          return '#document';
+    prefix = operation.prefix || '';
+    suffix = operation.suffix || '';
+    path = operation.skipped || '';
+    for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
+      arg = args[index];
+      if (typeof arg === 'string') {
+        if (index === 0) {
+          prefix = arg + prefix;
         } else {
-          relative = def ? this.toPath(def, operation[1]) : (method || '') + '$' + GSS.setupId(command);
-        }
-      } else {
-        if (absolute = command.selector) {
-          return absolute;
-        }
-        relative = command.prefix || '';
-        if (method) {
-          relative += method;
-        }
-        if (command.suffix) {
-          relative += command.suffix;
+          path = arg;
         }
       }
     }
-    return (path || command.path || '') + relative;
+    return prefix + path + suffix;
+  };
+
+  Processor.prototype.preprocess = function(operation) {
+    var arity, def, func, group, prefix, suffix;
+    operation.name = operation[0];
+    operation.offset = 0;
+    def = this[operation[0]];
+    if (operation.parent && typeof operation.index !== 'number') {
+      operation.index = operation.parent.indexOf(operation);
+    }
+    arity = operation.length === 2 && 1 || 2;
+    if (def.lookup) {
+      operation.skip = arity;
+      operation.skipped = operation[arity];
+      operation.name = (def.prefix || '') + operation.skipped;
+      if (typeof def.lookup === 'function') {
+        def = def.lookup.call(this, operation);
+      } else {
+        def = this[operation.name];
+      }
+    }
+    if (def === true) {
+      operation.noop = true;
+      return operation;
+    }
+    if (group = def.group) {
+      operation.group = group;
+    }
+    if (prefix = def.prefix) {
+      operation.prefix = prefix;
+    }
+    if (suffix = def.suffix) {
+      operation.suffix = suffix;
+    }
+    if (func = def[operation.length - 1 - (!!operation.skipped)]) {
+      operation.offset = 1;
+    } else {
+      func = def.command;
+    }
+    if (typeof func === 'string') {
+      if (this[func]) {
+        operation.func = this[func];
+      } else {
+        operation.method = func;
+      }
+    } else {
+      operation.func = func;
+    }
+    return operation;
   };
 
   Processor.prototype.isCollection = function(object) {
@@ -23214,28 +23211,36 @@ Processor = (function() {
   };
 
   Processor.prototype.callback = function(operation, path, value, from, singular) {
-    var breadcrumb, promise, val, _i, _len;
+    var breadcrumb, promise, responsible, val, _i, _len;
     if (!operation) {
       return value;
     }
     switch (typeof value) {
       case "undefined":
-        if (promise = this.promises[path]) {
-          return this.evaluate(promise, void 0, void 0, path, path);
+        if (responsible = this.promises[path]) {
+          promise = [responsible.group, path];
+          promise.path = path;
+          promise.parent = operation;
+          promise.index = from;
+          if (value !== void 0) {
+            promise.push(value);
+          }
+          return this.evaluate(promise, void 0, path);
         }
         break;
       case "object":
-        if (value && typeof value.length === 'number' && this[value[0]] !== true) {
-          console.groupCollapsed(path);
+        if (value && this.isCollection(value)) {
+          console.group(path);
+          debugger;
           for (_i = 0, _len = value.length; _i < _len; _i++) {
             val = value[_i];
-            breadcrumb = this.toPath(val, path);
+            breadcrumb = path + this.toId(val);
             this.memory.set(breadcrumb, val);
-            this.evaluate(operation, void 0, void 0, breadcrumb, path, from, val);
+            this.evaluate(operation, void 0, breadcrumb, path, from, val);
           }
           console.groupEnd(path);
         } else {
-          return this.evaluate(operation, void 0, void 0, singular || this.toPath(value, path), path, from, value, singular);
+          return this.evaluate(operation, void 0, singular || this.toId(value, path), path, from, value, singular);
         }
     }
     return path;
@@ -23248,6 +23253,119 @@ Processor = (function() {
 module.exports = Processor;
 
 });
+require.register("gss/lib/Observer.js", function(exports, require, module){
+var Observer;
+
+Observer = (function() {
+  function Observer(object) {
+    this.object = object;
+  }
+
+  Observer.prototype.update = function(node, command, added, removed) {
+    var id, index, watcher, watchers, _i, _len, _results;
+    if (!(id = node._gss_id)) {
+      return;
+    }
+    if (!(watchers = this.watchers[id])) {
+      return;
+    }
+    _results = [];
+    for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 2) {
+      watcher = watchers[index];
+      _results.push(1);
+    }
+    return _results;
+  };
+
+  Observer.prototype.add = function(node, operation, continuation) {
+    var id;
+    console.log(node, operation);
+    if (id = this.object.toId(node)) {
+      return (this[id] || (this[id] = [])).push(operation, continuation);
+    }
+  };
+
+  Observer.prototype.observer = function(mutations) {
+    var added, allAdded, allRemoved, child, firstNext, firstPrev, mutation, next, parent, prev, removed, _i, _j, _k, _len, _len1, _len2, _results;
+    _results = [];
+    for (_i = 0, _len = mutations.length; _i < _len; _i++) {
+      mutation = mutations[_i];
+      if (mutation.attributes) {
+
+      } else if (mutation.childList) {
+        parent = mutation.target;
+        added = mutation.addedNodes;
+        removed = mutation.removedNodes;
+        prev = next = mutation;
+        firstPrev = firstNext = true;
+        while ((prev = prev.previousSibling)) {
+          if (prev.nodeType === 1) {
+            if (!firstPrev) {
+              this.update(prev, '+', added[0], removed[0]);
+              this.update(prev, '++', added[0], removed[0]);
+              firstPrev = false;
+            }
+            this.update(prev, '~', added, removed);
+            this.update(prev, '~~', added, removed);
+          }
+        }
+        while ((next = next.nextSibling)) {
+          if (next.nodeType === 1) {
+            if (!firstNext) {
+              this.update(prev, '!+', added[added.length - 1], removed[removed.length - 1]);
+              this.update(prev, '++', added[added.length - 1], removed[removed.length - 1]);
+              firstNext = false;
+            }
+            this.update(prev, '!~', added, removed);
+            this.update(prev, '~~', added, removed);
+          }
+        }
+        this.update(parent, '>', added, removed);
+        allAdded = [];
+        for (_j = 0, _len1 = added.length; _j < _len1; _j++) {
+          child = added[_j];
+          this.update(child, '!>', parent);
+          allAdded.push(child);
+          allAdded.push.apply(allAdded, child.getElementsByTagName('*'));
+        }
+        allRemoved = [];
+        for (_k = 0, _len2 = removed.length; _k < _len2; _k++) {
+          child = removed[_k];
+          this.update(child, '!>', void 0, parent);
+          allRemoved.push(child);
+          allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'));
+        }
+        _results.push((function() {
+          var _l, _len3, _len4, _m, _results1;
+          _results1 = [];
+          while (parent && parent.nodeType === 1) {
+            this.update(parent, ' ', allAdded, allRemoved);
+            for (_l = 0, _len3 = allAdded.length; _l < _len3; _l++) {
+              child = allAdded[_l];
+              this.update(child, '!', parent, parent);
+            }
+            for (_m = 0, _len4 = allRemoved.length; _m < _len4; _m++) {
+              child = allRemoved[_m];
+              this.update(child, '!', parent, void 0, parent);
+            }
+            _results1.push(parent = parent.parentNode);
+          }
+          return _results1;
+        }).call(this));
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
+  return Observer;
+
+})();
+
+module.exports = Observer;
+
+});
 require.register("gss/lib/Commander.js", function(exports, require, module){
 /*
 
@@ -23255,19 +23373,29 @@ Root commands, if bound to a dom query, will spawn commands
 to match live results of query.
 */
 
-var Commander, Processor,
+var Commander, Memory, Observer, Processor,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Processor = require('./Processor.js');
+
+Observer = require('./Observer.js');
+
+Memory = require('./Memory.js');
 
 Commander = (function(_super) {
   __extends(Commander, _super);
 
   function Commander(engine) {
     this.engine = engine;
+    this.memory = new Memory(this);
+    this.observer = new Observer(this);
     Commander.__super__.constructor.call(this);
   }
+
+  Commander.prototype.toId = function(value) {
+    return value && value.nodeType && "$" + GSS.setupId(value);
+  };
 
   Commander.prototype.execute = function(ast) {
     var command, _i, _len, _ref, _results;
@@ -23296,31 +23424,27 @@ Commander = (function(_super) {
 
   Commander.prototype.handleInvalidMeasures = function(ids) {};
 
-  Commander.prototype['get'] = true;
-
   Commander.prototype['get$'] = {
     prefix: '[',
     suffix: ']',
-    method: '_get$'
-  };
-
-  Commander.prototype['_get$'] = function(path, property, command) {
-    var id, val;
-    if (command.nodeType) {
-      id = GSS.setupId(command);
-    } else if (command.absolute === 'window') {
-      return ['get', "::window[" + prop + "]", path];
-    }
-    if (property.indexOf("intrinsic-") === 0) {
-      if (this.register("$" + id + "[intrinsic]", context)) {
-        val = this.engine.measureByGssId(id, property);
-        engine.setNeedsMeasure(true);
-        if (engine.vars[k] !== val) {
-          return ['suggest', ['get', property, id, path], ['number', val], 'required'];
+    command: function(path, object, property) {
+      var id, val;
+      if (object.nodeType) {
+        id = GSS.setupId(object);
+      } else if (object.absolute === 'window') {
+        return ['get', "::window[" + prop + "]", path];
+      }
+      if (property.indexOf("intrinsic-") === 0) {
+        if (this.register("$" + id + "[intrinsic]", context)) {
+          val = this.engine.measureByGssId(id, property);
+          engine.setNeedsMeasure(true);
+          if (engine.vars[k] !== val) {
+            return ['suggest', ['get', property, id, path], ['number', val], 'required'];
+          }
         }
       }
+      return ['get', property, '$' + id, path];
     }
-    return ['get', property, '$' + id, path];
   };
 
   Commander.prototype["$rule"] = {
@@ -23352,31 +23476,31 @@ Commander = (function(_super) {
   };
 
   Commander.prototype['$query'] = {
-    method: "querySelectorAll",
-    match: function(value, node) {
+    group: '$query',
+    1: "querySelectorAll",
+    2: function(node, value) {
       if (node.webkitMatchesSelector(value)) {
         return node;
       }
-    },
-    group: '$query'
+    }
   };
 
   Commander.prototype['$class'] = {
     prefix: '.',
-    method: "getElementsByClassName",
-    match: function(value, node) {
+    group: '$query',
+    1: "getElementsByClassName",
+    2: function(node, value) {
       if (node.classList.contains(value)) {
         return node;
       }
-    },
-    group: '$query'
+    }
   };
 
   Commander.prototype['$tag'] = {
     prefix: '',
-    method: "getElementsByTagName",
     group: '$query',
-    match: function(value, node) {
+    1: "getElementsByTagName",
+    2: function(node, value) {
       if (node.tagName === value.toUpperCase()) {
         return node;
       }
@@ -23385,9 +23509,9 @@ Commander = (function(_super) {
 
   Commander.prototype['$id'] = {
     prefix: '#',
-    method: "getElementById",
     group: '$query',
-    match: function(value, node) {
+    1: "getElementById",
+    2: function(node, value) {
       if (node.id === name) {
         return node;
       }
@@ -23402,11 +23526,11 @@ Commander = (function(_super) {
   Commander.prototype['$nth'] = {
     prefix: ':nth(',
     suffix: ')',
-    valueOf: function(divisor, comparison) {
-      var i, node, nodes, _i, _len;
+    command: function(node, divisor, comparison) {
+      var i, nodes, _i, _len;
       nodes = [];
-      for (node = _i = 0, _len = this.length; _i < _len; node = ++_i) {
-        i = this[node];
+      for (node = _i = 0, _len = node.length; _i < _len; node = ++_i) {
+        i = node[node];
         if (i % parseInt(divisor) === parseInt(comparison)) {
           nodes.push(nodes);
         }
@@ -23415,33 +23539,33 @@ Commander = (function(_super) {
     }
   };
 
-  Commander.prototype['$pseudo'] = function(path, name) {
-    return this[name] || this[':get'];
+  Commander.prototype['$pseudo'] = {
+    prefix: ':',
+    lookup: true
   };
 
-  Commander.prototype['$combinator'] = function(path, name) {
-    return this[name];
+  Commander.prototype['$combinator'] = {
+    lookup: true
   };
 
-  Commander.prototype['$reserved'] = function(path, name) {
-    return this[name];
+  Commander.prototype['$reserved'] = {
+    prefix: '::',
+    lookup: true
   };
 
-  Commander.prototype['number'] = function(path, value) {
-    return parseFloat(value);
+  Commander.prototype['number'] = function(operation) {
+    return parseFloat(operation[1]);
   };
 
   Commander.prototype[' '] = {
-    prefix: ' ',
     group: '$query',
-    valueOf: function(node) {
+    1: function(node) {
       return node.getElementsByTagName("*");
     }
   };
 
   Commander.prototype['!'] = {
-    prefix: '!',
-    valueOf: function(node) {
+    1: function(node) {
       var nodes;
       nodes = void 0;
       while (node = node.parentNode) {
@@ -23454,70 +23578,92 @@ Commander = (function(_super) {
   };
 
   Commander.prototype['>'] = {
-    prefix: '>',
     group: '$query',
-    valueOf: function(node) {
+    1: function(node) {
       return node.children;
     }
   };
 
   Commander.prototype['!>'] = {
-    prefix: '!>',
-    valueOf: function(node) {
+    1: function(node) {
       return node.parentNode;
     }
   };
 
   Commander.prototype['+'] = {
-    prefix: '+',
-    valueOf: function(node) {
+    1: function(node) {
       return node.nextElementSibling;
     }
   };
 
   Commander.prototype['!+'] = {
-    prefix: '!+',
-    valueOf: function(node) {
+    1: function(node) {
       return node.previousElementSibling;
     }
   };
 
+  Commander.prototype['++'] = {
+    1: function(node) {
+      var next, nodes, prev;
+      nodes = void 0;
+      if (prev = node.previousElementSibling) {
+        (nodes || (nodes = [])).push(prev);
+      }
+      if (next = node.nextElementSibling) {
+        (nodes || (nodes = [])).push(next);
+      }
+      return nodes;
+    }
+  };
+
   Commander.prototype['~'] = {
-    prefix: '~',
     group: '$query',
-    valueOf: function(node) {
+    1: function(node) {
       var nodes;
       nodes = void 0;
       while (node = node.nextElementSibling) {
         (nodes || (nodes = [])).push(node);
       }
-      return node;
+      return nodes;
     }
   };
 
   Commander.prototype['!~'] = {
-    prefix: '~',
     group: '$query',
-    valueOf: function(node) {
+    1: function(node) {
       var nodes;
       nodes = void 0;
       while (node = node.previousElementSibling) {
         (nodes || (nodes = [])).push(node);
       }
-      return node;
+      return nodes;
+    }
+  };
+
+  Commander.prototype['~~'] = {
+    group: '$query',
+    1: function(node) {
+      var nodes;
+      nodes = void 0;
+      while (node = node.previousElementSibling) {
+        (nodes || (nodes = [])).push(node);
+      }
+      while (node = node.nextElementSibling) {
+        (nodes || (nodes = [])).push(node);
+      }
+      return nodes;
     }
   };
 
   Commander.prototype[':value'] = {
-    valueOf: function(node) {
+    1: function(node) {
       return node.value;
     },
     watch: "oninput"
   };
 
   Commander.prototype[':get'] = {
-    valueOf: function(node, property) {
-      console.log(property);
+    2: function(node, property) {
       return node[property];
     }
   };
@@ -23612,6 +23758,8 @@ Commander = (function(_super) {
   Commander.prototype['::scope[x]'] = 0;
 
   Commander.prototype['::scope[y]'] = 0;
+
+  Commander.prototype['get'] = true;
 
   Commander.prototype['strength'] = true;
 
@@ -29664,6 +29812,7 @@ module.exports = {
     "lib/Engine.js",
     "lib/Memory.js", 
     "lib/Processor.js", 
+    "lib/Observer.js", 
     "lib/Commander.js",
     "lib/Thread.js", 
     "lib/dom/Getter.js",

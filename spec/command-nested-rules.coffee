@@ -79,25 +79,27 @@ describe 'Nested Rules', ->
             commands: [
               ["eq", 
                 ["get$",
-                  "[target-size]", 
                   ['$pseudo',
-                    ':get'
                     ['$tag',
-                      'div',
-                      ['$combinator', ' ', 
+                      ['$combinator', 
                         ['$tag', 
-                          'section',
                           ['$combinator', 
-                            '!', 
-                            ['$tag', 
-                              'header'
-                              ['$combinator', 
-                                '>'
-                                ['$class',
-                                  'gizoogle'
-                                  ['$tag', 'h2']]]]]]]]
-                    'parentNode']]
-                ["number",100]]
+                            ['$class',
+                              ['$tag', 
+                                ['$combinator', 
+                                  ['$tag', 
+                                    'header']
+                                  '>']
+                                'h2']
+                              'gizoogle']
+                            '!']
+                          'section']
+                        ' '] 
+                      'div']
+                    'get', 'parentNode']
+                  "[target-size]"]
+                ["number",100]
+              ]
             ]
           }
         ]
@@ -113,14 +115,12 @@ describe 'Nested Rules', ->
         """
         console.log(container.innerHTML)
         console.info(rules[0].cssText)
-                              
-        listener = (e) ->        
+          
+        Scenario done, container, [->        
           expect(engine.lastWorkerCommands).to.eql [
               ["eq", ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"], ["number",100]]
             ]
-          container.removeEventListener 'solved', listener
-          done()
-        container.addEventListener 'solved', listener
+        ]
         
         engine = GSS(container)
 

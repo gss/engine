@@ -1,155 +1,137 @@
-Memory = require('./Memory.js')
-
-
 class Processor
   constructor: ->
-    @memory = new Memory
-    @memory.object = @
     @promises = {}
 
-  # Evaluate operation, map() compatible arguments
-  # Last four arguments are used for continuations :(
-  evaluate: (operation, index, context, contd, promised, from, bubbled, singular) ->
-    if context == undefined
-      if context = operation.context
-        if index == undefined
-          index = context.indexOf(operation)
-      
-    command = method = operation[0]
-    func = def = @[method]
-    if def
-      # Dispatch command dynamically (e.g. $combinator, $pseudo)
-      if typeof def == 'function'
-        operation.shift()
-        def = def.call(@, operation, operation[0])
-      group = def.group
-
-      # Use a groupping operation for lazy tokens
-      if contd && group && from == undefined
-        command = ''
-        def = @[group]
-        if promised 
-          operation = [operation[0], group, promised]
-
-      # Lookup method suggested by command
-      method = def.method
-      func = @[method]
-      evaluate = def.evaluate
+  # Evaluate operation depth first
+  evaluate: (operation, context, continuation, promised, from, bubbled, singular) ->
+    offset = operation.offset ? @preprocess(operation).offset
+    skip   = operation.skip
 
     # Recursively evaluate arguments, stop on undefined.
-    args = []
-    for arg, i in operation
-      if i == 0 && contd && def != true
-        arg = contd
-      else if from == i 
-        arg = bubbled
-      else if arg instanceof Array
-        arg.context = operation
-        value = (evaluate || @evaluate).call(@, arg, i, operation)
-        if typeof value == 'string'
-          # Resolve promise if can't give a sub-promise
-          if !arg.context || @[arg[0]].group != group
-            if contd
-              value = contd + command + value
-            value = @memory.watch value, operation
-        arg = value
-      return if arg == undefined
-      args[i] = arg
+    args = null
+    for argument, index in operation
+      if index == 0
+        continue if offset
+        if continuation && !operation.noop
+          argument = continuation
+      else if skip == index
+        offset += 1
+        continue
+      else if from == index 
+        argument = bubbled
+      else if argument instanceof Array
+        argument.parent ||= operation
+        value = (operation.evaluate || @evaluate).call(@, argument, args)
+        # Got promise, resolve if node can't give a sub-promise of the same type
+        if argument.group != operation.group
+          eager = true
+          if typeof value == 'string'
+            if continuation
+              value = continuation + operation.command + value
+            value = @memory.watch value, operation, index
+        argument = value
+      return if argument == undefined
+      (args ||= [])[index - offset] = argument
 
-    # Handle custom commands
-    unless func
-      switch typeof def
-        # Thread commands pass through
-        when "boolean"
-          unless context
-            return @return args
-          return args
-        # Substitute constants
-        when "number", "string"
-          return def
-        # Commands may define binary and unary operators separately
-        when "object"
-          if def.match && args.length > (command == '' && 3 || 2)
-            getter = func = def.match
-            binary = true
-          else if def.valueOf != Object.valueOf
-            getter = func = def.valueOf
+    # No-op commands are to be executed by something else (e.g. Thread)
+    if operation.noop
+      return if operation.parent then args else @return(args)
 
-      args.shift()
-
-    # Concat token path in lazy arguments. Groups native selectors
-    if context && group && !contd# || (from && args.length == 1))
-      if contd
-        path = @toPath(def, contd)
-      else
-        path = @toPath(def, args[1], args[0], operation)
-        @promises[path] = operation
-        return path
+    # Return promise if possible
+    path = @toPath operation, args, continuation
+    if operation.group && !continuation #&& (!continuation || path != continuation)
+      @promises[path] = operation
+      return path
 
     # Look up method on the first argument
-    unless func
-      scope = args.shift()
-      if typeof scope == 'object'
-        func = scope && scope[method]
-      else if contd
-        scope = @engine.queryScope
-        func = scope[method]
+    unless func = operation.func
+      scope = (typeof args[0] == 'object' && args.shift()) || @engine.queryScope
+      func = scope && scope[operation.method]
 
     # Execute the function
-    if func
-      console.warn('@' + (command || method) , args)
-      result = func.apply(scope || @, args)
-    else
-      throw new Error("Engine broke, couldn't find method: #{method}")
+    unless func
+      throw new Error("Engine broke, couldn't find method: #{operation.method}")
+
+    result = func.apply(scope || @, args)
+
+    console.log(@observer, operation.combinator || operation.name == '$query')
+    if operation.combinator || operation.name == '$query'
+      @observer.add(scope, operation, continuation)
 
     # Compute sub-path if forked, or reuse parent path
-    console.error(result, result && @isCollection(result))
     if result && @isCollection(result)
-      path = @toPath(result, contd, command, operation)
-      
-      # Store variable values. Functions and binary operators always recompute
-      unless binary
-        @memory.set path, result, index
-
+      @memory.set path, result, operation.index
+      return
     else
-      link = path = contd
+      link = path = continuation
 
     # Execute parent expression if promise resolved singular value
-    if contd && result != undefined
-      if promised == contd && !singular
+    if continuation
+      if promised == continuation && !singular
         return
-      return @callback context, path, result, index, link
+      return @callback operation.parent, path, result, operation.index, link
 
     return path
 
-  'toPath': (command, path, method, operation, def) ->
-    # Reverse path bits for combinators
-    if operation && !def
-      second = operation[2]
-      if second && second.push && second[0] == @[second[0]].prefix
-        swap = path
-        path = method
-        method = swap
-
-    if command == undefined
-      relative = method
-    else
-      if command.nodeType
-        if command.nodeType == 9
-          return '#document'
+  toPath: (operation, args, promised) ->
+    if subgroup = operation[1].group
+      if subgroup != operation.group
+        return promised
+    prefix = operation.prefix || ''
+    suffix = operation.suffix || ''
+    path = operation.skipped || ''
+    for arg, index in args
+      if typeof arg == 'string'
+        if index == 0
+          prefix = arg + prefix
         else
-          relative = 
-            if def
-              @toPath(def, operation[1])
-            else
-              (method || '') + '$' + GSS.setupId(command)
+          path = arg
+    return prefix + path + suffix
+
+  preprocess: (operation) ->
+    operation.name = operation[0]
+    operation.offset = 0;
+    def = @[operation[0]]
+
+    if operation.parent && typeof operation.index != 'number'
+      operation.index = operation.parent.indexOf(operation)
+
+    arity = operation.length - 1 
+    if def.lookup
+      operation.skip = arity == 1 ? 2 : 1
+      operation.skipped = operation[arity]
+      operation.name = (def.prefix || '') + operation.skipped
+      if typeof def.lookup == 'function'
+        def = def.lookup.call(@, operation)
+        for property in def
+          if property != 'lookup'
+            operation[property] = def[property]
       else
-        if absolute = command.selector
-          return absolute
-        relative = command.prefix || ''
-        relative += method if method
-        relative += command.suffix if command.suffix 
-    return (path || command.path || '') + relative
+        def = @[operation.name]
+
+    if def == true
+      operation.noop = true
+      return operation
+  
+    operation.group  = group  if group  = def.group
+    operation.prefix = prefix if prefix = def.prefix
+    operation.suffix = suffix if suffix = def.suffix
+
+    # Dispatch function by number of arguments
+    if func = def[arity]
+      operation.offset = 1
+    else
+      func = def.command
+
+    if typeof func == 'string'
+      if @[func]
+        operation.func = @[func]
+      else
+        operation.method = func
+    else
+      operation.func = func
+
+    return operation
 
   # Should we iterate the object?
   isCollection: (object) ->
@@ -163,19 +145,25 @@ class Processor
     switch typeof value
       when "undefined"
         # Resolve promise
-        if promise = @promises[path]
-          return @evaluate promise, undefined, undefined, path, path
+        if responsible = @promises[path]
+          promise = [responsible.group, path]
+          promise.path = path
+          promise.parent = operation
+          promise.index = from
+          promise.push value unless value == undefined
+          return @evaluate promise, undefined, path
       when "object"
         # Execute expression for each item in collection (fork)
-        if value && typeof value.length == 'number' && @[value[0]] != true 
-          console.groupCollapsed path
+        if value && @isCollection(value)
+          console.group path
+          debugger
           for val in value
-            breadcrumb = @toPath(val, path)
+            breadcrumb = path + @toId(val)
             @memory.set breadcrumb, val
-            @evaluate operation, undefined, undefined, breadcrumb, path, from, val
+            @evaluate operation, undefined, breadcrumb, path, from, val
           console.groupEnd path
         else
-          return @evaluate operation, undefined, undefined, singular || @toPath(value, path), path, from, value, singular
+          return @evaluate operation, undefined, singular || @toId(value, path), path, from, value, singular
     return path
 
 module.exports = Processor

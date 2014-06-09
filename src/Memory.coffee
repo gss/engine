@@ -2,7 +2,7 @@
 # Will handle references and ownership for garbage collection
 
 module.exports = class Memory
-  constructor: ->
+  constructor: (@object) ->
     @_watchers = {}
 
   # Observe a value by key. Executes expression starting with a given token
@@ -13,7 +13,7 @@ module.exports = class Memory
       watchers.push(value)
     else
       watchers = @_watchers[key] = [value]
-
+    debugger
     return @object.callback value, key, @[key], a,b,c
 
   # Assign a value by key, invoke callbacks
@@ -25,4 +25,4 @@ module.exports = class Memory
       for watcher in watchers
         @object.callback watcher, key, value, a,b,c
 
-    return true
+    return value

@@ -25,6 +25,7 @@
     "lib/Engine.js",
     "lib/Memory.js", 
     "lib/Processor.js", 
+    "lib/Observer.js", 
     "lib/Commander.js",
     "lib/Thread.js", 
     "lib/dom/Getter.js",

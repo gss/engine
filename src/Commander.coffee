@@ -11,13 +11,21 @@ to match live results of query.
 # transforms & generates needed commands for engine
 
 Processor = require('./Processor.js')
+Observer = require('./Observer.js')
+Memory = require('./Memory.js')
+
 
 class Commander extends Processor
 
   constructor: (engine) ->
     @engine = engine
+    @memory = new Memory(@)
+    @observer = new Observer(@)
     super()
 
+  toId: (value) ->
+    return value && value.nodeType && "$" + GSS.setupId(value)
+    
   execute: (ast) ->
     if ast.commands?
       for command in ast.commands 
@@ -46,31 +54,26 @@ class Commander extends Processor
     #  @memory.set "$" + id + '[intrinsic]'
 
   # Getters
-  
-  'get': true
     
   'get$':
     prefix: '['
     suffix: ']'
-    method: '_get$'
+    command: (path, object, property) ->
+      if object.nodeType
+        id = GSS.setupId(object)
+      else if object.absolute is 'window'
+        return ['get',"::window[#{prop}]", path]
 
-  '_get$': (path, property, command) ->
-    if command.nodeType
-      id = GSS.setupId(command)
-    else if command.absolute is 'window'
-      return ['get',"::window[#{prop}]", path]
-
-  
-    # intrinsics
-    if property.indexOf("intrinsic-") is 0
-      if @register "$" + id + "[intrinsic]", context
-        val = @engine.measureByGssId(id, property)
-        # intrinsics always need remeasurement
-        engine.setNeedsMeasure true
-        if engine.vars[k] isnt val
-          return ['suggest', ['get', property, id, path], ['number', val], 'required'] 
-      
-    return ['get', property, '$' + id, path]
+    
+      # intrinsics
+      if property.indexOf("intrinsic-") is 0
+        if @register "$" + id + "[intrinsic]", context
+          val = @engine.measureByGssId(id, property)
+          # intrinsics always need remeasurement
+          engine.setNeedsMeasure true
+          if engine.vars[k] isnt val
+            return ['suggest', ['get', property, id, path], ['number', val], 'required'] 
+      return ['get', property, '$' + id, path]
   
 
     
@@ -95,30 +98,34 @@ class Commander extends Processor
   # Selector commands
 
   '$query':
-    method: "querySelectorAll"
-    match: (value, node) ->
-      return node if node.webkitMatchesSelector(value)
     group: '$query'
+    1: "querySelectorAll"
+    2: (node, value) ->
+      return node if node.webkitMatchesSelector(value)
+    
   
   '$class':
     prefix: '.'
-    method: "getElementsByClassName"
-    match: (value, node) ->
-      return node if node.classList.contains(value)
     group: '$query'
+    type: 'qualifier'
+    1: "getElementsByClassName"
+    2: (node, value) ->
+      return node if node.classList.contains(value)
 
   '$tag':
     prefix: ''
-    method: "getElementsByTagName"
     group: '$query'
-    match: (value, node) ->
+    type: 'qualifier'
+    1: "getElementsByTagName"
+    2: (node, value) ->
       return node if node.tagName == value.toUpperCase()
 
   '$id':
     prefix: '#'
-    method: "getElementById"
     group: '$query'
-    match: (value, node) ->
+    type: 'qualifier'
+    1: "getElementById"
+    2: (node, value) ->
       return node if node.id == name
 
   '$virtual':
@@ -128,40 +135,43 @@ class Commander extends Processor
   '$nth':
     prefix: ':nth('
     suffix: ')'
-    valueOf: (divisor, comparison) ->
+    command: (node, divisor, comparison) ->
       nodes = []
-      for i, node in @
+      for i, node in node
         if i % parseInt(divisor) == parseInt(comparison)
           nodes.push(nodes)
       return nodes
 
 
-  # Macros
+  # Commands that look up other commands
 
-  '$pseudo': (path, name) ->
-    return @[name] || @[':get']
+  '$pseudo': 
+    type: 'qualifier'
+    prefix: ':'
+    lookup: true
 
-  '$combinator': (path, name) ->
-    return @[name]
+  '$combinator':
+    type: 'combinator'
+    lookup: true
 
-  '$reserved': (path, name) ->
-    return @[name]
+  '$reserved':
+    type: 'combinator'
+    prefix: '::'
+    lookup: true
 
-  'number': (path, value) ->
-    return parseFloat(value)
+  'number': (operation) ->
+    return parseFloat(operation[1])
 
 
   # CSS Combinators with reversals
 
   ' ':
-    prefix: ' '
     group: '$query'
-    valueOf: (node) ->
+    1: (node) ->
       return node.getElementsByTagName("*")
 
   '!':
-    prefix: '!'
-    valueOf: (node) ->
+    1: (node) ->
       nodes = undefined
       while node = node.parentNode
         if node.nodeType == 1
@@ -169,54 +179,64 @@ class Commander extends Processor
       return nodes
 
   '>':
-    prefix: '>'
     group: '$query'
-    valueOf: (node) ->
+    1: (node) ->
       return node.children
 
   '!>':
-    prefix: '!>'
-    valueOf: (node) ->
+    1: (node) ->
       return node.parentNode
 
   '+':
-    prefix: '+'
-    valueOf: (node) ->
+    1: (node) ->
       return node.nextElementSibling
 
   '!+':
-    prefix: '!+'
-    valueOf: (node) ->
+    1: (node) ->
       return node.previousElementSibling
 
+  '++':
+    1: (node) ->
+      nodes = undefined
+      if prev = node.previousElementSibling
+        (nodes ||= []).push(prev)
+      if next = node.nextElementSibling
+        (nodes ||= []).push(next)
+      return nodes;
+
   '~':
-    prefix: '~'
     group: '$query'
-    valueOf: (node) ->
+    1: (node) ->
       nodes = undefined
       while node = node.nextElementSibling
         (nodes ||= []).push(node)
-      return node
+      return nodes
 
   '!~':
-    prefix: '~'
-    group: '$query'
-    valueOf: (node) ->
+    1: (node) ->
       nodes = undefined
       while node = node.previousElementSibling
         (nodes ||= []).push(node)
-      return node
+      return nodes
+  
+  '~~':
+    1: (node) ->
+      nodes = undefined
+      while node = node.previousElementSibling
+        (nodes ||= []).push(node)
+      while node = node.nextElementSibling
+        (nodes ||= []).push(node)
+      return nodes
 
   # Pseudo classes
 
   ':value':
-    valueOf: (node) ->
+    1: (node) ->
       return node.value
     watch: "oninput"
 
   ':get':
-    valueOf: (node, property) ->
-      console.log(property  )
+    2: (node, property) ->
       return node[property]
 
 
@@ -286,7 +306,8 @@ class Commander extends Processor
   '::window[y]': 0
   '::scope[x]': 0
   '::scope[y]': 0
-    
+  
+  'get': true
 
   # Constraints
 
