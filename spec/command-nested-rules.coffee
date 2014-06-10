@@ -70,12 +70,13 @@ describe 'Nested Rules', ->
           rules: rules
           
         sheet.install()
-    describe 'new stuff', ->
-      it 'should support selectors', (done) ->
+    describe 'mixed selectors', ->
+      it 'should support mixed selectors', (done) ->
         rules = [
           {
             type:'constraint', 
-            cssText:'(header > h2.gizoogle ! section div:get("parentNode"))[target-size] == 100', 
+            cssText:'(header > h2.gizoogle ! section div:get("parentNode"))[target-size] == 100;
+                     (div + main !~ div)[width] == 50', 
             commands: [
               ["eq", 
                 ["get$",
@@ -120,6 +121,60 @@ describe 'Nested Rules', ->
           expect(engine.lastWorkerCommands).to.eql [
               ["eq", ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"], ["number",100]]
             ]
+        ]
+        
+        engine = GSS(container)
+
+        sheet = new GSS.StyleSheet
+          engine: engine
+          rules: rules
+          
+        sheet.install()
+
+    describe 'reversed sibling combinators', ->
+      it 'should support mixed selectors', (done) ->
+        rules = [
+          {
+            type:'constraint', 
+            cssText:'(header > h2.gizoogle ! section div:get("parentNode"))[target-size] == 100;
+                     (div + main !~ div)[width] == 50', 
+            commands: [
+              ["eq", 
+                ["get$",
+                  ['$tag',
+                    ['$combinator', 
+                      ['$tag', 
+                        ['$combinator', 
+                          ['$tag', 
+                            'div']
+                          '+']
+                        'main']
+                      '!~'] 
+                    'div']
+                  "[width]"]
+                ["number",50]
+              ]
+            ]
+          }
+        ]
+        container.innerHTML =  """
+          <section>
+            <div id="box0"></div>
+            <main id="box1"></main>
+          </section>
+        """
+        console.log(container.innerHTML)
+        console.info(rules[0].cssText)
+        main = container.getElementsByTagName('main')[0]
+
+        Scenario done, container, [->        
+          expect(engine.lastWorkerCommands).to.eql [
+              ["eq", ["get","[width]", "$box0", "div+main$box1!~$box0"], ["number",50]]
+            ]
+          main.parentNode.removeChild(main)
+        , ->
+
+
         ]
         
         engine = GSS(container)

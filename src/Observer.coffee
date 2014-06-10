@@ -5,7 +5,7 @@ class Observer
     op = operation
     group = operation.group
     while (op.type == 'combinator' || op.type == 'qualifier') && group == operation.group
-      group = (commands ||= operation.commands = {})[op.name] = {}
+      commands = (operation.commands = {})[op.name] = {}
       op = op[1]
     operation
 
@@ -13,9 +13,9 @@ class Observer
     return unless id = node._gss_id
     return unless watchers = @watchers[id]
     for operation, index in watchers by 2
-      commands = operation.commands ? @preprocess(operation).commands
-      if group = commands[command]
-        if 
+      if commands = operation.commands || @preprocess(operation).commands
+        if group = commands[command]
+          return
       if watcher.name == command
         @evaluate watcher
       watcher = watcher[1]

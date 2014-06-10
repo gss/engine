@@ -31,7 +31,7 @@ class Commander extends Processor
       for command in ast.commands 
         if ast.isRule
           command.parentRule = ast
-        @evaluate command, 0, ast
+        @evaluate command
 
   return: (command) ->
     @engine.registerCommand command
@@ -59,6 +59,7 @@ class Commander extends Processor
     prefix: '['
     suffix: ']'
     command: (path, object, property) ->
+      console.log(path, object, property)
       if object.nodeType
         id = GSS.setupId(object)
       else if object.absolute is 'window'
@@ -73,6 +74,7 @@ class Commander extends Processor
           engine.setNeedsMeasure true
           if engine.vars[k] isnt val
             return ['suggest', ['get', property, id, path], ['number', val], 'required'] 
+      debugger
       return ['get', property, '$' + id, path]
   
 
@@ -144,6 +146,12 @@ class Commander extends Processor
 
 
   # Commands that look up other commands
+  
+  '$attribute': 
+    type: 'qualifier'
+    prefix: '['
+    suffix: ']'
+    lookup: true
 
   '$pseudo': 
     type: 'qualifier'
@@ -188,6 +196,7 @@ class Commander extends Processor
       return node.parentNode
 
   '+':
+    group: '$query'
     1: (node) ->
       return node.nextElementSibling
 
@@ -237,6 +246,8 @@ class Commander extends Processor
 
   ':get':
     2: (node, property) ->
+      console.log(node, property)
+      debugger
       return node[property]
 
 

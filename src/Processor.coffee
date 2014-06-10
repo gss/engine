@@ -1,47 +1,38 @@
 class Processor
   constructor: ->
-    @promises = {}
+    @continuations = {}
 
   # Evaluate operation depth first
-  evaluate: (operation, context, continuation, promised, from, bubbled, singular) ->
+  evaluate: (operation, context, continuation, from, ascending) ->
     offset = operation.offset ? @preprocess(operation).offset
-    skip   = operation.skip
+
+    # Use a shortcut operation when possible
+    if promise = operation.promise
+      operation = operation.tail.shortcut ||= @getGrouppedOperation(operation)
+      from = ascending != undefined && 1 || undefined
 
     # Recursively evaluate arguments, stop on undefined.
     args = null
+    skip = operation.skip
+
     for argument, index in operation
+      continue if offset > index
       if index == 0
-        continue if offset
         if continuation && !operation.noop
           argument = continuation
+      else if from == index
+        argument = ascending
       else if skip == index
         offset += 1
         continue
-      else if from == index 
-        argument = bubbled
       else if argument instanceof Array
-        argument.parent ||= operation
-        value = (operation.evaluate || @evaluate).call(@, argument, args)
-        # Got promise, resolve if node can't give a sub-promise of the same type
-        if argument.group != operation.group
-          eager = true
-          if typeof value == 'string'
-            if continuation
-              value = continuation + operation.command + value
-            value = @memory.watch value, operation, index
-        argument = value
+        argument = (operation.evaluate || @evaluate).call(@, argument, args)
       return if argument == undefined
       (args ||= [])[index - offset] = argument
 
     # No-op commands are to be executed by something else (e.g. Thread)
     if operation.noop
       return if operation.parent then args else @return(args)
-
-    # Return promise if possible
-    path = @toPath operation, args, continuation
-    if operation.group && !continuation #&& (!continuation || path != continuation)
-      @promises[path] = operation
-      return path
 
     # Look up method on the first argument
     unless func = operation.func
@@ -54,72 +45,91 @@ class Processor
 
     result = func.apply(scope || @, args)
 
-    console.log(@observer, operation.combinator || operation.name == '$query')
-    if operation.combinator || operation.name == '$query'
+    # Set up DOM observer
+    if operation.type == 'combinator' || operation.type == 'qualifier'
+      console.log('observing', operation, GSS.getId(scope || @))
       @observer.add(scope, operation, continuation)
 
-    # Compute sub-path if forked, or reuse parent path
+    path = (continuation || '')
+    
+    # Fork for each item in collection, ascend 
     if result && @isCollection(result)
-      @memory.set path, result, operation.index
-      return
+      path += operation.path
+      console.group path
+      for item in result
+        @evaluate operation.parent, undefined, path + @toId(item), operation.index, item
+      console.groupEnd path
+    else if !context
+      if operation.parent
+        @evaluate operation.parent, undefined, path, operation.index, result
+      else
+        return @return result
     else
-      link = path = continuation
+      return result
 
-    # Execute parent expression if promise resolved singular value
-    if continuation
-      if promised == continuation && !singular
-        return
-      return @callback operation.parent, path, result, operation.index, link
-
-    return path
-
-  toPath: (operation, args, promised) ->
-    if subgroup = operation[1].group
-      if subgroup != operation.group
-        return promised
+  toPath: (operation) ->
     prefix = operation.prefix || ''
     suffix = operation.suffix || ''
-    path = operation.skipped || ''
-    for arg, index in args
-      if typeof arg == 'string'
-        if index == 0
-          prefix = arg + prefix
-        else
-          path = arg
+    path = ''
+    start = 1 + (operation.length > 2)
+    for index in [start ... operation.length]
+      path += operation[index]
     return prefix + path + suffix
 
-  preprocess: (operation) ->
+  # Process and pollute a single AST node with meta data.
+  preprocess: (operation, parent) ->
     operation.name = operation[0]
-    operation.offset = 0;
-    def = @[operation[0]]
+    def = @[operation.name]
 
-    if operation.parent && typeof operation.index != 'number'
-      operation.index = operation.parent.indexOf(operation)
+    if parent
+      operation.parent = parent
+      operation.index = parent.indexOf(operation)
 
-    arity = operation.length - 1 
+    # Handle commands that refer other commands (e.g. [$combinator, node, >])
+    operation.arity = operation.length - 1
     if def.lookup
-      operation.skip = arity == 1 ? 2 : 1
-      operation.skipped = operation[arity]
-      operation.name = (def.prefix || '') + operation.skipped
+      operation.arity--
+      operation.skip = operation.length - operation.arity
+      operation.name = (def.prefix || '') + operation[operation.skip]
+      console.log(def.lookup, def, 'lol')
+      for property in def
+        if property != 'lookup'
+          operation[property] = def[property]
       if typeof def.lookup == 'function'
         def = def.lookup.call(@, operation)
-        for property in def
-          if property != 'lookup'
-            operation[property] = def[property]
       else
         def = @[operation.name]
 
-    if def == true
-      operation.noop = true
-      return operation
-  
+
+    # Assign definition properties to AST node
     operation.group  = group  if group  = def.group
     operation.prefix = prefix if prefix = def.prefix
     operation.suffix = suffix if suffix = def.suffix
 
-    # Dispatch function by number of arguments
-    if func = def[arity]
-      operation.offset = 1
+    unless def == true
+      operation.path = @toPath(operation)
+
+    # Group multiple nested tokens into a single token
+    for child, index in operation
+      if child instanceof Array
+        @preprocess(child, operation).group
+        if index == 1 && group && group == child.group
+          tail = child.tail ||= (@canStartGroup(child, group) && child)
+          if tail
+            operation.promise = (child.promise || child.path) + operation.path
+            console.log('promising', operation.promise, child)
+            tail.head = operation
+            tail.promise = operation.promise
+            operation.tail = tail
+
+    operation.offset = 0
+    if def == true
+      operation.noop = true
+      return operation
+
+    # Try predefined command if can't dispatch by number of arguments
+    if func = def[operation.arity]
+      operation.offset += 1
     else
       func = def.command
 
@@ -133,37 +143,32 @@ class Processor
 
     return operation
 
+  # Create a shortcut operation to get through a group of operations
+  getGrouppedOperation: (operation) ->
+    shortcut = [operation.group, operation.promise]
+    shortcut.parent = (operation.head || operation).parent
+    shortcut.index = (operation.head || operation).index
+    @preprocess(shortcut)
+    tail = operation.tail
+    global = tail.arity == 1 && tail.length == 2
+    unless global
+      shortcut.splice(1, 0, tail[1])
+    return shortcut
+
+  # Native selectors cant start with a non-space combinator or qualifier
+  canStartGroup: (operation, group) ->
+    if group == '$query'
+      if operation.name == '$combinator'
+        if group[group.skip] != ' '
+          return false
+      else if operation.arity == 2
+        return false
+    return true
+
   # Should we iterate the object?
   isCollection: (object) ->
     if typeof object == 'object' && object.length != undefined
       unless typeof object[0] == 'string' && @[object[0]] == true
         return true
-
-  # Continues execution of expression with given value
-  callback: (operation, path, value, from, singular) ->
-    return value unless operation
-    switch typeof value
-      when "undefined"
-        # Resolve promise
-        if responsible = @promises[path]
-          promise = [responsible.group, path]
-          promise.path = path
-          promise.parent = operation
-          promise.index = from
-          promise.push value unless value == undefined
-          return @evaluate promise, undefined, path
-      when "object"
-        # Execute expression for each item in collection (fork)
-        if value && @isCollection(value)
-          console.group path
-          debugger
-          for val in value
-            breadcrumb = path + @toId(val)
-            @memory.set breadcrumb, val
-            @evaluate operation, undefined, breadcrumb, path, from, val
-          console.groupEnd path
-        else
-          return @evaluate operation, undefined, singular || @toId(value, path), path, from, value, singular
-    return path
 
 module.exports = Processor
