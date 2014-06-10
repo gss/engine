@@ -53,19 +53,19 @@ class Processor
     path = (continuation || '')
     
     # Fork for each item in collection, ascend 
-    if result && @isCollection(result)
-      path += operation.path
-      console.group path
-      for item in result
-        @evaluate operation.parent, undefined, path + @toId(item), operation.index, item
-      console.groupEnd path
-    else if !context
-      if operation.parent
-        @evaluate operation.parent, undefined, path, operation.index, result
-      else
-        return @return result
-    else
-      return result
+    if result?
+      if @isCollection(result)
+        path += operation.path
+        console.group path
+        for item in result
+          @evaluate operation.parent, undefined, path + @toId(item), operation.index, item
+        console.groupEnd path
+      else if !context
+        if operation.parent
+          @evaluate operation.parent, undefined, path, operation.index, result
+        else
+          return @return result
+    return result
 
   toPath: (operation) ->
     prefix = operation.prefix || ''
@@ -146,6 +146,8 @@ class Processor
   # Create a shortcut operation to get through a group of operations
   getGrouppedOperation: (operation) ->
     shortcut = [operation.group, operation.promise]
+    if (operation.tail.parent == operation)
+      console.error(operation)
     shortcut.parent = (operation.head || operation).parent
     shortcut.index = (operation.head || operation).index
     @preprocess(shortcut)

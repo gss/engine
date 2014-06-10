@@ -1,19 +1,25 @@
 class Observer
   constructor: (@object) ->
+    # Polyfill
+    unless window.MutationObserver
+      if window.WebKitMutationObserver
+        window.MutationObserver = window.WebKitMutationObserver
+      else
+        window.MutationObserver = window.JsMutationObserver
 
-  preprocess: (operation) ->
-    op = operation
-    group = operation.group
-    while (op.type == 'combinator' || op.type == 'qualifier') && group == operation.group
-      commands = (operation.commands = {})[op.name] = {}
-      op = op[1]
-    operation
+    return unless window.MutationObserver
+    @watchers = {}
+
+    @observer = new MutationObserver @listen.bind(this)
+    @observer.observe(document.body, GSS.config.observerOptions)
+
 
   update: (node, command, key, added, removed) ->
     return unless id = node._gss_id
     return unless watchers = @watchers[id]
+    return
     for operation, index in watchers by 2
-      if commands = operation.commands || @preprocess(operation).commands
+      if commands = operation.commands
         if group = commands[command]
           return
       if watcher.name == command
@@ -25,9 +31,10 @@ class Observer
     if id = @object.toId(node)
       (@[id] ||= []).push(operation, continuation)
 
-  observer: (mutations) ->
-    target = parent = mutation.target
+  listen: (mutations) ->
+    console.log('observer', mutations)
     for mutation in mutations
+      target = parent = mutation.target
       switch mutation.type
 
         when "attributes"

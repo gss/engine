@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-10) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-11) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20104,7 +20104,7 @@ GSS.config = {
   perf: false,
   fractionalPixels: true,
   readyClass: true,
-  processBeforeSet: null,
+  processBefore: null,
   maxDisplayRecursionDepth: 30,
   useWorker: !!window.Worker,
   worker: '../dist/worker.js',
@@ -20207,7 +20207,6 @@ GSS.boot = function() {
     bubbles: false,
     cancelable: false
   }));
-  GSS.setupObserver();
   GSS.update();
   GSS.observe();
   return GSS.trigger("afterLoaded");
@@ -23104,23 +23103,24 @@ Processor = (function() {
       this.observer.add(scope, operation, continuation);
     }
     path = continuation || '';
-    if (result && this.isCollection(result)) {
-      path += operation.path;
-      console.group(path);
-      for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
-        item = result[_j];
-        this.evaluate(operation.parent, void 0, path + this.toId(item), operation.index, item);
+    if (result != null) {
+      if (this.isCollection(result)) {
+        path += operation.path;
+        console.group(path);
+        for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
+          item = result[_j];
+          this.evaluate(operation.parent, void 0, path + this.toId(item), operation.index, item);
+        }
+        console.groupEnd(path);
+      } else if (!context) {
+        if (operation.parent) {
+          this.evaluate(operation.parent, void 0, path, operation.index, result);
+        } else {
+          return this["return"](result);
+        }
       }
-      return console.groupEnd(path);
-    } else if (!context) {
-      if (operation.parent) {
-        return this.evaluate(operation.parent, void 0, path, operation.index, result);
-      } else {
-        return this["return"](result);
-      }
-    } else {
-      return result;
     }
+    return result;
   };
 
   Processor.prototype.toPath = function(operation) {
@@ -23214,6 +23214,9 @@ Processor = (function() {
   Processor.prototype.getGrouppedOperation = function(operation) {
     var global, shortcut, tail;
     shortcut = [operation.group, operation.promise];
+    if (operation.tail.parent === operation) {
+      console.error(operation);
+    }
     shortcut.parent = (operation.head || operation).parent;
     shortcut.index = (operation.head || operation).index;
     this.preprocess(shortcut);
@@ -23259,18 +23262,20 @@ var Observer;
 Observer = (function() {
   function Observer(object) {
     this.object = object;
-  }
-
-  Observer.prototype.preprocess = function(operation) {
-    var commands, group, op;
-    op = operation;
-    group = operation.group;
-    while ((op.type === 'combinator' || op.type === 'qualifier') && group === operation.group) {
-      commands = (operation.commands = {})[op.name] = {};
-      op = op[1];
+    if (!window.MutationObserver) {
+      if (window.WebKitMutationObserver) {
+        window.MutationObserver = window.WebKitMutationObserver;
+      } else {
+        window.MutationObserver = window.JsMutationObserver;
+      }
     }
-    return operation;
-  };
+    if (!window.MutationObserver) {
+      return;
+    }
+    this.watchers = {};
+    this.observer = new MutationObserver(this.listen.bind(this));
+    this.observer.observe(document.body, GSS.config.observerOptions);
+  }
 
   Observer.prototype.update = function(node, command, key, added, removed) {
     var commands, group, id, index, operation, watcher, watchers, _i, _len;
@@ -23280,9 +23285,10 @@ Observer = (function() {
     if (!(watchers = this.watchers[id])) {
       return;
     }
+    return;
     for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 2) {
       operation = watchers[index];
-      if (commands = operation.commands || this.preprocess(operation).commands) {
+      if (commands = operation.commands) {
         if (group = commands[command]) {
           return;
         }
@@ -23302,12 +23308,13 @@ Observer = (function() {
     }
   };
 
-  Observer.prototype.observer = function(mutations) {
+  Observer.prototype.listen = function(mutations) {
     var add, added, allAdded, allRemoved, child, firstNext, firstPrev, klasses, kls, mutation, next, old, parent, prev, remove, removed, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o, _results;
-    target = parent = mutation.target;
+    console.log('observer', mutations);
     _results = [];
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
+      target = parent = mutation.target;
       switch (mutation.type) {
         case "attributes":
           if (mutation.attributeName === 'class') {

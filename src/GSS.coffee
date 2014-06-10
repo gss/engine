@@ -47,7 +47,7 @@ GSS.config =
   perf: false  
   fractionalPixels: true
   readyClass: true
-  processBeforeSet: null # function  
+  processBefore: null # function  
   maxDisplayRecursionDepth: 30
   useWorker: !!window.Worker
   worker: '../dist/worker.js'
@@ -127,7 +127,7 @@ GSS.boot = () ->
   # GSS object is ready for action
   document.dispatchEvent new CustomEvent 'GSS', {detail:GSS, bubbles:false, cancelable: false}
   
-  GSS.setupObserver()    
+  # GSS.setupObserver()    
   GSS.update()
   GSS.observe()
   GSS.trigger "afterLoaded"
