@@ -9,8 +9,8 @@ class Observer
 
     return unless window.MutationObserver
     @_watchers = {}
-    @observer = new MutationObserver @listen.bind(this)
-    @observer.observe(document.body, GSS.config.observerOptions)
+    @listener = new MutationObserver @listen.bind(this)
+    @listener.observe(document.body, GSS.config.observerOptions)
 
 
   match: (queries, node, group, qualifier, changed) ->
@@ -29,43 +29,51 @@ class Observer
                 queries.push(operation, watchers[index + 1])
     @
 
-  update: (operation, path) ->
+  set: (node, result, operation, continuation) ->
+    path = (continuation || '') + operation.path
     old = @[path]
-    if operation.name == '$query'
-      result = @object.evaluate operation, undefined, path
-
     if result == old
       return
-    if (result && result.length) || (old && old.length)
+
+    if id = GSS.setupId(node || @object.engine.queryScope)
+      watchers = @_watchers[id] ||= []
+      if watchers.indexOf(operation) == -1
+        watchers.push(operation, continuation)
+      
+    isCollection = result && result.length != undefined
+
+    if old && old.length
+      removed = undefined
       for child in old
-        if old.indexOf.call(result, child) == -1
-          1
-        added = []
-        for child in result
-          added.push child if old.indexOf(child) == -1
-        return added;
-    return result
+        if !result || old.indexOf.call(result, child) == -1
+          @object.registry.remove path, child
+          removed = true
+      if continuation && (!isCollection || !result.length)
+        @object.registry.remove(continuation, path)
 
-  compare: (path, result) ->
-    added = []
-    removed = []
-    old = @values[path]
+    if isCollection
+      added = undefined
+      for child in result
+        if !old || watchers.indexOf.call(old, child) == -1
+          @object.registry.append path, child
+          (added ||= []).push child if old
 
+      if continuation && (!old || !old.length)
+        @object.registry.append(continuation, path)
 
-  set: (node, result, operation, path) ->
-    old = @[id]
+      # Snapshot live node list for future reference
+      if result && result.item && (!old || removed || added)
+        result = watchers.slice.call(result, 0)
+    else if result != undefined || old != undefined
+      @object.registry.set path, result
 
-    console.log('observing', node, [GSS.setupId(node)], operation)
-    if id = GSS.setupId(node)
-      (@_watchers[id] ||= []).push(operation, path)
-    if result && result.item
-      result = Array.prototype.slice.call(result, 0)
     @[path] = result
-
+    if result
+      console.log('found', result.nodeType == 1 && 1 || result.length, ' by' ,path)
+    return added || result
 
 
   listen: (mutations) ->
-    console.log('observer', mutations)
     queries = []
     for mutation in mutations
       target = parent = mutation.target
@@ -113,11 +121,11 @@ class Observer
           while (next = next.nextSibling)
             if next.nodeType == 1
               if firstNext
-                @match(queries, prev, '!+') 
-                @match(queries, prev, '++')
+                @match(queries, next, '!+') 
+                @match(queries, next, '++')
                 firstNext = false
-              @match(queries, prev, '!~', undefined, changed)
-              @match(queries, prev, '~~', undefined, changed)
+              @match(queries, next, '!~', undefined, changed)
+              @match(queries, next, '~~', undefined, changed)
 
 
           # Invalidate descendants observers
@@ -131,12 +139,20 @@ class Observer
 
           while parent && parent.nodeType == 1
             @match(queries, parent, ' ', undefined, allChanged)
+
             for child in allChanged
+              prev = child
+              while prev = prev.previousSibling
+                if prev.nodeType == 1
+                  @match(queries, parent, ' +', undefined, prev)
+                  break
+              @match(queries, parent, ' +', undefined, child)
               @match(queries, child, '!', undefined, parent)
             parent = parent.parentNode
 
-    console.log("Queries:", queries, queries.length) 
     for query, index in queries by 2
-      @update query, queries[index + 1]
+      @object.evaluate query, undefined, queries[index + 1]
+    
+    @object.engine.dispatch 'solved'
     return true
 module.exports = Observer

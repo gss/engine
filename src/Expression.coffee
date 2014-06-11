@@ -1,4 +1,4 @@
-class Processor
+class Expression
   constructor: ->
     @continuations = {}
 
@@ -45,19 +45,16 @@ class Processor
 
     result = func.apply(scope || @, args)
 
-    path = (continuation || '') + operation.path
-
     # Set up DOM observer
     if operation.type == 'combinator' || operation.type == 'qualifier' || operation.group == '$query'
-      result = @observer.set(scope, result, operation, continuation)
+      result = @observer.set(scope || operation.func && args[0], result, operation, continuation)
 
-
+    path = (continuation || '') + operation.path
     
     # Fork for each item in collection, ascend 
     if result?
       if @isCollection(result)
         console.group path
-        debugger
         for item in result
           @evaluate operation.parent, undefined, path + @toId(item), operation.index, item
         console.groupEnd path
@@ -92,7 +89,7 @@ class Processor
       operation.arity--
       operation.skip = operation.length - operation.arity
       operation.name = (def.prefix || '') + operation[operation.skip]
-      for property in def
+      for property of def
         if property != 'lookup'
           operation[property] = def[property]
       if typeof def.lookup == 'function'
@@ -118,7 +115,6 @@ class Processor
             tail = child.tail ||= (def.attempt(child) && child)
             if tail
               operation.promise = (child.promise || child.path) + operation.path
-              console.log('promising', operation.promise, child)
               tail.head = operation
               tail.promise = operation.promise
               operation.tail = tail
@@ -150,4 +146,4 @@ class Processor
       unless typeof object[0] == 'string' && @[object[0]] == true
         return true
 
-module.exports = Processor
+module.exports = Expression

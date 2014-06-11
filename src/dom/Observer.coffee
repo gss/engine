@@ -142,7 +142,7 @@ GSS.setupObserver = () ->
     nodesToIgnore = null
     needsUpdateQueries = null
     invalidMeasureIds = null
-        
+    GSS.setNeedsUpdate(true)
     GSS.update()
   
     ###

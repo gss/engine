@@ -10,16 +10,16 @@ to match live results of query.
 #
 # transforms & generates needed commands for engine
 
-Processor = require('./Processor.js')
+Expression = require('./Expression.js')
 Observer = require('./Observer.js')
-Memory = require('./Memory.js')
+Registry = require('./Registry.js')
 
 
-class Commander extends Processor
+class Commander extends Expression
 
   constructor: (engine) ->
     @engine = engine
-    @memory = new Memory(@)
+    @registry = new Registry(@)
     @observer = new Observer(@)
     super()
 
@@ -35,31 +35,34 @@ class Commander extends Processor
 
   return: (command) ->
     @engine.registerCommand command
-    console.error('COMMAND', command)
+    console.error('Command', command)
     # send command to thread
 
 
-  # DOM Query invalidator hooks
+  onRemove: (continuation, value, id) ->
+    if watchers = @observer._watchers[id]
+      for watcher, index in watchers by 2
+        continue unless watcher
+        path = (watchers[index + 1] || '') + watcher.path
+        watchers[index] = null
 
-  handleRemoves: (removes) ->
-    #for remove in removes
-    #  @memory.set remove
+        console.log('clean', id, '@', continuation)
+        if result = @observer[path]
+          delete @observer[path]
+          if result.length != undefined
+            for child in result
+              @registry.remove(path, child, child._gss_id)
+          else
+            @registry.remove(path, result, result._gss_id)
 
-  handleSelectorsWithAdds: (selectors) ->
-    #for selector in selectors
-    #  @memory.set selector
-
-  handleInvalidMeasures: (ids) ->
-    #for id in ids
-    #  @memory.set "$" + id + '[intrinsic]'
-
+      delete @observer._watchers[id]
+    @
   # Getters
     
   'get$':
     prefix: '['
     suffix: ']'
     command: (path, object, property) ->
-      console.log(path, object, property)
       if object.nodeType
         id = GSS.setupId(object)
       else if object.absolute is 'window'
@@ -106,14 +109,17 @@ class Commander extends Processor
       
     # Create a shortcut operation to get through a group of operations
     toOperation: (object, operation) ->
-      shortcut = [operation.group, operation.promise]
+      debugger
+      if operation.tail.parent == operation && operation.tail.name == ' '
+        console.log(object, 2348778)
+      name = operation.group
+      shortcut = [name, operation.promise]
       shortcut.parent = (operation.head || operation).parent
       shortcut.index = (operation.head || operation).index
       object.preprocess(shortcut)
       tail = operation.tail
       global = tail.arity == 1 && tail.length == 2
       op = operation
-      console.log(shortcut, 555)
       while op
         @.analyze op, shortcut
         break if op == operation.tail

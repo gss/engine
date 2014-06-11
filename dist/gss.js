@@ -21453,6 +21453,7 @@ GSS.setupObserver = function() {
     nodesToIgnore = null;
     needsUpdateQueries = null;
     invalidMeasureIds = null;
+    GSS.setNeedsUpdate(true);
     return GSS.update();
     /*
     for m in mutations
@@ -23000,59 +23001,74 @@ Engine = (function(_super) {
 module.exports = Engine;
 
 });
-require.register("gss/lib/Memory.js", function(exports, require, module){
-var Memory;
+require.register("gss/lib/Registry.js", function(exports, require, module){
+var Registry;
 
-module.exports = Memory = (function() {
-  function Memory(object) {
+module.exports = Registry = (function() {
+  function Registry(object) {
     this.object = object;
-    this._watchers = {};
   }
 
-  Memory.prototype.watch = function(key, value, a, b, c) {
-    var watchers;
-    console.log('@memory.watch', [key, value]);
-    if (watchers = this._watchers[key]) {
-      if (watchers.indexOf(value) > -1) {
-        return;
+  Registry.prototype.append = function(path, value) {
+    var group;
+    group = this[path] || (this[path] = []);
+    console.warn('append', value, '@', path);
+    if (typeof value !== 'string') {
+      value = path + this.object.toId(value);
+    }
+    return group.push(value);
+  };
+
+  Registry.prototype.set = function(path, value) {
+    var old;
+    if (value === void 0) {
+      old = this[path];
+      if (old) {
+        return this.object.onRemove(path, old);
       }
-      watchers.push(value);
     } else {
-      watchers = this._watchers[key] = [value];
-    }
-    debugger;
-    return this.object.callback(value, key, this[key], a, b, c);
-  };
-
-  Memory.prototype.set = function(key, value, a, b, c) {
-    var watcher, watchers, _i, _len;
-    this[key] = value;
-    if (value === "get") {
-      debugger;
-    }
-    if (watchers = this._watchers[key]) {
-      for (_i = 0, _len = watchers.length; _i < _len; _i++) {
-        watcher = watchers[_i];
-        this.object.callback(watcher, key, value, a, b, c);
+      if (typeof value !== 'string') {
+        value = path + this.object.toId(value);
       }
+      return this[path] = value;
     }
-    return value;
   };
 
-  return Memory;
+  Registry.prototype.remove = function(path, value) {
+    var group, id, index;
+    if (typeof value !== 'string') {
+      id = value._gss_id;
+      value = path + "$" + id;
+    }
+    if (group = this[path]) {
+      console.group('remove ' + path);
+      delete this[path];
+      if (group instanceof Array) {
+        if ((index = group.indexOf(value)) > -1) {
+          group.splice(index, 1);
+          this.object.onRemove(path, value, id);
+        }
+      } else {
+        this.object.onRemove(path, value, id);
+      }
+      return console.groupEnd('remove ' + path);
+    }
+  };
+
+  return Registry;
 
 })();
 
 });
-require.register("gss/lib/Processor.js", function(exports, require, module){
-var Processor;
+require.register("gss/lib/Expression.js", function(exports, require, module){
+var Expression;
 
-Processor = (function() {
-  function Processor() {
+Expression = (function() {
+  function Expression() {
     this.continuations = {};
   }
 
-  Processor.prototype.evaluate = function(operation, context, continuation, from, ascending) {
+  Expression.prototype.evaluate = function(operation, context, continuation, from, ascending) {
     var args, argument, func, index, item, offset, path, promise, result, scope, skip, _base, _i, _j, _len, _len1, _ref;
     offset = (_ref = operation.offset) != null ? _ref : this.preprocess(operation).offset;
     if (promise = operation.promise) {
@@ -23098,14 +23114,13 @@ Processor = (function() {
       throw new Error("Engine broke, couldn't find method: " + operation.method);
     }
     result = func.apply(scope || this, args);
-    path = (continuation || '') + operation.path;
     if (operation.type === 'combinator' || operation.type === 'qualifier' || operation.group === '$query') {
-      result = this.observer.set(scope, result, operation, continuation);
+      result = this.observer.set(scope || operation.func && args[0], result, operation, continuation);
     }
+    path = (continuation || '') + operation.path;
     if (result != null) {
       if (this.isCollection(result)) {
         console.group(path);
-        debugger;
         for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
           item = result[_j];
           this.evaluate(operation.parent, void 0, path + this.toId(item), operation.index, item);
@@ -23122,7 +23137,7 @@ Processor = (function() {
     return result;
   };
 
-  Processor.prototype.toPath = function(operation) {
+  Expression.prototype.toPath = function(operation) {
     var index, path, prefix, start, suffix, _i, _ref;
     prefix = operation.prefix || '';
     suffix = operation.suffix || '';
@@ -23134,8 +23149,8 @@ Processor = (function() {
     return prefix + path + suffix;
   };
 
-  Processor.prototype.preprocess = function(operation, parent) {
-    var child, def, func, group, index, prefix, property, suffix, tail, _i, _j, _len, _len1;
+  Expression.prototype.preprocess = function(operation, parent) {
+    var child, def, func, group, index, prefix, property, suffix, tail, _i, _len;
     operation.name = operation[0];
     def = this[operation.name];
     if (parent) {
@@ -23147,8 +23162,7 @@ Processor = (function() {
       operation.arity--;
       operation.skip = operation.length - operation.arity;
       operation.name = (def.prefix || '') + operation[operation.skip];
-      for (_i = 0, _len = def.length; _i < _len; _i++) {
-        property = def[_i];
+      for (property in def) {
         if (property !== 'lookup') {
           operation[property] = def[property];
         }
@@ -23171,7 +23185,7 @@ Processor = (function() {
     if (def !== true) {
       operation.path = this.toPath(operation);
     }
-    for (index = _j = 0, _len1 = operation.length; _j < _len1; index = ++_j) {
+    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       child = operation[index];
       if (child instanceof Array) {
         this.preprocess(child, operation).group;
@@ -23180,7 +23194,6 @@ Processor = (function() {
             tail = child.tail || (child.tail = def.attempt(child) && child);
             if (tail) {
               operation.promise = (child.promise || child.path) + operation.path;
-              console.log('promising', operation.promise, child);
               tail.head = operation;
               tail.promise = operation.promise;
               operation.tail = tail;
@@ -23211,7 +23224,7 @@ Processor = (function() {
     return operation;
   };
 
-  Processor.prototype.isCollection = function(object) {
+  Expression.prototype.isCollection = function(object) {
     if (typeof object === 'object' && object.length !== void 0) {
       if (!(typeof object[0] === 'string' && this[object[0]] === true)) {
         return true;
@@ -23219,11 +23232,11 @@ Processor = (function() {
     }
   };
 
-  return Processor;
+  return Expression;
 
 })();
 
-module.exports = Processor;
+module.exports = Expression;
 
 });
 require.register("gss/lib/Observer.js", function(exports, require, module){
@@ -23243,8 +23256,8 @@ Observer = (function() {
       return;
     }
     this._watchers = {};
-    this.observer = new MutationObserver(this.listen.bind(this));
-    this.observer.observe(document.body, GSS.config.observerOptions);
+    this.listener = new MutationObserver(this.listen.bind(this));
+    this.listener.observe(document.body, GSS.config.observerOptions);
   }
 
   Observer.prototype.match = function(queries, node, group, qualifier, changed) {
@@ -23279,57 +23292,62 @@ Observer = (function() {
     return this;
   };
 
-  Observer.prototype.update = function(operation, path) {
-    var added, child, old, result, _i, _j, _len, _len1;
+  Observer.prototype.set = function(node, result, operation, continuation) {
+    var added, child, id, isCollection, old, path, removed, watchers, _base, _i, _j, _len, _len1;
+    path = (continuation || '') + operation.path;
     old = this[path];
-    if (operation.name === '$query') {
-      result = this.object.evaluate(operation, void 0, path);
-    }
     if (result === old) {
       return;
     }
-    if ((result && result.length) || (old && old.length)) {
-      for (_i = 0, _len = old.length; _i < _len; _i++) {
-        child = old[_i];
-        if (old.indexOf.call(result, child) === -1) {
-          1;
-        }
-        added = [];
-        for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
-          child = result[_j];
-          if (old.indexOf(child) === -1) {
-            added.push(child);
-          }
-        }
-        return added;
+    if (id = GSS.setupId(node || this.object.engine.queryScope)) {
+      watchers = (_base = this._watchers)[id] || (_base[id] = []);
+      if (watchers.indexOf(operation) === -1) {
+        watchers.push(operation, continuation);
       }
     }
-    return result;
-  };
-
-  Observer.prototype.compare = function(path, result) {
-    var added, old, removed;
-    added = [];
-    removed = [];
-    return old = this.values[path];
-  };
-
-  Observer.prototype.set = function(node, result, operation, path) {
-    var id, old, _base;
-    old = this[id];
-    console.log('observing', node, [GSS.setupId(node)], operation);
-    if (id = GSS.setupId(node)) {
-      ((_base = this._watchers)[id] || (_base[id] = [])).push(operation, path);
+    isCollection = result && result.length !== void 0;
+    if (old && old.length) {
+      removed = void 0;
+      for (_i = 0, _len = old.length; _i < _len; _i++) {
+        child = old[_i];
+        if (!result || old.indexOf.call(result, child) === -1) {
+          this.object.registry.remove(path, child);
+          removed = true;
+        }
+      }
+      if (continuation && (!isCollection || !result.length)) {
+        this.object.registry.remove(continuation, path);
+      }
     }
-    if (result && result.item) {
-      result = Array.prototype.slice.call(result, 0);
+    if (isCollection) {
+      added = void 0;
+      for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
+        child = result[_j];
+        if (!old || watchers.indexOf.call(old, child) === -1) {
+          this.object.registry.append(path, child);
+          if (old) {
+            (added || (added = [])).push(child);
+          }
+        }
+      }
+      if (continuation && (!old || !old.length)) {
+        this.object.registry.append(continuation, path);
+      }
+      if (result && result.item && (!old || removed || added)) {
+        result = watchers.slice.call(result, 0);
+      }
+    } else if (result !== void 0 || old !== void 0) {
+      this.object.registry.set(path, result);
     }
-    return this[path] = result;
+    this[path] = result;
+    if (result) {
+      console.log('found', result.nodeType === 1 && 1 || result.length, ' by', path);
+    }
+    return added || result;
   };
 
   Observer.prototype.listen = function(mutations) {
     var allChanged, changed, child, firstNext, firstPrev, index, klasses, kls, mutation, next, old, parent, prev, queries, query, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _m, _n, _o, _p, _q, _ref, _ref1;
-    console.log('observer', mutations);
     queries = [];
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
@@ -23398,12 +23416,12 @@ Observer = (function() {
           while ((next = next.nextSibling)) {
             if (next.nodeType === 1) {
               if (firstNext) {
-                this.match(queries, prev, '!+');
-                this.match(queries, prev, '++');
+                this.match(queries, next, '!+');
+                this.match(queries, next, '++');
                 firstNext = false;
               }
-              this.match(queries, prev, '!~', void 0, changed);
-              this.match(queries, prev, '~~', void 0, changed);
+              this.match(queries, next, '!~', void 0, changed);
+              this.match(queries, next, '~~', void 0, changed);
             }
           }
           this.match(queries, parent, '>', void 0, changed);
@@ -23418,17 +23436,25 @@ Observer = (function() {
             this.match(queries, parent, ' ', void 0, allChanged);
             for (_p = 0, _len7 = allChanged.length; _p < _len7; _p++) {
               child = allChanged[_p];
+              prev = child;
+              while (prev = prev.previousSibling) {
+                if (prev.nodeType === 1) {
+                  this.match(queries, parent, ' +', void 0, prev);
+                  break;
+                }
+              }
+              this.match(queries, parent, ' +', void 0, child);
               this.match(queries, child, '!', void 0, parent);
             }
             parent = parent.parentNode;
           }
       }
     }
-    console.log("Queries:", queries, queries.length);
     for (index = _q = 0, _len8 = queries.length; _q < _len8; index = _q += 2) {
       query = queries[index];
-      this.update(query, queries[index + 1]);
+      this.object.evaluate(query, void 0, queries[index + 1]);
     }
+    this.object.engine.dispatch('solved');
     return true;
   };
 
@@ -23446,23 +23472,23 @@ Root commands, if bound to a dom query, will spawn commands
 to match live results of query.
 */
 
-var Commander, Memory, Observer, Processor,
+var Commander, Expression, Observer, Registry,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-Processor = require('./Processor.js');
+Expression = require('./Expression.js');
 
 Observer = require('./Observer.js');
 
-Memory = require('./Memory.js');
+Registry = require('./Registry.js');
 
 Commander = (function(_super) {
   __extends(Commander, _super);
 
   function Commander(engine) {
     this.engine = engine;
-    this.memory = new Memory(this);
+    this.registry = new Registry(this);
     this.observer = new Observer(this);
     Commander.__super__.constructor.call(this);
   }
@@ -23489,21 +23515,42 @@ Commander = (function(_super) {
 
   Commander.prototype["return"] = function(command) {
     this.engine.registerCommand(command);
-    return console.error('COMMAND', command);
+    return console.error('Command', command);
   };
 
-  Commander.prototype.handleRemoves = function(removes) {};
-
-  Commander.prototype.handleSelectorsWithAdds = function(selectors) {};
-
-  Commander.prototype.handleInvalidMeasures = function(ids) {};
+  Commander.prototype.onRemove = function(continuation, value, id) {
+    var child, index, path, result, watcher, watchers, _i, _j, _len, _len1;
+    if (watchers = this.observer._watchers[id]) {
+      for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 2) {
+        watcher = watchers[index];
+        if (!watcher) {
+          continue;
+        }
+        path = (watchers[index + 1] || '') + watcher.path;
+        watchers[index] = null;
+        console.log('clean', id, '@', continuation);
+        if (result = this.observer[path]) {
+          delete this.observer[path];
+          if (result.length !== void 0) {
+            for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
+              child = result[_j];
+              this.registry.remove(path, child, child._gss_id);
+            }
+          } else {
+            this.registry.remove(path, result, result._gss_id);
+          }
+        }
+      }
+      delete this.observer._watchers[id];
+    }
+    return this;
+  };
 
   Commander.prototype['get$'] = {
     prefix: '[',
     suffix: ']',
     command: function(path, object, property) {
       var id, val;
-      console.log(path, object, property);
       if (object.nodeType) {
         id = GSS.setupId(object);
       } else if (object.absolute === 'window') {
@@ -23559,15 +23606,19 @@ Commander = (function(_super) {
       }
     },
     toOperation: function(object, operation) {
-      var global, op, shortcut, tail;
-      shortcut = [operation.group, operation.promise];
+      debugger;
+      var global, name, op, shortcut, tail;
+      if (operation.tail.parent === operation && operation.tail.name === ' ') {
+        console.log(object, 2348778);
+      }
+      name = operation.group;
+      shortcut = [name, operation.promise];
       shortcut.parent = (operation.head || operation).parent;
       shortcut.index = (operation.head || operation).index;
       object.preprocess(shortcut);
       tail = operation.tail;
       global = tail.arity === 1 && tail.length === 2;
       op = operation;
-      console.log(shortcut, 555);
       while (op) {
         this.analyze(op, shortcut);
         if (op === operation.tail) {
@@ -23993,7 +24044,7 @@ Commander = (function(_super) {
 
   return Commander;
 
-})(Processor);
+})(Expression);
 
 module.exports = Commander;
 
@@ -29998,8 +30049,8 @@ module.exports = {
     "lib/gssom/StyleSheet.js",
     "lib/gssom/Rule.js",
     "lib/Engine.js",
-    "lib/Memory.js", 
-    "lib/Processor.js", 
+    "lib/Registry.js", 
+    "lib/Expression.js", 
     "lib/Observer.js", 
     "lib/Commander.js",
     "lib/Thread.js", 
