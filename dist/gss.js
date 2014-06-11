@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-06-11) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20048,7 +20049,7 @@ GSS.Getter.prototype['readAST:text/gss'] = function(node) {
 
 });
 require.register("gss/lib/GSS.js", function(exports, require, module){
-var GSS, LOG_PASS, TIME, TIME_END, key, val, _ref;
+var GSS, LOG_PASS, TIME, TIME_END, key, val, _ref, _ref1;
 
 require("customevent-polyfill");
 
@@ -20117,6 +20118,10 @@ if (typeof GSS_CONFIG !== "undefined" && GSS_CONFIG !== null) {
   }
 }
 
+if (((_ref = location.search) != null ? _ref.substring(1) : void 0) === 'noworker') {
+  GSS.config.useWorker = false;
+}
+
 GSS.deblog = function() {
   if (GSS.config.debug) {
     return console.log.apply(console, arguments);
@@ -20178,9 +20183,9 @@ GSS.Rule = require("./gssom/Rule.js");
 
 require("./gssom/StyleSheet.js");
 
-_ref = require("./dom/IdMixin.js");
-for (key in _ref) {
-  val = _ref[key];
+_ref1 = require("./dom/IdMixin.js");
+for (key in _ref1) {
+  val = _ref1[key];
   if (GSS[key]) {
     throw new Error("IdMixin key clash: " + key);
   }

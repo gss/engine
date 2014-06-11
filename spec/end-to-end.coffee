@@ -423,6 +423,31 @@ describe 'End - to - End', ->
                 "$async1[height]": 100
                 "$async1[-test]": 0
               done()
+
+
+    describe 'variable math', ->
+
+      it 'should compute values', (done) ->
+        container.innerHTML = """
+          <style type="text/gss">
+            [message-height] == 230;
+            [message-width] == 240;
+
+            [large-message-height] == [message-height] * 2;
+            [large-message-width] == [message-width] * 2;
+          </style>
+        """
+
+        engine.once 'display', (e) ->
+          try
+            expect(engine.vars).to.deep.equal
+              "[message-height]": 230
+              "[message-width]": 240
+              "[large-message-height]": 460
+              "[large-message-width]": 480
+            done()
+          catch error
+            done error
                   
 
   
@@ -1443,3 +1468,128 @@ describe 'End - to - End', ->
       }
       
       ###
+
+
+    describe 'implied property values', ->
+
+      it 'should compute values', (done) ->
+        container.innerHTML = """
+          <div id="header"></div>
+
+          <style type="text/gss">
+            @h |[#header]| in(::window);
+            [header-center-x] == #header[center-x];
+          </style>
+        """
+
+        windowWidth = window.innerWidth - GSS.get.scrollbarWidth()
+
+        engine.once 'display', (e) ->
+          try
+            expect(engine.vars).to.deep.equal
+              "::window[x]": 0
+              "::window[width]": windowWidth
+              "$header[x]": 0
+              "$header[width]": windowWidth
+              "[header-center-x]": windowWidth / 2
+            done()
+          catch error
+            done error
+
+
+    describe 'chain-width', ->
+
+      it 'should compute values', (done) ->
+        container.innerHTML = """
+          <div id="platform">
+            <p id="platform-first-p"></p>
+            <p id="platform-second-p"></p>
+          </div>
+
+          <style type="text/gss">
+            [margin] == 20 !require;
+            [padding] == 25 !require;
+            
+            [p-top] == 0 !require;
+            [p-width] == (#platform[width] - (([margin] + [padding]) * 2)) / 3 !require;
+
+            @h |[#platform]| in(::window);
+
+            @h [#platform-first-p]-[#platform-second-p]-|
+              gap([margin])
+              outer-gap([padding])
+              in(#platform)
+              chain-top([p-top])
+              chain-width([p-width]);
+          </style>
+        """
+
+        margin = 20
+        padding = 25
+        
+        windowLeft = 0
+        windowWidth = window.innerWidth - GSS.get.scrollbarWidth()
+        
+        pWidth = (windowWidth - ((margin + padding) * 2)) / 3
+        pTop = 0
+        firstPLeft = windowLeft + padding + pWidth + margin
+        secondPLeft = firstPLeft + pWidth + margin
+
+        engine.once 'display', (e) ->
+          try
+            delta = 0.0000000000001
+
+            expect(engine.vars["[p-width]"]).to.be.closeTo pWidth, delta
+            expect(engine.vars["$platform-first-p[width]"]).to.be.closeTo pWidth, delta
+            expect(engine.vars["$platform-first-p[x]"]).to.be.closeTo firstPLeft, delta
+            expect(engine.vars["$platform-second-p[width]"]).to.be.closeTo pWidth, delta
+            expect(engine.vars["$platform-second-p[x]"]).to.be.closeTo secondPLeft, delta
+
+            delete engine.vars["[p-width]"]
+            delete engine.vars["$platform-first-p[width]"]
+            delete engine.vars["$platform-first-p[x]"]
+            delete engine.vars["$platform-second-p[width]"]
+            delete engine.vars["$platform-second-p[x]"]
+
+            expect(engine.vars).to.deep.equal
+              "[margin]": margin
+              "[padding]": padding
+              "[p-top]": pTop
+              "::window[x]": windowLeft
+              "::window[width]": windowWidth
+              "$platform[x]": windowLeft
+              "$platform[width]": windowWidth
+              "$platform-first-p[y]": pTop
+              "$platform-second-p[y]": pTop
+              
+            done()
+          catch error
+            done error
+
+
+    describe 'virtuals', ->
+
+      it 'should compute values', (done) ->
+        container.innerHTML = """
+          <div id="platform"></div>
+
+          <style type="text/gss">
+            [padding] == 25 !require;
+            @virtual "platform";
+            @h |-["platform"]-| outer-gap([padding]) in(#platform);
+          </style>
+        """
+
+        windowWidth = window.innerWidth - GSS.get.scrollbarWidth()
+        padding = 25
+
+        engine.once 'display', (e) ->
+          try
+            expect(engine.vars).to.deep.equal
+              "[padding]": padding
+              "$platform[x]": padding
+              "$platform[width]": windowWidth - (padding * 2)
+
+            done()
+          catch error
+            done error
