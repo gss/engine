@@ -8,7 +8,7 @@ class Processor
 
     # Use a shortcut operation when possible
     if promise = operation.promise
-      operation = operation.tail.shortcut ||= @getGrouppedOperation(operation)
+      operation = operation.tail.shortcut ||= @[operation.group].toOperation(@, operation)
       from = ascending != undefined && 1 || undefined
 
     # Recursively evaluate arguments, stop on undefined.
@@ -45,18 +45,19 @@ class Processor
 
     result = func.apply(scope || @, args)
 
-    # Set up DOM observer
-    if operation.type == 'combinator' || operation.type == 'qualifier'
-      console.log('observing', operation, GSS.getId(scope || @))
-      @observer.add(scope, operation, continuation)
+    path = (continuation || '') + operation.path
 
-    path = (continuation || '')
+    # Set up DOM observer
+    if operation.type == 'combinator' || operation.type == 'qualifier' || operation.group == '$query'
+      result = @observer.set(scope, result, operation, continuation)
+
+
     
     # Fork for each item in collection, ascend 
     if result?
       if @isCollection(result)
-        path += operation.path
         console.group path
+        debugger
         for item in result
           @evaluate operation.parent, undefined, path + @toId(item), operation.index, item
         console.groupEnd path
@@ -91,7 +92,6 @@ class Processor
       operation.arity--
       operation.skip = operation.length - operation.arity
       operation.name = (def.prefix || '') + operation[operation.skip]
-      console.log(def.lookup, def, 'lol')
       for property in def
         if property != 'lookup'
           operation[property] = def[property]
@@ -114,13 +114,14 @@ class Processor
       if child instanceof Array
         @preprocess(child, operation).group
         if index == 1 && group && group == child.group
-          tail = child.tail ||= (@canStartGroup(child, group) && child)
-          if tail
-            operation.promise = (child.promise || child.path) + operation.path
-            console.log('promising', operation.promise, child)
-            tail.head = operation
-            tail.promise = operation.promise
-            operation.tail = tail
+          if def = @[group]
+            tail = child.tail ||= (def.attempt(child) && child)
+            if tail
+              operation.promise = (child.promise || child.path) + operation.path
+              console.log('promising', operation.promise, child)
+              tail.head = operation
+              tail.promise = operation.promise
+              operation.tail = tail
 
     operation.offset = 0
     if def == true
@@ -142,30 +143,6 @@ class Processor
       operation.func = func
 
     return operation
-
-  # Create a shortcut operation to get through a group of operations
-  getGrouppedOperation: (operation) ->
-    shortcut = [operation.group, operation.promise]
-    if (operation.tail.parent == operation)
-      console.error(operation)
-    shortcut.parent = (operation.head || operation).parent
-    shortcut.index = (operation.head || operation).index
-    @preprocess(shortcut)
-    tail = operation.tail
-    global = tail.arity == 1 && tail.length == 2
-    unless global
-      shortcut.splice(1, 0, tail[1])
-    return shortcut
-
-  # Native selectors cant start with a non-space combinator or qualifier
-  canStartGroup: (operation, group) ->
-    if group == '$query'
-      if operation.name == '$combinator'
-        if group[group.skip] != ' '
-          return false
-      else if operation.arity == 2
-        return false
-    return true
 
   # Should we iterate the object?
   isCollection: (object) ->

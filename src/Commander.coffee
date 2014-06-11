@@ -74,7 +74,6 @@ class Commander extends Processor
           engine.setNeedsMeasure true
           if engine.vars[k] isnt val
             return ['suggest', ['get', property, id, path], ['number', val], 'required'] 
-      debugger
       return ['get', property, '$' + id, path]
   
 
@@ -104,7 +103,51 @@ class Commander extends Processor
     1: "querySelectorAll"
     2: (node, value) ->
       return node if node.webkitMatchesSelector(value)
-    
+      
+    # Create a shortcut operation to get through a group of operations
+    toOperation: (object, operation) ->
+      shortcut = [operation.group, operation.promise]
+      shortcut.parent = (operation.head || operation).parent
+      shortcut.index = (operation.head || operation).index
+      object.preprocess(shortcut)
+      tail = operation.tail
+      global = tail.arity == 1 && tail.length == 2
+      op = operation
+      console.log(shortcut, 555)
+      while op
+        @.analyze op, shortcut
+        break if op == operation.tail
+        op = op[1]
+      if (operation.tail.parent == operation)
+        unless global
+          shortcut.splice(1, 0, tail[1])
+      return shortcut
+
+    analyze: (operation, parent) ->
+      switch operation[0]
+        when '$tag'
+          if !parent || operation == operation.tail
+            group = ' '
+            index = (operation[2] || operation[1]).toUpperCase()
+        when '$combinator'
+          group = parent && ' ' ||  operation.name
+          index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
+        when '$class', '$pseudo', '$attribute'
+          group = operation[0]
+          index = operation[2] || operation[1]
+      (((parent || operation)[group] ||= {})[index] ||= []).push operation
+      index = group = null
+
+    # Native selectors cant start with a non-space combinator or qualifier
+    attempt: (operation) ->
+      @analyze(operation)
+      if operation.name == '$combinator'
+        if group[group.skip] != ' '
+          return false
+      else if operation.arity == 2
+        return false
+      return true
+
   
   '$class':
     prefix: '.'
@@ -188,53 +231,80 @@ class Commander extends Processor
 
   '>':
     group: '$query'
-    1: (node) ->
-      return node.children
+    1: 
+      if "children" in document 
+        (node) -> 
+          return node.children
+      else 
+        (node) ->
+          child for child in node.childNodes when child.nodeType == 1
 
   '!>':
-    1: (node) ->
-      return node.parentNode
+    1: 
+      if document.children[0].hasOwnProperty("parentElement") 
+        (node) ->
+          return node.parentElement
+      else
+        (node) ->
+          if parent = node.parentNode
+            return parent if parent.nodeType == 1
 
   '+':
     group: '$query'
-    1: (node) ->
-      return node.nextElementSibling
+    1: 
+      if document.children[0].hasOwnProperty("nextElementSibling")
+        (node) ->
+          return node.nextElementSibling
+      else
+        (node) ->
+          while node = node.nextSibling
+            return node if node.nodeType == 1
 
   '!+':
-    1: (node) ->
-      return node.previousElementSibling
+    1:
+      if document.children[0].hasOwnProperty("previousElementSibling")
+        (node) ->
+          return node.previousElementSibling
+      else
+        (node) ->
+          while node = node.previousSibling
+            return node if node.nodeType == 1
 
   '++':
     1: (node) ->
       nodes = undefined
-      if prev = node.previousElementSibling
-        (nodes ||= []).push(prev)
-      if next = node.nextElementSibling
-        (nodes ||= []).push(next)
+      while node = node.previousSibling
+        if node.nodeType == 1
+          (nodes ||= []).push(node)
+          break
+      while node = node.nextSibling
+        if node.nodeType == 1
+          (nodes ||= []).push(node)
+          break
       return nodes;
 
   '~':
     group: '$query'
     1: (node) ->
       nodes = undefined
-      while node = node.nextElementSibling
-        (nodes ||= []).push(node)
+      while node = node.nextSibling
+        (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
 
   '!~':
     1: (node) ->
       nodes = undefined
-      while node = node.previousElementSibling
-        (nodes ||= []).push(node)
+      while node = node.previousSibling
+        (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
   
   '~~':
     1: (node) ->
       nodes = undefined
-      while node = node.previousElementSibling
-        (nodes ||= []).push(node)
-      while node = node.nextElementSibling
-        (nodes ||= []).push(node)
+      while node = node.previousSibling
+        (nodes ||= []).push(node) if node.nodeType == 1
+      while node = node.nextSibling
+        (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
 
   # Pseudo classes
@@ -246,8 +316,6 @@ class Commander extends Processor
 
   ':get':
     2: (node, property) ->
-      console.log(node, property)
-      debugger
       return node[property]
 
 

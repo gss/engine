@@ -23056,7 +23056,7 @@ Processor = (function() {
     var args, argument, func, index, item, offset, path, promise, result, scope, skip, _base, _i, _j, _len, _len1, _ref;
     offset = (_ref = operation.offset) != null ? _ref : this.preprocess(operation).offset;
     if (promise = operation.promise) {
-      operation = (_base = operation.tail).shortcut || (_base.shortcut = this.getGrouppedOperation(operation));
+      operation = (_base = operation.tail).shortcut || (_base.shortcut = this[operation.group].toOperation(this, operation));
       from = ascending !== void 0 && 1 || void 0;
     }
     args = null;
@@ -23098,15 +23098,14 @@ Processor = (function() {
       throw new Error("Engine broke, couldn't find method: " + operation.method);
     }
     result = func.apply(scope || this, args);
-    if (operation.type === 'combinator' || operation.type === 'qualifier') {
-      console.log('observing', operation, GSS.getId(scope || this));
-      this.observer.add(scope, operation, continuation);
+    path = (continuation || '') + operation.path;
+    if (operation.type === 'combinator' || operation.type === 'qualifier' || operation.group === '$query') {
+      result = this.observer.set(scope, result, operation, continuation);
     }
-    path = continuation || '';
     if (result != null) {
       if (this.isCollection(result)) {
-        path += operation.path;
         console.group(path);
+        debugger;
         for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
           item = result[_j];
           this.evaluate(operation.parent, void 0, path + this.toId(item), operation.index, item);
@@ -23148,7 +23147,6 @@ Processor = (function() {
       operation.arity--;
       operation.skip = operation.length - operation.arity;
       operation.name = (def.prefix || '') + operation[operation.skip];
-      console.log(def.lookup, def, 'lol');
       for (_i = 0, _len = def.length; _i < _len; _i++) {
         property = def[_i];
         if (property !== 'lookup') {
@@ -23178,13 +23176,15 @@ Processor = (function() {
       if (child instanceof Array) {
         this.preprocess(child, operation).group;
         if (index === 1 && group && group === child.group) {
-          tail = child.tail || (child.tail = this.canStartGroup(child, group) && child);
-          if (tail) {
-            operation.promise = (child.promise || child.path) + operation.path;
-            console.log('promising', operation.promise, child);
-            tail.head = operation;
-            tail.promise = operation.promise;
-            operation.tail = tail;
+          if (def = this[group]) {
+            tail = child.tail || (child.tail = def.attempt(child) && child);
+            if (tail) {
+              operation.promise = (child.promise || child.path) + operation.path;
+              console.log('promising', operation.promise, child);
+              tail.head = operation;
+              tail.promise = operation.promise;
+              operation.tail = tail;
+            }
           }
         }
       }
@@ -23209,36 +23209,6 @@ Processor = (function() {
       operation.func = func;
     }
     return operation;
-  };
-
-  Processor.prototype.getGrouppedOperation = function(operation) {
-    var global, shortcut, tail;
-    shortcut = [operation.group, operation.promise];
-    if (operation.tail.parent === operation) {
-      console.error(operation);
-    }
-    shortcut.parent = (operation.head || operation).parent;
-    shortcut.index = (operation.head || operation).index;
-    this.preprocess(shortcut);
-    tail = operation.tail;
-    global = tail.arity === 1 && tail.length === 2;
-    if (!global) {
-      shortcut.splice(1, 0, tail[1]);
-    }
-    return shortcut;
-  };
-
-  Processor.prototype.canStartGroup = function(operation, group) {
-    if (group === '$query') {
-      if (operation.name === '$combinator') {
-        if (group[group.skip] !== ' ') {
-          return false;
-        }
-      } else if (operation.arity === 2) {
-        return false;
-      }
-    }
-    return true;
   };
 
   Processor.prototype.isCollection = function(object) {
@@ -23272,46 +23242,95 @@ Observer = (function() {
     if (!window.MutationObserver) {
       return;
     }
-    this.watchers = {};
+    this._watchers = {};
     this.observer = new MutationObserver(this.listen.bind(this));
     this.observer.observe(document.body, GSS.config.observerOptions);
   }
 
-  Observer.prototype.update = function(node, command, key, added, removed) {
-    var commands, group, id, index, operation, watcher, watchers, _i, _len;
+  Observer.prototype.match = function(queries, node, group, qualifier, changed) {
+    var change, groupped, id, index, indexed, operation, watchers, _i, _j, _len, _len1;
     if (!(id = node._gss_id)) {
       return;
     }
-    if (!(watchers = this.watchers[id])) {
+    if (!(watchers = this._watchers[id])) {
       return;
     }
-    return;
     for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 2) {
       operation = watchers[index];
-      if (commands = operation.commands) {
-        if (group = commands[command]) {
-          return;
+      if (groupped = operation[group]) {
+        if (qualifier) {
+          if (indexed = groupped[qualifier]) {
+            if (queries.indexOf(operation) === -1) {
+              queries.push(operation, watchers[index + 1]);
+            }
+          }
+        } else {
+          for (_j = 0, _len1 = changed.length; _j < _len1; _j++) {
+            change = changed[_j];
+            if (indexed = groupped[change.tagName] || groupped["*"]) {
+              if (queries.indexOf(operation) === -1) {
+                queries.push(operation, watchers[index + 1]);
+              }
+            }
+          }
         }
       }
-      if (watcher.name === command) {
-        this.evaluate(watcher);
-      }
-      watcher = watcher[1];
     }
+    return this;
   };
 
-  Observer.prototype.add = function(node, operation, continuation) {
-    var id;
-    console.log(node, operation);
-    if (id = this.object.toId(node)) {
-      return (this[id] || (this[id] = [])).push(operation, continuation);
+  Observer.prototype.update = function(operation, path) {
+    var added, child, old, result, _i, _j, _len, _len1;
+    old = this[path];
+    if (operation.name === '$query') {
+      result = this.object.evaluate(operation, void 0, path);
     }
+    if (result === old) {
+      return;
+    }
+    if ((result && result.length) || (old && old.length)) {
+      for (_i = 0, _len = old.length; _i < _len; _i++) {
+        child = old[_i];
+        if (old.indexOf.call(result, child) === -1) {
+          1;
+        }
+        added = [];
+        for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
+          child = result[_j];
+          if (old.indexOf(child) === -1) {
+            added.push(child);
+          }
+        }
+        return added;
+      }
+    }
+    return result;
+  };
+
+  Observer.prototype.compare = function(path, result) {
+    var added, old, removed;
+    added = [];
+    removed = [];
+    return old = this.values[path];
+  };
+
+  Observer.prototype.set = function(node, result, operation, path) {
+    var id, old, _base;
+    old = this[id];
+    console.log('observing', node, [GSS.setupId(node)], operation);
+    if (id = GSS.setupId(node)) {
+      ((_base = this._watchers)[id] || (_base[id] = [])).push(operation, path);
+    }
+    if (result && result.item) {
+      result = Array.prototype.slice.call(result, 0);
+    }
+    return this[path] = result;
   };
 
   Observer.prototype.listen = function(mutations) {
-    var add, added, allAdded, allRemoved, child, firstNext, firstPrev, klasses, kls, mutation, next, old, parent, prev, remove, removed, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o, _results;
+    var allChanged, changed, child, firstNext, firstPrev, index, klasses, kls, mutation, next, old, parent, prev, queries, query, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _m, _n, _o, _p, _q, _ref, _ref1;
     console.log('observer', mutations);
-    _results = [];
+    queries = [];
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
       target = parent = mutation.target;
@@ -23320,108 +23339,97 @@ Observer = (function() {
           if (mutation.attributeName === 'class') {
             klasses = parent.classList;
             old = mutation.oldValue.split(' ');
-            added = [];
-            removed = [];
+            changed = [];
             for (_j = 0, _len1 = old.length; _j < _len1; _j++) {
               kls = old[_j];
               if (!(kls && klasses.contains(kls))) {
-                removed.push(kls);
+                changed.push(kls);
               }
             }
             for (_k = 0, _len2 = klasses.length; _k < _len2; _k++) {
               kls = klasses[_k];
               if (!(kls && old.contains(kls))) {
-                added.push(kls);
+                changed.push(kls);
               }
             }
             while (parent.nodeType === 1) {
-              for (_l = 0, _len3 = added.length; _l < _len3; _l++) {
-                add = added[_l];
-                this.update(parent, '$class', add, target, void 0);
-              }
-              for (_m = 0, _len4 = removed.length; _m < _len4; _m++) {
-                remove = removed[_m];
-                this.update(parent, '$class', remove, void 0, target);
+              for (_l = 0, _len3 = changed.length; _l < _len3; _l++) {
+                kls = changed[_l];
+                this.match(queries, parent, '$class', kls, target);
               }
               parent = parent.parentNode;
             }
             parent = target;
           }
-          _results.push((function() {
-            var _results1;
-            _results1 = [];
-            while (parent.nodeType === 1) {
-              this.update(parent, '$attribute', mutation.attributeName, target, void 0);
-              _results1.push(parent = parent.parentNode);
-            }
-            return _results1;
-          }).call(this));
+          while (parent.nodeType === 1) {
+            this.match(queries, parent, '$attribute', mutation.attributeName, target);
+            parent = parent.parentNode;
+          }
           break;
         case "childList":
-          added = mutation.addedNodes;
-          removed = mutation.removedNodes;
+          changed = [];
+          _ref = mutation.addedNodes;
+          for (_m = 0, _len4 = _ref.length; _m < _len4; _m++) {
+            child = _ref[_m];
+            if (child.nodeType === 1) {
+              changed.push(child);
+            }
+          }
+          _ref1 = mutation.removedNodes;
+          for (_n = 0, _len5 = _ref1.length; _n < _len5; _n++) {
+            child = _ref1[_n];
+            if (child.nodeType === 1) {
+              changed.push(child);
+            }
+          }
           prev = next = mutation;
           firstPrev = firstNext = true;
           while ((prev = prev.previousSibling)) {
             if (prev.nodeType === 1) {
-              if (!firstPrev) {
-                this.update(prev, '+', added[0], removed[0]);
-                this.update(prev, '++', added[0], removed[0]);
+              if (firstPrev) {
+                this.match(queries, prev, '+');
+                this.match(queries, prev, '++');
                 firstPrev = false;
               }
-              this.update(prev, '~', added, removed);
-              this.update(prev, '~~', added, removed);
+              this.match(queries, prev, '~', void 0, changed);
+              this.match(queries, prev, '~~', void 0, changed);
             }
           }
           while ((next = next.nextSibling)) {
             if (next.nodeType === 1) {
-              if (!firstNext) {
-                this.update(prev, '!+', added[added.length - 1], removed[removed.length - 1]);
-                this.update(prev, '++', added[added.length - 1], removed[removed.length - 1]);
+              if (firstNext) {
+                this.match(queries, prev, '!+');
+                this.match(queries, prev, '++');
                 firstNext = false;
               }
-              this.update(prev, '!~', added, removed);
-              this.update(prev, '~~', added, removed);
+              this.match(queries, prev, '!~', void 0, changed);
+              this.match(queries, prev, '~~', void 0, changed);
             }
           }
-          this.update(parent, '>', added, removed);
-          allAdded = [];
-          for (_n = 0, _len5 = added.length; _n < _len5; _n++) {
-            child = added[_n];
-            this.update(child, '!>', parent);
-            allAdded.push(child);
-            allAdded.push.apply(allAdded, child.getElementsByTagName('*'));
+          this.match(queries, parent, '>', void 0, changed);
+          allChanged = [];
+          for (_o = 0, _len6 = changed.length; _o < _len6; _o++) {
+            child = changed[_o];
+            this.match(queries, child, '!>', void 0, parent);
+            allChanged.push(child);
+            allChanged.push.apply(allChanged, void 0, child.getElementsByTagName('*'));
           }
-          allRemoved = [];
-          for (_o = 0, _len6 = removed.length; _o < _len6; _o++) {
-            child = removed[_o];
-            this.update(child, '!>', void 0, parent);
-            allRemoved.push(child);
-            allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'));
-          }
-          _results.push((function() {
-            var _len7, _len8, _p, _q, _results1;
-            _results1 = [];
-            while (parent && parent.nodeType === 1) {
-              this.update(parent, ' ', allAdded, allRemoved);
-              for (_p = 0, _len7 = allAdded.length; _p < _len7; _p++) {
-                child = allAdded[_p];
-                this.update(child, '!', parent, parent);
-              }
-              for (_q = 0, _len8 = allRemoved.length; _q < _len8; _q++) {
-                child = allRemoved[_q];
-                this.update(child, '!', parent, void 0, parent);
-              }
-              _results1.push(parent = parent.parentNode);
+          while (parent && parent.nodeType === 1) {
+            this.match(queries, parent, ' ', void 0, allChanged);
+            for (_p = 0, _len7 = allChanged.length; _p < _len7; _p++) {
+              child = allChanged[_p];
+              this.match(queries, child, '!', void 0, parent);
             }
-            return _results1;
-          }).call(this));
-          break;
-        default:
-          _results.push(void 0);
+            parent = parent.parentNode;
+          }
       }
     }
-    return _results;
+    console.log("Queries:", queries, queries.length);
+    for (index = _q = 0, _len8 = queries.length; _q < _len8; index = _q += 2) {
+      query = queries[index];
+      this.update(query, queries[index + 1]);
+    }
+    return true;
   };
 
   return Observer;
@@ -23440,7 +23448,8 @@ to match live results of query.
 
 var Commander, Memory, Observer, Processor,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 Processor = require('./Processor.js');
 
@@ -23509,7 +23518,6 @@ Commander = (function(_super) {
           }
         }
       }
-      debugger;
       return ['get', property, '$' + id, path];
     }
   };
@@ -23549,6 +23557,63 @@ Commander = (function(_super) {
       if (node.webkitMatchesSelector(value)) {
         return node;
       }
+    },
+    toOperation: function(object, operation) {
+      var global, op, shortcut, tail;
+      shortcut = [operation.group, operation.promise];
+      shortcut.parent = (operation.head || operation).parent;
+      shortcut.index = (operation.head || operation).index;
+      object.preprocess(shortcut);
+      tail = operation.tail;
+      global = tail.arity === 1 && tail.length === 2;
+      op = operation;
+      console.log(shortcut, 555);
+      while (op) {
+        this.analyze(op, shortcut);
+        if (op === operation.tail) {
+          break;
+        }
+        op = op[1];
+      }
+      if (operation.tail.parent === operation) {
+        if (!global) {
+          shortcut.splice(1, 0, tail[1]);
+        }
+      }
+      return shortcut;
+    },
+    analyze: function(operation, parent) {
+      var group, index, _base, _base1;
+      switch (operation[0]) {
+        case '$tag':
+          if (!parent || operation === operation.tail) {
+            group = ' ';
+            index = (operation[2] || operation[1]).toUpperCase();
+          }
+          break;
+        case '$combinator':
+          group = parent && ' ' || operation.name;
+          index = operation.parent.name === "$tag" && operation.parent[2].toUpperCase() || "*";
+          break;
+        case '$class':
+        case '$pseudo':
+        case '$attribute':
+          group = operation[0];
+          index = operation[2] || operation[1];
+      }
+      ((_base = ((_base1 = parent || operation)[group] || (_base1[group] = {})))[index] || (_base[index] = [])).push(operation);
+      return index = group = null;
+    },
+    attempt: function(operation) {
+      this.analyze(operation);
+      if (operation.name === '$combinator') {
+        if (group[group.skip] !== ' ') {
+          return false;
+        }
+      } else if (operation.arity === 2) {
+        return false;
+      }
+      return true;
     }
   };
 
@@ -23659,39 +23724,75 @@ Commander = (function(_super) {
 
   Commander.prototype['>'] = {
     group: '$query',
-    1: function(node) {
+    1: __indexOf.call(document, "children") >= 0 ? function(node) {
       return node.children;
+    } : function(node) {
+      var child, _i, _len, _ref, _results;
+      _ref = node.childNodes;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        child = _ref[_i];
+        if (child.nodeType === 1) {
+          _results.push(child);
+        }
+      }
+      return _results;
     }
   };
 
   Commander.prototype['!>'] = {
-    1: function(node) {
-      return node.parentNode;
+    1: document.children[0].hasOwnProperty("parentElement") ? function(node) {
+      return node.parentElement;
+    } : function(node) {
+      var parent;
+      if (parent = node.parentNode) {
+        if (parent.nodeType === 1) {
+          return parent;
+        }
+      }
     }
   };
 
   Commander.prototype['+'] = {
     group: '$query',
-    1: function(node) {
+    1: document.children[0].hasOwnProperty("nextElementSibling") ? function(node) {
       return node.nextElementSibling;
+    } : function(node) {
+      while (node = node.nextSibling) {
+        if (node.nodeType === 1) {
+          return node;
+        }
+      }
     }
   };
 
   Commander.prototype['!+'] = {
-    1: function(node) {
+    1: document.children[0].hasOwnProperty("previousElementSibling") ? function(node) {
       return node.previousElementSibling;
+    } : function(node) {
+      while (node = node.previousSibling) {
+        if (node.nodeType === 1) {
+          return node;
+        }
+      }
     }
   };
 
   Commander.prototype['++'] = {
     1: function(node) {
-      var next, nodes, prev;
+      var nodes;
       nodes = void 0;
-      if (prev = node.previousElementSibling) {
-        (nodes || (nodes = [])).push(prev);
+      while (node = node.previousSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+          break;
+        }
       }
-      if (next = node.nextElementSibling) {
-        (nodes || (nodes = [])).push(next);
+      while (node = node.nextSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+          break;
+        }
       }
       return nodes;
     }
@@ -23702,8 +23803,10 @@ Commander = (function(_super) {
     1: function(node) {
       var nodes;
       nodes = void 0;
-      while (node = node.nextElementSibling) {
-        (nodes || (nodes = [])).push(node);
+      while (node = node.nextSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+        }
       }
       return nodes;
     }
@@ -23713,8 +23816,10 @@ Commander = (function(_super) {
     1: function(node) {
       var nodes;
       nodes = void 0;
-      while (node = node.previousElementSibling) {
-        (nodes || (nodes = [])).push(node);
+      while (node = node.previousSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+        }
       }
       return nodes;
     }
@@ -23724,11 +23829,15 @@ Commander = (function(_super) {
     1: function(node) {
       var nodes;
       nodes = void 0;
-      while (node = node.previousElementSibling) {
-        (nodes || (nodes = [])).push(node);
+      while (node = node.previousSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+        }
       }
-      while (node = node.nextElementSibling) {
-        (nodes || (nodes = [])).push(node);
+      while (node = node.nextSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+        }
       }
       return nodes;
     }
@@ -23743,8 +23852,6 @@ Commander = (function(_super) {
 
   Commander.prototype[':get'] = {
     2: function(node, property) {
-      console.log(node, property);
-      debugger;
       return node[property];
     }
   };
