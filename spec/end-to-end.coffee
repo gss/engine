@@ -1575,8 +1575,12 @@ describe 'End - to - End', ->
 
           <style type="text/gss">
             [padding] == 25 !require;
-            @virtual "platform";
-            @h |-["platform"]-| outer-gap([padding]) in(#platform);
+            @h |[#platform]| in(::window);
+
+            #platform {
+              @virtual "platform";
+              @h |-["platform"]-| outer-gap([padding]) in(::);
+            }
           </style>
         """
 
@@ -1587,8 +1591,12 @@ describe 'End - to - End', ->
           try
             expect(engine.vars).to.deep.equal
               "[padding]": padding
-              "$platform[x]": padding
-              "$platform[width]": windowWidth - (padding * 2)
+              "::window[x]": 0
+              "::window[width]": windowWidth
+              "$platform[x]": 0
+              "$platform[width]": windowWidth
+              "$platform\"platform\"[x]": padding
+              "$platform\"platform\"[width]": windowWidth - (padding * 2)
 
             done()
           catch error
