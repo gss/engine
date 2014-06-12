@@ -2,9 +2,9 @@
 # Engine -> Engine
 
 class Expressions extends Engine.Pipe
-  constructor: (@input, @output, @context) ->
+  constructor: (@input, @output = @input, @context) ->
     @output ||= @input
-    @context ||= @input || @
+    @context ||= @input && @input.context || @
 
   # Hook: Evaluate input
   read: ->

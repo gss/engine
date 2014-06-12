@@ -2,8 +2,8 @@
 # MutationEvent -> Expressions
 
 class Mutations extends Engine.Pipe
-  constructor: ->
-    Mutations.Observer ||= window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
+  constructor: (@input, @output) ->
+    Mutations.Observer ||= @getObserver()
     return false unless Mutations.Observer
     super.apply(this, arguments)
     
@@ -16,7 +16,7 @@ class Mutations extends Engine.Pipe
     for query, index in queries by 2
       @output.read query, undefined, queries[index + 1]
     
-  # Listens for DOM changes and precomputes combinators
+  # Listen to DOM changes and precomputes combinators
   read: (mutations) ->
     queries = []
     for mutation in mutations
@@ -155,4 +155,8 @@ class Mutations extends Engine.Pipe
               if queries.indexOf(operation) == -1
                 queries.push(operation, watchers[index + 1])
     @
+
+  getObserver: ->
+    return window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
+
 module.exports = Mutations

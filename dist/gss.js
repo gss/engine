@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-06-12) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20235,9 +20236,6 @@ Pipe = (function() {
         return this.input.apply(this, arguments);
       }
     }
-    if (this.process) {
-      return this.process.apply(this, arguments);
-    }
   };
 
   Pipe.prototype.write = function() {
@@ -20255,9 +20253,9 @@ Pipe = (function() {
 Engine = (function(_super) {
   __extends(Engine, _super);
 
-  Engine.prototype.Expressions = require('./Expressions.js');
+  Engine.prototype.Expressions = require('./context/Expressions.js');
 
-  Engine.prototype.References = require('./References.js');
+  Engine.prototype.References = require('./context/References.js');
 
   function Engine(scope) {
     var engine, id;
@@ -20292,10 +20290,6 @@ Engine = (function(_super) {
     }
   }
 
-  Engine.prototype.clean = function() {
-    return this.context.clean.apply(this.context, arguments);
-  };
-
   Engine.prototype.isCollection = function(object) {
     if (typeof object === 'object' && object.length !== void 0) {
       if (!(typeof object[0] === 'string' && !this.context[object[0]])) {
@@ -20304,8 +20298,12 @@ Engine = (function(_super) {
     }
   };
 
+  Engine.prototype.clean = function() {
+    return this.context.clean.apply(this.context, arguments);
+  };
+
   Engine.prototype.read = function() {
-    return this.expressions.read.apply(this, arguments);
+    return this.expressions.read.apply(this.expressions, arguments);
   };
 
   Engine.prototype.set = function() {
@@ -20347,11 +20345,11 @@ Document = (function(_super) {
 
   Document.prototype.Mutations = require('../input/Mutations.js');
 
-  Document.prototype.Mutations = require('../input/Measurements.js');
+  Document.prototype.Measurements = require('../input/Measurements.js');
 
   Document.prototype.Styles = require('../output/Styles.js');
 
-  function Document(scope) {
+  function Document(scope, url) {
     var context;
     if (context = Document.__super__.constructor.call(this, scope, url)) {
       return context;
@@ -20364,7 +20362,9 @@ Document = (function(_super) {
     this.mutations.pipe(this.expressions);
     this.measurements.pipe(this.expressions);
     this.expressions.pipe(this.solver);
-    this.process.pipe(this.styles);
+    this.solver.pipe(this.styles);
+    this.references.write = this.context.clean.bind(this.context);
+    this.references.write = this.context.clean.bind(this.context);
     if (this.scope.nodeType === 9) {
       this.scope.addEventListener('DOMContentLoaded', this);
     }
@@ -20379,11 +20379,11 @@ Document = (function(_super) {
 })(Engine);
 
 Document.prototype.Context = Context = (function() {
-  Context.prototype.Rules = require('./input/Measurements.js');
+  Context.prototype.Properties = require('./context/Properties.js');
 
-  Context.prototype.Rules = require('./input/Rules.js');
+  Context.prototype.Selectors = require('./context/Selectors.js');
 
-  Context.prototype.Selectors = require('./input/Selectors.js');
+  Context.prototype.Rules = require('./context/Rules.js');
 
   function Context(engine) {
     this.engine = engine;
@@ -20405,6 +20405,8 @@ for (prop in _ref1) {
   DOM.prototype[prop] = value;
 }
 
+Engine.Document = Document;
+
 module.exports = Document;
 
 });
@@ -20421,12 +20423,17 @@ Solver = (function(_super) {
 
   Solver.prototype.Constraints = require('./output/constraints.js');
 
-  function Solver(url) {
+  function Solver(input, output, url) {
+    this.input = input;
+    this.output = output;
     Solver.__super__.constructor.call(this);
     if (typeof url === 'url' && __indexOf.call(self, "onmessage") >= 0) {
-      this.process = new this.Worker(url);
+      this.worker = new this.Worker(url);
+      this.read = this.worker.postMessage.bind(this.worker);
     } else {
-      this.process = new this.Constraints;
+      this.constraints = new this.Constraints(this);
+      this.expressions.pipe(this.constraints);
+      this.constraints.pipe(this.output);
     }
   }
 
@@ -20442,7 +20449,7 @@ Solver = (function(_super) {
     var worker;
     worker = new Worker(url);
     worker.addEventListener(this);
-    return worker.postMessage.bind(this);
+    return worker;
   };
 
   return Solver;
@@ -20474,26 +20481,34 @@ if (self.window && self.window.document === void 0 && __indexOf.call(self, "onme
   self.addEventListener('message', Thread);
 }
 
+Engine.Solver = Solver;
+
+module.exports = Solver;
+
 });
 require.register("gss/lib/input/References.js", function(exports, require, module){
-var References;
+var References,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-References = (function() {
-  function References(input) {
+References = (function(_super) {
+  __extends(References, _super);
+
+  function References(input, output) {
     this.input = input;
+    this.output = output;
+    this.output || (this.output = this.input);
   }
+
+  References.prototype.write = function() {
+    return this.output.clean.apply(this, arguments);
+  };
 
   References.prototype.combine = function(path, value) {
     if (typeof object === 'string') {
       return object;
     }
-    return continuation + this.valueOf(object);
-  };
-
-  References.prototype.append = function(path, value) {
-    var group;
-    group = this[path] || (this[path] = []);
-    return group.push(this.combine(path, value));
+    return continuation + References.get(object);
   };
 
   References.prototype.set = function(path, value) {
@@ -20501,11 +20516,17 @@ References = (function() {
     if (value === void 0) {
       old = this[path];
       if (old) {
-        return this.input.clean(path, old);
+        return this.clean(path, old);
       }
     } else {
       return this[path] = this.combine(path, value);
     }
+  };
+
+  References.prototype.append = function(path, value) {
+    var group;
+    group = this[path] || (this[path] = []);
+    return group.push(this.combine(path, value));
   };
 
   References.prototype.remove = function(path, value) {
@@ -20520,16 +20541,14 @@ References = (function() {
       if (group instanceof Array) {
         if ((index = group.indexOf(value)) > -1) {
           group.splice(index, 1);
-          this.input.clean(path, value, id);
+          this.write(path, value, id);
         }
       } else {
-        this.input.clean(path, value, id);
+        this.write(path, value, id);
       }
       return console.groupEnd('remove ' + path);
     }
   };
-
-  References.uid = 0;
 
   References.get = function(object, force) {
     var id;
@@ -20540,9 +20559,11 @@ References = (function() {
     return id;
   };
 
+  References.uid = 0;
+
   return References;
 
-})();
+})(Engine.Pipe);
 
 module.exports = References;
 
@@ -20557,10 +20578,10 @@ Expressions = (function(_super) {
 
   function Expressions(input, output, context) {
     this.input = input;
-    this.output = output;
+    this.output = output != null ? output : this.input;
     this.context = context;
     this.output || (this.output = this.input);
-    this.context || (this.context = this.input || this);
+    this.context || (this.context = this.input && this.input.context || this);
   }
 
   Expressions.prototype.read = function() {
@@ -20741,8 +20762,10 @@ var Mutations,
 Mutations = (function(_super) {
   __extends(Mutations, _super);
 
-  function Mutations() {
-    Mutations.Observer || (Mutations.Observer = window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver);
+  function Mutations(input, output) {
+    this.input = input;
+    this.output = output;
+    Mutations.Observer || (Mutations.Observer = this.getObserver());
     if (!Mutations.Observer) {
       return false;
     }
@@ -20955,6 +20978,10 @@ Mutations = (function(_super) {
     return this;
   };
 
+  Mutations.prototype.getObserver = function() {
+    return window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver;
+  };
+
   return Mutations;
 
 })(Engine.Pipe);
@@ -20963,97 +20990,7 @@ module.exports = Mutations;
 
 });
 require.register("gss/lib/input/Measurements.js", function(exports, require, module){
-var Measurements;
 
-Measurements = (function() {
-  function Measurements(input) {
-    this.input = input;
-  }
-
-  Measurements.prototype.plus = function(a, b) {
-    return a + b;
-  };
-
-  Measurements.prototype.minus = function(a, b) {
-    return a - b;
-  };
-
-  Measurements.prototype.multiply = function(a, b) {
-    return a * b;
-  };
-
-  Measurements.prototype.divide = function(a, b) {
-    return a / b;
-  };
-
-  Measurements.prototype['::window[width]'] = function(context) {
-    var w;
-    w = window.innerWidth;
-    if (GSS.config.verticalScroll) {
-      w = w - GSS.get.scrollbarWidth();
-    }
-    return ['suggest', ['get', "::window[width]"], ['number', w], 'required'];
-  };
-
-  Measurements.prototype['::window[height]'] = function(context) {
-    var h;
-    h = window.innerHeight;
-    if (GSS.config.horizontalScroll) {
-      h = h - GSS.get.scrollbarWidth();
-    }
-    return ['suggest', ['get', "::window[height]"], ['number', w], 'required'];
-  };
-
-  Measurements.prototype['::window[x]'] = 0;
-
-  Measurements.prototype['::window[y]'] = 0;
-
-  Measurements.prototype['::scope[x]'] = 0;
-
-  Measurements.prototype['::scope[y]'] = 0;
-
-  Measurements.prototype["[right]"] = function(path, node) {
-    return this.plus(this._get(node, "x"), this._get(node, "width"));
-  };
-
-  Measurements.prototype["[bottom]"] = function(path, node) {
-    return this.plus(this._get(node, "y"), this._get(node, "height"));
-  };
-
-  Measurements.prototype["[center-x]"] = function(path, node) {
-    return this.plus(this._get(node, "x"), this.divide(this._get(node, "width"), 2));
-  };
-
-  Measurements.prototype["[center-y]"] = function(path, node) {
-    return this.plus(this._get(node, "y"), this.divide(this._get(node, "height"), 2));
-  };
-
-  Measurements.prototype['get$'] = {
-    prefix: '[',
-    suffix: ']',
-    command: function(path, object, property) {
-      var id;
-      if (object.nodeType) {
-        id = GSS.setupId(object);
-      } else if (object.absolute === 'window') {
-        return ['get', "::window[" + prop + "]", path];
-      }
-      if (property.indexOf("intrinsic-") === 0) {
-        if (this.register("$" + id + "[intrinsic]", context)) {
-          if (engine.vars[k] !== val) {
-            return ['suggest', ['get', property, id, path], ['number', val], 'required'];
-          }
-        }
-      }
-      return ['get', property, '$' + id, path];
-    }
-  };
-
-  return Measurements;
-
-})();
-
-module.exports = Measurements;
 
 });
 require.register("gss/lib/input/Selectors.js", function(exports, require, module){
@@ -21504,14 +21441,14 @@ require.register("gss/lib/output/Constraints.js", function(exports, require, mod
 var Constraints;
 
 Constraints = (function() {
-  function Constraints(engine) {
-    this.engine = engine;
+  function Constraints(input) {
+    this.input = input;
     this.solver = new c.SimplexSolver();
   }
 
-  Constraints.prototype.read = function() {};
-
-  Constraints.prototype.write = function() {};
+  Constraints.prototype.read = function() {
+    return commands;
+  };
 
   Constraints.prototype.eq = function(a, b, s, w) {
     return c.Equation(a, b, s, w);

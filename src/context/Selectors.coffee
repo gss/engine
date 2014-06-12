@@ -266,7 +266,9 @@ class Selectors
     prefix: 'window'
     absolute: "window"
 
+# Set up custom trigger for all selector operations
 for property, command of Selectors::
   if typeof command == 'object'
     command.callback = 'onDOMQuery'
+
 module.exports = Selectors

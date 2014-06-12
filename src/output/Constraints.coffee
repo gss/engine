@@ -1,11 +1,9 @@
 class Constraints
-  constructor: (@engine) ->
+  constructor: (@input) ->
     @solver = new c.SimplexSolver()
 
-  read: ->
-
-  write: ->
-
+  read: -> (commands)
+  
   eq: (a, b, s, w) -> 
     return c.Equation(a, b, s, w)
 

@@ -7,7 +7,7 @@ class Pipe
   constructor: (@input, @output) ->
 
   pipe: (pipe) ->
-    @output = pipe
+    return @output = pipe
 
   read: ->
     if @input
@@ -15,8 +15,6 @@ class Pipe
         return @input.write.apply(@input, arguments)
       else
         return @input.apply(this, arguments)
-    if @process
-      return @process.apply(this, arguments)
 
   write: ->
     if @output.read
@@ -24,9 +22,12 @@ class Pipe
     else
       return @output.apply(this, arguments)
 
+
+
+
 class Engine extends Pipe
-  Expressions:  require('./Expressions.js')
-  References:   require('./References.js')
+  Expressions:  require('./context/Expressions.js')
+  References:   require('./context/References.js')
 
   constructor: (scope) ->
     # GSS(node) finds parent nearest engine or makes one on root
@@ -56,20 +57,20 @@ class Engine extends Pipe
     else
       return new arguments.callee(scope)
 
-  # Hook: Clean up nested stuff when removing something
-  clean: ->
-    return @context.clean.apply(@context, arguments)
-
   # Hook: Should interpreter iterate given object?
   isCollection: (object) ->
     if typeof object == 'object' && object.length != undefined
       unless typeof object[0] == 'string' && !@context[object[0]]
         return true
 
-  # Delegate: Pass input to expressions input
+  # Delegate: Clean up nested things
+  clean: ->
+    return @context.clean.apply(@context, arguments)
+
+  # Delegate: Pass input to interpreter
   read: ->
-    return @expressions.read.apply(this, arguments)
-    
+    return @expressions.read.apply(@expressions, arguments)
+
   # Delegate: Reference tracking, helps with bookkeeping
   set: ->
     return @references.set.apply(@references, arguments)
@@ -78,6 +79,7 @@ class Engine extends Pipe
   remove: ->
     return @references.remove.apply(@references, arguments)
 
+  # Catch-all event handler, fires @onevent methods
   handleEvent: (e) ->
     method = 'on' + e.type
     if method in @
