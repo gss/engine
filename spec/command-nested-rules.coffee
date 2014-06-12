@@ -167,10 +167,11 @@ describe 'Nested Rules', ->
         main = container.getElementsByTagName('main')[0]
         parent = main.parentNode
         Scenario done, container, [->
-          console.error('Mutation: section.removeChild(main#box1)')        
-          #expect(engine.lastWorkerCommands).to.eql [
-          #    ["eq", ["get","[width]", "$box0", "div+main$box1!~$box0"], ["number",50]]
-          #  ]
+          console.error('Mutation: section.removeChild(main#box1)')   
+          console.log(engine.lastWorkerCommands, 123123123)     
+          expect(engine.lastWorkerCommands).to.eql [
+              ["eq", ["get","[width]", "$box0", "div+main$box1!~$box0div"], ["number",50]]
+            ]
           parent.removeChild(main)
           console.log('remove', main)
         , ->

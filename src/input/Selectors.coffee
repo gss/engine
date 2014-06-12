@@ -1,102 +1,28 @@
-###
+dummy = document.createElement('_')
 
-Root commands, if bound to a dom query, will spawn commands
-to match live results of query.
-
-###
-
-# Commander
-# ======================================================== 
-#
-# transforms & generates needed commands for engine
-
-Expression = require('./Expression.js')
-Observer = require('./Observer.js')
-Registry = require('./Registry.js')
-
-
-class Commander extends Expression
-
-  constructor: (engine) ->
-    @engine = engine
-    @registry = new Registry(@)
-    @observer = new Observer(@)
-    super()
-
-  toId: (value) ->
-    return value && value.nodeType && "$" + GSS.setupId(value)
-    
-  execute: (ast) ->
-    if ast.commands?
-      for command in ast.commands 
-        if ast.isRule
-          command.parentRule = ast
-        @evaluate command
-
-  return: (command) ->
-    @engine.registerCommand command
-    console.error('Command', command)
-    # send command to thread
-
-
+class Selectors
+  # Set up DOM observer and filter out old elements 
+  onDOMQuery: (engine, scope, args, result, operation, continuation) ->
+    return @engine.mutations.filter(scope || operation.func && args[0], result, operation, continuation)
+  
+  # Clean up nested when parent selector doesnt match anymore
   onRemove: (continuation, value, id) ->
-    if watchers = @observer._watchers[id]
+    if watchers = @input._watchers[id]
       for watcher, index in watchers by 2
         continue unless watcher
         path = (watchers[index + 1] || '') + watcher.path
         watchers[index] = null
 
-        console.log('clean', id, '@', continuation)
-        if result = @observer[path]
-          delete @observer[path]
+        if result = @input[path]
+          delete @input[path]
           if result.length != undefined
             for child in result
-              @registry.remove(path, child, child._gss_id)
+              @engine.references.remove(path, child)
           else
-            @registry.remove(path, result, result._gss_id)
+            @engine.references.remove(path, result)
 
-      delete @observer._watchers[id]
+      delete @input._watchers[id]
     @
-  # Getters
-    
-  'get$':
-    prefix: '['
-    suffix: ']'
-    command: (path, object, property) ->
-      if object.nodeType
-        id = GSS.setupId(object)
-      else if object.absolute is 'window'
-        return ['get',"::window[#{prop}]", path]
-
-    
-      # intrinsics
-      if property.indexOf("intrinsic-") is 0
-        if @register "$" + id + "[intrinsic]", context
-          val = @engine.measureByGssId(id, property)
-          # intrinsics always need remeasurement
-          engine.setNeedsMeasure true
-          if engine.vars[k] isnt val
-            return ['suggest', ['get', property, id, path], ['number', val], 'required'] 
-      return ['get', property, '$' + id, path]
-  
-
-    
-  # Conditionals
-  
-  "$rule":
-    prefix: "{"
-    scope: true
-    evaluate: (arg, i, evaluated) ->
-      return arg if i == 0
-      if i == 1 || (evaluated[1] && i == 2)
-        return @evaluate arg
-
-  "$if":
-    prefix: "@if"
-    evaluate: (arg, i, evaluated) ->
-      return arg if i == 0
-      if i == 1 || (evaluated[1] ? i == 2 : i == 3)
-        return @evaluate arg
 
 
   # Selector commands
@@ -108,10 +34,7 @@ class Commander extends Expression
       return node if node.webkitMatchesSelector(value)
       
     # Create a shortcut operation to get through a group of operations
-    toOperation: (object, operation) ->
-      debugger
-      if operation.tail.parent == operation && operation.tail.name == ' '
-        console.log(object, 2348778)
+    perform: (object, operation) ->
       name = operation.group
       shortcut = [name, operation.promise]
       shortcut.parent = (operation.head || operation).parent
@@ -129,6 +52,8 @@ class Commander extends Expression
           shortcut.splice(1, 0, tail[1])
       return shortcut
 
+
+    # Walk through commands in selector to make a dictionary used by Observer
     analyze: (operation, parent) ->
       switch operation[0]
         when '$tag'
@@ -158,7 +83,6 @@ class Commander extends Expression
   '$class':
     prefix: '.'
     group: '$query'
-    type: 'qualifier'
     1: "getElementsByClassName"
     2: (node, value) ->
       return node if node.classList.contains(value)
@@ -166,7 +90,6 @@ class Commander extends Expression
   '$tag':
     prefix: ''
     group: '$query'
-    type: 'qualifier'
     1: "getElementsByTagName"
     2: (node, value) ->
       return node if node.tagName == value.toUpperCase()
@@ -174,7 +97,6 @@ class Commander extends Expression
   '$id':
     prefix: '#'
     group: '$query'
-    type: 'qualifier'
     1: "getElementById"
     2: (node, value) ->
       return node if node.id == name
@@ -215,11 +137,7 @@ class Commander extends Expression
     type: 'combinator'
     prefix: '::'
     lookup: true
-
-  'number': (operation) ->
-    return parseFloat(operation[1])
-
-
+    
   # CSS Combinators with reversals
 
   ' ':
@@ -238,7 +156,7 @@ class Commander extends Expression
   '>':
     group: '$query'
     1: 
-      if "children" in document 
+      if "children" in dummy 
         (node) -> 
           return node.children
       else 
@@ -247,7 +165,7 @@ class Commander extends Expression
 
   '!>':
     1: 
-      if document.children[0].hasOwnProperty("parentElement") 
+      if dummy.hasOwnProperty("parentElement") 
         (node) ->
           return node.parentElement
       else
@@ -258,7 +176,7 @@ class Commander extends Expression
   '+':
     group: '$query'
     1: 
-      if document.children[0].hasOwnProperty("nextElementSibling")
+      if dummy.hasOwnProperty("nextElementSibling")
         (node) ->
           return node.nextElementSibling
       else
@@ -268,7 +186,7 @@ class Commander extends Expression
 
   '!+':
     1:
-      if document.children[0].hasOwnProperty("previousElementSibling")
+      if dummy.hasOwnProperty("previousElementSibling")
         (node) ->
           return node.previousElementSibling
       else
@@ -348,82 +266,7 @@ class Commander extends Expression
     prefix: 'window'
     absolute: "window"
 
-  # Global getters
-  '::window[width]': (context) ->
-    if @register "::window[size]", context
-      w = window.innerWidth
-      w = w - GSS.get.scrollbarWidth() if GSS.config.verticalScroll
-      if @set context, w
-        return ['suggest', ['get', "::window[width]"], ['number', w], 'required']
-
-  '::window[height]': (context) ->
-    if @register "::window[size]", context
-      h = window.innerHeight
-      h = h - GSS.get.scrollbarWidth() if GSS.config.horizontalScroll
-      if @set context, h
-        return ['suggest', ['get', "::window[height]"], ['number', w], 'required']
-
-  '::window[center-x]': (context) ->
-    if @register "::window[width]", context
-      return ['eq', ['get','::window[center-x]'], ['divide',['get','::window[width]'],2], 'required']
-
-  '::window[right]': (context) ->
-    if @register "::window[width]", context
-      return ['eq', ['get','::window[right]'], ['get','::window[width]'], 'required']
-
-  '::window[center-y]': (context) ->
-    if @register "::window[height]", context
-      return ['eq', ['get','::window[center-y]'], ['divide',['get','::window[height]'],2], 'required']
-
-  '::window[bottom]': (context) ->
-    if @register "::window[height]", context
-      return ['eq', ['get','::window[bottom]'], ['get','::window[height]'], 'required']
-
-  '::window[size]': 
-    watch: 'onresize'
-    context: ->
-      window
-
-
-  # Constants
-
-  '::window[x]': 0
-  '::window[y]': 0
-  '::scope[x]': 0
-  '::scope[y]': 0
-  
-  'get': true
-
-  # Constraints
-
-  'strength': true
-  'suggest': true
-  'eq': true
-  'lte': true
-  'gte': true
-  'lt': true
-  'gt': true
-  'stay': true
-
-
-  # Math operators
-
-  'number': true
-  'plus': true
-  'minus' : true
-  'multiply': true
-  'divide': true
-  
-
-  # Equasions
-
-  "?>=": true
-  "?<=": true
-  "?==": true
-  "?!=": true
-  "?>": true
-  "?<": true
-  "&&": true
-  "||": true
-
-module.exports = Commander
+for property, command of Selectors::
+  if typeof command == 'object'
+    command.callback = 'onDOMQuery'
+module.exports = Selectors

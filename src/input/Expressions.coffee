@@ -1,14 +1,22 @@
-class Expression
-  constructor: ->
-    @continuations = {}
+# Interepretes given expressions
+# Engine -> Engine
+
+class Expressions extends Engine.Pipe
+  constructor: (@input, @output, @context) ->
+    @output ||= @input
+    @context ||= @input || @
+
+  # Hook: Evaluate input
+  read: ->
+    return @evaluate.apply(@, arguments)
 
   # Evaluate operation depth first
   evaluate: (operation, context, continuation, from, ascending) ->
-    offset = operation.offset ? @preprocess(operation).offset
+    offset = operation.offset ? @analyze(operation).offset
 
     # Use a shortcut operation when possible
     if promise = operation.promise
-      operation = operation.tail.shortcut ||= @[operation.group].toOperation(@, operation)
+      operation = operation.tail.shortcut ||= @context[operation.group].perform(@, operation)
       from = ascending != undefined && 1 || undefined
 
     # Recursively evaluate arguments, stop on undefined.
@@ -32,11 +40,11 @@ class Expression
 
     # No-op commands are to be executed by something else (e.g. Thread)
     if operation.noop
-      return if operation.parent then args else @return(args)
+      return if operation.parent then args else @write(args)
 
     # Look up method on the first argument
     unless func = operation.func
-      scope = (typeof args[0] == 'object' && args.shift()) || @engine.queryScope
+      scope = (typeof args[0] == 'object' && args.shift()) || @input.scope
       func = scope && scope[operation.method]
 
     # Execute the function
@@ -45,39 +53,29 @@ class Expression
 
     result = func.apply(scope || @, args)
 
-    # Set up DOM observer
-    if operation.type == 'combinator' || operation.type == 'qualifier' || operation.group == '$query'
-      result = @observer.set(scope || operation.func && args[0], result, operation, continuation)
+    if callback = operation.callback
+      result = @context[callback](scope, args, operation, continuation)
 
     path = (continuation || '') + operation.path
     
     # Fork for each item in collection, ascend 
     if result?
-      if @isCollection(result)
+      if @input.isCollection(result)
         console.group path
         for item in result
-          @evaluate operation.parent, undefined, path + @toId(item), operation.index, item
+          @evaluate operation.parent, undefined, @References(path, item), operation.index, item
         console.groupEnd path
       else if !context
         if operation.parent
           @evaluate operation.parent, undefined, path, operation.index, result
         else
-          return @return result
+          return @write result
     return result
 
-  toPath: (operation) ->
-    prefix = operation.prefix || ''
-    suffix = operation.suffix || ''
-    path = ''
-    start = 1 + (operation.length > 2)
-    for index in [start ... operation.length]
-      path += operation[index]
-    return prefix + path + suffix
-
   # Process and pollute a single AST node with meta data.
-  preprocess: (operation, parent) ->
+  analyze: (operation, parent) ->
     operation.name = operation[0]
-    def = @[operation.name]
+    def = @input.context[operation.name]
 
     if parent
       operation.parent = parent
@@ -85,7 +83,7 @@ class Expression
 
     # Handle commands that refer other commands (e.g. [$combinator, node, >])
     operation.arity = operation.length - 1
-    if def.lookup
+    if def && def.lookup
       operation.arity--
       operation.skip = operation.length - operation.arity
       operation.name = (def.prefix || '') + operation[operation.skip]
@@ -95,34 +93,36 @@ class Expression
       if typeof def.lookup == 'function'
         def = def.lookup.call(@, operation)
       else
-        def = @[operation.name]
+        def = @context[operation.name]
 
+
+    operation.offset = 0
+    
+    for child, index in operation
+      if child instanceof Array
+        @analyze(child, operation).group
+
+    if def == undefined
+      operation.noop = true
+      return operation
 
     # Assign definition properties to AST node
     operation.group  = group  if group  = def.group
     operation.prefix = prefix if prefix = def.prefix
     operation.suffix = suffix if suffix = def.suffix
-
-    unless def == true
-      operation.path = @toPath(operation)
+    operation.path = @serialize(operation)
 
     # Group multiple nested tokens into a single token
     for child, index in operation
       if child instanceof Array
-        @preprocess(child, operation).group
         if index == 1 && group && group == child.group
-          if def = @[group]
+          if def = @context[group]
             tail = child.tail ||= (def.attempt(child) && child)
             if tail
               operation.promise = (child.promise || child.path) + operation.path
               tail.head = operation
               tail.promise = operation.promise
               operation.tail = tail
-
-    operation.offset = 0
-    if def == true
-      operation.noop = true
-      return operation
 
     # Try predefined command if can't dispatch by number of arguments
     if func = def[operation.arity]
@@ -131,8 +131,8 @@ class Expression
       func = def.command
 
     if typeof func == 'string'
-      if @[func]
-        operation.func = @[func]
+      if command = @commands[func]
+        operation.func = command
       else
         operation.method = func
     else
@@ -140,10 +140,14 @@ class Expression
 
     return operation
 
-  # Should we iterate the object?
-  isCollection: (object) ->
-    if typeof object == 'object' && object.length != undefined
-      unless typeof object[0] == 'string' && @[object[0]] == true
-        return true
+  # Serialize operation to a string with arguments, but without context
+  serialize: (operation) ->
+    prefix = operation.prefix || ''
+    suffix = operation.suffix || ''
+    path = ''
+    start = 1 + (operation.length > 2)
+    for index in [start ... operation.length]
+      path += operation[index]
+    return prefix + path + suffix
 
-module.exports = Expression
+module.exports = Expressions

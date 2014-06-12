@@ -1,79 +1,23 @@
-class Observer
-  constructor: (@object) ->
-    # Polyfill
-    unless window.MutationObserver
-      if window.WebKitMutationObserver
-        window.MutationObserver = window.WebKitMutationObserver
-      else
-        window.MutationObserver = window.JsMutationObserver
+# Listens for changes in DOM, invalidates cached DOM Queries
+# MutationEvent -> Expressions
 
-    return unless window.MutationObserver
+class Mutations extends Engine.Pipe
+  constructor: ->
+    Mutations.Observer ||= window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
+    return false unless Mutations.Observer
+    super.apply(this, arguments)
+    
     @_watchers = {}
-    @listener = new MutationObserver @listen.bind(this)
-    @listener.observe(document.body, GSS.config.observerOptions)
+    @listener = new Mutations.Observer @read.bind(this)
+    @listener.observe(@input.scope)
 
-
-  match: (queries, node, group, qualifier, changed) ->
-    return unless id = node._gss_id
-    return unless watchers = @_watchers[id]
-    for operation, index in watchers by 2
-      if groupped = operation[group]
-        if qualifier
-          if indexed = groupped[qualifier]
-            if queries.indexOf(operation) == -1
-              queries.push(operation, watchers[index + 1])
-        else
-          for change in changed
-            if indexed = groupped[change.tagName] || groupped["*"]
-              if queries.indexOf(operation) == -1
-                queries.push(operation, watchers[index + 1])
-    @
-
-  set: (node, result, operation, continuation) ->
-    path = (continuation || '') + operation.path
-    old = @[path]
-    if result == old
-      return
-
-    if id = GSS.setupId(node || @object.engine.queryScope)
-      watchers = @_watchers[id] ||= []
-      if watchers.indexOf(operation) == -1
-        watchers.push(operation, continuation)
-      
-    isCollection = result && result.length != undefined
-
-    if old && old.length
-      removed = undefined
-      for child in old
-        if !result || old.indexOf.call(result, child) == -1
-          @object.registry.remove path, child
-          removed = true
-      if continuation && (!isCollection || !result.length)
-        @object.registry.remove(continuation, path)
-
-    if isCollection
-      added = undefined
-      for child in result
-        if !old || watchers.indexOf.call(old, child) == -1
-          @object.registry.append path, child
-          (added ||= []).push child if old
-
-      if continuation && (!old || !old.length)
-        @object.registry.append(continuation, path)
-
-      # Snapshot live node list for future reference
-      if result && result.item && (!old || removed || added)
-        result = watchers.slice.call(result, 0)
-    else if result != undefined || old != undefined
-      @object.registry.set path, result
-
-    @[path] = result
-    if result
-      console.log('found', result.nodeType == 1 && 1 || result.length, ' by' ,path)
-    return added || result
-
-
-  listen: (mutations) ->
+  # Re-evaluate updated queries
+  write: (queries) ->
+    for query, index in queries by 2
+      @output.read query, undefined, queries[index + 1]
+    
+  # Listens for DOM changes and precomputes combinators
+  read: (mutations) ->
     queries = []
     for mutation in mutations
       target = parent = mutation.target
@@ -150,9 +94,65 @@ class Observer
               @match(queries, child, '!', undefined, parent)
             parent = parent.parentNode
 
-    for query, index in queries by 2
-      @object.evaluate query, undefined, queries[index + 1]
-    
-    @object.engine.dispatch 'solved'
     return true
-module.exports = Observer
+
+  # Filters out old values from DOM collections
+  filter: (node, result, operation, continuation) ->
+    path = (continuation || '') + operation.path
+    old = @[path]
+    if result == old
+      return
+
+    if id = @References::get(node || @input.scope)
+      watchers = @_watchers[id] ||= []
+      if watchers.indexOf(operation) == -1
+        watchers.push(operation, continuation)
+      
+    isCollection = result && result.length != undefined
+
+    if old && old.length
+      removed = undefined
+      for child in old
+        if !result || old.indexOf.call(result, child) == -1
+          @input.remove path, child
+          removed = true
+      if continuation && (!isCollection || !result.length)
+        @input.remove(continuation, path)
+
+    if isCollection
+      added = undefined
+      for child in result
+        if !old || watchers.indexOf.call(old, child) == -1
+          @input.append path, child
+          (added ||= []).push child if old
+
+      if continuation && (!old || !old.length)
+        @input.append(continuation, path)
+
+      # Snapshot live node list for future reference
+      if result && result.item && (!old || removed || added)
+        result = watchers.slice.call(result, 0)
+    else if result != undefined || old != undefined
+      @input.set path, result
+
+    @[path] = result
+    if result
+      console.log('found', result.nodeType == 1 && 1 || result.length, ' by' ,path)
+    return added || result
+
+  match: (queries, node, group, qualifier, changed) ->
+    return unless id = node._gss_id
+    return unless watchers = @_watchers[id]
+    for operation, index in watchers by 2
+      if groupped = operation[group]
+        if qualifier
+          if indexed = groupped[qualifier]
+            if queries.indexOf(operation) == -1
+              queries.push(operation, watchers[index + 1])
+        else
+          for change in changed
+            if indexed = groupped[change.tagName] || groupped["*"]
+              if queries.indexOf(operation) == -1
+                queries.push(operation, watchers[index + 1])
+    @
+module.exports = Mutations
