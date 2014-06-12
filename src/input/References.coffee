@@ -2,13 +2,17 @@
 # Will handle references and ownership for garbage collection
 # Engine -> Engine
 
-class References extends Engine.Pipe
+class References
   constructor: (@input, @output) ->
     @output ||= @input
 
   # Trigger cleaning on output object
   write: ->
-    return @output.clean.apply(this, arguments)
+    return @output.clean.apply(@output, arguments)
+
+  # Read in new references
+  read: ->
+    return @set.apply(@, arguments)
 
   # Return concatenated path for a given object and prefix
   combine: (path, value) ->

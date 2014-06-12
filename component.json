@@ -42,5 +42,5 @@
     "vendor/observe.js",
     "vendor/sidetable.js"
   ],
-  "main": "lib/GSS-with-compiler.js"
+  "main": "lib/Engine.js"
 }

@@ -1,10 +1,11 @@
 # Listens for changes in DOM, invalidates cached DOM Queries
 # MutationEvent -> Expressions
 
-class Mutations extends Engine.Pipe
+class Mutations
   constructor: (@input, @output) ->
-    Mutations.Observer ||= @getObserver()
-    return false unless Mutations.Observer
+    unless Mutations.Observer ||= @getObserver()
+      return false 
+
     super.apply(this, arguments)
     
     @_watchers = {}

@@ -26,7 +26,7 @@ class Pipe
 
 
 class Engine extends Pipe
-  Expressions:  require('./context/Expressions.js')
+  Expressions:  require('./input/Expressions.js')
   References:   require('./context/References.js')
 
   constructor: (scope) ->
@@ -69,7 +69,7 @@ class Engine extends Pipe
 
   # Delegate: Pass input to interpreter
   read: ->
-    return @expressions.read.apply(@expressions, arguments)
+    return @expressions.evaluate.apply(@expressions, arguments)
 
   # Delegate: Reference tracking, helps with bookkeeping
   set: ->

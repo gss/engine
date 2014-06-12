@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-12) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-13) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20253,7 +20253,7 @@ Pipe = (function() {
 Engine = (function(_super) {
   __extends(Engine, _super);
 
-  Engine.prototype.Expressions = require('./context/Expressions.js');
+  Engine.prototype.Expressions = require('./input/Expressions.js');
 
   Engine.prototype.References = require('./context/References.js');
 
@@ -20303,7 +20303,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.read = function() {
-    return this.expressions.read.apply(this.expressions, arguments);
+    return this.expressions.evaluate.apply(this.expressions, arguments);
   };
 
   Engine.prototype.set = function() {
@@ -20336,7 +20336,7 @@ module.exports = Engine;
 
 });
 require.register("gss/lib/Document.js", function(exports, require, module){
-var Context, Document, prop, value, _ref, _ref1,
+var Context, Document, prop, value, _ref, _ref1, _ref2,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -20362,8 +20362,7 @@ Document = (function(_super) {
     this.mutations.pipe(this.expressions);
     this.measurements.pipe(this.expressions);
     this.expressions.pipe(this.solver);
-    this.solver.pipe(this.styles);
-    this.references.write = this.context.clean.bind(this.context);
+    this.solver.constraints.pipe(this.styles);
     this.references.write = this.context.clean.bind(this.context);
     if (this.scope.nodeType === 9) {
       this.scope.addEventListener('DOMContentLoaded', this);
@@ -20405,6 +20404,12 @@ for (prop in _ref1) {
   DOM.prototype[prop] = value;
 }
 
+_ref2 = DOM.prototype.Rules.prototype;
+for (prop in _ref2) {
+  value = _ref2[prop];
+  DOM.prototype[prop] = value;
+}
+
 Engine.Document = Document;
 
 module.exports = Document;
@@ -20432,8 +20437,8 @@ Solver = (function(_super) {
       this.read = this.worker.postMessage.bind(this.worker);
     } else {
       this.constraints = new this.Constraints(this);
+      this.context = this.constraints;
       this.expressions.pipe(this.constraints);
-      this.constraints.pipe(this.output);
     }
   }
 
@@ -20487,13 +20492,9 @@ module.exports = Solver;
 
 });
 require.register("gss/lib/input/References.js", function(exports, require, module){
-var References,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var References;
 
-References = (function(_super) {
-  __extends(References, _super);
-
+References = (function() {
   function References(input, output) {
     this.input = input;
     this.output = output;
@@ -20501,7 +20502,11 @@ References = (function(_super) {
   }
 
   References.prototype.write = function() {
-    return this.output.clean.apply(this, arguments);
+    return this.output.clean.apply(this.output, arguments);
+  };
+
+  References.prototype.read = function() {
+    return this.set.apply(this, arguments);
   };
 
   References.prototype.combine = function(path, value) {
@@ -20563,19 +20568,15 @@ References = (function(_super) {
 
   return References;
 
-})(Engine.Pipe);
+})();
 
 module.exports = References;
 
 });
 require.register("gss/lib/input/Expressions.js", function(exports, require, module){
-var Expressions,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var Expressions;
 
-Expressions = (function(_super) {
-  __extends(Expressions, _super);
-
+Expressions = (function() {
   function Expressions(input, output, context) {
     this.input = input;
     this.output = output != null ? output : this.input;
@@ -20749,24 +20750,19 @@ Expressions = (function(_super) {
 
   return Expressions;
 
-})(Engine.Pipe);
+})();
 
 module.exports = Expressions;
 
 });
 require.register("gss/lib/input/Mutations.js", function(exports, require, module){
-var Mutations,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var Mutations;
 
-Mutations = (function(_super) {
-  __extends(Mutations, _super);
-
+Mutations = (function() {
   function Mutations(input, output) {
     this.input = input;
     this.output = output;
-    Mutations.Observer || (Mutations.Observer = this.getObserver());
-    if (!Mutations.Observer) {
+    if (!Mutations.Observer || (Mutations.Observer = this.getObserver())) {
       return false;
     }
     Mutations.__super__.constructor.apply(this, arguments).apply(this, arguments);
@@ -20984,13 +20980,22 @@ Mutations = (function(_super) {
 
   return Mutations;
 
-})(Engine.Pipe);
+})();
 
 module.exports = Mutations;
 
 });
 require.register("gss/lib/input/Measurements.js", function(exports, require, module){
+var Measurements;
 
+Measurements = (function() {
+  function Measurements() {}
+
+  return Measurements;
+
+})();
+
+module.exports = Measurements;
 
 });
 require.register("gss/lib/input/Selectors.js", function(exports, require, module){
@@ -21420,11 +21425,11 @@ var Styles;
 Styles = (function() {
   Styles.Matrix = require('../lib/gl-matrix.js');
 
-  function Styles(engine) {
-    this.engine = engine;
-    this.input = this.engine;
-    this.output = output;
+  function Styles(input) {
+    this.input = input;
   }
+
+  Styles.prototype.read = function(data) {};
 
   Styles.prototype.position = function(node, offsets) {};
 
@@ -21441,14 +21446,15 @@ require.register("gss/lib/output/Constraints.js", function(exports, require, mod
 var Constraints;
 
 Constraints = (function() {
-  function Constraints(input) {
+  function Constraints(input, output) {
     this.input = input;
+    this.output = output;
     this.solver = new c.SimplexSolver();
   }
 
-  Constraints.prototype.read = function() {
-    return commands;
-  };
+  Constraints.prototype.read = function(commands) {};
+
+  Constraints.prototype.write = function(command) {};
 
   Constraints.prototype.eq = function(a, b, s, w) {
     return c.Equation(a, b, s, w);
@@ -21492,7 +21498,7 @@ Constraints = (function() {
 
   Constraints.prototype.suggest = function(a, b, s, w) {
     this.solver.solve();
-    this._editvar(varr, this.strength(s), this.strength(w));
+    this.edit(varr, this.strength(s), this.strength(w));
     this.solver.suggestValue(a, b);
     return this.solver.resolve();
   };
@@ -26558,7 +26564,7 @@ module.exports = {
     "vendor/observe.js",
     "vendor/sidetable.js"
   ],
-  "main": "lib/GSS-with-compiler.js"
+  "main": "lib/Engine.js"
 }
 
 });
@@ -26610,7 +26616,7 @@ require.alias("slightlyoff-cassowary.js/src/parser/parser.js", "gss/deps/cassowa
 require.alias("slightlyoff-cassowary.js/src/parser/api.js", "gss/deps/cassowary/src/parser/api.js");
 require.alias("slightlyoff-cassowary.js/index.js", "cassowary/index.js");
 
-require.alias("gss/lib/GSS-with-compiler.js", "gss/index.js");if (typeof exports == "object") {
+require.alias("gss/lib/Engine.js", "gss/index.js");if (typeof exports == "object") {
   module.exports = require("gss");
 } else if (typeof define == "function" && define.amd) {
   define([], function(){ return require("gss"); });

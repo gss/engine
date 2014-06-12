@@ -1,10 +1,10 @@
 # Solves the constraints, in a worker if desired
-# Document -> Thread -> Document
+# Document -> (opt: Thread) -> Expressions -> Constraints -> Document
 Engine = require('./Engine.js')
 
 class Solver extends Engine
   Constraints: require('./output/constraints.js')
-
+  
   constructor: (@input, @output, url) -> 
     super()
 
@@ -14,8 +14,9 @@ class Solver extends Engine
       @read   = @worker.postMessage.bind(@worker)
     else
       @constraints = new @Constraints(@)
+      @context     = @constraints
+
       @expressions.pipe @constraints
-      @constraints.pipe @output
 
   # Receieve message from worker
   onmessage: (e) ->

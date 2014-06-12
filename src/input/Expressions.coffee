@@ -1,7 +1,7 @@
 # Interepretes given expressions
 # Engine -> Engine
 
-class Expressions extends Engine.Pipe
+class Expressions
   constructor: (@input, @output = @input, @context) ->
     @output ||= @input
     @context ||= @input && @input.context || @

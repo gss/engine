@@ -1,6 +1,6 @@
 # Handles side effects caused by elements changing position or size
 
-class Properties extends Engine.Pipe
+class Properties
 
   # Math ops compatible with constraints API
 

@@ -1,9 +1,10 @@
 class Styles
   @Matrix: require('../lib/gl-matrix.js')
 
-  constructor: (@engine) -> 
-    @input   = @engine
-    @output  = output
+  constructor: (@input) -> 
+
+  # Receive solved styles
+  read: (data) ->
 
   position: (node, offsets) ->
 

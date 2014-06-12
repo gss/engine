@@ -1,9 +1,14 @@
 class Constraints
-  constructor: (@input) ->
+  constructor: (@input, @output) ->
     @solver = new c.SimplexSolver()
 
-  read: -> (commands)
-  
+  # Read commands
+  read: (commands)-> 
+
+  # Assign styles
+  write: (command) ->
+
+    
   eq: (a, b, s, w) -> 
     return c.Equation(a, b, s, w)
 
@@ -36,7 +41,7 @@ class Constraints
 
   suggest: (a, b, s, w) ->
     @solver.solve()
-    @_editvar varr, @strength(s), @strength(w)
+    @edit varr, @strength(s), @strength(w)
     @solver.suggestValue a, b
     @solver.resolve()
 
