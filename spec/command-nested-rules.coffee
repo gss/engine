@@ -1,4 +1,4 @@
-Engine = GSS.Engine #require 'gss-engine/lib/Engine.js'
+Engine = GSS #require 'gss-engine/lib/Engine.js'
 
 assert = chai.assert
 expect = chai.expect
@@ -45,13 +45,7 @@ describe 'Nested Rules', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          {
-            type:'constraint', 
-            cssText:'[target-size] == 100', 
-            commands: [
-              ["eq", ["get","[target-size]"], ["number",100]]
-            ]
-          }
+          ["eq", ["get","[target-size]"], ["number",100]]
         ]
         container.innerHTML =  ""
                               
@@ -63,45 +57,34 @@ describe 'Nested Rules', ->
           done()
         container.addEventListener 'solved', listener
         
-        engine = GSS(container)
-
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+        engine = new GSS(container)
+        engine.read(rules)
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
-          {
-            type:'constraint', 
-            cssText:'(header > h2.gizoogle ! section div:get("parentNode"))[target-size] == 100', 
-            commands: [
-              ["eq", 
-                ["get$",
-                  ['$pseudo',
-                    ['$tag',
+          ["eq", 
+            ["get$",
+              ['$pseudo',
+                ['$tag',
+                  ['$combinator', 
+                    ['$tag', 
                       ['$combinator', 
-                        ['$tag', 
-                          ['$combinator', 
-                            ['$class',
+                        ['$class',
+                          ['$tag', 
+                            ['$combinator', 
                               ['$tag', 
-                                ['$combinator', 
-                                  ['$tag', 
-                                    'header']
-                                  '>']
-                                'h2']
-                              'gizoogle']
-                            '!']
-                          'section']
-                        ' '] 
-                      'div']
-                    'get', 'parentNode']
-                  "[target-size]"]
-                ["number",100]
-              ]
-            ]
-          }
+                                'header']
+                              '>']
+                            'h2']
+                          'gizoogle']
+                        '!']
+                      'section']
+                    ' '] 
+                  'div']
+                'get', 'parentNode']
+              "[target-size]"]
+            ["number",100]
+          ]
         ]
         container.innerHTML =  """
           <section>
@@ -123,37 +106,26 @@ describe 'Nested Rules', ->
         ]
         
         engine = GSS(container)
-
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+        engine.read(rules)
 
     describe 'reversed sibling combinators', ->
       it 'should support mixed selectors', (done) ->
         rules = [
-          {
-            type:'constraint', 
-            cssText:'(div + main !~ div)[width] == 50', 
-            commands: [
-              ["eq", 
-                ["get$",
-                  ['$tag',
+          ["eq", 
+            ["get$",
+              ['$tag',
+                ['$combinator', 
+                  ['$tag', 
                     ['$combinator', 
                       ['$tag', 
-                        ['$combinator', 
-                          ['$tag', 
-                            'div']
-                          '+']
-                        'main']
-                      '!~'] 
-                    'div']
-                  "[width]"]
-                ["number",50]
-              ]
-            ]
-          }
+                        'div']
+                      '+']
+                    'main']
+                  '!~'] 
+                'div']
+              "[width]"]
+            50
+          ]
         ]
         container.innerHTML =  """
           <section>
@@ -182,12 +154,7 @@ describe 'Nested Rules', ->
         ]
         
         engine = GSS(container)
-
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+        engine.read(rules)
 
     describe '1 level w/ ::', ->
     

@@ -2,13 +2,17 @@
 # Engine -> Engine
 
 class Expressions
-  constructor: (@input, @output = @input, @context) ->
-    @output ||= @input
-    @context ||= @input && @input.context || @
+  constructor: (@engine, @context, @output) ->
+    @context ||= @engine && @engine.context || @
 
   # Hook: Evaluate input
   read: ->
     return @evaluate.apply(@, arguments)
+
+  # Hook: Output equasions
+  write: ->
+    console.log('Expression output', !!@engine.onDOMContentLoaded, Array.prototype.slice.call(arguments))
+    return @output.read.apply(@output, arguments)
 
   # Evaluate operation depth first
   evaluate: (operation, context, continuation, from, ascending) ->
@@ -25,8 +29,8 @@ class Expressions
 
     for argument, index in operation
       continue if offset > index
-      if index == 0
-        if continuation && !operation.noop
+      if index == 0 && (!operation.noop && !offset)
+        if continuation
           argument = continuation
       else if from == index
         argument = ascending
@@ -40,30 +44,35 @@ class Expressions
 
     # No-op commands are to be executed by something else (e.g. Thread)
     if operation.noop
-      return if operation.parent then args else @write(args)
+      parent = operation.parent
+      if parent && (!parent.noop || parent.parent)
+        return args
+      else
+        return @write(args)
 
     # Look up method on the first argument
     unless func = operation.func
-      scope = (typeof args[0] == 'object' && args.shift()) || @input.scope
+      scope = (typeof args[0] == 'object' && args.shift()) || @engine.scope
       func = scope && scope[operation.method]
 
     # Execute the function
     unless func
       throw new Error("Engine broke, couldn't find method: #{operation.method}")
 
-    result = func.apply(scope || @, args)
+    result = func.apply(scope || @context, args)
 
+    # Let context transform or filter the result
     if callback = operation.callback
-      result = @context[callback](scope, args, operation, continuation)
+      result = @context[callback](@engine, scope, args, result, operation, continuation)
 
     path = (continuation || '') + operation.path
     
-    # Fork for each item in collection, ascend 
+    # Ascend the execution (forks for each item in collection)
     if result?
-      if @input.isCollection(result)
+      if @engine.isCollection(result)
         console.group path
         for item in result
-          @evaluate operation.parent, undefined, @References(path, item), operation.index, item
+          @evaluate operation.parent, undefined, @engine.references.combine(path, item), operation.index, item
         console.groupEnd path
       else if !context
         if operation.parent
@@ -75,7 +84,7 @@ class Expressions
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
     operation.name = operation[0]
-    def = @input.context[operation.name]
+    def = @engine.context[operation.name]
 
     if parent
       operation.parent = parent
@@ -125,13 +134,16 @@ class Expressions
               operation.tail = tail
 
     # Try predefined command if can't dispatch by number of arguments
-    if func = def[operation.arity]
+    if typeof def == 'function'
+      func = def
+      operation.offset += 1
+    else if func = def[operation.arity]
       operation.offset += 1
     else
       func = def.command
 
     if typeof func == 'string'
-      if command = @commands[func]
+      if command = @context[func]
         operation.func = command
       else
         operation.method = func
@@ -149,5 +161,6 @@ class Expressions
     for index in [start ... operation.length]
       path += operation[index]
     return prefix + path + suffix
+
 
 module.exports = Expressions

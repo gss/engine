@@ -6,24 +6,23 @@ class References
   constructor: (@input, @output) ->
     @output ||= @input
 
+  # Read in new references
+  read: ->
+    return @set.apply(@, arguments)
+    
   # Trigger cleaning on output object
   write: ->
     return @output.clean.apply(@output, arguments)
 
-  # Read in new references
-  read: ->
-    return @set.apply(@, arguments)
-
   # Return concatenated path for a given object and prefix
   combine: (path, value) ->
-    return object if typeof object == 'string'
-    return continuation + References.get(object)
+    return value if typeof value == 'string'
+    return path + "$" + @acquire(value)
 
   # Set a single reference by key
   set: (path, value) ->
     if value == undefined
-      old = @[path]
-      if old
+      if old = @[path]
         @clean(path, old)
     else
       @[path] = @combine(path, value)
@@ -49,13 +48,23 @@ class References
         @write(path, value, id)
       console.groupEnd('remove ' + path)
 
-  # Get id for given object. Pass force to generate id if there's none
-  @get: (object, force) ->
-    id = object && object._gss_id
-    if !id && force
-      object._gss_id = id = ++References.uid
-    return id
-  @uid: 0
+  get: (path) ->
+    return @[path]
 
+  # Get uid for given object. Pass force to generate id if there's none
+  @identify: (object, force) ->
+    return object._gss_id ||= object.id || ++References.uid
+
+  # Get id or make one
+  @acquire: (object) ->
+    return References.identify(object, true)
+
+  identify: (object, force) ->
+    return References.identify(object, force)
+
+  acquire: (object) ->
+    return References.identify(object, true)
+
+  @uid: 0
 
 module.exports = References

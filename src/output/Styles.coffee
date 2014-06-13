@@ -1,5 +1,5 @@
 class Styles
-  @Matrix: require('../lib/gl-matrix.js')
+  @Matrix: require('../../vendor/gl-matrix.js')
 
   constructor: (@input) -> 
 
@@ -11,4 +11,4 @@ class Styles
   matrix: (node, offsets) ->
 
     
-module.exports = Elements
+module.exports = Styles

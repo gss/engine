@@ -1,48 +1,28 @@
 # Engine is a base class for scripting environments.
 # It includes interpreter and reference tracker. 
-# Input, output and method definitions are set in subclasses
+# Acts as a faux-pipe that evaluates Expressions
+# and outputs the results to submodules
 
-# simplistic pipe-like I/O, connects engines and modules together
-class Pipe
-  constructor: (@input, @output) ->
-
-  pipe: (pipe) ->
-    return @output = pipe
-
-  read: ->
-    if @input
-      if @input.write
-        return @input.write.apply(@input, arguments)
-      else
-        return @input.apply(this, arguments)
-
-  write: ->
-    if @output.read
-      return @output.read.apply(@output, arguments)
-    else
-      return @output.apply(this, arguments)
-
-
-
-
-class Engine extends Pipe
-  Expressions:  require('./input/Expressions.js')
-  References:   require('./context/References.js')
+class Engine
+  Expressions:
+    require('./input/Expressions.js')
+  References:
+    require('./input/References.js')
 
   constructor: (scope) ->
     # GSS(node) finds parent nearest engine or makes one on root
     if scope && scope.nodeType
-      unless @References
+      unless @Expressions
         while scope
-          if id = Document::References.get(scope)
+          if id = Engine.identify(scope)
             if engine = Engine[id]
               return engine
           break unless scope.parentNode
           scope = scope.parentNode
-        return new Document(scope)
+        return new (Engine.Document || Engine)(scope)
 
       # new GSS(node) assigns engine to node if it doesnt have one
-      id = @References.get(scope, true)
+      id = Engine::References.acquire(scope)
       if engine = Engine[id]
         return engine
 
@@ -50,12 +30,22 @@ class Engine extends Pipe
       @scope   = scope
 
     # Create a new engine
-    if @References
+    if @Expressions
+      @context     = new @Context(@)
       @expressions = new @Expressions(@)
       @references  = new @References(@)
+      @events      = {}
       return
     else
       return new arguments.callee(scope)
+
+  # Delegate: Pass input to interpreter
+  read: ->
+    return @expressions.evaluate.apply(@expressions, arguments)
+
+  # Hook: Pass output to a subscriber
+  write: ->
+    return @output.read.apply(@output, arguments)
 
   # Hook: Should interpreter iterate given object?
   isCollection: (object) ->
@@ -63,28 +53,43 @@ class Engine extends Pipe
       unless typeof object[0] == 'string' && !@context[object[0]]
         return true
 
-  # Delegate: Clean up nested things
-  clean: ->
-    return @context.clean.apply(@context, arguments)
+  once: (type, fn) ->
+    fn.once = true
+    @addEventListener(type, fn)
 
-  # Delegate: Pass input to interpreter
-  read: ->
-    return @expressions.evaluate.apply(@expressions, arguments)
+  addEventListener: (type, fn) ->
+    (@events[type] ||= []).push(fn)
 
-  # Delegate: Reference tracking, helps with bookkeeping
-  set: ->
-    return @references.set.apply(@references, arguments)
-  add: ->
-    return @references.add.apply(@references, arguments)
-  remove: ->
-    return @references.remove.apply(@references, arguments)
+  removeEventListener: (type, fn) ->
+    if group = @events && @events[type]
+      if index = group.indexOf(fn) > -1
+        group.splice(index, 1)
 
-  # Catch-all event handler, fires @onevent methods
-  handleEvent: (e) ->
-    method = 'on' + e.type
+  triggerEvent: (type, a, b, c) ->
+    if group = @events[type]
+      index = 0
+      while fn = group[index]
+        fn.call(@, a, b, c)
+        if fn.once
+          group.splice(index, 1)
+        else
+          index++
+    method = 'on' + type
     if method in @
-      return @[method](e)
+      return @[method](a, b, c)
 
-Engine.Pipe = Pipe
+  handleEvent: (e) ->
+    @triggerEvent(e.type, e)
+
+  @include = ->
+    Context = (@engine) ->
+    for mixin in arguments
+      for name, fn of mixin::
+        Context::[name] = fn
+    return Context
+
+  @identify: Engine::References.identify
+
+self.GSS = Engine
 
 module.exports = Engine

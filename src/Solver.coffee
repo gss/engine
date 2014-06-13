@@ -1,22 +1,24 @@
 # Solves the constraints, in a worker if desired
-# Document -> (opt: Thread) -> Expressions -> Constraints -> Document
+# Document -> (opt: Thread) -> Expressions -> Solutions -> Document
+
 Engine = require('./Engine.js')
 
-class Solver extends Engine
-  Constraints: require('./output/constraints.js')
+class Engine.Solver extends Engine
+  Solutions: 
+    require('./output/Solutions.js')
+  Context: Engine.include(
+    require('./context/Properties.js')
+    require('./context/Constraints.js')
+  )
   
   constructor: (@input, @output, url) -> 
     super()
 
     # Pass input to worker when using one
-    if typeof url == 'url' && "onmessage" in self
-      @worker = new @Worker(url)
-      @read   = @worker.postMessage.bind(@worker)
-    else
-      @constraints = new @Constraints(@)
-      @context     = @constraints
-
-      @expressions.pipe @constraints
+    unless @useWorker(url)
+      @solutions = new @Solutions(@)
+      # Pass constraints to a solver engine
+      @expressions.output = @solutions
 
   # Receieve message from worker
   onmessage: (e) ->
@@ -26,28 +28,31 @@ class Solver extends Engine
   onerror: (e) ->
     throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
 
-  # Initialize worker and subscribe engine to it
-  Worker: (url) ->
-    worker = new Worker url
-    worker.addEventListener @
-    return worker
+  # Initialize new worker and subscribe engine to its events
+  useWorker: (url) ->
+    return unless typeof url == 'string' && "onmessage" in self
+    @worker = new @getWorker(url)
+    @worker.addEventListener @
+    @read   = @worker.postMessage.bind(@worker)
+    return @worker
 
-# Solver inside a worker, initialized lazily
+  getWorker: (url) ->
+    return new Worker url
+
+
+# Solver inside a worker, initialized lazily on first message
 # Solver -> Solver
 
-class Thread extends Solver
+class Engine.Thread extends Engine.Solver
     
   write: (data) -> 
     self.postMessage(data)
 
   @handleEvent: (e) ->
-    @instance ||= new @(e.data.config)
-    @instance.read(e)
+    @instance ||= new Engine.Thread
+    @instance.read(e.data)
 
 if self.window && self.window.document == undefined && "onmessage" in self
   self.addEventListener 'message', Thread
 
-
-Engine.Solver = Solver
-
-module.exports = Solver
+module.exports = Engine.Solver

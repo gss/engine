@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-13) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-14) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -20,52 +20,79 @@ var l=this.rows.get(this._objective);a.trace&&console.log(l);var m=b.strength.sy
       (module.compiled = true && module) : this
 );
 
-var Solver,
+var Engine, _ref,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-Solver = (function(_super) {
+Engine = require('./Engine.js');
+
+Engine.Solver = (function(_super) {
   __extends(Solver, _super);
 
-  Solver.prototype.Constraints = require('./output/constraints.js');
+  Solver.prototype.Solutions = require('./output/Solutions.js');
 
-  function Solver() {
-    Solver.__super__.constructor.apply(this, arguments).apply(this, arguments);
-    this.context = new this.Constraints;
+  Solver.prototype.Context = Engine.include(require('./context/Properties.js'), require('./context/Constraints.js'));
+
+  function Solver(input, output, url) {
+    this.input = input;
+    this.output = output;
+    Solver.__super__.constructor.call(this);
+    if (!this.useWorker(url)) {
+      this.solutions = new this.Solutions(this);
+      this.expressions.output = this.solutions;
+    }
   }
+
+  Solver.prototype.onmessage = function(e) {
+    return this.write(e.data);
+  };
+
+  Solver.prototype.onerror = function(e) {
+    throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
+  };
+
+  Solver.prototype.useWorker = function(url) {
+    if (!(typeof url === 'string' && __indexOf.call(self, "onmessage") >= 0)) {
+      return;
+    }
+    this.worker = new this.getWorker(url);
+    this.worker.addEventListener(this);
+    this.read = this.worker.postMessage.bind(this.worker);
+    return this.worker;
+  };
+
+  Solver.prototype.getWorker = function(url) {
+    return new Worker(url);
+  };
 
   return Solver;
 
 })(Engine);
 
-module.exports = Solver;
+Engine.Thread = (function(_super) {
+  __extends(Thread, _super);
 
-var thread;
-
-thread = null;
-
-self.onmessage = function(m) {
-  var config;
-  if (!thread) {
-    config = m.data.config || {};
-    thread = new Thread(config);
+  function Thread() {
+    _ref = Thread.__super__.constructor.apply(this, arguments);
+    return _ref;
   }
-  thread.postMessage(m.data);
-  return self.postMessage(thread.output());
-  /*
-  if ast isnt null
-    #if c.Equation isnt null
-    postMessage(
-      a: 7
-      b: 5
-      c: 2
-    )
-  else
-    postMessage(
-      a: 1
-      b: 1
-      c: 1
-    )
-  */
 
-};
+  Thread.prototype.write = function(data) {
+    return self.postMessage(data);
+  };
+
+  Thread.handleEvent = function(e) {
+    this.instance || (this.instance = new Engine.Thread);
+    return this.instance.read(e.data);
+  };
+
+  return Thread;
+
+})(Engine.Solver);
+
+if (self.window && self.window.document === void 0 && __indexOf.call(self, "onmessage") >= 0) {
+  self.addEventListener('message', Thread);
+}
+
+module.exports = Engine.Solver;

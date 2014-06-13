@@ -1,4 +1,4 @@
 
 require("../Engine.js")
-Compiler = GSS.Compiler = require("gss-compiler")
+Engine.Compiler = require("gss-compiler")
 

@@ -2,22 +2,28 @@
 # MutationEvent -> Expressions
 
 class Mutations
-  constructor: (@input, @output) ->
-    unless Mutations.Observer ||= @getObserver()
-      return false 
+  options:
+    subtree: true
+    childList: true
+    attributes: true
+    characterData: true
+    # attributeOldValue: true
 
-    super.apply(this, arguments)
-    
+  Observer: 
+    window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
+
+  constructor: (@engine, @output) ->
     @_watchers = {}
-    @listener = new Mutations.Observer @read.bind(this)
-    @listener.observe(@input.scope)
+    @references = @engine.references
+    @listener = new @Observer @read.bind(this)
+    @listener.observe @engine.scope, @options 
 
   # Re-evaluate updated queries
   write: (queries) ->
     for query, index in queries by 2
       @output.read query, undefined, queries[index + 1]
     
-  # Listen to DOM changes and precomputes combinators
+  # Listen to changes in DOM to broadcast them all around
   read: (mutations) ->
     queries = []
     for mutation in mutations
@@ -104,7 +110,7 @@ class Mutations
     if result == old
       return
 
-    if id = @References::get(node || @input.scope)
+    if id = @references.identify(node || @engine.scope)
       watchers = @_watchers[id] ||= []
       if watchers.indexOf(operation) == -1
         watchers.push(operation, continuation)
@@ -115,26 +121,26 @@ class Mutations
       removed = undefined
       for child in old
         if !result || old.indexOf.call(result, child) == -1
-          @input.remove path, child
+          @references.remove path, child
           removed = true
       if continuation && (!isCollection || !result.length)
-        @input.remove(continuation, path)
+        @references.remove continuation, path
 
     if isCollection
       added = undefined
       for child in result
         if !old || watchers.indexOf.call(old, child) == -1
-          @input.append path, child
+          @references.append path, child
           (added ||= []).push child if old
 
       if continuation && (!old || !old.length)
-        @input.append(continuation, path)
+        @references.append continuation, path
 
       # Snapshot live node list for future reference
       if result && result.item && (!old || removed || added)
         result = watchers.slice.call(result, 0)
     else if result != undefined || old != undefined
-      @input.set path, result
+      @references.set path, result
 
     @[path] = result
     if result
@@ -156,8 +162,5 @@ class Mutations
               if queries.indexOf(operation) == -1
                 queries.push(operation, watchers[index + 1])
     @
-
-  getObserver: ->
-    return window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
 
 module.exports = Mutations

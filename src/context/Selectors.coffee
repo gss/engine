@@ -4,26 +4,6 @@ class Selectors
   # Set up DOM observer and filter out old elements 
   onDOMQuery: (engine, scope, args, result, operation, continuation) ->
     return @engine.mutations.filter(scope || operation.func && args[0], result, operation, continuation)
-  
-  # Clean up nested when parent selector doesnt match anymore
-  onRemove: (continuation, value, id) ->
-    if watchers = @input._watchers[id]
-      for watcher, index in watchers by 2
-        continue unless watcher
-        path = (watchers[index + 1] || '') + watcher.path
-        watchers[index] = null
-
-        if result = @input[path]
-          delete @input[path]
-          if result.length != undefined
-            for child in result
-              @engine.references.remove(path, child)
-          else
-            @engine.references.remove(path, result)
-
-      delete @input._watchers[id]
-    @
-
 
   # Selector commands
 
@@ -39,15 +19,15 @@ class Selectors
       shortcut = [name, operation.promise]
       shortcut.parent = (operation.head || operation).parent
       shortcut.index = (operation.head || operation).index
-      object.preprocess(shortcut)
+      object.analyze(shortcut)
       tail = operation.tail
       global = tail.arity == 1 && tail.length == 2
       op = operation
       while op
         @.analyze op, shortcut
-        break if op == operation.tail
+        break if op == tail
         op = op[1]
-      if (operation.tail.parent == operation)
+      if (tail.parent == operation)
         unless global
           shortcut.splice(1, 0, tail[1])
       return shortcut
@@ -71,7 +51,7 @@ class Selectors
 
     # Native selectors cant start with a non-space combinator or qualifier
     attempt: (operation) ->
-      @analyze(operation)
+      @analyze(operation) unless operation.name
       if operation.name == '$combinator'
         if group[group.skip] != ' '
           return false
@@ -79,7 +59,8 @@ class Selectors
         return false
       return true
 
-  
+  # Live collections
+
   '$class':
     prefix: '.'
     group: '$query'
@@ -94,6 +75,8 @@ class Selectors
     2: (node, value) ->
       return node if node.tagName == value.toUpperCase()
 
+  # DOM Lookups
+
   '$id':
     prefix: '#'
     group: '$query'
@@ -104,6 +87,8 @@ class Selectors
   '$virtual':
     prefix: '"'
     suffix: '"'
+
+  # Filters
 
   '$nth':
     prefix: ':nth('
@@ -249,17 +234,17 @@ class Selectors
 
   '::this':
     prefix: ''
-    valueOf: (node) ->
+    1: (node) ->
       return node
 
   '::parent':
     prefix: '::parent'
-    valueOf: (node) ->
+    1: (node) ->
       return node
 
   '::scope':
     prefix: "::scope"
-    valueOf: (node) ->
+    1: (node) ->
       return @engine.scope
 
   '::window':
@@ -267,6 +252,7 @@ class Selectors
     absolute: "window"
 
 # Set up custom trigger for all selector operations
+# to filter out old elements from collections
 for property, command of Selectors::
   if typeof command == 'object'
     command.callback = 'onDOMQuery'

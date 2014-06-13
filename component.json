@@ -11,22 +11,25 @@
   "remotes": [
     "https://raw.githubusercontent.com"
   ],
+  
   "scripts": [
-    "lib/_.js",
-
     "lib/Engine.js",
     "lib/Document.js",
     "lib/Solver.js",
+
+    "lib/context/Math.js", 
+    "lib/context/Properties.js", 
+    "lib/context/Rules.js", 
+    "lib/context/Selectors.js", 
+    "lib/context/Constraints.js",
 
     "lib/input/References.js", 
     "lib/input/Expressions.js", 
     "lib/input/Mutations.js", 
     "lib/input/Measurements.js", 
-    "lib/input/Selectors.js", 
-    "lib/input/Rules.js", 
 
-    "lib/output/Styles.js", 
-    "lib/output/Constraints.js",
+    "lib/output/Solutions.js", 
+    "lib/output/Styles.js",
 
     "vendor/gl-matrix.js",
     "vendor/MutationObserver.js",
@@ -42,5 +45,5 @@
     "vendor/observe.js",
     "vendor/sidetable.js"
   ],
-  "main": "lib/Engine.js"
+  "main": "lib/Document.js"
 }

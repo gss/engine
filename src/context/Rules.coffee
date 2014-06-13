@@ -1,3 +1,5 @@
+# CSS rules and conditions
+
 class Rules
   
   # Conditionals
