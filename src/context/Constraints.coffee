@@ -46,8 +46,4 @@ class Constraints
   divide: (left, right, strength, weight) ->
     return c.divide(a, right)
 
-
-for property, command of Constraints::
-  if command && command.type == 'constraint'
-    command.callback = 'onConstraint'
 module.exports = Constraints

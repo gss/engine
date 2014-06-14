@@ -26,7 +26,6 @@ class Solutions
     c.debug = true
 
   write: (results) ->
-    console.log('lolelo')
     @solver.addConstraint(result)
     if @output
       @output.read(results)
