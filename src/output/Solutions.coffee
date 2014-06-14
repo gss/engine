@@ -14,6 +14,8 @@ class Solutions
   process: (command) ->
     if command instanceof c.Constraint
       @solver.addConstraint(command)
+    else if @[command[0]]
+      @[command[0]].apply(@, Array.prototype.slice.call(command))
 
   # Assign styles
   write: (command) ->
