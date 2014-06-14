@@ -73,7 +73,7 @@ class Selectors
     group: '$query'
     1: "getElementsByTagName"
     2: (node, value) ->
-      return node if node.tagName == value.toUpperCase()
+      return node if value == '*' || node.tagName == value.toUpperCase()
 
   # DOM Lookups
 

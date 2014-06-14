@@ -5,14 +5,18 @@ class Expressions
   constructor: (@engine, @context, @output) ->
     @context ||= @engine && @engine.context || @
 
-  # Hook: Evaluate input
+  # Hook: Evaluate input and send produced output
   read: ->
-    return @evaluate.apply(@, arguments)
+    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', Array.prototype.slice.call(arguments[0]))
+    result = @evaluate.apply(@, arguments)
+    if @buffer
+      @output.read(@buffer)
+      @buffer = null
+    return result
 
-  # Hook: Output equasions
-  write: ->
-    console.log('Expression output', !!@engine.onDOMContentLoaded, Array.prototype.slice.call(arguments))
-    return @output.read.apply(@output, arguments)
+  # Hook: Buffer equasions
+  write: (args) -> 
+    (@buffer ||= []).push(args)
 
   # Evaluate operation depth first
   evaluate: (operation, context, continuation, from, ascending) ->
@@ -38,7 +42,7 @@ class Expressions
         offset += 1
         continue
       else if argument instanceof Array
-        argument = (operation.evaluate || @evaluate).call(@, argument, args)
+        argument = (operation.evaluate || @evaluate).call(@, argument, (args ||= []))
       return if argument == undefined
       (args ||= [])[index - offset] = argument
 

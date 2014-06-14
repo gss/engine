@@ -20052,7 +20052,7 @@ Engine = (function() {
   }
 
   Engine.prototype.read = function() {
-    return this.expressions.evaluate.apply(this.expressions, arguments);
+    return this.expressions.read.apply(this.expressions, arguments);
   };
 
   Engine.prototype.write = function() {
@@ -20511,7 +20511,7 @@ Selectors = (function() {
     group: '$query',
     1: "getElementsByTagName",
     2: function(node, value) {
-      if (node.tagName === value.toUpperCase()) {
+      if (value === '*' || node.tagName === value.toUpperCase()) {
         return node;
       }
     }
@@ -20774,15 +20774,7 @@ var Constraints, command, property, _ref;
 require('cassowary');
 
 Constraints = (function() {
-  function Constraints(input, output) {
-    this.input = input;
-    this.output = output;
-    this.solver = new c.SimplexSolver();
-  }
-
-  Constraints.prototype.onConstraint = function(engine, scope, args, result, operation, continuation) {
-    return this.solver.addConstraint(result);
-  };
+  function Constraints() {}
 
   Constraints.prototype.get = function(property, scope) {
     if (typeof this[property] === 'function') {
@@ -20806,29 +20798,29 @@ Constraints = (function() {
   };
 
   Constraints.prototype.varexp = function(name) {
-    return new c.Expression({
+    return c.Expression({
       name: name
     });
   };
 
-  Constraints.prototype.eq = function(path, left, right, strength, weight) {
+  Constraints.prototype.eq = function(left, right, strength, weight) {
     return new c.Equation(left, right, this.strength(strength), this.weight(weight));
   };
 
-  Constraints.prototype.lte = function(path, left, right, strength, weight) {
-    return c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+  Constraints.prototype.lte = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype.gte = function(left, right, strength, weight) {
-    return c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype.lt = function(left, right, strength, weight) {
-    return c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype.gt = function(left, right, strength, weight) {
-    return c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype.plus = function(left, right, strength, weight) {
@@ -20845,24 +20837,6 @@ Constraints = (function() {
 
   Constraints.prototype.divide = function(left, right, strength, weight) {
     return c.divide(a, right);
-  };
-
-  Constraints.prototype.edit = function(variable) {
-    return this.solver.addEditVar(variable);
-  };
-
-  Constraints.prototype.suggest = function(variable, value, strength, weight) {
-    this.solver.solve();
-    this.edit(variable, this.strength(strength), this.weight(weight));
-    this.solver.suggestValue(variable, value);
-    return this.solver.resolve();
-  };
-
-  Constraints.prototype.stay = function(path, v) {
-    var i, _i, _ref;
-    for (i = _i = 1, _ref = arguments.length; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
-      this.solver.addStay(v);
-    }
   };
 
   return Constraints;
@@ -20984,12 +20958,18 @@ Expressions = (function() {
   }
 
   Expressions.prototype.read = function() {
-    return this.evaluate.apply(this, arguments);
+    var result;
+    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', Array.prototype.slice.call(arguments[0]));
+    result = this.evaluate.apply(this, arguments);
+    if (this.buffer) {
+      this.output.read(this.buffer);
+      this.buffer = null;
+    }
+    return result;
   };
 
-  Expressions.prototype.write = function() {
-    console.log('Expression output', !!this.engine.onDOMContentLoaded, Array.prototype.slice.call(arguments));
-    return this.output.read.apply(this.output, arguments);
+  Expressions.prototype.write = function(args) {
+    return (this.buffer || (this.buffer = [])).push(args);
   };
 
   Expressions.prototype.evaluate = function(operation, context, continuation, from, ascending) {
@@ -21016,7 +20996,7 @@ Expressions = (function() {
         offset += 1;
         continue;
       } else if (argument instanceof Array) {
-        argument = (operation.evaluate || this.evaluate).call(this, argument, args);
+        argument = (operation.evaluate || this.evaluate).call(this, argument, (args || (args = [])));
       }
       if (argument === void 0) {
         return;
@@ -21419,11 +21399,65 @@ require.register("gss/lib/output/Solutions.js", function(exports, require, modul
 var Solutions;
 
 Solutions = (function() {
-  function Solutions() {}
+  Solutions.prototype.read = function(commands) {
+    var command, subcommand, _i, _j, _len, _len1;
+    console.log("Solver input:", commands);
+    for (_i = 0, _len = commands.length; _i < _len; _i++) {
+      command = commands[_i];
+      if (command instanceof Array) {
+        for (_j = 0, _len1 = command.length; _j < _len1; _j++) {
+          subcommand = command[_j];
+          this.process(subcommand);
+        }
+      } else {
+        this.process(command);
+      }
+    }
+    this.solver.solve();
+    console.log("Solver output", this.solver._changed);
+  };
 
-  Solutions.prototype.read = function(commands) {};
+  Solutions.prototype.process = function(command) {
+    if (command instanceof c.Constraint) {
+      return this.solver.addConstraint(command);
+    }
+  };
 
   Solutions.prototype.write = function(command) {};
+
+  function Solutions(input, output) {
+    this.input = input;
+    this.output = output;
+    this.solver = new c.SimplexSolver();
+    this.solver.autoSolve = false;
+    c.debug = true;
+  }
+
+  Solutions.prototype.write = function(results) {
+    console.log('lolelo');
+    this.solver.addConstraint(result);
+    if (this.output) {
+      return this.output.read(results);
+    }
+  };
+
+  Solutions.prototype.edit = function(variable) {
+    return this.solver.addEditVar(variable);
+  };
+
+  Solutions.prototype.suggest = function(variable, value, strength, weight) {
+    this.solver.solve();
+    this.edit(variable, this.strength(strength), this.weight(weight));
+    this.solver.suggestValue(variable, value);
+    return this.solver.resolve();
+  };
+
+  Solutions.prototype.stay = function(path, v) {
+    var i, _i, _ref;
+    for (i = _i = 1, _ref = arguments.length; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+      this.solver.addStay(v);
+    }
+  };
 
   return Solutions;
 

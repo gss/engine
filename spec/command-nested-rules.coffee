@@ -122,32 +122,32 @@ describe 'Nested Rules', ->
                       '+']
                     'main']
                   '!~'] 
-                'div']
+                '*']
               "[width]"]
             50
           ]
         ]
         container.innerHTML =  """
           <section>
-            <h1></h1>
+            <h1 id="header0"></h1>
             <div id="box0"></div>
-            <main id="box1"></main>
+            <main id="main0"></main>
           </section>
         """
         console.log(container.innerHTML)
-        console.info(rules[0].cssText)
+        console.info("(div + main !~ *)[width] == 15")
         main = container.getElementsByTagName('main')[0]
         parent = main.parentNode
         Scenario done, container, [->
-          console.error('Mutation: section.removeChild(main#box1)')   
+          console.error('Mutation: section.removeChild(main#main0)')   
           console.log(engine.lastWorkerCommands, 123123123)     
           expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[width]", "$box0", "div+main$box1!~$box0div"], ["number",50]]
+              ["eq", ["get","[width]", "$box0", "div+main$main0!~$box0div"], ["number",50]]
             ]
           parent.removeChild(main)
           console.log('remove', main)
         , ->
-          console.error('Mutation: section.appendChild(main#box1)') 
+          console.error('Mutation: section.appendChild(main#main0)') 
           parent.appendChild(main)
         , ->
           console.log(123)

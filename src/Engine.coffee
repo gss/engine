@@ -41,7 +41,7 @@ class Engine
 
   # Delegate: Pass input to interpreter
   read: ->
-    return @expressions.evaluate.apply(@expressions, arguments)
+    return @expressions.read.apply(@expressions, arguments)
 
   # Hook: Pass output to a subscriber
   write: ->
