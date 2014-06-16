@@ -6,6 +6,8 @@ class Constraints
     for arg in args
       if arg.path
         (result.paths ||= []).push(arg.path)
+      if arg.prop
+        (result.props ||= []).push(arg.prop)
     return result
 
   get: (property, scope, path) ->
@@ -14,6 +16,7 @@ class Constraints
     else
       variable = @var((scope || '') + property)
     variable.path = path + (scope || '') if path
+    variable.prop = (scope || '') + property
     return variable
 
   remove: () ->
@@ -21,14 +24,8 @@ class Constraints
     for path in arguments
       if constraints = solutions[path]
         for constrain in constraints
-          solutions.remove(constrain)
-          for other in constrain.paths
-            unless other == path
-              if group = solutions[path]
-                if index = group.indexOf(constrain) > -1
-                  group.splice(index, 1)
-                unless group.length
-                  delete solutions[path] 
+          solutions.remove(constrain, path)
+
     return @
 
   var: (name) ->

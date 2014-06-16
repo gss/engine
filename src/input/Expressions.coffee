@@ -34,9 +34,8 @@ class Expressions
               return buffer
       else 
         @buffer = buffer = []
-      debugger
       buffer.push(args)
-      return buffer
+      return
     else
       return @output.read.apply(@output, args)
 

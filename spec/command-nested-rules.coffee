@@ -45,13 +45,13 @@ describe 'Nested Rules', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          ["eq", ["get","[target-size]"], ["number",100]]
+          ["eq", ["get","[target-size]"], 100]
         ]
         container.innerHTML =  ""
                               
         listener = (e) ->        
           expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[target-size]"], ["number",100]]
+              ["eq", ["get","[target-size]"], 100]
             ]
           container.removeEventListener 'solved', listener
           done()
@@ -63,7 +63,7 @@ describe 'Nested Rules', ->
       it 'should support mixed selectors', (done) ->
         rules = [
           ["eq", 
-            ["get$",
+            ["get",
               ['$pseudo',
                 ['$tag',
                   ['$combinator', 
@@ -83,7 +83,7 @@ describe 'Nested Rules', ->
                   'div']
                 'get', 'parentNode']
               "[target-size]"]
-            ["number",100]
+            100
           ]
         ]
         container.innerHTML =  """
@@ -99,13 +99,18 @@ describe 'Nested Rules', ->
         console.log(container.innerHTML)
         console.info(rules[0].cssText)
           
-        Scenario done, container, [->        
-          expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"], ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"]]
-            ]
-        ]
         
         engine = GSS(container)
+
+        engine.once 'solved', ->      
+          expect(stringify engine.expressions.lastOutput).to.eql stringify [
+              ["eq", 
+                ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6section div$5:getparentNode"]
+                , 100
+              ]
+            ]
+          done()
+
         engine.read(rules)
 
     describe 'reversed sibling combinators', ->
@@ -154,7 +159,7 @@ describe 'Nested Rules', ->
           console.error('Mutation: container.removeChild(#main)')
           parent.removeChild(all.main0) 
           engine.once 'solved', ->
-            expect(stringify engine.expressions.lastOutput).to.eql stringify[[
+            expect(stringify engine.expressions.lastOutput).to.eql stringify [[
               "remove"
               "div+main$main0!~$box0*$box0", 
               "div+main$main0!~$box0",
@@ -162,6 +167,8 @@ describe 'Nested Rules', ->
               "div+main$main0!~$header0",
               "div+main$main0"
             ]]
+            expect(all.header0.style.width).to.eql null
+            expect(all.box0.style.width).to.eql null
 
             done()
         engine.read(rules)

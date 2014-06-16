@@ -14,15 +14,33 @@ class Solutions
         @add(command)
     @solver.solve()
     console.log("Solver output", @solver._changed)
-    @write(@solver._changed)
+    response = {}
+    for property, value of @solver._changed
+      if value == 0
+        console.log('got zero', value, property, @[property], @)
+        if @[property] == 0
+          delete @[property]
+          value = null
+      response[property] = value
+    @write(response)
     return
 
   write: (results) ->
     @output.read(results) if @output
 
-  remove: (command) ->
-    if command instanceof c.Constraint
-      @solver.removeConstraint(command)
+  remove: (constrain, path) ->
+    if constrain instanceof c.Constraint
+      @solver.removeConstraint(constrain)
+      for other in constrain.paths
+        unless other == path
+          if group = solutions[path]
+            if index = group.indexOf(constrain) > -1
+              group.splice(index, 1)
+            unless group.length
+              delete solutions[path] 
+      debugger
+      for prop in constrain.props
+        @[prop]--
 
 
   add: (command) ->
@@ -31,6 +49,8 @@ class Solutions
       if command.paths
         for path in command.paths
           (@[path] ||= []).push(command)
+        for prop in command.props
+          @[prop] = (@[prop] || 0) + 1
           
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command))
