@@ -172,7 +172,6 @@ class View
     return "##{@id}{" + css + "}"
     
   printCssTree: (el,recurseLevel = 0) =>
-
     if !el
       el = @el 
       css = @printCss()
@@ -191,7 +190,7 @@ class View
         
   
   displayIfNeeded: (offsets = {x:0,y:0}, pass_to_children=true) ->
-    if @needsDisplay 
+    if @needsDisplay
       @display(offsets)
       @setNeedsDisplay false
     offsets =
@@ -228,6 +227,11 @@ class View
   # - used to batch last minute DOM reads (offsetParent)
   updateValues: (o) ->
     @values = o
+    
+    # TODO 
+    # diff old style keys with new 
+    # to clean up props no longer constrained
+    
     
     # reset style & matrix    
     @style = {}

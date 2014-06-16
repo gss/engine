@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-06-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20285,6 +20286,12 @@ GSS.displayIfNeeded = () ->
     TIME_END "RENDER"
 */
 
+
+Object.defineProperty(GSS, 'vars', {
+  get: function() {
+    return GSS.engines.root.vars;
+  }
+});
 
 GSS.printCss = function() {
   return GSS.get.view(GSS.engines.root.scope).printCssTree();
