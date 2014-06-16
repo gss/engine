@@ -114,7 +114,7 @@ class Queries
     return true
 
   # HOOK: Remove observers and cached node lists
-  clean: (id, continuation) ->
+  remove: (id, continuation) ->
     # Detach observer and its subquery when cleaning by id
     if watchers = @_watchers[id]
       ref = continuation + id
@@ -126,21 +126,20 @@ class Queries
           continue
         watchers.splice(index, 2)
         path = (contd || '') + watcher.path
-        @remove(path)
+        @clean(path)
       delete @_watchers[id] unless watchers.length
     # Remove cached DOM query
     else 
-      @remove(id)
+      @clean(id)
     @
 
-  remove: (path) ->
+  clean: (path) ->
     if result = @[path]
       delete @[path]
       if result.length != undefined
-        for child in result
-          @engine.clean child, path
+        @engine.context.remove child, path for child in result
       else
-        @engine.clean result, path
+        @engine.context.remove result, path
     return true
 
   # Filters out old values from DOM collections
@@ -163,10 +162,10 @@ class Queries
       removed = undefined
       for child in old
         if !result || old.indexOf.call(result, child) == -1
-          @engine.clean child, path
+          @engine.context.remove child, path
           (removed ||= []).push child
       if continuation && (!isCollection || !result.length)
-        @engine.clean path, continuation
+        @engine.context.remove path, continuation
 
     if isCollection
       added = undefined

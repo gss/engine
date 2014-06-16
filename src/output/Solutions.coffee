@@ -7,12 +7,11 @@ class Solutions
   # Read commands
   read: (commands)-> 
     @lastInput = commands
-    console.log("Solver input:", commands)
     for command in commands
       if command instanceof Array
-        @process(subcommand) for subcommand in command
+        @add(subcommand) for subcommand in command
       else 
-        @process(command)
+        @add(command)
     @solver.solve()
     console.log("Solver output", @solver._changed)
     @write(@solver._changed)
@@ -21,11 +20,18 @@ class Solutions
   write: (results) ->
     @output.read(results) if @output
 
-  clean: (id) ->
+  remove: (command) ->
+    if command instanceof c.Constraint
+      @solver.removeConstraint(command)
 
-  process: (command) ->
+
+  add: (command) ->
     if command instanceof c.Constraint
       @solver.addConstraint(command)
+      if command.paths
+        for path in command.paths
+          (@[path] ||= []).push(command)
+          
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command))
 

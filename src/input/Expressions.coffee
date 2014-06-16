@@ -2,6 +2,8 @@
 # supports forking for collections 
 # (e.g. to apply something for every element matched by selector)
 
+# Doesnt send the output until all commands are executed.
+
 # * Input: Engine, reads commands
 # * Output: Engine, outputs results, leaves out unrecognized commands as is
 
@@ -12,9 +14,8 @@ class Expressions
   # Hook: Evaluate input and send produced output
   read: ->
     @buffer = null
-    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', Array.prototype.slice.call(arguments[0]))
+    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', JSON.parse JSON.stringify arguments[0])
     result = @evaluate.apply(@, arguments)
-    console.log(@buffer, result)
     if @buffer
       @lastOutput = @buffer
       @output.read(@buffer)
@@ -22,9 +23,20 @@ class Expressions
     return result
 
   # Hook: Buffer equasions if needed
-  write: (args) ->
-    if @buffer != undefined
-      (@buffer ||= []).push(args)
+  write: (args, batch) ->
+    if (buffer = @buffer) != undefined
+      if buffer
+        # Optionally, combine subsequent commands (like remove)
+        if batch
+          if last = buffer[buffer.length - 1]
+            if last[0] == args[0]
+              last.push.apply(last, args.slice(1))
+              return buffer
+      else 
+        @buffer = buffer = []
+      debugger
+      buffer.push(args)
+      return buffer
     else
       return @output.read.apply(@output, args)
 

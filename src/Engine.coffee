@@ -2,6 +2,7 @@
 # It includes interpreter and reference tracker. 
 # Acts as a faux-pipe that evaluates Expressions
 # and outputs the results to submodules
+# Engine is the GSS global variable
 
 class Engine
   Expressions:
@@ -91,7 +92,7 @@ class Engine
   # Set up delegates for setting and getting uids
   @recognize: Engine::References.recognize
   recognize:  Engine::References.recognize
-  
+
   @identify:  Engine::References.identify
   identify:   Engine::References.identify
 

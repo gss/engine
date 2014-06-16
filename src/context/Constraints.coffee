@@ -2,10 +2,34 @@
 require 'cassowary'
 
 class Constraints
+  onConstraint: (engine, scope, args, result, operation, continuation) ->
+    for arg in args
+      if arg.path
+        (result.paths ||= []).push(arg.path)
+    return result
+
   get: (property, scope, path) ->
     if typeof @[property] == 'function'
-      return @[property](scope)
-    return @var((scope || '') + property)
+      variable = @[property](scope)
+    else
+      variable = @var((scope || '') + property)
+    variable.path = path + (scope || '') if path
+    return variable
+
+  remove: () ->
+    solutions = @engine.solutions
+    for path in arguments
+      if constraints = solutions[path]
+        for constrain in constraints
+          solutions.remove(constrain)
+          for other in constrain.paths
+            unless other == path
+              if group = solutions[path]
+                if index = group.indexOf(constrain) > -1
+                  group.splice(index, 1)
+                unless group.length
+                  delete solutions[path] 
+    return @
 
   var: (name) ->
     return new c.Variable name: name
@@ -45,5 +69,8 @@ class Constraints
 
   divide: (left, right, strength, weight) ->
     return c.divide(a, right)
+
+for property, method of Constraints::
+  method.callback = 'onConstraint'
 
 module.exports = Constraints

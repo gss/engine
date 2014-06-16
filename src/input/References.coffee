@@ -16,7 +16,7 @@ class References
     
   # Trigger cleaning on output object
   write: ->
-    return @output.clean.apply(@output, arguments)
+    return @output.context.remove.apply(@output.context, arguments)
 
   # Return concatenated path for a given object and prefix
   combine: (path, value) ->

@@ -48,14 +48,6 @@ class Engine.Document extends Engine
     @context.set("[scroll-top]", e.target)
     @context.set("[scroll-left]", e.target)
 
-  # Hook: Remove everything related to an id
-  clean: (id, continuation) ->
-    if typeof id == 'object'
-      id = @references.recognize(id)
-    @queries.clean(id, continuation)
-    if @References::[id]
-      @references.remove(continuation, continuation + id)
-
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @
     @scope.removeEventListener 'scroll', @

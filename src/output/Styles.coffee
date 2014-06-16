@@ -30,8 +30,8 @@ class Styles
 
 
 
-  clean: (id) ->
-    delete @[path]
+  remove: (id) ->
+    delete @[id]
 
   camelize: (string) ->
     return (@camelized ||= {})[string] ||= 

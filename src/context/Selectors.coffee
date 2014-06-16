@@ -5,6 +5,18 @@ class Selectors
   onDOMQuery: (engine, scope, args, result, operation, continuation) ->
     return @engine.queries.filter(scope || operation.func && args[0], result, operation, continuation)
 
+  remove: (id, continuation) ->
+    if typeof id == 'object'
+      id = @engine.references.recognize(id)
+    @engine.queries.remove(id, continuation)
+    # When removing id from collection
+    if @engine.References::[id]
+      path = continuation + id
+      @engine.references.remove(continuation, path)
+      # Output remove command for solver
+      @engine.expressions.write(['remove', path], true)
+    @
+
   # Selector commands
 
   '$query':

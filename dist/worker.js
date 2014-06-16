@@ -44,8 +44,8 @@ Engine.Solver = (function(_super) {
     }
   }
 
-  Solver.prototype.clean = function(id) {
-    return this.solutions.clean(id);
+  Solver.prototype.remove = function(id) {
+    return this.solutions.remove(id);
   };
 
   Solver.prototype.onmessage = function(e) {

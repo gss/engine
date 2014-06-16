@@ -22,8 +22,8 @@ class Engine.Solver extends Engine
       @expressions.output = @solutions
 
   # Hook: Remove everything related to an id
-  clean: (id) ->
-    @solutions.clean(id)
+  remove: (id) ->
+    @solutions.remove(id)
 
   # Receieve message from worker
   onmessage: (e) ->

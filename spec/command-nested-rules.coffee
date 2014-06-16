@@ -101,7 +101,7 @@ describe 'Nested Rules', ->
           
         Scenario done, container, [->        
           expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"], ["number",100]]
+              ["eq", ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"], ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6 $5"]]
             ]
         ]
         
@@ -151,11 +151,17 @@ describe 'Nested Rules', ->
             "$header0[width]": 50
           expect(all.header0.style.width).to.eql '50px'
           expect(all.box0.style.width).to.eql '50px'
+          console.error('Mutation: container.removeChild(#main)')
           parent.removeChild(all.main0) 
           engine.once 'solved', ->
-            expect(engine).to.eql [
-                ["eq", ["get","[width]", "$box0", "div+main$main0!~$box0div"], ["number",50]]
-              ]
+            expect(stringify engine.expressions.lastOutput).to.eql stringify[[
+              "remove"
+              "div+main$main0!~$box0*$box0", 
+              "div+main$main0!~$box0",
+              "div+main$main0!~$header0*$header0",
+              "div+main$main0!~$header0",
+              "div+main$main0"
+            ]]
 
             done()
         engine.read(rules)
