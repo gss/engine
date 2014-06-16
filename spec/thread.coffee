@@ -120,7 +120,6 @@ describe 'Cassowary Thread', ->
       "[intrinsic-width]": 999
     done()
   
-  
   it 'intrinsic var is immutable with suggestion', () ->
     #c.trace = true
     thread = new Thread()
@@ -139,46 +138,9 @@ describe 'Cassowary Thread', ->
       "[width]": 120
       "[intrinsic-width]": 100
       "[hgap]": 20
-    #done()
-  
-  it 'tracking & removing by get tracker', (done) ->
-    thread = new Thread()
-    thread.execute
-      commands:[
-        ['eq', ['get','[x]','x-tracker'],['number','100'],'strong']
-        ['eq', ['get','[x]'],['number','10'],'weak']
-      ]
-    chai.expect(thread.getValues()).to.eql
-      "[x]": 100
-    thread.execute
-      commands:[
-        ['remove', 'x-tracker']
-      ]
-    chai.expect(thread.getValues()).to.eql
-      "[x]": 10
-    done()
-  
-  it 'tracking & removing by var tracker', (done) ->
-    thread = new Thread()
-    thread.execute
-      commands:[
-        ['var', '[x]', 'x-tracker']
-        ['eq', ['get','[x]'],['number','100'],'strong']
-        ['eq', ['get','[x]'],['number','10'],'weak']
-        ['eq', ['get','[y]'],['number','50'],'strong']
-      ]
-    chai.expect(thread.getValues()).to.eql
-      "[x]": 100
-      "[y]": 50
-    thread.execute
-      commands:[
-        ['remove', 'x-tracker']
-      ]
-    chai.expect(thread.getValues()).to.eql
-      "[y]": 50
-    done()
+    #done()    
     
-    
+  
   # DOM Prop Helpers
   # ---------------------------------------------------------------------
   
@@ -264,6 +226,43 @@ describe 'Cassowary Thread', ->
         ]
       expect(thread.getValues()).to.eql
         "$222[line-height]": 1.6
+    
+    it 'tracking & removing by get tracker', (done) ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['eq', ['get','[x]','x-tracker'],['number','100'],'strong']
+          ['eq', ['get','[x]'],['number','10'],'weak']
+        ]
+      chai.expect(thread.getValues()).to.eql
+        "[x]": 100
+      thread.execute
+        commands:[
+          ['remove', 'x-tracker']
+        ]
+      chai.expect(thread.getValues()).to.eql
+        "[x]": 10
+      done()
+  
+    it 'tracking & removing by var tracker', (done) ->
+      thread = new Thread()
+      thread.execute
+        commands:[
+          ['var', '[x]', 'x-tracker']
+          ['eq', ['get','[x]'],['number','100'],'strong']
+          ['eq', ['get','[x]'],['number','10'],'weak']
+          ['eq', ['get','[y]'],['number','50'],'strong']
+        ]
+      chai.expect(thread.getValues()).to.eql
+        "[x]": 100
+        "[y]": 50
+      thread.execute
+        commands:[
+          ['remove', 'x-tracker']
+        ]
+      chai.expect(thread.getValues()).to.eql
+        "[y]": 50
+      done()
     
     describe 'add & remove inter-related, repeat x3', () ->
       thread = new Thread()
