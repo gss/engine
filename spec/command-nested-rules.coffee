@@ -112,7 +112,7 @@ describe 'Nested Rules', ->
       it 'should support mixed selectors', (done) ->
         rules = [
           ["eq", 
-            ["get$",
+            ["get",
               ['$tag',
                 ['$combinator', 
                   ['$tag', 
@@ -135,25 +135,29 @@ describe 'Nested Rules', ->
           </section>
         """
         console.log(container.innerHTML)
-        console.info("(div + main !~ *)[width] == 15")
-        main = container.getElementsByTagName('main')[0]
-        parent = main.parentNode
-        Scenario done, container, [->
-          console.error('Mutation: section.removeChild(main#main0)')   
-          console.log(engine.lastWorkerCommands, 123123123)     
-          expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[width]", "$box0", "div+main$main0!~$box0div"], ["number",50]]
-            ]
-          parent.removeChild(main)
-          console.log('remove', main)
-        , ->
-          console.error('Mutation: section.appendChild(main#main0)') 
-          parent.appendChild(main)
-        , ->
-          console.log(123)
-        ]
+        console.info("(div + main !~ *)[width] == 50")
+        all = container.getElementsByTagName('*')
+        parent = all.main0.parentNode
+
         
-        engine = GSS(container)
+        engine = new GSS(container)
+        engine.once 'solved', -> 
+          expect(stringify engine.expressions.lastOutput).to.eql stringify [
+            ["eq", ["get", "[width]", "$box0", "div+main$main0!~$box0*"], 50]
+            ["eq", ["get", "[width]", "$header0", "div+main$main0!~$header0*"], 50]
+          ]
+          expect(stringify engine.styles.lastInput).to.eql stringify
+            "$box0[width]": 50 
+            "$header0[width]": 50
+          expect(all.header0.style.width).to.eql '50px'
+          expect(all.box0.style.width).to.eql '50px'
+          parent.removeChild(all.main0) 
+          engine.once 'solved', ->
+            expect(engine).to.eql [
+                ["eq", ["get","[width]", "$box0", "div+main$main0!~$box0div"], ["number",50]]
+              ]
+
+            done()
         engine.read(rules)
 
     describe '1 level w/ ::', ->

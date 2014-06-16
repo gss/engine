@@ -3,7 +3,7 @@ dummy = document.createElement('_')
 class Selectors
   # Set up DOM observer and filter out old elements 
   onDOMQuery: (engine, scope, args, result, operation, continuation) ->
-    return @engine.mutations.filter(scope || operation.func && args[0], result, operation, continuation)
+    return @engine.queries.filter(scope || operation.func && args[0], result, operation, continuation)
 
   # Selector commands
 
@@ -24,7 +24,7 @@ class Selectors
       global = tail.arity == 1 && tail.length == 2
       op = operation
       while op
-        @.analyze op, shortcut
+        @analyze op, shortcut
         break if op == tail
         op = op[1]
       if (tail.parent == operation)
@@ -41,7 +41,7 @@ class Selectors
             group = ' '
             index = (operation[2] || operation[1]).toUpperCase()
         when '$combinator'
-          group = parent && ' ' ||  operation.name
+          group = (parent && ' ' || '') +  operation.name
           index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
         when '$class', '$pseudo', '$attribute'
           group = operation[0]

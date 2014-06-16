@@ -1,7 +1,14 @@
-# Listens for changes in DOM, invalidates cached DOM Queries
-# MutationEvent -> Expressions
+# - Listens for changes in DOM,
+# - Invalidates cached DOM Queries
+#   by bruteforcing combinators on reachable elements
 
-class Mutations
+# Input:  MutationEvent, processes observed mutations
+# Output: Expressions, revaluates expressions
+
+# State:  - `@[path]`: elements and collections by selector path
+#         - `@_watchers[id]`: dom queries by element id
+
+class Queries
   options:
     subtree: true
     childList: true
@@ -22,14 +29,15 @@ class Mutations
   write: (queries) ->
     for query, index in queries by 2
       @output.read query, undefined, queries[index + 1]
+    @
     
   # Listen to changes in DOM to broadcast them all around
   read: (mutations) ->
     queries = []
+
     for mutation in mutations
       target = parent = mutation.target
       switch mutation.type
-
         when "attributes"
           # Notify parents about class and attribute changes
           if mutation.attributeName == 'class'
@@ -100,37 +108,70 @@ class Mutations
               @match(queries, parent, ' +', undefined, child)
               @match(queries, child, '!', undefined, parent)
             parent = parent.parentNode
+    if queries.length
+      this.write(queries)
 
     return true
 
+  # HOOK: Remove observers and cached node lists
+  clean: (id, continuation) ->
+    # Detach observer and its subquery when cleaning by id
+    if watchers = @_watchers[id]
+      ref = continuation + id
+      index = 0
+      while watcher = watchers[index]
+        contd = watchers[index + 1]
+        unless contd == ref
+          index += 2
+          continue
+        watchers.splice(index, 2)
+        path = (contd || '') + watcher.path
+        @remove(path)
+      delete @_watchers[id] unless watchers.length
+    # Remove cached DOM query
+    else 
+      @remove(id)
+    @
+
+  remove: (path) ->
+    if result = @[path]
+      delete @[path]
+      if result.length != undefined
+        for child in result
+          @engine.clean child, path
+      else
+        @engine.clean result, path
+    return true
+
   # Filters out old values from DOM collections
+
   filter: (node, result, operation, continuation) ->
     path = (continuation || '') + operation.path
     old = @[path]
     if result == old
-      return
-
+      return  
+    isCollection = result && result.length != undefined
+    
+    # Subscribe context to the query
     if id = @references.identify(node || @engine.scope)
       watchers = @_watchers[id] ||= []
       if watchers.indexOf(operation) == -1
         watchers.push(operation, continuation)
-      
-    isCollection = result && result.length != undefined
-
+    
+    # Clean refs of nodes that dont match anymore
     if old && old.length
       removed = undefined
       for child in old
         if !result || old.indexOf.call(result, child) == -1
-          @references.remove path, child
-          removed = true
+          @engine.clean child, path
+          (removed ||= []).push child
       if continuation && (!isCollection || !result.length)
-        @references.remove continuation, path
+        @engine.clean path, continuation
 
     if isCollection
       added = undefined
       for child in result
-        if !old || watchers.indexOf.call(old, child) == -1
-          @references.append path, child
+        if !old || watchers.indexOf.call(old, child) == -1  
           (added ||= []).push child if old
 
       if continuation && (!old || !old.length)
@@ -140,27 +181,32 @@ class Mutations
       if result && result.item && (!old || removed || added)
         result = watchers.slice.call(result, 0)
     else if result != undefined || old != undefined
-      @references.set path, result
+      @references.append continuation, path
 
     @[path] = result
     if result
       console.log('found', result.nodeType == 1 && 1 || result.length, ' by' ,path)
     return added || result
 
+  # Check if a node observes this qualifier or combinator
   match: (queries, node, group, qualifier, changed) ->
     return unless id = node._gss_id
     return unless watchers = @_watchers[id]
     for operation, index in watchers by 2
       if groupped = operation[group]
+        continuation = watchers[index + 1]
         if qualifier
-          if indexed = groupped[qualifier]
-            if queries.indexOf(operation) == -1
-              queries.push(operation, watchers[index + 1])
-        else
-          for change in changed
-            if indexed = groupped[change.tagName] || groupped["*"]
-              if queries.indexOf(operation) == -1
-                queries.push(operation, watchers[index + 1])
+          @qualify(queries, operation, continuation, groupped, qualifier)
+        else if changed.nodeType
+          @qualify(queries, operation, continuation, groupped, changed.tagName, '*')
+        else for change in changed
+          @qualify(queries, operation, continuation, groupped, change.tagName, '*')
     @
 
-module.exports = Mutations
+  qualify: (queries, operation, continuation, groupped, qualifier, fallback) ->
+    if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
+      if queries.indexOf(operation) == -1
+        queries.push(operation, continuation)
+    @
+
+module.exports = Queries

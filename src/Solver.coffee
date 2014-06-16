@@ -14,11 +14,16 @@ class Engine.Solver extends Engine
   constructor: (@input, @output, url) -> 
     super()
 
-    # Pass input to worker when using one
+    # Leave the hard stuff for worker when possible
     unless @useWorker(url)
-      @solutions = new @Solutions(@)
+      # Use solver to produce solutions
+      @solutions = new @Solutions(@, @output)
       # Pass constraints to a solver engine
       @expressions.output = @solutions
+
+  # Hook: Remove everything related to an id
+  clean: (id) ->
+    @solutions.clean(id)
 
   # Receieve message from worker
   onmessage: (e) ->

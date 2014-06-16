@@ -10,34 +10,38 @@ class Engine
     require('./input/References.js')
 
   constructor: (scope) ->
-    # GSS(node) finds parent nearest engine or makes one on root
     if scope && scope.nodeType
-      unless @Expressions
+      # new GSS(node) assigns a new engine to node if it doesnt have one
+      if @Expressions
+        id = Engine.identify(scope)
+        if engine = Engine[id]
+          return engine
+
+        if Document = Engine.Document
+          unless this instanceof Document
+            return new Document(scope)
+
+        Engine[id] = @
+        @scope = scope
+      # GSS(node) finds nearest parent engine or makes one at root
+      else
         while scope
-          if id = Engine.identify(scope)
+          if id = Engine.recognize(scope)
             if engine = Engine[id]
               return engine
           break unless scope.parentNode
           scope = scope.parentNode
-        return new (Engine.Document || Engine)(scope)
 
-      # new GSS(node) assigns engine to node if it doesnt have one
-      id = Engine::References.acquire(scope)
-      if engine = Engine[id]
-        return engine
-
-      Engine[id] = @
-      @scope   = scope
-
-    # Create a new engine
+    # new GSS() creates a new engine
     if @Expressions
       @context     = new @Context(@)
       @expressions = new @Expressions(@)
       @references  = new @References(@)
       @events      = {}
       return
-    else
-      return new arguments.callee(scope)
+
+    # GSS.Document() and GSS() create new GSS.Document
+    return new (Engine.Document || Engine)(scope)
 
   # Delegate: Pass input to interpreter
   read: ->
@@ -47,11 +51,10 @@ class Engine
   write: ->
     return @output.read.apply(@output, arguments)
 
-  # Hook: Should interpreter iterate given object?
+  # Hook: Should interpreter iterate returned object?
   isCollection: (object) ->
-    if typeof object == 'object' && object.length != undefined
-      unless typeof object[0] == 'string' && !@context[object[0]]
-        return true
+    # (yes, if it's a collection of objects)
+    return object && typeof object[0] == 'object' && !object.nodeType
 
   once: (type, fn) ->
     fn.once = true
@@ -67,20 +70,17 @@ class Engine
 
   triggerEvent: (type, a, b, c) ->
     if group = @events[type]
-      index = 0
-      while fn = group[index]
+      for fn, index in group by -1
+        group.splice(index, 1) if fn.once
         fn.call(@, a, b, c)
-        if fn.once
-          group.splice(index, 1)
-        else
-          index++
-    method = 'on' + type
-    if method in @
+    if @[method = 'on' + type]
       return @[method](a, b, c)
 
+  # Catch-all event listener 
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
 
+  # Combine mixins
   @include = ->
     Context = (@engine) ->
     for mixin in arguments
@@ -88,8 +88,13 @@ class Engine
         Context::[name] = fn
     return Context
 
-  @identify: Engine::References.identify
+  # Set up delegates for setting and getting uids
+  @recognize: Engine::References.recognize
+  recognize:  Engine::References.recognize
+  
+  @identify:  Engine::References.identify
+  identify:   Engine::References.identify
 
-self.GSS = Engine
+window.GSS = Engine
 
 module.exports = Engine

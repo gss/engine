@@ -4,16 +4,15 @@
 Engine = require('./Engine')
 
 class Engine.Document extends Engine
-  Mutations:       
-    require('./input/Mutations.js')
-  Measurements:    
-    require('./input/Measurements.js')
+  Queries:       
+    require('./input/Queries.js')
   Styles:          
     require('./output/Styles.js')
   Solver:
     require('./Solver.js')
 
   Context: Engine.include(
+    require('./context/Measurements.js'),
     require('./context/Properties.js'),
     require('./context/Selectors.js'),
     require('./context/Rules.js'),
@@ -23,23 +22,44 @@ class Engine.Document extends Engine
   constructor: (scope = document, url) ->
     return context if context = super(scope, url)
 
-    @mutations           = new @Mutations(@)
-    @measurements        = new @Measurements(@)
-    @solver              = new @Solver(@, url)
-    @styles              = new @Styles(@)
-
-    # Mutations and measurements trigger expression evaluation
-    @mutations   .output = @expressions 
-    @measurements.output = @expressions 
-
-    # Expressions generate commands and pass them to solver
-    @expressions .output = @solver
+    # Element style properties are assigned by Styles object
+    @styles    = new @Styles(@)
 
     # Solver returns data to set element styles
-    @solver      .output = @styles
+    @solver    = new @Solver(@, @styles, url)
+
+    # DOM Queries trigger expression re-evaluation
+    @queries   = new @Queries(@, @expressions)
+
+    # Expressions generate commands and pass them to solver
+    @expressions.output = @solver
     
     if @scope.nodeType == 9
       @scope.addEventListener 'DOMContentLoaded', @
+
+    @scope.addEventListener 'scroll', @
+    window.addEventListener 'resize', @
+
+  onresize: (e) ->
+    @context.set("[width]", "::window")
+    @context.set("[height]", "::window")
+
+  onscroll: (e) ->
+    @context.set("[scroll-top]", e.target)
+    @context.set("[scroll-left]", e.target)
+
+  # Hook: Remove everything related to an id
+  clean: (id, continuation) ->
+    if typeof id == 'object'
+      id = @references.recognize(id)
+    @queries.clean(id, continuation)
+    if @References::[id]
+      @references.remove(continuation, continuation + id)
+
+  destroy: ->
+    @scope.removeEventListener 'DOMContentLoaded', @
+    @scope.removeEventListener 'scroll', @
+    window.removeEventListener 'resize', @
 
   onDOMContentLoaded: ->
     @scope.removeEventListener 'DOMContentLoaded', @

@@ -1,5 +1,9 @@
-# Interepretes given expressions
-# Engine -> Engine
+# Interepretes given expressions lazily, functions are defined by @context
+# supports forking for collections 
+# (e.g. to apply something for every element matched by selector)
+
+# * Input: Engine, reads commands
+# * Output: Engine, outputs results, leaves out unrecognized commands as is
 
 class Expressions
   constructor: (@engine, @context, @output) ->
@@ -7,16 +11,22 @@ class Expressions
 
   # Hook: Evaluate input and send produced output
   read: ->
+    @buffer = null
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', Array.prototype.slice.call(arguments[0]))
     result = @evaluate.apply(@, arguments)
+    console.log(@buffer, result)
     if @buffer
+      @lastOutput = @buffer
       @output.read(@buffer)
-      @buffer = null
+      @buffer = undefined
     return result
 
-  # Hook: Buffer equasions
-  write: (args) -> 
-    (@buffer ||= []).push(args)
+  # Hook: Buffer equasions if needed
+  write: (args) ->
+    if @buffer != undefined
+      (@buffer ||= []).push(args)
+    else
+      return @output.read.apply(@output, args)
 
   # Evaluate operation depth first
   evaluate: (operation, context, continuation, from, ascending) ->
@@ -120,10 +130,11 @@ class Expressions
       return operation
 
     # Assign definition properties to AST node
-    operation.group  = group  if group  = def.group
-    operation.prefix = prefix if prefix = def.prefix
-    operation.suffix = suffix if suffix = def.suffix
-    operation.path = @serialize(operation)
+    operation.group    = group    if group    = def.group
+    operation.prefix   = prefix   if prefix   = def.prefix
+    operation.suffix   = suffix   if suffix   = def.suffix
+    operation.callback = callback if callback = def.callback
+    operation.path     = @serialize(operation)
 
     # Group multiple nested tokens into a single token
     for child, index in operation
@@ -136,6 +147,7 @@ class Expressions
               tail.head = operation
               tail.promise = operation.promise
               operation.tail = tail
+
 
     # Try predefined command if can't dispatch by number of arguments
     if typeof def == 'function'
@@ -158,7 +170,7 @@ class Expressions
 
   # Serialize operation to a string with arguments, but without context
   serialize: (operation) ->
-    prefix = operation.prefix || ''
+    prefix = operation.prefix || (operation.noop && operation.name) || ''
     suffix = operation.suffix || ''
     path = ''
     start = 1 + (operation.length > 2)

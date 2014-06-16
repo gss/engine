@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-06-16) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -38,10 +39,14 @@ Engine.Solver = (function(_super) {
     this.output = output;
     Solver.__super__.constructor.call(this);
     if (!this.useWorker(url)) {
-      this.solutions = new this.Solutions(this);
+      this.solutions = new this.Solutions(this, this.output);
       this.expressions.output = this.solutions;
     }
   }
+
+  Solver.prototype.clean = function(id) {
+    return this.solutions.clean(id);
+  };
 
   Solver.prototype.onmessage = function(e) {
     return this.write(e.data);

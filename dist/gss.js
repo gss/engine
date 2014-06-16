@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-14) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20008,8 +20008,7 @@ c._api = function() {
 
 });
 require.register("gss/lib/Engine.js", function(exports, require, module){
-var Engine,
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+var Engine;
 
 Engine = (function() {
   Engine.prototype.Expressions = require('./input/Expressions.js');
@@ -20017,11 +20016,23 @@ Engine = (function() {
   Engine.prototype.References = require('./input/References.js');
 
   function Engine(scope) {
-    var engine, id;
+    var Document, engine, id;
     if (scope && scope.nodeType) {
-      if (!this.Expressions) {
+      if (this.Expressions) {
+        id = Engine.identify(scope);
+        if (engine = Engine[id]) {
+          return engine;
+        }
+        if (Document = Engine.Document) {
+          if (!(this instanceof Document)) {
+            return new Document(scope);
+          }
+        }
+        Engine[id] = this;
+        this.scope = scope;
+      } else {
         while (scope) {
-          if (id = Engine.identify(scope)) {
+          if (id = Engine.recognize(scope)) {
             if (engine = Engine[id]) {
               return engine;
             }
@@ -20031,14 +20042,7 @@ Engine = (function() {
           }
           scope = scope.parentNode;
         }
-        return new (Engine.Document || Engine)(scope);
       }
-      id = Engine.prototype.References.acquire(scope);
-      if (engine = Engine[id]) {
-        return engine;
-      }
-      Engine[id] = this;
-      this.scope = scope;
     }
     if (this.Expressions) {
       this.context = new this.Context(this);
@@ -20046,9 +20050,8 @@ Engine = (function() {
       this.references = new this.References(this);
       this.events = {};
       return;
-    } else {
-      return new arguments.callee(scope);
     }
+    return new (Engine.Document || Engine)(scope);
   }
 
   Engine.prototype.read = function() {
@@ -20060,11 +20063,7 @@ Engine = (function() {
   };
 
   Engine.prototype.isCollection = function(object) {
-    if (typeof object === 'object' && object.length !== void 0) {
-      if (!(typeof object[0] === 'string' && !this.context[object[0]])) {
-        return true;
-      }
-    }
+    return object && typeof object[0] === 'object' && !object.nodeType;
   };
 
   Engine.prototype.once = function(type, fn) {
@@ -20087,20 +20086,17 @@ Engine = (function() {
   };
 
   Engine.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method;
+    var fn, group, index, method, _i;
     if (group = this.events[type]) {
-      index = 0;
-      while (fn = group[index]) {
-        fn.call(this, a, b, c);
+      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
+        fn = group[index];
         if (fn.once) {
           group.splice(index, 1);
-        } else {
-          index++;
         }
+        fn.call(this, a, b, c);
       }
     }
-    method = 'on' + type;
-    if (__indexOf.call(this, method) >= 0) {
+    if (this[method = 'on' + type]) {
       return this[method](a, b, c);
     }
   };
@@ -20125,13 +20121,19 @@ Engine = (function() {
     return Context;
   };
 
+  Engine.recognize = Engine.prototype.References.recognize;
+
+  Engine.prototype.recognize = Engine.prototype.References.recognize;
+
   Engine.identify = Engine.prototype.References.identify;
+
+  Engine.prototype.identify = Engine.prototype.References.identify;
 
   return Engine;
 
 })();
 
-self.GSS = Engine;
+window.GSS = Engine;
 
 module.exports = Engine;
 
@@ -20146,15 +20148,13 @@ Engine = require('./Engine');
 Engine.Document = (function(_super) {
   __extends(Document, _super);
 
-  Document.prototype.Mutations = require('./input/Mutations.js');
-
-  Document.prototype.Measurements = require('./input/Measurements.js');
+  Document.prototype.Queries = require('./input/Queries.js');
 
   Document.prototype.Styles = require('./output/Styles.js');
 
   Document.prototype.Solver = require('./Solver.js');
 
-  Document.prototype.Context = Engine.include(require('./context/Properties.js'), require('./context/Selectors.js'), require('./context/Rules.js'), require('./context/Math.js'));
+  Document.prototype.Context = Engine.include(require('./context/Measurements.js'), require('./context/Properties.js'), require('./context/Selectors.js'), require('./context/Rules.js'), require('./context/Math.js'));
 
   function Document(scope, url) {
     var context;
@@ -20164,18 +20164,42 @@ Engine.Document = (function(_super) {
     if (context = Document.__super__.constructor.call(this, scope, url)) {
       return context;
     }
-    this.mutations = new this.Mutations(this);
-    this.measurements = new this.Measurements(this);
-    this.solver = new this.Solver(this, url);
     this.styles = new this.Styles(this);
-    this.mutations.output = this.expressions;
-    this.measurements.output = this.expressions;
+    this.solver = new this.Solver(this, this.styles, url);
+    this.queries = new this.Queries(this, this.expressions);
     this.expressions.output = this.solver;
-    this.solver.output = this.styles;
     if (this.scope.nodeType === 9) {
       this.scope.addEventListener('DOMContentLoaded', this);
     }
+    this.scope.addEventListener('scroll', this);
+    window.addEventListener('resize', this);
   }
+
+  Document.prototype.onresize = function(e) {
+    this.context.set("[width]", "::window");
+    return this.context.set("[height]", "::window");
+  };
+
+  Document.prototype.onscroll = function(e) {
+    this.context.set("[scroll-top]", e.target);
+    return this.context.set("[scroll-left]", e.target);
+  };
+
+  Document.prototype.clean = function(id, continuation) {
+    if (typeof id === 'object') {
+      id = this.references.recognize(id);
+    }
+    this.queries.clean(id, continuation);
+    if (this.References.prototype[id]) {
+      return this.references.remove(continuation, continuation + id);
+    }
+  };
+
+  Document.prototype.destroy = function() {
+    this.scope.removeEventListener('DOMContentLoaded', this);
+    this.scope.removeEventListener('scroll', this);
+    return window.removeEventListener('resize', this);
+  };
 
   Document.prototype.onDOMContentLoaded = function() {
     return this.scope.removeEventListener('DOMContentLoaded', this);
@@ -20208,10 +20232,14 @@ Engine.Solver = (function(_super) {
     this.output = output;
     Solver.__super__.constructor.call(this);
     if (!this.useWorker(url)) {
-      this.solutions = new this.Solutions(this);
+      this.solutions = new this.Solutions(this, this.output);
       this.expressions.output = this.solutions;
     }
   }
+
+  Solver.prototype.clean = function(id) {
+    return this.solutions.clean(id);
+  };
 
   Solver.prototype.onmessage = function(e) {
     return this.write(e.data);
@@ -20302,67 +20330,24 @@ var Properties;
 Properties = (function() {
   function Properties() {}
 
-  Properties.prototype['::window[width]'] = function(context) {
-    var w;
-    w = window.innerWidth;
-    if (GSS.config.verticalScroll) {
-      w = w - GSS.get.scrollbarWidth();
-    }
-    return ['suggest', ['get', "::window[width]"], w, 'required'];
-  };
+  Properties.prototype['::window[left]'] = 0;
 
-  Properties.prototype['::window[height]'] = function(context) {
-    var h;
-    h = window.innerHeight;
-    if (GSS.config.horizontalScroll) {
-      h = h - GSS.get.scrollbarWidth();
-    }
-    return ['suggest', ['get', "::window[height]"], w, 'required'];
-  };
-
-  Properties.prototype['::window[x]'] = 0;
-
-  Properties.prototype['::window[y]'] = 0;
-
-  Properties.prototype['::scope[x]'] = 0;
-
-  Properties.prototype['::scope[y]'] = 0;
+  Properties.prototype['::window[top]'] = 0;
 
   Properties.prototype["[right]"] = function(scope) {
-    return this.plus(this.get("[x]", scope), this.get("[width]", scope));
+    return this.plus(this.get("[left]", scope), this.get("[width]", scope));
   };
 
   Properties.prototype["[bottom]"] = function(scope) {
-    return this.plus(this.get("[y]", scope), this.get("[height]", scope));
+    return this.plus(this.get("[top]", scope), this.get("[height]", scope));
   };
 
   Properties.prototype["[center-x]"] = function(scope) {
-    return this.plus(this.get("[x]", scope), this.divide(this.get("[width]", scope), 2));
+    return this.plus(this.get("[left]", scope), this.divide(this.get("[width]", scope), 2));
   };
 
   Properties.prototype["[center-y]"] = function(scope) {
-    return this.plus(this.get("[y]", scope), this.divide(this.get("[height]", scope), 2));
-  };
-
-  Properties.prototype['get$'] = {
-    prefix: '[',
-    suffix: ']',
-    command: function(path, object, property) {
-      var id;
-      if (object.nodeType) {
-        id = this.engine.references.acquire(object);
-      } else if (object.absolute === 'window') {
-        return ['get', "::window[" + prop + "]", path];
-      }
-      if (property.indexOf("intrinsic-") === 0) {
-        if (this.register("$" + id + "[intrinsic]", context)) {
-          if (engine.vars[k] !== val) {
-            return ['suggest', ['get', property, id, path], val, 'required'];
-          }
-        }
-      }
-      return ['get', property, '$' + id, path];
-    }
+    return this.plus(this.get("[top]", scope), this.divide(this.get("[height]", scope), 2));
   };
 
   return Properties;
@@ -20423,7 +20408,7 @@ Selectors = (function() {
   function Selectors() {}
 
   Selectors.prototype.onDOMQuery = function(engine, scope, args, result, operation, continuation) {
-    return this.engine.mutations.filter(scope || operation.func && args[0], result, operation, continuation);
+    return this.engine.queries.filter(scope || operation.func && args[0], result, operation, continuation);
   };
 
   Selectors.prototype['$query'] = {
@@ -20468,7 +20453,7 @@ Selectors = (function() {
           }
           break;
         case '$combinator':
-          group = parent && ' ' || operation.name;
+          group = (parent && ' ' || '') + operation.name;
           index = operation.parent.name === "$tag" && operation.parent[2].toUpperCase() || "*";
           break;
         case '$class':
@@ -20769,14 +20754,14 @@ module.exports = Selectors;
 
 });
 require.register("gss/lib/context/Constraints.js", function(exports, require, module){
-var Constraints, command, property, _ref;
+var Constraints;
 
 require('cassowary');
 
 Constraints = (function() {
   function Constraints() {}
 
-  Constraints.prototype.get = function(property, scope) {
+  Constraints.prototype.get = function(property, scope, path) {
     if (typeof this[property] === 'function') {
       return this[property](scope);
     }
@@ -20798,7 +20783,7 @@ Constraints = (function() {
   };
 
   Constraints.prototype.varexp = function(name) {
-    return c.Expression({
+    return new c.Expression({
       name: name
     });
   };
@@ -20843,15 +20828,91 @@ Constraints = (function() {
 
 })();
 
-_ref = Constraints.prototype;
-for (property in _ref) {
-  command = _ref[property];
-  if (command && command.type === 'constraint') {
-    command.callback = 'onConstraint';
-  }
-}
-
 module.exports = Constraints;
+
+});
+require.register("gss/lib/context/Measurements.js", function(exports, require, module){
+var Measurements;
+
+Measurements = (function() {
+  function Measurements() {}
+
+  Measurements.prototype.plus = function(a, b) {
+    return a + b;
+  };
+
+  Measurements.prototype.minus = function(a, b) {
+    return a - b;
+  };
+
+  Measurements.prototype.multiply = function(a, b) {
+    return a * b;
+  };
+
+  Measurements.prototype.divide = function(a, b) {
+    return a / b;
+  };
+
+  Measurements.prototype["[intrinsic-height]"] = function(scope) {
+    return scope.offsetHeight;
+  };
+
+  Measurements.prototype["[intrinsic-width]"] = function(scope) {
+    return scope.offsetWidth;
+  };
+
+  Measurements.prototype["[scroll-left]"] = function(scope) {
+    return scope.scrollLeft;
+  };
+
+  Measurements.prototype["[scroll-top]"] = function(scope) {
+    return scope.scrollTop;
+  };
+
+  Measurements.prototype["[left]"] = function(scope) {
+    return this.get("[offsets]", scope).left;
+  };
+
+  Measurements.prototype["[top]"] = function(scope) {
+    return this.get("[offsets]", scope).top;
+  };
+
+  Measurements.prototype["[offsets]"] = function(scope) {
+    var offsets;
+    offsets = {
+      left: 0,
+      top: 0
+    };
+    while (scope) {
+      offsets.left += element.offsetLeft + element.clientLeft;
+      offsets.top += element.offsetTop + element.clientTop;
+      scope = scope.offsetParent;
+    }
+    return offsets;
+  };
+
+  Measurements.prototype['get'] = {
+    prefix: '[',
+    suffix: ']',
+    command: function(path, object, property) {
+      var id;
+      if (object.nodeType) {
+        id = this.engine.identify(object);
+      } else if (object.absolute === 'window') {
+        return ['get', "::window[" + prop + "]", path];
+      }
+      if (typeof this[property] === 'function') {
+        return this[property](scope);
+      }
+      return ['get', property, id, path];
+    }
+  };
+
+  return Measurements;
+
+})();
+
+module.exports = Measurements;
 
 });
 require.register("gss/lib/input/References.js", function(exports, require, module){
@@ -20876,14 +20937,14 @@ References = (function() {
     if (typeof value === 'string') {
       return value;
     }
-    return path + "$" + this.acquire(value);
+    return path + this.identify(value);
   };
 
   References.prototype.set = function(path, value) {
     var old;
     if (value === void 0) {
       if (old = this[path]) {
-        return this.clean(path, old);
+        return this.write(this.identify(old, path));
       }
     } else {
       return this[path] = this.combine(path, value);
@@ -20897,44 +20958,58 @@ References = (function() {
   };
 
   References.prototype.remove = function(path, value) {
-    var group, id, index;
+    var child, group, id, _i, _len, _results;
     if (typeof value !== 'string') {
       id = value._gss_id;
-      value = this.combine(path, id);
+      value = this.combine(path, value);
     }
-    if (group = this[path]) {
-      console.group('remove ' + path);
-      delete this[path];
+    if (group = this[value]) {
+      delete this[value];
       if (group instanceof Array) {
-        if ((index = group.indexOf(value)) > -1) {
-          group.splice(index, 1);
-          this.write(path, value, id);
+        _results = [];
+        for (_i = 0, _len = group.length; _i < _len; _i++) {
+          child = group[_i];
+          _results.push(this.write(child, path));
         }
+        return _results;
       } else {
-        this.write(path, value, id);
+        return this.write(group, path);
       }
-      return console.groupEnd('remove ' + path);
     }
+  };
+
+  References.get = function(path) {
+    return References.prototype[path];
   };
 
   References.prototype.get = function(path) {
     return this[path];
   };
 
-  References.identify = function(object, force) {
-    return object._gss_id || (object._gss_id = object.id || ++References.uid);
+  References.identify = function(object, generate) {
+    var id;
+    if (!(id = object._gss_id)) {
+      if (object === document) {
+        object = window;
+      }
+      if (generate !== false) {
+        object._gss_id = id = "$" + (object.id || ++References.uid);
+      }
+      References.prototype[id] = object;
+    }
+    return id;
   };
 
-  References.acquire = function(object) {
-    return References.identify(object, true);
+  References.recognize = function(object) {
+    return References.identify(object, false);
   };
 
-  References.prototype.identify = function(object, force) {
-    return References.identify(object, force);
+  References.prototype.identify = function(object) {
+    return References.identify(object);
   };
 
-  References.prototype.acquire = function(object) {
-    return References.identify(object, true);
+  References.prototype.recognize = function(object) {
+    return References.identify(object, false);
   };
 
   References.uid = 0;
@@ -20959,17 +21034,24 @@ Expressions = (function() {
 
   Expressions.prototype.read = function() {
     var result;
+    this.buffer = null;
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', Array.prototype.slice.call(arguments[0]));
     result = this.evaluate.apply(this, arguments);
+    console.log(this.buffer, result);
     if (this.buffer) {
+      this.lastOutput = this.buffer;
       this.output.read(this.buffer);
-      this.buffer = null;
+      this.buffer = void 0;
     }
     return result;
   };
 
   Expressions.prototype.write = function(args) {
-    return (this.buffer || (this.buffer = [])).push(args);
+    if (this.buffer !== void 0) {
+      return (this.buffer || (this.buffer = [])).push(args);
+    } else {
+      return this.output.read.apply(this.output, args);
+    }
   };
 
   Expressions.prototype.evaluate = function(operation, context, continuation, from, ascending) {
@@ -21043,7 +21125,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.analyze = function(operation, parent) {
-    var child, command, def, func, group, index, prefix, property, suffix, tail, _i, _j, _len, _len1;
+    var callback, child, command, def, func, group, index, prefix, property, suffix, tail, _i, _j, _len, _len1;
     operation.name = operation[0];
     def = this.engine.context[operation.name];
     if (parent) {
@@ -21086,6 +21168,9 @@ Expressions = (function() {
     if (suffix = def.suffix) {
       operation.suffix = suffix;
     }
+    if (callback = def.callback) {
+      operation.callback = callback;
+    }
     operation.path = this.serialize(operation);
     for (index = _j = 0, _len1 = operation.length; _j < _len1; index = ++_j) {
       child = operation[index];
@@ -21125,7 +21210,7 @@ Expressions = (function() {
 
   Expressions.prototype.serialize = function(operation) {
     var index, path, prefix, start, suffix, _i, _ref;
-    prefix = operation.prefix || '';
+    prefix = operation.prefix || (operation.noop && operation.name) || '';
     suffix = operation.suffix || '';
     path = '';
     start = 1 + (operation.length > 2);
@@ -21142,20 +21227,20 @@ Expressions = (function() {
 module.exports = Expressions;
 
 });
-require.register("gss/lib/input/Mutations.js", function(exports, require, module){
-var Mutations;
+require.register("gss/lib/input/Queries.js", function(exports, require, module){
+var Queries;
 
-Mutations = (function() {
-  Mutations.prototype.options = {
+Queries = (function() {
+  Queries.prototype.options = {
     subtree: true,
     childList: true,
     attributes: true,
     characterData: true
   };
 
-  Mutations.prototype.Observer = window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver;
+  Queries.prototype.Observer = window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver;
 
-  function Mutations(engine, output) {
+  function Queries(engine, output) {
     this.engine = engine;
     this.output = output;
     this._watchers = {};
@@ -21164,17 +21249,16 @@ Mutations = (function() {
     this.listener.observe(this.engine.scope, this.options);
   }
 
-  Mutations.prototype.write = function(queries) {
-    var index, query, _i, _len, _results;
-    _results = [];
+  Queries.prototype.write = function(queries) {
+    var index, query, _i, _len;
     for (index = _i = 0, _len = queries.length; _i < _len; index = _i += 2) {
       query = queries[index];
-      _results.push(this.output.read(query, void 0, queries[index + 1]));
+      this.output.read(query, void 0, queries[index + 1]);
     }
-    return _results;
+    return this;
   };
 
-  Mutations.prototype.read = function(mutations) {
+  Queries.prototype.read = function(mutations) {
     var allChanged, changed, child, firstNext, firstPrev, klasses, kls, mutation, next, old, parent, prev, queries, target, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _m, _n, _o, _p, _ref, _ref1;
     queries = [];
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
@@ -21278,34 +21362,77 @@ Mutations = (function() {
           }
       }
     }
+    if (queries.length) {
+      this.write(queries);
+    }
     return true;
   };
 
-  Mutations.prototype.filter = function(node, result, operation, continuation) {
+  Queries.prototype.clean = function(id, continuation) {
+    var contd, index, path, ref, watcher, watchers;
+    if (watchers = this._watchers[id]) {
+      ref = continuation + id;
+      index = 0;
+      while (watcher = watchers[index]) {
+        contd = watchers[index + 1];
+        if (contd !== ref) {
+          index += 2;
+          continue;
+        }
+        watchers.splice(index, 2);
+        path = (contd || '') + watcher.path;
+        this.remove(path);
+      }
+      if (!watchers.length) {
+        delete this._watchers[id];
+      }
+    } else {
+      this.remove(id);
+    }
+    return this;
+  };
+
+  Queries.prototype.remove = function(path) {
+    var child, result, _i, _len;
+    if (result = this[path]) {
+      delete this[path];
+      if (result.length !== void 0) {
+        for (_i = 0, _len = result.length; _i < _len; _i++) {
+          child = result[_i];
+          this.engine.clean(child, path);
+        }
+      } else {
+        this.engine.clean(result, path);
+      }
+    }
+    return true;
+  };
+
+  Queries.prototype.filter = function(node, result, operation, continuation) {
     var added, child, id, isCollection, old, path, removed, watchers, _base, _i, _j, _len, _len1;
     path = (continuation || '') + operation.path;
     old = this[path];
     if (result === old) {
       return;
     }
+    isCollection = result && result.length !== void 0;
     if (id = this.references.identify(node || this.engine.scope)) {
       watchers = (_base = this._watchers)[id] || (_base[id] = []);
       if (watchers.indexOf(operation) === -1) {
         watchers.push(operation, continuation);
       }
     }
-    isCollection = result && result.length !== void 0;
     if (old && old.length) {
       removed = void 0;
       for (_i = 0, _len = old.length; _i < _len; _i++) {
         child = old[_i];
         if (!result || old.indexOf.call(result, child) === -1) {
-          this.references.remove(path, child);
-          removed = true;
+          this.engine.clean(child, path);
+          (removed || (removed = [])).push(child);
         }
       }
       if (continuation && (!isCollection || !result.length)) {
-        this.references.remove(continuation, path);
+        this.engine.clean(path, continuation);
       }
     }
     if (isCollection) {
@@ -21313,7 +21440,6 @@ Mutations = (function() {
       for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
         child = result[_j];
         if (!old || watchers.indexOf.call(old, child) === -1) {
-          this.references.append(path, child);
           if (old) {
             (added || (added = [])).push(child);
           }
@@ -21326,7 +21452,7 @@ Mutations = (function() {
         result = watchers.slice.call(result, 0);
       }
     } else if (result !== void 0 || old !== void 0) {
-      this.references.set(path, result);
+      this.references.append(continuation, path);
     }
     this[path] = result;
     if (result) {
@@ -21335,8 +21461,8 @@ Mutations = (function() {
     return added || result;
   };
 
-  Mutations.prototype.match = function(queries, node, group, qualifier, changed) {
-    var change, groupped, id, index, indexed, operation, watchers, _i, _j, _len, _len1;
+  Queries.prototype.match = function(queries, node, group, qualifier, changed) {
+    var change, continuation, groupped, id, index, operation, watchers, _i, _j, _len, _len1;
     if (!(id = node._gss_id)) {
       return;
     }
@@ -21346,20 +21472,15 @@ Mutations = (function() {
     for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 2) {
       operation = watchers[index];
       if (groupped = operation[group]) {
+        continuation = watchers[index + 1];
         if (qualifier) {
-          if (indexed = groupped[qualifier]) {
-            if (queries.indexOf(operation) === -1) {
-              queries.push(operation, watchers[index + 1]);
-            }
-          }
+          this.qualify(queries, operation, continuation, groupped, qualifier);
+        } else if (changed.nodeType) {
+          this.qualify(queries, operation, continuation, groupped, changed.tagName, '*');
         } else {
           for (_j = 0, _len1 = changed.length; _j < _len1; _j++) {
             change = changed[_j];
-            if (indexed = groupped[change.tagName] || groupped["*"]) {
-              if (queries.indexOf(operation) === -1) {
-                queries.push(operation, watchers[index + 1]);
-              }
-            }
+            this.qualify(queries, operation, continuation, groupped, change.tagName, '*');
           }
         }
       }
@@ -21367,40 +21488,38 @@ Mutations = (function() {
     return this;
   };
 
-  return Mutations;
+  Queries.prototype.qualify = function(queries, operation, continuation, groupped, qualifier, fallback) {
+    var indexed;
+    if ((indexed = groupped[qualifier]) || (fallback && groupped[fallback])) {
+      if (queries.indexOf(operation) === -1) {
+        queries.push(operation, continuation);
+      }
+    }
+    return this;
+  };
+
+  return Queries;
 
 })();
 
-module.exports = Mutations;
-
-});
-require.register("gss/lib/input/Measurements.js", function(exports, require, module){
-var Measurements;
-
-Measurements = (function() {
-  function Measurements() {}
-
-  Measurements.prototype.read = function() {
-    return this.evaluate.apply(this, arguments);
-  };
-
-  Measurements.prototype.write = function() {
-    return this.output.read.apply(this.output, arguments);
-  };
-
-  return Measurements;
-
-})();
-
-module.exports = Measurements;
+module.exports = Queries;
 
 });
 require.register("gss/lib/output/Solutions.js", function(exports, require, module){
 var Solutions;
 
 Solutions = (function() {
+  function Solutions(input, output) {
+    this.input = input;
+    this.output = output;
+    this.solver = new c.SimplexSolver();
+    this.solver.autoSolve = false;
+    c.debug = true;
+  }
+
   Solutions.prototype.read = function(commands) {
     var command, subcommand, _i, _j, _len, _len1;
+    this.lastInput = commands;
     console.log("Solver input:", commands);
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
       command = commands[_i];
@@ -21415,29 +21534,22 @@ Solutions = (function() {
     }
     this.solver.solve();
     console.log("Solver output", this.solver._changed);
+    this.write(this.solver._changed);
   };
+
+  Solutions.prototype.write = function(results) {
+    if (this.output) {
+      return this.output.read(results);
+    }
+  };
+
+  Solutions.prototype.clean = function(id) {};
 
   Solutions.prototype.process = function(command) {
     if (command instanceof c.Constraint) {
       return this.solver.addConstraint(command);
-    }
-  };
-
-  Solutions.prototype.write = function(command) {};
-
-  function Solutions(input, output) {
-    this.input = input;
-    this.output = output;
-    this.solver = new c.SimplexSolver();
-    this.solver.autoSolve = false;
-    c.debug = true;
-  }
-
-  Solutions.prototype.write = function(results) {
-    console.log('lolelo');
-    this.solver.addConstraint(result);
-    if (this.output) {
-      return this.output.read(results);
+    } else if (this[command[0]]) {
+      return this[command[0]].apply(this, Array.prototype.slice.call(command));
     }
   };
 
@@ -21472,11 +21584,84 @@ var Styles;
 Styles = (function() {
   Styles.Matrix = require('../../vendor/gl-matrix.js');
 
-  function Styles(input) {
-    this.input = input;
+  function Styles(engine) {
+    this.engine = engine;
   }
 
-  Styles.prototype.read = function(data) {};
+  Styles.prototype.read = function(data) {
+    var index, intrinsic, path, property, value;
+    this.lastInput = JSON.parse(JSON.stringify(data));
+    intrinsic = null;
+    for (path in data) {
+      value = data[path];
+      index = path.indexOf('[intrinsic-');
+      if (index > -1) {
+        property = path.substring(index + 1, path.length - 1);
+        data[prop] = void 0;
+        (intrinsic || (intrinsic = {}))[path] = value;
+      }
+    }
+    for (path in data) {
+      value = data[path];
+      this.set(path, void 0, value);
+    }
+    if (intrinsic) {
+      for (path in intrinsic) {
+        value = intrinsic[path];
+        this.set(path, void 0, value);
+      }
+    }
+    return this.engine.triggerEvent('solved', data, intrinsic);
+  };
+
+  Styles.prototype.clean = function(id) {
+    return delete this[path];
+  };
+
+  Styles.prototype.camelize = function(string) {
+    var _base;
+    return (_base = (this.camelized || (this.camelized = {})))[string] || (_base[string] = string.toLowerCase().replace(/-([a-z])/i, function(match) {
+      return match[1].toUpperCase();
+    }));
+  };
+
+  Styles.prototype.dasherize = function(string) {
+    var _base;
+    return (_base = (this.dasherized || (this.dasherized = {})))[string] || (_base[string] = string.replace(/[A-Z]/, function(match) {
+      return '-' + match[0].toLowerCase();
+    }));
+  };
+
+  Styles.prototype.get = function(path, property, value) {
+    var camel, element, style;
+    element = this.references.get(path);
+    camel = this.camelize(property);
+    style = element.style;
+    value = style[camel];
+    if (value !== void 0) {
+      return value;
+    }
+    return this;
+  };
+
+  Styles.prototype.set = function(path, property, value) {
+    var camel, element, last, style;
+    if (property === void 0) {
+      last = path.lastIndexOf('[');
+      property = path.substring(last + 1, path.length - 1);
+      path = path.substring(0, last);
+    }
+    element = this.engine.references.get(path);
+    camel = this.camelize(property);
+    style = element.style;
+    if (style[camel] !== void 0) {
+      if (typeof value === 'number' && property !== 'zIndex') {
+        value += 'px';
+      }
+      style[camel] = value;
+    }
+    return this;
+  };
 
   Styles.prototype.position = function(node, offsets) {};
 
@@ -26516,11 +26701,11 @@ module.exports = {
     "lib/context/Rules.js", 
     "lib/context/Selectors.js", 
     "lib/context/Constraints.js",
+    "lib/context/Measurements.js", 
 
     "lib/input/References.js", 
     "lib/input/Expressions.js", 
-    "lib/input/Mutations.js", 
-    "lib/input/Measurements.js", 
+    "lib/input/Queries.js", 
 
     "lib/output/Solutions.js", 
     "lib/output/Styles.js",

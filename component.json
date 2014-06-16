@@ -22,11 +22,11 @@
     "lib/context/Rules.js", 
     "lib/context/Selectors.js", 
     "lib/context/Constraints.js",
+    "lib/context/Measurements.js", 
 
     "lib/input/References.js", 
     "lib/input/Expressions.js", 
-    "lib/input/Mutations.js", 
-    "lib/input/Measurements.js", 
+    "lib/input/Queries.js", 
 
     "lib/output/Solutions.js", 
     "lib/output/Styles.js",

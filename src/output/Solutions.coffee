@@ -1,6 +1,12 @@
 class Solutions
+  constructor: (@input, @output) ->
+    @solver = new c.SimplexSolver()
+    @solver.autoSolve = false
+    c.debug = true
+    
   # Read commands
   read: (commands)-> 
+    @lastInput = commands
     console.log("Solver input:", commands)
     for command in commands
       if command instanceof Array
@@ -9,7 +15,13 @@ class Solutions
         @process(command)
     @solver.solve()
     console.log("Solver output", @solver._changed)
+    @write(@solver._changed)
     return
+
+  write: (results) ->
+    @output.read(results) if @output
+
+  clean: (id) ->
 
   process: (command) ->
     if command instanceof c.Constraint
@@ -17,25 +29,12 @@ class Solutions
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command))
 
-  # Assign styles
-  write: (command) ->
-
-  constructor: (@input, @output) ->
-    @solver = new c.SimplexSolver()
-    @solver.autoSolve = false
-    c.debug = true
-
-  write: (results) ->
-    @solver.addConstraint(result)
-    if @output
-      @output.read(results)
-
   edit: (variable) ->
     @solver.addEditVar(variable)
 
   suggest: (variable, value, strength, weight) ->
     @solver.solve()
-    @edit variable, @strength(strength), @weight(weight)
+    @edit(variable, @strength(strength), @weight(weight))
     @solver.suggestValue(variable, value)
     @solver.resolve()
 

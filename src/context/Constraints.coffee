@@ -2,7 +2,7 @@
 require 'cassowary'
 
 class Constraints
-  get: (property, scope) ->
+  get: (property, scope, path) ->
     if typeof @[property] == 'function'
       return @[property](scope)
     return @var((scope || '') + property)
@@ -17,7 +17,7 @@ class Constraints
     return weight
 
   varexp: (name) ->
-    return c.Expression name: name
+    return new c.Expression name: name
 
   eq: (left, right, strength, weight) ->
     return new c.Equation(left, right, @strength(strength), @weight(weight))
