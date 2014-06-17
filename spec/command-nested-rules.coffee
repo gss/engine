@@ -183,8 +183,7 @@ describe 'Nested Rules', ->
                 ' ']
               'box']
             ["eq", 
-              ["get$","x",
-                ["$reserved","this"]]
+              ["get", ["$reserved","this"], "[x]"]
               100]
           ]
         ]
@@ -202,8 +201,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', -> 
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ['eq', ['get$','x','$box1', '.vessel .box'], ['number',100]]
-              ['eq', ['get$','x','$box2', '.vessel .box'], ['number',100]]
+              ['eq', ['get','[x]','$box1', '$rule.vessel .box$box1'], 100]
+              ['eq', ['get','[x]','$box2', '$rule.vessel .box$box2'], 100]
             ]
           done()
         
@@ -397,7 +396,7 @@ describe 'Nested Rules', ->
                 type:'constraint', 
                 cssText:'(::parent .box:last-child)[width] == 100', 
                 commands: [
-                  ["lte", ["get$","width",["$reserved","scope", ".box:last-child"]], ["number",100]]
+                  ["lte", ["get","width",["$reserved","scope", ".box:last-child"]], ["number",100]]
                 ]
               }
             ]

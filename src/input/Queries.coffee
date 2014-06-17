@@ -6,7 +6,7 @@
 # Output: Expressions, revaluates expressions
 
 # State:  - `@[path]`: elements and collections by selector path
-#         - `@_watchers[id]`: dom queries by element id
+#         - `@_watchers[id]`: dom queries by element id 
 
 class Queries
   options:
@@ -27,14 +27,16 @@ class Queries
 
   # Re-evaluate updated queries
   write: (queries) ->
-    for query, index in queries by 2
-      @output.read query, undefined, queries[index + 1]
+    # Watchers are stored in a single array in groups of 3 properties
+    for query, index in queries by 3
+      continuation = queries[index + 1]
+      scope = queries[index + 2]
+      @output.read query, undefined, continuation, undefined, undefined, scope
     @
     
   # Listen to changes in DOM to broadcast them all around
   read: (mutations) ->
     queries = []
-
     for mutation in mutations
       target = parent = mutation.target
       switch mutation.type
@@ -108,6 +110,8 @@ class Queries
               @match(queries, parent, ' +', undefined, child)
               @match(queries, child, '!', undefined, parent)
             parent = parent.parentNode
+
+    # Return possibly updated queries
     if queries.length
       this.write(queries)
 
@@ -122,9 +126,9 @@ class Queries
       while watcher = watchers[index]
         contd = watchers[index + 1]
         unless contd == ref
-          index += 2
+          index += 3
           continue
-        watchers.splice(index, 2)
+        watchers.splice(index, 3)
         path = (contd || '') + watcher.path
         @clean(path)
       delete @_watchers[id] unless watchers.length
@@ -144,7 +148,7 @@ class Queries
 
   # Filters out old values from DOM collections
 
-  filter: (node, result, operation, continuation) ->
+  filter: (node, result, operation, continuation, subscope) ->
     path = (continuation || '') + operation.path
     old = @[path]
     if result == old
@@ -152,10 +156,11 @@ class Queries
     isCollection = result && result.length != undefined
     
     # Subscribe context to the query
-    if id = @references.identify(node || @engine.scope)
+    subscope ||= node || @engine.scope
+    if id = @references.identify(subscope)
       watchers = @_watchers[id] ||= []
       if watchers.indexOf(operation) == -1
-        watchers.push(operation, continuation)
+        watchers.push(operation, continuation, subscope)
     
     # Clean refs of nodes that dont match anymore
     if old && old.length
@@ -191,21 +196,23 @@ class Queries
   match: (queries, node, group, qualifier, changed) ->
     return unless id = node._gss_id
     return unless watchers = @_watchers[id]
-    for operation, index in watchers by 2
+    for operation, index in watchers by 3
       if groupped = operation[group]
         continuation = watchers[index + 1]
+        subscope = watchers[index + 2]
         if qualifier
-          @qualify(queries, operation, continuation, groupped, qualifier)
+          @qualify(queries, operation, continuation, subscope, groupped, qualifier)
         else if changed.nodeType
-          @qualify(queries, operation, continuation, groupped, changed.tagName, '*')
+          @qualify(queries, operation, continuation, subscope, groupped, changed.tagName, '*')
         else for change in changed
-          @qualify(queries, operation, continuation, groupped, change.tagName, '*')
+          @qualify(queries, operation, continuation, subscope, groupped, change.tagName, '*')
     @
 
+  # Check if query observes qualifier by combinator 
   qualify: (queries, operation, continuation, groupped, qualifier, fallback) ->
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
       if queries.indexOf(operation) == -1
-        queries.push(operation, continuation)
+        queries.push(operation, continuation, subscope)
     @
 
 module.exports = Queries

@@ -9,7 +9,7 @@ class Styles
 
     intrinsic = null
 
-    # Filter out intrinsic properties, ignore their non-intrinsic parts
+    # Step 1: Filter out measurements 
     for path, value of data
       index = path.indexOf('[intrinsic-')
       if index > -1
@@ -17,25 +17,27 @@ class Styles
         data[prop] = undefined
         (intrinsic ||= {})[path] = value
 
+    @write(@lastInput)
 
-
-    # Step 1: Apply changed styles in batch, 
-    # leave out positioning properties (Restyle!)
+    # Step 2: Apply changed styles in batch, 
+    # leave out positioning properties (Restyle/Reflow)
     positioning = {}
     for path, value of data
       @set(path, undefined, value, positioning)
 
-    # Step 2: Position elements in natural order (Restyle contd.)
+    # Step 3: Adjust positioning styles to respect 
+    # element offsets 
     @render(positioning)
 
-    # Step 3: Re-measure elements (Reflow!)
-    for path, value of intrinsic
+    # Step 4: Set new positions in bulk (Restyle)
+    for id in positioning
+      for prop, value in positioning[id]
+        @set id, prop, value
 
+    # Step 4: Re-measure elements (Reflow)
     if intrinsic
       for path, value of intrinsic
         @set(path, undefined, value, positioning, true)
-        
-    
     else
       @engine.triggerEvent('solved', data, intrinsic)
 
@@ -71,7 +73,7 @@ class Styles
       path = path.substring(0, last)
 
     return unless element = @engine.references.get(path)
-    if this.positioners[prop]
+    if this.positioners[property]
       (positioning[path] ||= {})[property] = value
     else
       if intrinsic
@@ -90,28 +92,40 @@ class Styles
         style[camel] = value
     @
 
-
-  render: (positioning, parent, x, y) ->
+  # Position 
+  render: (positioning, parent, x, y, offsetParent) ->
     parent = @engine.scope unless parent
-    if offsets = @position(positioning, parent, x, y)
-      x += offsets.x || 0
-      y += offsets.y || 0
-    for child in @engine.context['>'](parent)
-      @render(positioning, child, x, y)
+    # Calculate new offsets for given element and styles
+    if offsets = @preposition(positioning, parent, x, y)
+      x += offsets.left
+      y += offsets.top
 
-    
-  position: (positioning, element, x, y) ->
+    # Select all children
+    children = @engine.context['>'][1](parent);
+
+    # When rendering a positioned element, measure its offsets
+    if offsetParent && !offsets && children.length && children[0].parentOffset == parent
+      x += parent.offsetLeft
+      y += parent.offsetTop
+      offsetParent = parent
+
+    # Position children
+    for child in children
+      @render(positioning, child, x, y, offsetParent)
+
+  # Calculate offsets according to new values (but dont set anything)
+  preposition: (positioning, element, x, y) ->
     if uid = element._gss_id
       if styles = positioning[uid]
-        offsets = null
+        offsets = {left: 0, top: 0}
         for property, value of styles
           switch property
             when "x"
-              @set(uid, property, value - x)
-              (offsets ||= {}).x = value - x
+              styles.x = value - x
+              offsets.left = value - x
             when "y"
-              @set(uid, property, value - y)
-              (offsets ||= {}).y = value - y
+              styles.y = value - y
+              offsets.top = value - y
 
     return offsets
 

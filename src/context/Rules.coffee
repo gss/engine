@@ -20,15 +20,21 @@ class Rules
   # Conditionals
   
   "$rule":
-    prefix: "{"
-    noop: true
     evaluate: (arg, evaluated) ->
       return arg if arg.index == 0
       if arg.index == 1 || (evaluated[1] && arg.index == 2)
-        return @evaluate arg, null, evaluated[0]
+        return @evaluate arg, evaluated, evaluated[0], undefined, undefined, evaluated[1]
 
-    command: (path, elements) ->
-      return null
+    receive: (engine, scope, args, result) ->
+      console.error('recieved cmd')
+      debugger
+      engine.expressions.write result
+
+    command: (path, condition, positive, negative) ->
+      if condition
+        positive
+      else
+        negative
 
   "$if":
     prefix: "@if"

@@ -2,8 +2,8 @@ dummy = document.createElement('_')
 
 class Selectors
   # Set up DOM observer and filter out old elements 
-  onDOMQuery: (engine, scope, args, result, operation, continuation) ->
-    return @engine.queries.filter(scope || operation.func && args[0], result, operation, continuation)
+  onDOMQuery: (engine, scope, args, result, operation, continuation, subscope) ->
+    return @engine.queries.filter(scope || operation.func && args[0], result, operation, continuation, subscope)
 
   remove: (id, continuation) ->
     if typeof id == 'object'
@@ -27,7 +27,7 @@ class Selectors
       
     # Create a shortcut operation to get through a group of operations
     perform: (object, operation) ->
-      name = operation.group
+      name = operation.def.group
       shortcut = [name, operation.promise]
       shortcut.parent = (operation.head || operation).parent
       shortcut.index = (operation.head || operation).index
@@ -246,12 +246,14 @@ class Selectors
 
   '::this':
     prefix: ''
-    command: (path, node) ->
-      console.log('pseudo', path, node)
+    scoped: true
+    1: (node) ->
+      debugger
       return node
 
   '::parent':
     prefix: '::parent'
+    scoped: true
     1: (node) ->
       if parent = node.parentNode
         if parent.nodeType == 1

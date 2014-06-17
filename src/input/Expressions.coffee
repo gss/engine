@@ -35,24 +35,25 @@ class Expressions
               return buffer
       else 
         @buffer = buffer = []
+      buffer.push(args)
       return
     else
       return @output.read.apply(@output, args)
 
   # Evaluate operation depth first
-  evaluate: (operation, context, continuation, from, ascending) ->
+  evaluate: (operation, context, continuation, from, ascending, subscope) ->
     console.log(operation)
-    offset = operation.offset ? @analyze(operation).offset
+    def = operation.def || @analyze(operation).def
 
     # Use a shortcut operation when possible
     if promise = operation.promise
-      operation = operation.tail.shortcut ||= @context[operation.group].perform(@, operation)
+      operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
       from = ascending != undefined && 1 || undefined
 
     # Recursively evaluate arguments, stop on undefined.
     args = null
     skip = operation.skip
-
+    offset = operation.offset || 0
     for argument, index in operation
       continue if offset > index
       if index == 0 && (!operation.noop && !offset)
@@ -64,19 +65,24 @@ class Expressions
         offset += 1
         continue
       else if argument instanceof Array
-        argument = (operation.evaluate || @evaluate).call(@, argument, (args ||= []))
+        evaluate = def.evaluate || @evaluate
+        argument = evaluate.call(@, argument, (args ||= []), continuation, undefined, undefined, subscope)
       return if argument == undefined
       (args ||= [])[index - offset] = argument
 
     # No-op commands are to be executed by something else (e.g. Thread)
     if operation.noop
       parent = operation.parent
-      if parent && (!parent.noop || parent.parent)
+      if parent && parent.def.receive
+        return parent.def.receive @engine, scope, args, args
+      else if parent && (!parent.noop || parent.parent)
         return args
       else
         return @write(args)
 
     # Look up method on the first argument
+    if def.scoped
+      (args ||= []).unshift subscope || @engine.scope
     unless func = operation.func
       scope = (typeof args[0] == 'object' && args.shift()) || @engine.scope
       func = scope && scope[operation.method]
@@ -88,23 +94,27 @@ class Expressions
     result = func.apply(scope || @context, args)
 
     # Let context transform or filter the result
-    if callback = operation.callback
-      result = @context[callback](@engine, scope, args, result, operation, continuation)
+    if callback = operation.def.callback
+      result = @context[callback](@engine, scope, args, result, operation, continuation, subscope)
 
     path = (continuation || '') + operation.path
     
-    # Ascend the execution (forks for each item in collection)
+    # Ascend the execution (fork for each item in collection)
     if result?
-      if @engine.isCollection(result)
-        console.group path
-        for item in result
-          @evaluate operation.parent, undefined, @engine.references.combine(path, item), operation.index, item
-        console.groupEnd path
-      else if !context
-        if operation.parent
-          @evaluate operation.parent, undefined, path, operation.index, result
-        else
-          return @write result
+      if parent = operation.parent
+        if @engine.isCollection(result)
+          console.group path
+          for item in result
+            @evaluate parent, undefined, @engine.references.combine(path, item), operation.index, item
+          console.groupEnd path
+          return
+        else if parent.def.receive
+          parent.def.receive @engine, scope, args, result
+        else if !context
+          @evaluate parent, undefined, path, operation.index, result
+      else
+        return @write result
+
     return result
 
   # Process and pollute a single AST node with meta data.
@@ -119,41 +129,36 @@ class Expressions
     # Handle commands that refer other commands (e.g. [$combinator, node, >])
     operation.arity = operation.length - 1
     if def && def.lookup
-      operation.arity--
-      operation.skip = operation.length - operation.arity
+      if operation.arity > 1
+        operation.arity-- 
+        operation.skip = operation.length - operation.arity
+      else
+        operation.skip = 1
       operation.name = (def.prefix || '') + operation[operation.skip]
-      for property of def
-        if property != 'lookup'
-          operation[property] = def[property]
+      otherdef = def
       if typeof def.lookup == 'function'
         def = def.lookup.call(@, operation)
       else
         def = @context[operation.name]
 
-
-    operation.offset = 0
     
     for child, index in operation
       if child instanceof Array
-        @analyze(child, operation).group
+        @analyze(child, operation)
 
     if def == undefined
-      operation.noop = true
+      operation.def = operation.noop = true
       return operation
 
     # Assign definition properties to AST node
-    operation.group    = group    if group    = def.group
-    operation.prefix   = prefix   if prefix   = def.prefix
-    operation.suffix   = suffix   if suffix   = def.suffix
-    operation.callback = callback if callback = def.callback
-    operation.evaluate = evaluate if evaluate = def.evaluate
-    operation.path     = @serialize(operation)
+    operation.def      = def
+    operation.path     = @serialize(operation, otherdef)
 
     # Group multiple nested tokens into a single token
     for child, index in operation
       if child instanceof Array
-        if index == 1 && group && group == child.group
-          if def = @context[group]
+        if index == 1 && def.group && def.group == child.def.group
+          if def = @context[def.group]
             tail = child.tail ||= (def.attempt(child) && child)
             if tail
               operation.promise = (child.promise || child.path) + operation.path
@@ -161,13 +166,12 @@ class Expressions
               tail.promise = operation.promise
               operation.tail = tail
 
-
     # Try predefined command if can't dispatch by number of arguments
     if typeof def == 'function'
       func = def
-      operation.offset += 1
+      operation.offset = 1
     else if func = def[operation.arity]
-      operation.offset += 1
+      operation.offset = 1
     else
       func = def.command
 
@@ -182,9 +186,10 @@ class Expressions
     return operation
 
   # Serialize operation to a string with arguments, but without context
-  serialize: (operation) ->
-    prefix = operation.prefix || (operation.noop && operation.name) || ''
-    suffix = operation.suffix || ''
+  serialize: (operation, otherdef) ->
+    def = operation.def
+    prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.noop && operation.name) || ''
+    suffix = def.suffix || (otherdef && otherdef.suffix) || ''
     path = ''
     start = 1 + (operation.length > 2)
     for index in [start ... operation.length]
