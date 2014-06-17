@@ -39,6 +39,7 @@ class Engine
       @expressions = new @Expressions(@)
       @references  = new @References(@)
       @events      = {}
+      @values      = {}
       return
 
     # GSS.Document() and GSS() create new GSS.Document
@@ -80,6 +81,11 @@ class Engine
   # Catch-all event listener 
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
+
+  # Store solutions
+  merge: (object) ->
+    for prop, value of object
+      @values[prop] = value
 
   # Combine mixins
   @include = ->

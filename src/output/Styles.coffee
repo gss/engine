@@ -17,18 +17,30 @@ class Styles
         data[prop] = undefined
         (intrinsic ||= {})[path] = value
 
-    # Apply changed styles
-    for path, value of data
-      @set(path, undefined, value)
 
-    # Compare intrinsic properties
+
+    # Step 1: Apply changed styles in batch, 
+    # leave out positioning properties (Restyle!)
+    positioning = {}
+    for path, value of data
+      @set(path, undefined, value, positioning)
+
+    # Step 2: Position elements in natural order (Restyle contd.)
+    @render(positioning)
+
+    # Step 3: Re-measure elements (Reflow!)
+    for path, value of intrinsic
+
     if intrinsic
       for path, value of intrinsic
-        @set(path, undefined, value)
+        @set(path, undefined, value, positioning, true)
         
-    @engine.triggerEvent('solved', data, intrinsic)
+    
+    else
+      @engine.triggerEvent('solved', data, intrinsic)
 
-
+  write: (data) ->
+    @engine.merge(data)
 
   remove: (id) ->
     delete @[id]
@@ -52,24 +64,60 @@ class Styles
       return value
     @
 
-  set: (path, property, value) ->
+  set: (path, property, value, positioning, intrinsic) ->
     if property == undefined
       last = path.lastIndexOf('[')
       property = path.substring(last + 1, path.length - 1)
       path = path.substring(0, last)
 
-    element = @engine.references.get(path)
-    camel = @camelize(property)
-    style = element.style
-    if style[camel] != undefined
-      if typeof value == 'number' && property != 'zIndex'
-        value += 'px'
-      style[camel] = value
-    @
-    
-  position: (node, offsets) ->
+    return unless element = @engine.references.get(path)
+    if this.positioners[prop]
+      (positioning[path] ||= {})[property] = value
+    else
+      if intrinsic
+        result = @engine.context['[' + property + ']'](element)
+        if result != value
 
-  matrix: (node, offsets) ->
+        else
+
+
+
+      camel = @camelize(property)
+      style = element.style
+      if style[camel] != undefined
+        if typeof value == 'number' && property != 'zIndex'
+          value += 'px'
+        style[camel] = value
+    @
+
+
+  render: (positioning, parent, x, y) ->
+    parent = @engine.scope unless parent
+    if offsets = @position(positioning, parent, x, y)
+      x += offsets.x || 0
+      y += offsets.y || 0
+    for child in @engine.context['>'](parent)
+      @render(positioning, child, x, y)
+
+    
+  position: (positioning, element, x, y) ->
+    if uid = element._gss_id
+      if styles = positioning[uid]
+        offsets = null
+        for property, value of styles
+          switch property
+            when "x"
+              @set(uid, property, value - x)
+              (offsets ||= {}).x = value - x
+            when "y"
+              @set(uid, property, value - y)
+              (offsets ||= {}).y = value - y
+
+    return offsets
+
+  matrix: (positioning, element) ->
+    
+  positioners: ['x', 'y']
 
     
 module.exports = Styles

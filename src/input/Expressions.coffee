@@ -25,6 +25,7 @@ class Expressions
   # Hook: Buffer equasions if needed
   write: (args, batch) ->
     if (buffer = @buffer) != undefined
+      return unless args?
       if buffer
         # Optionally, combine subsequent commands (like remove)
         if batch
@@ -34,13 +35,13 @@ class Expressions
               return buffer
       else 
         @buffer = buffer = []
-      buffer.push(args)
       return
     else
       return @output.read.apply(@output, args)
 
   # Evaluate operation depth first
   evaluate: (operation, context, continuation, from, ascending) ->
+    console.log(operation)
     offset = operation.offset ? @analyze(operation).offset
 
     # Use a shortcut operation when possible
@@ -145,6 +146,7 @@ class Expressions
     operation.prefix   = prefix   if prefix   = def.prefix
     operation.suffix   = suffix   if suffix   = def.suffix
     operation.callback = callback if callback = def.callback
+    operation.evaluate = evaluate if evaluate = def.evaluate
     operation.path     = @serialize(operation)
 
     # Group multiple nested tokens into a single token

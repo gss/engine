@@ -48,16 +48,15 @@ describe 'Nested Rules', ->
           ["eq", ["get","[target-size]"], 100]
         ]
         container.innerHTML =  ""
-                              
-        listener = (e) ->        
-          expect(engine.lastWorkerCommands).to.eql [
-              ["eq", ["get","[target-size]"], 100]
-            ]
-          container.removeEventListener 'solved', listener
-          done()
-        container.addEventListener 'solved', listener
-        
+                         
         engine = new GSS(container)
+
+        engine.once 'solved', ->        
+          expect(stringify engine.expressions.lastOutput).to.eql stringify [
+              ["eq", ["get", "[target-size]", null, "get"], 100]
+            ]
+          done()
+        
         engine.read(rules)
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
@@ -167,29 +166,27 @@ describe 'Nested Rules', ->
               "div+main$main0!~$header0",
               "div+main$main0"
             ]]
-            expect(all.header0.style.width).to.eql null
-            expect(all.box0.style.width).to.eql null
+            expect(all.header0.style.width).to.eql ''
+            expect(all.box0.style.width).to.eql ''
 
             done()
         engine.read(rules)
 
-    describe '1 level w/ ::', ->
+    describe '1 level w/ ::3', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          {
-            type:'ruleset'
-            selectors: ['.vessel .box']
-            rules: [
-              {
-                type:'constraint', 
-                cssText:'::[x] == 100', 
-                commands: [
-                  ["eq", ["get$","x",["$reserved","::this"]], ["number",100]]
-                ]
-              }
-            ]
-          }
+          ['$rule', 
+            ['$class',
+              ['$combinator'
+                ['$class', 'vessel']
+                ' ']
+              'box']
+            ["eq", 
+              ["get$","x",
+                ["$reserved","this"]]
+              100]
+          ]
         ]
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -200,26 +197,19 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
-                              
-        listener = (e) ->        
+                       
+        engine = GSS(container)
 
-          expect(stringify engine.lastWorkerCommands).to.eql stringify [
+        engine.once 'solved', -> 
+          expect(stringify engine.expressions.lastOutput).to.eql stringify [
               ['eq', ['get$','x','$box1', '.vessel .box'], ['number',100]]
               ['eq', ['get$','x','$box2', '.vessel .box'], ['number',100]]
             ]
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
         
-        engine = GSS(container)
+        engine.read rules
 
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
-      
-
+    describe '1 level w/ ::2', ->
 
       it 'should resolve selector on ::', (done) ->
         rules = [

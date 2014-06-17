@@ -246,13 +246,16 @@ class Selectors
 
   '::this':
     prefix: ''
-    1: (node) ->
+    command: (path, node) ->
+      console.log('pseudo', path, node)
       return node
 
   '::parent':
     prefix: '::parent'
     1: (node) ->
-      return node
+      if parent = node.parentNode
+        if parent.nodeType == 1
+          return parent
 
   '::scope':
     prefix: "::scope"

@@ -55,10 +55,10 @@ class Measurements
     command: (path, object, property) ->
       # Getting variable
       unless property
-        return ['get', object, path]
+        return ['get', object, null, path]
       # Getting global property
       if object.absolute is 'window' || object == document
-        return ['get',"::window[#{prop}]", path]
+        return ['get',"::window[#{prop}]", null, path]
       if object.nodeType
         id = @engine.identify(object)
       # Getting custom property

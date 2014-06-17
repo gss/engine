@@ -4,13 +4,15 @@ require 'cassowary'
 class Constraints
   onConstraint: (engine, scope, args, result, operation, continuation) ->
     for arg in args
-      if arg.path
-        (result.paths ||= []).push(arg.path)
-      if arg.prop
-        (result.props ||= []).push(arg.prop)
+      if arg
+        if arg.path
+          (result.paths ||= []).push(arg.path)
+        if arg.prop
+          (result.props ||= []).push(arg.prop)
     return result
 
   get: (property, scope, path) ->
+    console.log('getting', property, scope, path)
     if typeof @[property] == 'function'
       variable = @[property](scope)
     else
