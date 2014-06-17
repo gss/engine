@@ -141,6 +141,152 @@ describe 'Cassowary Thread', ->
     #done()    
     
   
+  
+  # Stays
+  # ---------------------------------------------------------------------
+  
+  describe 'Stays', ->
+    
+    describe 'basic stays w/ strength', ->
+      
+      thread = new Thread {
+        defaultStrength: "weak"
+      }
+      
+      it 'layout setup', () ->        
+        thread.execute
+          commands:[
+            
+            # window  
+            ['suggest',['get','[window]'],1000,'require']
+            
+            # weak layout
+            ['eq',['get','[frame-w]'],['divide',['get','[window]'],10],'weak']
+            ['eq',['get','[frame-h]'],['divide',['get','[window]'],10],'weak']            
+            
+            # strong stays
+            ['stay',['get','[frame-w]'],'strong']
+            ['stay',['get','[frame-h]'],'strong']                        
+            
+            # ignored b/c of stays
+            ['eq',['get','[frame-w]'],999,'medium']
+            ['eq',['get','[frame-h]'],999,'medium']
+            ['eq',['get','[frame-w]'],999,'medium']
+            ['eq',['get','[frame-h]'],999,'medium']
+            ['eq',['get','[frame-w]'],999,'medium']
+            ['eq',['get','[frame-h]'],999,'medium']
+            ['eq',['get','[frame-w]'],999,'medium']
+            ['eq',['get','[frame-h]'],999,'medium']
+            
+          ]
+        expect(thread.getValues()).to.eql
+          "[window]": 1000
+          "[frame-w]": 100
+          "[frame-h]": 100
+    
+    describe 'async stays w/ strengths', ->
+      
+      thread = new Thread {
+        defaultStrength: "weak"
+      }
+      
+      it 'step 1: no stays', () ->        
+        thread.execute
+          commands:[
+            ['eq',['get','[frame-w]'],100]
+            ['eq',['get','[frame-h]'],100]
+          ]
+        expect(thread.getValues()).to.eql
+          "[frame-w]": 100
+          "[frame-h]": 100
+      
+      it 'step 2: stays', () ->        
+        thread.execute
+          commands:[
+            ['stay',['get','[frame-w]'],'strong']
+            ['stay',['get','[frame-h]']]
+            ['eq',['get','[frame-w]'],['get','[bg-w]'],'require']
+            ['eq',['get','[frame-h]'],['get','[bg-h]'],'require']
+            ['eq',['get','[frame-w]'],1000,'strong']
+            ['eq',['get','[frame-h]'],1000,'strong']
+          ]
+        expect(thread.getValues()).to.eql
+          "[frame-w]": 100
+          "[frame-h]": 1000
+          "[bg-w]": 100
+          "[bg-h]": 1000
+      
+      it 'step 3: weak suggests', () ->        
+        thread.execute
+          commands:[            
+            ['suggest',['get','[frame-w]'],200,'weak']
+            ['suggest',['get','[frame-h]'],200,'weak']
+          ]
+        
+        expect(thread.getValues()).to.eql
+          "[frame-w]": 200
+          "[frame-h]": 1000
+          "[bg-w]": 200
+          "[bg-h]": 1000
+    
+    describe 'simulated cropping demo', ->
+      
+      thread = new Thread {
+        defaultStrength: "weak"
+      }
+      
+      it 'initial layout', () ->        
+        thread.execute
+          commands:[
+            # window            
+            ['suggest',['get','[window]'],1000,'require']
+            
+            # weak layout
+            ['eq',['get','[frame-w]'],['divide',['get','[window]'],10],'weak']
+            ['eq',['get','[frame-h]'],['divide',['get','[window]'],10],'weak']           
+            
+            # cropping
+            # -----------------------------------
+            
+            # stays            
+            ['stay',['get','[frame-w]'],'strong']
+            ['stay',['get','[frame-h]'],'strong']            
+            
+            # required 2x1 landscape aspect ratio
+            ['eq',['get','[bg-w]'],['multiply',['get','[bg-h]'],2],'require']
+            
+            # bg weakly is size of frame
+            ['eq',['get','[frame-w]'],['get','[bg-w]'],'weak']
+            ['eq',['get','[frame-h]'],['get','[bg-h]'],'weak']
+            
+            # bg required to cover frame
+            ['lte',['get','[frame-w]'],['get','[bg-w]'],'require']
+            ['lte',['get','[frame-h]'],['get','[bg-h]'],'require']            
+          ]          
+        expect(thread.getValues()).to.eql
+          "[window]": 1000
+          "[frame-w]": 100
+          "[frame-h]": 100
+          "[bg-w]": 200
+          "[bg-h]": 100
+          
+      it 'screensize changes', () ->        
+        thread.execute
+          commands:[
+            # window
+            ['suggest',['get','[window]'],2000,'require']           
+          ]          
+
+        expect(thread.getValues()).to.eql
+          "[window]": 2000
+          "[frame-w]": 200
+          "[frame-h]": 200
+          "[bg-w]": 400
+          "[bg-h]": 200
+      
+  
+  
+  
   # DOM Prop Helpers
   # ---------------------------------------------------------------------
   

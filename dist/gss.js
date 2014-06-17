@@ -24772,13 +24772,30 @@ Thread = (function() {
   };
 
   Thread.prototype.stay = function(self) {
-    var args, v, _i, _len, _ref;
+    var args, s, v, w, _i, _j, _len, _len1, _ref, _ref1;
     args = __slice.call(arguments);
+    s = null;
+    w = null;
     _ref = args.slice(1, args.length);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       v = _ref[_i];
-      this.solver.addStay(v);
+      if (typeof v === 'string') {
+        args.splice(args.indexOf(v), 1);
+        s = v;
+      } else if (typeof v === 'number') {
+        args.splice(args.indexOf(v), 1);
+        w = v;
+      }
     }
+    this.solver.solve();
+    _ref1 = args.slice(1, args.length);
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      v = _ref1[_j];
+      if (v instanceof c.Variable) {
+        this.solver.addStay(v, this._strength(s), this._weight(w));
+      }
+    }
+    this.solver.resolve();
     return this.solver;
   };
 

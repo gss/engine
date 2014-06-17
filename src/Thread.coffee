@@ -507,12 +507,29 @@ class Thread
     @solver.resolve()
     
 
-  # Todo
+  # TODO:
   # - track stay constraints... c.StayConstraint
   stay: (self) ->
     args = [arguments...]
+    
+    # extract strength & weight
+    s = null
+    w = null
     for v in args[1...args.length]
-      @solver.addStay v
+      if typeof v is 'string'
+        args.splice args.indexOf(v), 1
+        s = v
+      else if typeof v is 'number'
+        args.splice args.indexOf(v), 1
+        w = v
+    
+    # add stay constrains for vars
+    @solver.solve()
+    for v in args[1...args.length]
+      if v instanceof c.Variable
+        @solver.addStay v, @_strength(s), @_weight(w)
+    @solver.resolve()
+                
     return @solver
       
 
