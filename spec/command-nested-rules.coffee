@@ -187,6 +187,7 @@ describe 'Nested Rules', ->
               100]
           ]
         ]
+        console.info(".vessel .box { ::[x] == 100 }")
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div class="vessel">
