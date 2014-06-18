@@ -41,17 +41,22 @@ class Expressions
       return @output.read.apply(@output, args)
 
   # Evaluate operation depth first
-  evaluate: (operation, context, continuation, from, ascending, subscope) ->
+  evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
     console.log(operation)
     def = operation.def || @analyze(operation).def
+    if (parent = operation.parent) && !overloaded
+      if (pdef = parent.def) && pdef.evaluate
+        evaluated = pdef.evaluate.call(@, operation, continuation, scope, ascender, ascending)
+        return evaluated unless evaluated == @
+
 
     # Use a shortcut operation when possible
     if promise = operation.promise
       operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
-      from = ascending != undefined && 1 || undefined
+      ascender = ascender != undefined && 1 || undefined
 
     # Recursively evaluate arguments, stop on undefined.
-    args = null
+    args = prev = undefined
     skip = operation.skip
     offset = operation.offset || 0
     for argument, index in operation
@@ -59,22 +64,20 @@ class Expressions
       if index == 0 && (!operation.noop && !offset)
         if continuation
           argument = continuation
-      else if from == index
+      else if ascender == index
         argument = ascending
       else if skip == index
         offset += 1
         continue
       else if argument instanceof Array
-        evaluate = def.evaluate || @evaluate
-        argument = evaluate.call(@, argument, (args ||= []), continuation, undefined, undefined, subscope)
+        argument = @evaluate(argument, continuation, scope, undefined, prev)
       return if argument == undefined
-      (args ||= [])[index - offset] = argument
+      (args ||= [])[index - offset] = prev = argument
 
     # No-op commands are to be executed by something else (e.g. Thread)
     if operation.noop
-      parent = operation.parent
       if parent && parent.def.receive
-        return parent.def.receive @engine, scope, args, args
+        return parent.def.receive @engine, scope, args
       else if parent && (!parent.noop || parent.parent)
         return args
       else
@@ -82,36 +85,38 @@ class Expressions
 
     # Look up method on the first argument
     if def.scoped
-      (args ||= []).unshift subscope || @engine.scope
+      scope ||= @engine.scope
+      (args ||= []).unshift scope
     unless func = operation.func
-      scope = (typeof args[0] == 'object' && args.shift()) || @engine.scope
-      func = scope && scope[operation.method]
+      object = (typeof args[0] == 'object' && args.shift()) || @engine.scope
+      func = object && object[operation.method]
 
     # Execute the function
     unless func
       throw new Error("Engine broke, couldn't find method: #{operation.method}")
 
-    result = func.apply(scope || @context, args)
+    result = func.apply(object || @context, args)
 
     # Let context transform or filter the result
     if callback = operation.def.callback
-      result = @context[callback](@engine, scope, args, result, operation, continuation, subscope)
+      result = @context[callback](object, args, result, operation, continuation, scope)
 
     path = (continuation || '') + operation.path
     
     # Ascend the execution (fork for each item in collection)
     if result?
-      if parent = operation.parent
+      if parent
         if @engine.isCollection(result)
           console.group path
           for item in result
-            @evaluate parent, undefined, @engine.references.combine(path, item), operation.index, item
+            subpath = @engine.references.combine(path, item)
+            @evaluate parent, subpath, scope, operation.index, item
           console.groupEnd path
           return
         else if parent.def.receive
-          parent.def.receive @engine, scope, args, result
-        else if !context
-          @evaluate parent, undefined, path, operation.index, result
+          parent.def.receive @engine, object, result
+        else if ascender?
+          @evaluate parent, path, scope, operation.index, result
       else
         return @write result
 
@@ -154,12 +159,15 @@ class Expressions
     operation.def      = def
     operation.path     = @serialize(operation, otherdef)
 
+    if def.group && groupper = @context[def.group]
+      groupper.analyze(operation)
+      
     # Group multiple nested tokens into a single token
     for child, index in operation
       if child instanceof Array
-        if index == 1 && def.group && def.group == child.def.group
-          if def = @context[def.group]
-            tail = child.tail ||= (def.attempt(child) && child)
+        if index == 1 && def.group
+          if def.group == child.def.group
+            tail = child.tail ||= (groupper.attempt(child) && child)
             if tail
               operation.promise = (child.promise || child.path) + operation.path
               tail.head = operation
@@ -175,6 +183,7 @@ class Expressions
     else
       func = def.command
 
+    # Command may resolve to method, which will be called on the first argument
     if typeof func == 'string'
       if command = @context[func]
         operation.func = command
@@ -193,7 +202,9 @@ class Expressions
     path = ''
     start = 1 + (operation.length > 2)
     for index in [start ... operation.length]
-      path += operation[index]
+      if op = operation[index]
+        if typeof op != 'object'
+          path += operation[index]
     return prefix + path + suffix
 
 

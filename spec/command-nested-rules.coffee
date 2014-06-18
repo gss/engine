@@ -25,6 +25,7 @@ describe 'Nested Rules', ->
   
     beforeEach ->
       container = document.createElement 'div'
+      container.id = 'container0'
       $('#fixtures').appendChild container
   
     afterEach ->
@@ -172,7 +173,7 @@ describe 'Nested Rules', ->
             done()
         engine.read(rules)
 
-    describe '1 level w/ ::3', ->
+    describe '1 level w/ ::', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
@@ -208,33 +209,21 @@ describe 'Nested Rules', ->
           done()
         
         engine.read rules
-
-    describe '1 level w/ ::2', ->
-
-      it 'should resolve selector on ::', (done) ->
-        rules = [
-          {
-            type:'ruleset'
-            selectors: ['.vessel']
-            rules: [
-              {
-                type:'constraint', 
-                cssText:'(:: .box)[x] == 100', 
-                commands: [
+    describe '123', ->
+      it 'should observe selector on ::', (done) ->
+        rules = ["$rule",
+                  ["$class", "vessel"]
                   ["eq", 
-                    ["get$",
-                      "x", 
-                      ['$combinator', 
-                        ' ', 
-                        ["$class", 
-                          "box", 
-                          ["$reserved","::this"]], 
-                      ["number",100]]]]
+                    ["get",
+                      ["$class", 
+                        ['$combinator', 
+                          ["$reserved", "this"]
+                          ' '] 
+                        "box"], 
+                      "[x]"], 
+                    100]
                 ]
-              }
-            ]
-          }
-        ]
+        console.info(".vessel { (:: .box)[x] == 100 }")
 
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -247,43 +236,128 @@ describe 'Nested Rules', ->
           """
                         
         box1 = container.getElementsByClassName('box')[1]
+        box2 = container.getElementsByClassName('box')[2]
         vessel0 = container.getElementsByClassName('vessel')[0] 
+        engine = new GSS(container)
 
-        Scenario done, container, [
-          TwoElementsMatch = (e) ->  
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
-              ['eq', ['get$','x','$box2', '.vessel .box$vessel0'], ['number',100]]
+        engine.once 'solved', ->
+          expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+            ['eq', ['get','[x]','$box1', '.vessel$vessel0 .box$box1'], 100]
+            ['eq', ['get','[x]','$box2', '.vessel$vessel0 .box$box2'], 100]
+          ])
+          # Accumulated solutions
+          expect(stringify(engine.values)).to.eql stringify
+            "$box1[x]": 100
+            "$box2[x]": 100
+          # Snapshots of nodelists: Two elements match nested selector
+          expect(engine.queries['.vessel']).to.eql [vessel0]
+          expect(engine.queries['.vessel$vessel0 .box']).to.eql [box1, box2]
+          # Two elements observe a query. Query is stored with scope & continuation key by element id
+          expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
+          expect(engine.queries._watchers["$container0"][2]).to.eql(container)
+          expect(engine.queries._watchers["$container0"][3]).to.eql(undefined)
+          expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0')
+          expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
+          expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
+          # Two constraints are set
+          expect(engine.solver.solutions[".vessel$vessel0 .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions[".vessel$vessel0 .box$box1"].length).to.eql(1)
+          expect(engine.solver.solutions[".vessel$vessel0 .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions[".vessel$vessel0 .box$box2"].length).to.eql(1)
+          # Each property knows how many constraints reference it (so it can become null)
+          expect(engine.solver.solutions["$box1[x]"]).to.eql(1)
+          expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+          box1.classList.remove('box')
+
+          engine.once 'solved', ->
+            # One child doesnt match the subselector anymore
+            expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+              ['remove', '.vessel$vessel0 .box$box1']
             ])
-            box1.classList.remove('box')
-          OneChildDoesntMatchAnymore = (e) ->  
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['remove', '.vessel .box$vessel0$box1']
-            ])
+            expect(stringify(engine.values)).to.eql stringify
+              "$box2[x]": 100
+            expect(engine.queries['.vessel']).to.eql [vessel0]
+            expect(engine.queries['.vessel$vessel0 .box']).to.eql [box2]
+            expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
+            expect(engine.queries._watchers["$container0"][2]).to.eql(container)
+            expect(engine.queries._watchers["$container0"][3]).to.eql(undefined)
+            expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0')
+            expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
+            expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
+            expect(engine.solver.solutions[".vessel$vessel0 .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+            expect(engine.solver.solutions[".vessel$vessel0 .box$box2"].length).to.eql(1)
+            expect(engine.solver.solutions[".vessel$vessel0 .box$box1"]).to.eql(undefined)
+            expect(engine.solver.solutions["$box1[x]"]).to.eql(undefined)
+            expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
             box1.classList.add('box')
-          ChildMatchesAgain = (e) ->  
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
-            ])
-            vessel0.classList.remove('vessel')
-          ParentDoesntMatchAnyMore = (e) ->  
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['remove', '.vessel$vessel0', '.vessel .box$vessel0']
-            ])
-            vessel0.classList.add('vessel')
-          ParentMatchesAgain = (e) ->  
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['eq', ['get$','x','$box1', '.vessel .box$vessel0'], ['number',100]]
-              ['eq', ['get$','x','$box2', '.vessel .box$vessel0'], ['number',100]]
-            ])
-        ]
-        engine = GSS(container)
 
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+            engine.once 'solved', ->
+              # Child matches again
+              expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                ['eq', ['get','[x]','$box1', '.vessel$vessel0 .box$box1'], 100]
+              ])
+              expect(stringify(engine.values)).to.eql stringify
+                "$box2[x]": 100
+                "$box1[x]": 100
+              expect(engine.queries['.vessel']).to.eql [vessel0]
+              expect(engine.queries['.vessel$vessel0 .box']).to.eql [box1, box2]
+              expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
+              expect(engine.queries._watchers["$container0"][2]).to.eql(container)
+              expect(engine.queries._watchers["$container0"][3]).to.eql(undefined)
+              expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0')
+              expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
+              expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
+              expect(engine.solver.solutions[".vessel$vessel0 .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
+              expect(engine.solver.solutions[".vessel$vessel0 .box$box1"].length).to.eql(1)
+              expect(engine.solver.solutions[".vessel$vessel0 .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+              expect(engine.solver.solutions[".vessel$vessel0 .box$box2"].length).to.eql(1)
+              expect(engine.solver.solutions["$box1[x]"]).to.eql(1)
+              expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+              vessel0.classList.remove('vessel')
+
+              engine.once 'solved', ->
+                # Parent doesnt match anymore: Remove the whole tree
+                expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                  ['remove', 
+                    ".vessel$vessel0 .box$box1", 
+                    ".vessel$vessel0 .box$box2", 
+                    ".vessel$vessel0"]
+                ])
+                expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
+                expect(engine.queries._watchers["$container0"][2]).to.eql(container)
+                expect(engine.queries._watchers["$container0"][3]).to.eql(undefined)
+                expect(engine.queries._watchers["$vessel0"]).to.eql(undefined)
+                expect(engine.solver.solutions[".vessel$vessel0 .box$box1"]).to.eql(undefined)
+                expect(engine.solver.solutions[".vessel$vessel0 .box$box2"]).to.eql(undefined)
+                expect(engine.solver.solutions["$box1[x]"]).to.eql(undefined)
+                expect(engine.solver.solutions["$box2[x]"]).to.eql(undefined)
+                vessel0.classList.add('vessel')
+
+                engine.once 'solved', ->
+                  # Parent matches again, re-watch everything 
+                  expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                    ['eq', ['get','[x]','$box1', '.vessel$vessel0 .box$box1'], 100]
+                    ['eq', ['get','[x]','$box2', '.vessel$vessel0 .box$box2'], 100]
+                  ])
+                  expect(stringify(engine.values)).to.eql stringify
+                    "$box1[x]": 100
+                    "$box2[x]": 100
+                  expect(engine.queries['.vessel']).to.eql [vessel0]
+                  expect(engine.queries['.vessel$vessel0 .box']).to.eql [box1, box2]
+                  expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
+                  expect(engine.queries._watchers["$container0"][2]).to.eql(container)
+                  expect(engine.queries._watchers["$container0"][3]).to.eql(undefined)
+                  expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0')
+                  expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
+                  expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
+                  expect(engine.solver.solutions[".vessel$vessel0 .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
+                  expect(engine.solver.solutions[".vessel$vessel0 .box$box1"].length).to.eql(1)
+                  expect(engine.solver.solutions[".vessel$vessel0 .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+                  expect(engine.solver.solutions[".vessel$vessel0 .box$box2"].length).to.eql(1)
+                  expect(engine.solver.solutions["$box1[x]"]).to.eql(1)
+                  expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+                  done()
+        engine.read(rules)
 
     describe '1 level w/ multiple selectors and ::this', ->
       it 'should observe all matching elements', (done) ->

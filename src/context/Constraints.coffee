@@ -2,7 +2,7 @@
 require 'cassowary'
 
 class Constraints
-  onConstraint: (engine, scope, args, result, operation, continuation) ->
+  onConstraint: (node, args, result, operation, continuation, scope) ->
     for arg in args
       if arg
         if arg.path
@@ -17,7 +17,7 @@ class Constraints
       variable = @[property](scope)
     else
       variable = @var((scope || '') + property)
-    variable.path = path + (scope || '') if path
+    variable.path = path || scope || ''
     variable.prop = (scope || '') + property
     return variable
 
@@ -25,7 +25,7 @@ class Constraints
     solutions = @engine.solutions
     for path in arguments
       if constraints = solutions[path]
-        for constrain in constraints
+        for constrain in constraints by -1
           solutions.remove(constrain, path)
 
     return @

@@ -2,8 +2,9 @@ dummy = document.createElement('_')
 
 class Selectors
   # Set up DOM observer and filter out old elements 
-  onDOMQuery: (engine, scope, args, result, operation, continuation, subscope) ->
-    return @engine.queries.filter(scope || operation.func && args[0], result, operation, continuation, subscope)
+  onDOMQuery: (node, args, result, operation, continuation, scope) ->
+    return result if operation.def.hidden
+    return @engine.queries.filter(node, args, result, operation, continuation, scope)
 
   remove: (id, continuation) ->
     if typeof id == 'object'
@@ -63,9 +64,8 @@ class Selectors
 
     # Native selectors cant start with a non-space combinator or qualifier
     attempt: (operation) ->
-      @analyze(operation) unless operation.name
       if operation.name == '$combinator'
-        if group[group.skip] != ' '
+        if operation[operation.skip] != ' '
           return false
       else if operation.arity == 2
         return false
@@ -247,8 +247,8 @@ class Selectors
   '::this':
     prefix: ''
     scoped: true
+    hidden: true
     1: (node) ->
-      debugger
       return node
 
   '::parent':

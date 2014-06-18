@@ -14,7 +14,7 @@ class Queries
     childList: true
     attributes: true
     characterData: true
-    # attributeOldValue: true
+    attributeOldValue: true
 
   Observer: 
     window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
@@ -26,12 +26,12 @@ class Queries
     @listener.observe @engine.scope, @options 
 
   # Re-evaluate updated queries
+  # Watchers are stored in a single array in groups of 3 properties
   write: (queries) ->
-    # Watchers are stored in a single array in groups of 3 properties
     for query, index in queries by 3
       continuation = queries[index + 1]
       scope = queries[index + 2]
-      @output.read query, undefined, continuation, undefined, undefined, scope
+      @output.read query, continuation, scope
     @
     
   # Listen to changes in DOM to broadcast them all around
@@ -49,7 +49,7 @@ class Queries
             for kls in old
               changed.push kls unless kls && klasses.contains(kls)
             for kls in klasses
-              changed.push kls unless kls && old.contains(kls)
+              changed.push kls unless kls && old.indexOf(kls) > -1
             while parent.nodeType == 1
               for kls in changed
                 @match(queries, parent, '$class', kls, target) 
@@ -146,21 +146,19 @@ class Queries
         @engine.context.remove result, path
     return true
 
-  # Filters out old values from DOM collections
-
-  filter: (node, result, operation, continuation, subscope) ->
+  # Filter out known nodes from DOM collections
+  filter: (node, args, result, operation, continuation, scope) ->
+    return if result == old
+    node ||= scope
     path = (continuation || '') + operation.path
     old = @[path]
-    if result == old
-      return  
     isCollection = result && result.length != undefined
     
     # Subscribe context to the query
-    subscope ||= node || @engine.scope
-    if id = @references.identify(subscope)
+    if id = @references.identify(node)
       watchers = @_watchers[id] ||= []
       if watchers.indexOf(operation) == -1
-        watchers.push(operation, continuation, subscope)
+        watchers.push(operation, continuation, node)
     
     # Clean refs of nodes that dont match anymore
     if old && old.length
@@ -172,6 +170,7 @@ class Queries
       if continuation && (!isCollection || !result.length)
         @engine.context.remove path, continuation
 
+    # Register newly found nodes
     if isCollection
       added = undefined
       for child in result
@@ -190,6 +189,7 @@ class Queries
     @[path] = result
     if result
       console.log('found', result.nodeType == 1 && 1 || result.length, ' by' ,path)
+    return if removed && !added
     return added || result
 
   # Check if a node observes this qualifier or combinator
@@ -199,20 +199,22 @@ class Queries
     for operation, index in watchers by 3
       if groupped = operation[group]
         continuation = watchers[index + 1]
-        subscope = watchers[index + 2]
+        scope = watchers[index + 2]
         if qualifier
-          @qualify(queries, operation, continuation, subscope, groupped, qualifier)
+          @qualify(queries, operation, continuation, scope, groupped, qualifier)
         else if changed.nodeType
-          @qualify(queries, operation, continuation, subscope, groupped, changed.tagName, '*')
+          @qualify(queries, operation, continuation, scope, groupped, changed.tagName, '*')
         else for change in changed
-          @qualify(queries, operation, continuation, subscope, groupped, change.tagName, '*')
+          @qualify(queries, operation, continuation, scope, groupped, change.tagName, '*')
     @
 
   # Check if query observes qualifier by combinator 
-  qualify: (queries, operation, continuation, groupped, qualifier, fallback) ->
+  qualify: (queries, operation, continuation, scope, groupped, qualifier, fallback) ->
+    if typeof scope == 'string'
+      debugger
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
       if queries.indexOf(operation) == -1
-        queries.push(operation, continuation, subscope)
+        queries.push(operation, continuation, scope)
     @
 
 module.exports = Queries

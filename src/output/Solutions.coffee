@@ -17,7 +17,6 @@ class Solutions
     response = {}
     for property, value of @solver._changed
       if value == 0
-        console.log('got zero', value, property, @[property], @)
         if @[property] == 0
           delete @[property]
           value = null
@@ -32,13 +31,13 @@ class Solutions
     if constrain instanceof c.Constraint
       @solver.removeConstraint(constrain)
       for other in constrain.paths
-        unless other == path
-          if group = solutions[path]
-            if index = group.indexOf(constrain) > -1
-              group.splice(index, 1)
-            unless group.length
-              delete solutions[path] 
-      debugger
+        if group = @[path]
+          if (index = group.indexOf(constrain)) > -1
+            group.splice(index, 1)
+          unless group.length
+            delete @[path]
+      
+      
       for prop in constrain.props
         @[prop]--
 

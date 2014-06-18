@@ -55,8 +55,13 @@ class Engine
 
   # Hook: Should interpreter iterate returned object?
   isCollection: (object) ->
-    # (yes, if it's a collection of objects)
-    return object && typeof object[0] == 'object' && !object.nodeType
+    # (yes, if it's a collection of objects or empty array)
+    if object && object.length != undefined && !object.substring && !object.nodeType
+      switch typeof object[0]
+        when "object"
+          return true
+        when "undefined"
+          return object.length == 0
 
   once: (type, fn) ->
     fn.once = true
@@ -85,7 +90,10 @@ class Engine
   # Store solutions
   merge: (object) ->
     for prop, value of object
-      @values[prop] = value
+      if value?
+        @values[prop] = value
+      else
+        delete @values[prop]
 
   # Combine mixins
   @include = ->
