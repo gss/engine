@@ -13,7 +13,6 @@ class Solutions
       else 
         @add(command)
     @solver.solve()
-    console.log("Solver output", @solver._changed)
     response = {}
     for property, value of @solver._changed
       if value == 0
@@ -21,6 +20,7 @@ class Solutions
           delete @[property]
           value = null
       response[property] = value
+    console.log("Solutions output", response)
     @write(response)
     return
 

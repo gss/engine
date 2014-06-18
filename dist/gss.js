@@ -21680,7 +21680,6 @@ Solutions = (function() {
       }
     }
     this.solver.solve();
-    console.log("Solver output", this.solver._changed);
     response = {};
     _ref = this.solver._changed;
     for (property in _ref) {
@@ -21693,6 +21692,7 @@ Solutions = (function() {
       }
       response[property] = value;
     }
+    console.log("Solutions output", response);
     this.write(response);
   };
 
@@ -21787,7 +21787,7 @@ Styles = (function() {
   }
 
   Styles.prototype.read = function(data) {
-    var id, index, intrinsic, path, positioning, prop, property, value, _i, _j, _len, _len1, _ref, _results;
+    var id, index, intrinsic, path, positioning, prop, property, styles, value, _results;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
     for (path in data) {
@@ -21806,11 +21806,11 @@ Styles = (function() {
       this.set(path, void 0, value, positioning);
     }
     this.render(positioning);
-    for (_i = 0, _len = positioning.length; _i < _len; _i++) {
-      id = positioning[_i];
-      _ref = positioning[id];
-      for (value = _j = 0, _len1 = _ref.length; _j < _len1; value = ++_j) {
-        prop = _ref[value];
+    debugger;
+    for (id in positioning) {
+      styles = positioning[id];
+      for (prop in styles) {
+        value = styles[prop];
         this.set(id, prop, value);
       }
     }
@@ -21861,7 +21861,7 @@ Styles = (function() {
   };
 
   Styles.prototype.set = function(path, property, value, positioning, intrinsic) {
-    var camel, element, last, result, style;
+    var camel, element, last, positioned, positioner, result, style;
     if (property === void 0) {
       last = path.lastIndexOf('[');
       property = path.substring(last + 1, path.length - 1);
@@ -21870,7 +21870,8 @@ Styles = (function() {
     if (!(element = this.engine.references.get(path))) {
       return;
     }
-    if (this.positioners[property]) {
+    positioner = this.positioners[property];
+    if (positioning && positioner) {
       (positioning[path] || (positioning[path] = {}))[property] = value;
     } else {
       if (intrinsic) {
@@ -21879,6 +21880,12 @@ Styles = (function() {
 
         } else {
 
+        }
+      }
+      if (positioner) {
+        positioned = positioner(element);
+        if (typeof positioned === 'string') {
+          property = positioned;
         }
       }
       camel = this.camelize(property);
@@ -21926,14 +21933,16 @@ Styles = (function() {
         };
         for (property in styles) {
           value = styles[property];
-          switch (property) {
-            case "x":
-              styles.x = value - x;
-              offsets.left = value - x;
-              break;
-            case "y":
-              styles.y = value - y;
-              offsets.top = value - y;
+          if (value !== null) {
+            switch (property) {
+              case "x":
+                styles.x = value - (x || 0);
+                offsets.left = value - (x || 0);
+                break;
+              case "y":
+                styles.y = value - (y || 0);
+                offsets.top = value - (y || 0);
+            }
           }
         }
       }
@@ -21943,7 +21952,14 @@ Styles = (function() {
 
   Styles.prototype.matrix = function(positioning, element) {};
 
-  Styles.prototype.positioners = ['x', 'y'];
+  Styles.prototype.positioners = {
+    x: function() {
+      return 'left';
+    },
+    y: function() {
+      return 'top';
+    }
+  };
 
   return Styles;
 

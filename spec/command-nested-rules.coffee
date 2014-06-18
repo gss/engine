@@ -223,7 +223,6 @@ describe 'Nested Rules', ->
                       "[x]"], 
                     100]
                 ]
-        console.info(".vessel { (:: .box)[x] == 100 }")
 
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -267,6 +266,11 @@ describe 'Nested Rules', ->
           # Each property knows how many constraints reference it (so it can become null)
           expect(engine.solver.solutions["$box1[x]"]).to.eql(1)
           expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+
+          expect(box1.style.left).to.eql('100px')
+          expect(box2.style.left).to.eql('100px')
+          
+
           box1.classList.remove('box')
 
           engine.once 'solved', ->
@@ -289,6 +293,8 @@ describe 'Nested Rules', ->
             expect(engine.solver.solutions[".vessel$vessel0 .box$box1"]).to.eql(undefined)
             expect(engine.solver.solutions["$box1[x]"]).to.eql(undefined)
             expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+            expect(box1.style.left).to.eql('')
+            expect(box2.style.left).to.eql('100px')
             box1.classList.add('box')
 
             engine.once 'solved', ->
@@ -313,6 +319,8 @@ describe 'Nested Rules', ->
               expect(engine.solver.solutions[".vessel$vessel0 .box$box2"].length).to.eql(1)
               expect(engine.solver.solutions["$box1[x]"]).to.eql(1)
               expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+              expect(box1.style.left).to.eql('100px')
+              expect(box2.style.left).to.eql('100px')
               vessel0.classList.remove('vessel')
 
               engine.once 'solved', ->
@@ -331,6 +339,8 @@ describe 'Nested Rules', ->
                 expect(engine.solver.solutions[".vessel$vessel0 .box$box2"]).to.eql(undefined)
                 expect(engine.solver.solutions["$box1[x]"]).to.eql(undefined)
                 expect(engine.solver.solutions["$box2[x]"]).to.eql(undefined)
+                expect(box1.style.left).to.eql('')
+                expect(box2.style.left).to.eql('')
                 vessel0.classList.add('vessel')
 
                 engine.once 'solved', ->
@@ -356,6 +366,8 @@ describe 'Nested Rules', ->
                   expect(engine.solver.solutions[".vessel$vessel0 .box$box2"].length).to.eql(1)
                   expect(engine.solver.solutions["$box1[x]"]).to.eql(1)
                   expect(engine.solver.solutions["$box2[x]"]).to.eql(1)
+                  expect(box1.style.left).to.eql('100px')
+                  expect(box2.style.left).to.eql('100px')
                   done()
         engine.read(rules)
 

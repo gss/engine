@@ -29,12 +29,13 @@ class Styles
     # element offsets 
     @render(positioning)
 
+    debugger
     # Step 4: Set new positions in bulk (Restyle)
-    for id in positioning
-      for prop, value in positioning[id]
+    for id, styles of positioning
+      for prop, value of styles
         @set id, prop, value
 
-    # Step 4: Re-measure elements (Reflow)
+    # Step 5: Re-measure elements (Reflow)
     if intrinsic
       for path, value of intrinsic
         @set(path, undefined, value, positioning, true)
@@ -73,7 +74,8 @@ class Styles
       path = path.substring(0, last)
 
     return unless element = @engine.references.get(path)
-    if this.positioners[property]
+    positioner = this.positioners[property]
+    if positioning && positioner
       (positioning[path] ||= {})[property] = value
     else
       if intrinsic
@@ -84,6 +86,10 @@ class Styles
 
 
 
+      if positioner
+        positioned = positioner(element)
+        if typeof positioned == 'string'
+          property = positioned
       camel = @camelize(property)
       style = element.style
       if style[camel] != undefined
@@ -119,19 +125,21 @@ class Styles
       if styles = positioning[uid]
         offsets = {left: 0, top: 0}
         for property, value of styles
-          switch property
-            when "x"
-              styles.x = value - x
-              offsets.left = value - x
-            when "y"
-              styles.y = value - y
-              offsets.top = value - y
+          unless value == null
+            switch property
+              when "x"
+                styles.x = value - (x || 0)
+                offsets.left = value - (x || 0)
+              when "y"
+                styles.y = value - (y || 0)
+                offsets.top = value - (y || 0)
 
     return offsets
 
   matrix: (positioning, element) ->
     
-  positioners: ['x', 'y']
-
+  positioners:
+    x: -> 'left'
+    y: -> 'top'
     
 module.exports = Styles
