@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-06-17) - http://gridstylesheets.org */
 ;(function(){
 
 /**
