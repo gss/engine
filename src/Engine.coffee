@@ -15,8 +15,8 @@ class Engine
       # new GSS(node) assigns a new engine to node if it doesnt have one
       if @Expressions
         id = Engine.identify(scope)
-        if engine = Engine[id]
-          return engine
+        #if engine = Engine[id]
+        #  return engine
 
         if Document = Engine.Document
           unless this instanceof Document
@@ -24,6 +24,7 @@ class Engine
 
         Engine[id] = @
         @scope = scope
+        @all = scope.getElementsByTagName('*')
       # GSS(node) finds nearest parent engine or makes one at root
       else
         while scope
@@ -94,6 +95,10 @@ class Engine
         @values[prop] = value
       else
         delete @values[prop]
+
+  # Destroy engine
+  destroy: ->
+    Engine[@scope._gss_id] = undefined
 
   # Combine mixins
   @include = ->

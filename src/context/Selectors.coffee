@@ -1,18 +1,20 @@
-dummy = document.createElement('_')
 
 class Selectors
   # Set up DOM observer and filter out old elements 
   onDOMQuery: (node, args, result, operation, continuation, scope) ->
+    console.log(node, args, operation, result)
     return result if operation.def.hidden
     return @engine.queries.filter(node, args, result, operation, continuation, scope)
 
-  remove: (id, continuation) ->
+  remove: (id, continuation, collection) ->
     if typeof id == 'object'
       id = @engine.references.recognize(id)
     @engine.queries.remove(id, continuation)
     # When removing id from collection
     if @engine.References::[id]
-      path = continuation + id
+      path = continuation
+      if collection
+        path += id
       @engine.references.remove(continuation, path)
       # Output remove command for solver
       @engine.expressions.write(['remove', path], true)
@@ -29,7 +31,7 @@ class Selectors
     # Create a shortcut operation to get through a group of operations
     perform: (object, operation) ->
       name = operation.def.group
-      shortcut = [name, operation.promise]
+      shortcut = [name, operation.groupped]
       shortcut.parent = (operation.head || operation).parent
       shortcut.index = (operation.head || operation).index
       object.analyze(shortcut)
@@ -56,14 +58,22 @@ class Selectors
         when '$combinator'
           group = (parent && ' ' || '') +  operation.name
           index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
-        when '$class', '$pseudo', '$attribute'
+        when '$class', '$pseudo', '$attribute', '$id'
           group = operation[0]
           index = operation[2] || operation[1]
       (((parent || operation)[group] ||= {})[index] ||= []).push operation
       index = group = null
 
+    # Add * to a combinator at the end of native selector (e.g. `+` transforms to `+ *`)
+    promise: (operation, parent) ->
+      promise = operation.groupped
+      if operation.tail
+        if operation[0] == '$combinator' && (parent[0] == '$combinator' || parent[0] == ',')
+          promise += "*"
+      return promise
+
     # Native selectors cant start with a non-space combinator or qualifier
-    attempt: (operation) ->
+    condition: (operation) ->
       if operation.name == '$combinator'
         if operation[operation.skip] != ' '
           return false
@@ -96,6 +106,9 @@ class Selectors
     2: (node, value) ->
       return node if node.id == name
 
+  'getElementById': (node, id) ->
+    return @engine.all[id || node]
+
   '$virtual':
     prefix: '"'
     suffix: '"'
@@ -127,6 +140,7 @@ class Selectors
     lookup: true
 
   '$combinator':
+    prefix: ''
     type: 'combinator'
     lookup: true
 
@@ -134,6 +148,29 @@ class Selectors
     type: 'combinator'
     prefix: '::'
     lookup: true
+
+  ',':
+    # Doesnt let undefined arguments stop execution
+    eager: true
+    separator: true
+    group: '$query'
+    prefix: ','
+
+    evaluate: (operation, continuation, scope, ascender, ascending) ->
+      debugger
+
+      if operation.index == 2 && !ascender
+        @evaluate operation, continuation, ascending, undefined, undefined, operation.parent
+        return
+      else
+        return @
+
+    command: ->
+      debugger
+
+    receive: (engine, context, result, operation, continuation) -> 
+      engine.queries.add(result, operation.path)
+
     
   # CSS Combinators with reversals
 
@@ -152,80 +189,56 @@ class Selectors
 
   '>':
     group: '$query'
-    1: 
-      if "children" in dummy 
-        (node) -> 
-          return node.children
-      else 
-        (node) ->
-          child for child in node.childNodes when child.nodeType == 1
+    1: (node) -> 
+      return node.children
 
   '!>':
-    1: 
-      if dummy.hasOwnProperty("parentElement") 
-        (node) ->
-          return node.parentElement
-      else
-        (node) ->
-          if parent = node.parentNode
-            return parent if parent.nodeType == 1
+    1: (node) ->
+      return node.parentElement
 
   '+':
     group: '$query'
-    1: 
-      if dummy.hasOwnProperty("nextElementSibling")
-        (node) ->
-          return node.nextElementSibling
-      else
-        (node) ->
-          while node = node.nextSibling
-            return node if node.nodeType == 1
+    1: (node) ->
+      return node.nextElementSibling
 
   '!+':
-    1:
-      if dummy.hasOwnProperty("previousElementSibling")
-        (node) ->
-          return node.previousElementSibling
-      else
-        (node) ->
-          while node = node.previousSibling
-            return node if node.nodeType == 1
+    1: (node) ->
+      return node.previousElementSibling
 
   '++':
     1: (node) ->
       nodes = undefined
-      while node = node.previousSibling
-        if node.nodeType == 1
-          (nodes ||= []).push(node)
-          break
-      while node = node.nextSibling
-        if node.nodeType == 1
-          (nodes ||= []).push(node)
-          break
-      return nodes;
+      if prev = node.previousElementSibling
+        (nodes ||= []).push(prev)
+      if next = node.nextElementSibling
+        (nodes ||= []).push(next)
+      return nodes
 
   '~':
     group: '$query'
     1: (node) ->
       nodes = undefined
-      while node = node.nextSibling
-        (nodes ||= []).push(node) if node.nodeType == 1
+      while node = node.nextElementSibling
+        (nodes ||= []).push(node)
       return nodes
 
   '!~':
     1: (node) ->
       nodes = undefined
-      while node = node.previousSibling
-        (nodes ||= []).push(node) if node.nodeType == 1
+      prev = node.parentNode.firstElementChild
+      while prev != node
+        (nodes ||= []).push(prev)
+        prev = prev.nextElementSibling
       return nodes
-  
+
   '~~':
-    1: (node) ->
+    1:(node) ->
       nodes = undefined
-      while node = node.previousSibling
-        (nodes ||= []).push(node) if node.nodeType == 1
-      while node = node.nextSibling
-        (nodes ||= []).push(node) if node.nodeType == 1
+      prev = node.parentNode.firstElementChild
+      while prev
+        if prev != node
+          (nodes ||= []).push(prev) 
+        prev = prev.nextElementSibling
       return nodes
 
   # Pseudo classes
@@ -239,13 +252,21 @@ class Selectors
     2: (node, property) ->
       return node[property]
 
+  ':first-child':
+    group: '$query'
+    1: (node) ->
+      return node unless node.previousElementSibling
+
+  ':last-child':
+    group: '$query'
+    1: (node) ->
+      return node unless node.nextElementSibling
 
 
 
   # Pseudo elements
 
   '::this':
-    prefix: ''
     scoped: true
     hidden: true
     1: (node) ->
@@ -273,5 +294,67 @@ class Selectors
 for property, command of Selectors::
   if typeof command == 'object'
     command.callback = 'onDOMQuery'
+
+
+# Add shims for IE<=8 that dont support some DOM properties
+dummy = document.createElement('_')
+
+unless dummy.hasOwnProperty("parentElement") 
+  Selectors::['!>'][1] = (node) ->
+    if parent = node.parentNode
+      return parent if parent.nodeType == 1
+unless dummy.hasOwnProperty("nextElementSibling")
+  Selectors::['>'][1] = (node) ->
+      child for child in node.childNodes when child.nodeType == 1
+  Selectors::['+'][1] = (node) ->
+    while node = node.nextSibling
+      return node if node.nodeType == 1
+  Selectors::['!+'][1] = ->
+    while node = node.previousSibling
+      return node if node.nodeType == 1
+  Selectors::['++'][1] = (node) ->
+    nodes = undefined
+    while prev = node.previousSibling
+      if prev.nodeType == 1
+        (nodes ||= []).push(prev)
+        break
+    while next = node.nextSibling
+      if next.nodeType == 1
+        (nodes ||= []).push(next)
+        break
+    return nodes;
+  Selectors::['~'][1] = (node) ->
+    nodes = undefined
+    while node = node.nextSibling
+      (nodes ||= []).push(node) if node.nodeType == 1
+    return nodes
+  Selectors::['!~'][1] = (node) ->
+    nodes = undefined
+    prev = node.parentNode.firstChild
+    while prev != node
+      (nodes ||= []).push(prev) if pref.nodeType == 1
+      node = node.nextSibling
+    return nodes
+  Selectors::['~~'][1] = (node) ->
+    nodes = undefined
+    prev = node.parentNode.firstChild
+    while prev
+      if prev != node && prev.nodeType == 1
+        (nodes ||= []).push(prev) 
+      prev = prev.nextSibling
+    return nodes
+  Selectors::[':first-child'][1] = (node) ->
+    if parent = node.parentNode
+      child = parent.firstChild
+      while child && child.nodeType != 1
+        child = child.nextSibling
+      return node if child == node
+  Selectors::[':last-child'][1] = (node) ->
+    if parent = node.parentNode
+      child = parent.lastChild
+      while child && child.nodeType != 1
+        child = child.previousSibling
+      return child == node
+
 
 module.exports = Selectors

@@ -37,6 +37,7 @@ class Queries
   # Listen to changes in DOM to broadcast them all around
   read: (mutations) ->
     queries = []
+    scope = @engine.scope
     for mutation in mutations
       target = parent = mutation.target
       switch mutation.type
@@ -52,12 +53,14 @@ class Queries
               changed.push kls unless kls && old.indexOf(kls) > -1
             while parent.nodeType == 1
               for kls in changed
-                @match(queries, parent, '$class', kls, target) 
+                @match(queries, parent, '$class', kls, target)
+              break if parent == scope
               parent = parent.parentNode
             parent = target
 
           while parent.nodeType == 1
             @match(queries, parent, '$attribute', mutation.attributeName, target)
+            break if parent == scope
             parent = parent.parentNode
 
         when "childList"
@@ -117,6 +120,15 @@ class Queries
 
     return true
 
+  # Manually add element to collection
+  add: (node, continuation) ->
+    collection = @[continuation] ||= []
+    if collection.indexOf(node) == -1
+      collection.push(node)
+    else
+      (collection.dupes ||= []).push(node)
+    return collection
+
   # HOOK: Remove observers and cached node lists
   remove: (id, continuation) ->
     # Detach observer and its subquery when cleaning by id
@@ -129,7 +141,7 @@ class Queries
           index += 3
           continue
         watchers.splice(index, 3)
-        path = (contd || '') + watcher.path
+        path = (contd || '') + watcher.key
         @clean(path)
       delete @_watchers[id] unless watchers.length
     # Remove cached DOM query
@@ -141,7 +153,7 @@ class Queries
     if result = @[path]
       delete @[path]
       if result.length != undefined
-        @engine.context.remove child, path for child in result
+        @engine.context.remove child, path, result for child in result
       else
         @engine.context.remove result, path
     return true
@@ -149,8 +161,8 @@ class Queries
   # Filter out known nodes from DOM collections
   filter: (node, args, result, operation, continuation, scope) ->
     return if result == old
-    node ||= scope
-    path = (continuation || '') + operation.path
+    node ||= scope || args[0]
+    path = (continuation || '') + operation.key
     old = @[path]
     isCollection = result && result.length != undefined
     
@@ -165,7 +177,7 @@ class Queries
       removed = undefined
       for child in old
         if !result || old.indexOf.call(result, child) == -1
-          @engine.context.remove child, path
+          @engine.context.remove child, path, old
           (removed ||= []).push child
       if continuation && (!isCollection || !result.length)
         @engine.context.remove path, continuation

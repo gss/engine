@@ -48,23 +48,30 @@ class Measurements
 
 
 
-
+  # Generate command to create a variable
   'get':
     prefix: '['
     suffix: ']'
     command: (path, object, property) ->
-      # Getting variable
-      unless property
-        return ['get', object, null, path]
-      # Getting global property
-      if object.absolute is 'window' || object == document
-        return ['get',"::window[#{prop}]", null, path]
-      if object.nodeType
-        id = @engine.identify(object)
-      # Getting custom property
+
+      if property
+        # Get document property
+        if object.absolute is 'window' || object == document
+          id = '::window'
+        # Get element property
+        else if object.nodeType
+          id = @engine.identify(object)
+      else
+        # Get global property
+        id = '::global'
+        property = object
+        object = undefined
+        
+      # Get custom property
       if typeof @[property] == 'function'
-        return @[property](scope)
-      # Getting element property
-      return ['get', property, id, path]
+        return @[property](object)
+
+      # Return command with path which will be used to undo it
+      return ['get', id, property, path]
 
 module.exports = Measurements

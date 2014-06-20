@@ -49,12 +49,13 @@ describe 'Nested Rules', ->
           ["eq", ["get","[target-size]"], 100]
         ]
         container.innerHTML =  ""
-                         
+        if old = container._gss_id && GSS(container)
+          old.destroy()
         engine = new GSS(container)
 
         engine.once 'solved', ->        
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ["eq", ["get", "[target-size]", null, "get"], 100]
+              ["eq", ["get", "::global", "[target-size]", "get"], 100]
             ]
           done()
         
@@ -87,25 +88,25 @@ describe 'Nested Rules', ->
           ]
         ]
         container.innerHTML =  """
-          <section>
-            <div>
-              <header>
-                <h2 class='gizoogle'>
+          <section id="s">
+            <div id="d">
+              <header id="h">
+                <h2 class='gizoogle' id="h2">
                 </h2>
               </header>
             </div>
           </section>
         """
         console.log(container.innerHTML)
-        console.info(rules[0].cssText)
+        console.info("(header > h2.gizoogle ! section div:get('parentNode'))[target-size] == 100")
           
         
-        engine = GSS(container)
+        engine = new GSS(container)
 
         engine.once 'solved', ->      
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
               ["eq", 
-                ["get","[target-size]", "$6", "header>h2.gizoogle$3!$6section div$5:getparentNode"]
+                ["get", "$s","[target-size]", "header>h2.gizoogle$h2!$ssection div$d:getparentNode"]
                 , 100
               ]
             ]
@@ -148,23 +149,27 @@ describe 'Nested Rules', ->
         engine = new GSS(container)
         engine.once 'solved', -> 
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-            ["eq", ["get", "[width]", "$box0", "div+main$main0!~$box0*"], 50]
-            ["eq", ["get", "[width]", "$header0", "div+main$main0!~$header0*"], 50]
+            ["eq", ["get", "$header0", "[width]", "div+main$main0!~$header0*"], 50]
+            ["eq", ["get", "$box0", "[width]", "div+main$main0!~$box0*"], 50]
           ]
           expect(stringify engine.styles.lastInput).to.eql stringify
-            "$box0[width]": 50 
             "$header0[width]": 50
+            "$box0[width]": 50 
           expect(all.header0.style.width).to.eql '50px'
           expect(all.box0.style.width).to.eql '50px'
+          expect(engine.solver.solutions["div+main$main0!~$box0*"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions["div+main$main0!~$header0*"][0]).to.be.an.instanceOf(c.Constraint)
+
+
           console.error('Mutation: container.removeChild(#main)')
           parent.removeChild(all.main0) 
           engine.once 'solved', ->
             expect(stringify engine.expressions.lastOutput).to.eql stringify [[
               "remove"
-              "div+main$main0!~$box0*$box0", 
-              "div+main$main0!~$box0",
-              "div+main$main0!~$header0*$header0",
+              "div+main$main0!~$header0*",
               "div+main$main0!~$header0",
+              "div+main$main0!~$box0*", 
+              "div+main$main0!~$box0",
               "div+main$main0"
             ]]
             expect(all.header0.style.width).to.eql ''
@@ -199,17 +204,18 @@ describe 'Nested Rules', ->
           <div id="box4" class="box"></div>
           """
                        
-        engine = GSS(container)
+        engine = new GSS(container)
 
         engine.once 'solved', -> 
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ['eq', ['get','[x]','$box1', '$rule.vessel .box$box1'], 100]
-              ['eq', ['get','[x]','$box2', '$rule.vessel .box$box2'], 100]
+              ['eq', ['get', '$box1', '[x]', '.vessel .box$box1'], 100]
+              ['eq', ['get', '$box2', '[x]', '.vessel .box$box2'], 100]
             ]
           done()
         
         engine.read rules
-    describe '123', ->
+
+    describe 'subqueries', ->
       it 'should observe selector on ::', (done) ->
         rules = ["$rule",
                   ["$class", "vessel"]
@@ -223,6 +229,7 @@ describe 'Nested Rules', ->
                       "[x]"], 
                     100]
                 ]
+        console.info(".vessel { (:: .box)[x] == 100 }")
 
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -241,8 +248,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-            ['eq', ['get','[x]','$box1', '.vessel$vessel0 .box$box1'], 100]
-            ['eq', ['get','[x]','$box2', '.vessel$vessel0 .box$box2'], 100]
+            ['eq', ['get', '$box1','[x]', '.vessel$vessel0 .box$box1'], 100]
+            ['eq', ['get', '$box2','[x]', '.vessel$vessel0 .box$box2'], 100]
           ])
           # Accumulated solutions
           expect(stringify(engine.values)).to.eql stringify
@@ -300,7 +307,7 @@ describe 'Nested Rules', ->
             engine.once 'solved', ->
               # Child matches again
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                ['eq', ['get','[x]','$box1', '.vessel$vessel0 .box$box1'], 100]
+                ['eq', ['get', '$box1', '[x]', '.vessel$vessel0 .box$box1'], 100]
               ])
               expect(stringify(engine.values)).to.eql stringify
                 "$box2[x]": 100
@@ -346,8 +353,8 @@ describe 'Nested Rules', ->
                 engine.once 'solved', ->
                   # Parent matches again, re-watch everything 
                   expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                    ['eq', ['get','[x]','$box1', '.vessel$vessel0 .box$box1'], 100]
-                    ['eq', ['get','[x]','$box2', '.vessel$vessel0 .box$box2'], 100]
+                    ['eq', ['get', '$box1', '[x]', '.vessel$vessel0 .box$box1'], 100]
+                    ['eq', ['get', '$box2', '[x]', '.vessel$vessel0 .box$box2'], 100]
                   ])
                   expect(stringify(engine.values)).to.eql stringify
                     "$box1[x]": 100
@@ -372,23 +379,24 @@ describe 'Nested Rules', ->
         engine.read(rules)
 
     describe '1 level w/ multiple selectors and ::this', ->
-      it 'should observe all matching elements', (done) ->
+      it 'should combine comma separated native selectors', (done) ->
         rules = [
-          {
-            type:'ruleset'
-            selectors: ['.vessel', '#group1']
-            rules: [
-              {
-                type:'constraint', 
-                cssText:'(:: .box:first-child)[x] == 100', 
-                commands: [
-                  ["eq", ["get$","x",["$reserved","::this", ".box:first-child"]], ["number",100]]
-                ]
-              }
-            ]
-          }
-        ]
+          '$rule', 
+          [','
+            ['$class', 'vessel']
+            ['$id', 'group1']]
 
+          ['eq',
+            ['get'
+              ['$pseudo',
+                ['$combinator',
+                  ['$reserved', 'this']
+                  ' ']
+                'first-child']
+              '[y]']
+            100
+          ]
+        ]
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div class="vessel" id="vessel0">
@@ -400,33 +408,109 @@ describe 'Nested Rules', ->
             <div id="box4" class="box"></div>
           </div>
           """
+        console.info(".vessel, #group1 { (:: :first-child)[y] == 100 }")
+
         vessel0 = container.getElementsByClassName('vessel')[0]
-        Scenario done, container, [
-          TwoElementsMatch = (e) ->  
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['eq', ['get$','x','$box1', '.vessel, #group1 .box:first-child$vessel0'], ['number',100]]
-              ['eq', ['get$','x','$box3', '.vessel, #group1 .box:first-child$group1'], ['number',100]]
+        box1 = container.getElementsByClassName('box')[1]
+        box3 = container.getElementsByClassName('box')[3]
+        
+        engine = new GSS(container)
+
+        engine.once 'solved', ->
+          expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+            ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
+            ['eq', ['get', '$box3', '[y]','.vessel,#group1$group1 :first-child$box3'], 100]
+          ])
+
+          vessel0.classList.remove('vessel')
+          expect(box1.style.top).to.eql('100px')
+          expect(box3.style.top).to.eql('100px')
+          engine.once 'solved', ->
+            expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+              ['remove', ".vessel,#group1$vessel0 :first-child$box1", ".vessel,#group1$vessel0"]
             ])
-            vessel0.classList.remove('vessel')
-          OneOfParentSelectorsDoesntMatchAnymore = (e) ->
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['remove', ".vessel, #group1$vessel0", ".vessel, #group1 .box:first-child$vessel0"]
-            ])
+            expect(box1.style.top).to.eql('')
+            expect(box3.style.top).to.eql('100px')
+
             vessel0.classList.add('vessel')
-          ItMatchesAgain = (e) ->
-            expect(stringify(engine.lastWorkerCommands)).to.eql stringify([
-              ['eq', ['get$','x','$box1', '.vessel, #group1 .box:first-child$vessel0'], ['number',100]]
-            ])
+
+            engine.once 'solved', ->
+              expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
+              ])
+              expect(box1.style.top).to.eql('100px')
+              expect(box3.style.top).to.eql('100px')
+              done()
+        engine.read(rules)
+
+    describe '1 level w/ mixed multiple selectors and ::this', ->
+      it 'should implement comma for non-native selectors', (done) ->
+        rules = [
+          '$rule', 
+          [',', 
+            ['$combinator', 
+              ['$id', 'box1']
+              '!>']
+            ['$id', 'group1']]
+
+          ['eq',
+            ['get'
+              ['$pseudo',
+                ['$combinator',
+                  ['$reserved', 'this']
+                  ' ']
+                'first-child']
+              '[y]']
+            100
+          ]
         ]
-        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div class="vessel" id="vessel0">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div class="group" id="group1">
+            <div id="box3" class="box"></div>
+            <div id="box4" class="box"></div>
+          </div>
+          """
+        console.info("#box1 !>, #group1 { (&:first-child)[y] == 100 }")
 
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+        vessel0 = container.getElementsByClassName('vessel')[0]
+        box1 = container.getElementsByClassName('box')[1]
+        box3 = container.getElementsByClassName('box')[3]
+        
+        engine = new GSS(container)
 
-    describe '1 level w/ ::scope', ->
+        engine.once 'solved', ->
+          expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+            ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
+            ['eq', ['get', '$box3', '[y]','.vessel,#group1$group1 :first-child$box3'], 100]
+          ])
+
+          vessel0.classList.remove('vessel')
+          expect(box1.style.top).to.eql('100px')
+          expect(box3.style.top).to.eql('100px')
+          engine.once 'solved', ->
+            expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+              ['remove', ".vessel,#group1$vessel0 :first-child$box1", ".vessel,#group1$vessel0"]
+            ])
+            expect(box1.style.top).to.eql('')
+            expect(box3.style.top).to.eql('100px')
+
+            vessel0.classList.add('vessel')
+
+            engine.once 'solved', ->
+              expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
+              ])
+              expect(box1.style.top).to.eql('100px')
+              expect(box3.style.top).to.eql('100px')
+              done()
+        engine.read(rules)
+
+    xdescribe '1 level w/ ::scope', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
           {
@@ -464,7 +548,7 @@ describe 'Nested Rules', ->
           done()
         container.addEventListener 'solved', listener
         
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -571,7 +655,7 @@ describe 'Nested Rules', ->
             container.innerHTML = ""
 
         ]
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -579,7 +663,7 @@ describe 'Nested Rules', ->
           
         sheet.install()
       
-    describe '1 level w/ ::parent', ->
+    xdescribe '1 level w/ ::parent', ->
       it 'should resolve selector on ::parent', (done) ->
         rules = [
           {
@@ -673,7 +757,7 @@ describe 'Nested Rules', ->
 
         ]
         
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -681,7 +765,7 @@ describe 'Nested Rules', ->
           
         sheet.install()
     
-      it 'Runs commands from sourceNode', (done) ->
+      xit 'Runs commands from sourceNode', (done) ->
         rules = [
           {
             type:'ruleset'
@@ -717,7 +801,7 @@ describe 'Nested Rules', ->
           done()
         container.addEventListener 'solved', listener
         
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -818,7 +902,7 @@ describe 'Nested Rules', ->
 
         ]
         
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -826,7 +910,7 @@ describe 'Nested Rules', ->
           
         sheet.install()
 
-    describe '2 level', ->
+    xdescribe '2 level', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
@@ -903,7 +987,7 @@ describe 'Nested Rules', ->
             ]
 
         ]
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -911,7 +995,7 @@ describe 'Nested Rules', ->
           
         sheet.install()
 
-    describe '2 level /w multiple selectors in parent', (e) ->
+    xdescribe '2 level /w multiple selectors in parent', (e) ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
           {
@@ -989,7 +1073,7 @@ describe 'Nested Rules', ->
               ['eq', ['get$','x','$box2', '.vessel .box:last-child, #group1 .box:last-child'], ['number',100]]
             ]
         ]
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine
@@ -997,7 +1081,7 @@ describe 'Nested Rules', ->
           
         sheet.install()
   
-  describe '@if @else', ->
+  xdescribe '@if @else', ->
     
     container = null
     engine = null
@@ -1116,7 +1200,7 @@ describe 'Nested Rules', ->
           done()
         container.addEventListener 'solved', listener
         
-        engine = GSS(container)
+        engine = new GSS(container)
 
         sheet = new GSS.StyleSheet
           engine: engine

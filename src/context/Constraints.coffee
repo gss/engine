@@ -11,7 +11,7 @@ class Constraints
           (result.props ||= []).push(arg.prop)
     return result
 
-  get: (property, scope, path) ->
+  get: (scope, property, path) ->
     console.log('getting', property, scope, path)
     if typeof @[property] == 'function'
       variable = @[property](scope)
@@ -22,6 +22,7 @@ class Constraints
     return variable
 
   remove: () ->
+    debugger
     solutions = @engine.solutions
     for path in arguments
       if constraints = solutions[path]

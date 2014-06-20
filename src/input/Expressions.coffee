@@ -43,16 +43,17 @@ class Expressions
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
     console.log(operation)
+    # Use custom argument evaluator of parent operation if it has one
     def = operation.def || @analyze(operation).def
     if (parent = operation.parent) && !overloaded
       if (pdef = parent.def) && pdef.evaluate
         evaluated = pdef.evaluate.call(@, operation, continuation, scope, ascender, ascending)
         return evaluated unless evaluated == @
 
-
-    # Use a shortcut operation when possible
-    if promise = operation.promise
+    # Use a shortcut operation when possible (e.g. native dom query)
+    if operation.tail
       operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
+      parent = operation.parent
       ascender = ascender != undefined && 1 || undefined
 
     # Recursively evaluate arguments, stop on undefined.
@@ -71,10 +72,10 @@ class Expressions
         continue
       else if argument instanceof Array
         argument = @evaluate(argument, continuation, scope, undefined, prev)
-      return if argument == undefined
+      return if argument == undefined && !def.eager
       (args ||= [])[index - offset] = prev = argument
 
-    # No-op commands are to be executed by something else (e.g. Thread)
+    # No-op commands are to be executed by something else (e.g. Solver)
     if operation.noop
       if parent && parent.def.receive
         return parent.def.receive @engine, scope, args
@@ -83,25 +84,33 @@ class Expressions
       else
         return @write(args)
 
-    # Look up method on the first argument
+    # Use function, or look up method on the first argument. Falls back to builtin
+    scope ||= @engine.scope
     if def.scoped
-      scope ||= @engine.scope
       (args ||= []).unshift scope
     unless func = operation.func
-      object = (typeof args[0] == 'object' && args.shift()) || @engine.scope
-      func = object && object[operation.method]
+      if method = operation.method
+        if typeof args[0] == 'object'
+          if context = args[0]
+            if func = context[method]
+              args.shift()
+        unless func
+          if !context && (func = scope[method])
+            context = scope
+          else
+            func = @[method] || @context[method]
 
     # Execute the function
     unless func
       throw new Error("Engine broke, couldn't find method: #{operation.method}")
 
-    result = func.apply(object || @context, args)
+    result = func.apply(context || @context, args)
 
     # Let context transform or filter the result
     if callback = operation.def.callback
-      result = @context[callback](object, args, result, operation, continuation, scope)
+      result = @context[callback](context || scope, args, result, operation, continuation, scope)
 
-    path = (continuation || '') + operation.path
+    path = continuation && (continuation + operation.key) || operation.path
     
     # Ascend the execution (fork for each item in collection)
     if result?
@@ -113,10 +122,10 @@ class Expressions
             @evaluate parent, subpath, scope, operation.index, item
           console.groupEnd path
           return
-        else if parent.def.receive
-          parent.def.receive @engine, object, result
         else if ascender?
           @evaluate parent, path, scope, operation.index, result
+        else if parent.def.receive# && typeof result[0] == 'string'
+          parent.def.receive @engine, context, result, parent, continuation
       else
         return @write result
 
@@ -156,23 +165,17 @@ class Expressions
       return operation
 
     # Assign definition properties to AST node
-    operation.def      = def
-    operation.path     = @serialize(operation, otherdef)
+    operation.def  = def
+    # String representation of operation without complex arguments
+    operation.key  = @serialize(operation, otherdef, false)
+    # String representation of operation with all types of arguments
+    operation.path = @serialize(operation, otherdef)
 
-    if def.group && groupper = @context[def.group]
-      groupper.analyze(operation)
-      
-    # Group multiple nested tokens into a single token
-    for child, index in operation
-      if child instanceof Array
-        if index == 1 && def.group
-          if def.group == child.def.group
-            tail = child.tail ||= (groupper.attempt(child) && child)
-            if tail
-              operation.promise = (child.promise || child.path) + operation.path
-              tail.head = operation
-              tail.promise = operation.promise
-              operation.tail = tail
+    if def.group
+      # String representation of operation with arguments filtered by type
+      operation.groupped = @serialize(operation, otherdef, def.group)
+      if groupper = @context[def.group]
+        groupper.analyze(operation)
 
     # Try predefined command if can't dispatch by number of arguments
     if typeof def == 'function'
@@ -185,27 +188,43 @@ class Expressions
 
     # Command may resolve to method, which will be called on the first argument
     if typeof func == 'string'
-      if command = @context[func]
-        operation.func = command
-      else
-        operation.method = func
+      operation.method = func
     else
       operation.func = func
 
     return operation
 
   # Serialize operation to a string with arguments, but without context
-  serialize: (operation, otherdef) ->
+  serialize: (operation, otherdef, group) ->
     def = operation.def
     prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.noop && operation.name) || ''
     suffix = def.suffix || (otherdef && otherdef.suffix) || ''
-    path = ''
-    start = 1 + (operation.length > 2)
-    for index in [start ... operation.length]
+    if operation.def.separator
+      separator = prefix
+      prefix = ''
+    after = before = ''
+    for index in [1 ... operation.length]
       if op = operation[index]
         if typeof op != 'object'
-          path += operation[index]
-    return prefix + path + suffix
+          after += op
+        else if op.key && group != false
+          if (group && (groupper = @context[group]))
+            if (op.def.group == group)
+              if tail = op.tail ||= (groupper.condition(op) && op)
+                operation.groupped = tail.groupped = groupper.promise(op, operation)
+                tail.head = operation
+                operation.tail = tail
+                before += (before && separator || '') + op.groupped || op.key
+              else continue
+            else
+              group = false 
+              continue
+          else if separator
+            before += (before && separator || '') + op.path
+          else
+            before += op.path
+
+    return before + prefix + after + suffix
 
 
 module.exports = Expressions

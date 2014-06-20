@@ -29,7 +29,6 @@ class Styles
     # element offsets 
     @render(positioning)
 
-    debugger
     # Step 4: Set new positions in bulk (Restyle)
     for id, styles of positioning
       for prop, value of styles
