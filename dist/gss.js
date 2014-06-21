@@ -20053,12 +20053,16 @@ Engine = (function() {
     return new (Engine.Document || Engine)(scope);
   }
 
-  Engine.prototype.read = function() {
-    return this.expressions.read.apply(this.expressions, arguments);
+  Engine.prototype.add = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
   };
 
-  Engine.prototype.write = function() {
-    return this.output.read.apply(this.output, arguments);
+  Engine.prototype.pull = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.push = function() {
+    return this.output.pull.apply(this.output, arguments);
   };
 
   Engine.prototype.isCollection = function(object) {
@@ -20256,7 +20260,7 @@ Engine.Solver = (function(_super) {
   };
 
   Solver.prototype.onmessage = function(e) {
-    return this.write(e.data);
+    return this.push(e.data);
   };
 
   Solver.prototype.onerror = function(e) {
@@ -20269,7 +20273,7 @@ Engine.Solver = (function(_super) {
     }
     this.worker = new this.getWorker(url);
     this.worker.addEventListener(this);
-    this.read = this.worker.postMessage.bind(this.worker);
+    this.pull = this.worker.postMessage.bind(this.worker);
     return this.worker;
   };
 
@@ -20289,13 +20293,13 @@ Engine.Thread = (function(_super) {
     return _ref;
   }
 
-  Thread.prototype.write = function(data) {
+  Thread.prototype.push = function(data) {
     return self.postMessage(data);
   };
 
   Thread.handleEvent = function(e) {
     this.instance || (this.instance = new Engine.Thread);
-    return this.instance.read(e.data);
+    return this.instance.pull(e.data);
   };
 
   return Thread;
@@ -20405,7 +20409,7 @@ Rules = (function() {
     },
     capture: function(engine, result, parent, continuation, scope) {
       console.warn('recieved cmd', result);
-      return engine.expressions.write(result);
+      return engine.expressions.push(result);
     },
     command: function(path, condition, positive, negative) {
       if (condition) {
@@ -20453,25 +20457,7 @@ Selectors = (function() {
   };
 
   Selectors.prototype.remove = function(id, continuation, collection) {
-    var path, result;
-    if (typeof id === 'object') {
-      id = this.engine.references.recognize(id);
-    }
-    this.engine.queries.remove(id, continuation);
-    if (this.engine.References.prototype[id]) {
-      if (continuation) {
-        path = continuation;
-        if (result = this.engine.queries[path]) {
-          collection = result.length !== void 0;
-        }
-        if (collection) {
-          path += id;
-        }
-        this.engine.references.remove(continuation, path);
-        this.engine.expressions.write(['remove', path], true);
-      }
-    }
-    return this;
+    return this.engine.queries.remove(id, continuation, collection);
   };
 
   Selectors.prototype['$query'] = {
@@ -21168,11 +21154,11 @@ References = (function() {
     this.output || (this.output = this.input);
   }
 
-  References.prototype.read = function() {
+  References.prototype.pull = function() {
     return this.set.apply(this, arguments);
   };
 
-  References.prototype.write = function() {
+  References.prototype.push = function() {
     return this.output.context.remove.apply(this.output.context, arguments);
   };
 
@@ -21274,7 +21260,7 @@ Expressions = (function() {
     this.context || (this.context = this.engine && this.engine.context || this);
   }
 
-  Expressions.prototype.read = function() {
+  Expressions.prototype.pull = function() {
     var buffer, result;
     if (this.buffer === void 0) {
       this.buffer = null;
@@ -21291,11 +21277,11 @@ Expressions = (function() {
   Expressions.prototype.flush = function() {
     console.log(123123123, this.buffer);
     this.lastOutput = this.buffer;
-    this.output.read(this.buffer);
+    this.output.pull(this.buffer);
     return this.buffer = void 0;
   };
 
-  Expressions.prototype.write = function(args, batch) {
+  Expressions.prototype.push = function(args, batch) {
     var buffer, last;
     if (args == null) {
       return;
@@ -21317,7 +21303,7 @@ Expressions = (function() {
       }
       buffer.push(args);
     } else {
-      return this.output.read.apply(this.output, args);
+      return this.output.pull.apply(this.output, args);
     }
   };
 
@@ -21366,7 +21352,7 @@ Expressions = (function() {
       } else if (parent && (!parent.noop || parent.parent)) {
         return args;
       } else {
-        return this.write(args);
+        return this.push(args);
       }
     }
     scope || (scope = this.engine.scope);
@@ -21424,7 +21410,7 @@ Expressions = (function() {
           return;
         }
       } else {
-        return this.write(result);
+        return this.push(result);
       }
     }
     return result;
@@ -21553,13 +21539,13 @@ Queries = (function() {
     this._watchers = {};
     this._watched = {};
     this.references = this.engine.references;
-    this.listener = new this.Observer(this.read.bind(this));
+    this.listener = new this.Observer(this.pull.bind(this));
     this.listener.observe(this.engine.scope, this.options);
   }
 
-  Queries.prototype.write = function(query, continuation, scope) {
+  Queries.prototype.push = function(query, continuation, scope) {
     if (this.buffer === void 0) {
-      this.output.read(query, continuation, scope);
+      this.output.pull(query, continuation, scope);
     } else {
       (this.buffer || (this.buffer = [])).push(query, continuation, scope);
     }
@@ -21668,7 +21654,7 @@ Queries = (function() {
     for (_m = 0, _len4 = allRemoved.length; _m < _len4; _m++) {
       removed = allRemoved[_m];
       if (id = this.engine.recognize(removed)) {
-        this.engine.context.remove(id);
+        this.remove(id);
       }
     }
     update = {};
@@ -21747,7 +21733,7 @@ Queries = (function() {
     return this;
   };
 
-  Queries.prototype.read = function(mutations) {
+  Queries.prototype.pull = function(mutations) {
     var buffer, continuation, index, mutation, queries, query, scope, _i, _j, _len, _len1;
     this.output.buffer = this.buffer = null;
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
@@ -21766,7 +21752,7 @@ Queries = (function() {
         query = queries[index];
         continuation = queries[index + 1];
         scope = queries[index + 2];
-        this.output.read(query, continuation, scope);
+        this.output.pull(query, continuation, scope);
       }
     }
     if (buffer = this.output.buffer) {
@@ -21796,8 +21782,12 @@ Queries = (function() {
     return this[continuation];
   };
 
-  Queries.prototype.remove = function(id, continuation) {
-    var contd, index, path, ref, watched, watcher, watchers;
+  Queries.prototype.remove = function(id, continuation, collection) {
+    var contd, index, path, ref, result, watched, watcher, watchers;
+    if (typeof id === 'object') {
+      id = this.engine.references.recognize(id);
+    }
+    console.error('remove', id, continuation);
     if (continuation) {
       if (watchers = this._watchers[id]) {
         ref = continuation + id;
@@ -21811,12 +21801,25 @@ Queries = (function() {
           watchers.splice(index, 3);
           path = (contd || '') + watcher.key;
           this.clean(path);
+          console.log('remove', 123, path);
+          debugger;
         }
         if (!watchers.length) {
           delete this._watchers[id];
         }
+      }
+      if (this.engine.References.prototype[id]) {
+        path = continuation;
+        if (result = this.engine.queries[path]) {
+          collection = result.length !== void 0;
+        }
+        if (collection) {
+          path += id;
+        }
+        this.clean(path);
+        console.log('remove', 321, path);
       } else {
-        this.clean(id);
+        this.clean(id, continuation);
       }
     } else {
       if (watched = this._watched[id]) {
@@ -21824,38 +21827,41 @@ Queries = (function() {
         while (watcher = watched[index]) {
           contd = watched[index + 1];
           path = (contd || '') + watcher.key;
-          this.engine.context.remove(id, path);
           index += 3;
         }
         delete this._watched[id];
       }
       if (watchers = this._watchers[id]) {
-        debugger;
         index = 0;
-        while (watcher = watched[index]) {
-          contd = watched[index + 1];
+        while (watcher = watchers[index]) {
+          contd = watchers[index + 1];
           path = (contd || '') + watcher.key;
-          this.engine.context.remove(id, path);
+          this.remove(path, contd);
+          console.log('deleting', path);
           index += 3;
         }
-        delete this._watched[id];
+        console.error('deleting watchers', watchers.slice());
+        delete this._watchers[id];
       }
     }
     return this;
   };
 
-  Queries.prototype.clean = function(path) {
+  Queries.prototype.clean = function(path, continuation) {
     var child, result, _i, _len;
     if (result = this[path]) {
       delete this[path];
       if (result.length !== void 0) {
         for (_i = 0, _len = result.length; _i < _len; _i++) {
           child = result[_i];
-          this.engine.context.remove(child, path, result);
+          this.remove(child, path, result);
         }
       } else {
-        this.engine.context.remove(result, path);
+        this.remove(result, continuation);
       }
+    }
+    if (!result || !result.length) {
+      this.engine.expressions.push(['remove', path], true);
     }
     return true;
   };
@@ -21887,15 +21893,15 @@ Queries = (function() {
         for (_i = 0, _len = old.length; _i < _len; _i++) {
           child = old[_i];
           if (!result || old.indexOf.call(result, child) === -1) {
-            this.engine.context.remove(child, path, old);
+            this.remove(child, path, old);
             (removed || (removed = [])).push(child);
           }
         }
         if (continuation && (!isCollection || !result.length)) {
-          this.engine.context.remove(path, continuation);
+          this.remove(path, continuation);
         }
-      } else if (!result) {
-        this.references.remove(continuation, path);
+      } else {
+
       }
     }
     if (isCollection) {
@@ -21907,9 +21913,6 @@ Queries = (function() {
           ((_base1 = this._watched)[_name = this.engine.identify(child)] || (_base1[_name] = [])).push(operation, continuation, scope);
         }
       }
-      if (continuation && (!old || !old.length)) {
-        this.references.append(continuation, path);
-      }
       if (result && result.item && (!old || removed || added)) {
         result = watchers.slice.call(result, 0);
       }
@@ -21920,9 +21923,6 @@ Queries = (function() {
         debugger;
       }
       added = result;
-      if (result !== void 0 && old === void 0) {
-        this.references.append(continuation, path);
-      }
     }
     this[path] = result;
     console.log('found', result && (result.nodeType === 1 && 1 || result.length) || 0, ' by', path);
@@ -21966,7 +21966,7 @@ Queries = (function() {
       debugger;
     }
     if ((indexed = groupped[qualifier]) || (fallback && groupped[fallback])) {
-      this.write(operation, continuation, scope);
+      this.push(operation, continuation, scope);
     }
     return this;
   };
@@ -21990,7 +21990,7 @@ Solutions = (function() {
     c.debug = true;
   }
 
-  Solutions.prototype.read = function(commands) {
+  Solutions.prototype.pull = function(commands) {
     var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref;
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -22018,12 +22018,12 @@ Solutions = (function() {
       response[property] = value;
     }
     console.log("Solutions output", response);
-    this.write(response);
+    this.push(response);
   };
 
-  Solutions.prototype.write = function(results) {
+  Solutions.prototype.push = function(results) {
     if (this.output) {
-      return this.output.read(results);
+      return this.output.pull(results);
     }
   };
 
@@ -22111,7 +22111,7 @@ Styles = (function() {
     this.engine = engine;
   }
 
-  Styles.prototype.read = function(data) {
+  Styles.prototype.pull = function(data) {
     var id, index, intrinsic, path, positioning, prop, property, styles, value, _results;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
@@ -22124,7 +22124,7 @@ Styles = (function() {
         (intrinsic || (intrinsic = {}))[path] = value;
       }
     }
-    this.write(this.lastInput);
+    this.push(this.lastInput);
     positioning = {};
     for (path in data) {
       value = data[path];
@@ -22150,7 +22150,7 @@ Styles = (function() {
     }
   };
 
-  Styles.prototype.write = function(data) {
+  Styles.prototype.push = function(data) {
     return this.engine.merge(data);
   };
 

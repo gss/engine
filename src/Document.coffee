@@ -57,8 +57,8 @@ class Engine.Document extends Engine
     @scope.removeEventListener 'DOMContentLoaded', @
 
     # Observe and parse stylesheets
-    # @read ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'text/gss', '*']]
-    # @read ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'tree/gss', '*']]
+    # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'text/gss', '*']]
+    # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'tree/gss', '*']]
     
 
 module.exports = Engine.Document    

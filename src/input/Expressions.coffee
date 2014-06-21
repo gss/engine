@@ -12,7 +12,7 @@ class Expressions
     @context ||= @engine && @engine.context || @
 
   # Hook: Evaluate input and send produced output
-  read: ->
+  pull: ->
     if @buffer == undefined
       @buffer = null
       buffer = true
@@ -25,11 +25,11 @@ class Expressions
   flush: ->
     console.log(123123123, @buffer)
     @lastOutput = @buffer
-    @output.read(@buffer)
+    @output.pull(@buffer)
     @buffer = undefined
 
   # Hook: Buffer equasions if needed
-  write: (args, batch) ->
+  push: (args, batch) ->
     return unless args?
     if (buffer = @buffer) != undefined
       if buffer
@@ -45,7 +45,7 @@ class Expressions
       buffer.push(args)
       return
     else
-      return @output.read.apply(@output, args)
+      return @output.pull.apply(@output, args)
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
@@ -87,7 +87,7 @@ class Expressions
       else if parent && (!parent.noop || parent.parent)
         return args
       else
-        return @write(args)
+        return @push(args)
 
     # Use function, or look up method on the first argument. Falls back to builtin
     scope ||= @engine.scope
@@ -138,7 +138,7 @@ class Expressions
           @evaluate parent, path, scope, operation.index, result
           return
       else
-        return @write result
+        return @push result
 
     return result
 

@@ -27,7 +27,7 @@ class Engine.Solver extends Engine
 
   # Receieve message from worker
   onmessage: (e) ->
-    @write e.data
+    @push e.data
 
   # Handle error from worker
   onerror: (e) ->
@@ -38,7 +38,7 @@ class Engine.Solver extends Engine
     return unless typeof url == 'string' && "onmessage" in self
     @worker = new @getWorker(url)
     @worker.addEventListener @
-    @read   = @worker.postMessage.bind(@worker)
+    @pull   = @worker.postMessage.bind(@worker)
     return @worker
 
   getWorker: (url) ->
@@ -50,12 +50,12 @@ class Engine.Solver extends Engine
 
 class Engine.Thread extends Engine.Solver
     
-  write: (data) -> 
+  push: (data) -> 
     self.postMessage(data)
 
   @handleEvent: (e) ->
     @instance ||= new Engine.Thread
-    @instance.read(e.data)
+    @instance.pull(e.data)
 
 if self.window && self.window.document == undefined && "onmessage" in self
   self.addEventListener 'message', Thread

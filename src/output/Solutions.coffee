@@ -5,7 +5,7 @@ class Solutions
     c.debug = true
     
   # Read commands
-  read: (commands)-> 
+  pull: (commands)-> 
     @lastInput = commands
     for command in commands
       if command instanceof Array
@@ -21,11 +21,11 @@ class Solutions
           value = null
       response[property] = value
     console.log("Solutions output", response)
-    @write(response)
+    @push(response)
     return
 
-  write: (results) ->
-    @output.read(results) if @output
+  push: (results) ->
+    @output.pull(results) if @output
 
   remove: (constrain, path) ->
     if constrain instanceof c.Constraint

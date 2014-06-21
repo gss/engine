@@ -47,12 +47,14 @@ class Engine
     return new (Engine.Document || Engine)(scope)
 
   # Delegate: Pass input to interpreter
-  read: ->
-    return @expressions.read.apply(@expressions, arguments)
+  add: ->
+    return @expressions.pull.apply(@expressions, arguments)
+  pull: ->
+    return @expressions.pull.apply(@expressions, arguments)
 
   # Hook: Pass output to a subscriber
-  write: ->
-    return @output.read.apply(@output, arguments)
+  push: ->
+    return @output.pull.apply(@output, arguments)
 
   # Hook: Should interpreter iterate returned object?
   isCollection: (object) ->

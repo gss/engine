@@ -4,7 +4,7 @@ class Styles
   constructor: (@engine) -> 
 
   # Receive solved styles
-  read: (data) ->
+  pull: (data) ->
     @lastInput = JSON.parse JSON.stringify data
 
     intrinsic = null
@@ -17,7 +17,7 @@ class Styles
         data[prop] = undefined
         (intrinsic ||= {})[path] = value
 
-    @write(@lastInput)
+    @push(@lastInput)
 
     # Step 2: Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
@@ -41,7 +41,7 @@ class Styles
     else
       @engine.triggerEvent('solved', data, intrinsic)
 
-  write: (data) ->
+  push: (data) ->
     @engine.merge(data)
 
   remove: (id) ->

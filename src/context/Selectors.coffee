@@ -7,22 +7,7 @@ class Selectors
     return @engine.queries.update(node, args, result, operation, continuation, scope)
 
   remove: (id, continuation, collection) ->
-    if typeof id == 'object'
-      id = @engine.references.recognize(id)
-    @engine.queries.remove(id, continuation)
-    if @engine.References::[id]
-      # When removing id from collection
-      if continuation
-        path = continuation
-        if result = @engine.queries[path]
-          collection = result.length != undefined
-        if collection
-          path += id
-        @engine.references.remove(continuation, path)
-        # Output remove command for solver
-        @engine.expressions.write(['remove', path], true)
-    @
-
+    @engine.queries.remove(id, continuation, collection)
 
   # Selector commands
 

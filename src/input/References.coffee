@@ -11,11 +11,11 @@ class References
     @output ||= @input
 
   # Read the new references
-  read: ->
+  pull: ->
     return @set.apply(@, arguments)
     
   # Trigger cleaning on output object
-  write: ->
+  push: ->
     return @output.context.remove.apply(@output.context, arguments)
 
   # Return concatenated path for a given object and prefix

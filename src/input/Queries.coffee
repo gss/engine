@@ -23,14 +23,14 @@ class Queries
     @_watchers = {}
     @_watched = {}
     @references = @engine.references
-    @listener = new @Observer @read.bind(this)
+    @listener = new @Observer @pull.bind(this)
     @listener.observe @engine.scope, @options 
 
   # Re-evaluate updated queries
   # Watchers are stored in a single array in groups of 3 properties
-  write: (query, continuation, scope) ->
+  push: (query, continuation, scope) ->
     if @buffer == undefined
-      @output.read query, continuation, scope
+      @output.pull query, continuation, scope
     else
       (@buffer ||= []).push(query, continuation, scope)
     return
@@ -108,7 +108,7 @@ class Queries
     # Clean removed elements by id
     for removed in allRemoved
       if id = @engine.recognize(removed)
-        @engine.context.remove(id)
+        @remove(id)
 
     # Generate map of qualifiers to invalidate (to re-query native selectors)
     update = {}
@@ -157,7 +157,7 @@ class Queries
     @
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
-  read: (mutations) ->
+  pull: (mutations) ->
     @output.buffer = @buffer = null
     for mutation in mutations
       switch mutation.type
@@ -171,7 +171,7 @@ class Queries
       for query, index in queries by 3
         continuation = queries[index + 1]
         scope = queries[index + 2]
-        @output.read query, continuation, scope
+        @output.pull query, continuation, scope
 
     if buffer = @output.buffer
       @output.flush()
@@ -196,7 +196,12 @@ class Queries
     return @[continuation]
 
   # HOOK: Remove observers and cached node lists
-  remove: (id, continuation) ->
+  remove: (id, continuation, collection) ->
+
+    if typeof id == 'object'
+      id = @engine.references.recognize(id)
+
+    console.error('remove', id, continuation)
     if continuation
       # Detach observer and its subquery when cleaning by id
       if watchers = @_watchers[id]
@@ -210,39 +215,54 @@ class Queries
           watchers.splice(index, 3)
           path = (contd || '') + watcher.key
           @clean(path)
+          console.log('remove', 123, path)
+          debugger
         delete @_watchers[id] unless watchers.length
+      if @engine.References::[id]
+      # When removing id from collection
+        path = continuation
+        if result = @engine.queries[path]
+          collection = result.length != undefined
+        if collection
+          path += id
+        # Output remove command for solver
+        @clean(path)
+        console.log('remove', 321, path)
       # Remove cached DOM query
       else 
-        @clean(id)
+        @clean(id, continuation)
     else 
       if watched = @_watched[id]
         index = 0
         while watcher = watched[index]
           contd = watched[index + 1]
           path = (contd || '') + watcher.key
-          @engine.context.remove(id, path)
+          #@remove(id, path)
           index += 3
         delete @_watched[id] 
       if watchers = @_watchers[id]
-        debugger
         index = 0
-        while watcher = watched[index]
-          contd = watched[index + 1]
+        while watcher = watchers[index]
+          contd = watchers[index + 1]
           path = (contd || '') + watcher.key
-          @engine.context.remove(id, path)
+          @remove(path, contd)
+          console.log('deleting', path)
           index += 3
-        delete @_watched[id] 
-        
+        console.error('deleting watchers', watchers.slice())
+        delete @_watchers[id] 
+
 
     @
 
-  clean: (path) ->
+  clean: (path, continuation) ->
     if result = @[path]
       delete @[path]
       if result.length != undefined
-        @engine.context.remove child, path, result for child in result
+        @remove child, path, result for child in result
       else
-        @engine.context.remove result, path
+        @remove result, continuation
+    if !result || !result.length
+      @engine.expressions.push(['remove', path], true)
     return true
 
   # Filter out known nodes from DOM collections
@@ -269,12 +289,11 @@ class Queries
         removed = undefined
         for child in old
           if !result || old.indexOf.call(result, child) == -1
-            @engine.context.remove child, path, old
+            @remove child, path, old
             (removed ||= []).push child
         if continuation && (!isCollection || !result.length)
-          @engine.context.remove path, continuation
-      else if !result
-        @references.remove continuation, path
+          @remove path, continuation
+      else
 
     # Register newly found nodes
     if isCollection
@@ -283,8 +302,6 @@ class Queries
         if !old || watchers.indexOf.call(old, child) == -1  
           (added ||= []).push child
           (@_watched[@engine.identify(child)] ||= []).push(operation, continuation, scope)
-      if continuation && (!old || !old.length)
-        @references.append continuation, path
 
       # Snapshot live node list for future reference
       if result && result.item && (!old || removed || added)
@@ -295,8 +312,6 @@ class Queries
       else
         debugger
       added = result
-      if result != undefined && old == undefined
-        @references.append continuation, path
     @[path] = result
 
     console.log('found', result && (result.nodeType == 1 && 1 || result.length) || 0, ' by' ,path)
@@ -325,7 +340,7 @@ class Queries
     if typeof scope == 'string'
       debugger
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
-      @write(operation, continuation, scope)
+      @push(operation, continuation, scope)
     @
 
 module.exports = Queries
