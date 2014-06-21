@@ -6,8 +6,8 @@ class Selectors
     return result if operation.def.hidden
     return @engine.queries.update(node, args, result, operation, continuation, scope)
 
-  remove: (id, continuation, collection) ->
-    @engine.queries.remove(id, continuation, collection)
+  remove: (id, continuation, operation) ->
+    @engine.queries.remove(id, continuation, operation)
 
   # Selector commands
 

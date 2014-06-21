@@ -22,7 +22,6 @@ class Constraints
     return variable
 
   remove: () ->
-    debugger
     solutions = @engine.solutions
     for path in arguments
       if constraints = solutions[path]

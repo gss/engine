@@ -503,9 +503,9 @@ describe 'Nested Rules', ->
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
               ['remove', 
                 "#box1!>",  
-                "#box1",
                 "#box1!>,>div$vessel0 :first-child$box1"]
               ['eq', ['get', '$box2', '[y]','#box1!>,>div$vessel0 :first-child$box2'], 100]
+              ['remove', "#box1"]
             ])
             console.log('State', engine.queries, engine.references)
             expect(box1.style.top).to.eql('')
@@ -514,14 +514,15 @@ describe 'Nested Rules', ->
             expect(engine.queries['#box1!>,>div'].length).to.eql(3)
             expect(engine.queries['#box1!>,>div'].duplicates.length).to.eql(0)
 
-            vessel0.classList.add('vessel')
+            vessel0.parentNode.removeChild(vessel0)
 
             engine.once 'solved', ->
+              expect(box1.style.top).to.eql('')
+              expect(box2.style.top).to.eql('')
+              expect(box3.style.top).to.eql('100px')
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
                 ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
               ])
-              expect(box1.style.top).to.eql('100px')
-              expect(box3.style.top).to.eql('100px')
               done()
         engine.add(rules)
 
