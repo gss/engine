@@ -2,23 +2,27 @@
 class Selectors
   # Set up DOM observer and filter out old elements 
   onDOMQuery: (node, args, result, operation, continuation, scope) ->
-    console.log(node, args, operation, result)
+    console.log('query', node, args, operation, result)
     return result if operation.def.hidden
-    return @engine.queries.filter(node, args, result, operation, continuation, scope)
+    return @engine.queries.update(node, args, result, operation, continuation, scope)
 
   remove: (id, continuation, collection) ->
     if typeof id == 'object'
       id = @engine.references.recognize(id)
     @engine.queries.remove(id, continuation)
-    # When removing id from collection
     if @engine.References::[id]
-      path = continuation
-      if collection
-        path += id
-      @engine.references.remove(continuation, path)
-      # Output remove command for solver
-      @engine.expressions.write(['remove', path], true)
+      # When removing id from collection
+      if continuation
+        path = continuation
+        if result = @engine.queries[path]
+          collection = result.length != undefined
+        if collection
+          path += id
+        @engine.references.remove(continuation, path)
+        # Output remove command for solver
+        @engine.expressions.write(['remove', path], true)
     @
+
 
   # Selector commands
 
@@ -50,19 +54,20 @@ class Selectors
 
     # Walk through commands in selector to make a dictionary used by Observer
     analyze: (operation, parent) ->
+      prefix = (parent || typeof operation[0] != 'object') && ' ' || ''
       switch operation[0]
         when '$tag'
-          if !parent || operation == operation.tail
+          if (!parent || operation == operation.tail) && operation[1][0] != '$combinator'
             group = ' '
             index = (operation[2] || operation[1]).toUpperCase()
         when '$combinator'
-          group = (parent && ' ' || '') +  operation.name
+          group = prefix +  operation.name
           index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
         when '$class', '$pseudo', '$attribute', '$id'
-          group = operation[0]
-          index = operation[2] || operation[1]
+          group = prefix + operation[0]
+          index = (operation[2] || operation[1])
+      return unless group
       (((parent || operation)[group] ||= {})[index] ||= []).push operation
-      index = group = null
 
     # Add * to a combinator at the end of native selector (e.g. `+` transforms to `+ *`)
     promise: (operation, parent) ->
@@ -74,8 +79,8 @@ class Selectors
 
     # Native selectors cant start with a non-space combinator or qualifier
     condition: (operation) ->
-      if operation.name == '$combinator'
-        if operation[operation.skip] != ' '
+      if operation[0] == '$combinator'
+        if operation.name != ' '
           return false
       else if operation.arity == 2
         return false
@@ -104,7 +109,7 @@ class Selectors
     group: '$query'
     1: "getElementById"
     2: (node, value) ->
-      return node if node.id == name
+      return node if node.id == value
 
   'getElementById': (node, id) ->
     return @engine.all[id || node]
@@ -150,28 +155,34 @@ class Selectors
     lookup: true
 
   ',':
+    # If all sub-selectors are native, make a single comma separated selector
+    group: '$query'
+
+    # Separate arguments with commas during serialization
+    separator: ','
+
+    # Comma needs to know its scope element to generate proper cache key
+    scoped: true
+
     # Doesnt let undefined arguments stop execution
     eager: true
-    separator: true
-    group: '$query'
-    prefix: ','
 
-    evaluate: (operation, continuation, scope, ascender, ascending) ->
-      debugger
+    # Return deduplicated collection of all found elements
+    command: (scope, operation) ->
+      return @engine.queries.get(operation.path, scope)
 
-      if operation.index == 2 && !ascender
-        @evaluate operation, continuation, ascending, undefined, undefined, operation.parent
-        return
-      else
-        return @
+    # Recieve a single element from one of the sub-selectors
+    capture: (engine, result, operation, continuation, scope) -> 
+      engine.queries.add(result, operation.path, scope)
+      return
 
-    command: ->
-      debugger
+    release: (engine, result, operation) ->
+      engine.queries.remove(result, operation.path)
+      return
 
-    receive: (engine, context, result, operation, continuation) -> 
-      engine.queries.add(result, operation.path)
+    # evaluate: (operation, continuation, scope, ascender, ascending) ->
+    #   return @
 
-    
   # CSS Combinators with reversals
 
   ' ':

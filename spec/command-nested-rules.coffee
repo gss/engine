@@ -55,7 +55,7 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->        
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ["eq", ["get", "::global", "[target-size]", "get"], 100]
+              ["eq", ["get", "::global", "[target-size]", "[target-size]"], 100]
             ]
           done()
         
@@ -451,7 +451,11 @@ describe 'Nested Rules', ->
             ['$combinator', 
               ['$id', 'box1']
               '!>']
-            ['$id', 'group1']]
+            ['$tag', 
+              ['$combinator',
+                '>']
+              'div']]
+
 
           ['eq',
             ['get'
@@ -475,7 +479,7 @@ describe 'Nested Rules', ->
             <div id="box4" class="box"></div>
           </div>
           """
-        console.info("#box1 !>, #group1 { (&:first-child)[y] == 100 }")
+        console.info("#box1 !>, > div { (& :first-child)[y] == 100 }")
 
         vessel0 = container.getElementsByClassName('vessel')[0]
         box1 = container.getElementsByClassName('box')[1]
@@ -485,19 +489,30 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-            ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
-            ['eq', ['get', '$box3', '[y]','.vessel,#group1$group1 :first-child$box3'], 100]
+            ['eq', ['get', '$box1', '[y]','#box1!>,>div$vessel0 :first-child$box1'], 100]
+            ['eq', ['get', '$box3', '[y]','#box1!>,>div$group1 :first-child$box3'], 100]
           ])
 
-          vessel0.classList.remove('vessel')
           expect(box1.style.top).to.eql('100px')
           expect(box3.style.top).to.eql('100px')
+          expect(engine.queries['#box1!>,>div'].length).to.eql(3)
+          expect(engine.queries['#box1!>,>div'].duplicates.length).to.eql(1)
+          console.error('box1.remove()')
+          box1.parentNode.removeChild(box1)
           engine.once 'solved', ->
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-              ['remove', ".vessel,#group1$vessel0 :first-child$box1", ".vessel,#group1$vessel0"]
+              ['remove', 
+                "#box1!>",  
+                "#box1",
+                "#box1!>,>div$vessel0 :first-child$box1"]
+              ['eq', ['get', '$box2', '[y]','#box1!>,>div$vessel0 :first-child$box2'], 100]
             ])
+            console.log('State', engine.queries, engine.references)
             expect(box1.style.top).to.eql('')
+            expect(box2.style.top).to.eql('100px')
             expect(box3.style.top).to.eql('100px')
+            expect(engine.queries['#box1!>,>div'].length).to.eql(3)
+            expect(engine.queries['#box1!>,>div'].duplicates.length).to.eql(0)
 
             vessel0.classList.add('vessel')
 

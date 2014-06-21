@@ -13,25 +13,32 @@ class Expressions
 
   # Hook: Evaluate input and send produced output
   read: ->
-    @buffer = null
+    if @buffer == undefined
+      @buffer = null
+      buffer = true
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', JSON.parse JSON.stringify arguments[0])
     result = @evaluate.apply(@, arguments)
-    if @buffer
-      @lastOutput = @buffer
-      @output.read(@buffer)
-      @buffer = undefined
+    if buffer
+      @flush()
     return result
+
+  flush: ->
+    console.log(123123123, @buffer)
+    @lastOutput = @buffer
+    @output.read(@buffer)
+    @buffer = undefined
 
   # Hook: Buffer equasions if needed
   write: (args, batch) ->
+    return unless args?
     if (buffer = @buffer) != undefined
-      return unless args?
       if buffer
         # Optionally, combine subsequent commands (like remove)
         if batch
           if last = buffer[buffer.length - 1]
             if last[0] == args[0]
-              last.push.apply(last, args.slice(1))
+              if last.indexOf(args[1]) == -1
+                last.push.apply(last, args.slice(1))
               return buffer
       else 
         @buffer = buffer = []
@@ -42,7 +49,6 @@ class Expressions
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
-    console.log(operation)
     # Use custom argument evaluator of parent operation if it has one
     def = operation.def || @analyze(operation).def
     if (parent = operation.parent) && !overloaded
@@ -63,8 +69,7 @@ class Expressions
     for argument, index in operation
       continue if offset > index
       if index == 0 && (!operation.noop && !offset)
-        if continuation
-          argument = continuation
+        argument = continuation || operation
       else if ascender == index
         argument = ascending
       else if skip == index
@@ -72,13 +77,13 @@ class Expressions
         continue
       else if argument instanceof Array
         argument = @evaluate(argument, continuation, scope, undefined, prev)
-      return if argument == undefined && !def.eager
+      return if argument == undefined && (!def.eager || ascender != undefined)
       (args ||= [])[index - offset] = prev = argument
 
     # No-op commands are to be executed by something else (e.g. Solver)
     if operation.noop
-      if parent && parent.def.receive
-        return parent.def.receive @engine, scope, args
+      if parent && parent.def.capture
+        return parent.def.capture @engine, args, parent, continuation, scope
       else if parent && (!parent.noop || parent.parent)
         return args
       else
@@ -86,14 +91,15 @@ class Expressions
 
     # Use function, or look up method on the first argument. Falls back to builtin
     scope ||= @engine.scope
-    if def.scoped
+    if def.scoped || !args
       (args ||= []).unshift scope
+    if typeof args[0] == 'object'
+      node = args[0]
     unless func = operation.func
       if method = operation.method
-        if typeof args[0] == 'object'
-          if context = args[0]
-            if func = context[method]
-              args.shift()
+        if node && func = node[method]
+          args.shift()
+          context = node
         unless func
           if !context && (func = scope[method])
             context = scope
@@ -108,9 +114,13 @@ class Expressions
 
     # Let context transform or filter the result
     if callback = operation.def.callback
-      result = @context[callback](context || scope, args, result, operation, continuation, scope)
+      result = @context[callback](context || node || scope, args, result, operation, continuation, scope)
 
-    path = continuation && (continuation + operation.key) || operation.path
+    if continuation
+      path = continuation
+      path += operation.key unless operation.def.hidden
+    else
+      path = operation.path
     
     # Ascend the execution (fork for each item in collection)
     if result?
@@ -122,10 +132,11 @@ class Expressions
             @evaluate parent, subpath, scope, operation.index, item
           console.groupEnd path
           return
-        else if ascender?
+        else if parent.def.capture
+          return parent.def.capture @engine, result, parent, continuation, scope
+        else if ascender? || result.nodeType
           @evaluate parent, path, scope, operation.index, result
-        else if parent.def.receive# && typeof result[0] == 'string'
-          parent.def.receive @engine, context, result, parent, continuation
+          return
       else
         return @write result
 
@@ -164,7 +175,6 @@ class Expressions
       operation.def = operation.noop = true
       return operation
 
-    # Assign definition properties to AST node
     operation.def  = def
     # String representation of operation without complex arguments
     operation.key  = @serialize(operation, otherdef, false)
@@ -199,9 +209,8 @@ class Expressions
     def = operation.def
     prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.noop && operation.name) || ''
     suffix = def.suffix || (otherdef && otherdef.suffix) || ''
-    if operation.def.separator
-      separator = prefix
-      prefix = ''
+    separator = operation.def.separator
+    
     after = before = ''
     for index in [1 ... operation.length]
       if op = operation[index]

@@ -50,8 +50,6 @@ class Measurements
 
   # Generate command to create a variable
   'get':
-    prefix: '['
-    suffix: ']'
     command: (path, object, property) ->
 
       if property
@@ -72,6 +70,6 @@ class Measurements
         return @[property](object)
 
       # Return command with path which will be used to undo it
-      return ['get', id, property, path]
+      return ['get', id, property, path.path || path]
 
 module.exports = Measurements

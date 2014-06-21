@@ -48,6 +48,7 @@ class References
           @write(child, path)
       else
         @write(group, path)
+    @
 
   # Get object by id
   @get: (path) ->
