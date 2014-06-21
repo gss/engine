@@ -483,7 +483,9 @@ describe 'Nested Rules', ->
 
         vessel0 = container.getElementsByClassName('vessel')[0]
         box1 = container.getElementsByClassName('box')[1]
+        box2 = container.getElementsByClassName('box')[2]
         box3 = container.getElementsByClassName('box')[3]
+        box4 = container.getElementsByClassName('box')[4]
         
         engine = new GSS(container)
 
@@ -507,7 +509,6 @@ describe 'Nested Rules', ->
               ['eq', ['get', '$box2', '[y]','#box1!>,>div$vessel0 :first-child$box2'], 100]
               ['remove', "#box1"]
             ])
-            console.log('State', engine.queries, engine.references)
             expect(box1.style.top).to.eql('')
             expect(box2.style.top).to.eql('100px')
             expect(box3.style.top).to.eql('100px')
@@ -520,10 +521,38 @@ describe 'Nested Rules', ->
               expect(box1.style.top).to.eql('')
               expect(box2.style.top).to.eql('')
               expect(box3.style.top).to.eql('100px')
+              expect(box4.style.top).to.eql('')
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                ['eq', ['get', '$box1', '[y]','.vessel,#group1$vessel0 :first-child$box1'], 100]
+                ['remove', 
+                "#box1!>,>div$vessel0 :first-child$box2",
+                "#box1!>,>div$vessel0",  
+                ">$vessel0div"]
               ])
-              done()
+              box3.parentNode.removeChild(box3)
+
+              engine.once 'solved', ->
+                expect(box1.style.top).to.eql('')
+                expect(box2.style.top).to.eql('')
+                expect(box3.style.top).to.eql('')
+                expect(box4.style.top).to.eql('100px')
+                expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                  ['remove', "#box1!>,>div$group1 :first-child$box3"]
+
+                  ['eq', ['get', '$box4', '[y]','#box1!>,>div$group1 :first-child$box4'], 100]
+                ])
+                box4.parentNode.removeChild(box4)
+
+                engine.once 'solved', ->
+                  expect(box1.style.top).to.eql('')
+                  expect(box2.style.top).to.eql('')
+                  expect(box3.style.top).to.eql('')
+                  expect(box4.style.top).to.eql('')
+                  expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                    ['remove', "#box1!>,>div$group1 :first-child$box4"]
+                  ])
+                  #expect(engine.queries['#box1!>,>div']).to.eql([])
+                  done()
+                  console.log('State', engine.queries)
         engine.add(rules)
 
     xdescribe '1 level w/ ::scope', ->

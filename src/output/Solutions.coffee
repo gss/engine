@@ -6,6 +6,7 @@ class Solutions
     
   # Read commands
   pull: (commands)-> 
+    @response = response = {}
     @lastInput = commands
     for command in commands
       if command instanceof Array
@@ -13,14 +14,13 @@ class Solutions
       else 
         @add(command)
     @solver.solve()
-    response = {}
     for property, value of @solver._changed
-      if value == 0
-        if @[property] == 0
-          delete @[property]
-          value = null
       response[property] = value
-    console.log("Solutions output", response)
+    if @nullified
+      for property, value of @nullified
+        response[property] = null
+      delete @nullified
+    console.log("Solutions output", JSON.parse JSON.stringify @response)
     @push(response)
     return
 
@@ -29,27 +29,28 @@ class Solutions
 
   remove: (constrain, path) ->
     if constrain instanceof c.Constraint
+      console.info('removed constraint', path, constrain)
       @solver.removeConstraint(constrain)
-      for other in constrain.paths
-        if group = @[path]
+      for variable in constrain.variables
+        if group = @[variable.path]
           if (index = group.indexOf(constrain)) > -1
             group.splice(index, 1)
           unless group.length
-            delete @[path]
-      
-      
-      for prop in constrain.props
-        @[prop]--
+            delete @[variable.path]
+        
+        unless --@[variable.name]
+          delete @[variable.name]
+          @solver._externalParametricVars.delete(variable)
+          (@nullified ||= {})[variable.name] = null
 
 
   add: (command) ->
     if command instanceof c.Constraint
       @solver.addConstraint(command)
-      if command.paths
-        for path in command.paths
-          (@[path] ||= []).push(command)
-        for prop in command.props
-          @[prop] = (@[prop] || 0) + 1
+      if command.variables
+        for variable in command.variables
+          (@[variable.path] ||= []).push(command)
+          @[variable.name] = (@[variable.name] || 0) + 1
           
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command))

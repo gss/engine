@@ -4,11 +4,8 @@ require 'cassowary'
 class Constraints
   onConstraint: (node, args, result, operation, continuation, scope) ->
     for arg in args
-      if arg
-        if arg.path
-          (result.paths ||= []).push(arg.path)
-        if arg.prop
-          (result.props ||= []).push(arg.prop)
+      if arg.path
+        (result.variables ||= []).push(arg)
     return result
 
   get: (scope, property, path) ->
@@ -18,7 +15,6 @@ class Constraints
     else
       variable = @var((scope || '') + property)
     variable.path = path || scope || ''
-    variable.prop = (scope || '') + property
     return variable
 
   remove: () ->

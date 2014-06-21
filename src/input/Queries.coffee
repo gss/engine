@@ -224,6 +224,7 @@ class Queries
           @clean(path)
           console.log('remove watcher', path)
         delete @_watchers[id] unless watchers.length
+        
       if @engine.References::[id]
       # When removing id from collection
         path = continuation

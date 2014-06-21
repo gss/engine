@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-06-21) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20945,13 +20946,8 @@ Constraints = (function() {
     var arg, _i, _len;
     for (_i = 0, _len = args.length; _i < _len; _i++) {
       arg = args[_i];
-      if (arg) {
-        if (arg.path) {
-          (result.paths || (result.paths = [])).push(arg.path);
-        }
-        if (arg.prop) {
-          (result.props || (result.props = [])).push(arg.prop);
-        }
+      if (arg.path) {
+        (result.variables || (result.variables = [])).push(arg);
       }
     }
     return result;
@@ -20966,7 +20962,6 @@ Constraints = (function() {
       variable = this["var"]((scope || '') + property);
     }
     variable.path = path || scope || '';
-    variable.prop = (scope || '') + property;
     return variable;
   };
 
@@ -21978,7 +21973,8 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref;
+    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1;
+    this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
       command = commands[_i];
@@ -21992,19 +21988,20 @@ Solutions = (function() {
       }
     }
     this.solver.solve();
-    response = {};
     _ref = this.solver._changed;
     for (property in _ref) {
       value = _ref[property];
-      if (value === 0) {
-        if (this[property] === 0) {
-          delete this[property];
-          value = null;
-        }
-      }
       response[property] = value;
     }
-    console.log("Solutions output", response);
+    if (this.nullified) {
+      _ref1 = this.nullified;
+      for (property in _ref1) {
+        value = _ref1[property];
+        response[property] = null;
+      }
+      delete this.nullified;
+    }
+    console.log("Solutions output", JSON.parse(JSON.stringify(this.response)));
     this.push(response);
   };
 
@@ -22015,46 +22012,45 @@ Solutions = (function() {
   };
 
   Solutions.prototype.remove = function(constrain, path) {
-    var group, index, other, prop, _i, _j, _len, _len1, _ref, _ref1, _results;
+    var group, index, variable, _i, _len, _ref, _results;
     if (constrain instanceof c.Constraint) {
+      console.info('removed constraint', path, constrain);
       this.solver.removeConstraint(constrain);
-      _ref = constrain.paths;
+      _ref = constrain.variables;
+      _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        other = _ref[_i];
-        if (group = this[path]) {
+        variable = _ref[_i];
+        if (group = this[variable.path]) {
           if ((index = group.indexOf(constrain)) > -1) {
             group.splice(index, 1);
           }
           if (!group.length) {
-            delete this[path];
+            delete this[variable.path];
           }
         }
-      }
-      _ref1 = constrain.props;
-      _results = [];
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        prop = _ref1[_j];
-        _results.push(this[prop]--);
+        if (!--this[variable.name]) {
+          delete this[variable.name];
+          this.solver._externalParametricVars["delete"](variable);
+          _results.push((this.nullified || (this.nullified = {}))[variable.name] = null);
+        } else {
+          _results.push(void 0);
+        }
       }
       return _results;
     }
   };
 
   Solutions.prototype.add = function(command) {
-    var path, prop, _i, _j, _len, _len1, _ref, _ref1, _results;
+    var variable, _i, _len, _name, _ref, _results;
     if (command instanceof c.Constraint) {
       this.solver.addConstraint(command);
-      if (command.paths) {
-        _ref = command.paths;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          path = _ref[_i];
-          (this[path] || (this[path] = [])).push(command);
-        }
-        _ref1 = command.props;
+      if (command.variables) {
+        _ref = command.variables;
         _results = [];
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          prop = _ref1[_j];
-          _results.push(this[prop] = (this[prop] || 0) + 1);
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          variable = _ref[_i];
+          (this[_name = variable.path] || (this[_name] = [])).push(command);
+          _results.push(this[variable.name] = (this[variable.name] || 0) + 1);
         }
         return _results;
       }
