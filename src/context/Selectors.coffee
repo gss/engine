@@ -39,7 +39,7 @@ class Selectors
 
     # Walk through commands in selector to make a dictionary used by Observer
     analyze: (operation, parent) ->
-      prefix = (parent || typeof operation[0] != 'object') && ' ' || ''
+      prefix = (parent || (operation[0] != '$combinator' && typeof operation[1] != 'object')) && ' ' || ''
       switch operation[0]
         when '$tag'
           if (!parent || operation == operation.tail) && operation[1][0] != '$combinator'
@@ -161,8 +161,8 @@ class Selectors
       engine.queries.add(result, operation.path, scope)
       return
 
-    release: (engine, result, operation) ->
-      engine.queries.remove(result, operation.path)
+    release: (engine, result, operation, scope) ->
+      engine.queries.remove(result, operation.path, scope)
       return
 
     # evaluate: (operation, continuation, scope, ascender, ascending) ->

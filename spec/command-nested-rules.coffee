@@ -482,10 +482,12 @@ describe 'Nested Rules', ->
         console.info("#box1 !>, > div { (& :first-child)[y] == 100 }")
 
         vessel0 = container.getElementsByClassName('vessel')[0]
-        box1 = container.getElementsByClassName('box')[1]
-        box2 = container.getElementsByClassName('box')[2]
-        box3 = container.getElementsByClassName('box')[3]
-        box4 = container.getElementsByClassName('box')[4]
+        box0    = container.getElementsByClassName('box')[0]
+        box1    = container.getElementsByClassName('box')[1]
+        box2    = container.getElementsByClassName('box')[2]
+        box3    = container.getElementsByClassName('box')[3]
+        box4    = container.getElementsByClassName('box')[4]
+        group1  = container.getElementsByClassName('group')[0]
         
         engine = new GSS(container)
 
@@ -526,7 +528,8 @@ describe 'Nested Rules', ->
                 ['remove', 
                 "#box1!>,>div$vessel0 :first-child$box2",
                 "#box1!>,>div$vessel0",  
-                ">$vessel0div"]
+                ">$vessel0div"
+                ">$vessel0"]
               ])
               box3.parentNode.removeChild(box3)
 
@@ -550,9 +553,32 @@ describe 'Nested Rules', ->
                   expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
                     ['remove', "#box1!>,>div$group1 :first-child$box4"]
                   ])
-                  #expect(engine.queries['#box1!>,>div']).to.eql([])
-                  done()
-                  console.log('State', engine.queries)
+                  expect(engine.queries['#box1']).to.eql(undefined)
+                  expect(engine.queries['#box1!>']).to.eql(undefined)
+                  expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
+                  expect(engine.queries['>'].slice()).to.eql([box0, group1])
+                  box0.parentNode.removeChild(box0)
+                  engine.once 'solved', ->
+                    expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                      ['remove',
+                        "#box1!>,>div$box0"
+                        ">$box0div", 
+                        ">$box0"]
+                    ])
+                    expect(engine.queries['#box1']).to.eql(undefined)
+                    expect(engine.queries['#box1!>']).to.eql(undefined)
+                    expect(engine.queries['#box1!>,>div'].slice()).to.eql([group1])
+                    expect(engine.queries['>'].slice()).to.eql([group1])
+                    group1.parentNode.removeChild(group1)
+                    engine.once 'solved', ->
+                      console.log('State', engine.queries, 234)
+                      expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
+                        ['remove',
+                          "#box1!>,>div$group1"
+                          ">$group1div", 
+                          ">$group1"]
+                      ])
+                      done()
         engine.add(rules)
 
     xdescribe '1 level w/ ::scope', ->
