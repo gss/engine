@@ -58,7 +58,7 @@ class Styles
         return '-' + match[0].toLowerCase()
 
   get: (path, property, value) ->
-    element = @references.get(path)
+    element = @engine.get(path)
     camel = @camelize(property)
     style = element.style
     value = style[camel]
@@ -72,7 +72,7 @@ class Styles
       property = path.substring(last + 1, path.length - 1)
       path = path.substring(0, last)
 
-    return unless element = @engine.references.get(path)
+    return unless element = @engine[path]
     positioner = this.positioners[property]
     if positioning && positioner
       (positioning[path] ||= {})[property] = value

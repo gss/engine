@@ -7,8 +7,6 @@
 class Engine
   Expressions:
     require('./input/Expressions.js')
-  References:
-    require('./input/References.js')
 
   constructor: (scope) ->
     if scope && scope.nodeType
@@ -38,7 +36,6 @@ class Engine
     if @Expressions
       @context     = new @Context(@)
       @expressions = new @Expressions(@)
-      @references  = new @References(@)
       @events      = {}
       @values      = {}
       return
@@ -111,11 +108,42 @@ class Engine
     return Context
 
   # Set up delegates for setting and getting uids
-  @recognize: Engine::References.recognize
-  recognize:  Engine::References.recognize
 
-  @identify:  Engine::References.identify
-  identify:   Engine::References.identify
+
+  # Return concatenated path for a given object and prefix
+  getPath: (path, value) ->
+    return value if typeof value == 'string'
+    return path + @identify(value)
+
+  # Get object by id
+  @get: (path) ->
+    return Engine::[path]
+
+  # Get object by path or id
+  get: (path) ->
+    return @[path]
+
+  # Get or generate uid for a given object.
+  @identify: (object, generate) ->
+    unless id = object._gss_id
+      if object == document
+        object = window
+      unless generate == false
+        object._gss_id = id = "$" + (object.id || ++Engine.uid)
+      Engine::[id] = object
+    return id
+
+  # Get id if given object has one
+  @recognize: (object) ->
+    return Engine.identify(object, false)
+
+  identify: (object) ->
+    return Engine.identify(object)
+
+  recognize: (object) ->
+    return Engine.identify(object, false)
+
+  @uid: 0
 
 window.GSS = Engine
 

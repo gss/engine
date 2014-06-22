@@ -128,7 +128,7 @@ class Expressions
         if @engine.isCollection(result)
           console.group path
           for item in result
-            subpath = @engine.references.combine(path, item)
+            subpath = @engine.getPath(path, item)
             @evaluate parent, subpath, scope, operation.index, item
           console.groupEnd path
           return

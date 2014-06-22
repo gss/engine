@@ -21,7 +21,6 @@ class Queries
 
   constructor: (@engine, @output) ->
     @_watchers = {}
-    @references = @engine.references
     @listener = new @Observer @pull.bind(this)
     @listener.observe @engine.scope, @options 
 
@@ -199,7 +198,7 @@ class Queries
 
     if typeof id == 'object'
       node = id
-      id = @engine.references.recognize(id)
+      id = @engine.recognize(id)
     if scope && scope != @engine.scope
       continuation = @engine.recognize(scope) + continuation
 
@@ -207,7 +206,7 @@ class Queries
     if continuation
       collection = @[continuation]
       if collection
-        node ||= @references.get(id)
+        node ||= @engine.get(id)
         if (duplicates = collection.duplicates)
           if (index = duplicates.indexOf(node)) > -1
             duplicates.splice(index, 1)
@@ -219,7 +218,7 @@ class Queries
             console.error('removing', node, continuation, operation)
             #delete @[continuation] unless collection.length
 
-      if @engine.References::[id]
+      if @engine[id]
         # Detach observer and its subquery when cleaning by id
         if watchers = @_watchers[id]
           ref = continuation + id
@@ -286,7 +285,7 @@ class Queries
       old = undefined
     
     # Subscribe node to the query
-    if id = @references.identify(node)
+    if id = @engine.identify(node)
       watchers = @_watchers[id] ||= []
       if watchers.indexOf(operation) == -1
         watchers.push(operation, continuation, node)

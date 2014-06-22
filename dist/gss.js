@@ -20013,8 +20013,6 @@ var Engine;
 Engine = (function() {
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
-  Engine.prototype.References = require('./input/References.js');
-
   function Engine(scope) {
     var Document, engine, id;
     if (scope && scope.nodeType) {
@@ -20045,7 +20043,6 @@ Engine = (function() {
     if (this.Expressions) {
       this.context = new this.Context(this);
       this.expressions = new this.Expressions(this);
-      this.references = new this.References(this);
       this.events = {};
       this.values = {};
       return;
@@ -20149,13 +20146,48 @@ Engine = (function() {
     return Context;
   };
 
-  Engine.recognize = Engine.prototype.References.recognize;
+  Engine.prototype.getPath = function(path, value) {
+    if (typeof value === 'string') {
+      return value;
+    }
+    return path + this.identify(value);
+  };
 
-  Engine.prototype.recognize = Engine.prototype.References.recognize;
+  Engine.get = function(path) {
+    return Engine.prototype[path];
+  };
 
-  Engine.identify = Engine.prototype.References.identify;
+  Engine.prototype.get = function(path) {
+    return this[path];
+  };
 
-  Engine.prototype.identify = Engine.prototype.References.identify;
+  Engine.identify = function(object, generate) {
+    var id;
+    if (!(id = object._gss_id)) {
+      if (object === document) {
+        object = window;
+      }
+      if (generate !== false) {
+        object._gss_id = id = "$" + (object.id || ++Engine.uid);
+      }
+      Engine.prototype[id] = object;
+    }
+    return id;
+  };
+
+  Engine.recognize = function(object) {
+    return Engine.identify(object, false);
+  };
+
+  Engine.prototype.identify = function(object) {
+    return Engine.identify(object);
+  };
+
+  Engine.prototype.recognize = function(object) {
+    return Engine.identify(object, false);
+  };
+
+  Engine.uid = 0;
 
   return Engine;
 
@@ -21137,111 +21169,6 @@ Measurements = (function() {
 module.exports = Measurements;
 
 });
-require.register("gss/lib/input/References.js", function(exports, require, module){
-var References;
-
-References = (function() {
-  function References(input, output) {
-    this.input = input;
-    this.output = output;
-    this.output || (this.output = this.input);
-  }
-
-  References.prototype.pull = function() {
-    return this.set.apply(this, arguments);
-  };
-
-  References.prototype.push = function() {
-    return this.output.context.remove.apply(this.output.context, arguments);
-  };
-
-  References.prototype.combine = function(path, value) {
-    if (typeof value === 'string') {
-      return value;
-    }
-    return path + this.identify(value);
-  };
-
-  References.prototype.set = function(path, value) {
-    var old;
-    if (value === void 0) {
-      if (old = this[path]) {
-        return this.write(this.identify(old, path));
-      }
-    } else {
-      return this[path] = this.combine(path, value);
-    }
-  };
-
-  References.prototype.append = function(path, value) {
-    var group;
-    group = this[path] || (this[path] = []);
-    return group.push(this.combine(path, value));
-  };
-
-  References.prototype.remove = function(path, value) {
-    var child, group, id, _i, _len;
-    if (typeof value !== 'string') {
-      id = value._gss_id;
-      value = this.combine(path, value);
-    }
-    if (group = this[value]) {
-      delete this[value];
-      if (group instanceof Array) {
-        for (_i = 0, _len = group.length; _i < _len; _i++) {
-          child = group[_i];
-          this.write(child, path);
-        }
-      } else {
-        this.write(group, path);
-      }
-    }
-    return this;
-  };
-
-  References.get = function(path) {
-    return References.prototype[path];
-  };
-
-  References.prototype.get = function(path) {
-    return this[path];
-  };
-
-  References.identify = function(object, generate) {
-    var id;
-    if (!(id = object._gss_id)) {
-      if (object === document) {
-        object = window;
-      }
-      if (generate !== false) {
-        object._gss_id = id = "$" + (object.id || ++References.uid);
-      }
-      References.prototype[id] = object;
-    }
-    return id;
-  };
-
-  References.recognize = function(object) {
-    return References.identify(object, false);
-  };
-
-  References.prototype.identify = function(object) {
-    return References.identify(object);
-  };
-
-  References.prototype.recognize = function(object) {
-    return References.identify(object, false);
-  };
-
-  References.uid = 0;
-
-  return References;
-
-})();
-
-module.exports = References;
-
-});
 require.register("gss/lib/input/Expressions.js", function(exports, require, module){
 var Expressions;
 
@@ -21391,7 +21318,7 @@ Expressions = (function() {
           console.group(path);
           for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
             item = result[_j];
-            subpath = this.engine.references.combine(path, item);
+            subpath = this.engine.getPath(path, item);
             this.evaluate(parent, subpath, scope, operation.index, item);
           }
           console.groupEnd(path);
@@ -21530,7 +21457,6 @@ Queries = (function() {
     this.engine = engine;
     this.output = output;
     this._watchers = {};
-    this.references = this.engine.references;
     this.listener = new this.Observer(this.pull.bind(this));
     this.listener.observe(this.engine.scope, this.options);
   }
@@ -21778,7 +21704,7 @@ Queries = (function() {
     var collection, contd, duplicates, index, node, path, ref, result, watcher, watchers;
     if (typeof id === 'object') {
       node = id;
-      id = this.engine.references.recognize(id);
+      id = this.engine.recognize(id);
     }
     if (scope && scope !== this.engine.scope) {
       continuation = this.engine.recognize(scope) + continuation;
@@ -21787,7 +21713,7 @@ Queries = (function() {
     if (continuation) {
       collection = this[continuation];
       if (collection) {
-        node || (node = this.references.get(id));
+        node || (node = this.engine.get(id));
         if ((duplicates = collection.duplicates)) {
           if ((index = duplicates.indexOf(node)) > -1) {
             duplicates.splice(index, 1);
@@ -21802,7 +21728,7 @@ Queries = (function() {
           }
         }
       }
-      if (this.engine.References.prototype[id]) {
+      if (this.engine[id]) {
         if (watchers = this._watchers[id]) {
           ref = continuation + id;
           index = 0;
@@ -21885,7 +21811,7 @@ Queries = (function() {
       }
       old = void 0;
     }
-    if (id = this.references.identify(node)) {
+    if (id = this.engine.identify(node)) {
       watchers = (_base = this._watchers)[id] || (_base[id] = []);
       if (watchers.indexOf(operation) === -1) {
         watchers.push(operation, continuation, node);
@@ -22171,7 +22097,7 @@ Styles = (function() {
 
   Styles.prototype.get = function(path, property, value) {
     var camel, element, style;
-    element = this.references.get(path);
+    element = this.engine.get(path);
     camel = this.camelize(property);
     style = element.style;
     value = style[camel];
@@ -22188,7 +22114,7 @@ Styles = (function() {
       property = path.substring(last + 1, path.length - 1);
       path = path.substring(0, last);
     }
-    if (!(element = this.engine.references.get(path))) {
+    if (!(element = this.engine[path])) {
       return;
     }
     positioner = this.positioners[property];
@@ -27318,7 +27244,6 @@ module.exports = {
     "lib/context/Constraints.js",
     "lib/context/Measurements.js", 
 
-    "lib/input/References.js", 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 
 
