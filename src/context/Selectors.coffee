@@ -19,14 +19,16 @@ class Selectors
       
     # Create a shortcut operation to get through a group of operations
     perform: (object, operation) ->
+      head = operation.head || operation
       name = operation.def.group
-      shortcut = [name, operation.groupped]
-      shortcut.parent = (operation.head || operation).parent
-      shortcut.index = (operation.head || operation).index
+      shortcut = [name, head.groupped]
+      shortcut.parent = head.parent
+      shortcut.index = head.index
       object.analyze(shortcut)
       tail = operation.tail
-      global = tail.arity == 1 && tail.length == 2
-      op = operation
+      unless global = tail.arity == 1 && tail.length == 2
+        shortcut.splice(1, 0, tail[1])
+      op = head
       while op
         @analyze op, shortcut
         break if op == tail
@@ -288,6 +290,7 @@ class Selectors
 for property, command of Selectors::
   if typeof command == 'object'
     command.callback = 'onDOMQuery'
+    command.serialized = true
 
 
 # Add shims for IE<=8 that dont support some DOM properties

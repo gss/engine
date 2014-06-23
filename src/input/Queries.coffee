@@ -114,7 +114,7 @@ class Queries
       for attribute in node.attributes
         switch attribute.name
           when 'class'
-            for kls in removed.classList
+            for kls in node.classList
               if !update[' $class'] || update[' $class'].indexOf kls == -1
                 (update[' $class'] ||= []).push kls
           when 'id'
@@ -198,7 +198,7 @@ class Queries
 
     if typeof id == 'object'
       node = id
-      id = @engine.recognize(id)
+      id = @engine.identify(id)
     if scope && scope != @engine.scope
       continuation = @engine.recognize(scope) + continuation
 
@@ -223,10 +223,11 @@ class Queries
       if @engine[id]
         if watchers = @_watchers[id]
           ref = continuation + id
+          refforked = ref + '–'
           index = 0
           while watcher = watchers[index]
             contd = watchers[index + 1]
-            unless contd == ref
+            unless contd == ref || contd == refforked
               index += 3
               continue
             watchers.splice(index, 3)
@@ -234,11 +235,12 @@ class Queries
             @clean(path)
             console.log('remove watcher', path)
           delete @_watchers[id] unless watchers.length
-
         path = continuation
         if (result = @engine.queries[path])
           if result.length?
             path += id
+            if id == undefined
+              debugger
             @clean(path)
 
       # Remove cached DOM query
@@ -259,6 +261,7 @@ class Queries
         console.error('deleting watchers', watchers.slice())
         delete @_watchers[id] 
       delete @engine[id]
+      #delete node._gss_id
 
     @
 

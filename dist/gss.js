@@ -20501,15 +20501,18 @@ Selectors = (function() {
       }
     },
     perform: function(object, operation) {
-      var global, name, op, shortcut, tail;
+      var global, head, name, op, shortcut, tail;
+      head = operation.head || operation;
       name = operation.def.group;
-      shortcut = [name, operation.groupped];
-      shortcut.parent = (operation.head || operation).parent;
-      shortcut.index = (operation.head || operation).index;
+      shortcut = [name, head.groupped];
+      shortcut.parent = head.parent;
+      shortcut.index = head.index;
       object.analyze(shortcut);
       tail = operation.tail;
-      global = tail.arity === 1 && tail.length === 2;
-      op = operation;
+      if (!(global = tail.arity === 1 && tail.length === 2)) {
+        shortcut.splice(1, 0, tail[1]);
+      }
+      op = head;
       while (op) {
         this.analyze(op, shortcut);
         if (op === tail) {
@@ -20842,6 +20845,7 @@ for (property in _ref) {
   command = _ref[property];
   if (typeof command === 'object') {
     command.callback = 'onDOMQuery';
+    command.serialized = true;
   }
 }
 
@@ -21117,30 +21121,9 @@ Measurements = (function() {
     return scope.scrollTop;
   };
 
-  Measurements.prototype["[left]"] = function(scope) {
-    return this.get("[offsets]", scope).left;
-  };
-
-  Measurements.prototype["[top]"] = function(scope) {
-    return this.get("[offsets]", scope).top;
-  };
-
-  Measurements.prototype["[offsets]"] = function(scope) {
-    var offsets;
-    offsets = {
-      left: 0,
-      top: 0
-    };
-    while (scope) {
-      offsets.left += element.offsetLeft + element.clientLeft;
-      offsets.top += element.offsetTop + element.clientTop;
-      scope = scope.offsetParent;
-    }
-    return offsets;
-  };
-
   Measurements.prototype['get'] = {
     command: function(path, object, property) {
+      debugger;
       var id;
       if (property) {
         if (object.absolute === 'window' || object === document) {
@@ -21156,7 +21139,10 @@ Measurements = (function() {
       if (typeof this[property] === 'function') {
         return this[property](object);
       }
-      return ['get', id, property, path.path || path];
+      if (typeof path === 'object') {
+        path = path.path;
+      }
+      return ['get', id, property, path || ''];
     }
   };
 
@@ -21226,7 +21212,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, argument, callback, context, def, evaluated, func, index, item, method, node, offset, parent, path, pdef, prev, result, skip, subpath, _base, _i, _j, _len, _len1;
+    var args, argument, bit, callback, contd, context, def, evaluated, func, id, index, item, last, method, node, offset, parent, path, pdef, prev, result, separator, skip, subpath, _base, _i, _j, _len, _len1;
     def = operation.def || this.analyze(operation).def;
     if ((parent = operation.parent) && !overloaded) {
       if ((pdef = parent.def) && pdef.evaluate) {
@@ -21237,9 +21223,32 @@ Expressions = (function() {
       }
     }
     if (operation.tail) {
-      operation = (_base = operation.tail).shortcut || (_base.shortcut = this.context[def.group].perform(this, operation));
+      if (operation.tail.path === operation.tail.key || (ascender != null)) {
+        console.log('Shortcut up', operation, operation.tail, [continuation]);
+        operation = (_base = operation.tail).shortcut || (_base.shortcut = this.context[def.group].perform(this, operation));
+      } else {
+        console.log('Shortcut down', operation, operation.tail, [continuation]);
+        operation = operation.tail[1];
+      }
       parent = operation.parent;
       ascender = ascender !== void 0 && 1 || void 0;
+      def = operation.def;
+    }
+    if (operation.path && continuation) {
+      last = -1;
+      while ((index = continuation.indexOf('–', last + 1)) > -1) {
+        bit = continuation.substring(last + 1, index);
+        if (bit === operation.path) {
+          separator = last + 1 + operation.path.length;
+          id = continuation.substring(separator, index);
+          if (id) {
+            return this.engine[id];
+          } else {
+            return this.engine.queries[continuation.substring(0, separator)];
+          }
+        }
+        last = index;
+      }
     }
     args = prev = void 0;
     skip = operation.skip;
@@ -21257,7 +21266,13 @@ Expressions = (function() {
         offset += 1;
         continue;
       } else if (argument instanceof Array) {
-        argument = this.evaluate(argument, continuation, scope, void 0, prev);
+        if (ascender < index) {
+          contd = continuation;
+          if (contd.charAt(contd.length - 1) !== '–') {
+            contd += '–';
+          }
+        }
+        argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
       }
       if (argument === void 0 && (!def.eager || ascender !== void 0)) {
         return;
@@ -21304,7 +21319,7 @@ Expressions = (function() {
     }
     if (continuation) {
       path = continuation;
-      if (!operation.def.hidden) {
+      if (def.serialized && !def.hidden) {
         path += operation.key;
       }
     } else {
@@ -21369,12 +21384,14 @@ Expressions = (function() {
       return operation;
     }
     operation.def = def;
-    operation.key = this.serialize(operation, otherdef, false);
-    operation.path = this.serialize(operation, otherdef);
-    if (def.group) {
-      operation.groupped = this.serialize(operation, otherdef, def.group);
-      if (groupper = this.context[def.group]) {
-        groupper.analyze(operation);
+    if (def.serialized) {
+      operation.key = this.serialize(operation, otherdef, false);
+      operation.path = this.serialize(operation, otherdef);
+      if (def.group) {
+        operation.groupped = this.serialize(operation, otherdef, def.group);
+        if (groupper = this.context[def.group]) {
+          groupper.analyze(operation);
+        }
       }
     }
     if (typeof def === 'function') {
@@ -21408,7 +21425,7 @@ Expressions = (function() {
           if (group && (groupper = this.context[group])) {
             if (op.def.group === group) {
               if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
-                operation.groupped = tail.groupped = groupper.promise(op, operation);
+                operation.groupped = groupper.promise(op, operation);
                 tail.head = operation;
                 operation.tail = tail;
                 before += (before && separator || '') + op.groupped || op.key;
@@ -21581,7 +21598,7 @@ Queries = (function() {
         attribute = _ref2[_o];
         switch (attribute.name) {
           case 'class':
-            _ref3 = removed.classList;
+            _ref3 = node.classList;
             for (_p = 0, _len7 = _ref3.length; _p < _len7; _p++) {
               kls = _ref3[_p];
               if (!update[' $class'] || update[' $class'].indexOf(kls === -1)) {
@@ -21699,10 +21716,10 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope) {
-    var cleaning, collection, contd, duplicates, index, node, path, ref, result, watcher, watchers;
+    var cleaning, collection, contd, duplicates, index, node, path, ref, refforked, result, watcher, watchers;
     if (typeof id === 'object') {
       node = id;
-      id = this.engine.recognize(id);
+      id = this.engine.identify(id);
     }
     if (scope && scope !== this.engine.scope) {
       continuation = this.engine.recognize(scope) + continuation;
@@ -21729,10 +21746,11 @@ Queries = (function() {
       if (this.engine[id]) {
         if (watchers = this._watchers[id]) {
           ref = continuation + id;
+          refforked = ref + '–';
           index = 0;
           while (watcher = watchers[index]) {
             contd = watchers[index + 1];
-            if (contd !== ref) {
+            if (!(contd === ref || contd === refforked)) {
               index += 3;
               continue;
             }
@@ -21749,6 +21767,9 @@ Queries = (function() {
         if ((result = this.engine.queries[path])) {
           if (result.length != null) {
             path += id;
+            if (id === void 0) {
+              debugger;
+            }
             this.clean(path);
           }
         }

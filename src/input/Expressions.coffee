@@ -58,9 +58,29 @@ class Expressions
 
     # Use a shortcut operation when possible (e.g. native dom query)
     if operation.tail
-      operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
+      if (operation.tail.path == operation.tail.key || ascender?)
+
+        console.log('Shortcut up', operation, operation.tail, [continuation])
+        operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
+      else
+        console.log('Shortcut down', operation, operation.tail, [continuation])
+        operation = operation.tail[1]
       parent = operation.parent
       ascender = ascender != undefined && 1 || undefined
+      def = operation.def
+
+    if (operation.path && continuation)
+      last = -1
+      while (index = continuation.indexOf('–', last + 1)) > -1
+        bit = continuation.substring(last + 1, index)
+        if bit == operation.path
+          separator = last + 1 + operation.path.length
+          id = continuation.substring(separator, index)
+          if id
+            return @engine[id]
+          else
+            return @engine.queries[continuation.substring(0, separator)]
+        last = index
 
     # Recursively evaluate arguments, stop on undefined.
     args = prev = undefined
@@ -76,7 +96,11 @@ class Expressions
         offset += 1
         continue
       else if argument instanceof Array
-        argument = @evaluate(argument, continuation, scope, undefined, prev)
+        # Leave forking mark in a path when resolving next arguments
+        if ascender < index
+          contd = continuation
+          contd += '–' unless contd.charAt(contd.length - 1) == '–'
+        argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
       return if argument == undefined && (!def.eager || ascender != undefined)
       (args ||= [])[index - offset] = prev = argument
 
@@ -118,7 +142,7 @@ class Expressions
 
     if continuation
       path = continuation
-      path += operation.key unless operation.def.hidden
+      path += operation.key if def.serialized && !def.hidden
     else
       path = operation.path
     
@@ -134,7 +158,7 @@ class Expressions
           return
         else if parent.def.capture
           return parent.def.capture @engine, result, parent, continuation, scope
-        else if ascender? || result.nodeType
+        else if (ascender? || result.nodeType)
           @evaluate parent, path, scope, operation.index, result
           return
       else
@@ -176,16 +200,17 @@ class Expressions
       return operation
 
     operation.def  = def
-    # String representation of operation without complex arguments
-    operation.key  = @serialize(operation, otherdef, false)
-    # String representation of operation with all types of arguments
-    operation.path = @serialize(operation, otherdef)
+    if def.serialized
+      # String representation of operation without complex arguments
+      operation.key  = @serialize(operation, otherdef, false)
+      # String representation of operation with all types of arguments
+      operation.path = @serialize(operation, otherdef)
 
-    if def.group
-      # String representation of operation with arguments filtered by type
-      operation.groupped = @serialize(operation, otherdef, def.group)
-      if groupper = @context[def.group]
-        groupper.analyze(operation)
+      if def.group
+        # String representation of operation with arguments filtered by type
+        operation.groupped = @serialize(operation, otherdef, def.group)
+        if groupper = @context[def.group]
+          groupper.analyze(operation)
 
     # Try predefined command if can't dispatch by number of arguments
     if typeof def == 'function'
@@ -220,7 +245,7 @@ class Expressions
           if (group && (groupper = @context[group]))
             if (op.def.group == group)
               if tail = op.tail ||= (groupper.condition(op) && op)
-                operation.groupped = tail.groupped = groupper.promise(op, operation)
+                operation.groupped = groupper.promise(op, operation)
                 tail.head = operation
                 operation.tail = tail
                 before += (before && separator || '') + op.groupped || op.key

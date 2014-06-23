@@ -29,20 +29,6 @@ class Measurements
   "[scroll-top]": (scope) ->
     return scope.scrollTop
 
-  "[left]": (scope) ->
-    return @get("[offsets]", scope).left
-
-  "[top]": (scope) ->
-    return @get("[offsets]", scope).top
-
-  "[offsets]": (scope) ->
-    offsets = {left: 0, top: 0}
-    while scope
-      offsets.left += element.offsetLeft + element.clientLeft# - element.scrollLeft
-      offsets.top  += element.offsetTop + element.clientTop# - element.scrollTop
-      scope = scope.offsetParent
-    return offsets
-
 
   # Global getters
 
@@ -51,7 +37,7 @@ class Measurements
   # Generate command to create a variable
   'get':
     command: (path, object, property) ->
-
+      debugger
       if property
         # Get document property
         if object.absolute is 'window' || object == document
@@ -70,6 +56,8 @@ class Measurements
         return @[property](object)
 
       # Return command with path which will be used to undo it
-      return ['get', id, property, path.path || path]
+      if typeof path == 'object'
+        path = path.path
+      return ['get', id, property, path || '']
 
 module.exports = Measurements
