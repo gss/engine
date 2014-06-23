@@ -581,22 +581,18 @@ describe 'Nested Rules', ->
                       done()
         engine.add(rules)
 
-    xdescribe '1 level w/ ::scope', ->
+    describe '1 level w/ ::scope', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          {
-            type:'ruleset'
-            selectors: ['.vessel .box']
-            rules: [
-              {
-                type:'constraint', 
-                cssText:'::[width] == ::scope[width]', 
-                commands: [
-                  ["lte", ["get$","width",["$reserved","::this"]], ["get$","width",["$reserved","::scope"]]]
-                ]
-              }
-            ]
-          }
+          ['$rule', 
+            ['$class'
+              ['$combinator'
+                ['$class'
+                  'vessel']
+                ' ']
+              'box'],
+            ["lte", ["get", ["$reserved", "this"], "[width]"], ["get", ["$reserved", "scope"], "[width]"]]
+          ]
         ]
         container.id = 'container0'
         container.innerHTML =  """
@@ -608,24 +604,17 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
+        engine = new GSS(container)
                               
-        listener = (e) ->        
+        engine.once 'solved', ->  
 
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
+          expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
               ['lte', ['get$','width','$box1', '.vessel .box'], ['get$','width','$container0','::scope']]
               ['lte', ['get$','width','$box2', '.vessel .box'], ['get$','width','$container0','::scope']]
             ]
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
         
-        engine = new GSS(container)
-
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+        engine.add rules
 
 
       it 'should resolve selector on ::scope', (done) ->

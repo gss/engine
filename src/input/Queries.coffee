@@ -204,22 +204,23 @@ class Queries
 
     console.error('remove', id, continuation)
     if continuation
-      collection = @[continuation]
-      if collection
+      if collection = @[continuation]
         node ||= @engine.get(id)
+
+        # Dont remove it if element matches more than one selector
         if (duplicates = collection.duplicates)
           if (index = duplicates.indexOf(node)) > -1
             duplicates.splice(index, 1)
             return
+
+        # Remove element from collection manually
         if operation && collection && collection.length
           if (index = collection.indexOf(node)) > -1
             collection.splice(index, 1)
-            debugger
-            console.error('removing', node, continuation, operation)
-            #delete @[continuation] unless collection.length
+            cleaning = continuation unless collection.length
 
+      # Detach observer and its subquery when cleaning by id
       if @engine[id]
-        # Detach observer and its subquery when cleaning by id
         if watchers = @_watchers[id]
           ref = continuation + id
           index = 0
@@ -234,17 +235,19 @@ class Queries
             console.log('remove watcher', path)
           delete @_watchers[id] unless watchers.length
 
-        # When removing id from collection
         path = continuation
         if (result = @engine.queries[path])
           if result.length?
             path += id
             @clean(path)
-            console.log('remove from collection', path)
+
       # Remove cached DOM query
       else 
         @clean(id, continuation, operation, scope)
-    else 
+        
+      delete @[continuation] if collection && !collection.length
+    else if node = @engine[id]
+      # Detach queries attached to an element when removing element by id
       if watchers = @_watchers[id]
         index = 0
         while watcher = watchers[index]
@@ -255,7 +258,7 @@ class Queries
           index += 3
         console.error('deleting watchers', watchers.slice())
         delete @_watchers[id] 
-
+      delete @engine[id]
 
     @
 
@@ -313,10 +316,10 @@ class Queries
         result = watchers.slice.call(result, 0)
     else
       added = result
-    if result == undefined
-      delete @[path]
-    else
+    if result
       @[path] = result
+    else
+      delete @[path]
 
     console.log('found', result && (result.nodeType == 1 && 1 || result.length) || 0, ' by' ,path)
     return if removed && !added

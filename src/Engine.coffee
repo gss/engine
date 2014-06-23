@@ -63,6 +63,62 @@ class Engine
         when "undefined"
           return object.length == 0
 
+  # Store solutions
+  merge: (object) ->
+    for prop, value of object
+      if value?
+        @values[prop] = value
+      else
+        delete @values[prop]
+
+  # Destroy engine
+  destroy: ->
+    Engine[@scope._gss_id] = undefined
+
+  # Combine mixins
+  @include = ->
+    Context = (@engine) ->
+    for mixin in arguments
+      for name, fn of mixin::
+        Context::[name] = fn
+    return Context
+
+  # Return concatenated path for a given object and prefix
+  getPath: (path, value) ->
+    return value if typeof value == 'string'
+    return path + Engine.identify(value)
+
+  # Get object by id
+  @get: (id) ->
+    return Engine::[id]
+
+  # Get object by id
+  get: (id) ->
+    return @[id]
+
+  # Get or generate uid for a given object.
+  @identify: (object, generate) ->
+    unless id = object._gss_id
+      if object == document
+        object = window
+      unless generate == false
+        object._gss_id = id = "$" + (object.id || ++Engine.uid)
+      Engine::[id] = object
+    return id
+
+  # Get id if given object has one
+  @recognize: (object) ->
+    return Engine.identify(object, false)
+
+  identify: (object) ->
+    return Engine.identify(object)
+
+  recognize: (object) ->
+    return Engine.identify(object, false)
+
+  @uid: 0
+
+  # Simple EventTrigger that fires @on<event>
   once: (type, fn) ->
     fn.once = true
     @addEventListener(type, fn)
@@ -86,64 +142,6 @@ class Engine
   # Catch-all event listener 
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
-
-  # Store solutions
-  merge: (object) ->
-    for prop, value of object
-      if value?
-        @values[prop] = value
-      else
-        delete @values[prop]
-
-  # Destroy engine
-  destroy: ->
-    Engine[@scope._gss_id] = undefined
-
-  # Combine mixins
-  @include = ->
-    Context = (@engine) ->
-    for mixin in arguments
-      for name, fn of mixin::
-        Context::[name] = fn
-    return Context
-
-  # Set up delegates for setting and getting uids
-
-
-  # Return concatenated path for a given object and prefix
-  getPath: (path, value) ->
-    return value if typeof value == 'string'
-    return path + @identify(value)
-
-  # Get object by id
-  @get: (path) ->
-    return Engine::[path]
-
-  # Get object by path or id
-  get: (path) ->
-    return @[path]
-
-  # Get or generate uid for a given object.
-  @identify: (object, generate) ->
-    unless id = object._gss_id
-      if object == document
-        object = window
-      unless generate == false
-        object._gss_id = id = "$" + (object.id || ++Engine.uid)
-      Engine::[id] = object
-    return id
-
-  # Get id if given object has one
-  @recognize: (object) ->
-    return Engine.identify(object, false)
-
-  identify: (object) ->
-    return Engine.identify(object)
-
-  recognize: (object) ->
-    return Engine.identify(object, false)
-
-  @uid: 0
 
 window.GSS = Engine
 

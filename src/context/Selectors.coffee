@@ -269,7 +269,6 @@ class Selectors
       return node
 
   '::parent':
-    prefix: '::parent'
     scoped: true
     1: (node) ->
       if parent = node.parentNode
@@ -277,7 +276,6 @@ class Selectors
           return parent
 
   '::scope':
-    prefix: "::scope"
     1: (node) ->
       return @engine.scope
 

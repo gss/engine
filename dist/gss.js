@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-22) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-23) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20073,45 +20073,6 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.once = function(type, fn) {
-    fn.once = true;
-    return this.addEventListener(type, fn);
-  };
-
-  Engine.prototype.addEventListener = function(type, fn) {
-    var _base;
-    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
-  };
-
-  Engine.prototype.removeEventListener = function(type, fn) {
-    var group, index;
-    if (group = this.events && this.events[type]) {
-      if (index = group.indexOf(fn) > -1) {
-        return group.splice(index, 1);
-      }
-    }
-  };
-
-  Engine.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method, _i;
-    if (group = this.events[type]) {
-      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
-        fn = group[index];
-        if (fn.once) {
-          group.splice(index, 1);
-        }
-        fn.call(this, a, b, c);
-      }
-    }
-    if (this[method = 'on' + type]) {
-      return this[method](a, b, c);
-    }
-  };
-
-  Engine.prototype.handleEvent = function(e) {
-    return this.triggerEvent(e.type, e);
-  };
-
   Engine.prototype.merge = function(object) {
     var prop, value, _results;
     _results = [];
@@ -20150,15 +20111,15 @@ Engine = (function() {
     if (typeof value === 'string') {
       return value;
     }
-    return path + this.identify(value);
+    return path + Engine.identify(value);
   };
 
-  Engine.get = function(path) {
-    return Engine.prototype[path];
+  Engine.get = function(id) {
+    return Engine.prototype[id];
   };
 
-  Engine.prototype.get = function(path) {
-    return this[path];
+  Engine.prototype.get = function(id) {
+    return this[id];
   };
 
   Engine.identify = function(object, generate) {
@@ -20188,6 +20149,45 @@ Engine = (function() {
   };
 
   Engine.uid = 0;
+
+  Engine.prototype.once = function(type, fn) {
+    fn.once = true;
+    return this.addEventListener(type, fn);
+  };
+
+  Engine.prototype.addEventListener = function(type, fn) {
+    var _base;
+    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
+  };
+
+  Engine.prototype.removeEventListener = function(type, fn) {
+    var group, index;
+    if (group = this.events && this.events[type]) {
+      if (index = group.indexOf(fn) > -1) {
+        return group.splice(index, 1);
+      }
+    }
+  };
+
+  Engine.prototype.triggerEvent = function(type, a, b, c) {
+    var fn, group, index, method, _i;
+    if (group = this.events[type]) {
+      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
+        fn = group[index];
+        if (fn.once) {
+          group.splice(index, 1);
+        }
+        fn.call(this, a, b, c);
+      }
+    }
+    if (this[method = 'on' + type]) {
+      return this[method](a, b, c);
+    }
+  };
+
+  Engine.prototype.handleEvent = function(e) {
+    return this.triggerEvent(e.type, e);
+  };
 
   return Engine;
 
@@ -20811,7 +20811,6 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::parent'] = {
-    prefix: '::parent',
     scoped: true,
     1: function(node) {
       var parent;
@@ -20824,7 +20823,6 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::scope'] = {
-    prefix: "::scope",
     1: function(node) {
       return this.engine.scope;
     }
@@ -21701,7 +21699,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope) {
-    var collection, contd, duplicates, index, node, path, ref, result, watcher, watchers;
+    var cleaning, collection, contd, duplicates, index, node, path, ref, result, watcher, watchers;
     if (typeof id === 'object') {
       node = id;
       id = this.engine.recognize(id);
@@ -21711,8 +21709,7 @@ Queries = (function() {
     }
     console.error('remove', id, continuation);
     if (continuation) {
-      collection = this[continuation];
-      if (collection) {
+      if (collection = this[continuation]) {
         node || (node = this.engine.get(id));
         if ((duplicates = collection.duplicates)) {
           if ((index = duplicates.indexOf(node)) > -1) {
@@ -21723,8 +21720,9 @@ Queries = (function() {
         if (operation && collection && collection.length) {
           if ((index = collection.indexOf(node)) > -1) {
             collection.splice(index, 1);
-            debugger;
-            console.error('removing', node, continuation, operation);
+            if (!collection.length) {
+              cleaning = continuation;
+            }
           }
         }
       }
@@ -21752,13 +21750,15 @@ Queries = (function() {
           if (result.length != null) {
             path += id;
             this.clean(path);
-            console.log('remove from collection', path);
           }
         }
       } else {
         this.clean(id, continuation, operation, scope);
       }
-    } else {
+      if (collection && !collection.length) {
+        delete this[continuation];
+      }
+    } else if (node = this.engine[id]) {
       if (watchers = this._watchers[id]) {
         index = 0;
         while (watcher = watchers[index]) {
@@ -21771,6 +21771,7 @@ Queries = (function() {
         console.error('deleting watchers', watchers.slice());
         delete this._watchers[id];
       }
+      delete this.engine[id];
     }
     return this;
   };
@@ -21845,10 +21846,10 @@ Queries = (function() {
     } else {
       added = result;
     }
-    if (result === void 0) {
-      delete this[path];
-    } else {
+    if (result) {
       this[path] = result;
+    } else {
+      delete this[path];
     }
     console.log('found', result && (result.nodeType === 1 && 1 || result.length) || 0, ' by', path);
     if (removed && !added) {
