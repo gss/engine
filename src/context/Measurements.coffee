@@ -37,7 +37,6 @@ class Measurements
   # Generate command to create a variable
   'get':
     command: (path, object, property) ->
-      debugger
       if property
         # Get document property
         if object.absolute is 'window' || object == document

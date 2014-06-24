@@ -33,6 +33,31 @@ class Queries
       (@buffer ||= []).push(query, continuation, scope)
     return
 
+  # Listen to changes in DOM to broadcast them all around, update queries in batch
+  pull: (mutations) ->
+    @output.buffer = @buffer = null
+    for mutation in mutations
+      switch mutation.type
+        when "attributes"
+          @$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
+        when "childList"
+          @$childList(mutation.target, mutation)
+
+    if queries = @lastOutput = @buffer
+      @buffer = undefined
+      for query, index in queries by 3
+        continuation = queries[index + 1]
+        scope = queries[index + 2]
+        @output.pull query, continuation, scope
+      if @removed
+        for id in @removed
+          @remove id
+        @removed = undefined
+
+    if buffer = @output.buffer
+      @output.flush()
+    return
+
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
     if name == 'class' && typeof changed == 'string'
@@ -56,19 +81,28 @@ class Queries
       break unless parent = parent.parentNode
     @
 
+  index: (update, type, value) ->
+    if group = update[type]
+      return unless group.indexOf(value) == -1
+    else
+      update[type] = []
+    update[type].push(value)
+
   $childList: (target, mutation) ->
     # Invalidate sibling observers
     added = []
     removed = []
-    changed = []
     for child in mutation.addedNodes
       if child.nodeType == 1
-        changed.push(child)
         added.push(child)
     for child in mutation.removedNodes
       if child.nodeType == 1
-        changed.push(child)
-        removed.push(child)
+        if (index = added.indexOf(child)) > -1
+          added.splice index, 1
+          debugger
+        else
+          removed.push(child)
+    changed = added.concat(removed)
     prev = next = mutation
     firstPrev = firstNext = true
     while (prev = prev.previousSibling)
@@ -103,11 +137,6 @@ class Queries
       allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'))
     allChanged = allAdded.concat(allRemoved)
 
-    # Clean removed elements by id
-    for removed in allRemoved
-      if id = @engine.recognize(removed)
-        @remove(id)
-
     # Generate map of qualifiers to invalidate (to re-query native selectors)
     update = {}
     for node in allChanged
@@ -115,26 +144,25 @@ class Queries
         switch attribute.name
           when 'class'
             for kls in node.classList
-              if !update[' $class'] || update[' $class'].indexOf kls == -1
-                (update[' $class'] ||= []).push kls
+              @index update, ' $class', kls
           when 'id'
-            if !update[' $id'] || update[' $id'].indexOf kls == -1
-              (update[' $id'] ||= []).push attribute.value
-          else
-            if !update[' $attribute'] || update[' $attribute'].indexOf kls == -1
-              (update[' $attribute'] ||= []).push attribute.name
+            @index update, ' $id', attribute.value
+
+        @index update, ' $attribute', attribute.name
       prev = next = node  
       while prev = prev.previousSibling
         if prev.nodeType == 1
-          (update[' +'] ||= []).push(prev)
+          @index update, ' +', prev
           break
       while next = next.previousSibling
         if next.nodeType == 1
           break
-      (update[' $pseudo'] ||= []).push('first-child') unless prev
-      (update[' $pseudo'] ||= []).push('last-child') unless next
-      (update[' +'] ||= []).push(child)
-    console.log(update)
+
+      @index update, ' $pseudo', 'first-child' unless prev
+      @index update, ' $pseudo', 'last-child' unless next
+      @index update, ' +', child
+
+    console.error('updates', update)
 
     parent = target
     while parent.nodeType == 1
@@ -152,28 +180,12 @@ class Queries
 
       break if parent == @engine.scope
       break unless parent = parent.parentNode
+
+    # Clean removed elements by id
+    for removed in allRemoved
+      if id = @engine.recognize(removed)
+        (@removed ||= []).push(id)
     @
-
-  # Listen to changes in DOM to broadcast them all around, update queries in batch
-  pull: (mutations) ->
-    @output.buffer = @buffer = null
-    for mutation in mutations
-      switch mutation.type
-        when "attributes"
-          @$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
-        when "childList"
-          @$childList(mutation.target, mutation)
-
-    if queries = @lastOutput = @buffer
-      @buffer = undefined
-      for query, index in queries by 3
-        continuation = queries[index + 1]
-        scope = queries[index + 2]
-        @output.pull query, continuation, scope
-
-    if buffer = @output.buffer
-      @output.flush()
-    return
 
   # Manually add element to collection
   add: (node, continuation, scope) ->
@@ -189,8 +201,6 @@ class Queries
 
   # Return collection by path & scope
   get: (continuation, scope) ->
-    if scope != @engine.scope
-      continuation += @engine.recognize(scope)
     return @[continuation]
 
   # HOOK: Remove observers and cached node lists
@@ -199,10 +209,8 @@ class Queries
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
-    if scope && scope != @engine.scope
-      continuation = @engine.recognize(scope) + continuation
 
-    console.error('remove', id, continuation)
+    console.error('remove', id, '---', continuation)
     if continuation
       if collection = @[continuation]
         node ||= @engine.get(id)
@@ -222,7 +230,7 @@ class Queries
       # Detach observer and its subquery when cleaning by id
       if @engine[id]
         if watchers = @_watchers[id]
-          ref = continuation + id
+          ref = continuation + (collection && collection.length != undefined && id || '')
           refforked = ref + '–'
           index = 0
           while watcher = watchers[index]
@@ -232,8 +240,12 @@ class Queries
               continue
             watchers.splice(index, 3)
             path = (contd || '') + watcher.key
-            @clean(path)
+            if contd
+              debugger
+            @clean(path, path, watcher)
             console.log('remove watcher', path)
+          if id == '$container0' && !watchers.length
+            debugger
           delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries[path])
@@ -248,6 +260,8 @@ class Queries
         @clean(id, continuation, operation, scope)
         
       delete @[continuation] if collection && !collection.length
+
+
     else if node = @engine[id]
       # Detach queries attached to an element when removing element by id
       if watchers = @_watchers[id]
@@ -258,7 +272,9 @@ class Queries
           @remove(path, contd, watcher, watchers[index + 2])
           console.log('deleting', path)
           index += 3
-        console.error('deleting watchers', watchers.slice())
+        console.error('deleting watchers', watchers.slice(), 'from', id)
+        if id == '$container0'
+          debugger
         delete @_watchers[id] 
       delete @engine[id]
       #delete node._gss_id
@@ -269,12 +285,13 @@ class Queries
     if result = @[path]
       if parent = operation && operation.parent
         if (pdef = parent.def) && pdef.release
-          pdef.release(@engine, result, parent, scope)
+          pdef.release(@engine, result, parent, scope, operation)
 
       if result.length != undefined
-        @remove child, path for child in result
+        copy = result.slice()
+        @remove child, path, operation for child in copy
       else
-        @remove result, continuation
+        @remove result, continuation, operation
     delete @[path]
     if !result || result.length == undefined
       @engine.expressions.push(['remove', path], true)
@@ -292,9 +309,15 @@ class Queries
     
     # Subscribe node to the query
     if id = @engine.identify(node)
-      watchers = @_watchers[id] ||= []
-      if watchers.indexOf(operation) == -1
-        watchers.push(operation, continuation, node)
+      if watchers = @_watchers[id]
+        for watcher, index in watchers by 3
+          if watcher == operation && watchers[index + 1] == continuation
+            dupe = true
+            break
+      else
+        watchers = @_watchers[id] = []
+      unless dupe
+        watchers.push(operation, continuation, scope)
     
     # Clean refs of nodes that dont match anymore
     if old
@@ -315,7 +338,7 @@ class Queries
           (added ||= []).push child
 
       # Snapshot live node list for future reference
-      if result && result.item && (!old || removed || added)
+      if result && result.item
         result = watchers.slice.call(result, 0)
     else
       added = result

@@ -71,7 +71,10 @@ class Expressions
 
     if (operation.path && continuation)
       last = -1
-      while (index = continuation.indexOf('–', last + 1)) > -1
+      while (index = continuation.indexOf('–', last + 1))
+        if index == -1
+          index = continuation.length
+          breaking = true
         bit = continuation.substring(last + 1, index)
         if bit == operation.path
           separator = last + 1 + operation.path.length
@@ -80,6 +83,7 @@ class Expressions
             return @engine[id]
           else
             return @engine.queries[continuation.substring(0, separator)]
+        break if breaking
         last = index
 
     # Recursively evaluate arguments, stop on undefined.

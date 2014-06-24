@@ -154,17 +154,27 @@ class Selectors
     # Doesnt let undefined arguments stop execution
     eager: true
 
+    serialize: (scope, operation, engine) ->
+      if scope && scope != engine.scope
+        continuation = engine.recognize(scope) + operation.path
+      else
+        return operation.path
+
+
     # Return deduplicated collection of all found elements
     command: (scope, operation) ->
-      return @engine.queries.get(operation.path, scope)
+      continuation = @engine.context[','].serialize(scope, operation, @engine)
+      return @engine.queries.get(continuation)
 
     # Recieve a single element from one of the sub-selectors
     capture: (engine, result, operation, continuation, scope) -> 
-      engine.queries.add(result, operation.path, scope)
+      continuation = @serialize(scope, operation, engine)
+      engine.queries.add(result, continuation, scope, scope)
       return
 
-    release: (engine, result, operation, scope) ->
-      engine.queries.remove(result, operation.path, scope)
+    release: (engine, result, operation, scope, child) ->
+      continuation = @serialize(scope, operation, engine)
+      engine.queries.remove(result, continuation, child, scope)
       return
 
     # evaluate: (operation, continuation, scope, ascender, ascending) ->

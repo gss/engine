@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-23) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20663,14 +20663,27 @@ Selectors = (function() {
     separator: ',',
     scoped: true,
     eager: true,
+    serialize: function(scope, operation, engine) {
+      var continuation;
+      if (scope && scope !== engine.scope) {
+        return continuation = engine.recognize(scope) + operation.path;
+      } else {
+        return operation.path;
+      }
+    },
     command: function(scope, operation) {
-      return this.engine.queries.get(operation.path, scope);
+      var continuation;
+      continuation = this.engine.context[','].serialize(scope, operation, this.engine);
+      return this.engine.queries.get(continuation);
     },
     capture: function(engine, result, operation, continuation, scope) {
-      engine.queries.add(result, operation.path, scope);
+      continuation = this.serialize(scope, operation, engine);
+      engine.queries.add(result, continuation, scope, scope);
     },
-    release: function(engine, result, operation, scope) {
-      engine.queries.remove(result, operation.path, scope);
+    release: function(engine, result, operation, scope, child) {
+      var continuation;
+      continuation = this.serialize(scope, operation, engine);
+      engine.queries.remove(result, continuation, child, scope);
     }
   };
 
@@ -21123,7 +21136,6 @@ Measurements = (function() {
 
   Measurements.prototype['get'] = {
     command: function(path, object, property) {
-      debugger;
       var id;
       if (property) {
         if (object.absolute === 'window' || object === document) {
@@ -21212,7 +21224,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, argument, bit, callback, contd, context, def, evaluated, func, id, index, item, last, method, node, offset, parent, path, pdef, prev, result, separator, skip, subpath, _base, _i, _j, _len, _len1;
+    var args, argument, bit, breaking, callback, contd, context, def, evaluated, func, id, index, item, last, method, node, offset, parent, path, pdef, prev, result, separator, skip, subpath, _base, _i, _j, _len, _len1;
     def = operation.def || this.analyze(operation).def;
     if ((parent = operation.parent) && !overloaded) {
       if ((pdef = parent.def) && pdef.evaluate) {
@@ -21236,7 +21248,11 @@ Expressions = (function() {
     }
     if (operation.path && continuation) {
       last = -1;
-      while ((index = continuation.indexOf('–', last + 1)) > -1) {
+      while ((index = continuation.indexOf('–', last + 1))) {
+        if (index === -1) {
+          index = continuation.length;
+          breaking = true;
+        }
         bit = continuation.substring(last + 1, index);
         if (bit === operation.path) {
           separator = last + 1 + operation.path.length;
@@ -21246,6 +21262,9 @@ Expressions = (function() {
           } else {
             return this.engine.queries[continuation.substring(0, separator)];
           }
+        }
+        if (breaking) {
+          break;
         }
         last = index;
       }
@@ -21484,6 +21503,41 @@ Queries = (function() {
     }
   };
 
+  Queries.prototype.pull = function(mutations) {
+    var buffer, continuation, id, index, mutation, queries, query, scope, _i, _j, _k, _len, _len1, _len2, _ref;
+    this.output.buffer = this.buffer = null;
+    for (_i = 0, _len = mutations.length; _i < _len; _i++) {
+      mutation = mutations[_i];
+      switch (mutation.type) {
+        case "attributes":
+          this.$attribute(mutation.target, mutation.attributeName, mutation.oldValue);
+          break;
+        case "childList":
+          this.$childList(mutation.target, mutation);
+      }
+    }
+    if (queries = this.lastOutput = this.buffer) {
+      this.buffer = void 0;
+      for (index = _j = 0, _len1 = queries.length; _j < _len1; index = _j += 3) {
+        query = queries[index];
+        continuation = queries[index + 1];
+        scope = queries[index + 2];
+        this.output.pull(query, continuation, scope);
+      }
+      if (this.removed) {
+        _ref = this.removed;
+        for (_k = 0, _len2 = _ref.length; _k < _len2; _k++) {
+          id = _ref[_k];
+          this.remove(id);
+        }
+        this.removed = void 0;
+      }
+    }
+    if (buffer = this.output.buffer) {
+      this.output.flush();
+    }
+  };
+
   Queries.prototype.$attribute = function(target, name, changed) {
     var $attribute, $class, klasses, kls, old, parent, _i, _j, _k, _len, _len1, _len2;
     if (name === 'class' && typeof changed === 'string') {
@@ -21524,16 +21578,26 @@ Queries = (function() {
     return this;
   };
 
+  Queries.prototype.index = function(update, type, value) {
+    var group;
+    if (group = update[type]) {
+      if (group.indexOf(value) !== -1) {
+        return;
+      }
+    } else {
+      update[type] = [];
+    }
+    return update[type].push(value);
+  };
+
   Queries.prototype.$childList = function(target, mutation) {
-    var added, allAdded, allChanged, allRemoved, attribute, changed, child, firstNext, firstPrev, id, kls, next, node, parent, prev, prop, removed, update, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3;
+    var added, allAdded, allChanged, allRemoved, attribute, changed, child, firstNext, firstPrev, id, index, kls, next, node, parent, prev, prop, removed, update, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3;
     added = [];
     removed = [];
-    changed = [];
     _ref = mutation.addedNodes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       child = _ref[_i];
       if (child.nodeType === 1) {
-        changed.push(child);
         added.push(child);
       }
     }
@@ -21541,10 +21605,15 @@ Queries = (function() {
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       child = _ref1[_j];
       if (child.nodeType === 1) {
-        changed.push(child);
-        removed.push(child);
+        if ((index = added.indexOf(child)) > -1) {
+          added.splice(index, 1);
+          debugger;
+        } else {
+          removed.push(child);
+        }
       }
     }
+    changed = added.concat(removed);
     prev = next = mutation;
     firstPrev = firstNext = true;
     while ((prev = prev.previousSibling)) {
@@ -21584,43 +21653,29 @@ Queries = (function() {
       allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'));
     }
     allChanged = allAdded.concat(allRemoved);
-    for (_m = 0, _len4 = allRemoved.length; _m < _len4; _m++) {
-      removed = allRemoved[_m];
-      if (id = this.engine.recognize(removed)) {
-        this.remove(id);
-      }
-    }
     update = {};
-    for (_n = 0, _len5 = allChanged.length; _n < _len5; _n++) {
-      node = allChanged[_n];
+    for (_m = 0, _len4 = allChanged.length; _m < _len4; _m++) {
+      node = allChanged[_m];
       _ref2 = node.attributes;
-      for (_o = 0, _len6 = _ref2.length; _o < _len6; _o++) {
-        attribute = _ref2[_o];
+      for (_n = 0, _len5 = _ref2.length; _n < _len5; _n++) {
+        attribute = _ref2[_n];
         switch (attribute.name) {
           case 'class':
             _ref3 = node.classList;
-            for (_p = 0, _len7 = _ref3.length; _p < _len7; _p++) {
-              kls = _ref3[_p];
-              if (!update[' $class'] || update[' $class'].indexOf(kls === -1)) {
-                (update[' $class'] || (update[' $class'] = [])).push(kls);
-              }
+            for (_o = 0, _len6 = _ref3.length; _o < _len6; _o++) {
+              kls = _ref3[_o];
+              this.index(update, ' $class', kls);
             }
             break;
           case 'id':
-            if (!update[' $id'] || update[' $id'].indexOf(kls === -1)) {
-              (update[' $id'] || (update[' $id'] = [])).push(attribute.value);
-            }
-            break;
-          default:
-            if (!update[' $attribute'] || update[' $attribute'].indexOf(kls === -1)) {
-              (update[' $attribute'] || (update[' $attribute'] = [])).push(attribute.name);
-            }
+            this.index(update, ' $id', attribute.value);
         }
+        this.index(update, ' $attribute', attribute.name);
       }
       prev = next = node;
       while (prev = prev.previousSibling) {
         if (prev.nodeType === 1) {
-          (update[' +'] || (update[' +'] = [])).push(prev);
+          this.index(update, ' +', prev);
           break;
         }
       }
@@ -21630,25 +21685,25 @@ Queries = (function() {
         }
       }
       if (!prev) {
-        (update[' $pseudo'] || (update[' $pseudo'] = [])).push('first-child');
+        this.index(update, ' $pseudo', 'first-child');
       }
       if (!next) {
-        (update[' $pseudo'] || (update[' $pseudo'] = [])).push('last-child');
+        this.index(update, ' $pseudo', 'last-child');
       }
-      (update[' +'] || (update[' +'] = [])).push(child);
+      this.index(update, ' +', child);
     }
-    console.log(update);
+    console.error('updates', update);
     parent = target;
     while (parent.nodeType === 1) {
       this.match(parent, ' ', void 0, allAdded);
-      for (_q = 0, _len8 = allAdded.length; _q < _len8; _q++) {
-        child = allAdded[_q];
+      for (_p = 0, _len7 = allAdded.length; _p < _len7; _p++) {
+        child = allAdded[_p];
         this.match(child, '!', void 0, parent);
       }
       for (prop in update) {
         values = update[prop];
-        for (_r = 0, _len9 = values.length; _r < _len9; _r++) {
-          value = values[_r];
+        for (_q = 0, _len8 = values.length; _q < _len8; _q++) {
+          value = values[_q];
           if (typeof value === 'object') {
             this.match(parent, prop, void 0, value);
           } else {
@@ -21663,34 +21718,13 @@ Queries = (function() {
         break;
       }
     }
+    for (_r = 0, _len9 = allRemoved.length; _r < _len9; _r++) {
+      removed = allRemoved[_r];
+      if (id = this.engine.recognize(removed)) {
+        (this.removed || (this.removed = [])).push(id);
+      }
+    }
     return this;
-  };
-
-  Queries.prototype.pull = function(mutations) {
-    var buffer, continuation, index, mutation, queries, query, scope, _i, _j, _len, _len1;
-    this.output.buffer = this.buffer = null;
-    for (_i = 0, _len = mutations.length; _i < _len; _i++) {
-      mutation = mutations[_i];
-      switch (mutation.type) {
-        case "attributes":
-          this.$attribute(mutation.target, mutation.attributeName, mutation.oldValue);
-          break;
-        case "childList":
-          this.$childList(mutation.target, mutation);
-      }
-    }
-    if (queries = this.lastOutput = this.buffer) {
-      this.buffer = void 0;
-      for (index = _j = 0, _len1 = queries.length; _j < _len1; index = _j += 3) {
-        query = queries[index];
-        continuation = queries[index + 1];
-        scope = queries[index + 2];
-        this.output.pull(query, continuation, scope);
-      }
-    }
-    if (buffer = this.output.buffer) {
-      this.output.flush();
-    }
   };
 
   Queries.prototype.add = function(node, continuation, scope) {
@@ -21709,9 +21743,6 @@ Queries = (function() {
   };
 
   Queries.prototype.get = function(continuation, scope) {
-    if (scope !== this.engine.scope) {
-      continuation += this.engine.recognize(scope);
-    }
     return this[continuation];
   };
 
@@ -21721,10 +21752,7 @@ Queries = (function() {
       node = id;
       id = this.engine.identify(id);
     }
-    if (scope && scope !== this.engine.scope) {
-      continuation = this.engine.recognize(scope) + continuation;
-    }
-    console.error('remove', id, continuation);
+    console.error('remove', id, '---', continuation);
     if (continuation) {
       if (collection = this[continuation]) {
         node || (node = this.engine.get(id));
@@ -21745,7 +21773,7 @@ Queries = (function() {
       }
       if (this.engine[id]) {
         if (watchers = this._watchers[id]) {
-          ref = continuation + id;
+          ref = continuation + (collection && collection.length !== void 0 && id || '');
           refforked = ref + '–';
           index = 0;
           while (watcher = watchers[index]) {
@@ -21756,8 +21784,14 @@ Queries = (function() {
             }
             watchers.splice(index, 3);
             path = (contd || '') + watcher.key;
-            this.clean(path);
+            if (contd) {
+              debugger;
+            }
+            this.clean(path, path, watcher);
             console.log('remove watcher', path);
+          }
+          if (id === '$container0' && !watchers.length) {
+            debugger;
           }
           if (!watchers.length) {
             delete this._watchers[id];
@@ -21789,7 +21823,10 @@ Queries = (function() {
           console.log('deleting', path);
           index += 3;
         }
-        console.error('deleting watchers', watchers.slice());
+        console.error('deleting watchers', watchers.slice(), 'from', id);
+        if (id === '$container0') {
+          debugger;
+        }
         delete this._watchers[id];
       }
       delete this.engine[id];
@@ -21798,20 +21835,21 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope) {
-    var child, parent, pdef, result, _i, _len;
+    var child, copy, parent, pdef, result, _i, _len;
     if (result = this[path]) {
       if (parent = operation && operation.parent) {
         if ((pdef = parent.def) && pdef.release) {
-          pdef.release(this.engine, result, parent, scope);
+          pdef.release(this.engine, result, parent, scope, operation);
         }
       }
       if (result.length !== void 0) {
-        for (_i = 0, _len = result.length; _i < _len; _i++) {
-          child = result[_i];
-          this.remove(child, path);
+        copy = result.slice();
+        for (_i = 0, _len = copy.length; _i < _len; _i++) {
+          child = copy[_i];
+          this.remove(child, path, operation);
         }
       } else {
-        this.remove(result, continuation);
+        this.remove(result, continuation, operation);
       }
     }
     delete this[path];
@@ -21822,7 +21860,7 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, id, isCollection, old, path, removed, watchers, _base, _i, _j, _len, _len1;
+    var added, child, dupe, id, index, isCollection, old, path, removed, watcher, watchers, _i, _j, _k, _len, _len1, _len2;
     node || (node = scope || args[0]);
     path = continuation && continuation + operation.key || operation.path;
     old = this[path];
@@ -21834,16 +21872,26 @@ Queries = (function() {
       old = void 0;
     }
     if (id = this.engine.identify(node)) {
-      watchers = (_base = this._watchers)[id] || (_base[id] = []);
-      if (watchers.indexOf(operation) === -1) {
-        watchers.push(operation, continuation, node);
+      if (watchers = this._watchers[id]) {
+        for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
+          watcher = watchers[index];
+          if (watcher === operation && watchers[index + 1] === continuation) {
+            dupe = true;
+            break;
+          }
+        }
+      } else {
+        watchers = this._watchers[id] = [];
+      }
+      if (!dupe) {
+        watchers.push(operation, continuation, scope);
       }
     }
     if (old) {
       if (old.length !== void 0) {
         removed = void 0;
-        for (_i = 0, _len = old.length; _i < _len; _i++) {
-          child = old[_i];
+        for (_j = 0, _len1 = old.length; _j < _len1; _j++) {
+          child = old[_j];
           if (!result || old.indexOf.call(result, child) === -1) {
             this.remove(child, path);
             (removed || (removed = [])).push(child);
@@ -21855,13 +21903,13 @@ Queries = (function() {
     }
     if (isCollection) {
       added = void 0;
-      for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
-        child = result[_j];
+      for (_k = 0, _len2 = result.length; _k < _len2; _k++) {
+        child = result[_k];
         if (!old || watchers.indexOf.call(old, child) === -1) {
           (added || (added = [])).push(child);
         }
       }
-      if (result && result.item && (!old || removed || added)) {
+      if (result && result.item) {
         result = watchers.slice.call(result, 0);
       }
     } else {
