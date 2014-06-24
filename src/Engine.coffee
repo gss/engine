@@ -8,7 +8,7 @@ class Engine
   Expressions:
     require('./input/Expressions.js')
 
-  constructor: (scope) ->
+  constructor: (scope, url) ->
     if scope && scope.nodeType
       # new GSS(node) assigns a new engine to node if it doesnt have one
       if @Expressions
@@ -18,7 +18,7 @@ class Engine
 
         if Document = Engine.Document
           unless this instanceof Document
-            return new Document(scope)
+            return new Document(scope, url)
 
         Engine[id] = @
         @scope = scope
@@ -41,7 +41,7 @@ class Engine
       return
 
     # GSS.Document() and GSS() create new GSS.Document
-    return new (Engine.Document || Engine)(scope)
+    return new (Engine.Document || Engine)(scope, url)
 
   # Delegate: Pass input to interpreter
   add: ->
@@ -128,7 +128,7 @@ class Engine
 
   removeEventListener: (type, fn) ->
     if group = @events && @events[type]
-      if index = group.indexOf(fn) > -1
+      if (index = group.indexOf(fn)) > -1
         group.splice(index, 1)
 
   triggerEvent: (type, a, b, c) ->
@@ -143,6 +143,6 @@ class Engine
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
 
-window.GSS = Engine
+this.GSS = Engine
 
 module.exports = Engine

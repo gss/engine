@@ -1,3 +1,12 @@
+# Little shim for require.js so we dont have to carry it around
+unless this.require
+  this.module ||= {}
+  this.require = (string) ->
+    bits = string.replace('.js', '').split('/')
+    if string == 'cassowary'
+      return c
+    return this[bits[bits.length - 1]]
+
 # Handles side effects caused by elements changing position or size
 
 class Properties

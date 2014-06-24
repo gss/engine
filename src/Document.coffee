@@ -16,7 +16,6 @@ class Engine.Document extends Engine
     require('./context/Properties.js'),
     require('./context/Selectors.js'),
     require('./context/Rules.js'),
-    require('./context/Math.js')
   )
 
   constructor: (scope = document, url) ->

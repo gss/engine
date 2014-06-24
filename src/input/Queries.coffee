@@ -151,7 +151,7 @@ class Queries
       prev = next = node  
       while prev = prev.previousSibling
         if prev.nodeType == 1
-          @index update, ' +', prev
+          @index update, ' +', prev.tagName
           break
       while next = next.nextSibling
         if next.nodeType == 1
@@ -159,7 +159,7 @@ class Queries
 
       @index update, ' $pseudo', 'first-child' unless prev
       @index update, ' $pseudo', 'last-child' unless next
-      @index update, ' +', child
+      @index update, ' +', child.tagName
 
     console.error('updates', update)
 
@@ -172,10 +172,10 @@ class Queries
 
       for prop, values of update
         for value in values
-          if typeof value == 'object'
-            @match(parent, prop, undefined, value)
-          else
+          if prop.charAt(1) == '$' # qualifiers
             @match(parent, prop, value)
+          else
+            @match(parent, prop, undefined, value)
 
       break if parent == @engine.scope
       break unless parent = parent.parentNode
@@ -267,7 +267,7 @@ class Queries
           index += 3
         delete @_watchers[id] 
       delete @engine[id]
-      #delete node._gss_id
+      delete node._gss_id
 
     @
 
@@ -353,8 +353,13 @@ class Queries
           @qualify(operation, continuation, scope, groupped, qualifier)
         else if changed.nodeType
           @qualify(operation, continuation, scope, groupped, changed.tagName, '*')
+        else if typeof changed == 'string'
+          @qualify(operation, continuation, scope, groupped, changed, '*')
         else for change in changed
-          @qualify(operation, continuation, scope, groupped, change.tagName, '*')
+          if typeof change == 'string'
+            @qualify(operation, continuation, scope, groupped, change, '*')
+          else
+            @qualify(operation, continuation, scope, groupped, change.tagName, '*')
     @
 
   # Check if query observes qualifier by combinator 

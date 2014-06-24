@@ -9,7 +9,6 @@ class Constraints
     return result
 
   get: (scope, property, path) ->
-    console.log('getting', property, scope, path)
     if typeof @[property] == 'function'
       variable = @[property](scope)
     else

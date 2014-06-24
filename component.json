@@ -17,7 +17,6 @@
     "lib/Document.js",
     "lib/Solver.js",
 
-    "lib/context/Math.js", 
     "lib/context/Properties.js", 
     "lib/context/Rules.js", 
     "lib/context/Selectors.js", 

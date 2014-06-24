@@ -20,7 +20,7 @@ class Solutions
       for property, value of @nullified
         response[property] = null
       delete @nullified
-    console.log("Solutions output", JSON.parse JSON.stringify @response)
+    console.log("Solutions output", JSON.parse(JSON.stringify(@response)))
     @push(response)
     return
 

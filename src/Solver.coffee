@@ -35,10 +35,12 @@ class Engine.Solver extends Engine
 
   # Initialize new worker and subscribe engine to its events
   useWorker: (url) ->
-    return unless typeof url == 'string' && "onmessage" in self
+    return unless typeof url == 'string' && self.onmessage != undefined
     @worker = new @getWorker(url)
-    @worker.addEventListener @
-    @pull   = @worker.postMessage.bind(@worker)
+    @worker.addEventListener 'message', @onmessage.bind(this)
+    @worker.addEventListener 'error', @onerror.bind(this)
+    @pull   = =>
+      return @worker.postMessage.apply(@worker, arguments)
     return @worker
 
   getWorker: (url) ->
@@ -49,15 +51,19 @@ class Engine.Solver extends Engine
 # Solver -> Solver
 
 class Engine.Thread extends Engine.Solver
-    
-  push: (data) -> 
-    self.postMessage(data)
+  
+  constructor: ->
+    if (context = super()) && context != this
+      return context
+    @solutions.push = (data) -> 
+      self.postMessage(data)
 
   @handleEvent: (e) ->
     @instance ||= new Engine.Thread
     @instance.pull(e.data)
 
-if self.window && self.window.document == undefined && "onmessage" in self
-  self.addEventListener 'message', Thread
+if !self.window && self.onmessage != undefined
+  self.addEventListener 'message', (e) ->
+    Engine.Thread.handleEvent(e)
 
 module.exports = Engine.Solver

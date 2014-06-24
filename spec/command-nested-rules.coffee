@@ -861,22 +861,20 @@ describe 'Nested Rules', ->
 
         engine.add(rules)
     
-      xit 'Runs commands from sourceNode', (done) ->
+      it 'Runs commands from sourceNode', (done) ->
         rules = [
-          {
-            type:'ruleset'
-            selectors: ['.vessel .box']
-            rules: [
-              {
-                type:'constraint', 
-                cssText:'::[width] == ::parent[width]', 
-                commands: [
-                  ["lte", ["get","width",["$reserved","::this"]], ["get","width",["$reserved","::parent"]]]
-                ]
-              }
-            ]
-          }
+          ['$rule', 
+            ['$class'
+              ['$combinator',
+                ['$class',
+                  'vessel']
+                ' ']
+              'box'],
+
+            ["lte", ["get", ["$reserved","this"], "[width]"], ["get", ["$reserved","parent"], "[width]"]]
+          ]
         ]
+        console.info('.vessel .box { ::[width] == ::parent[width] } ')
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div id="vessel1" class="vessel">
@@ -886,24 +884,20 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
-                              
-        listener = (e) ->        
-
-          expect(stringify(engine.lastWorkerCommands)).to.eql stringify [
-              ['lte', ['get','width','$box1', '.vessel .box'], ['get','width','$vessel1','.vessel .box::parent']]
-              ['lte', ['get','width','$box2', '.vessel .box'], ['get','width','$vessel1','.vessel .box::parent']]
-            ]
-          container.removeEventListener 'solved', listener
-          done()
-        container.addEventListener 'solved', listener
         
         engine = new GSS(container)
+                              
+        engine.once 'solved', ->
+          expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+            ["lte",
+              ["get","$box1","[width]",".vessel .box$box1–::parent"],
+              ["get","$vessel1","[width]",".vessel .box$box1–::parent–"]],
+            ["lte",
+              ["get","$box2","[width]",".vessel .box$box2–::parent"],
+              ["get","$vessel1","[width]",".vessel .box$box2–::parent–"]]]
+          done()
 
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
+        engine.add rules
 
     xdescribe '2 level', ->
     

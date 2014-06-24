@@ -15,7 +15,7 @@ describe 'Perf', ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
-    engine = new GSS(scope)     
+    engine = new GSS(scope, '../dist/worker.js')     
 
   afterEach (done) ->
     remove(scope)
@@ -32,59 +32,60 @@ describe 'Perf', ->
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
 
+      engine.once 'solved', ->
+        done()
+
       engine.add [
         ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
       ]
       
-      engine.once 'solved', done
-    
-    xit '100 intrinsics at once', (done) ->
+      
+    it '100 intrinsics at once', (done) ->
 
       innerHTML = "" 
       for i in [0...100] 
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
 
-      engine.run commands: [
-          ['eq', ['get$','width',['$class','box']],['get$','intrinsic-width',['$class','box']]]
+      engine.once 'solved', ->     
+        done()
+
+      engine.add [
+          ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
         ]
       
-      listener = (e) ->
-        scope.removeEventListener 'solved', listener        
-        done()
-      scope.addEventListener 'solved', listener
         
     
     it '100 serially', (done) ->
       scope.innerHTML = ""
-      engine.run commands: [
-          ['eq', ['get$','width',['$class','box']],['get$','x',['$class','box']]]          
-          #['eq', ['get','.box[width]','box'],['get','.box[x]','.box']]
-        ]
+      
 
       count = 1
       
       # first one here otherwise, nothing to solve
       scope.insertAdjacentHTML 'beforeend', """
-          <div class='box' id='35346#{count}'>One</div>
-        """      
-      listener = (e) ->        
+          <div class='box' id='gen-35346#{count}'>One</div>
+        """    
+      console.profile('1')  
+      listener = (e) ->       
         count++
         scope.insertAdjacentHTML 'beforeend', """
-            <div class='box' id='35346#{count}'>One</div>
+            <div class='box' id='gen-35346#{count}'>One</div>
           """
         if count is 100
-          scope.removeEventListener 'solved', listener
+          engine.removeEventListener 'solved', listener
           done()
+          console.profileEnd('1')
 
-      scope.addEventListener 'solved', listener
+      engine.addEventListener 'solved', listener
     
+
+      engine.add [
+        ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
+      ]
+
     it '100 intrinsics serially', (done) ->
       scope.innerHTML = ""
-      engine.run commands: [
-          ['eq', ['get$','width',['$class','box']],['get$','intrinsic-width',['$class','box']]]          
-          #['eq', ['get','.box[width]','box'],['get','.box[x]','.box']]
-        ]
 
       count = 1
       
@@ -98,7 +99,12 @@ describe 'Perf', ->
             <div class='box' id='35346#{count}'>One</div>
           """
         if count is 100
-          scope.removeEventListener 'solved', listener
+          engine.removeEventListener 'solved', listener
           done()
+          
+      engine.addEventListener 'solved', listener
 
-      scope.addEventListener 'solved', listener
+      engine.add [
+          ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
+        ]
+      

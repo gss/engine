@@ -20013,14 +20013,14 @@ var Engine;
 Engine = (function() {
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
-  function Engine(scope) {
+  function Engine(scope, url) {
     var Document, engine, id;
     if (scope && scope.nodeType) {
       if (this.Expressions) {
         id = Engine.identify(scope);
         if (Document = Engine.Document) {
           if (!(this instanceof Document)) {
-            return new Document(scope);
+            return new Document(scope, url);
           }
         }
         Engine[id] = this;
@@ -20047,7 +20047,7 @@ Engine = (function() {
       this.values = {};
       return;
     }
-    return new (Engine.Document || Engine)(scope);
+    return new (Engine.Document || Engine)(scope, url);
   }
 
   Engine.prototype.add = function() {
@@ -20163,7 +20163,7 @@ Engine = (function() {
   Engine.prototype.removeEventListener = function(type, fn) {
     var group, index;
     if (group = this.events && this.events[type]) {
-      if (index = group.indexOf(fn) > -1) {
+      if ((index = group.indexOf(fn)) > -1) {
         return group.splice(index, 1);
       }
     }
@@ -20193,7 +20193,7 @@ Engine = (function() {
 
 })();
 
-window.GSS = Engine;
+this.GSS = Engine;
 
 module.exports = Engine;
 
@@ -20214,7 +20214,7 @@ Engine.Document = (function(_super) {
 
   Document.prototype.Solver = require('./Solver.js');
 
-  Document.prototype.Context = Engine.include(require('./context/Measurements.js'), require('./context/Properties.js'), require('./context/Selectors.js'), require('./context/Rules.js'), require('./context/Math.js'));
+  Document.prototype.Context = Engine.include(require('./context/Measurements.js'), require('./context/Properties.js'), require('./context/Selectors.js'), require('./context/Rules.js'));
 
   function Document(scope, url) {
     var context;
@@ -20263,10 +20263,9 @@ module.exports = Engine.Document;
 
 });
 require.register("gss/lib/Solver.js", function(exports, require, module){
-var Engine, _ref,
+var Engine,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Engine = require('./Engine.js');
 
@@ -20300,12 +20299,16 @@ Engine.Solver = (function(_super) {
   };
 
   Solver.prototype.useWorker = function(url) {
-    if (!(typeof url === 'string' && __indexOf.call(self, "onmessage") >= 0)) {
+    var _this = this;
+    if (!(typeof url === 'string' && self.onmessage !== void 0)) {
       return;
     }
     this.worker = new this.getWorker(url);
-    this.worker.addEventListener(this);
-    this.pull = this.worker.postMessage.bind(this.worker);
+    this.worker.addEventListener('message', this.onmessage.bind(this));
+    this.worker.addEventListener('error', this.onerror.bind(this));
+    this.pull = function() {
+      return _this.worker.postMessage.apply(_this.worker, arguments);
+    };
     return this.worker;
   };
 
@@ -20321,13 +20324,14 @@ Engine.Thread = (function(_super) {
   __extends(Thread, _super);
 
   function Thread() {
-    _ref = Thread.__super__.constructor.apply(this, arguments);
-    return _ref;
+    var context;
+    if ((context = Thread.__super__.constructor.call(this)) && context !== this) {
+      return context;
+    }
+    this.solutions.push = function(data) {
+      return self.postMessage(data);
+    };
   }
-
-  Thread.prototype.push = function(data) {
-    return self.postMessage(data);
-  };
 
   Thread.handleEvent = function(e) {
     this.instance || (this.instance = new Engine.Thread);
@@ -20338,44 +20342,29 @@ Engine.Thread = (function(_super) {
 
 })(Engine.Solver);
 
-if (self.window && self.window.document === void 0 && __indexOf.call(self, "onmessage") >= 0) {
-  self.addEventListener('message', Thread);
+if (!self.window && self.onmessage !== void 0) {
+  self.addEventListener('message', function(e) {
+    return Engine.Thread.handleEvent(e);
+  });
 }
 
 module.exports = Engine.Solver;
 
 });
-require.register("gss/lib/context/Math.js", function(exports, require, module){
-var Math;
-
-Math = (function() {
-  function Math() {}
-
-  Math.prototype.plus = function(a, b) {
-    return a + b;
-  };
-
-  Math.prototype.minus = function(a, b) {
-    return a - b;
-  };
-
-  Math.prototype.multiply = function(a, b) {
-    return a * b;
-  };
-
-  Math.prototype.divide = function(a, b) {
-    return a / b;
-  };
-
-  return Math;
-
-})();
-
-module.exports = Math;
-
-});
 require.register("gss/lib/context/Properties.js", function(exports, require, module){
 var Properties;
+
+if (!this.require) {
+  this.module || (this.module = {});
+  this.require = function(string) {
+    var bits;
+    bits = string.replace('.js', '').split('/');
+    if (string === 'cassowary') {
+      return c;
+    }
+    return this[bits[bits.length - 1]];
+  };
+}
 
 Properties = (function() {
   function Properties() {}
@@ -20440,7 +20429,6 @@ Rules = (function() {
       }
     },
     capture: function(engine, result, parent, continuation, scope) {
-      console.warn('recieved cmd', result);
       return engine.expressions.push(result);
     },
     command: function(path, condition, positive, negative) {
@@ -20481,7 +20469,6 @@ Selectors = (function() {
   function Selectors() {}
 
   Selectors.prototype.onDOMQuery = function(node, args, result, operation, continuation, scope) {
-    console.log('query', node, args, operation, result);
     if (operation.def.hidden) {
       return result;
     }
@@ -21002,7 +20989,6 @@ Constraints = (function() {
 
   Constraints.prototype.get = function(scope, property, path) {
     var variable;
-    console.log('getting', property, scope, path);
     if (typeof this[property] === 'function') {
       variable = this[property](scope);
     } else {
@@ -21182,7 +21168,6 @@ Expressions = (function() {
       this.buffer = null;
       buffer = true;
     }
-    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', JSON.parse(JSON.stringify(arguments[0])));
     result = this.evaluate.apply(this, arguments);
     if (buffer) {
       this.flush();
@@ -21191,7 +21176,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.flush = function() {
-    console.log(123123123, this.buffer);
+    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', this.buffer);
     this.lastOutput = this.buffer;
     this.output.pull(this.buffer);
     return this.buffer = void 0;
@@ -21224,7 +21209,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, argument, bit, breaking, callback, contd, context, def, evaluated, func, id, index, item, last, method, node, offset, parent, path, pdef, prev, result, separator, skip, subpath, _base, _i, _j, _len, _len1;
+    var args, argument, breaking, callback, contd, context, def, evaluated, func, id, index, item, last, method, node, offset, p, parent, path, pdef, prev, result, separator, skip, start, subpath, _base, _i, _j, _len, _len1;
     def = operation.def || this.analyze(operation).def;
     if ((parent = operation.parent) && !overloaded) {
       if ((pdef = parent.def) && pdef.evaluate) {
@@ -21236,27 +21221,32 @@ Expressions = (function() {
     }
     if (operation.tail) {
       if (operation.tail.path === operation.tail.key || (ascender != null)) {
-        console.log('Shortcut up', operation, operation.tail, [continuation]);
         operation = (_base = operation.tail).shortcut || (_base.shortcut = this.context[def.group].perform(this, operation));
       } else {
-        console.log('Shortcut down', operation, operation.tail, [continuation]);
         operation = operation.tail[1];
       }
       parent = operation.parent;
       ascender = ascender !== void 0 && 1 || void 0;
       def = operation.def;
     }
-    if (operation.path && continuation) {
+    if ((p = operation.path) && continuation) {
       last = -1;
       while ((index = continuation.indexOf('–', last + 1))) {
         if (index === -1) {
+          if (last === continuation.length - 1) {
+            break;
+          }
           index = continuation.length;
           breaking = true;
         }
-        bit = continuation.substring(last + 1, index);
-        if (bit === operation.path) {
-          separator = last + 1 + operation.path.length;
-          id = continuation.substring(separator, index);
+        start = continuation.substring(last + 1, last + 1 + p.length);
+        if (start === p) {
+          separator = last + 1 + p.length;
+          if (separator < index) {
+            if (continuation.charAt(separator) === '$') {
+              id = continuation.substring(separator, index);
+            }
+          }
           if (id) {
             return this.engine[id];
           } else {
@@ -21347,13 +21337,11 @@ Expressions = (function() {
     if (result != null) {
       if (parent) {
         if (this.engine.isCollection(result)) {
-          console.group(path);
           for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
             item = result[_j];
             subpath = this.engine.getPath(path, item);
             this.evaluate(parent, subpath, scope, operation.index, item);
           }
-          console.groupEnd(path);
           return;
         } else if (parent.def.capture) {
           return parent.def.capture(this.engine, result, parent, continuation, scope);
@@ -21674,7 +21662,7 @@ Queries = (function() {
       prev = next = node;
       while (prev = prev.previousSibling) {
         if (prev.nodeType === 1) {
-          this.index(update, ' +', prev);
+          this.index(update, ' +', prev.tagName);
           break;
         }
       }
@@ -21689,7 +21677,7 @@ Queries = (function() {
       if (!next) {
         this.index(update, ' $pseudo', 'last-child');
       }
-      this.index(update, ' +', child);
+      this.index(update, ' +', child.tagName);
     }
     console.error('updates', update);
     parent = target;
@@ -21703,10 +21691,10 @@ Queries = (function() {
         values = update[prop];
         for (_q = 0, _len8 = values.length; _q < _len8; _q++) {
           value = values[_q];
-          if (typeof value === 'object') {
-            this.match(parent, prop, void 0, value);
-          } else {
+          if (prop.charAt(1) === '$') {
             this.match(parent, prop, value);
+          } else {
+            this.match(parent, prop, void 0, value);
           }
         }
       }
@@ -21816,6 +21804,7 @@ Queries = (function() {
         delete this._watchers[id];
       }
       delete this.engine[id];
+      delete node._gss_id;
     }
     return this;
   };
@@ -21930,10 +21919,16 @@ Queries = (function() {
           this.qualify(operation, continuation, scope, groupped, qualifier);
         } else if (changed.nodeType) {
           this.qualify(operation, continuation, scope, groupped, changed.tagName, '*');
+        } else if (typeof changed === 'string') {
+          this.qualify(operation, continuation, scope, groupped, changed, '*');
         } else {
           for (_j = 0, _len1 = changed.length; _j < _len1; _j++) {
             change = changed[_j];
-            this.qualify(operation, continuation, scope, groupped, change.tagName, '*');
+            if (typeof change === 'string') {
+              this.qualify(operation, continuation, scope, groupped, change, '*');
+            } else {
+              this.qualify(operation, continuation, scope, groupped, change.tagName, '*');
+            }
           }
         }
       }
@@ -27293,7 +27288,6 @@ module.exports = {
     "lib/Document.js",
     "lib/Solver.js",
 
-    "lib/context/Math.js", 
     "lib/context/Properties.js", 
     "lib/context/Rules.js", 
     "lib/context/Selectors.js", 

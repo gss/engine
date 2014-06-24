@@ -2,7 +2,7 @@
 class Selectors
   # Set up DOM observer and filter out old elements 
   onDOMQuery: (node, args, result, operation, continuation, scope) ->
-    console.log('query', node, args, operation, result)
+    #console.log('query', node, args, operation, result)
     return result if operation.def.hidden
     return @engine.queries.update(node, args, result, operation, continuation, scope)
 

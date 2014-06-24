@@ -100,7 +100,16 @@ module.exports = ->
     # Worker process concatenation
     concat:
       worker:
-        src: ['components/slightlyoff-cassowary.js/bin/c.js', 'lib/Solver.js']
+        src: [
+          'components/slightlyoff-cassowary.js/bin/c.js', 
+          'lib/context/Properties.js',
+          'lib/context/Constraints.js',
+          'lib/context/Rules.js',
+          'lib/input/Expressions.js'
+          'lib/output/Solutions.js'
+          'lib/Engine.js',
+          'lib/Solver.js'
+        ]
         dest: 'dist/worker.js'
       ###
       vendors:

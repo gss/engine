@@ -16,14 +16,14 @@ class Expressions
     if @buffer == undefined
       @buffer = null
       buffer = true
-    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', JSON.parse JSON.stringify arguments[0])
+    #console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', JSON.parse JSON.stringify arguments[0])
     result = @evaluate.apply(@, arguments)
     if buffer
       @flush()
     return result
 
   flush: ->
-    console.log(123123123, @buffer)
+    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', @buffer)
     @lastOutput = @buffer
     @output.pull(@buffer)
     @buffer = undefined
@@ -60,25 +60,28 @@ class Expressions
     if operation.tail
       if (operation.tail.path == operation.tail.key || ascender?)
 
-        console.log('Shortcut up', operation, operation.tail, [continuation])
+        #console.log('Shortcut up', operation, operation.tail, [continuation])
         operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
       else
-        console.log('Shortcut down', operation, operation.tail, [continuation])
+        #console.log('Shortcut down', operation, operation.tail, [continuation])
         operation = operation.tail[1]
       parent = operation.parent
       ascender = ascender != undefined && 1 || undefined
       def = operation.def
 
-    if (operation.path && continuation)
+    if ((p = operation.path) && continuation)
       last = -1
       while (index = continuation.indexOf('–', last + 1))
         if index == -1
+          break if last == continuation.length - 1
           index = continuation.length
           breaking = true
-        bit = continuation.substring(last + 1, index)
-        if bit == operation.path
-          separator = last + 1 + operation.path.length
-          id = continuation.substring(separator, index)
+        start = continuation.substring(last + 1, last + 1 + p.length)
+        if start == p
+          separator = last + 1 + p.length
+          if separator < index
+            if continuation.charAt(separator) == '$'
+              id = continuation.substring(separator, index)
           if id
             return @engine[id]
           else
@@ -154,11 +157,11 @@ class Expressions
     if result?
       if parent
         if @engine.isCollection(result)
-          console.group path
+          #console.group path
           for item in result
             subpath = @engine.getPath(path, item)
             @evaluate parent, subpath, scope, operation.index, item
-          console.groupEnd path
+          #console.groupEnd path
           return
         else if parent.def.capture
           return parent.def.capture @engine, result, parent, continuation, scope
