@@ -15,7 +15,7 @@ describe 'Perf', ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
-    engine = GSS(scope:scope)      
+    engine = new GSS(scope)     
 
   afterEach (done) ->
     remove(scope)
@@ -32,16 +32,13 @@ describe 'Perf', ->
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
 
-      engine.run commands: [
-          ['eq', ['get$','width',['$class','box']],['get$','x',['$class','box']]]
-        ]
+      engine.add [
+        ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
+      ]
       
-      listener = (e) ->
-        scope.removeEventListener 'solved', listener        
-        done()
-      scope.addEventListener 'solved', listener
+      engine.once 'solved', done
     
-    it '100 intrinsics at once', (done) ->
+    xit '100 intrinsics at once', (done) ->
 
       innerHTML = "" 
       for i in [0...100] 

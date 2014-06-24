@@ -99,7 +99,6 @@ class Queries
       if child.nodeType == 1
         if (index = added.indexOf(child)) > -1
           added.splice index, 1
-          debugger
         else
           removed.push(child)
     changed = added.concat(removed)
@@ -154,7 +153,7 @@ class Queries
         if prev.nodeType == 1
           @index update, ' +', prev
           break
-      while next = next.previousSibling
+      while next = next.nextSibling
         if next.nodeType == 1
           break
 
@@ -240,19 +239,13 @@ class Queries
               continue
             watchers.splice(index, 3)
             path = (contd || '') + watcher.key
-            if contd
-              debugger
             @clean(path, path, watcher)
             console.log('remove watcher', path)
-          if id == '$container0' && !watchers.length
-            debugger
           delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries[path])
           if result.length?
             path += id
-            if id == undefined
-              debugger
             @clean(path)
 
       # Remove cached DOM query
@@ -272,9 +265,6 @@ class Queries
           @remove(path, contd, watcher, watchers[index + 2])
           console.log('deleting', path)
           index += 3
-        console.error('deleting watchers', watchers.slice(), 'from', id)
-        if id == '$container0'
-          debugger
         delete @_watchers[id] 
       delete @engine[id]
       #delete node._gss_id

@@ -20827,8 +20827,8 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::parent'] = {
-    scoped: true,
     1: function(node) {
+      debugger;
       var parent;
       if (parent = node.parentNode) {
         if (parent.nodeType === 1) {
@@ -21607,7 +21607,6 @@ Queries = (function() {
       if (child.nodeType === 1) {
         if ((index = added.indexOf(child)) > -1) {
           added.splice(index, 1);
-          debugger;
         } else {
           removed.push(child);
         }
@@ -21679,7 +21678,7 @@ Queries = (function() {
           break;
         }
       }
-      while (next = next.previousSibling) {
+      while (next = next.nextSibling) {
         if (next.nodeType === 1) {
           break;
         }
@@ -21784,14 +21783,8 @@ Queries = (function() {
             }
             watchers.splice(index, 3);
             path = (contd || '') + watcher.key;
-            if (contd) {
-              debugger;
-            }
             this.clean(path, path, watcher);
             console.log('remove watcher', path);
-          }
-          if (id === '$container0' && !watchers.length) {
-            debugger;
           }
           if (!watchers.length) {
             delete this._watchers[id];
@@ -21801,9 +21794,6 @@ Queries = (function() {
         if ((result = this.engine.queries[path])) {
           if (result.length != null) {
             path += id;
-            if (id === void 0) {
-              debugger;
-            }
             this.clean(path);
           }
         }
@@ -21822,10 +21812,6 @@ Queries = (function() {
           this.remove(path, contd, watcher, watchers[index + 2]);
           console.log('deleting', path);
           index += 3;
-        }
-        console.error('deleting watchers', watchers.slice(), 'from', id);
-        if (id === '$container0') {
-          debugger;
         }
         delete this._watchers[id];
       }

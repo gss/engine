@@ -281,8 +281,9 @@ class Selectors
       return node
 
   '::parent':
-    scoped: true
+    #scoped: true
     1: (node) ->
+      debugger
       if parent = node.parentNode
         if parent.nodeType == 1
           return parent
