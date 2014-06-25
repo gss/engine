@@ -8,7 +8,7 @@ class Selectors
 
   remove: (id, continuation, operation) ->
     @engine.queries.remove(id, continuation, operation)
-
+    return
   # Selector commands
 
   '$query':
@@ -292,9 +292,7 @@ class Selectors
     1: (node) ->
       return @engine.scope
 
-  '::window':
-    prefix: 'window'
-    absolute: "window"
+  '::window': {}
 
 # Set up custom trigger for all selector operations
 # to filter out old elements from collections

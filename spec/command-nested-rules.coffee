@@ -59,7 +59,7 @@ describe 'Nested Rules', ->
             ]
           done()
         
-        engine.add(rules)
+        engine.run(rules)
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
@@ -112,7 +112,7 @@ describe 'Nested Rules', ->
             ]
           done()
 
-        engine.add(rules)
+        engine.run(rules)
 
     describe 'reversed sibling combinators', ->
       it 'should support mixed selectors', (done) ->
@@ -176,7 +176,7 @@ describe 'Nested Rules', ->
             expect(all.box0.style.width).to.eql ''
 
             done()
-        engine.add(rules)
+        engine.run(rules)
 
     describe '1 level w/ ::', ->
     
@@ -213,7 +213,7 @@ describe 'Nested Rules', ->
             ]
           done()
         
-        engine.add rules
+        engine.run rules
 
     describe 'subqueries', ->
       it 'should observe selector on ::', (done) ->
@@ -376,7 +376,7 @@ describe 'Nested Rules', ->
                   expect(box1.style.left).to.eql('100px')
                   expect(box2.style.left).to.eql('100px')
                   done()
-        engine.add(rules)
+        engine.run(rules)
 
     describe '1 level w/ multiple selectors and ::this', ->
       it 'should combine comma separated native selectors', (done) ->
@@ -441,7 +441,7 @@ describe 'Nested Rules', ->
               expect(box1.style.top).to.eql('100px')
               expect(box3.style.top).to.eql('100px')
               done()
-        engine.add(rules)
+        engine.run(rules)
 
     describe '1 level w/ mixed multiple selectors and ::this', ->
       it 'should implement comma for non-native selectors', (done) ->
@@ -580,7 +580,7 @@ describe 'Nested Rules', ->
                           ">$group1"]
                       ])
                       done()
-        engine.add(rules)
+        engine.run(rules)
 
     describe '1 level w/ ::scope', ->
       it 'Runs commands from sourceNode', (done) ->
@@ -615,7 +615,7 @@ describe 'Nested Rules', ->
             ]
           done()
         
-        engine.add rules
+        engine.run rules
 
     describe '1 level w/ ::scope and selector', ->
 
@@ -743,7 +743,7 @@ describe 'Nested Rules', ->
                         container.innerHTML = ""
                         done()
 
-        engine.add(rules)
+        engine.run(rules)
       
     describe '1 level w/ ::parent', ->
       it 'should resolve selector on ::parent', (done) ->
@@ -859,7 +859,7 @@ describe 'Nested Rules', ->
                         container.innerHTML = ""
                         done()
 
-        engine.add(rules)
+        engine.run(rules)
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
@@ -897,7 +897,7 @@ describe 'Nested Rules', ->
               ["get","$vessel1","[width]",".vessel .box$box2–::parent–"]]]
           done()
 
-        engine.add rules
+        engine.run rules
 
     describe '2 level', ->
     
@@ -974,7 +974,7 @@ describe 'Nested Rules', ->
                         ]
                         engine.scope.innerHTML = ""
                         done()
-        engine.add rules
+        engine.run rules
 
     describe '2 level /w multiple selectors in parent', (e) ->
       it 'Runs commands from sourceNode', (done) ->
@@ -1061,7 +1061,7 @@ describe 'Nested Rules', ->
                           ".vessel,#group1$group1"
                         ]]
                         done()
-        engine.add rules
+        engine.run rules
 
   xdescribe '@if @else', ->
     

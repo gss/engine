@@ -24,8 +24,8 @@ class Expressions
 
   flush: ->
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', @buffer)
-    @lastOutput = @buffer
-    @output.pull(@buffer)
+    @lastOutput = GSS.clone @buffer
+    @output.pull(@buffer) if @buffer
     @buffer = undefined
 
   # Hook: Buffer equasions if needed
@@ -60,11 +60,8 @@ class Expressions
     # Use a shortcut operation when possible (e.g. native dom query)
     if operation.tail
       if (operation.tail.path == operation.tail.key || ascender?)
-
-        #console.log('Shortcut up', operation, operation.tail, [continuation])
         operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
       else
-        #console.log('Shortcut down', operation, operation.tail, [continuation])
         operation = operation.tail[1]
       parent = operation.parent
       ascender = ascender != undefined && 1 || undefined
@@ -109,17 +106,21 @@ class Expressions
           contd = continuation
           contd += '–' unless contd.charAt(contd.length - 1) == '–'
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
-      return if argument == undefined && (!def.eager || ascender != undefined)
+      if argument == undefined
+        return if (!def.eager || ascender?) && (!operation.noop || operation.parent)
+        offset += 1
+        continue
       (args ||= [])[index - offset] = prev = argument
 
     # No-op commands are to be executed by something else (e.g. Solver)
     if operation.noop
       if parent && parent.def.capture
         return parent.def.capture @engine, args, parent, continuation, scope
-      else if parent && (!parent.noop || parent.length > 1)
-        return args
       else
-        return @push(args)
+        if args && (!parent || (parent.noop && (parent.length == 1 || ascender?)))
+          @push args.length == 1 && args[0] || args
+          return
+        return args
 
     # Use function, or look up method on the first argument. Falls back to builtin
     scope ||= @engine.scope

@@ -39,6 +39,13 @@ class Engine.Document extends Engine
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
+  # Delegate: Pass input to interpreter, buffer DOM queries within command batch
+  run: ->
+    @queries.updated = null
+    result = @expressions.pull.apply(@expressions, arguments)
+    @queries.updated = undefined
+    return result
+    
   onresize: (e) ->
     @context.set("[width]", "::window")
     @context.set("[height]", "::window")

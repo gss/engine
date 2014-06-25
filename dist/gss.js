@@ -20050,7 +20050,7 @@ Engine = (function() {
     return new (Engine.Document || Engine)(scope, url);
   }
 
-  Engine.prototype.add = function() {
+  Engine.prototype.run = function() {
     return this.expressions.pull.apply(this.expressions, arguments);
   };
 
@@ -20185,6 +20185,13 @@ Engine = (function() {
     }
   };
 
+  Engine.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
+  };
+
   Engine.prototype.handleEvent = function(e) {
     return this.triggerEvent(e.type, e);
   };
@@ -20234,6 +20241,14 @@ Engine.Document = (function(_super) {
     this.scope.addEventListener('scroll', this);
     window.addEventListener('resize', this);
   }
+
+  Document.prototype.run = function() {
+    var result;
+    this.queries.updated = null;
+    result = this.expressions.pull.apply(this.expressions, arguments);
+    this.queries.updated = void 0;
+    return result;
+  };
 
   Document.prototype.onresize = function(e) {
     this.context.set("[width]", "::window");
@@ -20476,7 +20491,7 @@ Selectors = (function() {
   };
 
   Selectors.prototype.remove = function(id, continuation, operation) {
-    return this.engine.queries.remove(id, continuation, operation);
+    this.engine.queries.remove(id, continuation, operation);
   };
 
   Selectors.prototype['$query'] = {
@@ -20831,10 +20846,7 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['::window'] = {
-    prefix: 'window',
-    absolute: "window"
-  };
+  Selectors.prototype['::window'] = {};
 
   return Selectors;
 
@@ -21158,6 +21170,7 @@ Measurements = (function() {
   Measurements.prototype['get'] = {
     command: function(path, object, property) {
       var id;
+      console.log('get', [path, object, property]);
       if (property) {
         if (object.absolute === 'window' || object === document) {
           id = '::window';
@@ -21212,8 +21225,10 @@ Expressions = (function() {
 
   Expressions.prototype.flush = function() {
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', this.buffer);
-    this.lastOutput = this.buffer;
-    this.output.pull(this.buffer);
+    this.lastOutput = GSS.clone(this.buffer);
+    if (this.buffer) {
+      this.output.pull(this.buffer);
+    }
     return this.buffer = void 0;
   };
 
@@ -21319,18 +21334,24 @@ Expressions = (function() {
         }
         argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
       }
-      if (argument === void 0 && (!def.eager || ascender !== void 0)) {
-        return;
+      if (argument === void 0) {
+        if ((!def.eager || (ascender != null)) && (!operation.noop || operation.parent)) {
+          return;
+        }
+        offset += 1;
+        continue;
       }
       (args || (args = []))[index - offset] = prev = argument;
     }
     if (operation.noop) {
       if (parent && parent.def.capture) {
         return parent.def.capture(this.engine, args, parent, continuation, scope);
-      } else if (parent && (!parent.noop || parent.length > 1)) {
-        return args;
       } else {
-        return this.push(args);
+        if (args && (!parent || (parent.noop && (parent.length === 1 || (ascender != null))))) {
+          this.push(args.length === 1 && args[0] || args);
+          return;
+        }
+        return args;
       }
     }
     scope || (scope = this.engine.scope);
@@ -21529,7 +21550,7 @@ Queries = (function() {
 
   Queries.prototype.pull = function(mutations) {
     var buffer, continuation, id, index, mutation, queries, query, scope, _i, _j, _k, _len, _len1, _len2, _ref;
-    this.output.buffer = this.buffer = null;
+    this.output.buffer = this.buffer = this.updated = null;
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
       switch (mutation.type) {
@@ -21560,6 +21581,7 @@ Queries = (function() {
     if (buffer = this.output.buffer) {
       this.output.flush();
     }
+    this.updated = void 0;
   };
 
   Queries.prototype.$attribute = function(target, name, changed) {
@@ -21879,20 +21901,56 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, dupe, id, index, isCollection, old, path, removed, watcher, watchers, _i, _j, _k, _len, _len1, _len2;
+    var added, child, dupe, group, id, index, isCollection, old, path, removed, watcher, watchers, _base, _i, _j, _k, _len, _len1, _len2;
     node || (node = scope || args[0]);
     path = continuation && continuation + operation.key || operation.path;
     old = this[path];
-    isCollection = result && result.length !== void 0;
-    if (old === result) {
-      if (!(result && result.manual)) {
+    if (this.updated && (group = this.updated[path])) {
+      if (group.indexOf(operation) > -1) {
         return;
       }
-      old = void 0;
+      added = group[0];
+      removed = group[1];
+    } else {
+      isCollection = result && result.length !== void 0;
+      if (old === result) {
+        if (!(result && result.manual)) {
+          return;
+        }
+        old = void 0;
+      }
+      if (old) {
+        if (old.length !== void 0) {
+          removed = void 0;
+          for (_i = 0, _len = old.length; _i < _len; _i++) {
+            child = old[_i];
+            if (!result || Array.prototype.indexOf.call(result, child) === -1) {
+              this.remove(child, path);
+              (removed || (removed = [])).push(child);
+            }
+          }
+        } else if (!result) {
+          this.clean(path);
+        }
+      }
+      if (isCollection) {
+        added = void 0;
+        for (_j = 0, _len1 = result.length; _j < _len1; _j++) {
+          child = result[_j];
+          if (!old || Array.prototype.indexOf.call(old, child) === -1) {
+            (added || (added = [])).push(child);
+          }
+        }
+        if (result && result.item) {
+          result = Array.prototype.slice.call(result, 0);
+        }
+      } else {
+        added = result;
+      }
     }
     if (id = this.engine.identify(node)) {
       if (watchers = this._watchers[id]) {
-        for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
+        for (index = _k = 0, _len2 = watchers.length; _k < _len2; index = _k += 3) {
           watcher = watchers[index];
           if (watcher === operation && watchers[index + 1] === continuation) {
             dupe = true;
@@ -21906,40 +21964,19 @@ Queries = (function() {
         watchers.push(operation, continuation, scope);
       }
     }
-    if (old) {
-      if (old.length !== void 0) {
-        removed = void 0;
-        for (_j = 0, _len1 = old.length; _j < _len1; _j++) {
-          child = old[_j];
-          if (!result || old.indexOf.call(result, child) === -1) {
-            this.remove(child, path);
-            (removed || (removed = [])).push(child);
-          }
-        }
-      } else if (!result) {
-        this.clean(path);
-      }
-    }
-    if (isCollection) {
-      added = void 0;
-      for (_k = 0, _len2 = result.length; _k < _len2; _k++) {
-        child = result[_k];
-        if (!old || watchers.indexOf.call(old, child) === -1) {
-          (added || (added = [])).push(child);
-        }
-      }
-      if (result && result.item) {
-        result = watchers.slice.call(result, 0);
-      }
-    } else {
-      added = result;
-    }
     if (result) {
       this[path] = result;
     } else {
       delete this[path];
     }
-    console.log('found', result && (result.nodeType === 1 && 1 || result.length) || 0, ' by', path);
+    if (this.updated !== void 0) {
+      group = (_base = (this.updated || (this.updated = {})))[path] || (_base[path] = []);
+      if (group.length) {
+        group.push(operation);
+      } else {
+        group.push(added, removed, operation);
+      }
+    }
     if (removed && !added) {
       return;
     }
@@ -22115,10 +22152,11 @@ Solutions = (function() {
     return value;
   };
 
-  Solutions.prototype.stay = function(path, v) {
-    var i, _i, _ref;
-    for (i = _i = 1, _ref = arguments.length; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
-      this.solver.addStay(v);
+  Solutions.prototype.stay = function() {
+    var arg, _i, _len;
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      arg = arguments[_i];
+      this.solver.addStay(arg);
     }
   };
 

@@ -69,9 +69,9 @@ class Solutions
     #@solver.resolve()
     return value
 
-  stay: (path, v) ->
-    for i in [1..arguments.length]
-      @solver.addStay(v)
+  stay: ->
+    for arg in arguments
+      @solver.addStay(arg)
     return
 
 module.exports = Solutions

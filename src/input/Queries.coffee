@@ -35,7 +35,7 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
-    @output.buffer = @buffer = null
+    @output.buffer = @buffer = @updated = null
     for mutation in mutations
       switch mutation.type
         when "attributes"
@@ -56,6 +56,7 @@ class Queries
 
     if buffer = @output.buffer
       @output.flush()
+    @updated = undefined
     return
 
   $attribute: (target, name, changed) ->
@@ -298,11 +299,42 @@ class Queries
     node ||= scope || args[0]
     path = (continuation && continuation + operation.key || operation.path)
     old = @[path]
-    isCollection = result && result.length != undefined
-    if old == result
-      return unless result && result.manual
-      old = undefined
-    
+
+    if @updated && (group = @updated[path])
+      return if group.indexOf(operation) > -1
+      added = group[0]
+      removed = group[1]
+    else
+
+      isCollection = result && result.length != undefined
+      if old == result
+        return unless result && result.manual
+        old = undefined
+      
+      # Clean refs of nodes that dont match anymore
+      if old
+        if old.length != undefined
+          removed = undefined
+          for child in old
+            if !result || Array.prototype.indexOf.call(result, child) == -1
+              @remove child, path
+              (removed ||= []).push child
+        else if !result
+          @clean(path)
+
+      # Register newly found nodes
+      if isCollection
+        added = undefined
+        for child in result
+          if !old || Array.prototype.indexOf.call(old, child) == -1  
+            (added ||= []).push child
+
+        # Snapshot live node list for future reference
+        if result && result.item
+          result = Array.prototype.slice.call(result, 0)
+      else
+        added = result
+
     # Subscribe node to the query
     if id = @engine.identify(node)
       if watchers = @_watchers[id]
@@ -315,35 +347,18 @@ class Queries
       unless dupe
         watchers.push(operation, continuation, scope)
     
-    # Clean refs of nodes that dont match anymore
-    if old
-      if old.length != undefined
-        removed = undefined
-        for child in old
-          if !result || old.indexOf.call(result, child) == -1
-            @remove child, path
-            (removed ||= []).push child
-      else if !result
-        @clean(path)
-
-    # Register newly found nodes
-    if isCollection
-      added = undefined
-      for child in result
-        if !old || watchers.indexOf.call(old, child) == -1  
-          (added ||= []).push child
-
-      # Snapshot live node list for future reference
-      if result && result.item
-        result = watchers.slice.call(result, 0)
-    else
-      added = result
     if result
       @[path] = result
     else
       delete @[path]
 
-    console.log('found', result && (result.nodeType == 1 && 1 || result.length) || 0, ' by' ,path)
+    unless @updated == undefined 
+      group = (@updated ||= {})[path] ||= []
+      if group.length
+        group.push operation
+      else
+        group.push added, removed, operation
+
     return if removed && !added
     return added
 

@@ -44,7 +44,7 @@ describe 'Perf', ->
         console.timeStamp(123)
         done()
 
-      engine.add [
+      engine.run [
         ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
       ]
       
@@ -62,7 +62,7 @@ describe 'Perf', ->
         done()
         console.profileEnd('100 intrinsics at once')
 
-      engine.add [
+      engine.run [
           ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
         ]
       
@@ -92,7 +92,7 @@ describe 'Perf', ->
       engine.addEventListener 'solved', listener
     
 
-      engine.add [
+      engine.run [
         ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
       ]
 
@@ -118,7 +118,7 @@ describe 'Perf', ->
           
       engine.addEventListener 'solved', listener
 
-      engine.add [
+      engine.run [
           ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
         ]
       

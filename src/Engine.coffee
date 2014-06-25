@@ -44,8 +44,9 @@ class Engine
     return new (Engine.Document || Engine)(scope, url)
 
   # Delegate: Pass input to interpreter
-  add: ->
+  run: ->
     return @expressions.pull.apply(@expressions, arguments)
+
   pull: ->
     return @expressions.pull.apply(@expressions, arguments)
 
@@ -138,6 +139,12 @@ class Engine
         fn.call(@, a, b, c)
     if @[method = 'on' + type]
       return @[method](a, b, c)
+
+  @clone: (object) -> 
+    if object && object.map
+      return object.map @clone, @
+    return object
+
 
   # Catch-all event listener 
   handleEvent: (e) ->

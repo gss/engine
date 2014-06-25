@@ -15,7 +15,7 @@ describe 'GSS commands', ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
-    engine = GSS(scope:scope)      
+    engine = new GSS(scope)      
 
   afterEach (done) ->
     remove(scope)
@@ -33,12 +33,12 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.run commands: [
-          ['stay', ['get$','x',['$class','box']]]
+      engine.run [
+          ['stay', ['get', ['$class','box'], '[x]']]
         ]
-      chai.expect(engine.workerCommands).to.eql [
-          ['stay', ['get$','x','$12322','.box']]
-          ['stay', ['get$','x','$34222','.box']]
+      chai.expect(engine.expressions.lastOutput).to.eql [
+          ['stay', ['get', '$12322', '[x]', '.box$12322']]
+          ['stay', ['get', '$34222', '[x]', '.box$34222']]
         ]
     
     it 'multiple stays', ->
@@ -46,34 +46,34 @@ describe 'GSS commands', ->
         <div class="box block" id="12322">One</div>
         <div class="box block" id="34222">One</div>
       """
-      engine.run commands: [
-          ['stay', ['get$','x',    ['$class','box']]]
-          ['stay', ['get$','y',    ['$class','box']]]
-          ['stay', ['get$','width',['$class','block']]]
+      engine.run [
+          ['stay', ['get', ['$class','box']  , '[x]'    , '%1']]
+          ['stay', ['get', ['$class','box']  , '[y]'    , '%2']]
+          ['stay', ['get', ['$class','block'], '[width]', '%3']]
         ]
-      chai.expect(engine.workerCommands).to.eql [
+      chai.expect( engine.expressions.lastOutput).to.eql [
           # break up stays to allow multiple plural queries
-          ['stay', ['get$','x',    '$12322','.box']]
-          ['stay', ['get$','x',    '$34222','.box']] 
-          ['stay', ['get$','y',    '$12322','.box']]          
-          ['stay', ['get$','y',    '$34222','.box']]
-          ['stay', ['get$','width','$12322','.block']]          
-          ['stay', ['get$','width','$34222','.block']]
+          ['stay', ['get', '$12322','[x]'    ,'.box$12322'  ]]
+          ['stay', ['get', '$34222','[x]'    ,'.box$34222'  ]] 
+          ['stay', ['get', '$12322','[y]'    ,'.box$12322'  ]]          
+          ['stay', ['get', '$34222','[y]'    ,'.box$34222'  ]]
+          ['stay', ['get', '$12322','[width]','.block$12322']]          
+          ['stay', ['get', '$34222','[width]','.block$34222']]
         ]
     
-    it 'eq with class!!!!!!!!', ->
+    it 'eq with class and tracker', ->
       scope.innerHTML = """
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.run commands: [
-        ['eq', ['get$','width',['$class','box']],['get','[grid-col]']]
-        ['eq', ['number','100'],['get','[grid-col]']]
-      ]
-      chai.expect(stringify(engine.workerCommands)).to.eql stringify [
-        ['eq', ['get$','width','$12322','.box'],['get','[grid-col]']]
-        ['eq', ['get$','width','$34222','.box'],['get','[grid-col]']]
-        ['eq', ['number','100'],['get','[grid-col]']]
+      engine.run [
+        ['eq', ['get', ['$class','box'], '[width]'],['get','[grid-col]']]
+        ['eq', 100,['get','[grid-col]']]
+      ], '%'
+      chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+        ['eq', ['get','$12322','[width]','%.box$12322'],['get', "::global", '[grid-col]',"%.box$12322–"]]
+        ['eq', ['get','$34222','[width]','%.box$34222'],['get', "::global", '[grid-col]',"%.box$34222–"]]
+        ['eq', 100, ['get', "::global", '[grid-col]',"%"]]
       ]
         
     
@@ -82,14 +82,14 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.run commands: [
-        ['eq', ['get$','width',['$class','box']],['get','[grid-col]']]
-        ['eq', ['number','100'],['get','[grid-col]']]
+      engine.run [
+        ['eq', ['get',['$class','box'],'[width]'],['get','[grid-col]']]
+        ['eq', 100, ['get','[grid-col]']]
       ]
-      expect(stringify(engine.workerCommands)).to.eql stringify [
-        ['eq', ['get$','width','$12322','.box'],['get','[grid-col]']]
-        ['eq', ['get$','width','$34222','.box'],['get','[grid-col]']]
-        ['eq', ['number','100'],['get','[grid-col]']]
+      expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+        ['eq', ['get','$12322','[width]','.box$12322'],['get', '::global', '[grid-col]',".box$12322–"]]
+        ['eq', ['get','$34222','[width]','.box$34222'],['get', '::global', '[grid-col]',".box$34222–"]]
+        ['eq', 100,['get', '::global', '[grid-col]', ""]]
       ]
 
     it 'lte for class & id selectos', ->
@@ -98,13 +98,13 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
         <div class="box" id="35346">One</div>
       """
-      engine.run commands: [
-        ['lte', ['get$','width',['$class','box']],['get$','width',['$id','box1']]]
+      engine.run [
+        ['lte', ['get',['$class','box'],'[width]'],['get',['$id','box1'],'[width]']]
       ]
-      expect(engine.workerCommands).to.eql [
-        ['lte', ['get$','width','$box1' ,'.box'],['get$','width','$box1','#box1']]
-        ['lte', ['get$','width','$34222','.box'],['get$','width','$box1','#box1']]
-        ['lte', ['get$','width','$35346','.box'],['get$','width','$box1','#box1']]
+      expect(stringify engine.expressions.lastOutput).to.eql stringify [
+        ['lte', ['get', '$box1' , '[width]','.box$box1–#box1'],['get','$box1','[width]','.box$box1–#box1']]
+        ['lte', ['get', '$34222', '[width]','.box$34222–#box1'],['get','$box1','[width]','.box$34222–#box1']]
+        ['lte', ['get', '$35346', '[width]','.box$35346–#box1'],['get','$box1','[width]','.box$35346–#box1']]
       ]
 
     it 'intrinsic-width with class', ->
@@ -113,12 +113,12 @@ describe 'GSS commands', ->
         <div style="width:222px;" class="box" id="34222">One</div>
         <div style="width:333px;" class="box" id="35346">One</div>
       """
-      engine.run         
+      engine.run        
         _uuid: '55-55-55'
-        commands: [
+        [
           ['eq', ['get$','width',['$class','box']],['get$','intrinsic-width',['$class','box']]]
         ]
-      chai.expect(engine.workerCommands).to.eql [
+      chai.expect(engine.expressions.lastOutput).to.eql [
         ['suggest', ['get$','intrinsic-width','$12322','.box'], ['number', 111], 'required']
         ['suggest', ['get$','intrinsic-width','$34222','.box'], ['number', 222], 'required']
         ['suggest', ['get$','intrinsic-width','$35346','.box'], ['number', 333], 'required']
@@ -131,11 +131,11 @@ describe 'GSS commands', ->
       scope.innerHTML = """
         <div style="width:111px;" class="box" id="12322">One</div>
       """
-      engine.run commands: [
-        ['eq', ['get$','width',['$class','box']],['get$','width',['$reserved','window']]]
+      engine.run [
+        ['eq', ['get', ['$class','box'], '[width]'],['get', ['$reserved','window'], '[width]']]
       ]
-      chai.expect(stringify(engine.workerCommands)).to.eql stringify [
-        ['suggest', ['get','::window[width]'], ['number', window.innerWidth - GSS.get.scrollbarWidth()], 'required']
+      chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+        ['suggest', ['get','::window', '[width]'], ['number', window.innerWidth - GSS.get.scrollbarWidth()], 'required']
         ['eq', ['get$','width','$12322','.box'],['get','::window[width]']]
       ]
 
@@ -143,13 +143,13 @@ describe 'GSS commands', ->
       scope.innerHTML = """
         
       """
-      engine.run commands: [
+      engine.run [
         ['eq',  ['get','[xxx]'], ['get$','x',     ['$reserved','window']]]
         ['lte', ['get','[yyy]'], ['get$','y',     ['$reserved','window']]]
         ['gte', ['get','[hhh]'], ['get$','height',['$reserved','window']]]
         ['lte', ['get','[www]'], ['get$','width', ['$reserved','window']]]
       ]
-      chai.expect(stringify(engine.workerCommands)).to.eql stringify [
+      chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
         
         ['eq',  ['get','::window[x]'],['number',0],        'required']
         ['eq',  ['get','[xxx]'],      ['get','::window[x]']          ]
@@ -176,10 +176,10 @@ describe 'GSS commands', ->
           <div class="box" id="12322">One</div>
           <div class="box" id="34222">One</div>
         """
-        engine.run commands: [
+        engine.run [
             ['eq', ['get$','x',['$class','box']], ['number',100]]
           ]
-        expect(engine.workerCommands).to.eql [
+        expect(engine.expressions.lastOutput).to.eql [
             ['eq', ['get$','x','$12322','.box'], ['number',100]]
             ['eq', ['get$','x','$34222','.box'], ['number',100]]
           ]
@@ -201,10 +201,10 @@ describe 'GSS commands', ->
           <div class="box" id="12322">One</div>
           <div class="box" id="34222">One</div>
         """
-        engine.run commands: [
+        engine.run [
             ['eq', ['get$','x',['$class','box']], ['number',100]]
           ]
-        chai.expect(engine.workerCommands).to.eql [
+        chai.expect(engine.expressions.lastOutput).to.eql [
             ['eq', ['get$','x','$12322','.box'], ['number',100]]
             ['eq', ['get$','x','$34222','.box'], ['number',100]]
           ]
@@ -227,10 +227,10 @@ describe 'GSS commands', ->
           <div class="box" id="12322">One</div>
           <div class="box" id="34222">One</div>
         """
-        engine.run commands: [
+        engine.run [
             ['eq', ['get$','x',['$class','box']], ['number',100]]
           ]
-        chai.expect(engine.workerCommands).to.eql [
+        chai.expect(engine.expressions.lastOutput).to.eql [
             ['eq', ['get$','x','$12322','.box'], ['number',100]]
             ['eq', ['get$','x','$34222','.box'], ['number',100]]
           ]
@@ -261,7 +261,7 @@ describe 'GSS commands', ->
           <div style="width:111px;" id="box1" class="box" >One</div>
           <div style="width:222px;" id="box2" class="box" >One</div>
         """
-        engine.run commands: [
+        engine.run [
           ['eq', ['get$','height',['$class','box']],['get$','intrinsic-width',['$id','box1']]]
         ]
         count = 0
@@ -291,7 +291,7 @@ describe 'GSS commands', ->
           <div style="display:inline-block;" id="box1" class="box">One</div>
           <div style="width:222px;" id="box2" class="box">One</div>
         """
-        engine.run commands: [
+        engine.run [
           ['eq', ['get$','height',['$class','box']],['get$','intrinsic-width',['$id','box1']]]
         ]
         count = 0
@@ -317,7 +317,7 @@ describe 'GSS commands', ->
           <div style="display:inline-block" id="box1" class="box" >One</div>
           <div style="width:222px;" id="box2" class="box" >One</div>
         """
-        engine.run commands: [
+        engine.run [
           ['eq', ['get$','height',['$class','box']],['get$','intrinsic-width',['$id','box1']]]
         ]
         count = 0
@@ -351,7 +351,7 @@ describe 'GSS commands', ->
         scope.innerHTML = """
           <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
         """
-        engine.run commands: [
+        engine.run [
           ['eq', ['get$','width',['$id','p-text']],  ['number',100]]
           ['eq', ['get$','height',['$id','p-text']], ['get$','intrinsic-height',['$id','p-text']]]
         ]
@@ -385,7 +385,7 @@ describe 'GSS commands', ->
           <div id="thing1" class="thing"></div>
           <div id="thing2" class="thing"></div>
         """
-        engine.run commands: [
+        engine.run [
           [
             'chain', 
             ['$class','thing'], 
@@ -407,7 +407,7 @@ describe 'GSS commands', ->
           <div id="thing1" class="thing"></div>
           <div id="thing2" class="thing"></div>
         """
-        engine.run commands: [  
+        engine.run [  
               ['eq', ['get','[hgap]'], 20]
               ['eq', ['get$','width',['$id','thing1']], 100]
               [
@@ -429,7 +429,7 @@ describe 'GSS commands', ->
           <div id="thing1" class="thing"></div>
           <div id="thing2" class="thing"></div>
         """
-        engine.run commands: [
+        engine.run [
           ['eq', ['get$','x',['$id','thing1']], 10]
           ['eq', ['get$','x',['$id','thing2']], 110]
           [
@@ -452,7 +452,7 @@ describe 'GSS commands', ->
           <div id="thing1" class="thing"></div>
           <div id="thing2" class="thing"></div>
         """
-        engine.run commands: [
+        engine.run [
           [
             'for-all', 
             ['$class','thing'], 

@@ -299,8 +299,10 @@ Expressions = (function() {
 
   Expressions.prototype.flush = function() {
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', this.buffer);
-    this.lastOutput = this.buffer;
-    this.output.pull(this.buffer);
+    this.lastOutput = GSS.clone(this.buffer);
+    if (this.buffer) {
+      this.output.pull(this.buffer);
+    }
     return this.buffer = void 0;
   };
 
@@ -406,18 +408,24 @@ Expressions = (function() {
         }
         argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
       }
-      if (argument === void 0 && (!def.eager || ascender !== void 0)) {
-        return;
+      if (argument === void 0) {
+        if ((!def.eager || (ascender != null)) && (!operation.noop || operation.parent)) {
+          return;
+        }
+        offset += 1;
+        continue;
       }
       (args || (args = []))[index - offset] = prev = argument;
     }
     if (operation.noop) {
       if (parent && parent.def.capture) {
         return parent.def.capture(this.engine, args, parent, continuation, scope);
-      } else if (parent && (!parent.noop || parent.length > 1)) {
-        return args;
       } else {
-        return this.push(args);
+        if (args && (!parent || (parent.noop && (parent.length === 1 || (ascender != null))))) {
+          this.push(args.length === 1 && args[0] || args);
+          return;
+        }
+        return args;
       }
     }
     scope || (scope = this.engine.scope);
@@ -702,10 +710,11 @@ Solutions = (function() {
     return value;
   };
 
-  Solutions.prototype.stay = function(path, v) {
-    var i, _i, _ref;
-    for (i = _i = 1, _ref = arguments.length; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
-      this.solver.addStay(v);
+  Solutions.prototype.stay = function() {
+    var arg, _i, _len;
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      arg = arguments[_i];
+      this.solver.addStay(arg);
     }
   };
 
@@ -757,7 +766,7 @@ Engine = (function() {
     return new (Engine.Document || Engine)(scope, url);
   }
 
-  Engine.prototype.add = function() {
+  Engine.prototype.run = function() {
     return this.expressions.pull.apply(this.expressions, arguments);
   };
 
@@ -890,6 +899,13 @@ Engine = (function() {
     if (this[method = 'on' + type]) {
       return this[method](a, b, c);
     }
+  };
+
+  Engine.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
   };
 
   Engine.prototype.handleEvent = function(e) {
