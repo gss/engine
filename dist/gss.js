@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-24) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-25) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20369,24 +20369,24 @@ if (!this.require) {
 Properties = (function() {
   function Properties() {}
 
-  Properties.prototype['::window[left]'] = 0;
+  Properties.prototype['::window[x]'] = 0;
 
-  Properties.prototype['::window[top]'] = 0;
+  Properties.prototype['::window[y]'] = 0;
 
-  Properties.prototype["[right]"] = function(scope) {
-    return this.plus(this.get("[left]", scope), this.get("[width]", scope));
+  Properties.prototype["[right]"] = function(scope, path) {
+    return this.plus(this.get(scope, "[x]", path), this.get(scope, "[width]", path));
   };
 
-  Properties.prototype["[bottom]"] = function(scope) {
-    return this.plus(this.get("[top]", scope), this.get("[height]", scope));
+  Properties.prototype["[bottom]"] = function(scope, path) {
+    return this.plus(this.get(scope, "[y]", path), this.get(scope, "[height]", path));
   };
 
-  Properties.prototype["[center-x]"] = function(scope) {
-    return this.plus(this.get("[left]", scope), this.divide(this.get("[width]", scope), 2));
+  Properties.prototype["[center-x]"] = function(scope, path) {
+    return this.plus(this.get(scope, "[x]", path), this.divide(this.get(scope, "[width]", path), 2));
   };
 
-  Properties.prototype["[center-y]"] = function(scope) {
-    return this.plus(this.get("[top]", scope), this.divide(this.get("[height]", scope), 2));
+  Properties.prototype["[center-y]"] = function(scope, path) {
+    return this.plus(this.get(scope, "[y]", path), this.divide(this.get(scope, "[height]", path), 2));
   };
 
   return Properties;
@@ -20978,11 +20978,24 @@ Constraints = (function() {
 
   Constraints.prototype.onConstraint = function(node, args, result, operation, continuation, scope) {
     var arg, _i, _len;
-    for (_i = 0, _len = args.length; _i < _len; _i++) {
-      arg = args[_i];
-      if (arg.path) {
-        (result.variables || (result.variables = [])).push(arg);
+    if (result instanceof c.Constraint || result instanceof c.Expression) {
+      result = [result];
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        arg = args[_i];
+        if (arg instanceof c.Variable) {
+          result.push(arg);
+        }
+        if (arg.paths) {
+          result.push.apply(result, arg.paths);
+          arg.paths = void 0;
+        }
       }
+    }
+    if (result.length > 0) {
+      if (result.length > 1) {
+        result[0].paths = result.splice(1);
+      }
+      return result[0];
     }
     return result;
   };
@@ -20990,12 +21003,11 @@ Constraints = (function() {
   Constraints.prototype.get = function(scope, property, path) {
     var variable;
     if (typeof this[property] === 'function') {
-      variable = this[property](scope);
+      return this[property](scope, path);
     } else {
-      variable = this["var"]((scope || '') + property);
+      variable = this["var"]((scope || '') + (property || ''));
     }
-    variable.path = path || scope || '';
-    return variable;
+    return [variable, path || (property && scope) || ''];
   };
 
   Constraints.prototype.remove = function() {
@@ -21014,13 +21026,14 @@ Constraints = (function() {
   };
 
   Constraints.prototype["var"] = function(name) {
-    return new c.Variable({
+    var _base;
+    return (_base = this.engine.solutions)[name] || (_base[name] = new c.Variable({
       name: name
-    });
+    }));
   };
 
   Constraints.prototype.strength = function(strength) {
-    return strength;
+    return c.Strength[strength];
   };
 
   Constraints.prototype.weight = function(weight) {
@@ -21066,7 +21079,7 @@ Constraints = (function() {
   };
 
   Constraints.prototype.divide = function(left, right, strength, weight) {
-    return c.divide(a, right);
+    return c.divide(left, right);
   };
 
   return Constraints;
@@ -21076,7 +21089,29 @@ Constraints = (function() {
 _ref = Constraints.prototype;
 for (property in _ref) {
   method = _ref[property];
-  method.callback = 'onConstraint';
+  if (method.length > 3 && property !== 'onConstraint') {
+    (function(property, method) {
+      return Constraints.prototype[property] = function(left, right, strength, weight) {
+        var overloaded, value;
+        if (left.push) {
+          overloaded = left = Constraints.prototype.onConstraint(null, null, left);
+        }
+        if (right.push) {
+          overloaded = right = Constraints.prototype.onConstraint(null, null, right);
+        }
+        if (overloaded) {
+          debugger;
+        }
+        value = method.call(this, left, right, strength, weight);
+        if (overloaded) {
+          debugger;
+          return Constraints.prototype.onConstraint(null, [left, right], value);
+        }
+        return value;
+      };
+    })(property, method);
+  }
+  Constraints.prototype[property].callback = 'onConstraint';
 }
 
 module.exports = Constraints;
@@ -21210,6 +21245,7 @@ Expressions = (function() {
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
     var args, argument, breaking, callback, contd, context, def, evaluated, func, id, index, item, last, method, node, offset, p, parent, path, pdef, prev, result, separator, skip, start, subpath, _base, _i, _j, _len, _len1;
+    console.error(operation);
     def = operation.def || this.analyze(operation).def;
     if ((parent = operation.parent) && !overloaded) {
       if ((pdef = parent.def) && pdef.evaluate) {
@@ -21291,7 +21327,7 @@ Expressions = (function() {
     if (operation.noop) {
       if (parent && parent.def.capture) {
         return parent.def.capture(this.engine, args, parent, continuation, scope);
-      } else if (parent && (!parent.noop || parent.parent)) {
+      } else if (parent && (!parent.noop || parent.length > 1)) {
         return args;
       } else {
         return this.push(args);
@@ -21579,7 +21615,7 @@ Queries = (function() {
   };
 
   Queries.prototype.$childList = function(target, mutation) {
-    var added, allAdded, allChanged, allRemoved, attribute, changed, child, firstNext, firstPrev, id, index, kls, next, node, parent, prev, prop, removed, update, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3;
+    var added, allAdded, allChanged, allRemoved, attribute, changed, changedTags, child, firstNext, firstPrev, id, index, kls, next, node, parent, prev, prop, removed, tag, update, value, values, _i, _j, _k, _l, _len, _len1, _len10, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _s;
     added = [];
     removed = [];
     _ref = mutation.addedNodes;
@@ -21601,6 +21637,14 @@ Queries = (function() {
       }
     }
     changed = added.concat(removed);
+    changedTags = [];
+    for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
+      node = changed[_k];
+      tag = node.tagName;
+      if (changedTags.indexOf(tag) === -1) {
+        changedTags.push(tag);
+      }
+    }
     prev = next = mutation;
     firstPrev = firstNext = true;
     while ((prev = prev.previousSibling)) {
@@ -21610,8 +21654,8 @@ Queries = (function() {
           this.match(prev, '++');
           firstPrev = false;
         }
-        this.match(prev, '~', void 0, changed);
-        this.match(prev, '~~', void 0, changed);
+        this.match(prev, '~', void 0, changedTags);
+        this.match(prev, '~~', void 0, changedTags);
       }
     }
     while ((next = next.nextSibling)) {
@@ -21621,36 +21665,36 @@ Queries = (function() {
           this.match(next, '++');
           firstNext = false;
         }
-        this.match(next, '!~', void 0, changed);
-        this.match(next, '~~', void 0, changed);
+        this.match(next, '!~', void 0, changedTags);
+        this.match(next, '~~', void 0, changedTags);
       }
     }
-    this.match(target, '>', void 0, changed);
+    this.match(target, '>', void 0, changedTags);
     allAdded = [];
     allRemoved = [];
-    for (_k = 0, _len2 = added.length; _k < _len2; _k++) {
-      child = added[_k];
+    for (_l = 0, _len3 = added.length; _l < _len3; _l++) {
+      child = added[_l];
       this.match(child, '!>', void 0, target);
       allAdded.push(child);
       allAdded.push.apply(allAdded, child.getElementsByTagName('*'));
     }
-    for (_l = 0, _len3 = removed.length; _l < _len3; _l++) {
-      child = removed[_l];
+    for (_m = 0, _len4 = removed.length; _m < _len4; _m++) {
+      child = removed[_m];
       allRemoved.push(child);
       allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'));
     }
     allChanged = allAdded.concat(allRemoved);
     update = {};
-    for (_m = 0, _len4 = allChanged.length; _m < _len4; _m++) {
-      node = allChanged[_m];
+    for (_n = 0, _len5 = allChanged.length; _n < _len5; _n++) {
+      node = allChanged[_n];
       _ref2 = node.attributes;
-      for (_n = 0, _len5 = _ref2.length; _n < _len5; _n++) {
-        attribute = _ref2[_n];
+      for (_o = 0, _len6 = _ref2.length; _o < _len6; _o++) {
+        attribute = _ref2[_o];
         switch (attribute.name) {
           case 'class':
             _ref3 = node.classList;
-            for (_o = 0, _len6 = _ref3.length; _o < _len6; _o++) {
-              kls = _ref3[_o];
+            for (_p = 0, _len7 = _ref3.length; _p < _len7; _p++) {
+              kls = _ref3[_p];
               this.index(update, ' $class', kls);
             }
             break;
@@ -21683,14 +21727,14 @@ Queries = (function() {
     parent = target;
     while (parent.nodeType === 1) {
       this.match(parent, ' ', void 0, allAdded);
-      for (_p = 0, _len7 = allAdded.length; _p < _len7; _p++) {
-        child = allAdded[_p];
+      for (_q = 0, _len8 = allAdded.length; _q < _len8; _q++) {
+        child = allAdded[_q];
         this.match(child, '!', void 0, parent);
       }
       for (prop in update) {
         values = update[prop];
-        for (_q = 0, _len8 = values.length; _q < _len8; _q++) {
-          value = values[_q];
+        for (_r = 0, _len9 = values.length; _r < _len9; _r++) {
+          value = values[_r];
           if (prop.charAt(1) === '$') {
             this.match(parent, prop, value);
           } else {
@@ -21705,8 +21749,8 @@ Queries = (function() {
         break;
       }
     }
-    for (_r = 0, _len9 = allRemoved.length; _r < _len9; _r++) {
-      removed = allRemoved[_r];
+    for (_s = 0, _len10 = allRemoved.length; _s < _len10; _s++) {
+      removed = allRemoved[_s];
       if (id = this.engine.recognize(removed)) {
         (this.removed || (this.removed = [])).push(id);
       }
@@ -21955,8 +21999,8 @@ require.register("gss/lib/output/Solutions.js", function(exports, require, modul
 var Solutions;
 
 Solutions = (function() {
-  function Solutions(input, output) {
-    this.input = input;
+  function Solutions(engine, output) {
+    this.engine = engine;
     this.output = output;
     this.solver = new c.SimplexSolver();
     this.solver.autoSolve = false;
@@ -21969,7 +22013,7 @@ Solutions = (function() {
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
       command = commands[_i];
-      if (command instanceof Array) {
+      if (command instanceof Array && typeof command[0] === 'object') {
         for (_j = 0, _len1 = command.length; _j < _len1; _j++) {
           subcommand = command[_j];
           this.add(subcommand);
@@ -21993,6 +22037,7 @@ Solutions = (function() {
       delete this.nullified;
     }
     console.log("Solutions output", JSON.parse(JSON.stringify(this.response)));
+    this.lastOutput = response;
     this.push(response);
   };
 
@@ -22003,28 +22048,35 @@ Solutions = (function() {
   };
 
   Solutions.prototype.remove = function(constrain, path) {
-    var group, index, variable, _i, _len, _ref, _results;
+    var group, index, _i, _len, _ref, _results;
     if (constrain instanceof c.Constraint) {
       console.info('removed constraint', path, constrain);
       this.solver.removeConstraint(constrain);
-      _ref = constrain.variables;
+      _ref = constrain.paths;
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        variable = _ref[_i];
-        if (group = this[variable.path]) {
-          if ((index = group.indexOf(constrain)) > -1) {
-            group.splice(index, 1);
+        path = _ref[_i];
+        if (typeof path === 'string') {
+          if (group = this[path]) {
+            if ((index = group.indexOf(constrain)) > -1) {
+              group.splice(index, 1);
+            }
+            if (!group.length) {
+              _results.push(delete this[path]);
+            } else {
+              _results.push(void 0);
+            }
+          } else {
+            _results.push(void 0);
           }
-          if (!group.length) {
-            delete this[variable.path];
-          }
-        }
-        if (!--this[variable.name]) {
-          delete this[variable.name];
-          this.solver._externalParametricVars["delete"](variable);
-          _results.push((this.nullified || (this.nullified = {}))[variable.name] = null);
         } else {
-          _results.push(void 0);
+          if (!--path.counter) {
+            delete this[path.name];
+            this.solver._externalParametricVars["delete"](path);
+            _results.push((this.nullified || (this.nullified = {}))[path.name] = null);
+          } else {
+            _results.push(void 0);
+          }
         }
       }
       return _results;
@@ -22032,33 +22084,35 @@ Solutions = (function() {
   };
 
   Solutions.prototype.add = function(command) {
-    var variable, _i, _len, _name, _ref, _results;
+    var path, _i, _len, _ref, _results;
     if (command instanceof c.Constraint) {
       this.solver.addConstraint(command);
-      if (command.variables) {
-        _ref = command.variables;
+      if (command.paths) {
+        _ref = command.paths;
         _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          variable = _ref[_i];
-          (this[_name = variable.path] || (this[_name] = [])).push(command);
-          _results.push(this[variable.name] = (this[variable.name] || 0) + 1);
+          path = _ref[_i];
+          if (typeof path === 'string') {
+            _results.push((this[path] || (this[path] = [])).push(command));
+          } else {
+            _results.push(path.counter = (path.counter || 0) + 1);
+          }
         }
         return _results;
       }
     } else if (this[command[0]]) {
-      return this[command[0]].apply(this, Array.prototype.slice.call(command));
+      return this[command[0]].apply(this, Array.prototype.slice.call(command, 1));
     }
   };
 
-  Solutions.prototype.edit = function(variable) {
-    return this.solver.addEditVar(variable);
+  Solutions.prototype.edit = function(variable, strength, weight) {
+    return this.solver.addEditVar(variable, this.engine.context.strength(strength), this.engine.context.weight(weight));
   };
 
   Solutions.prototype.suggest = function(variable, value, strength, weight) {
-    this.solver.solve();
-    this.edit(variable, this.strength(strength), this.weight(weight));
+    this.edit(variable, strength, weight);
     this.solver.suggestValue(variable, value);
-    return this.solver.resolve();
+    return value;
   };
 
   Solutions.prototype.stay = function(path, v) {

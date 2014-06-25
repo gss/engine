@@ -3,18 +3,28 @@ require 'cassowary'
 
 class Constraints
   onConstraint: (node, args, result, operation, continuation, scope) ->
-    for arg in args
-      if arg.path
-        (result.variables ||= []).push(arg)
+    # variable[paths] -> constrain[paths]
+    if result instanceof c.Constraint || result instanceof c.Expression
+      result = [result]
+      for arg in args
+        if arg instanceof c.Variable
+          result.push(arg)
+        if arg.paths
+          result.push.apply(result, arg.paths)
+          arg.paths = undefined
+    # [variable, path] -> variable[paths]
+    if result.length > 0
+      if result.length > 1
+        result[0].paths = result.splice(1)
+      return result[0]
     return result
 
   get: (scope, property, path) ->
     if typeof @[property] == 'function'
-      variable = @[property](scope)
+      return @[property](scope, path)
     else
-      variable = @var((scope || '') + property)
-    variable.path = path || scope || ''
-    return variable
+      variable = @var((scope || '') + (property || ''))
+    return [variable, path || (property && scope) || '']
 
   remove: () ->
     solutions = @engine.solutions
@@ -26,10 +36,10 @@ class Constraints
     return @
 
   var: (name) ->
-    return new c.Variable name: name
+    return @engine.solutions[name] ||= new c.Variable name: name
 
   strength: (strength) ->
-    return strength
+    return c.Strength[strength]
 
   weight: (weight) ->
     return weight
@@ -62,9 +72,27 @@ class Constraints
     return c.times(left, right)
 
   divide: (left, right, strength, weight) ->
-    return c.divide(a, right)
+    return c.divide(left, right)
 
 for property, method of Constraints::
-  method.callback = 'onConstraint'
+  # Overload cassowary helpers so they can use [variable, path] pairs
+  # in place of simple variables
+  if method.length > 3 && property != 'onConstraint'
+    do (property, method) ->
+      Constraints::[property] = (left, right, strength, weight) ->
+        if left.push
+          overloaded = left = Constraints::onConstraint(null, null, left)
+        if right.push
+          overloaded = right = Constraints::onConstraint(null, null, right)
+
+        if overloaded
+          debugger
+        value = method.call(@, left, right, strength, weight)
+        if overloaded
+          debugger
+          return Constraints::onConstraint(null, [left, right], value)
+        return value
+  Constraints::[property].callback = 'onConstraint'
+
 
 module.exports = Constraints

@@ -14,22 +14,22 @@ class Properties
 
   # Constants
 
-  '::window[left]': 0
-  '::window[top]': 0
+  '::window[x]': 0
+  '::window[y]': 0
 
   # Formulas
 
-  "[right]": (scope) ->
-    return @plus(@get("[left]", scope), @get("[width]", scope))
+  "[right]": (scope, path) ->
+    return @plus(@get(scope, "[x]", path), @get(scope, "[width]", path))
   
-  "[bottom]": (scope) ->
-    return @plus(@get("[top]", scope), @get("[height]", scope))
+  "[bottom]": (scope, path) ->
+    return @plus(@get(scope, "[y]", path), @get(scope, "[height]", path))
   
-  "[center-x]": (scope) ->
-    return @plus(@get("[left]", scope), @divide(@get("[width]", scope), 2))
+  "[center-x]": (scope, path) ->
+    return @plus(@get(scope, "[x]", path), @divide(@get(scope, "[width]", path), 2))
 
-  "[center-y]": (scope) ->
-    return @plus(@get("[top]", scope), @divide(@get("[height]", scope), 2))
+  "[center-y]": (scope, path) ->
+    return @plus(@get(scope, "[y]", path), @divide(@get(scope, "[height]", path), 2))
 
 
 module.exports = Properties

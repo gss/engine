@@ -102,6 +102,12 @@ class Queries
         else
           removed.push(child)
     changed = added.concat(removed)
+    changedTags = []
+    for node in changed
+      tag = node.tagName
+      if changedTags.indexOf(tag) == -1
+        changedTags.push(tag)
+
     prev = next = mutation
     firstPrev = firstNext = true
     while (prev = prev.previousSibling)
@@ -110,20 +116,20 @@ class Queries
           @match(prev, '+') 
           @match(prev, '++')
           firstPrev = false
-        @match(prev, '~', undefined, changed)
-        @match(prev, '~~', undefined, changed)
+        @match(prev, '~', undefined, changedTags)
+        @match(prev, '~~', undefined, changedTags)
     while (next = next.nextSibling)
       if next.nodeType == 1
         if firstNext
           @match(next, '!+') 
           @match(next, '++')
           firstNext = false
-        @match(next, '!~', undefined, changed)
-        @match(next, '~~', undefined, changed)
+        @match(next, '!~', undefined, changedTags)
+        @match(next, '~~', undefined, changedTags)
 
 
     # Invalidate descendants observers
-    @match(target, '>', undefined, changed)
+    @match(target, '>', undefined, changedTags)
     allAdded = []
     allRemoved = []
 

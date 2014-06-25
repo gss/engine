@@ -49,6 +49,7 @@ class Expressions
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
+    console.error(operation)
     # Use custom argument evaluator of parent operation if it has one
     def = operation.def || @analyze(operation).def
     if (parent = operation.parent) && !overloaded
@@ -115,7 +116,7 @@ class Expressions
     if operation.noop
       if parent && parent.def.capture
         return parent.def.capture @engine, args, parent, continuation, scope
-      else if parent && (!parent.noop || parent.parent)
+      else if parent && (!parent.noop || parent.length > 1)
         return args
       else
         return @push(args)
