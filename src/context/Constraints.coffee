@@ -1,5 +1,5 @@
 # Convert expressions into cassowary objects
-require 'cassowary'
+# require 'cassowary'
 
 class Constraints
   onConstraint: (node, args, result, operation, continuation, scope) ->

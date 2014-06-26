@@ -160,7 +160,6 @@ describe 'Nested Rules', ->
           expect(engine.solver.solutions["div+main$main0!~$box0*"][0]).to.be.an.instanceOf(c.Constraint)
           expect(engine.solver.solutions["div+main$main0!~$header0*"][0]).to.be.an.instanceOf(c.Constraint)
 
-
           console.error('Mutation: container.removeChild(#main)')
           parent.removeChild(all.main0) 
           engine.once 'solved', ->
@@ -686,9 +685,7 @@ describe 'Nested Rules', ->
                     '.group .vessel$vessel1']
                 ]
               container.firstElementChild.classList.add('group')
-              window.zzz = true
               engine.once 'solved', ->   
-                console.log(321)
 
                 expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                     ['lte', ['get','$box2','[width]', '.group .vessel$vessel1–::scope .box:last-child$box2'], 100],
@@ -705,9 +702,7 @@ describe 'Nested Rules', ->
                       ['lte', ['get', '$box12', '[width]', '.group .vessel$vessel11–::scope .box:last-child$box12'], 100]
                       ['lte', ['get', '$box14', '[width]', '.group .vessel$vessel11–::scope .box:last-child$box14'], 100]
                     ]
-                  window.zzz = true
-                  console.log(4444)
-
+                    
                   container.replaceChild(container.firstElementChild, container.lastElementChild)
                   engine.once 'solved', ->
                     expect(stringify(engine.expressions.lastOutput)).to.eql stringify [

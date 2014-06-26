@@ -36,6 +36,7 @@ class Styles
 
     # Step 5: Re-measure elements (Reflow)
     if intrinsic
+      debugger
       for path, value of intrinsic
         @set(path, undefined, value, positioning, true)
     else

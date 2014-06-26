@@ -37,6 +37,7 @@ class Measurements
   # Generate command to create a variable
   'get':
     command: (path, object, property) ->
+      debugger
       console.log('get', [path, object, property])
       if property
         # Get document property

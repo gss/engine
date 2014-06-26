@@ -22,12 +22,6 @@ class Expressions
       @flush()
     return result
 
-  flush: ->
-    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', @buffer)
-    @lastOutput = GSS.clone @buffer
-    @output.pull(@buffer) if @buffer
-    @buffer = undefined
-
   # Hook: Buffer equasions if needed
   push: (args, batch) ->
     return unless args?
@@ -47,87 +41,60 @@ class Expressions
     else
       return @output.pull.apply(@output, args)
 
+  # Output buffered expressions
+  flush: ->
+    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', @buffer)
+    @lastOutput = GSS.clone @buffer
+    @output.pull(@buffer) if @buffer
+    @buffer = undefined
+
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
-    console.error(operation)
+    # Analyze operation once
+    unless operation.def
+      @analyze(operation)
+    
     # Use custom argument evaluator of parent operation if it has one
-    def = operation.def || @analyze(operation).def
-    if (parent = operation.parent) && !overloaded
-      if (pdef = parent.def) && pdef.evaluate
-        evaluated = pdef.evaluate.call(@, operation, continuation, scope, ascender, ascending)
-        return evaluated unless evaluated == @
+    if !overloaded && operation.parent
+      overloading = @overload(operation, continuation, scope, ascender, ascending)
+      return overloading unless overloading == @
 
     # Use a shortcut operation when possible (e.g. native dom query)
     if operation.tail
-      if (operation.tail.path == operation.tail.key || ascender?)
-        operation = operation.tail.shortcut ||= @context[def.group].perform(@, operation)
-      else
-        operation = operation.tail[1]
-      parent = operation.parent
-      ascender = ascender != undefined && 1 || undefined
-      def = operation.def
+      operation = @skip(operation, ascender)
 
-    if ((p = operation.path) && continuation)
-      last = -1
-      while (index = continuation.indexOf('–', last + 1))
-        if index == -1
-          break if last == continuation.length - 1
-          index = continuation.length
-          breaking = true
-        start = continuation.substring(last + 1, last + 1 + p.length)
-        if start == p
-          separator = last + 1 + p.length
-          if separator < index
-            if continuation.charAt(separator) == '$'
-              id = continuation.substring(separator, index)
-          if id
-            return @engine[id]
-          else
-            return @engine.queries[continuation.substring(0, separator)]
-        break if breaking
-        last = index
+    # Use computed result by *cough* parsing continuation string
+    if continuation && operation.path
+      if (result = @reuse(operation.path, continuation)) != false
+        debugger
+        return result
 
-    # Recursively evaluate arguments, stop on undefined.
-    args = prev = undefined
-    skip = operation.skip
-    offset = operation.offset || 0
-    for argument, index in operation
-      continue if offset > index
-      if index == 0 && (!operation.noop && !offset)
-        argument = continuation || operation
-      else if ascender == index
-        argument = ascending
-      else if skip == index
-        offset += 1
-        continue
-      else if argument instanceof Array
-        # Leave forking mark in a path when resolving next arguments
-        if ascender < index
-          contd = continuation
-          contd += '–' unless contd.charAt(contd.length - 1) == '–'
-        argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
-      if argument == undefined
-        return if (!def.eager || ascender?) && (!operation.noop || operation.parent)
-        offset += 1
-        continue
-      (args ||= [])[index - offset] = prev = argument
+    # Recursively evaluate arguments, stop on undefined
+    args = @resolve(operation, continuation, scope, ascender, ascending)
+    return if args == false
 
-    # No-op commands are to be executed by something else (e.g. Solver)
-    if operation.noop
-      if parent && parent.def.capture
-        return parent.def.capture @engine, args, parent, continuation, scope
-      else
-        if args && (!parent || (parent.noop && (parent.length == 1 || ascender?)))
-          @push args.length == 1 && args[0] || args
-          return
-        return args
+    # Execute function
+    if operation.def.noop
+      result = args
+    else
+      result = @execute(operation, continuation, scope, args)
 
-    # Use function, or look up method on the first argument. Falls back to builtin
+    # Log operation in a continuation path
+    breadcrumbs = @breadcrumb(operation, continuation)
+    debugger if breadcrumbs && breadcrumbs.indexOf('scope::scope') > -1
+
+    # Ascend the execution (fork for each item in collection)
+    return @ascend(operation, breadcrumbs, result, scope, ascender)
+
+  # Get result of executing operation with resolved arguments
+  execute: (operation, continuation, scope, args) ->
     scope ||= @engine.scope
-    if def.scoped || !args
+    if operation.def.scoped || !args
       (args ||= []).unshift scope
     if typeof args[0] == 'object'
       node = args[0]
+
+    # Use function, or look up method on the first argument. Falls back to builtin
     unless func = operation.func
       if method = operation.method
         if node && func = node[method]
@@ -149,31 +116,94 @@ class Expressions
     if callback = operation.def.callback
       result = @context[callback](context || node || scope, args, result, operation, continuation, scope)
 
-    if continuation
-      path = continuation
-      path += operation.key if def.serialized && !def.hidden
-    else
-      path = operation.path
-    
-    # Ascend the execution (fork for each item in collection)
-    if result?
-      if parent
-        if @engine.isCollection(result)
-          #console.group path
+    return result
+
+  # Try to read saved results within continuation
+  reuse: (path, continuation) ->
+    last = -1
+    if path.indexOf('::scope') > -1 && continuation && continuation.indexOf('::scope') > -1
+      debugger
+    while (index = continuation.indexOf('–', last + 1))
+      if index == -1
+        break if last == continuation.length - 1
+        index = continuation.length
+        breaking = true
+      start = continuation.substring(last + 1, last + 1 + path.length)
+      if start == path
+        separator = last + 1 + path.length
+        if separator < index
+          if continuation.charAt(separator) == '$'
+            id = continuation.substring(separator, index)
+        if id
+          return @engine[id]
+        else
+          return @engine.queries[continuation.substring(0, separator)]
+      break if breaking
+      last = index
+    return false
+
+  # Evaluate operation arguments in order, break on undefined
+  resolve: (operation, continuation, scope, ascender, ascending) ->
+    args = prev = undefined
+    skip = operation.skip
+    offset = operation.offset || 0
+    for argument, index in operation
+      continue if offset > index
+      if index == 0 && (!operation.def.noop && !offset)
+        argument = continuation || operation
+      else if ascender == index
+        argument = ascending
+      else if skip == index
+        offset += 1
+        continue
+      else if argument instanceof Array
+        # Leave forking mark in a path when resolving next arguments
+        if ascender < index
+          contd = continuation
+          contd += '–' unless contd.charAt(contd.length - 1) == '–'
+        argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
+      if argument == undefined
+        return false if (!operation.def.eager || ascender?) && (!operation.def.noop || operation.parent)
+        offset += 1
+        continue
+      (args ||= [])[index - offset] = prev = argument
+    return false if !args && operation.def.noop
+    return args
+  # Pass control to parent operation 
+  ascend: (operation, continuation, result, scope, ascender) ->
+    if result? 
+      if (parent = operation.parent) || operation.def.noop
+        if parent && @engine.isCollection(result)
+          console.group continuation
           for item in result
-            subpath = @engine.getPath(path, item)
-            @evaluate parent, subpath, scope, operation.index, item
-          #console.groupEnd path
+            breadcrumbs = @engine.getPath(continuation, item)
+            @evaluate operation.parent, breadcrumbs, scope, operation.index, item
+          console.groupEnd continuation
           return
-        else if parent.def.capture
+        else if parent && parent.def.capture
           return parent.def.capture @engine, result, parent, continuation, scope
-        else if (ascender? || result.nodeType)
-          @evaluate parent, path, scope, operation.index, result
-          return
+        else 
+          # A topmost noop operation adds itself to output queue
+          if operation.def.noop
+            if result && (!parent || (parent.def.noop && parent.length == 1 || ascender?))
+              if result.length == 1
+                return @push result[0]
+              else
+                return @push result
+          else if parent && (ascender? || result.nodeType)
+            @evaluate parent, continuation, scope, operation.index, result
+            return 
       else
         return @push result
 
     return result
+
+  # Advance to a groupped shortcut operation
+  skip: (operation, ascender) ->
+    if (operation.tail.path == operation.tail.key || ascender?)
+      return operation.tail.shortcut ||= @context[operation.def.group].perform(@, operation)
+    else
+      return operation.tail[1]
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
@@ -205,7 +235,7 @@ class Expressions
         @analyze(child, operation)
 
     if def == undefined
-      operation.def = operation.noop = true
+      operation.def = {noop: true}
       return operation
 
     operation.def  = def
@@ -241,7 +271,7 @@ class Expressions
   # Serialize operation to a string with arguments, but without context
   serialize: (operation, otherdef, group) ->
     def = operation.def
-    prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.noop && operation.name) || ''
+    prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.def.noop && operation.name) || ''
     suffix = def.suffix || (otherdef && otherdef.suffix) || ''
     separator = operation.def.separator
     
@@ -268,6 +298,21 @@ class Expressions
             before += op.path
 
     return before + prefix + after + suffix
+
+  breadcrumb: (operation, continuation) ->
+    if continuation?
+      if operation.def.serialized && !operation.def.hidden
+        return continuation + operation.key 
+      return continuation
+    else
+      return operation.path
+
+  overload: (operation, continuation, scope, ascender, ascending) ->
+    parent = operation.parent
+    if (pdef = parent.def) && pdef.evaluate
+      evaluated = pdef.evaluate.call(@, operation, continuation, scope, ascender, ascending)
+      return evaluated
+    return @
 
 
 module.exports = Expressions
