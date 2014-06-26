@@ -89,7 +89,6 @@ class Styles
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
         brackets = '[' + property + ']'
-        debugger
         value = @engine.context.compute(element,  '[' + property + ']', undefined, value)
         
       if positioner

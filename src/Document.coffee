@@ -39,20 +39,23 @@ class Engine.Document extends Engine
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
+    @onresize()
+    @onscroll()
+
   # Delegate: Pass input to interpreter, buffer DOM queries within command batch
   run: ->
-    @queries.updated = null
+    @queries.updated = null # Turn on batching
     result = @expressions.pull.apply(@expressions, arguments)
-    @queries.updated = undefined
+    @queries.updated = undefined # Forget batched stuff 
     return result
     
-  onresize: (e) ->
-    @context.set("[width]", "::window")
-    @context.set("[height]", "::window")
+  onresize: (e = '::window') ->
+    @context.compute(e.target || e, "[width]")
+    @context.compute(e.target || e, "[height]")
 
-  onscroll: (e) ->
-    @context.set("[scroll-top]", e.target)
-    @context.set("[scroll-left]", e.target)
+  onscroll: (e = '::window') ->
+    @context.compute(e.target || e, "[scroll-top]")
+    @context.compute(e.target || e, "[scroll-left]")
 
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @

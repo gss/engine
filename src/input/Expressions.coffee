@@ -11,7 +11,7 @@ class Expressions
   constructor: (@engine, @context, @output) ->
     @context ||= @engine && @engine.context || @
 
-  # Hook: Evaluate input and send produced output
+  # Hook: Evaluate input and pass produced output
   pull: ->
     if @buffer == undefined
       @buffer = null
@@ -22,12 +22,12 @@ class Expressions
       @flush()
     return result
 
-  # Hook: Buffer equasions if needed
+  # Hook: Output commands in batch
   push: (args, batch) ->
     return unless args?
     if (buffer = @buffer) != undefined
       if buffer
-        # Optionally, combine subsequent commands (like remove)
+        # Optionally, combine subsequent commands (e.g. remove)
         if batch
           if last = buffer[buffer.length - 1]
             if last[0] == args[0]
@@ -41,7 +41,7 @@ class Expressions
     else
       return @output.pull.apply(@output, args)
 
-  # Output buffered expressions
+  # Output buffered commands
   flush: ->
     buffer = @buffer
     if @context.onFlush
@@ -109,7 +109,7 @@ class Expressions
 
     # Execute the function
     unless func
-      throw new Error("Engine broke, couldn't find method: #{operation.method}")
+      throw new Error("Couldn't find method: #{operation.method}")
 
     result = func.apply(context || @context, args)
 
@@ -168,10 +168,14 @@ class Expressions
       (args ||= [])[index - offset] = prev = argument
     return false if !args && operation.def.noop
     return args
-  # Pass control to parent operation 
+
+  # Pass control back to parent operation. 
+  # If child op returns DOM collection or node, evaluator recurses to do so.
+  # When recursion unrolls all caller ops are discarded
   ascend: (operation, continuation, result, scope, ascender) ->
     if result? 
       if (parent = operation.parent) || operation.def.noop
+        # For each node in collection, we ascend to a parent op with a distinct continuation key
         if parent && @engine.isCollection(result)
           console.group continuation
           for item in result
@@ -179,10 +183,13 @@ class Expressions
             @evaluate operation.parent, breadcrumbs, scope, operation.index, item
           console.groupEnd continuation
           return
+        
+        # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
         else if parent && parent.def.capture
           return parent.def.capture @engine, result, parent, continuation, scope
+        
+        # Topmost operations produce output
         else 
-          # A topmost noop operation adds itself to output queue
           if operation.def.noop
             if result && (!parent || (parent.def.noop && parent.length == 1 || ascender?))
               if result.length == 1
@@ -195,6 +202,7 @@ class Expressions
       else
         return @push result
 
+    # Ascend without recursion (math, regular functions, constraints)
     return result
 
   # Advance to a groupped shortcut operation
@@ -227,7 +235,6 @@ class Expressions
         def = def.lookup.call(@, operation)
       else
         def = @context[operation.name]
-
     
     for child, index in operation
       if child instanceof Array

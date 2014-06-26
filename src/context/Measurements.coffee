@@ -29,6 +29,20 @@ class Measurements
     return a / b
 
 
+
+  # Constants
+
+  '::window[x]': 0
+  '::window[y]': 0
+
+  '::window[width]': ->
+    return window.innerWidth
+
+  '::window[height]': ->
+    return window.innerHeight
+
+  # Properties
+
   "[intrinsic-height]": (scope) ->
     return scope.offsetHeight
 
@@ -40,6 +54,12 @@ class Measurements
 
   "[scroll-top]": (scope) ->
     return scope.scrollTop
+
+  "[offset-left]": (scope) ->
+    return scope.offsetLeft
+
+  "[offset-top]": (scope) ->
+    return scope.offsetTop
 
   compute: (id, property, continuation, old) ->
     if id.nodeType

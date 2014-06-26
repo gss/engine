@@ -20240,6 +20240,8 @@ Engine.Document = (function(_super) {
     }
     this.scope.addEventListener('scroll', this);
     window.addEventListener('resize', this);
+    this.onresize();
+    this.onscroll();
   }
 
   Document.prototype.run = function() {
@@ -20251,13 +20253,19 @@ Engine.Document = (function(_super) {
   };
 
   Document.prototype.onresize = function(e) {
-    this.context.set("[width]", "::window");
-    return this.context.set("[height]", "::window");
+    if (e == null) {
+      e = '::window';
+    }
+    this.context.compute(e.target || e, "[width]");
+    return this.context.compute(e.target || e, "[height]");
   };
 
   Document.prototype.onscroll = function(e) {
-    this.context.set("[scroll-top]", e.target);
-    return this.context.set("[scroll-left]", e.target);
+    if (e == null) {
+      e = '::window';
+    }
+    this.context.compute(e.target || e, "[scroll-top]");
+    return this.context.compute(e.target || e, "[scroll-left]");
   };
 
   Document.prototype.destroy = function() {
@@ -20383,10 +20391,6 @@ if (!this.require) {
 
 Properties = (function() {
   function Properties() {}
-
-  Properties.prototype['::window[x]'] = 0;
-
-  Properties.prototype['::window[y]'] = 0;
 
   Properties.prototype["[right]"] = function(scope, path) {
     return this.plus(this.get(scope, "[x]", path), this.get(scope, "[width]", path));
@@ -21168,6 +21172,18 @@ Measurements = (function() {
     return a / b;
   };
 
+  Measurements.prototype['::window[x]'] = 0;
+
+  Measurements.prototype['::window[y]'] = 0;
+
+  Measurements.prototype['::window[width]'] = function() {
+    return window.innerWidth;
+  };
+
+  Measurements.prototype['::window[height]'] = function() {
+    return window.innerHeight;
+  };
+
   Measurements.prototype["[intrinsic-height]"] = function(scope) {
     return scope.offsetHeight;
   };
@@ -21182,6 +21198,14 @@ Measurements = (function() {
 
   Measurements.prototype["[scroll-top]"] = function(scope) {
     return scope.scrollTop;
+  };
+
+  Measurements.prototype["[offset-left]"] = function(scope) {
+    return scope.offsetLeft;
+  };
+
+  Measurements.prototype["[offset-top]"] = function(scope) {
+    return scope.offsetTop;
   };
 
   Measurements.prototype.compute = function(id, property, continuation, old) {
@@ -21367,7 +21391,7 @@ Expressions = (function() {
       }
     }
     if (!func) {
-      throw new Error("Engine broke, couldn't find method: " + operation.method);
+      throw new Error("Couldn't find method: " + operation.method);
     }
     result = func.apply(context || this.context, args);
     if (callback = operation.def.callback) {
@@ -22397,7 +22421,6 @@ Styles = (function() {
     } else {
       if (intrinsic) {
         brackets = '[' + property + ']';
-        debugger;
         value = this.engine.context.compute(element, '[' + property + ']', void 0, value);
       }
       if (positioner) {

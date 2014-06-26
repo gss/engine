@@ -37,10 +37,6 @@ if (!this.require) {
 Properties = (function() {
   function Properties() {}
 
-  Properties.prototype['::window[x]'] = 0;
-
-  Properties.prototype['::window[y]'] = 0;
-
   Properties.prototype["[right]"] = function(scope, path) {
     return this.plus(this.get(scope, "[x]", path), this.get(scope, "[width]", path));
   };
@@ -392,7 +388,7 @@ Expressions = (function() {
       }
     }
     if (!func) {
-      throw new Error("Engine broke, couldn't find method: " + operation.method);
+      throw new Error("Couldn't find method: " + operation.method);
     }
     result = func.apply(context || this.context, args);
     if (callback = operation.def.callback) {

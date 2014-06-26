@@ -11,12 +11,6 @@ unless this.require
 
 class Properties
 
-
-  # Constants
-
-  '::window[x]': 0
-  '::window[y]': 0
-
   # Formulas
 
   "[right]": (scope, path) ->
