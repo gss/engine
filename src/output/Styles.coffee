@@ -36,9 +36,15 @@ class Styles
 
     # Step 5: Re-measure elements (Reflow)
     if intrinsic
-      debugger
       for path, value of intrinsic
         @set(path, undefined, value, positioning, true)
+    
+    # Step 6: Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
+    if @engine.context.computed
+      suggests = []
+      for property, value of @engine.context.computed
+        suggests.push ['suggest', property, value, 'required']
+      @engine.pull suggests
     else
       @engine.triggerEvent('solved', data, intrinsic)
 
@@ -67,25 +73,25 @@ class Styles
       return value
     @
 
-  set: (path, property, value, positioning, intrinsic) ->
+  set: (id, property, value, positioning, intrinsic) ->
+    # parse $id[property] as id
     if property == undefined
-      last = path.lastIndexOf('[')
-      property = path.substring(last + 1, path.length - 1)
-      path = path.substring(0, last)
+      path = id
+      last = id.lastIndexOf('[')
+      property = path.substring(last + 1, id.length - 1)
+      id = id.substring(0, last)
 
-    return unless element = @engine[path]
+    return unless element = @engine[id]
     positioner = this.positioners[property]
     if positioning && positioner
-      (positioning[path] ||= {})[property] = value
+      (positioning[id] ||= {})[property] = value
     else
+      # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        result = @engine.context['[' + property + ']'](element)
-        if result != value
-
-        else
-
-
-
+        brackets = '[' + property + ']'
+        debugger
+        value = @engine.context.compute(element,  '[' + property + ']', undefined, value)
+        
       if positioner
         positioned = positioner(element)
         if typeof positioned == 'string'

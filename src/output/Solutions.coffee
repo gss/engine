@@ -41,7 +41,13 @@ class Solutions
               delete @[path]
         else
           unless --path.counter
+            variable = @[path.name]
+            if variable.editing
+              cei = @solver._editVarMap.get(variable);
+              @solver.removeColumn(cei.editMinus);
+              @solver._editVarMap.delete(variable);
             delete @[path.name]
+            # Explicitly remove variable from cassowary
             @solver._externalParametricVars.delete(path)
             (@nullified ||= {})[path.name] = null
 
@@ -60,14 +66,22 @@ class Solutions
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))
 
   edit: (variable, strength, weight) ->
-    @solver.addEditVar(variable, @engine.context.strength(strength), @engine.context.weight(weight))
+    strength = @engine.context.strength(strength)
+    weight = @engine.context.weight(weight)
+    c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
+    constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight)
+    @solver.addConstraint(constraint)
+    variable.editing = constraint
+    return constraint
 
   suggest: (variable, value, strength, weight) ->
     #@solver.solve()
+    if typeof variable == 'string'
+      return unless variable = @[variable]
     @edit(variable, strength, weight)
     @solver.suggestValue(variable, value)
     #@solver.resolve()
-    return value
+    return variable
 
   stay: ->
     for arg in arguments

@@ -113,19 +113,28 @@ describe 'GSS commands', ->
         <div style="width:222px;" class="box" id="34222">One</div>
         <div style="width:333px;" class="box" id="35346">One</div>
       """
-      engine.run        
-        _uuid: '55-55-55'
-        [
-          ['eq', ['get$','width',['$class','box']],['get$','intrinsic-width',['$class','box']]]
+
+      engine.once 'solved', ->
+        chai.expect(stringify engine.expressions.lastOutput).to.eql stringify  [
+          ['suggest', '$12322[intrinsic-width]', 111, 'required']
+          ['suggest', '$34222[intrinsic-width]', 222, 'required']
+          ['suggest', '$35346[intrinsic-width]', 333, 'required']
+          ['eq', ['get','$12322','[width]','.box$12322'],['get','$12322','[intrinsic-width]','.box$12322–']]
+          ['eq', ['get','$34222','[width]','.box$34222'],['get','$34222','[intrinsic-width]','.box$34222–']]
+          ['eq', ['get','$35346','[width]','.box$35346'],['get','$35346','[intrinsic-width]','.box$35346–']]
         ]
-      chai.expect(engine.expressions.lastOutput).to.eql [
-        ['suggest', ['get$','intrinsic-width','$12322','.box'], ['number', 111], 'required']
-        ['suggest', ['get$','intrinsic-width','$34222','.box'], ['number', 222], 'required']
-        ['suggest', ['get$','intrinsic-width','$35346','.box'], ['number', 333], 'required']
-        ['eq', ['get$','width','$12322','.box'],['get$','intrinsic-width','$12322','.box']]
-        ['eq', ['get$','width','$34222','.box'],['get$','intrinsic-width','$34222','.box']]
-        ['eq', ['get$','width','$35346','.box'],['get$','intrinsic-width','$35346','.box']]
+        engine.once 'solved', ->
+          chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+            [["remove",".box$12322"]]
+          ]
+        box0 = scope.getElementsByClassName('box')[0]
+        box0.parentNode.removeChild(box0)
+
+
+      engine.run [
+        ['eq', ['get', ['$class','box'], '[width]'],['get', ['$class','box'], '[intrinsic-width]']]
       ]
+
 
     it '.box[width] == ::window[width]', ->
       scope.innerHTML = """

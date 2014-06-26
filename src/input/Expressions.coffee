@@ -43,9 +43,12 @@ class Expressions
 
   # Output buffered expressions
   flush: ->
-    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', @buffer)
-    @lastOutput = GSS.clone @buffer
-    @output.pull(@buffer) if @buffer
+    buffer = @buffer
+    if @context.onFlush
+      buffer = @context.onFlush(buffer)
+    @lastOutput = GSS.clone buffer
+    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
+    @output.pull(buffer) if buffer
     @buffer = undefined
 
   # Evaluate operation depth first
@@ -66,7 +69,6 @@ class Expressions
     # Use computed result by *cough* parsing continuation string
     if continuation && operation.path
       if (result = @reuse(operation.path, continuation)) != false
-        debugger
         return result
 
     # Recursively evaluate arguments, stop on undefined
@@ -80,8 +82,7 @@ class Expressions
       result = @execute(operation, continuation, scope, args)
 
     # Log operation in a continuation path
-    breadcrumbs = @breadcrumb(operation, continuation)
-    debugger if breadcrumbs && breadcrumbs.indexOf('scope::scope') > -1
+    breadcrumbs = @log(operation, continuation)
 
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, breadcrumbs, result, scope, ascender)
@@ -121,8 +122,6 @@ class Expressions
   # Try to read saved results within continuation
   reuse: (path, continuation) ->
     last = -1
-    if path.indexOf('::scope') > -1 && continuation && continuation.indexOf('::scope') > -1
-      debugger
     while (index = continuation.indexOf('–', last + 1))
       if index == -1
         break if last == continuation.length - 1
@@ -299,7 +298,7 @@ class Expressions
 
     return before + prefix + after + suffix
 
-  breadcrumb: (operation, continuation) ->
+  log: (operation, continuation) ->
     if continuation?
       if operation.def.serialized && !operation.def.hidden
         return continuation + operation.key 
