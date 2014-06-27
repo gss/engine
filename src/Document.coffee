@@ -39,9 +39,6 @@ class Engine.Document extends Engine
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
-    @onresize()
-    @onscroll()
-
   # Delegate: Pass input to interpreter, buffer DOM queries within command batch
   run: ->
     @queries.updated = null # Turn on batching
@@ -50,12 +47,12 @@ class Engine.Document extends Engine
     return result
     
   onresize: (e = '::window') ->
-    @context.compute(e.target || e, "[width]")
-    @context.compute(e.target || e, "[height]")
+    @context.compute(e.target || e, "[width]", undefined, false)
+    @context.compute(e.target || e, "[height]", undefined, false)
 
   onscroll: (e = '::window') ->
-    @context.compute(e.target || e, "[scroll-top]")
-    @context.compute(e.target || e, "[scroll-left]")
+    @context.compute(e.target || e, "[scroll-top]", undefined, false)
+    @context.compute(e.target || e, "[scroll-left]", undefined, false)
 
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @
@@ -69,5 +66,10 @@ class Engine.Document extends Engine
     # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'text/gss', '*']]
     # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'tree/gss', '*']]
     
+# Export all DOM helpers as functions 
+GSS.Document::Context::._export(GSS)
+GSS.Document::Context::._export(GSS::)
+GSS::engine = GSS
+GSS.engine = GSS
 
 module.exports = Engine.Document    

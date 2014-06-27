@@ -40,9 +40,9 @@ class Styles
         @set(path, undefined, value, positioning, true)
     
     # Step 6: Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
-    if @engine.context.computed
+    if @engine.computed
       suggests = []
-      for property, value of @engine.context.computed
+      for property, value of @engine.computed
         suggests.push ['suggest', property, value, 'required']
       @engine.pull suggests
     else
@@ -81,7 +81,7 @@ class Styles
       property = path.substring(last + 1, id.length - 1)
       id = id.substring(0, last)
 
-    return unless element = @engine[id]
+    return unless id.charAt(0) != ':' && element = @engine[id]
     positioner = this.positioners[property]
     if positioning && positioner
       (positioning[id] ||= {})[property] = value

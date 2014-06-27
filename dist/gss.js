@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-26) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-27) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20240,8 +20240,6 @@ Engine.Document = (function(_super) {
     }
     this.scope.addEventListener('scroll', this);
     window.addEventListener('resize', this);
-    this.onresize();
-    this.onscroll();
   }
 
   Document.prototype.run = function() {
@@ -20256,16 +20254,16 @@ Engine.Document = (function(_super) {
     if (e == null) {
       e = '::window';
     }
-    this.context.compute(e.target || e, "[width]");
-    return this.context.compute(e.target || e, "[height]");
+    this.context.compute(e.target || e, "[width]", void 0, false);
+    return this.context.compute(e.target || e, "[height]", void 0, false);
   };
 
   Document.prototype.onscroll = function(e) {
     if (e == null) {
       e = '::window';
     }
-    this.context.compute(e.target || e, "[scroll-top]");
-    return this.context.compute(e.target || e, "[scroll-left]");
+    this.context.compute(e.target || e, "[scroll-top]", void 0, false);
+    return this.context.compute(e.target || e, "[scroll-left]", void 0, false);
   };
 
   Document.prototype.destroy = function() {
@@ -20281,6 +20279,14 @@ Engine.Document = (function(_super) {
   return Document;
 
 })(Engine);
+
+GSS.Document.prototype.Context.prototype._export(GSS);
+
+GSS.Document.prototype.Context.prototype._export(GSS.prototype);
+
+GSS.prototype.engine = GSS;
+
+GSS.engine = GSS;
 
 module.exports = Engine.Document;
 
@@ -20615,6 +20621,9 @@ Selectors = (function() {
   };
 
   Selectors.prototype['getElementById'] = function(node, id) {
+    if (id == null) {
+      id = node;
+    }
     return this.engine.all[id || node];
   };
 
@@ -20850,7 +20859,9 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['::window'] = {};
+  Selectors.prototype['::window'] = function() {
+    return '::window';
+  };
 
   return Selectors;
 
@@ -21138,13 +21149,12 @@ Measurements = (function() {
   function Measurements() {}
 
   Measurements.prototype.onFlush = function(buffer) {
-    debugger;
     var commands, property, value, _ref;
-    if (!this.computed) {
+    if (!this.engine.computed) {
       return buffer;
     }
     commands = [];
-    _ref = this.computed;
+    _ref = this.engine.computed;
     for (property in _ref) {
       value = _ref[property];
       if (this.engine.values[property] === value) {
@@ -21152,7 +21162,6 @@ Measurements = (function() {
       }
       commands.push(['suggest', property, value, 'required']);
     }
-    this.computed = void 0;
     return commands.concat(buffer);
   };
 
@@ -21172,10 +21181,6 @@ Measurements = (function() {
     return a / b;
   };
 
-  Measurements.prototype['::window[x]'] = 0;
-
-  Measurements.prototype['::window[y]'] = 0;
-
   Measurements.prototype['::window[width]'] = function() {
     return window.innerWidth;
   };
@@ -21183,6 +21188,18 @@ Measurements = (function() {
   Measurements.prototype['::window[height]'] = function() {
     return window.innerHeight;
   };
+
+  Measurements.prototype['::window[scroll-left]'] = function() {
+    return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
+  };
+
+  Measurements.prototype['::window[scroll-top]'] = function() {
+    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+  };
+
+  Measurements.prototype['::window[x]'] = 0;
+
+  Measurements.prototype['::window[y]'] = 0;
 
   Measurements.prototype["[intrinsic-height]"] = function(scope) {
     return scope.offsetHeight;
@@ -21208,17 +21225,44 @@ Measurements = (function() {
     return scope.offsetTop;
   };
 
+  Measurements.prototype.unwrap = function(property) {
+    if (property.charAt(0) === '[') {
+      return property.substring(1, property.length - 1);
+    }
+    return property;
+  };
+
+  Measurements.prototype.getStyle = function(element, property) {};
+
+  Measurements.prototype.setStyle = function(element, property, value) {
+    return element.style[this.unwrap(property)] = value;
+  };
+
   Measurements.prototype.compute = function(id, property, continuation, old) {
-    var method, object, path, value;
+    var current, def, method, object, path, value, _base, _base1;
     if (id.nodeType) {
       object = id;
       id = this.engine.identify(object);
-    } else if (property) {
+    } else {
       object = this.engine[id];
     }
-    if (property.indexOf('intrinsic-') > -1) {
+    path = property.charAt(0) === '[' && id + property || property;
+    if ((def = this[path]) != null) {
+      current = this.engine.values[path];
+      if (current === void 0 || old === true) {
+        if (typeof def === 'function') {
+          value = this[path](object, continuation);
+        } else {
+          value = def;
+        }
+        if (value !== current) {
+          ((_base = this.engine).computed || (_base.computed = {}))[path] = value;
+        }
+      }
+      return value;
+    } else if (property.indexOf('intrinsic-') > -1) {
       path = id + property;
-      if (!this.computed || (this.computed[path] == null)) {
+      if (!this.engine.computed || (this.engine.computed[path] == null)) {
         if (value === void 0) {
           method = this[property] && property || 'getStyle';
           if (document.contains(object)) {
@@ -21228,7 +21272,7 @@ Measurements = (function() {
           }
         }
         if (value !== old) {
-          return (this.computed || (this.computed = {}))[path] = value;
+          return ((_base1 = this.engine).computed || (_base1.computed = {}))[path] = value;
         }
       }
     } else {
@@ -21238,9 +21282,12 @@ Measurements = (function() {
 
   Measurements.prototype.get = {
     command: function(continuation, object, property) {
+      debugger;
       var computed, id;
       if (property) {
-        if (object.absolute === 'window' || object === document) {
+        if (typeof object === 'string') {
+          id = object;
+        } else if (object.absolute === 'window' || object === document) {
           id = '::window';
         } else if (object.nodeType) {
           id = this.engine.identify(object);
@@ -21253,14 +21300,70 @@ Measurements = (function() {
       if (typeof continuation === 'object') {
         continuation = continuation.path;
       }
-      if (property.indexOf('intrinsic-') > -1 || this[property]) {
-        computed = this.compute(id, property, continuation);
+      if (property.indexOf('intrinsic-') > -1 || (this[property] != null) || (this[id + property] != null)) {
+        computed = this.compute(id, property, continuation, true);
         if (typeof computed === 'object') {
           return computed;
         }
       }
       return ['get', id, property, continuation || ''];
     }
+  };
+
+  Measurements.prototype._export = function(object) {
+    var def, property, _results;
+    _results = [];
+    for (property in this) {
+      def = this[property];
+      if (object[property] != null) {
+        continue;
+      }
+      if (property === 'unwrap') {
+        object[property] = def;
+        continue;
+      }
+      _results.push((function(def, property) {
+        var func, measurements;
+        if (typeof def === 'function') {
+          func = def;
+        }
+        measurements = Measurements.prototype;
+        return object[property] = function(scope) {
+          var args, context, fn, length, method;
+          args = Array.prototype.slice.call(arguments, 0);
+          length = arguments.length;
+          if (def.serialized || measurements[property]) {
+            if (!(scope && scope.nodeType)) {
+              scope = object.scope || document.body;
+              if (typeof def[args.length] === 'string') {
+                context = scope;
+              } else {
+                args.unshift(scope);
+              }
+            } else {
+              if (typeof def[args.length - 1] === 'string') {
+                context = scope = args.shift();
+              }
+            }
+          }
+          if (!(fn = func)) {
+            if (typeof (method = def[args.length]) === 'function') {
+              fn = method;
+            } else {
+              if (!(method && (fn = scope[method]))) {
+                if (fn = scope[def.method]) {
+                  context = scope;
+                } else {
+                  fn = def.command;
+                }
+              }
+            }
+          }
+          return fn.apply(context || object.context || this, args);
+        };
+      })(def, property));
+    }
+    return _results;
   };
 
   return Measurements;
@@ -21336,6 +21439,7 @@ Expressions = (function() {
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
     var args, breadcrumbs, overloading, result;
+    console.log(operation);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -21491,7 +21595,7 @@ Expressions = (function() {
           return parent.def.capture(this.engine, result, parent, continuation, scope);
         } else {
           if (operation.def.noop) {
-            if (result && (!parent || (parent.def.noop && parent.length === 1 || (ascender != null)))) {
+            if (result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length === 1) || (ascender != null)))) {
               if (result.length === 1) {
                 return this.push(result[0]);
               } else {
@@ -22357,9 +22461,9 @@ Styles = (function() {
         this.set(path, void 0, value, positioning, true);
       }
     }
-    if (this.engine.context.computed) {
+    if (this.engine.computed) {
       suggests = [];
-      _ref = this.engine.context.computed;
+      _ref = this.engine.computed;
       for (property in _ref) {
         value = _ref[property];
         suggests.push(['suggest', property, value, 'required']);
@@ -22412,7 +22516,7 @@ Styles = (function() {
       property = path.substring(last + 1, id.length - 1);
       id = id.substring(0, last);
     }
-    if (!(element = this.engine[id])) {
+    if (!(id.charAt(0) !== ':' && (element = this.engine[id]))) {
       return;
     }
     positioner = this.positioners[property];

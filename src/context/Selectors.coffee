@@ -98,7 +98,7 @@ class Selectors
     2: (node, value) ->
       return node if node.id == value
 
-  'getElementById': (node, id) ->
+  'getElementById': (node, id = node) ->
     return @engine.all[id || node]
 
   '$virtual':
@@ -292,7 +292,8 @@ class Selectors
     1: (node) ->
       return @engine.scope
 
-  '::window': {}
+  '::window': ->
+    return '::window' 
 
 # Set up custom trigger for all selector operations
 # to filter out old elements from collections

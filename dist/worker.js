@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-26) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-27) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -333,6 +333,7 @@ Expressions = (function() {
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
     var args, breadcrumbs, overloading, result;
+    console.log(operation);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -488,7 +489,7 @@ Expressions = (function() {
           return parent.def.capture(this.engine, result, parent, continuation, scope);
         } else {
           if (operation.def.noop) {
-            if (result && (!parent || (parent.def.noop && parent.length === 1 || (ascender != null)))) {
+            if (result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length === 1) || (ascender != null)))) {
               if (result.length === 1) {
                 return this.push(result[0]);
               } else {

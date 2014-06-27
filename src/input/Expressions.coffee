@@ -53,6 +53,7 @@ class Expressions
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
+    console.log(operation)
     # Analyze operation once
     unless operation.def
       @analyze(operation)
@@ -175,7 +176,7 @@ class Expressions
   ascend: (operation, continuation, result, scope, ascender) ->
     if result? 
       if (parent = operation.parent) || operation.def.noop
-        # For each node in collection, we ascend to a parent op with a distinct continuation key
+        # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection(result)
           console.group continuation
           for item in result
@@ -191,7 +192,7 @@ class Expressions
         # Topmost operations produce output
         else 
           if operation.def.noop
-            if result && (!parent || (parent.def.noop && parent.length == 1 || ascender?))
+            if result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length == 1) || ascender?))
               if result.length == 1
                 return @push result[0]
               else
