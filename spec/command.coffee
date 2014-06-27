@@ -71,9 +71,9 @@ describe 'GSS commands', ->
         ['eq', 100,['get','[grid-col]']]
       ], '%'
       chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['eq', ['get','$12322','[width]','%.box$12322'],['get', "::global", '[grid-col]',"%.box$12322–"]]
-        ['eq', ['get','$34222','[width]','%.box$34222'],['get', "::global", '[grid-col]',"%.box$34222–"]]
-        ['eq', 100, ['get', "::global", '[grid-col]',"%"]]
+        ['eq', ['get','$12322','[width]','%.box$12322'],['get', "", '[grid-col]',"%.box$12322–"]]
+        ['eq', ['get','$34222','[width]','%.box$34222'],['get', "", '[grid-col]',"%.box$34222–"]]
+        ['eq', 100, ['get', "", '[grid-col]',"%"]]
       ]
         
     
@@ -87,9 +87,9 @@ describe 'GSS commands', ->
         ['eq', 100, ['get','[grid-col]']]
       ]
       expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['eq', ['get','$12322','[width]','.box$12322'],['get', '::global', '[grid-col]',".box$12322–"]]
-        ['eq', ['get','$34222','[width]','.box$34222'],['get', '::global', '[grid-col]',".box$34222–"]]
-        ['eq', 100,['get', '::global', '[grid-col]', ""]]
+        ['eq', ['get','$12322','[width]','.box$12322'],['get', '', '[grid-col]',".box$12322–"]]
+        ['eq', ['get','$34222','[width]','.box$34222'],['get', '', '[grid-col]',".box$34222–"]]
+        ['eq', 100,['get', '', '[grid-col]', ""]]
       ]
 
     it 'lte for class & id selectos', ->
@@ -169,13 +169,13 @@ describe 'GSS commands', ->
         ['suggest', '::window[height]', window.innerHeight, 'required']
         ['suggest', '::window[width]',  window.innerWidth,  'required']
 
-        ['eq',  ['get','::global', '[xxx]', ''], ['get','::window', '[x]', '']]
-        ['lte', ['get','::global', '[yyy]', ''], ['get','::window', '[y]', '']]                
-        ['lte', ['get','::global', '[yay]', ''], ['get','::window', '[y]', '']]  
+        ['eq',  ['get','', '[xxx]', ''], ['get','::window', '[x]', '']]
+        ['lte', ['get','', '[yyy]', ''], ['get','::window', '[y]', '']]                
+        ['lte', ['get','', '[yay]', ''], ['get','::window', '[y]', '']]  
         
-        ['gte',     ['get','::global', '[hhh]', ''],    ['get','::window', '[height]', '']]
-        ['gte',     ['get','::global', '[hah]', ''],    ['get','::window', '[height]', '']]
-        ['lte',     ['get','::global', '[www]', ''],    ['get','::window', '[width]', '']]        
+        ['gte',     ['get','', '[hhh]', ''],    ['get','::window', '[height]', '']]
+        ['gte',     ['get','', '[hah]', ''],    ['get','::window', '[height]', '']]
+        ['lte',     ['get','', '[www]', ''],    ['get','::window', '[width]', '']]        
         
       ]
 
@@ -350,13 +350,13 @@ describe 'GSS commands', ->
           count++      
           if count is 1
             # don't set height b/c intrinsic-height was used
-            expect(engine.$id("p-text").style.height).to.eql ""            
+            expect(engine.$id("p-text").style.height).to.eql ""   
+            console.error('booya')         
             expect(engine.values["$p-text[width]"]).to.eql 100
             expect(engine.values["$p-text[intrinsic-height]"] > 400).to.eql true
             expect(engine.values["$p-text[intrinsic-height]"] % 16).to.eql 0
             expect(engine.values["$p-text[x-height]"] % 16).to.eql 0
             engine.$id("p-text").innerHTML = "Booyaka"
-            console.error('booya')
           else if count is 2
             expect(engine.values["$p-text[width]"]).to.eql 100
             expect(engine.values["$p-text[intrinsic-height]"]).to.eql(16)

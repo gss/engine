@@ -156,7 +156,7 @@ class Measurements
           id = @engine.identify(object)
       else
         # Get global variable
-        id = '::global'
+        id = ''
         property = object
         object = undefined
 

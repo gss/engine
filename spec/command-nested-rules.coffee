@@ -55,7 +55,7 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->        
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ["eq", ["get", "::global", "[target-size]", ""], 100]
+              ["eq", ["get", "", "[target-size]", ""], 100]
             ]
           done()
         

@@ -67,8 +67,8 @@ class Engine.Document extends Engine
     # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'tree/gss', '*']]
     
 # Export all DOM helpers as functions 
-GSS.Document::Context::._export(GSS)
-GSS.Document::Context::._export(GSS::)
+GSS.Document::Context::_export(GSS)
+GSS.Document::Context::_export(GSS::)
 GSS::engine = GSS
 GSS.engine = GSS
 

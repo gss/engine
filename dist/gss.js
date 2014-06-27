@@ -21384,7 +21384,7 @@ Measurements = (function() {
           id = this.engine.identify(object);
         }
       } else {
-        id = '::global';
+        id = '';
         property = object;
         object = void 0;
       }
@@ -22596,9 +22596,9 @@ Styles = (function() {
       }
       this.data = void 0;
     }
-    if (this.resuggest(data)) {
-      return this.data = data;
-    } else {
+    this.data = data;
+    if (!this.resuggest(data)) {
+      this.data = void 0;
       return this.push(data);
     }
   };
@@ -22664,8 +22664,13 @@ Styles = (function() {
       property = path.substring(last + 1, id.length - 1);
       id = id.substring(0, last);
     }
-    if (!(id.charAt(0) !== ':' && (element = this.engine[id]))) {
+    if (id.charAt(0) === ':') {
       return;
+    }
+    if (!(element = this.engine[id])) {
+      if (!(element = this.engine.context.getElementById(this.engine.scope, id.substring(1)))) {
+        return;
+      }
     }
     positioner = this.positioners[property];
     if (positioning && positioner) {

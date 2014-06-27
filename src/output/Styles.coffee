@@ -43,9 +43,9 @@ class Styles
       @data = undefined
 
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
-    if @resuggest(data)
-      @data = data
-    else
+    @data = data
+    unless @resuggest(data)
+      @data = undefined
       @push(data)
 
   resuggest: (data) ->
@@ -92,7 +92,9 @@ class Styles
       property = path.substring(last + 1, id.length - 1)
       id = id.substring(0, last)
 
-    return unless id.charAt(0) != ':' && element = @engine[id]
+    return unless id.charAt(0) != ':'
+    unless element = @engine[id]
+      return unless element = @engine.context.getElementById(@engine.scope, id.substring(1))
     positioner = this.positioners[property]
     if positioning && positioner
       (positioning[id] ||= {})[property] = value
