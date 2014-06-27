@@ -31,7 +31,11 @@ class Solutions
     return
 
   push: (results) ->
-    @output.pull(results) if @output
+    if @output
+      @output.pull(results)
+    else
+      @engine.merge(results)
+      @engine.push(results)
 
   remove: (constrain, path) ->
     if constrain instanceof c.Constraint

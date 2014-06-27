@@ -16,7 +16,6 @@ class Expressions
     if @buffer == undefined
       @buffer = null
       buffer = true
-    #console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'input:', JSON.parse JSON.stringify arguments[0])
     result = @evaluate.apply(@, arguments)
     if buffer
       @flush()
@@ -54,8 +53,6 @@ class Expressions
       @output.pull(buffer)
     else if @buffer == undefined
       @engine.onSolved()
-    else if @buffer == null
-      debugger
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->

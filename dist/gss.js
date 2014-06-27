@@ -20040,6 +20040,11 @@ Engine = (function() {
         }
       }
     }
+    if (!scope || typeof scope === 'string') {
+      if (Engine.Solver && !(this instanceof Engine.Solver)) {
+        return new Engine.Solver(void 0, void 0, scope);
+      }
+    }
     if (this.Expressions) {
       this.context = new this.Context(this);
       this.expressions = new this.Expressions(this);
@@ -20062,17 +20067,17 @@ Engine = (function() {
     var _base;
     if (this.deferred == null) {
       (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions)(0, this));
+      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions));
     }
-    return this.expressions.pull.apply(this.expressions, arguments);
+    return this.run.apply(this, arguments);
   };
 
-  Engine.prototype.onSolved = function(data) {
-    return this.triggerEvent('solved', data);
-  };
-
-  Engine.prototype.push = function() {
-    return this.output.pull.apply(this.output, arguments);
+  Engine.prototype.push = function(data) {
+    this.merge(data);
+    this.triggerEvent('solved', data);
+    if (this.output) {
+      return this.output.pull.apply(this.output, arguments);
+    }
   };
 
   Engine.prototype.isCollection = function(object) {
@@ -20107,23 +20112,9 @@ Engine = (function() {
   };
 
   Engine.prototype.destroy = function() {
-    return Engine[this.scope._gss_id] = void 0;
-  };
-
-  Engine.include = function() {
-    var Context, fn, mixin, name, _i, _len, _ref;
-    Context = function(engine) {
-      this.engine = engine;
-    };
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      mixin = arguments[_i];
-      _ref = mixin.prototype;
-      for (name in _ref) {
-        fn = _ref[name];
-        Context.prototype[name] = fn;
-      }
+    if (this.scope) {
+      return Engine[this.scope._gss_id] = void 0;
     }
-    return Context;
   };
 
   Engine.prototype.getPath = function(path, value) {
@@ -20209,6 +20200,22 @@ Engine = (function() {
       return object.map(this.clone, this);
     }
     return object;
+  };
+
+  Engine.include = function() {
+    var Context, fn, mixin, name, _i, _len, _ref;
+    Context = function(engine) {
+      this.engine = engine;
+    };
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      mixin = arguments[_i];
+      _ref = mixin.prototype;
+      for (name in _ref) {
+        fn = _ref[name];
+        Context.prototype[name] = fn;
+      }
+    }
+    return Context;
   };
 
   Engine.prototype.handleEvent = function(e) {
@@ -20339,6 +20346,7 @@ Engine.Solver = (function(_super) {
   };
 
   Solver.prototype.onmessage = function(e) {
+    debugger;
     return this.push(e.data);
   };
 
@@ -20354,7 +20362,7 @@ Engine.Solver = (function(_super) {
     this.worker = new this.getWorker(url);
     this.worker.addEventListener('message', this.onmessage.bind(this));
     this.worker.addEventListener('error', this.onerror.bind(this));
-    this.pull = function() {
+    this.pull = this.run = function() {
       return _this.worker.postMessage.apply(_this.worker, arguments);
     };
     return this.worker;
@@ -21518,8 +21526,6 @@ Expressions = (function() {
       return this.output.pull(buffer);
     } else if (this.buffer === void 0) {
       return this.engine.onSolved();
-    } else if (this.buffer === null) {
-      debugger;
     }
   };
 
@@ -22418,6 +22424,9 @@ Solutions = (function() {
   Solutions.prototype.push = function(results) {
     if (this.output) {
       return this.output.pull(results);
+    } else {
+      this.engine.merge(results);
+      return this.engine.push(results);
     }
   };
 
@@ -22535,7 +22544,7 @@ Styles = (function() {
   }
 
   Styles.prototype.pull = function(data) {
-    var id, intrinsic, path, positioning, prop, styles, value;
+    var id, intrinsic, path, positioning, prop, styles, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
     for (path in data) {
@@ -22561,12 +22570,23 @@ Styles = (function() {
     if (intrinsic) {
       for (path in intrinsic) {
         value = intrinsic[path];
-        this.set(path, void 0, value, positioning, true);
+        data[path] = this.set(path, void 0, value, positioning, true);
       }
     }
-    this.push(this.lastInput);
-    if (!this.resuggest(data)) {
-      return this.engine.onSolved(data);
+    if (this.data) {
+      _ref = this.data;
+      for (path in _ref) {
+        value = _ref[path];
+        if (data[path] === void 0 && value !== void 0) {
+          data[path] = value;
+        }
+      }
+      this.data = void 0;
+    }
+    if (this.resuggest(data)) {
+      return this.data = data;
+    } else {
+      return this.push(data);
     }
   };
 
@@ -22590,7 +22610,7 @@ Styles = (function() {
   };
 
   Styles.prototype.push = function(data) {
-    return this.engine.merge(data);
+    return this.engine.push(data);
   };
 
   Styles.prototype.remove = function(id) {
@@ -22624,7 +22644,7 @@ Styles = (function() {
   };
 
   Styles.prototype.set = function(id, property, value, positioning, intrinsic) {
-    var camel, element, last, measured, path, positioned, positioner, style;
+    var camel, element, last, measured, path, pixels, positioned, positioner, style;
     if (property === void 0) {
       path = id;
       last = id.lastIndexOf('[');
@@ -22643,7 +22663,7 @@ Styles = (function() {
         if (measured != null) {
           value = measured;
         }
-        return this;
+        return value;
       }
       if (positioner) {
         positioned = positioner(element);
@@ -22655,9 +22675,9 @@ Styles = (function() {
       style = element.style;
       if (style[camel] !== void 0) {
         if (typeof value === 'number' && property !== 'zIndex') {
-          value += 'px';
+          pixels = value + 'px';
         }
-        style[camel] = value;
+        style[camel] = pixels || value;
       }
     }
     return this;

@@ -5,12 +5,13 @@
 # Engine is the GSS global variable
 
 class Engine
+
   Expressions:
     require('./input/Expressions.js')
 
   constructor: (scope, url) ->
     if scope && scope.nodeType
-      # new GSS(node) assigns a new engine to node if it doesnt have one
+      # new GSS(node) assigns a new Engine.Document to node if it doesnt have one
       if @Expressions
         id = Engine.identify(scope)
         #if engine = Engine[id]
@@ -32,7 +33,10 @@ class Engine
           break unless scope.parentNode
           scope = scope.parentNode
 
-    # new GSS() creates a new engine
+    # new GSS() creates a new Engine.Solver
+    if !scope || typeof scope == 'string'
+      if Engine.Solver && !(this instanceof Engine.Solver)
+        return new Engine.Solver(undefined, undefined, scope)
     if @Expressions
       @context     = new @Context(@)
       @expressions = new @Expressions(@)
@@ -54,16 +58,15 @@ class Engine
   defer: ->
     unless @deferred?
       @expressions.buffer ||= null
-      @deferred = setImmediate @expressions.flush.bind(@expressions) 0, @
-    return @expressions.pull.apply(@expressions, arguments)
-
-  onSolved: (data) ->
-    @triggerEvent('solved', data)
-
+      @deferred = setImmediate @expressions.flush.bind(@expressions)
+    return @run.apply(@, arguments)
 
   # Hook: Pass output to a subscriber
-  push: ->
-    return @output.pull.apply(@output, arguments)
+  push: (data) ->
+    @merge data
+    @triggerEvent('solved', data)
+    if @output
+      return @output.pull.apply(@output, arguments)
 
   # Hook: Should interpreter iterate returned object?
   isCollection: (object) ->
@@ -90,15 +93,8 @@ class Engine
 
   # Destroy engine
   destroy: ->
-    Engine[@scope._gss_id] = undefined
-
-  # Combine mixins
-  @include = ->
-    Context = (@engine) ->
-    for mixin in arguments
-      for name, fn of mixin::
-        Context::[name] = fn
-    return Context
+    if @scope
+      Engine[@scope._gss_id] = undefined
 
   # Return concatenated path for a given object and prefix
   getPath: (path, value) ->
@@ -161,11 +157,19 @@ class Engine
       return object.map @clone, @
     return object
 
+  # Combine mixins
+  @include = ->
+    Context = (@engine) ->
+    for mixin in arguments
+      for name, fn of mixin::
+        Context::[name] = fn
+    return Context
 
   # Catch-all event listener 
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
 
+  
 this.GSS = Engine
 
 module.exports = Engine

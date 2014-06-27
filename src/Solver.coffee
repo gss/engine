@@ -6,6 +6,7 @@ Engine = require('./Engine.js')
 class Engine.Solver extends Engine
   Solutions: 
     require('./output/Solutions.js')
+
   Context: Engine.include(
     require('./context/Properties.js')
     require('./context/Constraints.js')
@@ -27,6 +28,7 @@ class Engine.Solver extends Engine
 
   # Receieve message from worker
   onmessage: (e) ->
+    debugger
     @push e.data
 
   # Handle error from worker
@@ -39,7 +41,7 @@ class Engine.Solver extends Engine
     @worker = new @getWorker(url)
     @worker.addEventListener 'message', @onmessage.bind(this)
     @worker.addEventListener 'error', @onerror.bind(this)
-    @pull   = =>
+    @pull = @run = =>
       return @worker.postMessage.apply(@worker, arguments)
     return @worker
 

@@ -27,64 +27,44 @@ describe 'GSS engine', ->
     before ->
       container = document.createElement 'div'
       $('#fixtures').appendChild container
-      engine = GSS(container)
+      engine = new GSS(container)
 
     after (done) ->
       remove(container)
       done()
     it 'should be bound to the DOM scope', ->
       expect(engine.scope).to.eql container
-    it 'should not hold a worker', ->
-      expect(engine.worker).to.be.a 'null'
-    it 'should pass the scope to its DOM getter', ->
-      expect(engine.getter).to.be.an 'object'
-      expect(engine.getter.scope).to.eql engine.scope
-      
-  describe 'scopeless', ->
+
+  describe 'new GSS(url) - scopeless with web worker', ->
     e = null
     it 'should initialize', ->
-      e = new GSS.Engine()
-    it 'engine hierarchy', ->
-      assert(e.parentEngine is GSS.engines.root)
-      expect(e.childEngines).to.be.eql([])
-      assert GSS.engines.root.childEngines.indexOf(e) > -1, "e is not child of root"
+      e = new GSS('../dist/worker.js')
     it 'should run commands', (done)->
       e.once 'solved', ->
-        val = e.vars['[x]']
+        val = e.values['[x]']
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
-      e.run commands: [
-          ['eq', ['get','[x]'], ['number',222]]
+      e.run [
+          ['eq', ['get','[x]'], 222]
         ]
     it 'should destroy', (done)->
       e.destroy()
-      assert !e.parentEngine, "parentEngine"
-      #assert expect(e.childEngines).to.be.eql([])
-      assert GSS.engines.root.childEngines.indexOf(e) is -1, "e is still child of root"
       done()
     
-  describe 'scopeless & no web workers', ->
+  describe 'GSS() - scopeless & no web workers', ->
     e = null
     it 'should initialize', ->
-      e = new GSS.Engine({useWorker:false})
-      assert e.useWorker? and !e.useWorker,"set useWorker"
-    it 'engine hierarchy', ->
-      assert(e.parentEngine is GSS.engines.root)
-      expect(e.childEngines).to.be.eql([])
-      assert GSS.engines.root.childEngines.indexOf(e) > -1, "e is not child of root"
+      e = new GSS()
     it 'should run commands', (done)->
       e.once 'solved', ->
-        val = e.vars['[x]']
+        val = e.values['[x]']
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
-      e.run commands: [
-          ['eq', ['get','[x]'], ['number',222]]
+      e.run [
+          ['eq', ['get','[x]'], 222]
         ]
     it 'should destroy', (done)->
       e.destroy()
-      assert !e.parentEngine, "parentEngine"
-      #assert expect(e.childEngines).to.be.eql([])
-      assert GSS.engines.root.childEngines.indexOf(e) is -1, "e is still child of root"
       done()
   
   describe 'scopeless & no web workers via GSS.config', ->

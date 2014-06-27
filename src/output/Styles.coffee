@@ -9,38 +9,44 @@ class Styles
 
     intrinsic = null
 
-    # Step 1: Filter out measurements 
+    # Filter out measurements 
     for path, value of data
       if @engine.context.getIntrinsicProperty(path)
         data[path] = undefined
         (intrinsic ||= {})[path] = value
 
-    # Step 2: Apply changed styles in batch, 
+    # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
     positioning = {}
     for path, value of data
       @set(path, undefined, value, positioning)
 
-    # Step 3: Adjust positioning styles to respect 
+    # Adjust positioning styles to respect 
     # element offsets 
     @render(positioning)
 
-    # Step 4: Set new positions in bulk (Restyle)
+    #  Set new positions in bulk (Restyle)
     for id, styles of positioning
       for prop, value of styles
         @set id, prop, value
 
-    # Step 5: Re-measure elements (Reflow)
+    # Re-measure elements (Reflow)
     if intrinsic
       for path, value of intrinsic
-        @set(path, undefined, value, positioning, true)
-    
+        data[path] = @set(path, undefined, value, positioning, true)
 
-    @push(@lastInput)
-    
-    # Step 6: Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
-    unless @resuggest(data)
-      @engine.onSolved(data)
+    # Merge data from previous pass
+    if @data
+      for path, value of @data
+        if data[path] == undefined && value != undefined
+          data[path] = value
+      @data = undefined
+
+    # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
+    if @resuggest(data)
+      @data = data
+    else
+      @push(data)
 
   resuggest: (data) ->
     if @engine.computed
@@ -54,7 +60,7 @@ class Styles
         return suggests
 
   push: (data) ->
-    @engine.merge(data)
+    @engine.push(data)
 
   remove: (id) ->
     delete @[id]
@@ -96,7 +102,7 @@ class Styles
         measured = @engine.context.compute(element,  '[' + property + ']', undefined, value)
         if measured?
           value = measured
-        return @
+        return value
         
       if positioner
         positioned = positioner(element)
@@ -106,8 +112,8 @@ class Styles
       style = element.style
       if style[camel] != undefined
         if typeof value == 'number' && property != 'zIndex'
-          value += 'px'
-        style[camel] = value
+          pixels = value + 'px'
+        style[camel] = pixels || value
     @
 
   # Position 

@@ -330,8 +330,6 @@ Expressions = (function() {
       return this.output.pull(buffer);
     } else if (this.buffer === void 0) {
       return this.engine.onSolved();
-    } else if (this.buffer === null) {
-      debugger;
     }
   };
 
@@ -703,6 +701,9 @@ Solutions = (function() {
   Solutions.prototype.push = function(results) {
     if (this.output) {
       return this.output.pull(results);
+    } else {
+      this.engine.merge(results);
+      return this.engine.push(results);
     }
   };
 
@@ -840,6 +841,11 @@ Engine = (function() {
         }
       }
     }
+    if (!scope || typeof scope === 'string') {
+      if (Engine.Solver && !(this instanceof Engine.Solver)) {
+        return new Engine.Solver(void 0, void 0, scope);
+      }
+    }
     if (this.Expressions) {
       this.context = new this.Context(this);
       this.expressions = new this.Expressions(this);
@@ -862,17 +868,17 @@ Engine = (function() {
     var _base;
     if (this.deferred == null) {
       (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions)(0, this));
+      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions));
     }
-    return this.expressions.pull.apply(this.expressions, arguments);
+    return this.run.apply(this, arguments);
   };
 
-  Engine.prototype.onSolved = function(data) {
-    return this.triggerEvent('solved', data);
-  };
-
-  Engine.prototype.push = function() {
-    return this.output.pull.apply(this.output, arguments);
+  Engine.prototype.push = function(data) {
+    this.merge(data);
+    this.triggerEvent('solved', data);
+    if (this.output) {
+      return this.output.pull.apply(this.output, arguments);
+    }
   };
 
   Engine.prototype.isCollection = function(object) {
@@ -907,23 +913,9 @@ Engine = (function() {
   };
 
   Engine.prototype.destroy = function() {
-    return Engine[this.scope._gss_id] = void 0;
-  };
-
-  Engine.include = function() {
-    var Context, fn, mixin, name, _i, _len, _ref;
-    Context = function(engine) {
-      this.engine = engine;
-    };
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      mixin = arguments[_i];
-      _ref = mixin.prototype;
-      for (name in _ref) {
-        fn = _ref[name];
-        Context.prototype[name] = fn;
-      }
+    if (this.scope) {
+      return Engine[this.scope._gss_id] = void 0;
     }
-    return Context;
   };
 
   Engine.prototype.getPath = function(path, value) {
@@ -1011,6 +1003,22 @@ Engine = (function() {
     return object;
   };
 
+  Engine.include = function() {
+    var Context, fn, mixin, name, _i, _len, _ref;
+    Context = function(engine) {
+      this.engine = engine;
+    };
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      mixin = arguments[_i];
+      _ref = mixin.prototype;
+      for (name in _ref) {
+        fn = _ref[name];
+        Context.prototype[name] = fn;
+      }
+    }
+    return Context;
+  };
+
   Engine.prototype.handleEvent = function(e) {
     return this.triggerEvent(e.type, e);
   };
@@ -1051,6 +1059,7 @@ Engine.Solver = (function(_super) {
   };
 
   Solver.prototype.onmessage = function(e) {
+    debugger;
     return this.push(e.data);
   };
 
@@ -1066,7 +1075,7 @@ Engine.Solver = (function(_super) {
     this.worker = new this.getWorker(url);
     this.worker.addEventListener('message', this.onmessage.bind(this));
     this.worker.addEventListener('error', this.onerror.bind(this));
-    this.pull = function() {
+    this.pull = this.run = function() {
       return _this.worker.postMessage.apply(_this.worker, arguments);
     };
     return this.worker;
