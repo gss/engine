@@ -326,14 +326,17 @@ Expressions = (function() {
     this.lastOutput = GSS.clone(buffer);
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
     if (buffer) {
-      this.output.pull(buffer);
+      this.buffer = void 0;
+      return this.output.pull(buffer);
+    } else if (this.buffer === void 0) {
+      return this.engine.onSolved();
+    } else if (this.buffer === null) {
+      debugger;
     }
-    return this.buffer = void 0;
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
     var args, breadcrumbs, overloading, result;
-    console.log(operation);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -547,6 +550,9 @@ Expressions = (function() {
         this.analyze(child, operation);
       }
     }
+    if (operation[0] === 'suggest') {
+      debugger;
+    }
     if (def === void 0) {
       operation.def = {
         noop: true
@@ -670,12 +676,18 @@ Solutions = (function() {
         this.add(command);
       }
     }
-    this.solver.solve();
+    if (this.constrained) {
+      this.constrained = void 0;
+      this.solver.solve();
+    } else {
+      this.solver.resolve();
+    }
     _ref = this.solver._changed;
     for (property in _ref) {
       value = _ref[property];
       response[property] = value;
     }
+    this.solver._changed = void 0;
     if (this.nullified) {
       _ref1 = this.nullified;
       for (property in _ref1) {
@@ -684,7 +696,6 @@ Solutions = (function() {
       }
       delete this.nullified;
     }
-    console.log("Solutions output", JSON.parse(JSON.stringify(this.response)));
     this.lastOutput = response;
     this.push(response);
   };
@@ -698,7 +709,6 @@ Solutions = (function() {
   Solutions.prototype.remove = function(constrain, path) {
     var cei, group, index, variable, _i, _len, _ref, _results;
     if (constrain instanceof c.Constraint) {
-      console.info('removed constraint', path, constrain);
       this.solver.removeConstraint(constrain);
       _ref = constrain.paths;
       _results = [];
@@ -740,6 +750,7 @@ Solutions = (function() {
   Solutions.prototype.add = function(command) {
     var path, _i, _len, _ref, _results;
     if (command instanceof c.Constraint) {
+      this.constrained = true;
       this.solver.addConstraint(command);
       if (command.paths) {
         _ref = command.paths;
@@ -776,7 +787,9 @@ Solutions = (function() {
         return;
       }
     }
-    this.edit(variable, strength, weight);
+    if (!variable.editing) {
+      this.edit(variable, strength, weight);
+    }
     this.solver.suggestValue(variable, value);
     return variable;
   };
@@ -845,6 +858,19 @@ Engine = (function() {
     return this.expressions.pull.apply(this.expressions, arguments);
   };
 
+  Engine.prototype.defer = function() {
+    var _base;
+    if (this.deferred == null) {
+      (_base = this.expressions).buffer || (_base.buffer = null);
+      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions)(0, this));
+    }
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.onSolved = function(data) {
+    return this.triggerEvent('solved', data);
+  };
+
   Engine.prototype.push = function() {
     return this.output.pull.apply(this.output, arguments);
   };
@@ -861,17 +887,23 @@ Engine = (function() {
   };
 
   Engine.prototype.merge = function(object) {
-    var prop, value, _results;
-    _results = [];
+    var old, prop, value;
     for (prop in object) {
       value = object[prop];
+      old = this.values[prop];
+      if (old === value) {
+        continue;
+      }
+      if (this.context.onChange) {
+        this.context.onChange(prop, value, old);
+      }
       if (value != null) {
-        _results.push(this.values[prop] = value);
+        this.values[prop] = value;
       } else {
-        _results.push(delete this.values[prop]);
+        delete this.values[prop];
       }
     }
-    return _results;
+    return this;
   };
 
   Engine.prototype.destroy = function() {

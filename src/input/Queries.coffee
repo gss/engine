@@ -41,7 +41,9 @@ class Queries
         when "attributes"
           @$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
         when "childList"
-          @$childList(mutation.target, mutation)
+          @$children(mutation.target, mutation)
+
+      @$intrinsics(mutation.target)
 
     if queries = @lastOutput = @buffer
       @buffer = undefined
@@ -54,10 +56,13 @@ class Queries
           @remove id
         @removed = undefined
 
-    if buffer = @output.buffer
-      @output.flush()
-    @updated = undefined
-    return
+
+    @buffer = @updated = undefined
+    unless buffer = @output.buffer
+      @output.buffer = undefined
+      return if @engine.styles.resuggest()
+
+    @output.flush()
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -89,7 +94,7 @@ class Queries
       update[type] = []
     update[type].push(value)
 
-  $childList: (target, mutation) ->
+  $children: (target, mutation) ->
     # Invalidate sibling observers
     added = []
     removed = []
@@ -168,8 +173,6 @@ class Queries
       @index update, ' $pseudo', 'last-child' unless next
       @index update, ' +', child.tagName
 
-    console.error('updates', update)
-
     parent = target
     while parent.nodeType == 1
       # Let parents know about inserted nodes
@@ -192,6 +195,10 @@ class Queries
       if id = @engine.recognize(removed)
         (@removed ||= []).push(id)
     @
+
+  $intrinsics: (node) ->
+    return unless document.body.contains(node)
+    @engine.context.onResize(node)
 
   # Manually add element to collection
   add: (node, continuation, scope) ->
@@ -216,7 +223,6 @@ class Queries
       node = id
       id = @engine.identify(id)
 
-    console.error('remove', id, '---', continuation)
     if continuation
       if collection = @[continuation]
         node ||= @engine.get(id)
@@ -247,7 +253,6 @@ class Queries
             watchers.splice(index, 3)
             path = (contd || '') + watcher.key
             @clean(path, path, watcher)
-            console.log('remove watcher', path)
           delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries[path])
@@ -270,7 +275,6 @@ class Queries
           contd = watchers[index + 1]
           path = (contd || '') + watcher.key
           @remove(path, contd, watcher, watchers[index + 2])
-          console.log('deleting', path)
           index += 3
         delete @_watchers[id] 
       delete @engine[id]
@@ -308,7 +312,7 @@ class Queries
 
       isCollection = result && result.length != undefined
       if old == result
-        return unless result && result.manual
+        noop = true unless result && result.manual
         old = undefined
       
       # Clean refs of nodes that dont match anymore
@@ -346,6 +350,8 @@ class Queries
         watchers = @_watchers[id] = []
       unless dupe
         watchers.push(operation, continuation, scope)
+    
+    return if noop
     
     if result
       @[path] = result

@@ -107,7 +107,7 @@ describe 'GSS commands', ->
         ['lte', ['get', '$35346', '[width]','.box$35346–#box1'],['get','$box1','[width]','.box$35346–#box1']]
       ]
 
-    it 'intrinsic-width with class', ->
+    it 'intrinsic-width with class', (done) ->
       scope.innerHTML = """
         <div style="width:111px;" class="box" id="12322">One</div>
         <div style="width:222px;" class="box" id="34222">One</div>
@@ -125,8 +125,9 @@ describe 'GSS commands', ->
         ]
         engine.once 'solved', ->
           chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-            [["remove",".box$12322"]]
+            ["remove",".box$12322"]
           ]
+          done()
         box0 = scope.getElementsByClassName('box')[0]
         box0.parentNode.removeChild(box0)
 
@@ -272,19 +273,18 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            el = document.querySelector('#box1')
+            el = engine.$id('box1')
             GSS.setStyle el, "width", "1110px"
-            done()
             
           else if count is 2     
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', ['get','$box1','[]','#box1'],1110, 'required']
+                ['suggest', '$box1[intrinsic-width]' ,1110, 'required']
               ]
-            chai.expect(engine.vars['$box1[intrinsic-width]']).to.equal 1110
-            chai.expect(engine.vars['$box2[height]']).to.equal 1110
-            scope.removeEventListener 'solved', listener
+            chai.expect(engine.values['$box1[intrinsic-width]']).to.equal 1110
+            chai.expect(engine.values['$box2[height]']).to.equal 1110
+            engine.removeEventListener 'solved', listener
             done()
-            
+
         engine.addEventListener 'solved', listener
         engine.run [
           ['eq', ['get',['$class','box'],'[height]'],['get',['$id','box1'],'[intrinsic-width]']]
@@ -295,95 +295,82 @@ describe 'GSS commands', ->
         """
       
       it 'element resized by inserting child', (done) ->
+        count = 0
+        listener = (e) ->
+          count++
+          if count is 1           
+            engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
+          else if count is 2
+            chai.expect(engine.expressions.lastOutput).to.eql [
+                ['suggest', '$box1[intrinsic-width]', 111, 'required']
+              ]
+            engine.removeEventListener 'solved', listener
+            done()
+        engine.addEventListener 'solved', listener
+        engine.run [
+          ['eq', ['get',['$class','box'],'[height]'],['get',['$id','box1'],'[intrinsic-width]']]
+        ]
         scope.innerHTML = """
           <div style="display:inline-block;" id="box1" class="box">One</div>
           <div style="width:222px;" id="box2" class="box">One</div>
         """
-        engine.run [
-          ['eq', ['get','height',['$class','box']],['get','intrinsic-width',['$id','box1']]]
-        ]
-        count = 0
-        listener = (e) ->
-          count++
-          if count is 1
-            el = scope.querySelector('#box1')            
-            el.innerHTML = "<div style=\"width:111px;\"></div>"
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # JSMutationObserver on Phantom doesn't trigger mutation
-            #engine._handleMutations()
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          else if count is 2
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', ['get','intrinsic-width','$box1','#box1'],111, 'required']
-              ]
-            scope.removeEventListener 'solved', listener
-            done()
-        scope.addEventListener 'solved', listener
       
       it 'element resized by changing text', (done) ->
-        scope.innerHTML = """
-          <div style="display:inline-block" id="box1" class="box" >One</div>
-          <div style="width:222px;" id="box2" class="box" >One</div>
-        """
-        engine.run [
-          ['eq', ['get','height',['$class','box']],['get','intrinsic-width',['$id','box1']]]
-        ]
         count = 0
         el = null
         listener = (e) ->
           count++          
           if count is 1
-            el = scope.querySelector('#box1')            
-            engine.expressions.lastOutput = [] # to ensure it's reset
+            el = engine.$id('box1')            
             el.innerHTML = "<div style=\"width:111px;\"></div>"
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # JSMutationObserver on Phantom doesn't trigger mutation
-            #engine._handleMutations()
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           else if count is 2            
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', ['get','intrinsic-width','$box1','#box1'],111, 'required']
+                ['suggest', '$box1[intrinsic-width]', 111, 'required']
               ]
-            engine.expressions.lastOutput = [] # to ensure it's reset
             el.innerHTML = ""            
           else if count is 3
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', ['get','intrinsic-width','$box1','#box1'],0, 'required']
+                ['suggest', '$box1[intrinsic-width]', 0, 'required']
               ]
-            scope.removeEventListener 'solved', listener
+            engine.removeEventListener 'solved', listener
             done()
-        scope.addEventListener 'solved', listener
-    
+        engine.addEventListener 'solved', listener
+        engine.run [
+          ['eq', ['get',['$class','box'],'[height]'],['get',['$id','box1'],'[intrinsic-width]']]
+        ]
+        scope.innerHTML = """
+          <div style="display:inline-block" id="box1" class="box" >One</div>
+          <div style="width:222px;" id="box2" class="box" >One</div>
+        """
     describe "text measuring", ->
       it 'text measuring', (done) ->
-        scope.innerHTML = """
-          <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
-        """
-        engine.run [
-          ['eq', ['get','width',['$id','p-text']],  100]
-          ['eq', ['get','height',['$id','p-text']], ['get','intrinsic-height',['$id','p-text']]]
-        ]
         count = 0
         el = null
         listener = (e) ->
           count++      
           if count is 1
             # don't set height b/c intrinsic-height was used
-            expect(document.getElementById("p-text").style.height).to.eql ""            
-            expect(engine.vars["$p-text[width]"]).to.eql 100
-            expect(engine.vars["$p-text[intrinsic-height]"] % 16).to.eql 0          
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # JSMutationObserver on Phantom doesn't trigger mutation
-            #engine._handleMutations()
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          else if count is 2            
-            expect(document.getElementById("p-text").style.height).to.eql ""
-            expect(engine.vars["$p-text[width]"]).to.eql 100
-            iHeight = engine.vars["$p-text[intrinsic-height]"] 
-            assert( (iHeight % 16 is 0) and (iHeight > 400), "text height is #{iHeight}" )#608
-            scope.removeEventListener 'solved', listener
+            expect(engine.$id("p-text").style.height).to.eql ""            
+            expect(engine.values["$p-text[width]"]).to.eql 100
+            expect(engine.values["$p-text[intrinsic-height]"] > 400).to.eql true
+            expect(engine.values["$p-text[intrinsic-height]"] % 16).to.eql 0
+            expect(engine.values["$p-text[x-height]"] % 16).to.eql 0
+            engine.$id("p-text").innerHTML = "Booyaka"
+            console.error('booya')
+          else if count is 2
+            expect(engine.values["$p-text[width]"]).to.eql 100
+            expect(engine.values["$p-text[intrinsic-height]"]).to.eql(16)
+            expect(engine.values["$p-text[x-height]"]).to.eql(16)
+            engine.removeEventListener 'solved', listener
             done()
-        scope.addEventListener 'solved', listener
+        engine.addEventListener 'solved', listener
+        engine.run [
+          ['eq', ['get',['$id','p-text'],'[width]'],  100]
+          ['eq', ['get',['$id','p-text'],'[x-height]'], ['get',['$id','p-text'],'[intrinsic-height]']]
+        ]
+        scope.innerHTML = """
+          <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
+        """
     
     
     describe "Chain", ->

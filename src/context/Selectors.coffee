@@ -2,7 +2,6 @@
 class Selectors
   # Set up DOM observer and filter out old elements 
   onDOMQuery: (node, args, result, operation, continuation, scope) ->
-    #console.log('query', node, args, operation, result)
     return result if operation.def.hidden
     return @engine.queries.update(node, args, result, operation, continuation, scope)
 
@@ -10,6 +9,10 @@ class Selectors
     @engine.queries.remove(id, continuation, operation)
     return
   # Selector commands
+
+  '$first': 
+    group: '$query'
+    1: "querySelector"
 
   '$query':
     group: '$query'
@@ -98,8 +101,15 @@ class Selectors
     2: (node, value) ->
       return node if node.id == value
 
+  # Live collections index their nodes by id in NodeList object
+  # We use a single document.all-like collection on sub-engines
+  # But numeric ids need workaround: Keys are set, but not values
+  # So we fall back to querySelect 
   'getElementById': (node, id = node) ->
-    return @engine.all[id || node]
+    unless found = @engine.all[id]
+      if @engine.all.hasOwnProperty(id)
+        return @['$first']('#' + id)
+    return found
 
   '$virtual':
     prefix: '"'

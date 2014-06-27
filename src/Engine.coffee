@@ -50,6 +50,17 @@ class Engine
   pull: ->
     return @expressions.pull.apply(@expressions, arguments)
 
+  # Schedule execution of expressions to the next tick, buffer input
+  defer: ->
+    unless @deferred?
+      @expressions.buffer ||= null
+      @deferred = setImmediate @expressions.flush.bind(@expressions) 0, @
+    return @expressions.pull.apply(@expressions, arguments)
+
+  onSolved: (data) ->
+    @triggerEvent('solved', data)
+
+
   # Hook: Pass output to a subscriber
   push: ->
     return @output.pull.apply(@output, arguments)
@@ -67,10 +78,15 @@ class Engine
   # Store solutions
   merge: (object) ->
     for prop, value of object
+      old = @values[prop]
+      continue if old == value
+      if @context.onChange
+        @context.onChange prop, value, old
       if value?
         @values[prop] = value
       else
         delete @values[prop]
+    @
 
   # Destroy engine
   destroy: ->

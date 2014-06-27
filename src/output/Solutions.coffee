@@ -13,14 +13,19 @@ class Solutions
         @add(subcommand) for subcommand in command
       else 
         @add(command)
-    @solver.solve()
+    if @constrained
+      @constrained = undefined
+      @solver.solve()
+    else
+      @solver.resolve()
+
     for property, value of @solver._changed
       response[property] = value
+    @solver._changed = undefined
     if @nullified
       for property, value of @nullified
         response[property] = null
       delete @nullified
-    console.log("Solutions output", JSON.parse(JSON.stringify(@response)))
     @lastOutput = response
     @push(response)
     return
@@ -30,7 +35,6 @@ class Solutions
 
   remove: (constrain, path) ->
     if constrain instanceof c.Constraint
-      console.info('removed constraint', path, constrain)
       @solver.removeConstraint(constrain)
       for path in constrain.paths
         if typeof path == 'string'
@@ -54,6 +58,7 @@ class Solutions
 
   add: (command) ->
     if command instanceof c.Constraint
+      @constrained = true
       @solver.addConstraint(command)
       if command.paths
         for path in command.paths
@@ -78,7 +83,7 @@ class Solutions
     #@solver.solve()
     if typeof variable == 'string'
       return unless variable = @[variable]
-    @edit(variable, strength, weight)
+    @edit(variable, strength, weight) unless variable.editing
     @solver.suggestValue(variable, value)
     #@solver.resolve()
     return variable

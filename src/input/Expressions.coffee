@@ -48,12 +48,17 @@ class Expressions
       buffer = @context.onFlush(buffer)
     @lastOutput = GSS.clone buffer
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
-    @output.pull(buffer) if buffer
-    @buffer = undefined
+
+    if buffer
+      @buffer = undefined
+      @output.pull(buffer)
+    else if @buffer == undefined
+      @engine.onSolved()
+    else if @buffer == null
+      debugger
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
-    console.log(operation)
     # Analyze operation once
     unless operation.def
       @analyze(operation)
@@ -72,7 +77,7 @@ class Expressions
       if (result = @reuse(operation.path, continuation)) != false
         return result
 
-    # Recursively evaluate arguments, stop on undefined
+    # Recursively evaluate arguments,stop on undefined
     args = @resolve(operation, continuation, scope, ascender, ascending)
     return if args == false
 
@@ -241,6 +246,8 @@ class Expressions
       if child instanceof Array
         @analyze(child, operation)
 
+    if (operation[0] == 'suggest')
+      debugger
     if def == undefined
       operation.def = {noop: true}
       return operation

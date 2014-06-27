@@ -11,13 +11,9 @@ class Styles
 
     # Step 1: Filter out measurements 
     for path, value of data
-      index = path.indexOf('[intrinsic-')
-      if index > -1
-        property = path.substring(index + 1, path.length - 1)
-        data[prop] = undefined
+      if @engine.context.getIntrinsicProperty(path)
+        data[path] = undefined
         (intrinsic ||= {})[path] = value
-
-    @push(@lastInput)
 
     # Step 2: Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
@@ -39,14 +35,23 @@ class Styles
       for path, value of intrinsic
         @set(path, undefined, value, positioning, true)
     
+
+    @push(@lastInput)
+    
     # Step 6: Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
+    unless @resuggest(data)
+      @engine.onSolved(data)
+
+  resuggest: (data) ->
     if @engine.computed
       suggests = []
       for property, value of @engine.computed
-        suggests.push ['suggest', property, value, 'required']
-      @engine.pull suggests
-    else
-      @engine.triggerEvent('solved', data, intrinsic)
+        if value != @engine.values[property]
+          suggests.push ['suggest', property, value, 'required']
+      @engine.computed = undefined
+      if suggests.length
+        @engine.pull suggests
+        return suggests
 
   push: (data) ->
     @engine.merge(data)
@@ -88,8 +93,10 @@ class Styles
     else
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        brackets = '[' + property + ']'
-        value = @engine.context.compute(element,  '[' + property + ']', undefined, value)
+        measured = @engine.context.compute(element,  '[' + property + ']', undefined, value)
+        if measured?
+          value = measured
+        return @
         
       if positioner
         positioned = positioner(element)
@@ -140,8 +147,6 @@ class Styles
                 offsets.top = value - (y || 0)
 
     return offsets
-
-  matrix: (positioning, element) ->
     
   positioners:
     x: -> 'left'

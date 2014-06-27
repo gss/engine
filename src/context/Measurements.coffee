@@ -10,9 +10,37 @@ class Measurements
     # Send all measured dimensions as suggestions to solver before other commands
     for property, value of @engine.computed
       continue if @engine.values[property] == value
+      debugger
       commands.push ['suggest', property, value, 'required']
+    
+    @engine.computed = undefined
 
     return commands.concat(buffer)
+
+
+  onResize: (node) ->
+    return unless intrinsic = @engine.intrinsic
+    while node 
+      if id = node._gss_id
+        if properties = intrinsic[id]
+          for prop in properties
+            switch prop
+              when "height", "width"         
+                @engine.context.compute id, '[intrinsic-' + prop + ']'  
+                
+      node = node.parent
+
+  # Register intrinsic values assigned to engine
+  onChange: (path, value, old) ->
+    unless old? == value? 
+      if prop = @getIntrinsicProperty(path)
+        id = path.substring(0, path.length - prop.length - 10 - 2)
+        if value?
+          ((@engine.intrinsic ||= {})[id] ||= []).push(prop)
+        else
+          group = @engine.intrinsic[id] 
+          group.splice group.indexOf(path), 1
+          delete @engine.intrinsic[id] unless group.length
 
   # Math ops compatible with constraints API
 
@@ -102,19 +130,19 @@ class Measurements
       if !@engine.computed || !@engine.computed[path]?
         if value == undefined
           method = @[property] && property || 'getStyle'
-          if document.contains(object)
+          if document.body.contains(object)
             value = @[method](object, property, continuation)
           else
             value = null
         if value != old
           (@engine.computed ||= {})[path] = value
+          return value
     else
       return @[property](object, continuation)
 
   # Generate command to create a variable
   get:
     command: (continuation, object, property) ->
-      debugger
       if property
         if typeof object == 'string'
           id = object
@@ -144,6 +172,7 @@ class Measurements
       # Return command for solver with path which will be used to clean it
       return ['get', id, property, continuation || '']
 
+  # Export commands as self-contained functions to be used as helpers 
   _export: (object) ->
     for property, def of @
       continue if object[property]?
@@ -160,7 +189,7 @@ class Measurements
           length = arguments.length
           if def.serialized || measurements[property]
             unless scope && scope.nodeType
-              scope = object.scope || document.body
+              scope = object.scope || document
               if typeof def[args.length] == 'string'
                 context = scope
               else
@@ -174,12 +203,19 @@ class Measurements
               fn = method
             else
               unless method && (fn = scope[method])
-                if fn = scope[def.method]
+                if fn = scope[method || def.method]
                   context = scope
                 else
                   fn = def.command
 
           return fn.apply(context || object.context || @, args)
+
+
+
+  getIntrinsicProperty: (path) ->
+    index = path.indexOf('[intrinsic-')
+    if index > -1
+      return property = path.substring(index + 11, path.length - 1)
 
 
 module.exports = Measurements
