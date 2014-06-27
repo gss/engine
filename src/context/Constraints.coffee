@@ -84,12 +84,8 @@ for property, method of Constraints::
           overloaded = left = Constraints::onConstraint(null, null, left)
         if right.push
           overloaded = right = Constraints::onConstraint(null, null, right)
-
-        if overloaded
-          debugger
         value = method.call(@, left, right, strength, weight)
         if overloaded
-          debugger
           return Constraints::onConstraint(null, [left, right], value)
         return value
   Constraints::[property].callback = 'onConstraint'

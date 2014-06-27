@@ -20075,6 +20075,7 @@ Engine = (function() {
   Engine.prototype.push = function(data) {
     this.merge(data);
     this.triggerEvent('solved', data);
+    this.dispatchEvent(this.scope, 'solved', data);
     if (this.output) {
       return this.output.pull.apply(this.output, arguments);
     }
@@ -20193,6 +20194,18 @@ Engine = (function() {
     if (this[method = 'on' + type]) {
       return this[method](a, b, c);
     }
+  };
+
+  Engine.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
+    if (!this.scope) {
+      return;
+    }
+    (detail || (detail = {})).engine = this;
+    return element.dispatchEvent(new CustomEvent(type, {
+      detail: detail,
+      bubbles: bubbles,
+      cancelable: cancelable
+    }));
   };
 
   Engine.clone = function(object) {
@@ -21162,12 +21175,8 @@ for (property in _ref) {
         if (right.push) {
           overloaded = right = Constraints.prototype.onConstraint(null, null, right);
         }
-        if (overloaded) {
-          debugger;
-        }
         value = method.call(this, left, right, strength, weight);
         if (overloaded) {
-          debugger;
           return Constraints.prototype.onConstraint(null, [left, right], value);
         }
         return value;
@@ -21382,7 +21391,7 @@ Measurements = (function() {
       if (typeof continuation === 'object') {
         continuation = continuation.path;
       }
-      if (property.indexOf('intrinsic-') > -1 || (this[property] != null) || (this[id + property] != null)) {
+      if (property.indexOf('intrinsic-') > -1 || (this[id + property] != null)) {
         computed = this.compute(id, property, continuation, true);
         if (typeof computed === 'object') {
           return computed;
@@ -21525,7 +21534,7 @@ Expressions = (function() {
       this.buffer = void 0;
       return this.output.pull(buffer);
     } else if (this.buffer === void 0) {
-      return this.engine.onSolved();
+      return this.engine.push();
     }
   };
 
@@ -21589,6 +21598,10 @@ Expressions = (function() {
       throw new Error("Couldn't find method: " + operation.method);
     }
     result = func.apply(context || this.context, args);
+    if (result !== result) {
+      args.unshift(operation.name);
+      return args;
+    }
     if (callback = operation.def.callback) {
       result = this.context[callback](context || node || scope, args, result, operation, continuation, scope);
     }

@@ -65,6 +65,7 @@ class Engine
   push: (data) ->
     @merge data
     @triggerEvent('solved', data)
+    @dispatchEvent(@scope, 'solved', data)
     if @output
       return @output.pull.apply(@output, arguments)
 
@@ -151,6 +152,11 @@ class Engine
         fn.call(@, a, b, c)
     if @[method = 'on' + type]
       return @[method](a, b, c)
+
+  dispatchEvent: (element, type, detail, bubbles, cancelable) ->
+    return unless @scope
+    (detail ||= {}).engine = @
+    element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
 
   @clone: (object) -> 
     if object && object.map

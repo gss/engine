@@ -164,7 +164,7 @@ class Measurements
         continuation = continuation.path
 
       # Compute custom property
-      if property.indexOf('intrinsic-') > -1 || @[property]? || @[id + property]?
+      if property.indexOf('intrinsic-') > -1 || @[id + property]? # || @[property]?
         computed = @compute(id, property, continuation, true)
         if typeof computed == 'object'
           return computed

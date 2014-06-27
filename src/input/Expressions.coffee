@@ -52,7 +52,7 @@ class Expressions
       @buffer = undefined
       @output.pull(buffer)
     else if @buffer == undefined
-      @engine.onSolved()
+      @engine.push()
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
@@ -116,10 +116,16 @@ class Expressions
 
     result = func.apply(context || @context, args)
 
+    # If it's NaN, then we've done some bad math, leave it to solver
+    unless result == result
+      args.unshift operation.name
+      return args
+
     # Let context transform or filter the result
     if callback = operation.def.callback
       result = @context[callback](context || node || scope, args, result, operation, continuation, scope)
 
+    
     return result
 
   # Try to read saved results within continuation
