@@ -1,8 +1,17 @@
 # Engine is a base class for scripting environments.
-# It includes interpreter and reference tracker. 
+# It includes interpreter that can be used with provided functions
 # Acts as a faux-pipe that evaluates Expressions
-# and outputs the results to submodules
+# routes it through submodules to solve equasions and set styles
 # Engine is the GSS global variable
+
+
+# Little shim for require.js so we dont have to carry it around
+this.require ||= (string) ->
+  bits = string.replace('.js', '').split('/')
+  if string == 'cassowary'
+    return c
+  return this[bits[bits.length - 1]]
+
 
 class Engine
 
@@ -37,14 +46,16 @@ class Engine
     if !scope || typeof scope == 'string'
       if Engine.Solver && !(this instanceof Engine.Solver)
         return new Engine.Solver(undefined, undefined, scope)
+
     if @Expressions
-      @context     = new @Context(@)
+      @properties  = new @Properties(@)  if @Properties
+      @commands    = new @Commands(@)    if @Commands
       @expressions = new @Expressions(@)
       @events      = {}
       @values      = {}
       return
 
-    # GSS.Document() and GSS() create new GSS.Document
+    # GSS.Document() and GSS() create new GSS.Document on root initially
     return new (Engine.Document || Engine)(scope, url)
 
   # Delegate: Pass input to interpreter
@@ -63,11 +74,18 @@ class Engine
 
   # Hook: Pass output to a subscriber
   push: (data) ->
+    # Unreference removed elements
+    if @removed
+      for id in @removed
+        delete @engine.elements[id]
+      @removed = undefined
+    # Store solutions
     @merge data
+    # Trigger events on engine and scope node
     @triggerEvent('solved', data)
-    @dispatchEvent(@scope, 'solved', data)
-    if @output
-      return @output.pull.apply(@output, arguments)
+    @dispatchEvent(@scope, 'solved', data) if @scope
+    # Proceed
+    return @output.pull.apply(@output, arguments) if @output
 
   # Hook: Should interpreter iterate returned object?
   isCollection: (object) ->
@@ -84,8 +102,8 @@ class Engine
     for prop, value of object
       old = @values[prop]
       continue if old == value
-      if @context.onChange
-        @context.onChange prop, value, old
+      if @_onChange
+        @_onChange prop, value, old
       if value?
         @values[prop] = value
       else
@@ -104,11 +122,11 @@ class Engine
 
   # Get object by id
   @get: (id) ->
-    return Engine::[id]
+    return Engine::elements[id]
 
   # Get object by id
   get: (id) ->
-    return @[id]
+    return @elements[id]
 
   # Get or generate uid for a given object.
   @identify: (object, generate) ->
@@ -117,7 +135,7 @@ class Engine
         object = window
       unless generate == false
         object._gss_id = id = "$" + (object.id || ++Engine.uid)
-      Engine::[id] = object
+      Engine::elements[id] = object
     return id
 
   # Get id if given object has one
@@ -131,6 +149,7 @@ class Engine
     return Engine.identify(object, false)
 
   @uid: 0
+  elements: {}
 
   # Simple EventTrigger that fires @on<event>
   once: (type, fn) ->
@@ -175,7 +194,57 @@ class Engine
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
 
-  
+  # Export all commands as underscored functions into engine
+  # This ensures commands are called in engine context
+  # Doing so on first run allows commands to be set after init
+  start: ->
+    unless @running
+      for property, command of @commands
+        command.reference = '_' + property
+        @[command.reference] = Engine.Command(command, command.reference)
+      @running = true
+
+  # Make non-function commands helpers with original command properties
+  @Command: (command, reference) ->
+    unless typeof command == 'function'
+      helper = Engine.Helper(command)
+      for property, value of command
+        helper[property] = value
+      command = helper
+    command.reference = reference
+    return command
+
+  # Export given commands as self-contained functions to be used as helpers 
+  @Helper: (command, scoped)  ->
+    if typeof command == 'function'
+      func = command
+    return (scope) ->
+      args = Array.prototype.slice.call(arguments, 0)
+      length = arguments.length
+      if scoped || command.serialized
+        unless scope && scope.nodeType
+          scope = @scope || document
+          if typeof command[args.length] == 'string'
+            context = scope
+          else
+            args.unshift(scope)
+        else
+          if typeof command[args.length - 1] == 'string'
+            context = scope = args.shift()
+
+      unless fn = func
+        if typeof (method = command[args.length]) == 'function'
+          fn = method
+        else
+          unless method && (fn = scope[method])
+            if fn = @commands[method]
+              context = @
+            else
+              fn = command.command
+
+      return fn.apply(context || @, args)
+
+
 this.GSS = Engine
 
 module.exports = Engine

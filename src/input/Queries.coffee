@@ -79,7 +79,7 @@ class Queries
     while parent
       $attribute = target == parent && '$attribute' || ' $attribute'
       @match(parent, $attribute, name, target)
-      if changed && changed.length
+      if changed?.length
         $class = target == parent && '$class' || ' $class'
         for kls in changed
           @match(parent, $class, kls, target)
@@ -198,7 +198,7 @@ class Queries
 
   $intrinsics: (node) ->
     return unless document.body.contains(node)
-    @engine.context.onResize(node)
+    @engine._onResize(node)
 
   # Manually add element to collection
   add: (node, continuation, scope) ->
@@ -234,13 +234,13 @@ class Queries
             return
 
         # Remove element from collection manually
-        if operation && collection && collection.length
+        if operation && collection?.length
           if (index = collection.indexOf(node)) > -1
             collection.splice(index, 1)
             cleaning = continuation unless collection.length
 
       # Detach observer and its subquery when cleaning by id
-      if @engine[id]
+      if @engine.elements[id]
         if watchers = @_watchers[id]
           ref = continuation + (collection && collection.length != undefined && id || '')
           refforked = ref + '–'
@@ -255,10 +255,9 @@ class Queries
             @clean(path, path, watcher)
           delete @_watchers[id] unless watchers.length
         path = continuation
-        if (result = @engine.queries[path])
-          if result.length?
-            path += id
-            @clean(path)
+        if (result = @engine.queries[path])?.length?
+          path += id
+          @clean(path)
 
       # Remove cached DOM query
       else 
@@ -267,7 +266,7 @@ class Queries
       delete @[continuation] if collection && !collection.length
 
 
-    else if node = @engine[id]
+    else if node = @engine.elements[id]
       # Detach queries attached to an element when removing element by id
       if watchers = @_watchers[id]
         index = 0
@@ -277,16 +276,15 @@ class Queries
           @remove(path, contd, watcher, watchers[index + 2])
           index += 3
         delete @_watchers[id] 
-      delete @engine[id]
+      (@engine.removing ||= []).push(id)
       delete node._gss_id
 
     @
 
   clean: (path, continuation, operation, scope) ->
     if result = @[path]
-      if parent = operation && operation.parent
-        if (pdef = parent.def) && pdef.release
-          pdef.release(@engine, result, parent, scope, operation)
+      if parent = operation?.parent
+        parent.def.release?.call(@engine, result, parent, scope, operation)
 
       if result.length != undefined
         copy = result.slice()
@@ -376,12 +374,16 @@ class Queries
       if groupped = operation[group]
         continuation = watchers[index + 1]
         scope = watchers[index + 2]
+        # Check qualifier value
         if qualifier
           @qualify(operation, continuation, scope, groupped, qualifier)
+        # Check combinator and tag name of a given element
         else if changed.nodeType
           @qualify(operation, continuation, scope, groupped, changed.tagName, '*')
+        # Check combinator and given tag name
         else if typeof changed == 'string'
           @qualify(operation, continuation, scope, groupped, changed, '*')
+        # Ditto in bulk: Qualify combinator with nodelist or array of tag names
         else for change in changed
           if typeof change == 'string'
             @qualify(operation, continuation, scope, groupped, change, '*')

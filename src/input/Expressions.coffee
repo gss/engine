@@ -8,11 +8,13 @@
 # * Output: Engine, outputs results, leaves out unrecognized commands as is
 
 class Expressions
-  constructor: (@engine, @context, @output) ->
-    @context ||= @engine && @engine.context || @
+  constructor: (@engine, @output) ->
+    @commands = @engine && @engine.commands || @
 
   # Hook: Evaluate input and pass produced output
   pull: ->
+    @engine.start()
+
     if @buffer == undefined
       @buffer = null
       buffer = true
@@ -25,17 +27,8 @@ class Expressions
   push: (args, batch) ->
     return unless args?
     if (buffer = @buffer) != undefined
-      if buffer
-        # Optionally, combine subsequent commands (e.g. remove)
-        if batch
-          if last = buffer[buffer.length - 1]
-            if last[0] == args[0]
-              if last.indexOf(args[1]) == -1
-                last.push.apply(last, args.slice(1))
-              return buffer
-      else 
-        @buffer = buffer = []
-      buffer.push(args)
+      unless @engine._onBuffer && @engine._onBuffer(buffer, args, batch) == false
+        (buffer || (@buffer = [])).push args
       return
     else
       return @output.pull.apply(@output, args)
@@ -43,8 +36,8 @@ class Expressions
   # Output buffered commands
   flush: ->
     buffer = @buffer
-    if @context.onFlush
-      buffer = @context.onFlush(buffer)
+    if @engine._onFlush
+      buffer = @engine._onFlush(buffer)
     @lastOutput = GSS.clone buffer
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
 
@@ -61,9 +54,9 @@ class Expressions
       @analyze(operation)
     
     # Use custom argument evaluator of parent operation if it has one
-    if !overloaded && operation.parent
-      overloading = @overload(operation, continuation, scope, ascender, ascending)
-      return overloading unless overloading == @
+    if !overloaded && (evaluate = operation.parent?.def.evaluate)
+      evaluated = evaluate.call(@engine, operation, continuation, scope, ascender, ascending)
+      return evaluated unless evaluated == @engine
 
     # Use a shortcut operation when possible (e.g. native dom query)
     if operation.tail
@@ -78,17 +71,15 @@ class Expressions
     args = @resolve(operation, continuation, scope, ascender, ascending)
     return if args == false
 
-    # Execute function
+    # Execute function and log it in continuation path
     if operation.def.noop
       result = args
     else
       result = @execute(operation, continuation, scope, args)
-
-    # Log operation in a continuation path
-    breadcrumbs = @log(operation, continuation)
+      continuation = @log(operation, continuation)
 
     # Ascend the execution (fork for each item in collection)
-    return @ascend(operation, breadcrumbs, result, scope, ascender)
+    return @ascend(operation, continuation, result, scope, ascender)
 
   # Get result of executing operation with resolved arguments
   execute: (operation, continuation, scope, args) ->
@@ -107,14 +98,14 @@ class Expressions
         unless func
           if !context && (func = scope[method])
             context = scope
-          else
-            func = @[method] || @context[method]
+          else if command = @commands[method]
+            func = @engine[command.reference]
 
     # Execute the function
     unless func
       throw new Error("Couldn't find method: #{operation.method}")
 
-    result = func.apply(context || @context, args)
+    result = func.apply(context || @engine, args)
 
     # If it's NaN, then we've done some bad math, leave it to solver
     unless result == result
@@ -123,7 +114,7 @@ class Expressions
 
     # Let context transform or filter the result
     if callback = operation.def.callback
-      result = @context[callback](context || node || scope, args, result, operation, continuation, scope)
+      result = @engine[callback](context || node || scope, args, result, operation, continuation, scope)
 
     
     return result
@@ -143,7 +134,7 @@ class Expressions
           if continuation.charAt(separator) == '$'
             id = continuation.substring(separator, index)
         if id
-          return @engine[id]
+          return @engine.elements[id]
         else
           return @engine.queries[continuation.substring(0, separator)]
       break if breaking
@@ -193,18 +184,15 @@ class Expressions
           console.groupEnd continuation
           return
         
-        # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-        else if parent && parent.def.capture
-          return parent.def.capture @engine, result, parent, continuation, scope
+        # Some operations may capturre its arguments (e.g. comma captures nodes by subselectors)
+        else if parent?.def.capture
+          return parent.def.capture.call(@engine, result, parent, continuation, scope)
         
         # Topmost operations produce output
         else 
           if operation.def.noop
             if result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length == 1) || ascender?))
-              if result.length == 1
-                return @push result[0]
-              else
-                return @push result
+              return @push(if result.length == 1 then result[0] else result)
           else if parent && (ascender? || result.nodeType)
             @evaluate parent, continuation, scope, operation.index, result
             return 
@@ -217,14 +205,15 @@ class Expressions
   # Advance to a groupped shortcut operation
   skip: (operation, ascender) ->
     if (operation.tail.path == operation.tail.key || ascender?)
-      return operation.tail.shortcut ||= @context[operation.def.group].perform(@, operation)
+      return operation.tail.shortcut ||= 
+        @engine.commands[operation.def.group].perform.call(@engine, operation)
     else
       return operation.tail[1]
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
     operation.name = operation[0]
-    def = @engine.context[operation.name]
+    def = @commands[operation.name]
 
     if parent
       operation.parent = parent
@@ -243,14 +232,12 @@ class Expressions
       if typeof def.lookup == 'function'
         def = def.lookup.call(@, operation)
       else
-        def = @context[operation.name]
+        def = @commands[operation.name]
     
     for child, index in operation
       if child instanceof Array
         @analyze(child, operation)
 
-    if (operation[0] == 'suggest')
-      debugger
     if def == undefined
       operation.def = {noop: true}
       return operation
@@ -265,7 +252,7 @@ class Expressions
       if def.group
         # String representation of operation with arguments filtered by type
         operation.groupped = @serialize(operation, otherdef, def.group)
-        if groupper = @context[def.group]
+        if groupper = @commands[def.group]
           groupper.analyze(operation)
 
     # Try predefined command if can't dispatch by number of arguments
@@ -277,6 +264,8 @@ class Expressions
     else
       func = def.command
 
+    if typeof func != 'function' && typeof func != 'string'
+      debugger
     # Command may resolve to method, which will be called on the first argument
     if typeof func == 'string'
       operation.method = func
@@ -298,7 +287,7 @@ class Expressions
         if typeof op != 'object'
           after += op
         else if op.key && group != false
-          if (group && (groupper = @context[group]))
+          if (group && (groupper = @commands[group]))
             if (op.def.group == group)
               if tail = op.tail ||= (groupper.condition(op) && op)
                 operation.groupped = groupper.promise(op, operation)
@@ -324,12 +313,6 @@ class Expressions
     else
       return operation.path
 
-  overload: (operation, continuation, scope, ascender, ascending) ->
-    parent = operation.parent
-    if (pdef = parent.def) && pdef.evaluate
-      evaluated = pdef.evaluate.call(@, operation, continuation, scope, ascender, ascending)
-      return evaluated
-    return @
 
-
+@module ||= {}
 module.exports = Expressions

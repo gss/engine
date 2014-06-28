@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-27) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-28) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -20,262 +20,18 @@ var l=this.rows.get(this._objective);a.trace&&console.log(l);var m=b.strength.sy
       (module.compiled = true && module) : this
 );
 
-var Properties;
-
-if (!this.require) {
-  this.module || (this.module = {});
-  this.require = function(string) {
-    var bits;
-    bits = string.replace('.js', '').split('/');
-    if (string === 'cassowary') {
-      return c;
-    }
-    return this[bits[bits.length - 1]];
-  };
-}
-
-Properties = (function() {
-  function Properties() {}
-
-  Properties.prototype["[right]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[x]", path), this.get(scope, "[width]", path));
-  };
-
-  Properties.prototype["[bottom]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[y]", path), this.get(scope, "[height]", path));
-  };
-
-  Properties.prototype["[center-x]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[x]", path), this.divide(this.get(scope, "[width]", path), 2));
-  };
-
-  Properties.prototype["[center-y]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[y]", path), this.divide(this.get(scope, "[height]", path), 2));
-  };
-
-  return Properties;
-
-})();
-
-module.exports = Properties;
-
-var Constraints, method, property, _ref;
-
-Constraints = (function() {
-  function Constraints() {}
-
-  Constraints.prototype.onConstraint = function(node, args, result, operation, continuation, scope) {
-    var arg, _i, _len;
-    if (result instanceof c.Constraint || result instanceof c.Expression) {
-      result = [result];
-      for (_i = 0, _len = args.length; _i < _len; _i++) {
-        arg = args[_i];
-        if (arg instanceof c.Variable) {
-          result.push(arg);
-        }
-        if (arg.paths) {
-          result.push.apply(result, arg.paths);
-          arg.paths = void 0;
-        }
-      }
-    }
-    if (result.length > 0) {
-      if (result.length > 1) {
-        result[0].paths = result.splice(1);
-      }
-      return result[0];
-    }
-    return result;
-  };
-
-  Constraints.prototype.get = function(scope, property, path) {
-    var variable;
-    if (typeof this[property] === 'function') {
-      return this[property](scope, path);
-    } else {
-      variable = this["var"]((scope || '') + (property || ''));
-    }
-    return [variable, path || (property && scope) || ''];
-  };
-
-  Constraints.prototype.remove = function() {
-    var constrain, constraints, path, solutions, _i, _j, _len;
-    solutions = this.engine.solutions;
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      path = arguments[_i];
-      if (constraints = solutions[path]) {
-        for (_j = constraints.length - 1; _j >= 0; _j += -1) {
-          constrain = constraints[_j];
-          solutions.remove(constrain, path);
-        }
-      }
-    }
-    return this;
-  };
-
-  Constraints.prototype["var"] = function(name) {
-    var _base;
-    return (_base = this.engine.solutions)[name] || (_base[name] = new c.Variable({
-      name: name
-    }));
-  };
-
-  Constraints.prototype.strength = function(strength) {
-    return c.Strength[strength];
-  };
-
-  Constraints.prototype.weight = function(weight) {
-    return weight;
-  };
-
-  Constraints.prototype.varexp = function(name) {
-    return new c.Expression({
-      name: name
-    });
-  };
-
-  Constraints.prototype.eq = function(left, right, strength, weight) {
-    return new c.Equation(left, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype.lte = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype.gte = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype.lt = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype.gt = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype.plus = function(left, right, strength, weight) {
-    return c.plus(left, right);
-  };
-
-  Constraints.prototype.minus = function(left, right, strength, weight) {
-    return c.minus(left, right);
-  };
-
-  Constraints.prototype.multiply = function(left, right, strength, weight) {
-    return c.times(left, right);
-  };
-
-  Constraints.prototype.divide = function(left, right, strength, weight) {
-    return c.divide(left, right);
-  };
-
-  return Constraints;
-
-})();
-
-_ref = Constraints.prototype;
-for (property in _ref) {
-  method = _ref[property];
-  if (method.length > 3 && property !== 'onConstraint') {
-    (function(property, method) {
-      return Constraints.prototype[property] = function(left, right, strength, weight) {
-        var overloaded, value;
-        if (left.push) {
-          overloaded = left = Constraints.prototype.onConstraint(null, null, left);
-        }
-        if (right.push) {
-          overloaded = right = Constraints.prototype.onConstraint(null, null, right);
-        }
-        value = method.call(this, left, right, strength, weight);
-        if (overloaded) {
-          return Constraints.prototype.onConstraint(null, [left, right], value);
-        }
-        return value;
-      };
-    })(property, method);
-  }
-  Constraints.prototype[property].callback = 'onConstraint';
-}
-
-module.exports = Constraints;
-
-var Rules;
-
-Rules = (function() {
-  function Rules() {}
-
-  Rules.prototype[';'] = {
-    prefix: '',
-    noop: true,
-    evaluate: function(arg, evaluated) {
-      var value;
-      if (arg.index === 0) {
-        return arg;
-      }
-      if (arg.index === 1 || (evaluated[1] && arg.index === 2)) {
-        value = this.evaluate(arg);
-        if (value === void 0) {
-          value = null;
-        }
-        return value;
-      }
-    }
-  };
-
-  Rules.prototype["$rule"] = {
-    evaluate: function(operation, continuation, scope, ascender, ascending) {
-      if (operation.index === 2 && !ascender) {
-        this.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
-      } else {
-        return this;
-      }
-    },
-    capture: function(engine, result, parent, continuation, scope) {
-      return engine.expressions.push(result);
-    },
-    command: function(path, condition, positive, negative) {
-      if (condition) {
-        return positive;
-      } else {
-        return negative;
-      }
-    }
-  };
-
-  Rules.prototype["$if"] = {
-    prefix: "@if",
-    evaluate: function(arg, i, evaluated) {
-      var _ref;
-      if (i === 0) {
-        return arg;
-      }
-      if (i === 1 || ((_ref = evaluated[1]) != null ? _ref : i === {
-        2: i === 3
-      })) {
-        return this.evaluate(arg);
-      }
-    }
-  };
-
-  return Rules;
-
-})();
-
-module.exports = Rules;
-
 var Expressions;
 
 Expressions = (function() {
-  function Expressions(engine, context, output) {
+  function Expressions(engine, output) {
     this.engine = engine;
-    this.context = context;
     this.output = output;
-    this.context || (this.context = this.engine && this.engine.context || this);
+    this.commands = this.engine && this.engine.commands || this;
   }
 
   Expressions.prototype.pull = function() {
     var buffer, result;
+    this.engine.start();
     if (this.buffer === void 0) {
       this.buffer = null;
       buffer = true;
@@ -288,26 +44,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.push = function(args, batch) {
-    var buffer, last;
+    var buffer;
     if (args == null) {
       return;
     }
     if ((buffer = this.buffer) !== void 0) {
-      if (buffer) {
-        if (batch) {
-          if (last = buffer[buffer.length - 1]) {
-            if (last[0] === args[0]) {
-              if (last.indexOf(args[1]) === -1) {
-                last.push.apply(last, args.slice(1));
-              }
-              return buffer;
-            }
-          }
-        }
-      } else {
-        this.buffer = buffer = [];
+      if (!(this.engine._onBuffer && this.engine._onBuffer(buffer, args, batch) === false)) {
+        (buffer || (this.buffer = [])).push(args);
       }
-      buffer.push(args);
     } else {
       return this.output.pull.apply(this.output, args);
     }
@@ -316,8 +60,8 @@ Expressions = (function() {
   Expressions.prototype.flush = function() {
     var buffer;
     buffer = this.buffer;
-    if (this.context.onFlush) {
-      buffer = this.context.onFlush(buffer);
+    if (this.engine._onFlush) {
+      buffer = this.engine._onFlush(buffer);
     }
     this.lastOutput = GSS.clone(buffer);
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
@@ -330,14 +74,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, breadcrumbs, overloading, result;
+    var args, evaluate, evaluated, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (!overloaded && operation.parent) {
-      overloading = this.overload(operation, continuation, scope, ascender, ascending);
-      if (overloading !== this) {
-        return overloading;
+    if (!overloaded && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
+      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+      if (evaluated !== this.engine) {
+        return evaluated;
       }
     }
     if (operation.tail) {
@@ -356,13 +100,13 @@ Expressions = (function() {
       result = args;
     } else {
       result = this.execute(operation, continuation, scope, args);
+      continuation = this.log(operation, continuation);
     }
-    breadcrumbs = this.log(operation, continuation);
-    return this.ascend(operation, breadcrumbs, result, scope, ascender);
+    return this.ascend(operation, continuation, result, scope, ascender);
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
-    var callback, context, func, method, node, result;
+    var callback, command, context, func, method, node, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
       (args || (args = [])).unshift(scope);
@@ -379,8 +123,8 @@ Expressions = (function() {
         if (!func) {
           if (!context && (func = scope[method])) {
             context = scope;
-          } else {
-            func = this[method] || this.context[method];
+          } else if (command = this.commands[method]) {
+            func = this.engine[command.reference];
           }
         }
       }
@@ -388,13 +132,13 @@ Expressions = (function() {
     if (!func) {
       throw new Error("Couldn't find method: " + operation.method);
     }
-    result = func.apply(context || this.context, args);
+    result = func.apply(context || this.engine, args);
     if (result !== result) {
       args.unshift(operation.name);
       return args;
     }
     if (callback = operation.def.callback) {
-      result = this.context[callback](context || node || scope, args, result, operation, continuation, scope);
+      result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
   };
@@ -419,7 +163,7 @@ Expressions = (function() {
           }
         }
         if (id) {
-          return this.engine[id];
+          return this.engine.elements[id];
         } else {
           return this.engine.queries[continuation.substring(0, separator)];
         }
@@ -486,16 +230,12 @@ Expressions = (function() {
           }
           console.groupEnd(continuation);
           return;
-        } else if (parent && parent.def.capture) {
-          return parent.def.capture(this.engine, result, parent, continuation, scope);
+        } else if (parent != null ? parent.def.capture : void 0) {
+          return parent.def.capture.call(this.engine, result, parent, continuation, scope);
         } else {
           if (operation.def.noop) {
             if (result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length === 1) || (ascender != null)))) {
-              if (result.length === 1) {
-                return this.push(result[0]);
-              } else {
-                return this.push(result);
-              }
+              return this.push(result.length === 1 ? result[0] : result);
             }
           } else if (parent && ((ascender != null) || result.nodeType)) {
             this.evaluate(parent, continuation, scope, operation.index, result);
@@ -512,7 +252,7 @@ Expressions = (function() {
   Expressions.prototype.skip = function(operation, ascender) {
     var _base;
     if (operation.tail.path === operation.tail.key || (ascender != null)) {
-      return (_base = operation.tail).shortcut || (_base.shortcut = this.context[operation.def.group].perform(this, operation));
+      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.commands[operation.def.group].perform.call(this.engine, operation));
     } else {
       return operation.tail[1];
     }
@@ -521,7 +261,7 @@ Expressions = (function() {
   Expressions.prototype.analyze = function(operation, parent) {
     var child, def, func, groupper, index, otherdef, _i, _len;
     operation.name = operation[0];
-    def = this.engine.context[operation.name];
+    def = this.commands[operation.name];
     if (parent) {
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
@@ -539,7 +279,7 @@ Expressions = (function() {
       if (typeof def.lookup === 'function') {
         def = def.lookup.call(this, operation);
       } else {
-        def = this.context[operation.name];
+        def = this.commands[operation.name];
       }
     }
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
@@ -547,9 +287,6 @@ Expressions = (function() {
       if (child instanceof Array) {
         this.analyze(child, operation);
       }
-    }
-    if (operation[0] === 'suggest') {
-      debugger;
     }
     if (def === void 0) {
       operation.def = {
@@ -563,7 +300,7 @@ Expressions = (function() {
       operation.path = this.serialize(operation, otherdef);
       if (def.group) {
         operation.groupped = this.serialize(operation, otherdef, def.group);
-        if (groupper = this.context[def.group]) {
+        if (groupper = this.commands[def.group]) {
           groupper.analyze(operation);
         }
       }
@@ -575,6 +312,9 @@ Expressions = (function() {
       operation.offset = 1;
     } else {
       func = def.command;
+    }
+    if (typeof func !== 'function' && typeof func !== 'string') {
+      debugger;
     }
     if (typeof func === 'string') {
       operation.method = func;
@@ -596,7 +336,7 @@ Expressions = (function() {
         if (typeof op !== 'object') {
           after += op;
         } else if (op.key && group !== false) {
-          if (group && (groupper = this.context[group])) {
+          if (group && (groupper = this.commands[group])) {
             if (op.def.group === group) {
               if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
                 operation.groupped = groupper.promise(op, operation);
@@ -632,21 +372,509 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.overload = function(operation, continuation, scope, ascender, ascending) {
-    var evaluated, parent, pdef;
-    parent = operation.parent;
-    if ((pdef = parent.def) && pdef.evaluate) {
-      evaluated = pdef.evaluate.call(this, operation, continuation, scope, ascender, ascending);
-      return evaluated;
-    }
-    return this;
-  };
-
   return Expressions;
 
 })();
 
+this.module || (this.module = {});
+
 module.exports = Expressions;
+
+var Engine;
+
+this.require || (this.require = function(string) {
+  var bits;
+  bits = string.replace('.js', '').split('/');
+  if (string === 'cassowary') {
+    return c;
+  }
+  return this[bits[bits.length - 1]];
+});
+
+Engine = (function() {
+  Engine.prototype.Expressions = require('./input/Expressions.js');
+
+  function Engine(scope, url) {
+    var Document, engine, id;
+    if (scope && scope.nodeType) {
+      if (this.Expressions) {
+        id = Engine.identify(scope);
+        if (Document = Engine.Document) {
+          if (!(this instanceof Document)) {
+            return new Document(scope, url);
+          }
+        }
+        Engine[id] = this;
+        this.scope = scope;
+        this.all = scope.getElementsByTagName('*');
+      } else {
+        while (scope) {
+          if (id = Engine.recognize(scope)) {
+            if (engine = Engine[id]) {
+              return engine;
+            }
+          }
+          if (!scope.parentNode) {
+            break;
+          }
+          scope = scope.parentNode;
+        }
+      }
+    }
+    if (!scope || typeof scope === 'string') {
+      if (Engine.Solver && !(this instanceof Engine.Solver)) {
+        return new Engine.Solver(void 0, void 0, scope);
+      }
+    }
+    if (this.Expressions) {
+      if (this.Properties) {
+        this.properties = new this.Properties(this);
+      }
+      if (this.Commands) {
+        this.commands = new this.Commands(this);
+      }
+      this.expressions = new this.Expressions(this);
+      this.events = {};
+      this.values = {};
+      return;
+    }
+    return new (Engine.Document || Engine)(scope, url);
+  }
+
+  Engine.prototype.run = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.pull = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.defer = function() {
+    var _base;
+    if (this.deferred == null) {
+      (_base = this.expressions).buffer || (_base.buffer = null);
+      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions));
+    }
+    return this.run.apply(this, arguments);
+  };
+
+  Engine.prototype.push = function(data) {
+    var id, _i, _len, _ref;
+    if (this.removed) {
+      _ref = this.removed;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        id = _ref[_i];
+        delete this.engine.elements[id];
+      }
+      this.removed = void 0;
+    }
+    this.merge(data);
+    this.triggerEvent('solved', data);
+    if (this.scope) {
+      this.dispatchEvent(this.scope, 'solved', data);
+    }
+    if (this.output) {
+      return this.output.pull.apply(this.output, arguments);
+    }
+  };
+
+  Engine.prototype.isCollection = function(object) {
+    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      switch (typeof object[0]) {
+        case "object":
+          return !object[0].push;
+        case "undefined":
+          return object.length === 0;
+      }
+    }
+  };
+
+  Engine.prototype.merge = function(object) {
+    var old, prop, value;
+    for (prop in object) {
+      value = object[prop];
+      old = this.values[prop];
+      if (old === value) {
+        continue;
+      }
+      if (this._onChange) {
+        this._onChange(prop, value, old);
+      }
+      if (value != null) {
+        this.values[prop] = value;
+      } else {
+        delete this.values[prop];
+      }
+    }
+    return this;
+  };
+
+  Engine.prototype.destroy = function() {
+    if (this.scope) {
+      return Engine[this.scope._gss_id] = void 0;
+    }
+  };
+
+  Engine.prototype.getPath = function(path, value) {
+    if (typeof value === 'string') {
+      return value;
+    }
+    return path + Engine.identify(value);
+  };
+
+  Engine.get = function(id) {
+    return Engine.prototype.elements[id];
+  };
+
+  Engine.prototype.get = function(id) {
+    return this.elements[id];
+  };
+
+  Engine.identify = function(object, generate) {
+    var id;
+    if (!(id = object._gss_id)) {
+      if (object === document) {
+        object = window;
+      }
+      if (generate !== false) {
+        object._gss_id = id = "$" + (object.id || ++Engine.uid);
+      }
+      Engine.prototype.elements[id] = object;
+    }
+    return id;
+  };
+
+  Engine.recognize = function(object) {
+    return Engine.identify(object, false);
+  };
+
+  Engine.prototype.identify = function(object) {
+    return Engine.identify(object);
+  };
+
+  Engine.prototype.recognize = function(object) {
+    return Engine.identify(object, false);
+  };
+
+  Engine.uid = 0;
+
+  Engine.prototype.elements = {};
+
+  Engine.prototype.once = function(type, fn) {
+    fn.once = true;
+    return this.addEventListener(type, fn);
+  };
+
+  Engine.prototype.addEventListener = function(type, fn) {
+    var _base;
+    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
+  };
+
+  Engine.prototype.removeEventListener = function(type, fn) {
+    var group, index;
+    if (group = this.events && this.events[type]) {
+      if ((index = group.indexOf(fn)) > -1) {
+        return group.splice(index, 1);
+      }
+    }
+  };
+
+  Engine.prototype.triggerEvent = function(type, a, b, c) {
+    var fn, group, index, method, _i;
+    if (group = this.events[type]) {
+      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
+        fn = group[index];
+        if (fn.once) {
+          group.splice(index, 1);
+        }
+        fn.call(this, a, b, c);
+      }
+    }
+    if (this[method = 'on' + type]) {
+      return this[method](a, b, c);
+    }
+  };
+
+  Engine.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
+    if (!this.scope) {
+      return;
+    }
+    (detail || (detail = {})).engine = this;
+    return element.dispatchEvent(new CustomEvent(type, {
+      detail: detail,
+      bubbles: bubbles,
+      cancelable: cancelable
+    }));
+  };
+
+  Engine.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
+  };
+
+  Engine.include = function() {
+    var Context, fn, mixin, name, _i, _len, _ref;
+    Context = function(engine) {
+      this.engine = engine;
+    };
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      mixin = arguments[_i];
+      _ref = mixin.prototype;
+      for (name in _ref) {
+        fn = _ref[name];
+        Context.prototype[name] = fn;
+      }
+    }
+    return Context;
+  };
+
+  Engine.prototype.handleEvent = function(e) {
+    return this.triggerEvent(e.type, e);
+  };
+
+  Engine.prototype.start = function() {
+    var command, property, _ref;
+    if (!this.running) {
+      _ref = this.commands;
+      for (property in _ref) {
+        command = _ref[property];
+        command.reference = '_' + property;
+        this[command.reference] = Engine.Command(command, command.reference);
+      }
+      return this.running = true;
+    }
+  };
+
+  Engine.Command = function(command, reference) {
+    var helper, property, value;
+    if (typeof command !== 'function') {
+      helper = Engine.Helper(command);
+      for (property in command) {
+        value = command[property];
+        helper[property] = value;
+      }
+      command = helper;
+    }
+    command.reference = reference;
+    return command;
+  };
+
+  Engine.Helper = function(command, scoped) {
+    var func;
+    if (typeof command === 'function') {
+      func = command;
+    }
+    return function(scope) {
+      var args, context, fn, length, method;
+      args = Array.prototype.slice.call(arguments, 0);
+      length = arguments.length;
+      if (scoped || command.serialized) {
+        if (!(scope && scope.nodeType)) {
+          scope = this.scope || document;
+          if (typeof command[args.length] === 'string') {
+            context = scope;
+          } else {
+            args.unshift(scope);
+          }
+        } else {
+          if (typeof command[args.length - 1] === 'string') {
+            context = scope = args.shift();
+          }
+        }
+      }
+      if (!(fn = func)) {
+        if (typeof (method = command[args.length]) === 'function') {
+          fn = method;
+        } else {
+          if (!(method && (fn = scope[method]))) {
+            if (fn = this.commands[method]) {
+              context = this;
+            } else {
+              fn = command.command;
+            }
+          }
+        }
+      }
+      return fn.apply(context || this, args);
+    };
+  };
+
+  return Engine;
+
+})();
+
+this.GSS = Engine;
+
+module.exports = Engine;
+
+var Equasions;
+
+Equasions = (function() {
+  function Equasions() {}
+
+  Equasions.prototype["[right]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[x]", path), this._get(scope, "[width]", path));
+  };
+
+  Equasions.prototype["[bottom]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[y]", path), this._get(scope, "[height]", path));
+  };
+
+  Equasions.prototype["[center-x]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[x]", path), this._divide(this._get(scope, "[width]", path), 2));
+  };
+
+  Equasions.prototype["[center-y]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[y]", path), this._divide(this._get(scope, "[height]", path), 2));
+  };
+
+  return Equasions;
+
+})();
+
+module.exports = Equasions;
+
+var Constraints, method, property, _ref;
+
+Constraints = (function() {
+  function Constraints() {}
+
+  Constraints.prototype.onConstraint = function(node, args, result, operation, continuation, scope) {
+    var arg, _i, _len;
+    if (result instanceof c.Constraint || result instanceof c.Expression) {
+      result = [result];
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        arg = args[_i];
+        if (arg instanceof c.Variable) {
+          result.push(arg);
+        }
+        if (arg.paths) {
+          result.push.apply(result, arg.paths);
+          arg.paths = void 0;
+        }
+      }
+    }
+    if (result.length > 0) {
+      if (result.length > 1) {
+        result[0].paths = result.splice(1);
+      }
+      return result[0];
+    }
+    return result;
+  };
+
+  Constraints.prototype.get = function(scope, property, path) {
+    var variable;
+    if (typeof this.properties[property] === 'function') {
+      return this.properties[property].call(this, scope, path);
+    } else {
+      variable = this._var((scope || '') + (property || ''));
+    }
+    return [variable, path || (property && scope) || ''];
+  };
+
+  Constraints.prototype.remove = function() {
+    var constrain, constraints, path, _i, _j, _len;
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      path = arguments[_i];
+      if (constraints = this.solutions[path]) {
+        for (_j = constraints.length - 1; _j >= 0; _j += -1) {
+          constrain = constraints[_j];
+          this.solutions.remove(constrain, path);
+        }
+      }
+    }
+    return this;
+  };
+
+  Constraints.prototype["var"] = function(name) {
+    var _base;
+    return (_base = this.solutions)[name] || (_base[name] = new c.Variable({
+      name: name
+    }));
+  };
+
+  Constraints.prototype.strength = function(strength) {
+    return c.Strength[strength];
+  };
+
+  Constraints.prototype.weight = function(weight) {
+    return weight;
+  };
+
+  Constraints.prototype.varexp = function(name) {
+    return new c.Expression({
+      name: name
+    });
+  };
+
+  Constraints.prototype.eq = function(left, right, strength, weight) {
+    return new c.Equation(left, right, this._strength(strength), this._weight(weight));
+  };
+
+  Constraints.prototype.lte = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
+  };
+
+  Constraints.prototype.gte = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
+  };
+
+  Constraints.prototype.lt = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
+  };
+
+  Constraints.prototype.gt = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
+  };
+
+  Constraints.prototype.plus = function(left, right, strength, weight) {
+    return c.plus(left, right);
+  };
+
+  Constraints.prototype.minus = function(left, right, strength, weight) {
+    return c.minus(left, right);
+  };
+
+  Constraints.prototype.multiply = function(left, right, strength, weight) {
+    return c.times(left, right);
+  };
+
+  Constraints.prototype.divide = function(left, right, strength, weight) {
+    return c.divide(left, right);
+  };
+
+  return Constraints;
+
+})();
+
+_ref = Constraints.prototype;
+for (property in _ref) {
+  method = _ref[property];
+  if (method.length > 3 && property !== 'onConstraint') {
+    (function(property, method) {
+      return Constraints.prototype[property] = function(left, right, strength, weight) {
+        var overloaded, value;
+        if (left.push) {
+          overloaded = left = this._onConstraint(null, null, left);
+        }
+        if (right.push) {
+          overloaded = right = this._onConstraint(null, null, right);
+        }
+        value = method.call(this, left, right, strength, weight);
+        if (overloaded) {
+          return this._onConstraint(null, [left, right], value);
+        }
+        return value;
+      };
+    })(property, method);
+  }
+  Constraints.prototype[property].callback = '_onConstraint';
+}
+
+module.exports = Constraints;
 
 var Solutions;
 
@@ -660,6 +888,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
+    debugger;
     var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1;
     this.response = response = {};
     this.lastInput = commands;
@@ -696,6 +925,7 @@ Solutions = (function() {
     }
     this.lastOutput = response;
     this.push(response);
+    debugger;
   };
 
   Solutions.prototype.push = function(results) {
@@ -773,8 +1003,8 @@ Solutions = (function() {
 
   Solutions.prototype.edit = function(variable, strength, weight) {
     var constraint;
-    strength = this.engine.context.strength(strength);
-    weight = this.engine.context.weight(weight);
+    strength = this.engine._strength(strength);
+    weight = this.engine._weight(weight);
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
     constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight);
     this.solver.addConstraint(constraint);
@@ -809,241 +1039,6 @@ Solutions = (function() {
 
 module.exports = Solutions;
 
-var Engine;
-
-Engine = (function() {
-  Engine.prototype.Expressions = require('./input/Expressions.js');
-
-  function Engine(scope, url) {
-    var Document, engine, id;
-    if (scope && scope.nodeType) {
-      if (this.Expressions) {
-        id = Engine.identify(scope);
-        if (Document = Engine.Document) {
-          if (!(this instanceof Document)) {
-            return new Document(scope, url);
-          }
-        }
-        Engine[id] = this;
-        this.scope = scope;
-        this.all = scope.getElementsByTagName('*');
-      } else {
-        while (scope) {
-          if (id = Engine.recognize(scope)) {
-            if (engine = Engine[id]) {
-              return engine;
-            }
-          }
-          if (!scope.parentNode) {
-            break;
-          }
-          scope = scope.parentNode;
-        }
-      }
-    }
-    if (!scope || typeof scope === 'string') {
-      if (Engine.Solver && !(this instanceof Engine.Solver)) {
-        return new Engine.Solver(void 0, void 0, scope);
-      }
-    }
-    if (this.Expressions) {
-      this.context = new this.Context(this);
-      this.expressions = new this.Expressions(this);
-      this.events = {};
-      this.values = {};
-      return;
-    }
-    return new (Engine.Document || Engine)(scope, url);
-  }
-
-  Engine.prototype.run = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.pull = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.defer = function() {
-    var _base;
-    if (this.deferred == null) {
-      (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions));
-    }
-    return this.run.apply(this, arguments);
-  };
-
-  Engine.prototype.push = function(data) {
-    this.merge(data);
-    this.triggerEvent('solved', data);
-    this.dispatchEvent(this.scope, 'solved', data);
-    if (this.output) {
-      return this.output.pull.apply(this.output, arguments);
-    }
-  };
-
-  Engine.prototype.isCollection = function(object) {
-    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
-      switch (typeof object[0]) {
-        case "object":
-          return !object[0].push;
-        case "undefined":
-          return object.length === 0;
-      }
-    }
-  };
-
-  Engine.prototype.merge = function(object) {
-    var old, prop, value;
-    for (prop in object) {
-      value = object[prop];
-      old = this.values[prop];
-      if (old === value) {
-        continue;
-      }
-      if (this.context.onChange) {
-        this.context.onChange(prop, value, old);
-      }
-      if (value != null) {
-        this.values[prop] = value;
-      } else {
-        delete this.values[prop];
-      }
-    }
-    return this;
-  };
-
-  Engine.prototype.destroy = function() {
-    if (this.scope) {
-      return Engine[this.scope._gss_id] = void 0;
-    }
-  };
-
-  Engine.prototype.getPath = function(path, value) {
-    if (typeof value === 'string') {
-      return value;
-    }
-    return path + Engine.identify(value);
-  };
-
-  Engine.get = function(id) {
-    return Engine.prototype[id];
-  };
-
-  Engine.prototype.get = function(id) {
-    return this[id];
-  };
-
-  Engine.identify = function(object, generate) {
-    var id;
-    if (!(id = object._gss_id)) {
-      if (object === document) {
-        object = window;
-      }
-      if (generate !== false) {
-        object._gss_id = id = "$" + (object.id || ++Engine.uid);
-      }
-      Engine.prototype[id] = object;
-    }
-    return id;
-  };
-
-  Engine.recognize = function(object) {
-    return Engine.identify(object, false);
-  };
-
-  Engine.prototype.identify = function(object) {
-    return Engine.identify(object);
-  };
-
-  Engine.prototype.recognize = function(object) {
-    return Engine.identify(object, false);
-  };
-
-  Engine.uid = 0;
-
-  Engine.prototype.once = function(type, fn) {
-    fn.once = true;
-    return this.addEventListener(type, fn);
-  };
-
-  Engine.prototype.addEventListener = function(type, fn) {
-    var _base;
-    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
-  };
-
-  Engine.prototype.removeEventListener = function(type, fn) {
-    var group, index;
-    if (group = this.events && this.events[type]) {
-      if ((index = group.indexOf(fn)) > -1) {
-        return group.splice(index, 1);
-      }
-    }
-  };
-
-  Engine.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method, _i;
-    if (group = this.events[type]) {
-      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
-        fn = group[index];
-        if (fn.once) {
-          group.splice(index, 1);
-        }
-        fn.call(this, a, b, c);
-      }
-    }
-    if (this[method = 'on' + type]) {
-      return this[method](a, b, c);
-    }
-  };
-
-  Engine.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
-    if (!this.scope) {
-      return;
-    }
-    (detail || (detail = {})).engine = this;
-    return element.dispatchEvent(new CustomEvent(type, {
-      detail: detail,
-      bubbles: bubbles,
-      cancelable: cancelable
-    }));
-  };
-
-  Engine.clone = function(object) {
-    if (object && object.map) {
-      return object.map(this.clone, this);
-    }
-    return object;
-  };
-
-  Engine.include = function() {
-    var Context, fn, mixin, name, _i, _len, _ref;
-    Context = function(engine) {
-      this.engine = engine;
-    };
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      mixin = arguments[_i];
-      _ref = mixin.prototype;
-      for (name in _ref) {
-        fn = _ref[name];
-        Context.prototype[name] = fn;
-      }
-    }
-    return Context;
-  };
-
-  Engine.prototype.handleEvent = function(e) {
-    return this.triggerEvent(e.type, e);
-  };
-
-  return Engine;
-
-})();
-
-this.GSS = Engine;
-
-module.exports = Engine;
-
 var Engine,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -1055,7 +1050,9 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.Solutions = require('./output/Solutions.js');
 
-  Solver.prototype.Context = Engine.include(require('./context/Properties.js'), require('./context/Constraints.js'));
+  Solver.prototype.Commands = require('./commands/Constraints.js');
+
+  Solver.prototype.Properties = require('./properties/Equasions.js');
 
   function Solver(input, output, url) {
     this.input = input;
@@ -1072,7 +1069,6 @@ Engine.Solver = (function(_super) {
   };
 
   Solver.prototype.onmessage = function(e) {
-    debugger;
     return this.push(e.data);
   };
 

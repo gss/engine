@@ -7,10 +7,11 @@ class Engine.Solver extends Engine
   Solutions: 
     require('./output/Solutions.js')
 
-  Context: Engine.include(
-    require('./context/Properties.js')
-    require('./context/Constraints.js')
-  )
+  Commands: 
+    require('./commands/Constraints.js')
+
+  Properties:
+    require('./properties/Equasions.js')
   
   constructor: (@input, @output, url) -> 
     super()
@@ -28,7 +29,6 @@ class Engine.Solver extends Engine
 
   # Receieve message from worker
   onmessage: (e) ->
-    debugger
     @push e.data
 
   # Handle error from worker
@@ -53,7 +53,6 @@ class Engine.Solver extends Engine
 # Solver -> Solver
 
 class Engine.Thread extends Engine.Solver
-  
   constructor: ->
     if (context = super()) && context != this
       return context

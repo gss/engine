@@ -102,12 +102,11 @@ module.exports = ->
       worker:
         src: [
           'components/slightlyoff-cassowary.js/bin/c.js', 
-          'lib/context/Properties.js',
-          'lib/context/Constraints.js',
-          'lib/context/Rules.js',
           'lib/input/Expressions.js'
-          'lib/output/Solutions.js'
           'lib/Engine.js',
+          'lib/properties/Equasions.js',
+          'lib/commands/Constraints.js',
+          'lib/output/Solutions.js'
           'lib/Solver.js'
         ]
         dest: 'dist/worker.js'

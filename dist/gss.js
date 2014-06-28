@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-27) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20010,6 +20010,15 @@ c._api = function() {
 require.register("gss/lib/Engine.js", function(exports, require, module){
 var Engine;
 
+this.require || (this.require = function(string) {
+  var bits;
+  bits = string.replace('.js', '').split('/');
+  if (string === 'cassowary') {
+    return c;
+  }
+  return this[bits[bits.length - 1]];
+});
+
 Engine = (function() {
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
@@ -20046,7 +20055,12 @@ Engine = (function() {
       }
     }
     if (this.Expressions) {
-      this.context = new this.Context(this);
+      if (this.Properties) {
+        this.properties = new this.Properties(this);
+      }
+      if (this.Commands) {
+        this.commands = new this.Commands(this);
+      }
       this.expressions = new this.Expressions(this);
       this.events = {};
       this.values = {};
@@ -20073,9 +20087,20 @@ Engine = (function() {
   };
 
   Engine.prototype.push = function(data) {
+    var id, _i, _len, _ref;
+    if (this.removed) {
+      _ref = this.removed;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        id = _ref[_i];
+        delete this.engine.elements[id];
+      }
+      this.removed = void 0;
+    }
     this.merge(data);
     this.triggerEvent('solved', data);
-    this.dispatchEvent(this.scope, 'solved', data);
+    if (this.scope) {
+      this.dispatchEvent(this.scope, 'solved', data);
+    }
     if (this.output) {
       return this.output.pull.apply(this.output, arguments);
     }
@@ -20100,8 +20125,8 @@ Engine = (function() {
       if (old === value) {
         continue;
       }
-      if (this.context.onChange) {
-        this.context.onChange(prop, value, old);
+      if (this._onChange) {
+        this._onChange(prop, value, old);
       }
       if (value != null) {
         this.values[prop] = value;
@@ -20126,11 +20151,11 @@ Engine = (function() {
   };
 
   Engine.get = function(id) {
-    return Engine.prototype[id];
+    return Engine.prototype.elements[id];
   };
 
   Engine.prototype.get = function(id) {
-    return this[id];
+    return this.elements[id];
   };
 
   Engine.identify = function(object, generate) {
@@ -20142,7 +20167,7 @@ Engine = (function() {
       if (generate !== false) {
         object._gss_id = id = "$" + (object.id || ++Engine.uid);
       }
-      Engine.prototype[id] = object;
+      Engine.prototype.elements[id] = object;
     }
     return id;
   };
@@ -20160,6 +20185,8 @@ Engine = (function() {
   };
 
   Engine.uid = 0;
+
+  Engine.prototype.elements = {};
 
   Engine.prototype.once = function(type, fn) {
     fn.once = true;
@@ -20235,6 +20262,73 @@ Engine = (function() {
     return this.triggerEvent(e.type, e);
   };
 
+  Engine.prototype.start = function() {
+    var command, property, _ref;
+    if (!this.running) {
+      _ref = this.commands;
+      for (property in _ref) {
+        command = _ref[property];
+        command.reference = '_' + property;
+        this[command.reference] = Engine.Command(command, command.reference);
+      }
+      return this.running = true;
+    }
+  };
+
+  Engine.Command = function(command, reference) {
+    var helper, property, value;
+    if (typeof command !== 'function') {
+      helper = Engine.Helper(command);
+      for (property in command) {
+        value = command[property];
+        helper[property] = value;
+      }
+      command = helper;
+    }
+    command.reference = reference;
+    return command;
+  };
+
+  Engine.Helper = function(command, scoped) {
+    var func;
+    if (typeof command === 'function') {
+      func = command;
+    }
+    return function(scope) {
+      var args, context, fn, length, method;
+      args = Array.prototype.slice.call(arguments, 0);
+      length = arguments.length;
+      if (scoped || command.serialized) {
+        if (!(scope && scope.nodeType)) {
+          scope = this.scope || document;
+          if (typeof command[args.length] === 'string') {
+            context = scope;
+          } else {
+            args.unshift(scope);
+          }
+        } else {
+          if (typeof command[args.length - 1] === 'string') {
+            context = scope = args.shift();
+          }
+        }
+      }
+      if (!(fn = func)) {
+        if (typeof (method = command[args.length]) === 'function') {
+          fn = method;
+        } else {
+          if (!(method && (fn = scope[method]))) {
+            if (fn = this.commands[method]) {
+              context = this;
+            } else {
+              fn = command.command;
+            }
+          }
+        }
+      }
+      return fn.apply(context || this, args);
+    };
+  };
+
   return Engine;
 
 })();
@@ -20245,7 +20339,7 @@ module.exports = Engine;
 
 });
 require.register("gss/lib/Document.js", function(exports, require, module){
-var Engine,
+var Engine, command, property, source, target, _i, _j, _len, _len1, _ref, _ref1,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -20260,7 +20354,9 @@ Engine.Document = (function(_super) {
 
   Document.prototype.Solver = require('./Solver.js');
 
-  Document.prototype.Context = Engine.include(require('./context/Measurements.js'), require('./context/Properties.js'), require('./context/Selectors.js'), require('./context/Rules.js'));
+  Document.prototype.Commands = Engine.include(require('./commands/Measurements.js'), require('./commands/Selectors.js'), require('./commands/Rules.js'));
+
+  Document.prototype.Properties = Engine.include(require('./properties/Dimensions.js'), require('./properties/Equasions.js'));
 
   function Document(scope, url) {
     var context;
@@ -20293,16 +20389,16 @@ Engine.Document = (function(_super) {
     if (e == null) {
       e = '::window';
     }
-    this.context.compute(e.target || e, "[width]", void 0, false);
-    return this.context.compute(e.target || e, "[height]", void 0, false);
+    this._compute(e.target || e, "[width]", void 0, false);
+    return this._compute(e.target || e, "[height]", void 0, false);
   };
 
   Document.prototype.onscroll = function(e) {
     if (e == null) {
       e = '::window';
     }
-    this.context.compute(e.target || e, "[scroll-top]", void 0, false);
-    return this.context.compute(e.target || e, "[scroll-left]", void 0, false);
+    this._compute(e.target || e, "[scroll-top]", void 0, false);
+    return this._compute(e.target || e, "[scroll-left]", void 0, false);
   };
 
   Document.prototype.destroy = function() {
@@ -20319,13 +20415,26 @@ Engine.Document = (function(_super) {
 
 })(Engine);
 
-GSS.Document.prototype.Context.prototype._export(GSS);
-
-GSS.Document.prototype.Context.prototype._export(GSS.prototype);
-
-GSS.prototype.engine = GSS;
-
-GSS.engine = GSS;
+_ref = [Engine, Engine.Document.prototype, Engine.Document];
+for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+  target = _ref[_i];
+  _ref1 = [Engine.Document.prototype.Commands.prototype, Engine.Document.prototype.Properties.prototype];
+  for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+    source = _ref1[_j];
+    for (property in source) {
+      command = source[property];
+      if (target[property] != null) {
+        continue;
+      }
+      if (property === 'unwrap') {
+        target._unwrap = command;
+        continue;
+      }
+      target[property] = Engine.Helper(command, true);
+    }
+  }
+  target.engine = Engine;
+}
 
 module.exports = Engine.Document;
 
@@ -20342,7 +20451,9 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.Solutions = require('./output/Solutions.js');
 
-  Solver.prototype.Context = Engine.include(require('./context/Properties.js'), require('./context/Constraints.js'));
+  Solver.prototype.Commands = require('./commands/Constraints.js');
+
+  Solver.prototype.Properties = require('./properties/Equasions.js');
 
   function Solver(input, output, url) {
     this.input = input;
@@ -20359,7 +20470,6 @@ Engine.Solver = (function(_super) {
   };
 
   Solver.prototype.onmessage = function(e) {
-    debugger;
     return this.push(e.data);
   };
 
@@ -20420,48 +20530,101 @@ if (!self.window && self.onmessage !== void 0) {
 module.exports = Engine.Solver;
 
 });
-require.register("gss/lib/context/Properties.js", function(exports, require, module){
-var Properties;
+require.register("gss/lib/properties/Dimensions.js", function(exports, require, module){
+var Dimensions;
 
-if (!this.require) {
-  this.module || (this.module = {});
-  this.require = function(string) {
-    var bits;
-    bits = string.replace('.js', '').split('/');
-    if (string === 'cassowary') {
-      return c;
-    }
-    return this[bits[bits.length - 1]];
-  };
-}
+Dimensions = (function() {
+  function Dimensions() {}
 
-Properties = (function() {
-  function Properties() {}
-
-  Properties.prototype["[right]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[x]", path), this.get(scope, "[width]", path));
+  Dimensions.prototype['::window[width]'] = function() {
+    return window.innerWidth;
   };
 
-  Properties.prototype["[bottom]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[y]", path), this.get(scope, "[height]", path));
+  Dimensions.prototype['::window[height]'] = function() {
+    return window.innerHeight;
   };
 
-  Properties.prototype["[center-x]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[x]", path), this.divide(this.get(scope, "[width]", path), 2));
+  Dimensions.prototype['::window[scroll-left]'] = function() {
+    return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
   };
 
-  Properties.prototype["[center-y]"] = function(scope, path) {
-    return this.plus(this.get(scope, "[y]", path), this.divide(this.get(scope, "[height]", path), 2));
+  Dimensions.prototype['::window[scroll-top]'] = function() {
+    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
   };
 
-  return Properties;
+  Dimensions.prototype['::window[x]'] = 0;
+
+  Dimensions.prototype['::window[y]'] = 0;
+
+  Dimensions.prototype["[intrinsic-height]"] = function(scope) {
+    return scope.offsetHeight;
+  };
+
+  Dimensions.prototype["[intrinsic-width]"] = function(scope) {
+    return scope.offsetWidth;
+  };
+
+  Dimensions.prototype["[intrinsic-y]"] = function(scope) {
+    return scope.offsetTop;
+  };
+
+  Dimensions.prototype["[intrinsic-x]"] = function(scope) {
+    return scope.offsetWidth;
+  };
+
+  Dimensions.prototype["[scroll-left]"] = function(scope) {
+    return scope.scrollLeft;
+  };
+
+  Dimensions.prototype["[scroll-top]"] = function(scope) {
+    return scope.scrollTop;
+  };
+
+  Dimensions.prototype["[offset-left]"] = function(scope) {
+    return scope.offsetLeft;
+  };
+
+  Dimensions.prototype["[offset-top]"] = function(scope) {
+    return scope.offsetTop;
+  };
+
+  return Dimensions;
 
 })();
 
-module.exports = Properties;
+module.exports = Dimensions;
 
 });
-require.register("gss/lib/context/Rules.js", function(exports, require, module){
+require.register("gss/lib/properties/Equasions.js", function(exports, require, module){
+var Equasions;
+
+Equasions = (function() {
+  function Equasions() {}
+
+  Equasions.prototype["[right]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[x]", path), this._get(scope, "[width]", path));
+  };
+
+  Equasions.prototype["[bottom]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[y]", path), this._get(scope, "[height]", path));
+  };
+
+  Equasions.prototype["[center-x]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[x]", path), this._divide(this._get(scope, "[width]", path), 2));
+  };
+
+  Equasions.prototype["[center-y]"] = function(scope, path) {
+    return this._plus(this._get(scope, "[y]", path), this._divide(this._get(scope, "[height]", path), 2));
+  };
+
+  return Equasions;
+
+})();
+
+module.exports = Equasions;
+
+});
+require.register("gss/lib/commands/Rules.js", function(exports, require, module){
 var Rules;
 
 Rules = (function() {
@@ -20488,13 +20651,13 @@ Rules = (function() {
   Rules.prototype["$rule"] = {
     evaluate: function(operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender) {
-        this.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
+        this.expressions.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
       } else {
         return this;
       }
     },
-    capture: function(engine, result, parent, continuation, scope) {
-      return engine.expressions.push(result);
+    capture: function(result, parent, continuation, scope) {
+      return this.expressions.push(result);
     },
     command: function(path, condition, positive, negative) {
       if (condition) {
@@ -20527,21 +20690,21 @@ Rules = (function() {
 module.exports = Rules;
 
 });
-require.register("gss/lib/context/Selectors.js", function(exports, require, module){
+require.register("gss/lib/commands/Selectors.js", function(exports, require, module){
 var Selectors, command, dummy, property, _ref;
 
 Selectors = (function() {
   function Selectors() {}
 
-  Selectors.prototype.onDOMQuery = function(node, args, result, operation, continuation, scope) {
+  Selectors.prototype.onQuery = function(node, args, result, operation, continuation, scope) {
     if (operation.def.hidden) {
       return result;
     }
-    return this.engine.queries.update(node, args, result, operation, continuation, scope);
+    return this.queries.update(node, args, result, operation, continuation, scope);
   };
 
   Selectors.prototype.remove = function(id, continuation, operation) {
-    this.engine.queries.remove(id, continuation, operation);
+    this.queries.remove(id, continuation, operation);
   };
 
   Selectors.prototype['$first'] = {
@@ -20557,21 +20720,21 @@ Selectors = (function() {
         return node;
       }
     },
-    perform: function(object, operation) {
+    perform: function(operation) {
       var global, head, name, op, shortcut, tail;
       head = operation.head || operation;
       name = operation.def.group;
       shortcut = [name, head.groupped];
       shortcut.parent = head.parent;
       shortcut.index = head.index;
-      object.analyze(shortcut);
+      this.expressions.analyze(shortcut);
       tail = operation.tail;
       if (!(global = tail.arity === 1 && tail.length === 2)) {
         shortcut.splice(1, 0, tail[1]);
       }
       op = head;
       while (op) {
-        this.analyze(op, shortcut);
+        this.commands['$query'].analyze.call(this, op, shortcut);
         if (op === tail) {
           break;
         }
@@ -20670,9 +20833,9 @@ Selectors = (function() {
     if (id == null) {
       id = node;
     }
-    if (!(found = this.engine.all[id])) {
-      if (this.engine.all.hasOwnProperty(id)) {
-        return this['$first']('#' + id);
+    if (!(found = this.all[id])) {
+      if (this.all.hasOwnProperty(id)) {
+        return this._$first('#' + id);
       }
     }
     return found;
@@ -20727,29 +20890,28 @@ Selectors = (function() {
   Selectors.prototype[','] = {
     group: '$query',
     separator: ',',
-    scoped: true,
     eager: true,
-    serialize: function(scope, operation, engine) {
-      var continuation;
-      if (scope && scope !== engine.scope) {
-        return continuation = engine.recognize(scope) + operation.path;
+    scoped: true,
+    serialize: function(scope, operation) {
+      if (scope && scope !== this.scope) {
+        return this.recognize(scope) + operation.path;
       } else {
         return operation.path;
       }
     },
     command: function(scope, operation) {
       var continuation;
-      continuation = this.engine.context[','].serialize(scope, operation, this.engine);
-      return this.engine.queries.get(continuation);
+      continuation = this.commands[','].serialize.call(this, scope, operation);
+      return this.queries.get(continuation);
     },
-    capture: function(engine, result, operation, continuation, scope) {
-      continuation = this.serialize(scope, operation, engine);
-      engine.queries.add(result, continuation, scope, scope);
+    capture: function(result, operation, continuation, scope) {
+      continuation = this.commands[','].serialize.call(this, scope, operation);
+      this.queries.add(result, continuation, scope, scope);
     },
-    release: function(engine, result, operation, scope, child) {
+    release: function(result, operation, scope, child) {
       var continuation;
-      continuation = this.serialize(scope, operation, engine);
-      engine.queries.remove(result, continuation, child, scope);
+      continuation = this.commands[','].serialize.call(this, scope, operation);
+      this.queries.remove(result, continuation, child, scope);
     }
   };
 
@@ -20893,20 +21055,12 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::parent'] = {
-    1: function(node) {
-      debugger;
-      var parent;
-      if (parent = node.parentNode) {
-        if (parent.nodeType === 1) {
-          return parent;
-        }
-      }
-    }
+    1: Selectors.prototype['!>'][1]
   };
 
   Selectors.prototype['::scope'] = {
     1: function(node) {
-      return this.engine.scope;
+      return this.scope;
     }
   };
 
@@ -20922,7 +21076,7 @@ _ref = Selectors.prototype;
 for (property in _ref) {
   command = _ref[property];
   if (typeof command === 'object') {
-    command.callback = 'onDOMQuery';
+    command.callback = '_onQuery';
     command.serialized = true;
   }
 }
@@ -20930,7 +21084,7 @@ for (property in _ref) {
 dummy = document.createElement('_');
 
 if (!dummy.hasOwnProperty("parentElement")) {
-  Selectors.prototype['!>'][1] = function(node) {
+  Selectors.prototype['!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
     var parent;
     if (parent = node.parentNode) {
       if (parent.nodeType === 1) {
@@ -21046,7 +21200,7 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
 module.exports = Selectors;
 
 });
-require.register("gss/lib/context/Constraints.js", function(exports, require, module){
+require.register("gss/lib/commands/Constraints.js", function(exports, require, module){
 var Constraints, method, property, _ref;
 
 Constraints = (function() {
@@ -21078,23 +21232,22 @@ Constraints = (function() {
 
   Constraints.prototype.get = function(scope, property, path) {
     var variable;
-    if (typeof this[property] === 'function') {
-      return this[property](scope, path);
+    if (typeof this.properties[property] === 'function') {
+      return this.properties[property].call(this, scope, path);
     } else {
-      variable = this["var"]((scope || '') + (property || ''));
+      variable = this._var((scope || '') + (property || ''));
     }
     return [variable, path || (property && scope) || ''];
   };
 
   Constraints.prototype.remove = function() {
-    var constrain, constraints, path, solutions, _i, _j, _len;
-    solutions = this.engine.solutions;
+    var constrain, constraints, path, _i, _j, _len;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
-      if (constraints = solutions[path]) {
+      if (constraints = this.solutions[path]) {
         for (_j = constraints.length - 1; _j >= 0; _j += -1) {
           constrain = constraints[_j];
-          solutions.remove(constrain, path);
+          this.solutions.remove(constrain, path);
         }
       }
     }
@@ -21103,7 +21256,7 @@ Constraints = (function() {
 
   Constraints.prototype["var"] = function(name) {
     var _base;
-    return (_base = this.engine.solutions)[name] || (_base[name] = new c.Variable({
+    return (_base = this.solutions)[name] || (_base[name] = new c.Variable({
       name: name
     }));
   };
@@ -21123,23 +21276,23 @@ Constraints = (function() {
   };
 
   Constraints.prototype.eq = function(left, right, strength, weight) {
-    return new c.Equation(left, right, this.strength(strength), this.weight(weight));
+    return new c.Equation(left, right, this._strength(strength), this._weight(weight));
   };
 
   Constraints.prototype.lte = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
   };
 
   Constraints.prototype.gte = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
   };
 
   Constraints.prototype.lt = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
   };
 
   Constraints.prototype.gt = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
   };
 
   Constraints.prototype.plus = function(left, right, strength, weight) {
@@ -21170,53 +21323,69 @@ for (property in _ref) {
       return Constraints.prototype[property] = function(left, right, strength, weight) {
         var overloaded, value;
         if (left.push) {
-          overloaded = left = Constraints.prototype.onConstraint(null, null, left);
+          overloaded = left = this._onConstraint(null, null, left);
         }
         if (right.push) {
-          overloaded = right = Constraints.prototype.onConstraint(null, null, right);
+          overloaded = right = this._onConstraint(null, null, right);
         }
         value = method.call(this, left, right, strength, weight);
         if (overloaded) {
-          return Constraints.prototype.onConstraint(null, [left, right], value);
+          return this._onConstraint(null, [left, right], value);
         }
         return value;
       };
     })(property, method);
   }
-  Constraints.prototype[property].callback = 'onConstraint';
+  Constraints.prototype[property].callback = '_onConstraint';
 }
 
 module.exports = Constraints;
 
 });
-require.register("gss/lib/context/Measurements.js", function(exports, require, module){
+require.register("gss/lib/commands/Measurements.js", function(exports, require, module){
 var Measurements;
 
 Measurements = (function() {
   function Measurements() {}
 
+  Measurements.prototype.onBuffer = function(buffer, args, batch) {
+    var last;
+    if (!(buffer && batch)) {
+      return;
+    }
+    if (last = buffer[buffer.length - 1]) {
+      if (last[0] === args[0]) {
+        if (last.indexOf(args[1]) === -1) {
+          last.push.apply(last, args.slice(1));
+        }
+        return false;
+      }
+    }
+  };
+
   Measurements.prototype.onFlush = function(buffer) {
     var commands, property, value, _ref;
-    if (!this.engine.computed) {
+    if (!this.computed) {
       return buffer;
     }
     commands = [];
-    _ref = this.engine.computed;
+    _ref = this.computed;
     for (property in _ref) {
       value = _ref[property];
-      if (this.engine.values[property] === value) {
+      if (this.values[property] === value) {
         continue;
       }
-      debugger;
       commands.push(['suggest', property, value, 'required']);
     }
-    this.engine.computed = void 0;
+    this.computed = void 0;
     return commands.concat(buffer);
   };
 
+  Measurements.prototype.onMeasure = function(node, id) {};
+
   Measurements.prototype.onResize = function(node) {
     var id, intrinsic, prop, properties, _i, _len, _results;
-    if (!(intrinsic = this.engine.intrinsic)) {
+    if (!(intrinsic = this.intrinsic)) {
       return;
     }
     _results = [];
@@ -21228,7 +21397,7 @@ Measurements = (function() {
             switch (prop) {
               case "height":
               case "width":
-                this.engine.context.compute(id, '[intrinsic-' + prop + ']');
+                this._compute(id, '[intrinsic-' + prop + ']');
             }
           }
         }
@@ -21239,17 +21408,17 @@ Measurements = (function() {
   };
 
   Measurements.prototype.onChange = function(path, value, old) {
-    var group, id, prop, _base, _base1;
+    var group, id, prop, _base;
     if ((old != null) !== (value != null)) {
-      if (prop = this.getIntrinsicProperty(path)) {
+      if (prop = this._getIntrinsicProperty(path)) {
         id = path.substring(0, path.length - prop.length - 10 - 2);
         if (value != null) {
-          return ((_base = ((_base1 = this.engine).intrinsic || (_base1.intrinsic = {})))[id] || (_base[id] = [])).push(prop);
+          return ((_base = (this.intrinsic || (this.intrinsic = {})))[id] || (_base[id] = [])).push(prop);
         } else {
-          group = this.engine.intrinsic[id];
+          group = this.intrinsic[id];
           group.splice(group.indexOf(path), 1);
           if (!group.length) {
-            return delete this.engine.intrinsic[id];
+            return delete this.intrinsic[id];
           }
         }
       }
@@ -21272,50 +21441,6 @@ Measurements = (function() {
     return a / b;
   };
 
-  Measurements.prototype['::window[width]'] = function() {
-    return window.innerWidth;
-  };
-
-  Measurements.prototype['::window[height]'] = function() {
-    return window.innerHeight;
-  };
-
-  Measurements.prototype['::window[scroll-left]'] = function() {
-    return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
-  };
-
-  Measurements.prototype['::window[scroll-top]'] = function() {
-    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-  };
-
-  Measurements.prototype['::window[x]'] = 0;
-
-  Measurements.prototype['::window[y]'] = 0;
-
-  Measurements.prototype["[intrinsic-height]"] = function(scope) {
-    return scope.offsetHeight;
-  };
-
-  Measurements.prototype["[intrinsic-width]"] = function(scope) {
-    return scope.offsetWidth;
-  };
-
-  Measurements.prototype["[scroll-left]"] = function(scope) {
-    return scope.scrollLeft;
-  };
-
-  Measurements.prototype["[scroll-top]"] = function(scope) {
-    return scope.scrollTop;
-  };
-
-  Measurements.prototype["[offset-left]"] = function(scope) {
-    return scope.offsetLeft;
-  };
-
-  Measurements.prototype["[offset-top]"] = function(scope) {
-    return scope.offsetTop;
-  };
-
   Measurements.prototype.unwrap = function(property) {
     if (property.charAt(0) === '[') {
       return property.substring(1, property.length - 1);
@@ -21326,44 +21451,54 @@ Measurements = (function() {
   Measurements.prototype.getStyle = function(element, property) {};
 
   Measurements.prototype.setStyle = function(element, property, value) {
-    return element.style[this.unwrap(property)] = value;
+    return element.style[this._unwrap(property)] = value;
+  };
+
+  Measurements.prototype.deferComputation = {
+    '[intrinsic-x]': '[intrinsic-x]',
+    '[intrinsic-y]': '[intrinsic-y]'
   };
 
   Measurements.prototype.compute = function(id, property, continuation, old) {
-    var current, def, method, object, path, value, _base, _base1;
+    var current, def, method, object, path, prop, value;
     if (id.nodeType) {
       object = id;
-      id = this.engine.identify(object);
+      id = this.identify(object);
     } else {
-      object = this.engine[id];
+      object = this.elements[id];
     }
     path = property.charAt(0) === '[' && id + property || property;
-    if ((def = this[path]) != null) {
-      current = this.engine.values[path];
+    if ((def = this.properties[path]) != null) {
+      current = this.values[path];
       if (current === void 0 || old === true) {
         if (typeof def === 'function') {
-          value = this[path](object, continuation);
+          value = this.properties[path].call(this, object, continuation);
         } else {
           value = def;
         }
         if (value !== current) {
-          ((_base = this.engine).computed || (_base.computed = {}))[path] = value;
+          (this.computed || (this.computed = {}))[path] = value;
         }
       }
       return value;
     } else if (property.indexOf('intrinsic-') > -1) {
       path = id + property;
-      if (!this.engine.computed || (this.engine.computed[path] == null)) {
+      if (!this.computed || (this.computed[path] == null)) {
         if (value === void 0) {
-          method = this[property] && property || 'getStyle';
+          prop = this.properties[property];
+          method = prop && property || 'getStyle';
           if (document.body.contains(object)) {
-            value = this[method](object, property, continuation);
+            if (prop) {
+              value = prop.call(this, object, property, continuation);
+            } else {
+              value = this._getStyle(object, property, continuation);
+            }
           } else {
             value = null;
           }
         }
         if (value !== old) {
-          ((_base1 = this.engine).computed || (_base1.computed = {}))[path] = value;
+          (this.computed || (this.computed = {}))[path] = value;
           return value;
         }
       }
@@ -21381,7 +21516,7 @@ Measurements = (function() {
         } else if (object.absolute === 'window' || object === document) {
           id = '::window';
         } else if (object.nodeType) {
-          id = this.engine.identify(object);
+          id = this.identify(object);
         }
       } else {
         id = '';
@@ -21391,70 +21526,14 @@ Measurements = (function() {
       if (typeof continuation === 'object') {
         continuation = continuation.path;
       }
-      if (property.indexOf('intrinsic-') > -1 || (this[id + property] != null)) {
-        computed = this.compute(id, property, continuation, true);
+      if (property.indexOf('intrinsic-') > -1 || (this.properties[id + property] != null)) {
+        computed = this._compute(id, property, continuation, true);
         if (typeof computed === 'object') {
           return computed;
         }
       }
       return ['get', id, property, continuation || ''];
     }
-  };
-
-  Measurements.prototype._export = function(object) {
-    var def, property, _results;
-    _results = [];
-    for (property in this) {
-      def = this[property];
-      if (object[property] != null) {
-        continue;
-      }
-      if (property === 'unwrap') {
-        object[property] = def;
-        continue;
-      }
-      _results.push((function(def, property) {
-        var func, measurements;
-        if (typeof def === 'function') {
-          func = def;
-        }
-        measurements = Measurements.prototype;
-        return object[property] = function(scope) {
-          var args, context, fn, length, method;
-          args = Array.prototype.slice.call(arguments, 0);
-          length = arguments.length;
-          if (def.serialized || measurements[property]) {
-            if (!(scope && scope.nodeType)) {
-              scope = object.scope || document;
-              if (typeof def[args.length] === 'string') {
-                context = scope;
-              } else {
-                args.unshift(scope);
-              }
-            } else {
-              if (typeof def[args.length - 1] === 'string') {
-                context = scope = args.shift();
-              }
-            }
-          }
-          if (!(fn = func)) {
-            if (typeof (method = def[args.length]) === 'function') {
-              fn = method;
-            } else {
-              if (!(method && (fn = scope[method]))) {
-                if (fn = scope[method || def.method]) {
-                  context = scope;
-                } else {
-                  fn = def.command;
-                }
-              }
-            }
-          }
-          return fn.apply(context || object.context || this, args);
-        };
-      })(def, property));
-    }
-    return _results;
   };
 
   Measurements.prototype.getIntrinsicProperty = function(path) {
@@ -21476,15 +21555,15 @@ require.register("gss/lib/input/Expressions.js", function(exports, require, modu
 var Expressions;
 
 Expressions = (function() {
-  function Expressions(engine, context, output) {
+  function Expressions(engine, output) {
     this.engine = engine;
-    this.context = context;
     this.output = output;
-    this.context || (this.context = this.engine && this.engine.context || this);
+    this.commands = this.engine && this.engine.commands || this;
   }
 
   Expressions.prototype.pull = function() {
     var buffer, result;
+    this.engine.start();
     if (this.buffer === void 0) {
       this.buffer = null;
       buffer = true;
@@ -21497,26 +21576,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.push = function(args, batch) {
-    var buffer, last;
+    var buffer;
     if (args == null) {
       return;
     }
     if ((buffer = this.buffer) !== void 0) {
-      if (buffer) {
-        if (batch) {
-          if (last = buffer[buffer.length - 1]) {
-            if (last[0] === args[0]) {
-              if (last.indexOf(args[1]) === -1) {
-                last.push.apply(last, args.slice(1));
-              }
-              return buffer;
-            }
-          }
-        }
-      } else {
-        this.buffer = buffer = [];
+      if (!(this.engine._onBuffer && this.engine._onBuffer(buffer, args, batch) === false)) {
+        (buffer || (this.buffer = [])).push(args);
       }
-      buffer.push(args);
     } else {
       return this.output.pull.apply(this.output, args);
     }
@@ -21525,8 +21592,8 @@ Expressions = (function() {
   Expressions.prototype.flush = function() {
     var buffer;
     buffer = this.buffer;
-    if (this.context.onFlush) {
-      buffer = this.context.onFlush(buffer);
+    if (this.engine._onFlush) {
+      buffer = this.engine._onFlush(buffer);
     }
     this.lastOutput = GSS.clone(buffer);
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
@@ -21539,14 +21606,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, breadcrumbs, overloading, result;
+    var args, evaluate, evaluated, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (!overloaded && operation.parent) {
-      overloading = this.overload(operation, continuation, scope, ascender, ascending);
-      if (overloading !== this) {
-        return overloading;
+    if (!overloaded && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
+      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+      if (evaluated !== this.engine) {
+        return evaluated;
       }
     }
     if (operation.tail) {
@@ -21565,13 +21632,13 @@ Expressions = (function() {
       result = args;
     } else {
       result = this.execute(operation, continuation, scope, args);
+      continuation = this.log(operation, continuation);
     }
-    breadcrumbs = this.log(operation, continuation);
-    return this.ascend(operation, breadcrumbs, result, scope, ascender);
+    return this.ascend(operation, continuation, result, scope, ascender);
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
-    var callback, context, func, method, node, result;
+    var callback, command, context, func, method, node, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
       (args || (args = [])).unshift(scope);
@@ -21588,8 +21655,8 @@ Expressions = (function() {
         if (!func) {
           if (!context && (func = scope[method])) {
             context = scope;
-          } else {
-            func = this[method] || this.context[method];
+          } else if (command = this.commands[method]) {
+            func = this.engine[command.reference];
           }
         }
       }
@@ -21597,13 +21664,13 @@ Expressions = (function() {
     if (!func) {
       throw new Error("Couldn't find method: " + operation.method);
     }
-    result = func.apply(context || this.context, args);
+    result = func.apply(context || this.engine, args);
     if (result !== result) {
       args.unshift(operation.name);
       return args;
     }
     if (callback = operation.def.callback) {
-      result = this.context[callback](context || node || scope, args, result, operation, continuation, scope);
+      result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
   };
@@ -21628,7 +21695,7 @@ Expressions = (function() {
           }
         }
         if (id) {
-          return this.engine[id];
+          return this.engine.elements[id];
         } else {
           return this.engine.queries[continuation.substring(0, separator)];
         }
@@ -21695,16 +21762,12 @@ Expressions = (function() {
           }
           console.groupEnd(continuation);
           return;
-        } else if (parent && parent.def.capture) {
-          return parent.def.capture(this.engine, result, parent, continuation, scope);
+        } else if (parent != null ? parent.def.capture : void 0) {
+          return parent.def.capture.call(this.engine, result, parent, continuation, scope);
         } else {
           if (operation.def.noop) {
             if (result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length === 1) || (ascender != null)))) {
-              if (result.length === 1) {
-                return this.push(result[0]);
-              } else {
-                return this.push(result);
-              }
+              return this.push(result.length === 1 ? result[0] : result);
             }
           } else if (parent && ((ascender != null) || result.nodeType)) {
             this.evaluate(parent, continuation, scope, operation.index, result);
@@ -21721,7 +21784,7 @@ Expressions = (function() {
   Expressions.prototype.skip = function(operation, ascender) {
     var _base;
     if (operation.tail.path === operation.tail.key || (ascender != null)) {
-      return (_base = operation.tail).shortcut || (_base.shortcut = this.context[operation.def.group].perform(this, operation));
+      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.commands[operation.def.group].perform.call(this.engine, operation));
     } else {
       return operation.tail[1];
     }
@@ -21730,7 +21793,7 @@ Expressions = (function() {
   Expressions.prototype.analyze = function(operation, parent) {
     var child, def, func, groupper, index, otherdef, _i, _len;
     operation.name = operation[0];
-    def = this.engine.context[operation.name];
+    def = this.commands[operation.name];
     if (parent) {
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
@@ -21748,7 +21811,7 @@ Expressions = (function() {
       if (typeof def.lookup === 'function') {
         def = def.lookup.call(this, operation);
       } else {
-        def = this.context[operation.name];
+        def = this.commands[operation.name];
       }
     }
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
@@ -21756,9 +21819,6 @@ Expressions = (function() {
       if (child instanceof Array) {
         this.analyze(child, operation);
       }
-    }
-    if (operation[0] === 'suggest') {
-      debugger;
     }
     if (def === void 0) {
       operation.def = {
@@ -21772,7 +21832,7 @@ Expressions = (function() {
       operation.path = this.serialize(operation, otherdef);
       if (def.group) {
         operation.groupped = this.serialize(operation, otherdef, def.group);
-        if (groupper = this.context[def.group]) {
+        if (groupper = this.commands[def.group]) {
           groupper.analyze(operation);
         }
       }
@@ -21784,6 +21844,9 @@ Expressions = (function() {
       operation.offset = 1;
     } else {
       func = def.command;
+    }
+    if (typeof func !== 'function' && typeof func !== 'string') {
+      debugger;
     }
     if (typeof func === 'string') {
       operation.method = func;
@@ -21805,7 +21868,7 @@ Expressions = (function() {
         if (typeof op !== 'object') {
           after += op;
         } else if (op.key && group !== false) {
-          if (group && (groupper = this.context[group])) {
+          if (group && (groupper = this.commands[group])) {
             if (op.def.group === group) {
               if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
                 operation.groupped = groupper.promise(op, operation);
@@ -21841,19 +21904,11 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.overload = function(operation, continuation, scope, ascender, ascending) {
-    var evaluated, parent, pdef;
-    parent = operation.parent;
-    if ((pdef = parent.def) && pdef.evaluate) {
-      evaluated = pdef.evaluate.call(this, operation, continuation, scope, ascender, ascending);
-      return evaluated;
-    }
-    return this;
-  };
-
   return Expressions;
 
 })();
+
+this.module || (this.module = {});
 
 module.exports = Expressions;
 
@@ -21952,7 +22007,7 @@ Queries = (function() {
     while (parent) {
       $attribute = target === parent && '$attribute' || ' $attribute';
       this.match(parent, $attribute, name, target);
-      if (changed && changed.length) {
+      if (changed != null ? changed.length : void 0) {
         $class = target === parent && '$class' || ' $class';
         for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
           kls = changed[_k];
@@ -22128,7 +22183,7 @@ Queries = (function() {
     if (!document.body.contains(node)) {
       return;
     }
-    return this.engine.context.onResize(node);
+    return this.engine._onResize(node);
   };
 
   Queries.prototype.add = function(node, continuation, scope) {
@@ -22151,7 +22206,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope) {
-    var cleaning, collection, contd, duplicates, index, node, path, ref, refforked, result, watcher, watchers;
+    var cleaning, collection, contd, duplicates, index, node, path, ref, refforked, result, watcher, watchers, _base, _ref;
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -22165,7 +22220,7 @@ Queries = (function() {
             return;
           }
         }
-        if (operation && collection && collection.length) {
+        if (operation && (collection != null ? collection.length : void 0)) {
           if ((index = collection.indexOf(node)) > -1) {
             collection.splice(index, 1);
             if (!collection.length) {
@@ -22174,7 +22229,7 @@ Queries = (function() {
           }
         }
       }
-      if (this.engine[id]) {
+      if (this.engine.elements[id]) {
         if (watchers = this._watchers[id]) {
           ref = continuation + (collection && collection.length !== void 0 && id || '');
           refforked = ref + '–';
@@ -22194,11 +22249,9 @@ Queries = (function() {
           }
         }
         path = continuation;
-        if ((result = this.engine.queries[path])) {
-          if (result.length != null) {
-            path += id;
-            this.clean(path);
-          }
+        if (((_ref = (result = this.engine.queries[path])) != null ? _ref.length : void 0) != null) {
+          path += id;
+          this.clean(path);
         }
       } else {
         this.clean(id, continuation, operation, scope);
@@ -22206,7 +22259,7 @@ Queries = (function() {
       if (collection && !collection.length) {
         delete this[continuation];
       }
-    } else if (node = this.engine[id]) {
+    } else if (node = this.engine.elements[id]) {
       if (watchers = this._watchers[id]) {
         index = 0;
         while (watcher = watchers[index]) {
@@ -22217,18 +22270,18 @@ Queries = (function() {
         }
         delete this._watchers[id];
       }
-      delete this.engine[id];
+      ((_base = this.engine).removing || (_base.removing = [])).push(id);
       delete node._gss_id;
     }
     return this;
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope) {
-    var child, copy, parent, pdef, result, _i, _len;
+    var child, copy, parent, result, _i, _len, _ref;
     if (result = this[path]) {
-      if (parent = operation && operation.parent) {
-        if ((pdef = parent.def) && pdef.release) {
-          pdef.release(this.engine, result, parent, scope, operation);
+      if (parent = operation != null ? operation.parent : void 0) {
+        if ((_ref = parent.def.release) != null) {
+          _ref.call(this.engine, result, parent, scope, operation);
         }
       }
       if (result.length !== void 0) {
@@ -22396,6 +22449,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
+    debugger;
     var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1;
     this.response = response = {};
     this.lastInput = commands;
@@ -22432,6 +22486,7 @@ Solutions = (function() {
     }
     this.lastOutput = response;
     this.push(response);
+    debugger;
   };
 
   Solutions.prototype.push = function(results) {
@@ -22509,8 +22564,8 @@ Solutions = (function() {
 
   Solutions.prototype.edit = function(variable, strength, weight) {
     var constraint;
-    strength = this.engine.context.strength(strength);
-    weight = this.engine.context.weight(weight);
+    strength = this.engine._strength(strength);
+    weight = this.engine._weight(weight);
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
     constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight);
     this.solver.addConstraint(constraint);
@@ -22560,9 +22615,10 @@ Styles = (function() {
     var id, intrinsic, path, positioning, prop, styles, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
+    this.engine.start();
     for (path in data) {
       value = data[path];
-      if (this.engine.context.getIntrinsicProperty(path)) {
+      if (this.engine._getIntrinsicProperty(path)) {
         data[path] = void 0;
         (intrinsic || (intrinsic = {}))[path] = value;
       }
@@ -22667,8 +22723,8 @@ Styles = (function() {
     if (id.charAt(0) === ':') {
       return;
     }
-    if (!(element = this.engine[id])) {
-      if (!(element = this.engine.context.getElementById(this.engine.scope, id.substring(1)))) {
+    if (!(element = this.engine.elements[id])) {
+      if (!(element = this.engine._getElementById(this.engine.scope, id.substring(1)))) {
         return;
       }
     }
@@ -22677,7 +22733,7 @@ Styles = (function() {
       (positioning[id] || (positioning[id] = {}))[property] = value;
     } else {
       if (intrinsic) {
-        measured = this.engine.context.compute(element, '[' + property + ']', void 0, value);
+        measured = this.engine._compute(element, '[' + property + ']', void 0, value);
         if (measured != null) {
           value = measured;
         }
@@ -22695,6 +22751,17 @@ Styles = (function() {
         if (typeof value === 'number' && property !== 'zIndex') {
           pixels = value + 'px';
         }
+        if (positioner) {
+          if (!style[camel]) {
+            if ((style.positioning = (style.positioning || 0) + 1) === 1) {
+              style.position = 'absolute';
+            }
+          } else if (!value) {
+            if (!--style.positioning) {
+              style.position = '';
+            }
+          }
+        }
         style[camel] = pixels || value;
       }
     }
@@ -22702,26 +22769,31 @@ Styles = (function() {
   };
 
   Styles.prototype.render = function(positioning, parent, x, y, offsetParent) {
-    var child, children, offsets, _i, _len, _results;
-    if (!parent) {
+    var child, children, offsets, _i, _len;
+    if (parent == null) {
       parent = this.engine.scope;
+    }
+    if (x == null) {
+      x = 0;
+    }
+    if (y == null) {
+      y = 0;
     }
     if (offsets = this.preposition(positioning, parent, x, y)) {
       x += offsets.left;
       y += offsets.top;
     }
-    children = this.engine.context['>'][1](parent);
-    if (offsetParent && !offsets && children.length && children[0].parentOffset === parent) {
-      x += parent.offsetLeft;
-      y += parent.offsetTop;
+    children = this.engine.commands['>'][1](parent);
+    if (!offsets && children.length && children[0].offsetParent === parent) {
+      x += parent.offsetLeft + parent.clientLeft;
+      y += parent.offsetTop + parent.clientTop;
       offsetParent = parent;
     }
-    _results = [];
     for (_i = 0, _len = children.length; _i < _len; _i++) {
       child = children[_i];
-      _results.push(this.render(positioning, child, x, y, offsetParent));
+      this.render(positioning, child, x, y, offsetParent);
     }
-    return _results;
+    return this;
   };
 
   Styles.prototype.preposition = function(positioning, element, x, y) {
@@ -22737,16 +22809,17 @@ Styles = (function() {
           if (value !== null) {
             switch (property) {
               case "x":
-                styles.x = value - (x || 0);
-                offsets.left = value - (x || 0);
+                styles.x = value - x;
+                offsets.left = value - x;
                 break;
               case "y":
-                styles.y = value - (y || 0);
-                offsets.top = value - (y || 0);
+                styles.y = value - y;
+                offsets.top = value - y;
             }
           }
         }
       }
+      this.engine._onMeasure(element, x, y, styles);
     }
     return offsets;
   };
@@ -27789,11 +27862,13 @@ module.exports = {
     "lib/Document.js",
     "lib/Solver.js",
 
-    "lib/context/Properties.js", 
-    "lib/context/Rules.js", 
-    "lib/context/Selectors.js", 
-    "lib/context/Constraints.js",
-    "lib/context/Measurements.js", 
+    "lib/properties/Dimensions.js", 
+    "lib/properties/Equasions.js",
+
+    "lib/commands/Rules.js", 
+    "lib/commands/Selectors.js", 
+    "lib/commands/Constraints.js",
+    "lib/commands/Measurements.js", 
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 

@@ -6,16 +6,22 @@ Engine = require('./Engine')
 class Engine.Document extends Engine
   Queries:       
     require('./input/Queries.js')
+
   Styles:          
     require('./output/Styles.js')
+
   Solver:
     require('./Solver.js')
 
-  Context: Engine.include(
-    require('./context/Measurements.js'),
-    require('./context/Properties.js'),
-    require('./context/Selectors.js'),
-    require('./context/Rules.js'),
+  Commands: Engine.include(
+    require('./commands/Measurements.js'),
+    require('./commands/Selectors.js'),
+    require('./commands/Rules.js'),
+  )
+
+  Properties: Engine.include(
+    require('./properties/Dimensions.js'),
+    require('./properties/Equasions.js')
   )
 
   constructor: (scope = document, url) ->
@@ -47,18 +53,19 @@ class Engine.Document extends Engine
     return result
     
   onresize: (e = '::window') ->
-    @context.compute(e.target || e, "[width]", undefined, false)
-    @context.compute(e.target || e, "[height]", undefined, false)
+    @_compute(e.target || e, "[width]", undefined, false)
+    @_compute(e.target || e, "[height]", undefined, false)
 
   onscroll: (e = '::window') ->
-    @context.compute(e.target || e, "[scroll-top]", undefined, false)
-    @context.compute(e.target || e, "[scroll-left]", undefined, false)
+    @_compute(e.target || e, "[scroll-top]", undefined, false)
+    @_compute(e.target || e, "[scroll-left]", undefined, false)
 
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @
     @scope.removeEventListener 'scroll', @
     window.removeEventListener 'resize', @
 
+  # Observe stylesheets in dom
   onDOMContentLoaded: ->
     @scope.removeEventListener 'DOMContentLoaded', @
 
@@ -66,10 +73,16 @@ class Engine.Document extends Engine
     # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'text/gss', '*']]
     # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'tree/gss', '*']]
     
-# Export all DOM helpers as functions 
-GSS.Document::Context::_export(GSS)
-GSS.Document::Context::_export(GSS::)
-GSS::engine = GSS
-GSS.engine = GSS
+# Export all DOM commands as helper functions 
+for target in [Engine, Engine.Document::, Engine.Document]
+  for source in [Engine.Document::Commands::, Engine.Document::Properties::]
+    for property, command of source
+      continue if target[property]?
+      if property == 'unwrap'
+        target._unwrap = command
+        continue
+      target[property] = Engine.Helper(command, true)
+
+  target.engine = Engine
 
 module.exports = Engine.Document    

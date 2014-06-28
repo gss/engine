@@ -350,8 +350,7 @@ describe 'GSS commands', ->
           count++      
           if count is 1
             # don't set height b/c intrinsic-height was used
-            expect(engine.$id("p-text").style.height).to.eql ""   
-            console.error('booya')         
+            expect(engine.$id("p-text").style.height).to.eql ""            
             expect(engine.values["$p-text[width]"]).to.eql 100
             expect(engine.values["$p-text[intrinsic-height]"] > 400).to.eql true
             expect(engine.values["$p-text[intrinsic-height]"] % 16).to.eql 0

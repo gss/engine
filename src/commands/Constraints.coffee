@@ -20,23 +20,22 @@ class Constraints
     return result
 
   get: (scope, property, path) ->
-    if typeof @[property] == 'function'
-      return @[property](scope, path)
+    if typeof @properties[property] == 'function'
+      return @properties[property].call(@, scope, path)
     else
-      variable = @var((scope || '') + (property || ''))
+      variable = @_var((scope || '') + (property || ''))
     return [variable, path || (property && scope) || '']
 
   remove: () ->
-    solutions = @engine.solutions
     for path in arguments
-      if constraints = solutions[path]
+      if constraints = @solutions[path]
         for constrain in constraints by -1
-          solutions.remove(constrain, path)
+          @solutions.remove(constrain, path)
 
     return @
 
   var: (name) ->
-    return @engine.solutions[name] ||= new c.Variable name: name
+    return @solutions[name] ||= new c.Variable name: name
 
   strength: (strength) ->
     return c.Strength[strength]
@@ -48,19 +47,19 @@ class Constraints
     return new c.Expression name: name
 
   eq: (left, right, strength, weight) ->
-    return new c.Equation(left, right, @strength(strength), @weight(weight))
+    return new c.Equation(left, right, @_strength(strength), @_weight(weight))
 
   lte: (left, right, strength, weight) ->
-    return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
+    return new c.Inequality(left, c.LEQ, right, @_strength(strength), @_weight(weight))
 
   gte: (left, right, strength, weight) ->
-    return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
+    return new c.Inequality(left, c.GEQ, right, @_strength(strength), @_weight(weight))
 
   lt: (left, right, strength, weight) ->
-    return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
+    return new c.Inequality(left, c.LEQ, right, @_strength(strength), @_weight(weight))
 
   gt: (left, right, strength, weight) ->
-    return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
+    return new c.Inequality(left, c.GEQ, right, @_strength(strength), @_weight(weight))
 
   plus: (left, right, strength, weight) ->
     return c.plus(left, right)
@@ -81,14 +80,15 @@ for property, method of Constraints::
     do (property, method) ->
       Constraints::[property] = (left, right, strength, weight) ->
         if left.push
-          overloaded = left = Constraints::onConstraint(null, null, left)
+          overloaded = left = @_onConstraint(null, null, left)
         if right.push
-          overloaded = right = Constraints::onConstraint(null, null, right)
+          overloaded = right = @_onConstraint(null, null, right)
         value = method.call(@, left, right, strength, weight)
         if overloaded
-          return Constraints::onConstraint(null, [left, right], value)
+          return @_onConstraint(null, [left, right], value)
         return value
-  Constraints::[property].callback = 'onConstraint'
+  Constraints::[property].callback = '_onConstraint'
+
 
 
 module.exports = Constraints

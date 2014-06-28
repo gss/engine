@@ -17,11 +17,13 @@
     "lib/Document.js",
     "lib/Solver.js",
 
-    "lib/context/Properties.js", 
-    "lib/context/Rules.js", 
-    "lib/context/Selectors.js", 
-    "lib/context/Constraints.js",
-    "lib/context/Measurements.js", 
+    "lib/properties/Dimensions.js", 
+    "lib/properties/Equasions.js",
+
+    "lib/commands/Rules.js", 
+    "lib/commands/Selectors.js", 
+    "lib/commands/Constraints.js",
+    "lib/commands/Measurements.js", 
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 

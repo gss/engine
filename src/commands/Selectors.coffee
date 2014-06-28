@@ -1,13 +1,17 @@
+# Selectors with custom combinators inspired by Slick of mootools fame (shout-out & credits)
 
 class Selectors
+
   # Set up DOM observer and filter out old elements 
-  onDOMQuery: (node, args, result, operation, continuation, scope) ->
+
+  onQuery: (node, args, result, operation, continuation, scope) ->
     return result if operation.def.hidden
-    return @engine.queries.update(node, args, result, operation, continuation, scope)
+    return @queries.update(node, args, result, operation, continuation, scope)
 
   remove: (id, continuation, operation) ->
-    @engine.queries.remove(id, continuation, operation)
+    @queries.remove(id, continuation, operation)
     return
+
   # Selector commands
 
   '$first': 
@@ -21,19 +25,19 @@ class Selectors
       return node if node.webkitMatchesSelector(value)
       
     # Create a shortcut operation to get through a group of operations
-    perform: (object, operation) ->
+    perform: (operation) ->
       head = operation.head || operation
       name = operation.def.group
       shortcut = [name, head.groupped]
       shortcut.parent = head.parent
       shortcut.index = head.index
-      object.analyze(shortcut)
+      @expressions.analyze(shortcut)
       tail = operation.tail
       unless global = tail.arity == 1 && tail.length == 2
         shortcut.splice(1, 0, tail[1])
       op = head
       while op
-        @analyze op, shortcut
+        @commands['$query'].analyze.call @, op, shortcut
         break if op == tail
         op = op[1]
       if (tail.parent == operation)
@@ -106,9 +110,9 @@ class Selectors
   # But numeric ids need workaround: Keys are set, but not values
   # So we fall back to querySelect 
   'getElementById': (node, id = node) ->
-    unless found = @engine.all[id]
-      if @engine.all.hasOwnProperty(id)
-        return @['$first']('#' + id)
+    unless found = @all[id]
+      if @all.hasOwnProperty(id)
+        return @_$first('#' + id)
     return found
 
   '$virtual':
@@ -151,6 +155,7 @@ class Selectors
     prefix: '::'
     lookup: true
 
+  # Comma combines found elements from multiple selectors without duplicates
   ',':
     # If all sub-selectors are native, make a single comma separated selector
     group: '$query'
@@ -158,45 +163,48 @@ class Selectors
     # Separate arguments with commas during serialization
     separator: ','
 
+    # Dont let undefined arguments stop execution
+    eager: true
+
     # Comma needs to know its scope element to generate proper cache key
     scoped: true
 
-    # Doesnt let undefined arguments stop execution
-    eager: true
-
-    serialize: (scope, operation, engine) ->
-      if scope && scope != engine.scope
-        continuation = engine.recognize(scope) + operation.path
+    # Commas disregard continuation path, because their path is global
+    # - comma separated list of selectors. So we prepend scope id to disambiguate 
+    serialize: (scope, operation) ->
+      if scope && scope != @scope
+        return @recognize(scope) + operation.path
       else
         return operation.path
 
-
     # Return deduplicated collection of all found elements
     command: (scope, operation) ->
-      continuation = @engine.context[','].serialize(scope, operation, @engine)
-      return @engine.queries.get(continuation)
+      continuation = @commands[','].serialize.call(@, scope, operation)
+      return @queries.get(continuation)
 
-    # Recieve a single element from one of the sub-selectors
-    capture: (engine, result, operation, continuation, scope) -> 
-      continuation = @serialize(scope, operation, engine)
-      engine.queries.add(result, continuation, scope, scope)
+    # Recieve a single element found by one of sub-selectors
+    # Duplicates are stored separately, they dont trigger callbacks
+    capture: (result, operation, continuation, scope) -> 
+      continuation = @commands[','].serialize.call(@, scope, operation)
+      @queries.add(result, continuation, scope, scope)
       return
 
-    release: (engine, result, operation, scope, child) ->
-      continuation = @serialize(scope, operation, engine)
-      engine.queries.remove(result, continuation, child, scope)
+    # Remove a single element that was found by sub-selector
+    # Doesnt trigger callbacks if it was also found by other selector
+    release: (result, operation, scope, child) ->
+      continuation = @commands[','].serialize.call(@, scope, operation)
+      @queries.remove(result, continuation, child, scope)
       return
-
-    # evaluate: (operation, continuation, scope, ascender, ascending) ->
-    #   return @
 
   # CSS Combinators with reversals
 
+  # All descendant elements
   ' ':
     group: '$query'
     1: (node) ->
       return node.getElementsByTagName("*")
 
+  # All parent elements
   '!':
     1: (node) ->
       nodes = undefined
@@ -205,24 +213,29 @@ class Selectors
           (nodes ||= []).push(node)
       return nodes
 
+  # All children elements
   '>':
     group: '$query'
     1: (node) -> 
       return node.children
 
+  # Parent element
   '!>':
     1: (node) ->
       return node.parentElement
 
+  # Next element
   '+':
     group: '$query'
     1: (node) ->
       return node.nextElementSibling
 
+  # Previous element
   '!+':
     1: (node) ->
       return node.previousElementSibling
 
+  # All direct sibling elements
   '++':
     1: (node) ->
       nodes = undefined
@@ -232,6 +245,7 @@ class Selectors
         (nodes ||= []).push(next)
       return nodes
 
+  # All succeeding sibling elements
   '~':
     group: '$query'
     1: (node) ->
@@ -240,6 +254,7 @@ class Selectors
         (nodes ||= []).push(node)
       return nodes
 
+  # All preceeding sibling elements
   '!~':
     1: (node) ->
       nodes = undefined
@@ -249,6 +264,7 @@ class Selectors
         prev = prev.nextElementSibling
       return nodes
 
+  # All sibling elements
   '~~':
     1:(node) ->
       nodes = undefined
@@ -290,18 +306,16 @@ class Selectors
     1: (node) ->
       return node
 
+  # Parent element (alias for !> *)
   '::parent':
-    #scoped: true
-    1: (node) ->
-      debugger
-      if parent = node.parentNode
-        if parent.nodeType == 1
-          return parent
+    1: Selectors::['!>'][1]
 
+  # Current engine scope (defaults to document)
   '::scope':
     1: (node) ->
-      return @engine.scope
+      return @scope
 
+  # Return abstract reference to window
   '::window': ->
     return '::window' 
 
@@ -309,7 +323,7 @@ class Selectors
 # to filter out old elements from collections
 for property, command of Selectors::
   if typeof command == 'object'
-    command.callback = 'onDOMQuery'
+    command.callback = '_onQuery'
     command.serialized = true
 
 
@@ -317,7 +331,7 @@ for property, command of Selectors::
 dummy = document.createElement('_')
 
 unless dummy.hasOwnProperty("parentElement") 
-  Selectors::['!>'][1] = (node) ->
+  Selectors::['!>'][1] = Selectors::['::parent'][1] = (node) ->
     if parent = node.parentNode
       return parent if parent.nodeType == 1
 unless dummy.hasOwnProperty("nextElementSibling")

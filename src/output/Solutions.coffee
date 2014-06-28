@@ -6,6 +6,7 @@ class Solutions
     
   # Read commands
   pull: (commands)->
+    debugger
     @response = response = {}
     @lastInput = commands
     for command in commands
@@ -28,6 +29,7 @@ class Solutions
       delete @nullified
     @lastOutput = response
     @push(response)
+    debugger
     return
 
   push: (results) ->
@@ -75,8 +77,8 @@ class Solutions
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))
 
   edit: (variable, strength, weight) ->
-    strength = @engine.context.strength(strength)
-    weight = @engine.context.weight(weight)
+    strength = @engine._strength(strength)
+    weight = @engine._weight(weight)
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
     constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight)
     @solver.addConstraint(constraint)

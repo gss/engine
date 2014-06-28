@@ -8,10 +8,11 @@ class Styles
     @lastInput = JSON.parse JSON.stringify data
 
     intrinsic = null
+    @engine.start()
 
     # Filter out measurements 
     for path, value of data
-      if @engine.context.getIntrinsicProperty(path)
+      if @engine._getIntrinsicProperty(path)
         data[path] = undefined
         (intrinsic ||= {})[path] = value
 
@@ -93,15 +94,15 @@ class Styles
       id = id.substring(0, last)
 
     return unless id.charAt(0) != ':'
-    unless element = @engine[id]
-      return unless element = @engine.context.getElementById(@engine.scope, id.substring(1))
+    unless element = @engine.elements[id]
+      return unless element = @engine._getElementById(@engine.scope, id.substring(1))
     positioner = this.positioners[property]
     if positioning && positioner
       (positioning[id] ||= {})[property] = value
     else
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        measured = @engine.context.compute(element,  '[' + property + ']', undefined, value)
+        measured = @engine._compute(element,  '[' + property + ']', undefined, value)
         if measured?
           value = measured
         return value
@@ -115,29 +116,36 @@ class Styles
       if style[camel] != undefined
         if typeof value == 'number' && property != 'zIndex'
           pixels = value + 'px'
+        if (positioner)
+          if !style[camel]
+            if (style.positioning = (style.positioning || 0) + 1) == 1
+              style.position = 'absolute'
+          else if !value
+            unless --style.positioning 
+              style.position = ''
         style[camel] = pixels || value
     @
 
   # Position 
-  render: (positioning, parent, x, y, offsetParent) ->
-    parent = @engine.scope unless parent
+  render: (positioning, parent = @engine.scope, x = 0, y = 0, offsetParent) ->
     # Calculate new offsets for given element and styles
     if offsets = @preposition(positioning, parent, x, y)
       x += offsets.left
       y += offsets.top
 
     # Select all children
-    children = @engine.context['>'][1](parent);
+    children = @engine.commands['>'][1](parent);
 
     # When rendering a positioned element, measure its offsets
-    if offsetParent && !offsets && children.length && children[0].parentOffset == parent
-      x += parent.offsetLeft
-      y += parent.offsetTop
+    if !offsets && children.length && children[0].offsetParent == parent
+      x += parent.offsetLeft + parent.clientLeft
+      y += parent.offsetTop + parent.clientTop
       offsetParent = parent
 
     # Position children
     for child in children
       @render(positioning, child, x, y, offsetParent)
+    return @
 
   # Calculate offsets according to new values (but dont set anything)
   preposition: (positioning, element, x, y) ->
@@ -148,11 +156,12 @@ class Styles
           unless value == null
             switch property
               when "x"
-                styles.x = value - (x || 0)
-                offsets.left = value - (x || 0)
+                styles.x = value - x
+                offsets.left = value - x
               when "y"
-                styles.y = value - (y || 0)
-                offsets.top = value - (y || 0)
+                styles.y = value - y
+                offsets.top = value - y
+      @engine._onMeasure(element, x, y, styles)
 
     return offsets
     
