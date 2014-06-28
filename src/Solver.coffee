@@ -14,7 +14,7 @@ class Engine.Solver extends Engine
     require('./properties/Equasions.js')
   
   constructor: (@input, @output, url) -> 
-    super()
+    return context if context = super()
 
     # Leave the hard stuff for worker when possible
     unless @useWorker(url)
@@ -47,6 +47,10 @@ class Engine.Solver extends Engine
 
   getWorker: (url) ->
     return new Worker url
+
+  getPath: (scope, property) ->
+    return scope || property unless scope && property
+    return (scope || '') + '[' + (property || '') + ']'
 
 
 # Solver inside a worker, initialized lazily on first message

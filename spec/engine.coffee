@@ -41,11 +41,11 @@ describe 'GSS engine', ->
       e = new GSS('../dist/worker.js')
     it 'should run commands', (done)->
       e.once 'solved', ->
-        val = e.values['[x]']
+        val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run [
-          ['eq', ['get','[x]'], 222]
+          ['eq', ['get','x'], 222]
         ]
     it 'should destroy', (done)->
       e.destroy()
@@ -57,11 +57,11 @@ describe 'GSS engine', ->
       e = new GSS()
     it 'should run commands', (done)->
       e.once 'solved', ->
-        val = e.values['[x]']
+        val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run [
-          ['eq', ['get','[x]'], 222]
+          ['eq', ['get','x'], 222]
         ]
     it 'should destroy', (done)->
       e.destroy()
@@ -93,8 +93,8 @@ describe 'GSS engine', ->
           done()
     
         ast = [
-          ['eq', ['get', ['$id','button1'], '[width]'], ['get', ['$id','button2'], '[width]']]
-          ['eq', ['get', ['$id','button1'], '[width]'], 100]
+          ['eq', ['get', ['$id','button1'], 'width'], ['get', ['$id','button2'], 'width']]
+          ['eq', ['get', ['$id','button1'], 'width'], 100]
         ]
         
         it 'before solving the second button should be wider', ->
@@ -141,8 +141,8 @@ describe 'GSS engine', ->
           done()
     
         ast = [
-            ['eq', ['get',['$tag','h1'],'[line-height]'], ['get',['$tag','h1'],'[font-size]']]
-            ['eq', ['get',['$tag','h1'],'[line-height]'], 42]
+            ['eq', ['get',['$tag','h1'],'line-height'], ['get',['$tag','h1'],'font-size']]
+            ['eq', ['get',['$tag','h1'],'line-height'], 42]
           ]
         
             
@@ -190,8 +190,8 @@ describe 'GSS engine', ->
       done()
     
     ast = [
-      ['eq', ['get',['$id','button2'],'[width]'], 222]
-      ['eq', ['get',['$id','button1'],'[width]'], 111]        
+      ['eq', ['get',['$id','button2'],'width'], 222]
+      ['eq', ['get',['$id','button1'],'width'], 111]        
     ]
     
     it 'before solving buttons dont exist', ->
@@ -202,7 +202,7 @@ describe 'GSS engine', ->
       assert !button2, "button2 doesn't exist"
     
     it 'engine remains idle',  ->            
-      assert engine.expressions.lastOutput == null
+      assert engine.expressions.lastOutput == undefined
     
     it 'after solving the buttons should have right', (done) ->
       onSolved = (e) ->
@@ -243,15 +243,15 @@ describe 'GSS engine', ->
     
 
     ast = [
-        ["eq", ["get", ["$id","b1"], "[right]"],  ["get",["$id","b2"],"[x]"]]
-        ["eq", ["get", ["$id","w"],  "[width]"],  200]
-        ["eq", ["get", ["$id","w"],  "[x]"]  ,    ["get",'[target]']]
-        ["eq", ["get", ["$id","b2"], "[right]"] , ["get",["$id","w"],"[right]"]] 
+        ["eq", ["get", ["$id","b1"], "right"],  ["get",["$id","b2"],"x"]]
+        ["eq", ["get", ["$id","w"],  "width"],  200]
+        ["eq", ["get", ["$id","w"],  "x"]  ,    ["get",'target']]
+        ["eq", ["get", ["$id","b2"], "right"] , ["get",["$id","w"],"right"]] 
         # b2[right] -> 200
-        ["eq", ["get", ["$id","b1"], "[x]"   ] ,  ["get","[target]"]]        
-        ["eq", ["get", ["$id","b1"], "[width]"] , ["get",["$id","b2"],"[width]"]]
+        ["eq", ["get", ["$id","b1"], "x"   ] ,  ["get","target"]]        
+        ["eq", ["get", ["$id","b1"], "width"] , ["get",["$id","b2"],"width"]]
         
-        ["eq", ["get", "[target]"], 0]
+        ["eq", ["get", "target"], 0]
       ]
     
     it 'after solving should have right size', (done) ->
@@ -286,15 +286,15 @@ describe 'GSS engine', ->
     it 'var == var * (num / num)', (done) ->
       onSolved =  (e) ->
         expect(e.detail).to.eql 
-          '[y]': 10
-          '[x]': 5
+          'y': 10
+          'x': 5
           engine: engine
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
       engine.run [
-        ['eq', ['get', '[y]'], 10]
-        ['eq', ['get', '[x]'], ['multiply',['get','[y]'],['divide',1,2]] ]
+        ['eq', ['get', 'y'], 10]
+        ['eq', ['get', 'x'], ['multiply',['get','y'],['divide',1,2]] ]
       ]
   
   describe 'Engine::vars', ->
@@ -314,15 +314,15 @@ describe 'GSS engine', ->
       onSolved =  (e) ->
         values = e.detail
         expect(values).to.eql 
-          '[col-width]': 100
-          '[row-height]': 50
+          'col-width': 100
+          'row-height': 50
           engine: engine
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
       engine.run [
-          ['eq', ['get', '[col-width]'], 100]
-          ['eq', ['get', '[row-height]'], 50]
+          ['eq', ['get', 'col-width'], 100]
+          ['eq', ['get', 'row-height'], 50]
         ]
     
     it 'engine.vars are updated after many suggests', (done) ->
@@ -330,34 +330,34 @@ describe 'GSS engine', ->
       onSolved =  (e) ->        
         count++
         if count is 1
-          colwidth = engine.values['[col-width]']
-          rowheight = engine.values['[row-height]']
+          colwidth = engine.values['col-width']
+          rowheight = engine.values['row-height']
           assert colwidth is 10, "fist step [col-width] == #{colwidth}"
           assert rowheight , "fist step [row-height] == #{rowheight}"
           engine.run [
-              ['suggest', '[col-width]', 1]
-              ['suggest', '[row-height]', .5]
+              ['suggest', 'col-width', 1]
+              ['suggest', 'row-height', .5]
             ]
         else if count is 2
           expect(engine.values).to.eql 
-            '[col-width]': 1
-            '[row-height]': .5
+            'col-width': 1
+            'row-height': .5
           engine.run [
-              ['suggest', '[col-width]', 333]
-              ['suggest', '[row-height]', 222]
+              ['suggest', 'col-width', 333]
+              ['suggest', 'row-height', 222]
             ]
         else if count is 3
           expect(engine.values).to.eql 
-            '[col-width]': 333
-            '[row-height]': 222
+            'col-width': 333
+            'row-height': 222
           container.removeEventListener 'solved', onSolved
           done()
       container.addEventListener 'solved', onSolved
       engine.run [
-          ['eq', ['get', '[col-width]'], 100, 'medium']
-          ['eq', ['get', '[row-height]'], 50, 'medium']
-          ['suggest', '[col-width]', 10]
-          ['suggest', '[row-height]', 5]
+          ['eq', ['get', 'col-width'], 100, 'medium']
+          ['eq', ['get', 'row-height'], 50, 'medium']
+          ['suggest', 'col-width', 10]
+          ['suggest', 'row-height', 5]
         ]
       
       
@@ -461,7 +461,7 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ["suggest", "[col-width-1]", 111]
+              ["suggest", "col-width-1", 111]
             ]          
           }]
           </style>
@@ -469,7 +469,7 @@ describe 'GSS engine', ->
         listener = (e) ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
-          expect(engine1.vars['[col-width-1]']).to.equal 111
+          expect(engine1.vars['col-width-1']).to.equal 111
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
@@ -481,15 +481,15 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ["suggest", "[col-width-11]", 1111]
+              ["suggest", "col-width-11", 1111]
             ]          
           }]
         """        
         listener = (e) ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
-          expect(engine1.vars['[col-width-1]']).to.equal undefined
-          expect(engine1.vars['[col-width-11]']).to.equal 1111
+          expect(engine1.vars['col-width-1']).to.equal undefined
+          expect(engine1.vars['col-width-11']).to.equal 1111
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
@@ -502,7 +502,7 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ["suggest", "[col-width-2]", 222]
+              ["suggest", "col-width-2", 222]
             ]          
           }]
           </style>
@@ -511,9 +511,9 @@ describe 'GSS engine', ->
         listener = (e) ->
           engine2 = GSS(container)
           assert engine1 is engine2, "engine is maintained" 
-          assert !engine1.vars['[col-width-1]']?, "engine1.vars['[col-width-1]'] removed" 
-          expect(engine1.vars['[col-width-11]']).to.equal undefined
-          expect(engine1.vars['[col-width-2]']).to.equal 222
+          assert !engine1.vars['col-width-1']?, "engine1.vars['col-width-1'] removed" 
+          expect(engine1.vars['col-width-11']).to.equal undefined
+          expect(engine1.vars['col-width-2']).to.equal 222
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
@@ -526,7 +526,7 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ["suggest", "[col-width-3]", 333]
+              ["suggest", "col-width-3", 333]
             ]          
           }]
           </style>
@@ -534,7 +534,7 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ["suggest", "[col-width-4]", 444]
+              ["suggest", "col-width-4", 444]
             ]          
           }]
           </style>
@@ -544,10 +544,10 @@ describe 'GSS engine', ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
           #expect(engine1.styleNode).to.equal document.getElementById 'gssb'
-          expect(engine1.vars['[col-width-1]']).to.equal undefined
-          expect(engine1.vars['[col-width-2]']).to.equal undefined
-          expect(engine1.vars['[col-width-3]']).to.equal 333
-          expect(engine1.vars['[col-width-4]']).to.equal 444
+          expect(engine1.vars['col-width-1']).to.equal undefined
+          expect(engine1.vars['col-width-2']).to.equal undefined
+          expect(engine1.vars['col-width-3']).to.equal 333
+          expect(engine1.vars['col-width-4']).to.equal 444
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
@@ -831,7 +831,7 @@ describe 'GSS engine', ->
         count = 0
         for key of GSS.View.byId          
           count++
-        assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
+        assert count <= document.querySelectorAll("data-gss-id").length + margin_of_error, "views are recycled: #{count}"
         done()
     it "_byIdCache is cleared *MOSTLY*", (done) ->
       margin_of_error = 25 + 5
@@ -839,7 +839,7 @@ describe 'GSS engine', ->
         count = 0
         for key of GSS._byIdCache
           count++
-        assert count <= document.querySelectorAll("[data-gss-id]").length + margin_of_error, "views are recycled: #{count}"
+        assert count <= document.querySelectorAll("data-gss-id").length + margin_of_error, "views are recycled: #{count}"
         done()
   
     #it 'updates to scoped value are bridged downward', (done) ->

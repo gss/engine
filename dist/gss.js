@@ -20026,13 +20026,12 @@ Engine = (function() {
     var Document, engine, id;
     if (scope && scope.nodeType) {
       if (this.Expressions) {
-        id = Engine.identify(scope);
         if (Document = Engine.Document) {
           if (!(this instanceof Document)) {
             return new Document(scope, url);
           }
         }
-        Engine[id] = this;
+        Engine[Engine.identify(scope)] = this;
         this.scope = scope;
         this.all = scope.getElementsByTagName('*');
       } else {
@@ -20143,7 +20142,7 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.getPath = function(path, value) {
+  Engine.prototype.getContinuation = function(path, value) {
     if (typeof value === 'string') {
       return value;
     }
@@ -20187,6 +20186,8 @@ Engine = (function() {
   Engine.uid = 0;
 
   Engine.prototype.elements = {};
+
+  Engine.prototype.engines = {};
 
   Engine.prototype.once = function(type, fn) {
     fn.once = true;
@@ -20268,8 +20269,10 @@ Engine = (function() {
       _ref = this.commands;
       for (property in _ref) {
         command = _ref[property];
-        command.reference = '_' + property;
-        this[command.reference] = Engine.Command(command, command.reference);
+        if (property !== 'engine') {
+          command.reference = '_' + property;
+          this[command.reference] = Engine.Command(command, command.reference);
+        }
       }
       return this.running = true;
     }
@@ -20389,16 +20392,16 @@ Engine.Document = (function(_super) {
     if (e == null) {
       e = '::window';
     }
-    this._compute(e.target || e, "[width]", void 0, false);
-    return this._compute(e.target || e, "[height]", void 0, false);
+    this._compute(e.target || e, "width", void 0, false);
+    return this._compute(e.target || e, "height", void 0, false);
   };
 
   Document.prototype.onscroll = function(e) {
     if (e == null) {
       e = '::window';
     }
-    this._compute(e.target || e, "[scroll-top]", void 0, false);
-    return this._compute(e.target || e, "[scroll-left]", void 0, false);
+    this._compute(e.target || e, "scroll-top", void 0, false);
+    return this._compute(e.target || e, "scroll-left", void 0, false);
   };
 
   Document.prototype.destroy = function() {
@@ -20423,14 +20426,7 @@ for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     source = _ref1[_j];
     for (property in source) {
       command = source[property];
-      if (target[property] != null) {
-        continue;
-      }
-      if (property === 'unwrap') {
-        target._unwrap = command;
-        continue;
-      }
-      target[property] = Engine.Helper(command, true);
+      target[property] || (target[property] = Engine.Helper(command, true));
     }
   }
   target.engine = Engine;
@@ -20456,9 +20452,12 @@ Engine.Solver = (function(_super) {
   Solver.prototype.Properties = require('./properties/Equasions.js');
 
   function Solver(input, output, url) {
+    var context;
     this.input = input;
     this.output = output;
-    Solver.__super__.constructor.call(this);
+    if (context = Solver.__super__.constructor.call(this)) {
+      return context;
+    }
     if (!this.useWorker(url)) {
       this.solutions = new this.Solutions(this, this.output);
       this.expressions.output = this.solutions;
@@ -20493,6 +20492,13 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.getWorker = function(url) {
     return new Worker(url);
+  };
+
+  Solver.prototype.getPath = function(scope, property) {
+    if (!(scope && property)) {
+      return scope || property;
+    }
+    return (scope || '') + '[' + (property || '') + ']';
   };
 
   return Solver;
@@ -20536,55 +20542,52 @@ var Dimensions;
 Dimensions = (function() {
   function Dimensions() {}
 
-  Dimensions.prototype['::window[width]'] = function() {
-    return window.innerWidth;
+  Dimensions.prototype['::window'] = {
+    'width': function() {
+      return window.innerWidth;
+    },
+    'height': function() {
+      return window.innerHeight;
+    },
+    'scroll-left': function() {
+      return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
+    },
+    'scroll-top': function() {
+      return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    },
+    'x': 0,
+    'y': 0
   };
 
-  Dimensions.prototype['::window[height]'] = function() {
-    return window.innerHeight;
-  };
-
-  Dimensions.prototype['::window[scroll-left]'] = function() {
-    return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
-  };
-
-  Dimensions.prototype['::window[scroll-top]'] = function() {
-    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-  };
-
-  Dimensions.prototype['::window[x]'] = 0;
-
-  Dimensions.prototype['::window[y]'] = 0;
-
-  Dimensions.prototype["[intrinsic-height]"] = function(scope) {
+  Dimensions.prototype["intrinsic-height"] = function(scope) {
     return scope.offsetHeight;
   };
 
-  Dimensions.prototype["[intrinsic-width]"] = function(scope) {
+  Dimensions.prototype["intrinsic-width"] = function(scope) {
     return scope.offsetWidth;
   };
 
-  Dimensions.prototype["[intrinsic-y]"] = function(scope) {
+  Dimensions.prototype["intrinsic-y"] = function(scope) {
     return scope.offsetTop;
   };
 
-  Dimensions.prototype["[intrinsic-x]"] = function(scope) {
+  Dimensions.prototype["intrinsic-x"] = function(scope) {
     return scope.offsetWidth;
   };
 
-  Dimensions.prototype["[scroll-left]"] = function(scope) {
+  Dimensions.prototype["scroll-left"] = function(scope) {
     return scope.scrollLeft;
   };
 
-  Dimensions.prototype["[scroll-top]"] = function(scope) {
+  Dimensions.prototype["scroll-top"] = function(scope) {
     return scope.scrollTop;
   };
 
-  Dimensions.prototype["[offset-left]"] = function(scope) {
+  Dimensions.prototype["offset-left"] = function(scope) {
     return scope.offsetLeft;
   };
 
-  Dimensions.prototype["[offset-top]"] = function(scope) {
+  Dimensions.prototype["offset-top"] = function(scope) {
     return scope.offsetTop;
   };
 
@@ -20601,20 +20604,20 @@ var Equasions;
 Equasions = (function() {
   function Equasions() {}
 
-  Equasions.prototype["[right]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[x]", path), this._get(scope, "[width]", path));
+  Equasions.prototype["right"] = function(scope, path) {
+    return this._plus(this._get(scope, "x", path), this._get(scope, "width", path));
   };
 
-  Equasions.prototype["[bottom]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[y]", path), this._get(scope, "[height]", path));
+  Equasions.prototype["bottom"] = function(scope, path) {
+    return this._plus(this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
-  Equasions.prototype["[center-x]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[x]", path), this._divide(this._get(scope, "[width]", path), 2));
+  Equasions.prototype["center-x"] = function(scope, path) {
+    return this._plus(this._get(scope, "x", path), this._divide(this._get(scope, "width", path), 2));
   };
 
-  Equasions.prototype["[center-y]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[y]", path), this._divide(this._get(scope, "[height]", path), 2));
+  Equasions.prototype["center-y"] = function(scope, path) {
+    return this._plus(this._get(scope, "y", path), this._divide(this._get(scope, "height", path), 2));
   };
 
   return Equasions;
@@ -20833,10 +20836,8 @@ Selectors = (function() {
     if (id == null) {
       id = node;
     }
-    if (!(found = this.all[id])) {
-      if (this.all.hasOwnProperty(id)) {
-        return this._$first('#' + id);
-      }
+    if (!(found = this.all[id]) && isFinite(parseInt(id))) {
+      return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
     }
     return found;
   };
@@ -21235,7 +21236,7 @@ Constraints = (function() {
     if (typeof this.properties[property] === 'function') {
       return this.properties[property].call(this, scope, path);
     } else {
-      variable = this._var((scope || '') + (property || ''));
+      variable = this._var(this.getPath(scope, property));
     }
     return [variable, path || (property && scope) || ''];
   };
@@ -21364,21 +21365,7 @@ Measurements = (function() {
   };
 
   Measurements.prototype.onFlush = function(buffer) {
-    var commands, property, value, _ref;
-    if (!this.computed) {
-      return buffer;
-    }
-    commands = [];
-    _ref = this.computed;
-    for (property in _ref) {
-      value = _ref[property];
-      if (this.values[property] === value) {
-        continue;
-      }
-      commands.push(['suggest', property, value, 'required']);
-    }
-    this.computed = void 0;
-    return commands.concat(buffer);
+    return this._getComputedProperties();
   };
 
   Measurements.prototype.onMeasure = function(node, id) {};
@@ -21397,7 +21384,7 @@ Measurements = (function() {
             switch (prop) {
               case "height":
               case "width":
-                this._compute(id, '[intrinsic-' + prop + ']');
+                this._compute(id, 'intrinsic-' + prop);
             }
           }
         }
@@ -21441,75 +21428,77 @@ Measurements = (function() {
     return a / b;
   };
 
-  Measurements.prototype.unwrap = function(property) {
-    if (property.charAt(0) === '[') {
-      return property.substring(1, property.length - 1);
-    }
-    return property;
-  };
-
   Measurements.prototype.getStyle = function(element, property) {};
 
   Measurements.prototype.setStyle = function(element, property, value) {
-    return element.style[this._unwrap(property)] = value;
+    return element.style[property] = value;
   };
 
   Measurements.prototype.deferComputation = {
-    '[intrinsic-x]': '[intrinsic-x]',
-    '[intrinsic-y]': '[intrinsic-y]'
+    'intrinsic-x': 'intrinsic-x',
+    'intrinsic-y': 'intrinsic-y'
   };
 
-  Measurements.prototype.compute = function(id, property, continuation, old) {
-    var current, def, method, object, path, prop, value;
-    if (id.nodeType) {
-      object = id;
-      id = this.identify(object);
+  Measurements.prototype.compute = function(node, property, continuation, old) {
+    var current, id, path, prop, value, _ref, _ref1;
+    if (node.nodeType) {
+      id = this.identify(node);
     } else {
-      object = this.elements[id];
+      id = node;
+      node = this.elements[id];
     }
-    path = property.charAt(0) === '[' && id + property || property;
-    if ((def = this.properties[path]) != null) {
+    path = property.indexOf('[') > -1 && property || id + '[' + property + ']';
+    if (path.indexOf('window') > -1) {
+      debugger;
+    }
+    if (((_ref = this.computed) != null ? _ref[path] : void 0) != null) {
+      return;
+    }
+    if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
       current = this.values[path];
       if (current === void 0 || old === true) {
-        if (typeof def === 'function') {
-          value = this.properties[path].call(this, object, continuation);
+        if (typeof prop === 'function') {
+          value = prop.call(this, node, continuation);
         } else {
-          value = def;
-        }
-        if (value !== current) {
-          (this.computed || (this.computed = {}))[path] = value;
+          value = prop;
         }
       }
-      return value;
     } else if (property.indexOf('intrinsic-') > -1) {
-      path = id + property;
-      if (!this.computed || (this.computed[path] == null)) {
-        if (value === void 0) {
-          prop = this.properties[property];
-          method = prop && property || 'getStyle';
-          if (document.body.contains(object)) {
-            if (prop) {
-              value = prop.call(this, object, property, continuation);
-            } else {
-              value = this._getStyle(object, property, continuation);
-            }
-          } else {
-            value = null;
-          }
+      if (document.body.contains(node)) {
+        if (prop = this.properties[property]) {
+          value = prop.call(this, node, property, continuation);
+        } else {
+          value = this._getStyle(node, property, continuation);
         }
-        if (value !== old) {
-          (this.computed || (this.computed = {}))[path] = value;
-          return value;
-        }
+      } else {
+        value = null;
       }
     } else {
-      return this[property](object, continuation);
+      value = this[property](node, continuation);
     }
+    return (this.computed || (this.computed = {}))[path] = value;
+  };
+
+  Measurements.prototype.getComputedProperties = function() {
+    var property, suggests, value, _ref;
+    if (!this.computed) {
+      return;
+    }
+    suggests = void 0;
+    _ref = this.computed;
+    for (property in _ref) {
+      value = _ref[property];
+      if (value !== this.values[property]) {
+        (suggests || (suggests = [])).push(['suggest', property, value, 'required']);
+      }
+    }
+    this.computed = void 0;
+    return suggests;
   };
 
   Measurements.prototype.get = {
     command: function(continuation, object, property) {
-      var computed, id;
+      var computed, id, _ref;
       if (property) {
         if (typeof object === 'string') {
           id = object;
@@ -21526,7 +21515,7 @@ Measurements = (function() {
       if (typeof continuation === 'object') {
         continuation = continuation.path;
       }
-      if (property.indexOf('intrinsic-') > -1 || (this.properties[id + property] != null)) {
+      if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
         computed = this._compute(id, property, continuation, true);
         if (typeof computed === 'object') {
           return computed;
@@ -21590,10 +21579,11 @@ Expressions = (function() {
   };
 
   Expressions.prototype.flush = function() {
-    var buffer;
+    var added, buffer;
     buffer = this.buffer;
     if (this.engine._onFlush) {
-      buffer = this.engine._onFlush(buffer);
+      added = this.engine._onFlush();
+      buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
     this.lastOutput = GSS.clone(buffer);
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
@@ -21757,7 +21747,7 @@ Expressions = (function() {
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
-            breadcrumbs = this.engine.getPath(continuation, item);
+            breadcrumbs = this.engine.getContinuation(continuation, item);
             this.evaluate(operation.parent, breadcrumbs, scope, operation.index, item);
           }
           console.groupEnd(continuation);
@@ -21944,7 +21934,7 @@ Queries = (function() {
   };
 
   Queries.prototype.pull = function(mutations) {
-    var buffer, continuation, id, index, mutation, queries, query, scope, _i, _j, _k, _len, _len1, _len2, _ref;
+    var continuation, id, index, mutation, queries, query, scope, _i, _j, _k, _len, _len1, _len2, _ref;
     this.output.buffer = this.buffer = this.updated = null;
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
@@ -21975,12 +21965,6 @@ Queries = (function() {
       }
     }
     this.buffer = this.updated = void 0;
-    if (!(buffer = this.output.buffer)) {
-      this.output.buffer = void 0;
-      if (this.engine.styles.resuggest()) {
-        return;
-      }
-    }
     return this.output.flush();
   };
 
@@ -22210,10 +22194,11 @@ Queries = (function() {
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
+    } else {
+      node = this.engine.elements[id];
     }
     if (continuation) {
       if (collection = this[continuation]) {
-        node || (node = this.engine.get(id));
         if ((duplicates = collection.duplicates)) {
           if ((index = duplicates.indexOf(node)) > -1) {
             duplicates.splice(index, 1);
@@ -22229,7 +22214,7 @@ Queries = (function() {
           }
         }
       }
-      if (this.engine.elements[id]) {
+      if (node) {
         if (watchers = this._watchers[id]) {
           ref = continuation + (collection && collection.length !== void 0 && id || '');
           refforked = ref + '–';
@@ -22259,7 +22244,7 @@ Queries = (function() {
       if (collection && !collection.length) {
         delete this[continuation];
       }
-    } else if (node = this.engine.elements[id]) {
+    } else if (node) {
       if (watchers = this._watchers[id]) {
         index = 0;
         while (watcher = watchers[index]) {
@@ -22612,7 +22597,7 @@ Styles = (function() {
   }
 
   Styles.prototype.pull = function(data) {
-    var id, intrinsic, path, positioning, prop, styles, value, _ref;
+    var id, intrinsic, path, positioning, prop, styles, suggests, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
     this.engine.start();
@@ -22626,7 +22611,9 @@ Styles = (function() {
     positioning = {};
     for (path in data) {
       value = data[path];
-      this.set(path, void 0, value, positioning);
+      if (value !== void 0) {
+        this.set(path, void 0, value, positioning);
+      }
     }
     this.render(positioning);
     for (id in positioning) {
@@ -22653,28 +22640,11 @@ Styles = (function() {
       this.data = void 0;
     }
     this.data = data;
-    if (!this.resuggest(data)) {
+    if (suggests = this.engine._getComputedProperties()) {
+      return this.pull(suggests);
+    } else {
       this.data = void 0;
       return this.push(data);
-    }
-  };
-
-  Styles.prototype.resuggest = function(data) {
-    var property, suggests, value, _ref;
-    if (this.engine.computed) {
-      suggests = [];
-      _ref = this.engine.computed;
-      for (property in _ref) {
-        value = _ref[property];
-        if (value !== this.engine.values[property]) {
-          suggests.push(['suggest', property, value, 'required']);
-        }
-      }
-      this.engine.computed = void 0;
-      if (suggests.length) {
-        this.engine.pull(suggests);
-        return suggests;
-      }
     }
   };
 
@@ -22733,7 +22703,7 @@ Styles = (function() {
       (positioning[id] || (positioning[id] = {}))[property] = value;
     } else {
       if (intrinsic) {
-        measured = this.engine._compute(element, '[' + property + ']', void 0, value);
+        measured = this.engine._compute(element, property, void 0, value);
         if (measured != null) {
           value = measured;
         }

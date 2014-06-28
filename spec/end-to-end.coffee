@@ -42,7 +42,7 @@ describe 'End - to - End', ->
       
         listen = (e) ->     
           expect(engine.vars).to.eql 
-            "[m]": 2
+            "m": 2
           GSS.config.defaultStrength = oldDefault
           done()     
                      
@@ -169,10 +169,10 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', (e) ->     
           expect(engine.vars).to.eql 
-            "[c]": 10
-            "[x]": 0
-            "[y]": 500
-            "[z]": 510
+            "c": 10
+            "x": 0
+            "y": 500
+            "z": 510
           done()
           
     describe 'expression chain w/ queryBound connector', ->  
@@ -186,7 +186,7 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', (e) ->     
           expect(engine.vars).to.eql 
-            "[grid]": 36
+            "grid": 36
             "$billy[x]": 36
           done()
     
@@ -229,14 +229,14 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', (e) ->
           expect(engine.vars).to.eql 
-            "[w]": 100
-            "[igap]": 3
-            "[ogap]": 10
-            "[md]": 20
-            "[span3]": 66
-            "[blah]": 70
-            "[blah2]": 70
-            "[md2]": 71 / 4
+            "w": 100
+            "igap": 3
+            "ogap": 10
+            "md": 20
+            "span3": 66
+            "blah": 70
+            "blah2": 70
+            "md2": 71 / 4
           done()
     
     describe 'balanced plural selectors', -> 
@@ -255,7 +255,7 @@ describe 'End - to - End', ->
           """
         engine.once 'display', (e) ->
           expect(engine.vars).to.eql 
-            "[x]": 100
+            "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
             "$a3[x]": 100
@@ -288,7 +288,7 @@ describe 'End - to - End', ->
         engine.once 'display', (e) ->
           assert warned, "warn message should contain unbalanced selectors"
           expect(engine.vars).to.eql 
-            "[x]": 100
+            "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
             "$a3[x]": 100
@@ -316,7 +316,7 @@ describe 'End - to - End', ->
           """
         engine.once 'display', (e) ->
           expect(engine.vars).to.eql 
-            "[x]": 100
+            "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
             "$a3[x]": 100
@@ -443,10 +443,10 @@ describe 'End - to - End', ->
           expect(engine.vars).to.eql 
             "::window[width]": w
             "::window[center-x]": cx
-            "[center-x]": cx
+            "center-x": cx
             "::window[height]": h
             "::window[center-y]": cy            
-            "[center-y]": cy
+            "center-y": cy
           done()                             
         container.innerHTML =  """
             <style type="text/gss">              
@@ -461,13 +461,13 @@ describe 'End - to - End', ->
           h = (window.innerHeight)
           expect(engine.vars).to.eql 
             "::window[y]": 0
-            "[top]": 0
+            "top": 0
             "::window[width]": w
-            "[right]": w
+            "right": w
             "::window[height]": h
-            "[bottom]": h
+            "bottom": h
             "::window[x]": 0
-            "[left]": 0
+            "left": 0
           done()                             
         container.innerHTML =  """
             <style type="text/gss">
@@ -491,7 +491,7 @@ describe 'End - to - End', ->
       
         listen = (e) ->     
           expect(engine.vars).to.eql 
-            "[external-file]": 1000
+            "external-file": 1000
           GSS.config.defaultStrength = oldDefault
           done()     
                      
@@ -509,9 +509,9 @@ describe 'End - to - End', ->
       
         listen = (e) ->     
           expect(engine.vars).to.eql 
-            "[external-file]": 1000
-            "[external-file-2]": 2000
-            "[external-file-3]": 3000
+            "external-file": 1000
+            "external-file-2": 2000
+            "external-file-3": 3000
           GSS.config.defaultStrength = oldDefault
           done()     
                      
@@ -732,8 +732,8 @@ describe 'End - to - End', ->
       it 'should compute values', (done) ->
         listen = (e) ->     
           expect(engine.vars).to.eql 
-            "[t]": 500
-            "[x]": 1
+            "t": 500
+            "x": 1
           done()     
                      
         engine.once 'solved', listen
@@ -757,7 +757,7 @@ describe 'End - to - End', ->
       it 'should compute values', (done) ->
         listen = (e) ->     
           expect(engine.vars).to.eql 
-            "[t]": 500
+            "t": 500
             "$b[width]": 1
           done()          
           engine.off 'solved', listen                    
@@ -1084,7 +1084,7 @@ describe 'End - to - End', ->
       it 'should compute values', (done) ->
         listen = (e) ->             
           expect(engine.vars).to.eql
-            "[Wwin]":100
+            "Wwin":100
             "$s1[x]":50
             "$s1[width]":1
             "$s2[width]":1
@@ -1372,7 +1372,7 @@ describe 'End - to - End', ->
           expect(engine.vars).to.eql                  
             "$container[x]": 10,
             "$container[width]": 100,
-            "[right-edge]": 200,
+            "right-edge": 200,
             "$s1[x]": 70,
             "$s1[width]": 120
             "$s2[x]": 200,

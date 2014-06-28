@@ -110,9 +110,8 @@ class Selectors
   # But numeric ids need workaround: Keys are set, but not values
   # So we fall back to querySelect 
   'getElementById': (node, id = node) ->
-    unless found = @all[id]
-      if @all.hasOwnProperty(id)
-        return @_$first('#' + id)
+    if !(found = @all[id]) && isFinite(parseInt(id))
+      return (node.nodeType && node || @scope).querySelector('[id="' + id + '"]')
     return found
 
   '$virtual':

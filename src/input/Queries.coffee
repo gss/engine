@@ -56,12 +56,7 @@ class Queries
           @remove id
         @removed = undefined
 
-
     @buffer = @updated = undefined
-    unless buffer = @output.buffer
-      @output.buffer = undefined
-      return if @engine.styles.resuggest()
-
     @output.flush()
 
   $attribute: (target, name, changed) ->
@@ -222,11 +217,11 @@ class Queries
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
+    else
+      node = @engine.elements[id]
 
     if continuation
       if collection = @[continuation]
-        node ||= @engine.get(id)
-
         # Dont remove it if element matches more than one selector
         if (duplicates = collection.duplicates)
           if (index = duplicates.indexOf(node)) > -1
@@ -240,7 +235,7 @@ class Queries
             cleaning = continuation unless collection.length
 
       # Detach observer and its subquery when cleaning by id
-      if @engine.elements[id]
+      if node
         if watchers = @_watchers[id]
           ref = continuation + (collection && collection.length != undefined && id || '')
           refforked = ref + '–'
@@ -266,7 +261,7 @@ class Queries
       delete @[continuation] if collection && !collection.length
 
 
-    else if node = @engine.elements[id]
+    else if node
       # Detach queries attached to an element when removing element by id
       if watchers = @_watchers[id]
         index = 0

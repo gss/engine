@@ -20,7 +20,8 @@ class Styles
     # leave out positioning properties (Restyle/Reflow)
     positioning = {}
     for path, value of data
-      @set(path, undefined, value, positioning)
+      unless value == undefined
+        @set(path, undefined, value, positioning)
 
     # Adjust positioning styles to respect 
     # element offsets 
@@ -45,20 +46,11 @@ class Styles
 
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
     @data = data
-    unless @resuggest(data)
+    if suggests = @engine._getComputedProperties()
+      @pull(suggests)
+    else
       @data = undefined
       @push(data)
-
-  resuggest: (data) ->
-    if @engine.computed
-      suggests = []
-      for property, value of @engine.computed
-        if value != @engine.values[property]
-          suggests.push ['suggest', property, value, 'required']
-      @engine.computed = undefined
-      if suggests.length
-        @engine.pull suggests
-        return suggests
 
   push: (data) ->
     @engine.push(data)
@@ -102,7 +94,7 @@ class Styles
     else
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        measured = @engine._compute(element,  '[' + property + ']', undefined, value)
+        measured = @engine._compute(element,  property, undefined, value)
         if measured?
           value = measured
         return value

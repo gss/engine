@@ -58,10 +58,11 @@ Expressions = (function() {
   };
 
   Expressions.prototype.flush = function() {
-    var buffer;
+    var added, buffer;
     buffer = this.buffer;
     if (this.engine._onFlush) {
-      buffer = this.engine._onFlush(buffer);
+      added = this.engine._onFlush();
+      buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
     this.lastOutput = GSS.clone(buffer);
     console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
@@ -225,7 +226,7 @@ Expressions = (function() {
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
-            breadcrumbs = this.engine.getPath(continuation, item);
+            breadcrumbs = this.engine.getContinuation(continuation, item);
             this.evaluate(operation.parent, breadcrumbs, scope, operation.index, item);
           }
           console.groupEnd(continuation);
@@ -398,13 +399,12 @@ Engine = (function() {
     var Document, engine, id;
     if (scope && scope.nodeType) {
       if (this.Expressions) {
-        id = Engine.identify(scope);
         if (Document = Engine.Document) {
           if (!(this instanceof Document)) {
             return new Document(scope, url);
           }
         }
-        Engine[id] = this;
+        Engine[Engine.identify(scope)] = this;
         this.scope = scope;
         this.all = scope.getElementsByTagName('*');
       } else {
@@ -515,7 +515,7 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.getPath = function(path, value) {
+  Engine.prototype.getContinuation = function(path, value) {
     if (typeof value === 'string') {
       return value;
     }
@@ -559,6 +559,8 @@ Engine = (function() {
   Engine.uid = 0;
 
   Engine.prototype.elements = {};
+
+  Engine.prototype.engines = {};
 
   Engine.prototype.once = function(type, fn) {
     fn.once = true;
@@ -640,8 +642,10 @@ Engine = (function() {
       _ref = this.commands;
       for (property in _ref) {
         command = _ref[property];
-        command.reference = '_' + property;
-        this[command.reference] = Engine.Command(command, command.reference);
+        if (property !== 'engine') {
+          command.reference = '_' + property;
+          this[command.reference] = Engine.Command(command, command.reference);
+        }
       }
       return this.running = true;
     }
@@ -714,20 +718,20 @@ var Equasions;
 Equasions = (function() {
   function Equasions() {}
 
-  Equasions.prototype["[right]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[x]", path), this._get(scope, "[width]", path));
+  Equasions.prototype["right"] = function(scope, path) {
+    return this._plus(this._get(scope, "x", path), this._get(scope, "width", path));
   };
 
-  Equasions.prototype["[bottom]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[y]", path), this._get(scope, "[height]", path));
+  Equasions.prototype["bottom"] = function(scope, path) {
+    return this._plus(this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
-  Equasions.prototype["[center-x]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[x]", path), this._divide(this._get(scope, "[width]", path), 2));
+  Equasions.prototype["center-x"] = function(scope, path) {
+    return this._plus(this._get(scope, "x", path), this._divide(this._get(scope, "width", path), 2));
   };
 
-  Equasions.prototype["[center-y]"] = function(scope, path) {
-    return this._plus(this._get(scope, "[y]", path), this._divide(this._get(scope, "[height]", path), 2));
+  Equasions.prototype["center-y"] = function(scope, path) {
+    return this._plus(this._get(scope, "y", path), this._divide(this._get(scope, "height", path), 2));
   };
 
   return Equasions;
@@ -770,7 +774,7 @@ Constraints = (function() {
     if (typeof this.properties[property] === 'function') {
       return this.properties[property].call(this, scope, path);
     } else {
-      variable = this._var((scope || '') + (property || ''));
+      variable = this._var(this.getPath(scope, property));
     }
     return [variable, path || (property && scope) || ''];
   };
@@ -1055,9 +1059,12 @@ Engine.Solver = (function(_super) {
   Solver.prototype.Properties = require('./properties/Equasions.js');
 
   function Solver(input, output, url) {
+    var context;
     this.input = input;
     this.output = output;
-    Solver.__super__.constructor.call(this);
+    if (context = Solver.__super__.constructor.call(this)) {
+      return context;
+    }
     if (!this.useWorker(url)) {
       this.solutions = new this.Solutions(this, this.output);
       this.expressions.output = this.solutions;
@@ -1092,6 +1099,13 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.getWorker = function(url) {
     return new Worker(url);
+  };
+
+  Solver.prototype.getPath = function(scope, property) {
+    if (!(scope && property)) {
+      return scope || property;
+    }
+    return (scope || '') + '[' + (property || '') + ']';
   };
 
   return Solver;

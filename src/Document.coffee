@@ -53,12 +53,12 @@ class Engine.Document extends Engine
     return result
     
   onresize: (e = '::window') ->
-    @_compute(e.target || e, "[width]", undefined, false)
-    @_compute(e.target || e, "[height]", undefined, false)
+    @_compute(e.target || e, "width", undefined, false)
+    @_compute(e.target || e, "height", undefined, false)
 
   onscroll: (e = '::window') ->
-    @_compute(e.target || e, "[scroll-top]", undefined, false)
-    @_compute(e.target || e, "[scroll-left]", undefined, false)
+    @_compute(e.target || e, "scroll-top", undefined, false)
+    @_compute(e.target || e, "scroll-left", undefined, false)
 
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @
@@ -77,11 +77,7 @@ class Engine.Document extends Engine
 for target in [Engine, Engine.Document::, Engine.Document]
   for source in [Engine.Document::Commands::, Engine.Document::Properties::]
     for property, command of source
-      continue if target[property]?
-      if property == 'unwrap'
-        target._unwrap = command
-        continue
-      target[property] = Engine.Helper(command, true)
+      target[property] ||= Engine.Helper(command, true)
 
   target.engine = Engine
 

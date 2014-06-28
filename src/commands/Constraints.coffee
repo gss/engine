@@ -23,7 +23,7 @@ class Constraints
     if typeof @properties[property] == 'function'
       return @properties[property].call(@, scope, path)
     else
-      variable = @_var((scope || '') + (property || ''))
+      variable = @_var(@getPath(scope, property))
     return [variable, path || (property && scope) || '']
 
   remove: () ->

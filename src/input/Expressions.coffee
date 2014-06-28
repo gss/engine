@@ -37,7 +37,8 @@ class Expressions
   flush: ->
     buffer = @buffer
     if @engine._onFlush
-      buffer = @engine._onFlush(buffer)
+      added = @engine._onFlush()
+      buffer = buffer && added && added.concat(buffer) || buffer || added
     @lastOutput = GSS.clone buffer
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
 
@@ -179,7 +180,7 @@ class Expressions
         if parent && @engine.isCollection(result)
           console.group continuation
           for item in result
-            breadcrumbs = @engine.getPath(continuation, item)
+            breadcrumbs = @engine.getContinuation(continuation, item)
             @evaluate operation.parent, breadcrumbs, scope, operation.index, item
           console.groupEnd continuation
           return

@@ -34,11 +34,11 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.run [
-          ['stay', ['get', ['$class','box'], '[x]']]
+          ['stay', ['get', ['$class','box'], 'x']]
         ]
       chai.expect(engine.expressions.lastOutput).to.eql [
-          ['stay', ['get', '$12322', '[x]', '.box$12322']]
-          ['stay', ['get', '$34222', '[x]', '.box$34222']]
+          ['stay', ['get', '$12322', 'x', '.box$12322']]
+          ['stay', ['get', '$34222', 'x', '.box$34222']]
         ]
     
     it 'multiple stays', ->
@@ -47,18 +47,18 @@ describe 'GSS commands', ->
         <div class="box block" id="34222">One</div>
       """
       engine.run [
-          ['stay', ['get', ['$class','box']  , '[x]'    , '%1']]
-          ['stay', ['get', ['$class','box']  , '[y]'    , '%2']]
-          ['stay', ['get', ['$class','block'], '[width]', '%3']]
+          ['stay', ['get', ['$class','box']  , 'x'    , '%1']]
+          ['stay', ['get', ['$class','box']  , 'y'    , '%2']]
+          ['stay', ['get', ['$class','block'], 'width', '%3']]
         ]
       chai.expect( engine.expressions.lastOutput).to.eql [
           # break up stays to allow multiple plural queries
-          ['stay', ['get', '$12322','[x]'    ,'.box$12322'  ]]
-          ['stay', ['get', '$34222','[x]'    ,'.box$34222'  ]] 
-          ['stay', ['get', '$12322','[y]'    ,'.box$12322'  ]]          
-          ['stay', ['get', '$34222','[y]'    ,'.box$34222'  ]]
-          ['stay', ['get', '$12322','[width]','.block$12322']]          
-          ['stay', ['get', '$34222','[width]','.block$34222']]
+          ['stay', ['get', '$12322','x'    ,'.box$12322'  ]]
+          ['stay', ['get', '$34222','x'    ,'.box$34222'  ]] 
+          ['stay', ['get', '$12322','y'    ,'.box$12322'  ]]          
+          ['stay', ['get', '$34222','y'    ,'.box$34222'  ]]
+          ['stay', ['get', '$12322','width','.block$12322']]          
+          ['stay', ['get', '$34222','width','.block$34222']]
         ]
     
     it 'eq with class and tracker', ->
@@ -67,13 +67,13 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.run [
-        ['eq', ['get', ['$class','box'], '[width]'],['get','[grid-col]']]
-        ['eq', 100,['get','[grid-col]']]
+        ['eq', ['get', ['$class','box'], 'width'],['get','grid-col']]
+        ['eq', 100,['get','grid-col']]
       ], '%'
       chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['eq', ['get','$12322','[width]','%.box$12322'],['get', "", '[grid-col]',"%.box$12322–"]]
-        ['eq', ['get','$34222','[width]','%.box$34222'],['get', "", '[grid-col]',"%.box$34222–"]]
-        ['eq', 100, ['get', "", '[grid-col]',"%"]]
+        ['eq', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322–"]]
+        ['eq', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222–"]]
+        ['eq', 100, ['get', "", 'grid-col',"%"]]
       ]
         
     
@@ -83,13 +83,13 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.run [
-        ['eq', ['get',['$class','box'],'[width]'],['get','[grid-col]']]
-        ['eq', 100, ['get','[grid-col]']]
+        ['eq', ['get',['$class','box'],'width'],['get','grid-col']]
+        ['eq', 100, ['get','grid-col']]
       ]
       expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['eq', ['get','$12322','[width]','.box$12322'],['get', '', '[grid-col]',".box$12322–"]]
-        ['eq', ['get','$34222','[width]','.box$34222'],['get', '', '[grid-col]',".box$34222–"]]
-        ['eq', 100,['get', '', '[grid-col]', ""]]
+        ['eq', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322–"]]
+        ['eq', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222–"]]
+        ['eq', 100,['get', '', 'grid-col', ""]]
       ]
 
     it 'lte for class & id selectos', ->
@@ -99,29 +99,24 @@ describe 'GSS commands', ->
         <div class="box" id="35346">One</div>
       """
       engine.run [
-        ['lte', ['get',['$class','box'],'[width]'],['get',['$id','box1'],'[width]']]
+        ['lte', ['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
       ]
       expect(stringify engine.expressions.lastOutput).to.eql stringify [
-        ['lte', ['get', '$box1' , '[width]','.box$box1–#box1'],['get','$box1','[width]','.box$box1–#box1']]
-        ['lte', ['get', '$34222', '[width]','.box$34222–#box1'],['get','$box1','[width]','.box$34222–#box1']]
-        ['lte', ['get', '$35346', '[width]','.box$35346–#box1'],['get','$box1','[width]','.box$35346–#box1']]
+        ['lte', ['get', '$box1' , 'width','.box$box1–#box1'],['get','$box1','width','.box$box1–#box1']]
+        ['lte', ['get', '$34222', 'width','.box$34222–#box1'],['get','$box1','width','.box$34222–#box1']]
+        ['lte', ['get', '$35346', 'width','.box$35346–#box1'],['get','$box1','width','.box$35346–#box1']]
       ]
 
     it 'intrinsic-width with class', (done) ->
-      scope.innerHTML = """
-        <div style="width:111px;" class="box" id="12322">One</div>
-        <div style="width:222px;" class="box" id="34222">One</div>
-        <div style="width:333px;" class="box" id="35346">One</div>
-      """
 
       engine.once 'solved', ->
         chai.expect(stringify engine.expressions.lastOutput).to.eql stringify  [
           ['suggest', '$12322[intrinsic-width]', 111, 'required']
           ['suggest', '$34222[intrinsic-width]', 222, 'required']
           ['suggest', '$35346[intrinsic-width]', 333, 'required']
-          ['eq', ['get','$12322','[width]','.box$12322'],['get','$12322','[intrinsic-width]','.box$12322–']]
-          ['eq', ['get','$34222','[width]','.box$34222'],['get','$34222','[intrinsic-width]','.box$34222–']]
-          ['eq', ['get','$35346','[width]','.box$35346'],['get','$35346','[intrinsic-width]','.box$35346–']]
+          ['eq', ['get','$12322','width','.box$12322'],['get','$12322','intrinsic-width','.box$12322–']]
+          ['eq', ['get','$34222','width','.box$34222'],['get','$34222','intrinsic-width','.box$34222–']]
+          ['eq', ['get','$35346','width','.box$35346'],['get','$35346','intrinsic-width','.box$35346–']]
         ]
         engine.once 'solved', ->
           chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
@@ -131,10 +126,15 @@ describe 'GSS commands', ->
         box0 = scope.getElementsByClassName('box')[0]
         box0.parentNode.removeChild(box0)
 
-
       engine.run [
-        ['eq', ['get', ['$class','box'], '[width]'],['get', ['$class','box'], '[intrinsic-width]']]
+        ['eq', ['get', ['$class','box'], 'width'],['get', ['$class','box'], 'intrinsic-width']]
       ]
+
+      scope.innerHTML = """
+        <div style="width:111px;" class="box" id="12322">One</div>
+        <div style="width:222px;" class="box" id="34222">One</div>
+        <div style="width:333px;" class="box" id="35346">One</div>
+      """
 
 
     it '.box[width] == ::window[width]', ->
@@ -142,11 +142,11 @@ describe 'GSS commands', ->
         <div style="width:111px;" class="box" id="12322">One</div>
       """
       engine.run [
-        ['eq', ['get', ['$class','box'], '[width]'],['get', ['$reserved','window'], '[width]']]
+        ['eq', ['get', ['$class','box'], 'width'],['get', ['$reserved','window'], 'width']]
       ]
       chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
         ['suggest', '::window[width]', window.innerWidth, 'required']
-        ['eq', ['get', '$12322','[width]','.box$12322'],['get','::window', '[width]',".box$12322–"]]
+        ['eq', ['get', '$12322','width','.box$12322'],['get','::window', 'width',".box$12322–"]]
       ]
 
 
@@ -155,12 +155,12 @@ describe 'GSS commands', ->
         
       """
       engine.run [
-        ['eq',  ['get', '[xxx]'], ['get', ['$reserved','window'], '[x]'     ]]
-        ['lte', ['get', '[yyy]'], ['get', ['$reserved','window'], '[y]'     ]]
-        ['lte', ['get', '[yay]'], ['get', ['$reserved','window'], '[y]'     ]]
-        ['gte', ['get', '[hhh]'], ['get', ['$reserved','window'], '[height]']]
-        ['gte', ['get', '[hah]'], ['get', ['$reserved','window'], '[height]']]
-        ['lte', ['get', '[www]'], ['get', ['$reserved','window'], '[width]' ]]
+        ['eq',  ['get', 'xxx'], ['get', ['$reserved','window'], 'x'     ]]
+        ['lte', ['get', 'yyy'], ['get', ['$reserved','window'], 'y'     ]]
+        ['lte', ['get', 'yay'], ['get', ['$reserved','window'], 'y'     ]]
+        ['gte', ['get', 'hhh'], ['get', ['$reserved','window'], 'height']]
+        ['gte', ['get', 'hah'], ['get', ['$reserved','window'], 'height']]
+        ['lte', ['get', 'www'], ['get', ['$reserved','window'], 'width' ]]
       ]
       chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
         
@@ -169,13 +169,13 @@ describe 'GSS commands', ->
         ['suggest', '::window[height]', window.innerHeight, 'required']
         ['suggest', '::window[width]',  window.innerWidth,  'required']
 
-        ['eq',  ['get','', '[xxx]', ''], ['get','::window', '[x]', '']]
-        ['lte', ['get','', '[yyy]', ''], ['get','::window', '[y]', '']]                
-        ['lte', ['get','', '[yay]', ''], ['get','::window', '[y]', '']]  
+        ['eq',  ['get','', 'xxx', ''], ['get','::window', 'x', '']]
+        ['lte', ['get','', 'yyy', ''], ['get','::window', 'y', '']]                
+        ['lte', ['get','', 'yay', ''], ['get','::window', 'y', '']]  
         
-        ['gte',     ['get','', '[hhh]', ''],    ['get','::window', '[height]', '']]
-        ['gte',     ['get','', '[hah]', ''],    ['get','::window', '[height]', '']]
-        ['lte',     ['get','', '[www]', ''],    ['get','::window', '[width]', '']]        
+        ['gte',     ['get','', 'hhh', ''],    ['get','::window', 'height', '']]
+        ['gte',     ['get','', 'hah', ''],    ['get','::window', 'height', '']]
+        ['lte',     ['get','', 'www', ''],    ['get','::window', 'width', '']]        
         
       ]
 
@@ -195,19 +195,19 @@ describe 'GSS commands', ->
           count++
           if count is 1
             expect(engine.expressions.lastOutput).to.eql [
-                ['eq', ['get','$12322','[x]','.box$12322'], 100]
-                ['eq', ['get','$34222','[x]','.box$34222'], 100]
+                ['eq', ['get','$12322','x','.box$12322'], 100]
+                ['eq', ['get','$34222','x','.box$34222'], 100]
               ]
             scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')            
           else if count is 2
             expect(engine.expressions.lastOutput).to.eql [
-                ['eq', ['get','$35346','[x]','.box$35346'], 100]
+                ['eq', ['get','$35346','x','.box$35346'], 100]
               ]
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
         engine.run [
-            ['eq', ['get',['$class','box'],'[x]'], 100]
+            ['eq', ['get',['$class','box'],'x'], 100]
           ]
 
       it 'removed from dom', (done) ->
@@ -220,10 +220,10 @@ describe 'GSS commands', ->
           count++
           if count is 1
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['eq', ['get','$12322','[x]','.box$12322'], 100]
-                ['eq', ['get','$34222','[x]','.box$34222'], 100]
+                ['eq', ['get','$12322','x','.box$12322'], 100]
+                ['eq', ['get','$34222','x','.box$34222'], 100]
               ]
-            res = scope.querySelector('[id="34222"]')
+            res = engine.$id('34222')
             res.parentNode.removeChild res
           else if count is 2
             chai.expect(engine.expressions.lastOutput).to.eql [
@@ -233,7 +233,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solved', listener
         engine.run [
-            ['eq', ['get',['$class','box'],'[x]'], 100]
+            ['eq', ['get',['$class','box'],'x'], 100]
           ]
 
       it 'removed from selector', (done) ->
@@ -242,10 +242,10 @@ describe 'GSS commands', ->
           count++
           if count is 1
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['eq', ['get','$12322','[x]','.box$12322'], 100]
-                ['eq', ['get','$34222','[x]','.box$34222'], 100]
+                ['eq', ['get','$12322','x','.box$12322'], 100]
+                ['eq', ['get','$34222','x','.box$34222'], 100]
               ]
-            el = scope.querySelector('[id="34222"]')
+            el = engine.$id('34222')
             el.classList.remove('box')
 
           else if count is 2
@@ -256,7 +256,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solved', listener
         engine.run [
-            ['eq', ['get',['$class','box'],'[x]'], 100]
+            ['eq', ['get',['$class','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -287,7 +287,7 @@ describe 'GSS commands', ->
 
         engine.addEventListener 'solved', listener
         engine.run [
-          ['eq', ['get',['$class','box'],'[height]'],['get',['$id','box1'],'[intrinsic-width]']]
+          ['eq', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" >One</div>
@@ -308,7 +308,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solved', listener
         engine.run [
-          ['eq', ['get',['$class','box'],'[height]'],['get',['$id','box1'],'[intrinsic-width]']]
+          ['eq', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="display:inline-block;" id="box1" class="box">One</div>
@@ -336,7 +336,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solved', listener
         engine.run [
-          ['eq', ['get',['$class','box'],'[height]'],['get',['$id','box1'],'[intrinsic-width]']]
+          ['eq', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="display:inline-block" id="box1" class="box" >One</div>
@@ -364,8 +364,8 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solved', listener
         engine.run [
-          ['eq', ['get',['$id','p-text'],'[width]'],  100]
-          ['eq', ['get',['$id','p-text'],'[x-height]'], ['get',['$id','p-text'],'[intrinsic-height]']]
+          ['eq', ['get',['$id','p-text'],'width'],  100]
+          ['eq', ['get',['$id','p-text'],'x-height'], ['get',['$id','p-text'],'intrinsic-height']]
         ]
         scope.innerHTML = """
           <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
@@ -402,12 +402,12 @@ describe 'GSS commands', ->
           <div id="thing2" class="thing"></div>
         """
         engine.run [  
-              ['eq', ['get','[hgap]'], 20]
+              ['eq', ['get','hgap'], 20]
               ['eq', ['get','width',['$id','thing1']], 100]
               [
                 'chain', 
                 ['$class', 'thing'], 
-                ['eq-chain',['plus-chain','width',['multiply',['get','[hgap]'],2]],'width']
+                ['eq-chain',['plus-chain','width',['multiply',['get','hgap'],2]],'width']
               ]
             ]
         el = null

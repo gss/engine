@@ -47,7 +47,7 @@ describe "GSS.View", ->
       assert target1.style['width'] is "10px"
       assert target2.style['width'] is "10px"
       ast = [
-          ['eq', ['get',['$class', 'target'],   '[width]'], 88]
+          ['eq', ['get',['$class', 'target'],   'width'], 88]
         ]
       onSolved = (e) ->
         values = e.detail.values
@@ -68,7 +68,7 @@ describe "GSS.View", ->
         </div>  
       """          
       ast = [
-          ['eq', ['get',['$class','target'],'[y]'], 100]
+          ['eq', ['get',['$class','target'],'y'], 100]
         ]        
 
       q = document.getElementsByClassName('target')
@@ -96,7 +96,7 @@ describe "GSS.View", ->
       """
 
       ast = [
-          ['eq', ['get',['$id', 'floater'],'[y]'], ['get',['$id', 'pusher'],'[intrinsic-y]']]
+          ['eq', ['get',['$id', 'floater'],'y'], ['get',['$id', 'pusher'],'intrinsic-y']]
         ]        
       
       q = document.getElementsByClassName('target')
@@ -130,7 +130,7 @@ describe "GSS.View", ->
       """
 
       ast = [
-          ['eq', ['get',['$class', 'target'],'[y]'], 100]
+          ['eq', ['get',['$class', 'target'],'y'], 100]
         ]        
       
       q = document.getElementsByClassName('target')

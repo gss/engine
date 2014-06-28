@@ -1,47 +1,49 @@
 class Dimensions
   # Global variables managed by the engine
 
-  '::window[width]': ->
-    return window.innerWidth
+  '::window':
+      
+    'width': ->
+      return window.innerWidth
 
-  '::window[height]': ->
-    return window.innerHeight
+    'height': ->
+      return window.innerHeight
 
-  '::window[scroll-left]': ->
-    return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft 
+    'scroll-left': ->
+      return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft 
 
-  '::window[scroll-top]': ->
-    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop 
+    'scroll-top': ->
+      return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop 
 
-  # Constants
+    # Constants
 
-  '::window[x]': 0
-  '::window[y]': 0
+    'x': 0
+    'y': 0
 
   # Properties
 
-  "[intrinsic-height]": (scope) ->
+  "intrinsic-height": (scope) ->
     return scope.offsetHeight
 
-  "[intrinsic-width]": (scope) ->
+  "intrinsic-width": (scope) ->
     return scope.offsetWidth
 
-  "[intrinsic-y]": (scope) ->
+  "intrinsic-y": (scope) ->
     return scope.offsetTop
 
-  "[intrinsic-x]": (scope) ->
+  "intrinsic-x": (scope) ->
     return scope.offsetWidth
 
-  "[scroll-left]": (scope) ->
+  "scroll-left": (scope) ->
     return scope.scrollLeft
 
-  "[scroll-top]": (scope) ->
+  "scroll-top": (scope) ->
     return scope.scrollTop
 
-  "[offset-left]": (scope) ->
+  "offset-left": (scope) ->
     return scope.offsetLeft
 
-  "[offset-top]": (scope) ->
+  "offset-top": (scope) ->
     return scope.offsetTop
 
 module.exports = Dimensions

@@ -22,15 +22,11 @@ class Engine
     if scope && scope.nodeType
       # new GSS(node) assigns a new Engine.Document to node if it doesnt have one
       if @Expressions
-        id = Engine.identify(scope)
-        #if engine = Engine[id]
-        #  return engine
-
         if Document = Engine.Document
           unless this instanceof Document
             return new Document(scope, url)
 
-        Engine[id] = @
+        Engine[Engine.identify(scope)] = @
         @scope = scope
         @all = scope.getElementsByTagName('*')
       # GSS(node) finds nearest parent engine or makes one at root
@@ -116,7 +112,7 @@ class Engine
       Engine[@scope._gss_id] = undefined
 
   # Return concatenated path for a given object and prefix
-  getPath: (path, value) ->
+  getContinuation: (path, value) ->
     return value if typeof value == 'string'
     return path + Engine.identify(value)
 
@@ -150,6 +146,7 @@ class Engine
 
   @uid: 0
   elements: {}
+  engines: {}
 
   # Simple EventTrigger that fires @on<event>
   once: (type, fn) ->
@@ -200,11 +197,12 @@ class Engine
   start: ->
     unless @running
       for property, command of @commands
-        command.reference = '_' + property
-        @[command.reference] = Engine.Command(command, command.reference)
+        if property != 'engine'
+          command.reference = '_' + property
+          @[command.reference] = Engine.Command(command, command.reference)
       @running = true
 
-  # Make non-function commands helpers with original command properties
+  # Helperize non-callable commands, keep original command properties
   @Command: (command, reference) ->
     unless typeof command == 'function'
       helper = Engine.Helper(command)

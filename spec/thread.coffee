@@ -24,86 +24,86 @@ describe 'Cassowary Thread', ->
   it 'hierarchy', (done) ->
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['get','[x]'],100,'strong']
-        ['eq', ['get','[x]'],10,'medium']
-        ['eq', ['get','[x]'],1,'weak']
-        ['eq', ['get','[y]'],1,'weak']
-        ['eq', ['get','[y]'],10,'medium']
-        ['eq', ['get','[y]'],101,'strong']
+        ['eq', ['get','x'],100,'strong']
+        ['eq', ['get','x'],10,'medium']
+        ['eq', ['get','x'],1,'weak']
+        ['eq', ['get','y'],1,'weak']
+        ['eq', ['get','y'],10,'medium']
+        ['eq', ['get','y'],101,'strong']
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[x]": 100
-      "[y]": 101
+      "x": 100
+      "y": 101
     done()
     
   it 'order of operations', (done) ->
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['get','[w]'], 100,'required']
-        ['eq', ['get','[igap]'], 3,'required']
-        ['eq', ['get','[ogap]'], 20,'required']
-        ['eq', ['get','[md]'], ['divide',['minus',['get','[w]'],['multiply',['get','[ogap]'],2]], 4],'required']
-        ['eq', ['get','[span3]'], ['plus',['multiply',['get','[md]'],3],['multiply',['get','[igap]'],2]],'required']
+        ['eq', ['get','w'], 100,'required']
+        ['eq', ['get','igap'], 3,'required']
+        ['eq', ['get','ogap'], 20,'required']
+        ['eq', ['get','md'], ['divide',['minus',['get','w'],['multiply',['get','ogap'],2]], 4],'required']
+        ['eq', ['get','span3'], ['plus',['multiply',['get','md'],3],['multiply',['get','igap'],2]],'required']
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[w]": 100
-      "[igap]": 3
-      "[ogap]": 20
-      "[md]": 15
-      "[span3]": 51
+      "w": 100
+      "igap": 3
+      "ogap": 20
+      "md": 15
+      "span3": 51
     done()
 
   it '$12322[width] == [grid-col]; ...', (done) ->
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['get','$12322[width]'],['get','[grid-col]']]
-        ['eq', ['get','$34222[width]'],['get','[grid-col]']]
-        ['eq', 100,['get','[grid-col]']]
+        ['eq', ['get','$12322[width]'],['get','grid-col']]
+        ['eq', ['get','$34222[width]'],['get','grid-col']]
+        ['eq', 100,['get','grid-col']]
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
       "$12322[width]": 100
       "$34222[width]": 100
-      "[grid-col]": 100
+      "grid-col": 100
     done()
   
   it 'Serial Suggests with plus expression', (done) ->
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['plus',['get','[target-width]'],['get','[pad]']], ['get','[actual-width]']]
-        ['eq', ['get','[target-width]'],100]
-        ['suggest', ['get','[pad]'],1]
+        ['eq', ['plus',['get','target-width'],['get','pad']], ['get','actual-width']]
+        ['eq', ['get','target-width'],100]
+        ['suggest', ['get','pad'],1]
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[target-width]": 100
-      "[actual-width]": 101
-      "[pad]": 1
+      "target-width": 100
+      "actual-width": 101
+      "pad": 1
     thread.run [
-        ['suggest', ['get','[pad]'],2]
+        ['suggest', ['get','pad'],2]
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[actual-width]": 102
-      "[pad]": 2    
+      "actual-width": 102
+      "pad": 2    
     thread.run [
-        ['suggest', ['get','[pad]'],3]
-        ['suggest', ['get','[pad]'],4]
+        ['suggest', ['get','pad'],3]
+        ['suggest', ['get','pad'],4]
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[actual-width]": 104
-      "[pad]": 4
+      "actual-width": 104
+      "pad": 4
     done()
   
 
   it 'intrinsic mock', (done) ->
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['get','[width]'],100, 'weak']
-        ['eq', ['get','[width]'],['get','[intrinsic-width]'], 'require']        
-        ['suggest', ['get','[intrinsic-width]'], 999]
+        ['eq', ['get','width'],100, 'weak']
+        ['eq', ['get','width'],['get','intrinsic-width'], 'require']        
+        ['suggest', ['get','intrinsic-width'], 999]
       ]
     values = thread.solutions.lastOutput
     chai.expect(values).to.eql
-      "[width]": 999
-      "[intrinsic-width]": 999
+      "width": 999
+      "intrinsic-width": 999
     done()
   
   
@@ -111,31 +111,31 @@ describe 'Cassowary Thread', ->
     #c.trace = true
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['get','[hgap]'],20, 'require']                
-        ['eq', ['get','[width]'],['plus',['get','[intrinsic-width]'],['get','[hgap]']],'require']
-        ['suggest', ['get','[intrinsic-width]'], 100, 'required']
-        ['eq', ['get','[width]'], 20, 'strong']  
+        ['eq', ['get','hgap'],20, 'require']                
+        ['eq', ['get','width'],['plus',['get','intrinsic-width'],['get','hgap']],'require']
+        ['suggest', ['get','intrinsic-width'], 100, 'required']
+        ['eq', ['get','width'], 20, 'strong']  
       ]
     values = thread.solutions.lastOutput
     chai.expect(values).to.eql
-      "[width]": 120
-      "[intrinsic-width]": 100
-      "[hgap]": 20
+      "width": 120
+      "intrinsic-width": 100
+      "hgap": 20
     #done()
   
   it 'tracking & removing by get tracker', (done) ->
     thread = new GSS.Solver()
     thread.run [
-        ['eq', ['get', '[x]', '', 'x-tracker'],100,'strong']
-        ['eq', ['get','[x]'],10,'weak']
+        ['eq', ['get', 'x', '', 'x-tracker'],100,'strong']
+        ['eq', ['get','x'],10,'weak']
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[x]": 100
+      "x": 100
     thread.run [
         ['remove', 'x-tracker']
       ]
     chai.expect(thread.solutions.lastOutput).to.eql
-      "[x]": 10
+      "x": 10
     done()
   
     
@@ -147,8 +147,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - right', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['eq', ['get','$112', '[x]', '.box'],10]
-          ['eq', ['get','$112', '[right]','.box'],100]
+          ['eq', ['get','$112', 'x', '.box'],10]
+          ['eq', ['get','$112', 'right','.box'],100]
         ]
       expect(thread.solutions.lastOutput).to.eql
         "$112[x]": 10
@@ -157,8 +157,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - center-x', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['eq', ['get', '$112', '[x]','.box'],10]
-          ['eq', ['get','$112','[center-x]','.box'],110]
+          ['eq', ['get', '$112', 'x','.box'],10]
+          ['eq', ['get','$112','center-x','.box'],110]
         ]
       expect(thread.solutions.lastOutput).to.eql
         "$112[x]": 10
@@ -167,8 +167,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - bottom', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['eq', ['get','$112','[height]','.box'],10]
-          ['eq', ['get','$112','[bottom]','.box'],100]
+          ['eq', ['get','$112','height','.box'],10]
+          ['eq', ['get','$112','bottom','.box'],100]
         ]
       expect(thread.solutions.lastOutput).to.eql
         "$112[height]": 10
@@ -177,8 +177,8 @@ describe 'Cassowary Thread', ->
     it 'varexp - center-y', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['eq', ['get', '$112', '[height]', '.box'],100]
-          ['eq', ['get', '$112', '[center-y]','.box'],51]
+          ['eq', ['get', '$112', 'height', '.box'],100]
+          ['eq', ['get', '$112', 'center-y','.box'],51]
         ]
       expect(thread.solutions.lastOutput).to.eql
         "$112[height]": 100
@@ -194,9 +194,9 @@ describe 'Cassowary Thread', ->
     it 'tracking by path', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['eq', ['get', '$222', '[line-height]'], 1.6]
-          ['eq', ['get', '$112', '[x]','.box'],10]
-          ['eq', ['get', '$112', '[right]','.box'],100]
+          ['eq', ['get', '$222', 'line-height'], 1.6]
+          ['eq', ['get', '$112', 'x','.box'],10]
+          ['eq', ['get', '$112', 'right','.box'],100]
         ]
       expect(thread.solutions.lastOutput).to.eql
         "$222[line-height]": 1.6
@@ -213,8 +213,8 @@ describe 'Cassowary Thread', ->
     it 'tracking by selector', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['eq', ['get','$112', '[x]', '.big-box'],1000]
-          ['eq', ['get','$112', '[x]', '.box'],50,'strong']
+          ['eq', ['get','$112', 'x', '.big-box'],1000]
+          ['eq', ['get','$112', 'x', '.box'],50,'strong']
         ]
       expect(thread.solutions.lastOutput).to.eql
         "$112[x]": 1000
