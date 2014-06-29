@@ -1,6 +1,4 @@
 /* gss-engine - version 1.0.4-beta (2014-06-29) - http://gridstylesheets.org */
-/* gss-engine - version 1.0.4-beta (2014-06-29) - http://gridstylesheets.org */
-/* gss-engine - version 1.0.4-beta (2014-06-29) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -76,8 +74,19 @@ Expressions = (function() {
     }
   };
 
+  Expressions.prototype["do"] = function() {
+    var buffer, lastOutput, result;
+    lastOutput = this.lastOutput, buffer = this.buffer;
+    this.lastOutput = this.buffer = void 0;
+    result = this.pull.apply(this, arguments);
+    this.lastOutput = lastOutput;
+    this.buffer = buffer;
+    return result;
+  };
+
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
     var args, evaluate, evaluated, result, _ref;
+    console.log(operation);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -180,7 +189,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending) {
-    var args, argument, contd, index, offset, prev, skip, _i, _len;
+    var args, argument, contd, index, offset, prev, skip, stopping, _i, _len;
     args = prev = void 0;
     skip = operation.skip;
     offset = operation.offset || 0;
@@ -206,15 +215,20 @@ Expressions = (function() {
         argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
       }
       if (argument === void 0) {
-        if ((!operation.def.eager || (ascender != null)) && (!operation.def.noop || operation.parent)) {
-          return false;
+        if (!operation.def.eager || (ascender != null)) {
+          if (!operation.def.noop || operation.parent) {
+            return false;
+          }
+          if (operation.name && !operation.parent) {
+            stopping = true;
+          }
         }
         offset += 1;
         continue;
       }
       (args || (args = []))[index - offset] = prev = argument;
     }
-    if (!args && operation.def.noop) {
+    if (stopping || (!args && operation.def.noop)) {
       return false;
     }
     return args;
@@ -263,7 +277,9 @@ Expressions = (function() {
 
   Expressions.prototype.analyze = function(operation, parent) {
     var child, def, func, groupper, index, otherdef, _i, _len;
-    operation.name = operation[0];
+    if (typeof operation[0] === 'string') {
+      operation.name = operation[0];
+    }
     def = this.commands[operation.name];
     if (parent) {
       operation.parent = parent;
@@ -277,7 +293,7 @@ Expressions = (function() {
       } else {
         operation.skip = 1;
       }
-      operation.name = (def.prefix || '') + operation[operation.skip];
+      operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '');
       otherdef = def;
       if (typeof def.lookup === 'function') {
         def = def.lookup.call(this, operation);
@@ -449,6 +465,10 @@ Engine = (function() {
 
   Engine.prototype.pull = function() {
     return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype["do"] = function() {
+    return this.expressions["do"].apply(this.expressions, arguments);
   };
 
   Engine.prototype.defer = function() {
@@ -640,17 +660,18 @@ Engine = (function() {
 
   Engine.prototype.start = function() {
     var command, property, _ref;
-    if (!this.running) {
-      _ref = this.commands;
-      for (property in _ref) {
-        command = _ref[property];
-        if (property !== 'engine') {
-          command.reference = '_' + property;
-          this[command.reference] = Engine.Command(command, command.reference);
-        }
-      }
-      return this.running = true;
+    if (this.running) {
+      return;
     }
+    _ref = this.commands;
+    for (property in _ref) {
+      command = _ref[property];
+      if (property !== 'engine') {
+        command.reference = '_' + property;
+        this[command.reference] = Engine.Command(command, command.reference);
+      }
+    }
+    return this.running = true;
   };
 
   Engine.Command = function(command, reference) {

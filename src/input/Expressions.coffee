@@ -15,11 +15,11 @@ class Expressions
   pull: ->
     @engine.start()
 
-    if @buffer == undefined
+    if @buffer == undefined # Enable buffering if nobody enabled it already
       @buffer = null
       buffer = true
     result = @evaluate.apply(@, arguments)
-    if buffer
+    if buffer # Flush buffered output if this function started the buffering
       @flush()
     return result
 
@@ -48,8 +48,18 @@ class Expressions
     else if @buffer == undefined
       @engine.push()
 
+  # Run without changing lastOutput or buffer settings
+  do: ->
+    {lastOutput, buffer} = @
+    @lastOutput = @buffer = undefined
+    result = @pull.apply(@, arguments)
+    @lastOutput = lastOutput
+    @buffer = buffer
+    return result 
+
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
+    console.log(operation)
     # Analyze operation once
     unless operation.def
       @analyze(operation)
@@ -163,11 +173,15 @@ class Expressions
           contd += '–' unless contd.charAt(contd.length - 1) == '–'
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
       if argument == undefined
-        return false if (!operation.def.eager || ascender?) && (!operation.def.noop || operation.parent)
+        if !operation.def.eager || ascender?
+          if !operation.def.noop || operation.parent
+            return false 
+          if operation.name && !operation.parent
+            stopping = true
         offset += 1
         continue
       (args ||= [])[index - offset] = prev = argument
-    return false if !args && operation.def.noop
+    return false if stopping || (!args && operation.def.noop)
     return args
 
   # Pass control back to parent operation. 
@@ -213,7 +227,7 @@ class Expressions
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
-    operation.name = operation[0]
+    operation.name = operation[0] if typeof operation[0] == 'string'
     def = @commands[operation.name]
 
     if parent
@@ -228,7 +242,7 @@ class Expressions
         operation.skip = operation.length - operation.arity
       else
         operation.skip = 1
-      operation.name = (def.prefix || '') + operation[operation.skip]
+      operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '')
       otherdef = def
       if typeof def.lookup == 'function'
         def = def.lookup.call(@, operation)

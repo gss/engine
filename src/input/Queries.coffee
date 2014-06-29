@@ -36,6 +36,7 @@ class Queries
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
     @output.buffer = @buffer = @updated = null
+    @engine.start()
     for mutation in mutations
       switch mutation.type
         when "attributes"

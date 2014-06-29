@@ -69,9 +69,15 @@ class Engine.Document extends Engine
   onDOMContentLoaded: ->
     @scope.removeEventListener 'DOMContentLoaded', @
 
-    # Observe and parse stylesheets
-    # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'text/gss', '*']]
-    # @pull ['$parse', ['$attribute', ['$tag', 'style'], 'type', 'tree/gss', '*']]
+  # Observe and parse stylesheets
+  start: ->
+    return if @running
+    super
+    @do [
+      ['$eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
+      ['$load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
+    ]
+    return true
     
 # Export all DOM commands as helper functions 
 for target in [Engine, Engine.Document::, Engine.Document]

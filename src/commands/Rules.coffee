@@ -1,4 +1,5 @@
 # CSS rules and conditions
+compiler = require 'gss-compiler'
 
 class Rules
   # The wonderful semicolon
@@ -45,5 +46,26 @@ class Rules
       return arg if i == 0
       if i == 1 || (evaluated[1] ? i == 2 : i == 3)
         return @evaluate arg
+
+  "$eval": (node, type = 'text/gss') ->
+    if (node.type || type) == 'text/gss-ast'
+      rules = JSON.parse(node.textContent ? node)
+    else
+      rules = compiler.compile(node.textContent ? node)
+    scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
+    @run rules, undefined, scope
+    return
+  "$load": (node, type, method = 'GET') ->
+    src = node.href || node.src || node
+    type ||= node.type || 'text/gss'
+    xhr = new XMLHttpRequest()
+    xhr.onstatechange = ->
+      if xhr.readyState == 4 && xhr.status == 20
+        1
+    xhr.open(node.toUpperCase(), src)
+
+
+
+
 
 module.exports = Rules

@@ -133,11 +133,28 @@ class Selectors
 
   # Commands that look up other commands
   
-  '$attribute': 
+  '$attribute':
+    lookup: true
+    group: '$query'
     type: 'qualifier'
     prefix: '['
     suffix: ']'
-    lookup: true
+    serialize: -> (operation, args) ->
+      name = operation.name
+      return (args[1]) + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"'
+
+  '[=]': (node, attribute, value, operator) ->
+    return node if node.getAttribute(attribute) == value
+
+  '[*=]': (node, attribute, value, operator) ->
+    return node if  node.getAttribute(attribute)?.indexOf(value) > -1
+  
+  '[|=]': (node, attribute, value, operator) ->
+    return node if  node.getAttribute(attribute)?
+  
+  '[]': (node, attribute, value, operator) ->
+    return node if  node.getAttribute(attribute)?
+
 
   '$pseudo': 
     type: 'qualifier'

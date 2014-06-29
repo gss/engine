@@ -61,6 +61,9 @@ class Engine
   pull: ->
     return @expressions.pull.apply(@expressions, arguments)
 
+  do: ->
+    return @expressions.do.apply(@expressions, arguments)
+
   # Schedule execution of expressions to the next tick, buffer input
   defer: ->
     unless @deferred?
@@ -195,12 +198,13 @@ class Engine
   # This ensures commands are called in engine context
   # Doing so on first run allows commands to be set after init
   start: ->
-    unless @running
-      for property, command of @commands
-        if property != 'engine'
-          command.reference = '_' + property
-          @[command.reference] = Engine.Command(command, command.reference)
-      @running = true
+    return if @running
+    for property, command of @commands
+      if property != 'engine'
+        command.reference = '_' + property
+        @[command.reference] = Engine.Command(command, command.reference)
+    @running = true
+
 
   # Helperize non-callable commands, keep original command properties
   @Command: (command, reference) ->

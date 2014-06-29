@@ -397,7 +397,7 @@ describe 'GSS engine', ->
     
 
   
-  xdescribe 'GSS Engine with styleNode', ->
+  describe 'GSS Engine with styleNode', ->
     container = null
     engine = null
   
@@ -411,29 +411,22 @@ describe 'GSS engine', ->
     describe 'Engine::styleNode', ->
     
       it 'Runs commands from sourceNode', (done) ->
-        container.innerHTML =  """
-          <style type="text/gss-ast" scoped>
-          [
-            { 
-              "type":"constraint",
-              "commands": [
-                ["eq", ["get$","x",["$class", "box"]], ["number",100]]
-              ]          
-            }
-          ]
-          </style>
-          <div id="box1" class="box"></div>
-          <div id="box2" class="box"></div>
-          """
-        engine = GSS(container)
         listener = (e) ->        
-          expect(engine.lastWorkerCommands).to.eql [
-              ['eq', ['get$','x','$box1','.box'], ['number',100]]
-              ['eq', ['get$','x','$box2','.box'], ['number',100]]
+          expect(engine.expressions.lastOutput).to.eql [
+              ['eq', ['get','$box1','x','.box$box1'], 100]
+              ['eq', ['get','$box2','x','.box$box2'], 100]
             ]
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
+        engine = new GSS(container)
+        container.innerHTML =  """
+          <style type="text/gss-ast" scoped>
+            ["eq", ["get",["$class", "box"],"x"], 100]
+          </style>
+          <div id="box1" class="box"></div>
+          <div id="box2" class="box"></div>
+          """
 
   xdescribe 'GSS Engine Life Cycle', ->  
     container = null

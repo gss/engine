@@ -4,3 +4,10 @@
 sauce_connect.log*
 spec/*.xml
 npm-debug.log
+components/
+components
+components/*
+/components/
+/components
+/components/*
+.gitignore
