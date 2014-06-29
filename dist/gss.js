@@ -1,4 +1,5 @@
-/* gss-engine - version 1.0.4-beta (2014-06-28) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-29) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21413,6 +21414,9 @@ Measurements = (function() {
   };
 
   Measurements.prototype.plus = function(a, b) {
+    if (typeof a === 'object') {
+      return NaN;
+    }
     return a + b;
   };
 
@@ -27852,7 +27856,7 @@ module.exports = {
     "vendor/MutationObserver.classList.js"
   ],
   "dependencies": {
-    "the-gss/compiler": "*",
+    "the-gss/compiler": "new",
     "d4tocchini/customevent-polyfill": "*",
     "slightlyoff/cassowary.js": "*"
   },

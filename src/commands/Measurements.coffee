@@ -45,6 +45,7 @@ class Measurements
 
   # Math ops compatible with constraints API
   plus: (a, b) ->
+    return NaN if typeof a == 'object' 
     return a + b
 
   minus: (a, b) ->

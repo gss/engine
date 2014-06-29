@@ -95,15 +95,21 @@ describe "GSS.View", ->
         <div id="floater"></div>
       """
 
-      ast = [
-          ['eq', ['get',['$id', 'floater'],'y'], ['get',['$id', 'pusher'],'intrinsic-y']]
-        ]        
+      ast = ['eq', 
+              ['get',
+                ['$id', 'floater'],
+                'y'], 
+              ['plus', 
+                ['get',
+                  ['$id', 'pusher'],
+                  'intrinsic-y'], 
+                3]]        
       
       q = document.getElementsByClassName('target')
       target1 = q[0]      
       
       onSolved = (e) ->
-        assert engine.values['$target1[y]'] is 100, "solved value is 100."
+        expect(engine.values['$target1[y]']).to.eql 20
         assert target1.offsetTop == 92, "Top offset should match"        
         assert target1.offsetLeft == 0, "Left offset should match"                
         done()
