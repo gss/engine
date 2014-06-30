@@ -21,6 +21,7 @@
     "lib/commands/Selectors.js", 
     "lib/commands/Constraints.js",
     "lib/commands/Measurements.js", 
+    "lib/commands/Native.js", 
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 
@@ -42,5 +43,7 @@
     "vendor/observe.js",
     "vendor/sidetable.js"
   ],
+  "paths": ["/Users/invizko/Sites/the-gss"],
+  "locals": ["the-compiler", "ccss-compiler"],
   "main": "lib/Document.js"
 }

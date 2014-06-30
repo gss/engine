@@ -199,19 +199,37 @@ class Engine
   # Doing so on first run allows commands to be set after init
   start: ->
     return if @running
-    for property, command of @commands
-      if property != 'engine'
-        command.reference = '_' + property
-        @[command.reference] = Engine.Command(command, command.reference)
+    for key, command of @commands
+      continue if command == @
+      command.reference = '_' + key
+      @[command.reference] = Engine.Command(command, command.reference)
+
+    for key, property of @properties
+      continue if property == @
+      console.error(key)
+      Engine.Property(property, key, @properties)
     @running = true
 
+  @Property: (property, reference, properties) ->
+    if typeof property == 'object'
+      for key, value of property
+        if property == 'shortcut'
+
+        else
+          if reference.match(/^[a-z]/i)
+            path = reference + '-' + key
+          else
+            path = reference + key
+
+          properties[path] = Engine.Property(value, path, properties)
+    return property
 
   # Helperize non-callable commands, keep original command properties
   @Command: (command, reference) ->
     unless typeof command == 'function'
       helper = Engine.Helper(command)
-      for property, value of command
-        helper[property] = value
+      for key, value of command
+        helper[key] = value
       command = helper
     command.reference = reference
     return command

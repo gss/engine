@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-29) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-06-30) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -61,7 +61,7 @@ Expressions = (function() {
     var added, buffer;
     buffer = this.buffer;
     if (this.engine._onFlush) {
-      added = this.engine._onFlush();
+      added = this.engine._onFlush(buffer);
       buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
     this.lastOutput = GSS.clone(buffer);
@@ -331,9 +331,6 @@ Expressions = (function() {
       operation.offset = 1;
     } else {
       func = def.command;
-    }
-    if (typeof func !== 'function' && typeof func !== 'string') {
-      debugger;
     }
     if (typeof func === 'string') {
       operation.method = func;
@@ -659,28 +656,58 @@ Engine = (function() {
   };
 
   Engine.prototype.start = function() {
-    var command, property, _ref;
+    var command, key, property, _ref, _ref1;
     if (this.running) {
       return;
     }
     _ref = this.commands;
-    for (property in _ref) {
-      command = _ref[property];
-      if (property !== 'engine') {
-        command.reference = '_' + property;
-        this[command.reference] = Engine.Command(command, command.reference);
+    for (key in _ref) {
+      command = _ref[key];
+      if (command === this) {
+        continue;
       }
+      command.reference = '_' + key;
+      this[command.reference] = Engine.Command(command, command.reference);
+    }
+    _ref1 = this.properties;
+    for (key in _ref1) {
+      property = _ref1[key];
+      if (property === this) {
+        continue;
+      }
+      console.error(key);
+      Engine.Property(property, key, this.properties);
     }
     return this.running = true;
   };
 
+  Engine.Property = function(property, reference, properties) {
+    var key, path, value;
+    if (typeof property === 'object') {
+      for (key in property) {
+        value = property[key];
+        if (property === 'shortcut') {
+
+        } else {
+          if (reference.match(/^[a-z]/i)) {
+            path = reference + '-' + key;
+          } else {
+            path = reference + key;
+          }
+          properties[path] = Engine.Property(value, path, properties);
+        }
+      }
+    }
+    return property;
+  };
+
   Engine.Command = function(command, reference) {
-    var helper, property, value;
+    var helper, key, value;
     if (typeof command !== 'function') {
       helper = Engine.Helper(command);
-      for (property in command) {
-        value = command[property];
-        helper[property] = value;
+      for (key in command) {
+        value = command[key];
+        helper[key] = value;
       }
       command = helper;
     }
@@ -741,20 +768,21 @@ var Equasions;
 Equasions = (function() {
   function Equasions() {}
 
-  Equasions.prototype["right"] = function(scope, path) {
+  Equasions.prototype.right = function(scope, path) {
     return this._plus(this._get(scope, "x", path), this._get(scope, "width", path));
   };
 
-  Equasions.prototype["bottom"] = function(scope, path) {
+  Equasions.prototype.bottom = function(scope, path) {
     return this._plus(this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
-  Equasions.prototype["center-x"] = function(scope, path) {
-    return this._plus(this._get(scope, "x", path), this._divide(this._get(scope, "width", path), 2));
-  };
-
-  Equasions.prototype["center-y"] = function(scope, path) {
-    return this._plus(this._get(scope, "y", path), this._divide(this._get(scope, "height", path), 2));
+  Equasions.prototype.center = {
+    x: function(scope, path) {
+      return this._plus(this._get(scope, "x", path), this._divide(this._get(scope, "width", path), 2));
+    },
+    y: function(scope, path) {
+      return this._plus(this._get(scope, "y", path), this._divide(this._get(scope, "height", path), 2));
+    }
   };
 
   return Equasions;

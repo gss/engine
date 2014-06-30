@@ -7,12 +7,14 @@
   "json": [
     "component.json"
   ],
-  "remotes": [
-    "https://raw.githubusercontent.com"
-  ],
   "scripts": [
-    "lib/ccss-compiler.js",
-    "lib/grammar.js"
+    "lib/compiler.js",
+    "lib/grammar.js",
+    "lib/parser.js"
   ],
-  "main": "lib/ccss-compiler.js"
+  "dependencies": {
+    "the-gss/error-reporter": "*"
+  },
+  "main": "lib/compiler.js",
+  "license": "MIT"
 }

@@ -7,9 +7,6 @@
   "scripts": [
     "lib/gss-compiler.js"
   ],
-  "remotes": [
-    "https://raw.githubusercontent.com"
-  ],
   "json": [
     "component.json"
   ],

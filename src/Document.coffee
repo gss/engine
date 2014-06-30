@@ -17,6 +17,7 @@ class Engine.Document extends Engine
     require('./commands/Measurements.js'),
     require('./commands/Selectors.js'),
     require('./commands/Rules.js'),
+    require('./commands/Native.js'),
   )
 
   Properties: Engine.include(
@@ -81,7 +82,7 @@ class Engine.Document extends Engine
     
 # Export all DOM commands as helper functions 
 for target in [Engine, Engine.Document::, Engine.Document]
-  for source in [Engine.Document::Commands::, Engine.Document::Properties::]
+  for source in [Engine.Document::Commands::]
     for property, command of source
       target[property] ||= Engine.Helper(command, true)
 

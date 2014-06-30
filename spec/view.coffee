@@ -88,12 +88,7 @@ describe "GSS.View", ->
   
   describe 'Elements can be positioned relative to', ->
     it 'after solving', (done) ->
-      
-      container.innerHTML = """
-        <div id="pusher" style="height: 17px"></div>
-        <div id="anchor" style="height: 10px"></div>
-        <div id="floater"></div>
-      """
+      container.style.position = 'relative'
 
       ast = ['eq', 
               ['get',
@@ -101,21 +96,25 @@ describe "GSS.View", ->
                 'y'], 
               ['plus', 
                 ['get',
-                  ['$id', 'pusher'],
+                  ['$id', 'anchor'],
                   'intrinsic-y'], 
                 3]]        
       
-      q = document.getElementsByClassName('target')
-      target1 = q[0]      
-      
-      onSolved = (e) ->
-        expect(engine.values['$target1[y]']).to.eql 20
-        assert target1.offsetTop == 92, "Top offset should match"        
-        assert target1.offsetLeft == 0, "Left offset should match"                
-        done()
         
-      engine.once 'solved', onSolved
+      engine.once 'solved', ->
+        expect(engine.values['$floater[y]']).to.eql 20
+
+        engine._setStyle(engine.$id('pusher'), 'paddingTop', '11px') 
+
+        engine.once 'solved', ->  
+          expect(engine.values['$floater[y]']).to.eql 31        
+          done()
       engine.run ast
+      container.innerHTML = """
+        <div id="pusher" style="height: 17px"></div>
+        <div id="anchor" style="height: 10px"></div>
+        <div id="floater"></div>
+      """
 
 
   describe 'Display Pass takes in account parent offsets when requested', ->

@@ -12,9 +12,10 @@ class Styles
 
     # Filter out measurements 
     for path, value of data
-      if @engine._getIntrinsicProperty(path)
+      if property = @engine._getIntrinsicProperty(path)
         data[path] = undefined
-        (intrinsic ||= {})[path] = value
+        if property != 'intrinsic-x' && property != 'intrinsic-y'
+          (intrinsic ||= {})[path] = value
 
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
@@ -25,7 +26,7 @@ class Styles
 
     # Adjust positioning styles to respect 
     # element offsets 
-    @render(positioning)
+    @render(null, null, null, positioning)
 
     #  Set new positions in bulk (Restyle)
     for id, styles of positioning
@@ -47,7 +48,7 @@ class Styles
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
     @data = data
     if suggests = @engine._getComputedProperties()
-      @pull(suggests)
+      @engine.pull(suggests)
     else
       @data = undefined
       @push(data)
@@ -58,19 +59,9 @@ class Styles
   remove: (id) ->
     delete @[id]
 
-  camelize: (string) ->
-    return (@camelized ||= {})[string] ||= 
-      string.toLowerCase().replace /-([a-z])/i, (match) ->
-        return match[1].toUpperCase()
-
-  dasherize: (string) ->
-    return (@dasherized ||= {})[string] ||= 
-      string.replace /[A-Z]/, (match) ->
-        return '-' + match[0].toLowerCase()
-
   get: (path, property, value) ->
     element = @engine.get(path)
-    camel = @camelize(property)
+    camel = (@camelized ||= {})[property] ||= @engine._camelize(property)
     style = element.style
     value = style[camel]
     if value != undefined
@@ -103,7 +94,7 @@ class Styles
         positioned = positioner(element)
         if typeof positioned == 'string'
           property = positioned
-      camel = @camelize(property)
+      camel = (@camelized ||= {})[property] ||= @engine._camelize(property)
       style = element.style
       if style[camel] != undefined
         if typeof value == 'number' && property != 'zIndex'
@@ -119,30 +110,35 @@ class Styles
     @
 
   # Position 
-  render: (positioning, parent = @engine.scope, x = 0, y = 0, offsetParent) ->
+  render: (parent = @engine.scope, x = 0, y = 0, positioning, offsetParent) ->
     # Calculate new offsets for given element and styles
-    if offsets = @preposition(positioning, parent, x, y)
+    if offsets = @placehold(positioning, parent, x, y)
       x += offsets.left
       y += offsets.top
 
     # Select all children
-    children = @engine.commands['>'][1](parent);
+    children = @engine['_>'][1](parent);
 
-    # When rendering a positioned element, measure its offsets
-    if !offsets && children.length && children[0].offsetParent == parent
-      x += parent.offsetLeft + parent.clientLeft
-      y += parent.offsetTop + parent.clientTop
-      offsetParent = parent
+    if parent.offsetParent == @engine.scope
+      x -= @engine.scope.offsetLeft
+      y -= @engine.scope.offsetTop
+    else if parent != @engine.scope
+      # When rendering a positioned element, measure its offsets
+      if !offsets && children.length && children[0].offsetParent == parent
+        x += parent.offsetLeft + parent.clientLeft
+        y += parent.offsetTop + parent.clientTop
+        offsetParent = parent
+
 
     # Position children
     for child in children
-      @render(positioning, child, x, y, offsetParent)
+      @render(child, x, y, positioning, offsetParent)
     return @
 
   # Calculate offsets according to new values (but dont set anything)
-  preposition: (positioning, element, x, y) ->
+  placehold: (positioning, element, x, y) ->
     if uid = element._gss_id
-      if styles = positioning[uid]
+      if styles = positioning?[uid]
         offsets = {left: 0, top: 0}
         for property, value of styles
           unless value == null
@@ -154,6 +150,7 @@ class Styles
                 styles.y = value - y
                 offsets.top = value - y
       @engine._onMeasure(element, x, y, styles)
+
 
     return offsets
     

@@ -15,14 +15,6 @@ Grammar = (function() {
     return result;
   };
 
-  Grammar._reportError = function(message, line, column) {
-    if ((line != null) && (column != null)) {
-      message = "" + message + " {line:" + line + ", col:" + column + "}";
-    }
-    console.error(message);
-    return message;
-  };
-
   Grammar._toString = function(input) {
     if (toString.call(input) === '[object String]') {
       return input;
@@ -62,6 +54,8 @@ Grammar = (function() {
 
   Grammar.prototype._commands = null;
 
+  Grammar.prototype._Error = null;
+
   Grammar.prototype._selectors = null;
 
   Grammar.prototype._addCommand = function(command) {
@@ -78,22 +72,20 @@ Grammar = (function() {
     return selector;
   };
 
-  Grammar.prototype._column = function() {};
+  Grammar.prototype._columnNumber = function() {};
 
-  Grammar.prototype._input = function() {};
-
-  Grammar.prototype._line = function() {};
+  Grammar.prototype._lineNumber = function() {};
 
   /* Public*/
 
 
-  function Grammar(input, line, column) {
+  function Grammar(lineNumber, columnNumber, errorType) {
     this.chainer = __bind(this.chainer, this);
     this._commands = [];
     this._selectors = [];
-    this._input = input;
-    this._line = line;
-    this._column = column;
+    this._lineNumber = lineNumber;
+    this._columnNumber = columnNumber;
+    this._Error = errorType();
   }
 
   Grammar.prototype.start = function() {
@@ -180,15 +172,15 @@ Grammar = (function() {
       secondExpression = tail[index][3];
       headExpressions = Grammar._unpack2DExpression(firstExpression);
       tailExpressions = Grammar._unpack2DExpression(secondExpression);
+      if (headExpressions.length > tailExpressions.length) {
+        tailExpressions.push(tailExpressions[0]);
+      } else if (headExpressions.length < tailExpressions.length) {
+        headExpressions.push(headExpressions[0]);
+      }
       for (index = _j = 0, _len1 = tailExpressions.length; _j < _len1; index = ++_j) {
         tailExpression = tailExpressions[index];
         headExpression = headExpressions[index];
         if ((headExpression != null) && (tailExpression != null)) {
-          if (headExpressions.length > tailExpressions.length) {
-            headExpression[1] = tailExpression[1];
-          } else if (headExpressions.length < tailExpressions.length) {
-            tailExpression[1] = headExpression[1];
-          }
           command = [operator, headExpression, tailExpression].concat(strengthAndWeight);
           this._addCommand(command);
         }
@@ -264,14 +256,6 @@ Grammar = (function() {
     };
   };
 
-  Grammar.prototype.primaryExpression = function() {
-    return {
-      andOrExpression: function(expression) {
-        return expression;
-      }
-    };
-  };
-
   Grammar.prototype.variable = function(selector, variableNameCharacters) {
     var selectorName, variableName;
     variableName = variableNameCharacters.join('');
@@ -318,8 +302,22 @@ Grammar = (function() {
     return parseInt(digits.join(''), 10);
   };
 
+  Grammar.prototype.signedInteger = function(sign, integer) {
+    if (integer == null) {
+      integer = 0;
+    }
+    return parseInt("" + sign + integer, 10);
+  };
+
   Grammar.prototype.real = function(digits) {
     return parseFloat(digits.join(''));
+  };
+
+  Grammar.prototype.signedReal = function(sign, real) {
+    if (real == null) {
+      real = 0;
+    }
+    return parseFloat("" + sign + real);
   };
 
   /* Query selectors*/
@@ -389,17 +387,6 @@ Grammar = (function() {
     };
   };
 
-  Grammar.prototype.reservedPseudoSelector = function() {
-    return {
-      window: function() {
-        return 'window';
-      },
-      "this": function() {
-        return 'this';
-      }
-    };
-  };
-
   /* Strength and weight directives*/
 
 
@@ -413,7 +400,7 @@ Grammar = (function() {
         return [strength, weight];
       },
       invalid: function() {
-        return Grammar._reportError('Invalid Strength or Weight', _this._line(), _this._column());
+        throw new _this._Error('Invalid Strength or Weight', null, null, null, _this._lineNumber(), _this._columnNumber());
       }
     };
   };
@@ -525,7 +512,8 @@ Grammar = (function() {
   };
 
   Grammar.prototype.chainer = function(options) {
-    var asts, bridgeValue, createChainAST, head, headAST, headCharacters, headExpression, headOperator, strengthAndWeight, tail, tailAST, tailCharacters, tailOperator;
+    var asts, bridgeValue, createChainAST, head, headCharacters, headExpression, headOperator, strengthAndWeight, tail, tailCharacters, tailOperator,
+      _this = this;
     headCharacters = options.headCharacters, headExpression = options.headExpression, headOperator = options.headOperator, bridgeValue = options.bridgeValue, tailOperator = options.tailOperator, strengthAndWeight = options.strengthAndWeight, tailCharacters = options.tailCharacters;
     asts = [];
     head = Grammar._toString(headCharacters);
@@ -545,16 +533,15 @@ Grammar = (function() {
       headExpression.splice(1, 1, head);
       head = headExpression;
     }
-    headAST = createChainAST(headOperator, head, tail);
     if (bridgeValue != null) {
-      headAST = createChainAST(headOperator, head, bridgeValue);
-    }
-    asts.push(headAST);
-    if ((bridgeValue != null) && (tailOperator != null)) {
-      tailAST = createChainAST(tailOperator, bridgeValue, tail);
-      asts.push(tailAST);
+      asts.push(createChainAST(headOperator, head, bridgeValue));
+      if (tailOperator != null) {
+        asts.push(createChainAST(tailOperator, bridgeValue, tail));
+      } else {
+        throw new this._Error('Invalid Chain Statement', null, null, null, this._lineNumber(), this._columnNumber());
+      }
     } else {
-      Grammar._reportError('Invalid Chain Statement', this._line(), this._column());
+      asts.push(createChainAST(headOperator, head, tail));
     }
     return asts;
   };

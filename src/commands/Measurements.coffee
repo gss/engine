@@ -12,24 +12,43 @@ class Measurements
         return false
 
   # Add suggestions before all other commands are sent
+  # Triggers measure pass if no commands were sent 
+  # and something is set for re-measurement
   onFlush: (buffer) ->
-    return @_getComputedProperties()
+    return @_getComputedProperties(!buffer)
 
-  onMeasure: (node, id) ->
-    
-
+  onMeasure: (node, x, y) ->
+    return unless @intrinsic
+    if id = node._gss_id
+      if properties = @intrinsic[id]
+        for prop in properties
+          switch prop
+            when "x", "y"
+              path = id + "[intrinsic-" + prop + "]"
+              (@computed ||= {})[path] = 
+                if prop == "x" 
+                  x + node.offsetLeft
+                else
+                  y + node.offsetTop
+              console.log(path, y, node.offsetTop)
+    return
 
   onResize: (node) ->
+    debugger
     return unless intrinsic = @intrinsic
-    while node 
+    reflown = undefined
+    while node
+      if node == @scope
+        reflown ||= @scope
+        break
+      if node == @reflown
+        break 
       if id = node._gss_id
         if properties = intrinsic[id]
-          for prop in properties
-            switch prop
-              when "height", "width"         
-                @_compute id, 'intrinsic-' + prop
-                
-      node = node.parent
+          reflown = node
+      node = node.parentNode
+    console.log('onResize', reflown)
+    @reflown = reflown
 
   # Register intrinsic values assigned to engine
   onChange: (path, value, old) ->
@@ -45,6 +64,7 @@ class Measurements
 
   # Math ops compatible with constraints API
   plus: (a, b) ->
+    # Dont let + coerce first argument to string if its object
     return NaN if typeof a == 'object' 
     return a + b
 
@@ -74,7 +94,6 @@ class Measurements
       node = @elements[id]
 
     path = property.indexOf('[') > -1 && property || id + '[' + property + ']'
-    debugger if path.indexOf('window') > -1
     return if @computed?[path]?
     if (prop = @properties[id]?[property])? 
       current = @values[path]
@@ -93,16 +112,23 @@ class Measurements
         value = null
     else
       value = @[property](node, continuation)
+
     return (@computed ||= {})[path] = value
 
-  getComputedProperties: () ->
-    return unless @computed
+  getComputedProperties: (reflow) ->
     suggests = undefined
-    for property, value of @computed
-      unless value == @values[property]
-        (suggests ||= []).push ['suggest', property, value, 'required']
+    if @reflown
+      debugger
+      if (reflow)
+        @styles.render(@reflown)
+      @reflown = undefined
+    if @computed
+      for property, value of @computed
+        unless value == @values[property]
+          (suggests ||= []).push ['suggest', property, value, 'required']
+      @merge @computed
+      @computed = undefined
 
-    @computed = undefined
     return suggests
 
   # Generate command to create a variable

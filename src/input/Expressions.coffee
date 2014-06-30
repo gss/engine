@@ -37,7 +37,7 @@ class Expressions
   flush: ->
     buffer = @buffer
     if @engine._onFlush
-      added = @engine._onFlush()
+      added = @engine._onFlush(buffer)
       buffer = buffer && added && added.concat(buffer) || buffer || added
     @lastOutput = GSS.clone buffer
     console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
@@ -279,8 +279,6 @@ class Expressions
     else
       func = def.command
 
-    if typeof func != 'function' && typeof func != 'string'
-      debugger
     # Command may resolve to method, which will be called on the first argument
     if typeof func == 'string'
       operation.method = func
