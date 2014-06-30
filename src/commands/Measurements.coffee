@@ -17,29 +17,48 @@ class Measurements
   onFlush: (buffer) ->
     return @_getComputedProperties(!buffer)
 
-  onMeasure: (node, x, y) ->
+  onMeasure: (node, x, y, styles, full) ->
     return unless @intrinsic
     if id = node._gss_id
       if properties = @intrinsic[id]
         for prop in properties
-          switch prop
-            when "x", "y"
-              path = id + "[intrinsic-" + prop + "]"
-              (@computed ||= {})[path] = 
-                if prop == "x" 
-                  x + node.offsetLeft
-                else
-                  y + node.offsetTop
-              console.log(path, y, node.offsetTop)
+          continue if full && (prop == 'width' || prop == 'height')
+
+          path = id + "[intrinsic-" + prop + "]"
+          (@computed ||= {})[path] = 
+            if prop == "x" 
+              x + node.offsetLeft
+            else
+              y + node.offsetTop
+          console.log(path, y, node.offsetTop)
     return
 
+  getCommonParent: (a, b) ->
+    aps = []
+    bps = []
+    ap = a
+    bp = b
+    while ap && bp
+      aps.push ap
+      bps.push bp
+      ap = ap.parentNode
+      bp = bp.parentNode
+      if bps.indexOf(ap) > -1
+        return ap
+      if aps.indexOf(bp) > -1
+        return bp
+
+  # Decide common parent for all mutated nodes
   onResize: (node) ->
     debugger
     return unless intrinsic = @intrinsic
     reflown = undefined
     while node
       if node == @scope
-        reflown ||= @scope
+        if @reflown
+          reflown = @_getCommonParent(reflown, @reflown)
+        else
+          reflown = @scope
         break
       if node == @reflown
         break 
@@ -124,7 +143,7 @@ class Measurements
       @reflown = undefined
     if @computed
       for property, value of @computed
-        unless value == @values[property]
+        if value? && value != @values[property]
           (suggests ||= []).push ['suggest', property, value, 'required']
       @merge @computed
       @computed = undefined

@@ -20775,7 +20775,6 @@ Dimensions = (function() {
       return scope.offsetWidth;
     },
     y: function(scope) {
-      debugger;
       return scope.offsetTop;
     },
     x: function(scope) {
@@ -21653,7 +21652,7 @@ Measurements = (function() {
     return this._getComputedProperties(!buffer);
   };
 
-  Measurements.prototype.onMeasure = function(node, x, y) {
+  Measurements.prototype.onMeasure = function(node, x, y, styles, full) {
     var id, path, prop, properties, _i, _len;
     if (!this.intrinsic) {
       return;
@@ -21662,14 +21661,33 @@ Measurements = (function() {
       if (properties = this.intrinsic[id]) {
         for (_i = 0, _len = properties.length; _i < _len; _i++) {
           prop = properties[_i];
-          switch (prop) {
-            case "x":
-            case "y":
-              path = id + "[intrinsic-" + prop + "]";
-              (this.computed || (this.computed = {}))[path] = prop === "x" ? x + node.offsetLeft : y + node.offsetTop;
-              console.log(path, y, node.offsetTop);
+          if (full && (prop === 'width' || prop === 'height')) {
+            continue;
           }
+          path = id + "[intrinsic-" + prop + "]";
+          (this.computed || (this.computed = {}))[path] = prop === "x" ? x + node.offsetLeft : y + node.offsetTop;
+          console.log(path, y, node.offsetTop);
         }
+      }
+    }
+  };
+
+  Measurements.prototype.getCommonParent = function(a, b) {
+    var ap, aps, bp, bps;
+    aps = [];
+    bps = [];
+    ap = a;
+    bp = b;
+    while (ap && bp) {
+      aps.push(ap);
+      bps.push(bp);
+      ap = ap.parentNode;
+      bp = bp.parentNode;
+      if (bps.indexOf(ap) > -1) {
+        return ap;
+      }
+      if (aps.indexOf(bp) > -1) {
+        return bp;
       }
     }
   };
@@ -21683,7 +21701,11 @@ Measurements = (function() {
     reflown = void 0;
     while (node) {
       if (node === this.scope) {
-        reflown || (reflown = this.scope);
+        if (this.reflown) {
+          reflown = this._getCommonParent(reflown, this.reflown);
+        } else {
+          reflown = this.scope;
+        }
         break;
       }
       if (node === this.reflown) {
@@ -21799,7 +21821,7 @@ Measurements = (function() {
       _ref = this.computed;
       for (property in _ref) {
         value = _ref[property];
-        if (value !== this.values[property]) {
+        if ((value != null) && value !== this.values[property]) {
           (suggests || (suggests = [])).push(['suggest', property, value, 'required']);
         }
       }
@@ -22275,8 +22297,16 @@ Queries = (function() {
     this.output = output;
     this._watchers = {};
     this.listener = new this.Observer(this.pull.bind(this));
-    this.listener.observe(this.engine.scope, this.options);
+    this.connect();
   }
+
+  Queries.prototype.connect = function() {
+    return this.listener.observe(this.engine.scope, this.options);
+  };
+
+  Queries.prototype.disconnect = function() {
+    return this.listener.disconnect();
+  };
 
   Queries.prototype.push = function(query, continuation, scope) {
     if (this.buffer === void 0) {
@@ -22965,13 +22995,15 @@ Styles = (function() {
       }
     }
     positioning = {};
+    this.engine.queries.disconnect();
     for (path in data) {
       value = data[path];
       if (value !== void 0) {
         this.set(path, void 0, value, positioning);
       }
     }
-    this.render(null, null, null, positioning);
+    this.engine.queries.connect();
+    this.render(null, null, null, positioning, null, true);
     for (id in positioning) {
       styles = positioning[id];
       for (prop in styles) {
@@ -23080,26 +23112,25 @@ Styles = (function() {
     return this;
   };
 
-  Styles.prototype.render = function(parent, x, y, positioning, offsetParent) {
-    var child, children, offsets, _i, _len;
-    if (parent == null) {
-      parent = this.engine.scope;
-    }
+  Styles.prototype.render = function(parent, x, y, positioning, offsetParent, full) {
+    var child, children, offsets, scope, _i, _len;
     if (x == null) {
       x = 0;
     }
     if (y == null) {
       y = 0;
     }
-    if (offsets = this.placehold(positioning, parent, x, y)) {
+    scope = this.engine.scope;
+    parent || (parent = scope);
+    if (offsets = this.placehold(positioning, parent, x, y, full)) {
       x += offsets.left;
       y += offsets.top;
     }
     children = this.engine['_>'][1](parent);
-    if (parent.offsetParent === this.engine.scope) {
-      x -= this.engine.scope.offsetLeft;
-      y -= this.engine.scope.offsetTop;
-    } else if (parent !== this.engine.scope) {
+    if (parent.offsetParent === scope) {
+      x -= scope.offsetLeft;
+      y -= scope.offsetTop;
+    } else if (parent !== scope) {
       if (!offsets && children.length && children[0].offsetParent === parent) {
         x += parent.offsetLeft + parent.clientLeft;
         y += parent.offsetTop + parent.clientTop;
@@ -23108,12 +23139,12 @@ Styles = (function() {
     }
     for (_i = 0, _len = children.length; _i < _len; _i++) {
       child = children[_i];
-      this.render(child, x, y, positioning, offsetParent);
+      this.render(child, x, y, positioning, offsetParent, full);
     }
     return this;
   };
 
-  Styles.prototype.placehold = function(positioning, element, x, y) {
+  Styles.prototype.placehold = function(positioning, element, x, y, full) {
     var offsets, property, styles, uid, value;
     if (uid = element._gss_id) {
       if (styles = positioning != null ? positioning[uid] : void 0) {
@@ -23136,7 +23167,7 @@ Styles = (function() {
           }
         }
       }
-      this.engine._onMeasure(element, x, y, styles);
+      this.engine._onMeasure(element, x, y, styles, full);
     }
     return offsets;
   };

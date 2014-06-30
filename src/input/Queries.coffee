@@ -22,7 +22,13 @@ class Queries
   constructor: (@engine, @output) ->
     @_watchers = {}
     @listener = new @Observer @pull.bind(this)
+    @connect()
+
+  connect: ->
     @listener.observe @engine.scope, @options 
+
+  disconnect: ->
+    @listener.disconnect()
 
   # Re-evaluate updated queries
   # Watchers are stored in a single array in groups of 3 properties

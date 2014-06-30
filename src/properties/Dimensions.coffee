@@ -31,7 +31,6 @@ class Dimensions
       return scope.offsetWidth
 
     y: (scope) ->
-      debugger
       return scope.offsetTop
 
     x: (scope) ->

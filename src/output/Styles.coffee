@@ -20,13 +20,15 @@ class Styles
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
     positioning = {}
+    @engine.queries.disconnect()
     for path, value of data
       unless value == undefined
         @set(path, undefined, value, positioning)
+    @engine.queries.connect()
 
     # Adjust positioning styles to respect 
     # element offsets 
-    @render(null, null, null, positioning)
+    @render(null, null, null, positioning, null, true)
 
     #  Set new positions in bulk (Restyle)
     for id, styles of positioning
@@ -110,19 +112,21 @@ class Styles
     @
 
   # Position 
-  render: (parent = @engine.scope, x = 0, y = 0, positioning, offsetParent) ->
+  render: (parent, x = 0, y = 0, positioning, offsetParent, full) ->
+    scope = @engine.scope
+    parent ||= scope
     # Calculate new offsets for given element and styles
-    if offsets = @placehold(positioning, parent, x, y)
+    if offsets = @placehold(positioning, parent, x, y, full)
       x += offsets.left
       y += offsets.top
 
     # Select all children
     children = @engine['_>'][1](parent);
 
-    if parent.offsetParent == @engine.scope
-      x -= @engine.scope.offsetLeft
-      y -= @engine.scope.offsetTop
-    else if parent != @engine.scope
+    if parent.offsetParent == scope
+      x -= scope.offsetLeft
+      y -= scope.offsetTop
+    else if parent != scope
       # When rendering a positioned element, measure its offsets
       if !offsets && children.length && children[0].offsetParent == parent
         x += parent.offsetLeft + parent.clientLeft
@@ -132,11 +136,11 @@ class Styles
 
     # Position children
     for child in children
-      @render(child, x, y, positioning, offsetParent)
+      @render(child, x, y, positioning, offsetParent, full)
     return @
 
   # Calculate offsets according to new values (but dont set anything)
-  placehold: (positioning, element, x, y) ->
+  placehold: (positioning, element, x, y, full) ->
     if uid = element._gss_id
       if styles = positioning?[uid]
         offsets = {left: 0, top: 0}
@@ -149,7 +153,7 @@ class Styles
               when "y"
                 styles.y = value - y
                 offsets.top = value - y
-      @engine._onMeasure(element, x, y, styles)
+      @engine._onMeasure(element, x, y, styles, full)
 
 
     return offsets
