@@ -147,6 +147,7 @@ class Selectors
     return node if node.getAttribute(attribute) == value
 
   '[*=]': (node, attribute, value, operator) ->
+    debugger
     return node if  node.getAttribute(attribute)?.indexOf(value) > -1
   
   '[|=]': (node, attribute, value, operator) ->
@@ -203,14 +204,14 @@ class Selectors
     capture: (result, operation, continuation, scope) -> 
       continuation = @commands[','].serialize.call(@, scope, operation)
       @queries.add(result, continuation, scope, scope)
-      return
+      return true
 
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, scope, child) ->
       continuation = @commands[','].serialize.call(@, scope, operation)
       @queries.remove(result, continuation, child, scope)
-      return
+      return true
 
   # CSS Combinators with reversals
 

@@ -31,10 +31,26 @@ class Dimensions
       return scope.offsetWidth
 
     y: (scope) ->
-      return scope.offsetTop
+      y = 0
+      while scope
+        y = scope.offsetTop
+        scope = scope.offsetParent
+        if scope == @scope
+          break
+        if scope == @scope.offsetParent
+          y -= @scope.offsetTop
+      return y
 
     x: (scope) ->
-      return scope.offsetWidth
+      x = 0
+      while scope
+        x = scope.offsetLeft
+        scope = scope.offsetParent
+        if scope == @scope
+          break
+        if scope == @scope.offsetParent
+          x -= @scope.offsetLeft
+      return x
 
   scroll:
 

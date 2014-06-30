@@ -119,13 +119,17 @@ class Engine
     return value if typeof value == 'string'
     return path + Engine.identify(value)
 
-  # Get object by id
-  @get: (id) ->
-    return Engine::elements[id]
+  get: (id, property) ->
+    if property == null
+      property = id
+      id = null
+    if id
+      path = id + '[' + property + ']'
+    else
+      path = property
+    return @values[path]
 
-  # Get object by id
-  get: (id) ->
-    return @elements[id]
+
 
   # Get or generate uid for a given object.
   @identify: (object, generate) ->

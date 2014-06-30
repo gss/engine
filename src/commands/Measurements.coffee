@@ -1,6 +1,48 @@
-# Do your math! Functions that work on fully resolved values
-
+# Buffer up measurements
 class Measurements
+
+  # Generate command to create a variable
+  get:
+    meta: true
+    command: (operation, continuation, object, property) ->
+      if property
+        if typeof object == 'string'
+          id = object
+
+        # Get document property
+        else if object.absolute is 'window' || object == document
+          id = '::window'
+
+        # Get element property
+        else if object.nodeType
+          id = @identify(object)
+      else
+        # Get global variable
+        id = ''
+        property = object
+        object = undefined
+
+      if operation
+        parent = child = operation
+        debugger
+        while parent = parent.parent
+          if child.index && parent.def.primitive == child.index
+            primitive = true
+            break
+          child = parent
+
+      console.log('get', property, primitive)
+      # Compute custom property
+      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
+        computed = @_compute(id, property, continuation, true)
+        if primitive
+          return computed 
+      else if primitive
+        return @get(id, property)
+
+      # Return command for solver with path which will be used to clean it
+      return ['get', id, property, continuation || '']
+
 
   # Combine subsequent remove commands
   onBuffer: (buffer, args, batch) ->
@@ -32,21 +74,6 @@ class Measurements
               y + node.offsetTop
           console.log(path, y, node.offsetTop)
     return
-
-  getCommonParent: (a, b) ->
-    aps = []
-    bps = []
-    ap = a
-    bp = b
-    while ap && bp
-      aps.push ap
-      bps.push bp
-      ap = ap.parentNode
-      bp = bp.parentNode
-      if bps.indexOf(ap) > -1
-        return ap
-      if aps.indexOf(bp) > -1
-        return bp
 
   # Decide common parent for all mutated nodes
   onResize: (node) ->
@@ -80,21 +107,6 @@ class Measurements
           group = @intrinsic[id] 
           group.splice group.indexOf(path), 1
           delete @intrinsic[id] unless group.length
-
-  # Math ops compatible with constraints API
-  plus: (a, b) ->
-    # Dont let + coerce first argument to string if its object
-    return NaN if typeof a == 'object' 
-    return a + b
-
-  minus: (a, b) ->
-    return a - b
-
-  multiply: (a, b) ->
-    return a * b
-
-  divide: (a, b) ->
-    return a / b
 
   getStyle: (element, property) ->
 
@@ -134,6 +146,21 @@ class Measurements
 
     return (@computed ||= {})[path] = value
 
+  getCommonParent: (a, b) ->
+    aps = []
+    bps = []
+    ap = a
+    bp = b
+    while ap && bp
+      aps.push ap
+      bps.push bp
+      ap = ap.parentNode
+      bp = bp.parentNode
+      if bps.indexOf(ap) > -1
+        return ap
+      if aps.indexOf(bp) > -1
+        return bp
+
   getComputedProperties: (reflow) ->
     suggests = undefined
     if @reflown
@@ -149,38 +176,6 @@ class Measurements
       @computed = undefined
 
     return suggests
-
-  # Generate command to create a variable
-  get:
-    command: (continuation, object, property) ->
-      if property
-        if typeof object == 'string'
-          id = object
-
-        # Get document property
-        else if object.absolute is 'window' || object == document
-          id = '::window'
-
-        # Get element property
-        else if object.nodeType
-          id = @identify(object)
-      else
-        # Get global variable
-        id = ''
-        property = object
-        object = undefined
-
-      if typeof continuation == 'object'
-        continuation = continuation.path
-
-      # Compute custom property
-      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
-        computed = @_compute(id, property, continuation, true)
-        if typeof computed == 'object'
-          return computed
-
-      # Return command for solver with path which will be used to clean it
-      return ['get', id, property, continuation || '']
 
   getIntrinsicProperty: (path) ->
     index = path.indexOf('[intrinsic-')

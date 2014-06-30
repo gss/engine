@@ -62,7 +62,7 @@ class Styles
     delete @[id]
 
   get: (path, property, value) ->
-    element = @engine.get(path)
+    element = @engine[path]
     camel = (@camelized ||= {})[property] ||= @engine._camelize(property)
     style = element.style
     value = style[camel]

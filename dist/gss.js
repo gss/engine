@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-30) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-01) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20315,12 +20315,18 @@ Engine = (function() {
     return path + Engine.identify(value);
   };
 
-  Engine.get = function(id) {
-    return Engine.prototype.elements[id];
-  };
-
-  Engine.prototype.get = function(id) {
-    return this.elements[id];
+  Engine.prototype.get = function(id, property) {
+    var path;
+    if (property === null) {
+      property = id;
+      id = null;
+    }
+    if (id) {
+      path = id + '[' + property + ']';
+    } else {
+      path = property;
+    }
+    return this.values[path];
   };
 
   Engine.identify = function(object, generate) {
@@ -20554,7 +20560,7 @@ Engine.Document = (function(_super) {
 
   Document.prototype.Solver = require('./Solver.js');
 
-  Document.prototype.Commands = Engine.include(require('./commands/Measurements.js'), require('./commands/Selectors.js'), require('./commands/Rules.js'), require('./commands/Native.js'));
+  Document.prototype.Commands = Engine.include(require('./commands/Measurements.js'), require('./commands/Selectors.js'), require('./commands/Rules.js'), require('./commands/Native.js'), require('./commands/Algebra.js'));
 
   Document.prototype.Properties = Engine.include(require('./properties/Dimensions.js'), require('./properties/Equasions.js'));
 
@@ -20616,7 +20622,9 @@ Engine.Document = (function(_super) {
       return;
     }
     Document.__super__.start.apply(this, arguments);
+    console.groupCollapsed('Watch for stylesheets');
     this["do"]([['$eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['$load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+    console.groupEnd('Watch for stylesheets');
     return true;
   };
 
@@ -20775,10 +20783,34 @@ Dimensions = (function() {
       return scope.offsetWidth;
     },
     y: function(scope) {
-      return scope.offsetTop;
+      var y;
+      y = 0;
+      while (scope) {
+        y = scope.offsetTop;
+        scope = scope.offsetParent;
+        if (scope === this.scope) {
+          break;
+        }
+        if (scope === this.scope.offsetParent) {
+          y -= this.scope.offsetTop;
+        }
+      }
+      return y;
     },
     x: function(scope) {
-      return scope.offsetWidth;
+      var x;
+      x = 0;
+      while (scope) {
+        x = scope.offsetLeft;
+        scope = scope.offsetParent;
+        if (scope === this.scope) {
+          break;
+        }
+        if (scope === this.scope.offsetParent) {
+          x -= this.scope.offsetLeft;
+        }
+      }
+      return x;
     }
   };
 
@@ -20876,33 +20908,40 @@ Rules = (function() {
     evaluate: function(operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender) {
         this.expressions.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
-      } else {
-        return this;
+        return false;
       }
     },
     capture: function(result, parent, continuation, scope) {
-      return this.expressions.push(result);
-    },
-    command: function(path, condition, positive, negative) {
-      if (condition) {
-        return positive;
-      } else {
-        return negative;
+      if (!result.nodeType && !this.isCollection(result)) {
+        this.expressions.push(result);
+        return true;
       }
     }
   };
 
   Rules.prototype["$if"] = {
-    prefix: "@if",
-    evaluate: function(arg, i, evaluated) {
-      var _ref;
-      if (i === 0) {
-        return arg;
+    primitive: 1,
+    capture: function(result, parent, continuation, scope) {
+      if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
+        this.expressions.push(result);
+        return true;
       }
-      if (i === 1 || ((_ref = evaluated[1]) != null ? _ref : i === {
-        2: i === 3
-      })) {
-        return this.evaluate(arg);
+    },
+    evaluate: function(operation, continuation, scope, ascender, ascending) {
+      var condition;
+      if (operation.index === 1) {
+        return 'compute';
+      } else if (operation.index === 2 && (!ascender)) {
+        condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
+        console.group('if', operation.parent[1], condition && 'then' || 'else');
+        debugger;
+        if (condition) {
+          this.expressions.evaluate(operation.parent[2], continuation, scope, void 0, void 0, 'overloaded');
+        } else if (operation.parent[3]) {
+          this.expressions.evaluate(operation.parent[3], continuation, scope, void 0, void 0, 'overloaded');
+        }
+        console.groupEnd('if', operation.parent[1], condition && 'then' || 'else');
+        return false;
       }
     }
   };
@@ -20930,8 +20969,10 @@ Rules = (function() {
     type || (type = node.type || 'text/gss');
     xhr = new XMLHttpRequest();
     xhr.onstatechange = function() {
-      if (xhr.readyState === 4 && xhr.status === 20) {
-        return 1;
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          return 1;
+        }
       }
     };
     return xhr.open(node.toUpperCase(), src);
@@ -21136,6 +21177,7 @@ Selectors = (function() {
   };
 
   Selectors.prototype['[*=]'] = function(node, attribute, value, operator) {
+    debugger;
     var _ref;
     if (((_ref = node.getAttribute(attribute)) != null ? _ref.indexOf(value) : void 0) > -1) {
       return node;
@@ -21192,11 +21234,13 @@ Selectors = (function() {
     capture: function(result, operation, continuation, scope) {
       continuation = this.commands[','].serialize.call(this, scope, operation);
       this.queries.add(result, continuation, scope, scope);
+      return true;
     },
     release: function(result, operation, scope, child) {
       var continuation;
       continuation = this.commands[','].serialize.call(this, scope, operation);
       this.queries.remove(result, continuation, child, scope);
+      return true;
     }
   };
 
@@ -21633,6 +21677,47 @@ var Measurements;
 Measurements = (function() {
   function Measurements() {}
 
+  Measurements.prototype.get = {
+    meta: true,
+    command: function(operation, continuation, object, property) {
+      var child, computed, id, parent, primitive, _ref;
+      if (property) {
+        if (typeof object === 'string') {
+          id = object;
+        } else if (object.absolute === 'window' || object === document) {
+          id = '::window';
+        } else if (object.nodeType) {
+          id = this.identify(object);
+        }
+      } else {
+        id = '';
+        property = object;
+        object = void 0;
+      }
+      if (operation) {
+        parent = child = operation;
+        debugger;
+        while (parent = parent.parent) {
+          if (child.index && parent.def.primitive === child.index) {
+            primitive = true;
+            break;
+          }
+          child = parent;
+        }
+      }
+      console.log('get', property, primitive);
+      if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
+        computed = this._compute(id, property, continuation, true);
+        if (primitive) {
+          return computed;
+        }
+      } else if (primitive) {
+        return this.get(id, property);
+      }
+      return ['get', id, property, continuation || ''];
+    }
+  };
+
   Measurements.prototype.onBuffer = function(buffer, args, batch) {
     var last;
     if (!(buffer && batch)) {
@@ -21668,26 +21753,6 @@ Measurements = (function() {
           (this.computed || (this.computed = {}))[path] = prop === "x" ? x + node.offsetLeft : y + node.offsetTop;
           console.log(path, y, node.offsetTop);
         }
-      }
-    }
-  };
-
-  Measurements.prototype.getCommonParent = function(a, b) {
-    var ap, aps, bp, bps;
-    aps = [];
-    bps = [];
-    ap = a;
-    bp = b;
-    while (ap && bp) {
-      aps.push(ap);
-      bps.push(bp);
-      ap = ap.parentNode;
-      bp = bp.parentNode;
-      if (bps.indexOf(ap) > -1) {
-        return ap;
-      }
-      if (aps.indexOf(bp) > -1) {
-        return bp;
       }
     }
   };
@@ -21740,25 +21805,6 @@ Measurements = (function() {
     }
   };
 
-  Measurements.prototype.plus = function(a, b) {
-    if (typeof a === 'object') {
-      return NaN;
-    }
-    return a + b;
-  };
-
-  Measurements.prototype.minus = function(a, b) {
-    return a - b;
-  };
-
-  Measurements.prototype.multiply = function(a, b) {
-    return a * b;
-  };
-
-  Measurements.prototype.divide = function(a, b) {
-    return a / b;
-  };
-
   Measurements.prototype.getStyle = function(element, property) {};
 
   Measurements.prototype.setStyle = function(element, property, value) {
@@ -21807,6 +21853,26 @@ Measurements = (function() {
     return (this.computed || (this.computed = {}))[path] = value;
   };
 
+  Measurements.prototype.getCommonParent = function(a, b) {
+    var ap, aps, bp, bps;
+    aps = [];
+    bps = [];
+    ap = a;
+    bp = b;
+    while (ap && bp) {
+      aps.push(ap);
+      bps.push(bp);
+      ap = ap.parentNode;
+      bp = bp.parentNode;
+      if (bps.indexOf(ap) > -1) {
+        return ap;
+      }
+      if (aps.indexOf(bp) > -1) {
+        return bp;
+      }
+    }
+  };
+
   Measurements.prototype.getComputedProperties = function(reflow) {
     var property, suggests, value, _ref;
     suggests = void 0;
@@ -21829,35 +21895,6 @@ Measurements = (function() {
       this.computed = void 0;
     }
     return suggests;
-  };
-
-  Measurements.prototype.get = {
-    command: function(continuation, object, property) {
-      var computed, id, _ref;
-      if (property) {
-        if (typeof object === 'string') {
-          id = object;
-        } else if (object.absolute === 'window' || object === document) {
-          id = '::window';
-        } else if (object.nodeType) {
-          id = this.identify(object);
-        }
-      } else {
-        id = '';
-        property = object;
-        object = void 0;
-      }
-      if (typeof continuation === 'object') {
-        continuation = continuation.path;
-      }
-      if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
-        computed = this._compute(id, property, continuation, true);
-        if (typeof computed === 'object') {
-          return computed;
-        }
-      }
-      return ['get', id, property, continuation || ''];
-    }
   };
 
   Measurements.prototype.getIntrinsicProperty = function(path) {
@@ -21898,6 +21935,78 @@ Native = (function() {
 })();
 
 module.exports = Native;
+
+});
+require.register("gss/lib/commands/Algebra.js", function(exports, require, module){
+var Algebra, fn, property, _ref;
+
+Algebra = (function() {
+  function Algebra() {}
+
+  Algebra.prototype.isPrimitive = function(object) {
+    if (typeof object === 'object') {
+      return object.valueOf !== Object.prototype.valueOf;
+    }
+    return true;
+  };
+
+  Algebra.prototype.eq = function(a, b) {
+    return a === b;
+  };
+
+  Algebra.prototype.lte = function(a, b) {
+    return a <= b;
+  };
+
+  Algebra.prototype.gte = function(a, b) {
+    return a >= b;
+  };
+
+  Algebra.prototype.lt = function(a, b) {
+    return a < b;
+  };
+
+  Algebra.prototype.gt = function(a, b) {
+    return a > b;
+  };
+
+  Algebra.prototype.plus = function(a, b) {
+    return a + b;
+  };
+
+  Algebra.prototype.minus = function(a, b) {
+    return a - b;
+  };
+
+  Algebra.prototype.multiply = function(a, b) {
+    return a * b;
+  };
+
+  Algebra.prototype.divide = function(a, b) {
+    return a / b;
+  };
+
+  return Algebra;
+
+})();
+
+_ref = Algebra.prototype;
+for (property in _ref) {
+  fn = _ref[property];
+  if (property !== 'isPrimitive') {
+    fn = (function(property, fn) {
+      return Algebra.prototype[property] = function(a, b) {
+        if (!(this._isPrimitive(a) && this._isPrimitive(b))) {
+          return NaN;
+        }
+        fn.binary = true;
+        return fn.apply(this, arguments);
+      };
+    })(property, fn);
+  }
+}
+
+module.exports = Algebra;
 
 });
 require.register("gss/lib/input/Expressions.js", function(exports, require, module){
@@ -21965,16 +22074,16 @@ Expressions = (function() {
     return result;
   };
 
-  Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, evaluate, evaluated, result, _ref;
-    console.log(operation);
+  Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
+    var args, evaluate, result, _ref;
+    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (!overloaded && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
-      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
-      if (evaluated !== this.engine) {
-        return evaluated;
+    if (!meta && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
+      meta = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+      if (meta === false) {
+        return;
       }
     }
     if (operation.tail) {
@@ -21985,7 +22094,7 @@ Expressions = (function() {
         return result;
       }
     }
-    args = this.resolve(operation, continuation, scope, ascender, ascending);
+    args = this.resolve(operation, continuation, scope, ascender, ascending, meta);
     if (args === false) {
       return;
     }
@@ -21994,6 +22103,9 @@ Expressions = (function() {
     } else {
       result = this.execute(operation, continuation, scope, args);
       continuation = this.log(operation, continuation);
+    }
+    if (result === false) {
+      debugger;
     }
     return this.ascend(operation, continuation, result, scope, ascender);
   };
@@ -22069,22 +22181,25 @@ Expressions = (function() {
     return false;
   };
 
-  Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending) {
-    var args, argument, contd, index, offset, prev, skip, stopping, _i, _len;
+  Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending, meta) {
+    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
     args = prev = void 0;
     skip = operation.skip;
+    shift = 0;
     offset = operation.offset || 0;
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       argument = operation[index];
       if (offset > index) {
         continue;
       }
-      if (index === 0 && (!operation.def.noop && !offset)) {
-        argument = continuation || operation;
+      if (!offset && index === 0 && !operation.def.noop) {
+        args = [operation, continuation || operation.path];
+        shift++;
+        continue;
       } else if (ascender === index) {
         argument = ascending;
       } else if (skip === index) {
-        offset += 1;
+        shift--;
         continue;
       } else if (argument instanceof Array) {
         if (ascender < index) {
@@ -22107,7 +22222,7 @@ Expressions = (function() {
         offset += 1;
         continue;
       }
-      (args || (args = []))[index - offset] = prev = argument;
+      (args || (args = []))[index - offset + shift] = prev = argument;
     }
     if (stopping || (!args && operation.def.noop)) {
       return false;
@@ -22116,7 +22231,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender) {
-    var breadcrumbs, item, parent, _i, _len;
+    var breadcrumbs, captured, item, parent, _i, _len;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
@@ -22129,10 +22244,13 @@ Expressions = (function() {
           console.groupEnd(continuation);
           return;
         } else if (parent != null ? parent.def.capture : void 0) {
-          return parent.def.capture.call(this.engine, result, parent, continuation, scope);
+          captured = parent.def.capture.call(this.engine, result, parent, continuation, scope);
+          if (captured === true) {
+            return;
+          }
         } else {
-          if (operation.def.noop) {
-            if (result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length === 1) || (ascender != null)))) {
+          if (operation.def.noop || (parent.def.noop && !parent.name)) {
+            if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
               return this.push(result.length === 1 ? result[0] : result);
             }
           } else if (parent && ((ascender != null) || result.nodeType)) {
@@ -22212,6 +22330,11 @@ Expressions = (function() {
       operation.offset = 1;
     } else {
       func = def.command;
+    }
+    if (def.offset) {
+      if (operation.offset == null) {
+        operation.offset = def.offset;
+      }
     }
     if (typeof func === 'string') {
       operation.method = func;
@@ -23046,7 +23169,7 @@ Styles = (function() {
 
   Styles.prototype.get = function(path, property, value) {
     var camel, element, style, _base;
-    element = this.engine.get(path);
+    element = this.engine[path];
     camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine._camelize(property));
     style = element.style;
     value = style[camel];
@@ -28231,6 +28354,7 @@ module.exports = {
     "lib/commands/Constraints.js",
     "lib/commands/Measurements.js", 
     "lib/commands/Native.js", 
+    "lib/commands/Algebra.js", 
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 

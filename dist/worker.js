@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-30) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-01) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -84,16 +84,16 @@ Expressions = (function() {
     return result;
   };
 
-  Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, overloaded) {
-    var args, evaluate, evaluated, result, _ref;
-    console.log(operation);
+  Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
+    var args, evaluate, result, _ref;
+    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (!overloaded && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
-      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
-      if (evaluated !== this.engine) {
-        return evaluated;
+    if (!meta && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
+      meta = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+      if (meta === false) {
+        return;
       }
     }
     if (operation.tail) {
@@ -104,7 +104,7 @@ Expressions = (function() {
         return result;
       }
     }
-    args = this.resolve(operation, continuation, scope, ascender, ascending);
+    args = this.resolve(operation, continuation, scope, ascender, ascending, meta);
     if (args === false) {
       return;
     }
@@ -113,6 +113,9 @@ Expressions = (function() {
     } else {
       result = this.execute(operation, continuation, scope, args);
       continuation = this.log(operation, continuation);
+    }
+    if (result === false) {
+      debugger;
     }
     return this.ascend(operation, continuation, result, scope, ascender);
   };
@@ -188,22 +191,25 @@ Expressions = (function() {
     return false;
   };
 
-  Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending) {
-    var args, argument, contd, index, offset, prev, skip, stopping, _i, _len;
+  Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending, meta) {
+    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
     args = prev = void 0;
     skip = operation.skip;
+    shift = 0;
     offset = operation.offset || 0;
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       argument = operation[index];
       if (offset > index) {
         continue;
       }
-      if (index === 0 && (!operation.def.noop && !offset)) {
-        argument = continuation || operation;
+      if (!offset && index === 0 && !operation.def.noop) {
+        args = [operation, continuation || operation.path];
+        shift++;
+        continue;
       } else if (ascender === index) {
         argument = ascending;
       } else if (skip === index) {
-        offset += 1;
+        shift--;
         continue;
       } else if (argument instanceof Array) {
         if (ascender < index) {
@@ -226,7 +232,7 @@ Expressions = (function() {
         offset += 1;
         continue;
       }
-      (args || (args = []))[index - offset] = prev = argument;
+      (args || (args = []))[index - offset + shift] = prev = argument;
     }
     if (stopping || (!args && operation.def.noop)) {
       return false;
@@ -235,7 +241,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender) {
-    var breadcrumbs, item, parent, _i, _len;
+    var breadcrumbs, captured, item, parent, _i, _len;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
@@ -248,10 +254,13 @@ Expressions = (function() {
           console.groupEnd(continuation);
           return;
         } else if (parent != null ? parent.def.capture : void 0) {
-          return parent.def.capture.call(this.engine, result, parent, continuation, scope);
+          captured = parent.def.capture.call(this.engine, result, parent, continuation, scope);
+          if (captured === true) {
+            return;
+          }
         } else {
-          if (operation.def.noop) {
-            if (result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length === 1) || (ascender != null)))) {
+          if (operation.def.noop || (parent.def.noop && !parent.name)) {
+            if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
               return this.push(result.length === 1 ? result[0] : result);
             }
           } else if (parent && ((ascender != null) || result.nodeType)) {
@@ -331,6 +340,11 @@ Expressions = (function() {
       operation.offset = 1;
     } else {
       func = def.command;
+    }
+    if (def.offset) {
+      if (operation.offset == null) {
+        operation.offset = def.offset;
+      }
     }
     if (typeof func === 'string') {
       operation.method = func;
@@ -541,12 +555,18 @@ Engine = (function() {
     return path + Engine.identify(value);
   };
 
-  Engine.get = function(id) {
-    return Engine.prototype.elements[id];
-  };
-
-  Engine.prototype.get = function(id) {
-    return this.elements[id];
+  Engine.prototype.get = function(id, property) {
+    var path;
+    if (property === null) {
+      property = id;
+      id = null;
+    }
+    if (id) {
+      path = id + '[' + property + ']';
+    } else {
+      path = property;
+    }
+    return this.values[path];
   };
 
   Engine.identify = function(object, generate) {

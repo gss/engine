@@ -18,6 +18,7 @@ class Engine.Document extends Engine
     require('./commands/Selectors.js'),
     require('./commands/Rules.js'),
     require('./commands/Native.js'),
+    require('./commands/Algebra.js')
   )
 
   Properties: Engine.include(
@@ -74,10 +75,12 @@ class Engine.Document extends Engine
   start: ->
     return if @running
     super
+    console.groupCollapsed('Watch for stylesheets')
     @do [
       ['$eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
       ['$load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
     ]
+    console.groupEnd('Watch for stylesheets')
     return true
     
 # Export all DOM commands as helper functions 

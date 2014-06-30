@@ -58,16 +58,17 @@ class Expressions
     return result 
 
   # Evaluate operation depth first
-  evaluate: (operation, continuation, scope, ascender, ascending, overloaded) ->
-    console.log(operation)
+  evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
+    console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
     # Analyze operation once
     unless operation.def
       @analyze(operation)
     
     # Use custom argument evaluator of parent operation if it has one
-    if !overloaded && (evaluate = operation.parent?.def.evaluate)
-      evaluated = evaluate.call(@engine, operation, continuation, scope, ascender, ascending)
-      return evaluated unless evaluated == @engine
+    if !meta && (evaluate = operation.parent?.def.evaluate)
+      meta = evaluate.call(@engine, operation, continuation, scope, ascender, ascending)
+      return if meta == false
+
 
     # Use a shortcut operation when possible (e.g. native dom query)
     if operation.tail
@@ -79,7 +80,7 @@ class Expressions
         return result
 
     # Recursively evaluate arguments,stop on undefined
-    args = @resolve(operation, continuation, scope, ascender, ascending)
+    args = @resolve(operation, continuation, scope, ascender, ascending, meta)
     return if args == false
 
     # Execute function and log it in continuation path
@@ -89,6 +90,8 @@ class Expressions
       result = @execute(operation, continuation, scope, args)
       continuation = @log(operation, continuation)
 
+    if result == false
+      debugger
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, ascender)
 
@@ -153,18 +156,21 @@ class Expressions
     return false
 
   # Evaluate operation arguments in order, break on undefined
-  resolve: (operation, continuation, scope, ascender, ascending) ->
+  resolve: (operation, continuation, scope, ascender, ascending, meta) ->
     args = prev = undefined
     skip = operation.skip
+    shift = 0
     offset = operation.offset || 0
     for argument, index in operation
       continue if offset > index
-      if index == 0 && (!operation.def.noop && !offset)
-        argument = continuation || operation
+      if (!offset && index == 0 && !operation.def.noop)
+        args = [operation, continuation || operation.path]
+        shift++
+        continue
       else if ascender == index
         argument = ascending
       else if skip == index
-        offset += 1
+        shift--
         continue
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
@@ -180,7 +186,7 @@ class Expressions
             stopping = true
         offset += 1
         continue
-      (args ||= [])[index - offset] = prev = argument
+      (args ||= [])[index - offset + shift] = prev = argument
     return false if stopping || (!args && operation.def.noop)
     return args
 
@@ -201,12 +207,12 @@ class Expressions
         
         # Some operations may capturre its arguments (e.g. comma captures nodes by subselectors)
         else if parent?.def.capture
-          return parent.def.capture.call(@engine, result, parent, continuation, scope)
-        
+          captured = parent.def.capture.call(@engine, result, parent, continuation, scope)
+          return if captured == true
         # Topmost operations produce output
         else 
-          if operation.def.noop
-            if result && (!parent || (parent.def.noop && (!parent.def.parent || parent.length == 1) || ascender?))
+          if operation.def.noop || (parent.def.noop && !parent.name)
+            if result && (!parent || (parent.def.noop && (!parent.parent || parent.length == 1) || ascender?))
               return @push(if result.length == 1 then result[0] else result)
           else if parent && (ascender? || result.nodeType)
             @evaluate parent, continuation, scope, operation.index, result
@@ -278,6 +284,7 @@ class Expressions
       operation.offset = 1
     else
       func = def.command
+    operation.offset ?= def.offset if def.offset
 
     # Command may resolve to method, which will be called on the first argument
     if typeof func == 'string'

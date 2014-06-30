@@ -1053,7 +1053,7 @@ describe 'Nested Rules', ->
                         done()
         engine.run rules
 
-  xdescribe '@if @else', ->
+  describe '@if @else', ->
     
     container = null
     engine = null
@@ -1069,86 +1069,60 @@ describe 'Nested Rules', ->
     
       it 'step 1', (done) ->
         rules = [
-          {
-             type: "constraint",
-             cssText: "[big] == 500;"
-             commands: [
-               ['eq',['get','big'],['number',500]]
-             ]
-          }
-          {
-             type: "constraint",
-             cssText: "[med] == 50;"
-             commands: [
-               ['eq',['get','med'],50]
-             ]
-          }
-          {
-             type: "constraint",
-             cssText: "[small] == 5;"
-             commands: [
-               ['eq',['get','small'],5]
-             ]
-          }
-          {
-             type: "constraint",
-             cssText: "[target-width] == 900;"
-             commands: [
-               ['eq',['get','target-width'],900]
-             ]
-          }
-          {
-            type:'ruleset'
-            selectors: ['.vessel .box']
-            rules: [
-              {
-                name: 'if'
-                type:'directive'                
-                terms: '[target-width] >= 960'
-                clause: ["?>=", ["get", "target-width"],960]
-                rules: [
-                  {
-                    type:'constraint', 
-                    cssText:'::[width] == [big]', 
-                    commands: [
-                      ["eq", ["get","width",["$reserved","::this"]], ["get","big"]]
-                    ]
-                  }
+
+# .vessel .box$box1@if([target-width]>=960)
+          ['eq',['get','big'], 500]
+          ['eq',['get','med'], 50]
+          ['eq',['get','small'],5]
+          ['eq',['get','target-width'], 900]
+          ['$rule', 
+            ['$class',
+              ['$combinator'
+                ['$class', 'vessel']
+                ' ']
+              'box']
+
+            ['$if',
+              ['gte'
+                ['get', 'target-width']
+                960]
+              ["eq", ["get",["$reserved","this"],"width"], ["get","big"]]
+              [
+                ['$if',
+                  ['gte'
+                    ['get', 'target-width']
+                    500]
+                  ["eq", ["get",["$reserved","this"], 'width'],["get","med"]]
+
+                  ["eq", ["get",["$reserved","this"], 'width'], ["get","small"]]
                 ]
-              }
-              {
-                name: 'elseif'
-                type:'directive'                
-                terms: '[target-width] >= 500'
-                clause: ["?>=",["get","target-width"],500]
-                rules: [
-                  {
-                    type:'constraint', 
-                    cssText:'::[width] == [med]', 
-                    commands: [
-                      ["eq", ["get","width",["$reserved","::this"]],["get","med"]]
-                    ]
-                  }
-                ]
-              }
-              {
-                name: 'else'
-                type:'directive'                
-                terms: ''
-                clause: null
-                rules: [
-                  {
-                    type:'constraint', 
-                    cssText:'::[width] == [small]', 
-                    commands: [
-                      ["eq", ["get","width",["$reserved","::this"]], ["get","small"]]
-                    ]
-                  }
-                ]
-              }
+              ]
             ]
-          }          
+          ]         
         ]
+        counter = 0
+        listener = (e) ->
+          counter++
+          if counter is 1   
+            expect(stringify(engine.values)).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":900 
+          else if counter is 2   
+            expect(stringify(engine.values)).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":900
+              "$box1[width]":50
+              "$box2[width]":50         
+            container.removeEventListener 'solved', listener
+            done()
+        container.addEventListener 'solved', listener
+        
+        engine = new GSS(container)
+        engine.run rules
         container.innerHTML =  """
           <div id="container" >
             <div class="vessel">
@@ -1159,24 +1133,4 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
-                              
-        listener = (e) ->        
-          expect(stringify(engine.vars)).to.eql stringify
-            "big":500
-            "med":50
-            "small":5
-            "target-width":900
-            "$box1[width]":50
-            "$box2[width]":50            
-          container.removeEventListener 'solved', listener
-          done()
-        container.addEventListener 'solved', listener
-        
-        engine = new GSS(container)
-
-        sheet = new GSS.StyleSheet
-          engine: engine
-          rules: rules
-          
-        sheet.install()
 
