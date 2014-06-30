@@ -31,14 +31,13 @@ class Measurements
             break
           child = parent
 
-      console.log('get', property, primitive)
       # Compute custom property
       if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
         computed = @_compute(id, property, continuation, true)
         if primitive
           return computed 
       else if primitive
-        return @get(id, property)
+        return @values.get(id, property)
 
       # Return command for solver with path which will be used to clean it
       return ['get', id, property, continuation || '']
@@ -72,7 +71,6 @@ class Measurements
               x + node.offsetLeft
             else
               y + node.offsetTop
-          console.log(path, y, node.offsetTop)
     return
 
   # Decide common parent for all mutated nodes
@@ -93,7 +91,6 @@ class Measurements
         if properties = intrinsic[id]
           reflown = node
       node = node.parentNode
-    console.log('onResize', reflown)
     @reflown = reflown
 
   # Register intrinsic values assigned to engine
@@ -172,7 +169,7 @@ class Measurements
       for property, value of @computed
         if value? && value != @values[property]
           (suggests ||= []).push ['suggest', property, value, 'required']
-      @merge @computed
+      @values.merge @computed
       @computed = undefined
 
     return suggests

@@ -251,7 +251,7 @@ describe 'Nested Rules', ->
             ['eq', ['get', '$box2','x', '.vessel$vessel0– .box$box2'], 100]
           ])
           # Accumulated solutions
-          expect(stringify(engine.values)).to.eql stringify
+          expect(stringify(engine.values.export())).to.eql stringify
             "$box1[x]": 100
             "$box2[x]": 100
           # Snapshots of nodelists: Two elements match nested selector
@@ -283,7 +283,7 @@ describe 'Nested Rules', ->
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
               ['remove', '.vessel$vessel0– .box$box1']
             ])
-            expect(stringify(engine.values)).to.eql stringify
+            expect(stringify(engine.values.export())).to.eql stringify
               "$box2[x]": 100
             expect(engine.queries['.vessel']).to.eql [vessel0]
             expect(engine.queries['.vessel$vessel0– .box']).to.eql [box2]
@@ -306,7 +306,7 @@ describe 'Nested Rules', ->
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
                 ['eq', ['get', '$box1', 'x', '.vessel$vessel0– .box$box1'], 100]
               ])
-              expect(stringify(engine.values)).to.eql stringify
+              expect(stringify(engine.values.export())).to.eql stringify
                 "$box2[x]": 100
                 "$box1[x]": 100
               expect(engine.queries['.vessel']).to.eql [vessel0]
@@ -351,7 +351,7 @@ describe 'Nested Rules', ->
                     ['eq', ['get', '$box1', 'x', '.vessel$vessel0– .box$box1'], 100]
                     ['eq', ['get', '$box2', 'x', '.vessel$vessel0– .box$box2'], 100]
                   ])
-                  expect(stringify(engine.values)).to.eql stringify
+                  expect(stringify(engine.values.export())).to.eql stringify
                     "$box1[x]": 100
                     "$box2[x]": 100
                   expect(engine.queries['.vessel']).to.eql [vessel0]
@@ -1104,13 +1104,13 @@ describe 'Nested Rules', ->
         listener = (e) ->
           counter++
           if counter is 1   
-            expect(stringify(engine.values)).to.eql stringify
+            expect(stringify(engine.values.export())).to.eql stringify
               "big":500
               "med":50
               "small":5
               "target-width":900 
           else if counter is 2   
-            expect(stringify(engine.values)).to.eql stringify
+            expect(stringify(engine.values.export())).to.eql stringify
               "big":500
               "med":50
               "small":5

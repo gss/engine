@@ -17,6 +17,8 @@ class Engine
 
   Expressions:
     require('./input/Expressions.js')
+  Values:
+    require('./input/Values.js')
 
   constructor: (scope, url) ->
     if scope && scope.nodeType
@@ -47,8 +49,8 @@ class Engine
       @properties  = new @Properties(@)  if @Properties
       @commands    = new @Commands(@)    if @Commands
       @expressions = new @Expressions(@)
+      @values      = new @Values(@)
       @events      = {}
-      @values      = {}
       return
 
     # GSS.Document() and GSS() create new GSS.Document on root initially
@@ -79,7 +81,7 @@ class Engine
         delete @engine.elements[id]
       @removed = undefined
     # Store solutions
-    @merge data
+    @values.merge data
     # Trigger events on engine and scope node
     @triggerEvent('solved', data)
     @dispatchEvent(@scope, 'solved', data) if @scope
@@ -96,19 +98,6 @@ class Engine
         when "undefined"
           return object.length == 0
 
-  # Store solutions
-  merge: (object) ->
-    for prop, value of object
-      old = @values[prop]
-      continue if old == value
-      if @_onChange
-        @_onChange prop, value, old
-      if value?
-        @values[prop] = value
-      else
-        delete @values[prop]
-    @
-
   # Destroy engine
   destroy: ->
     if @scope
@@ -118,17 +107,6 @@ class Engine
   getContinuation: (path, value) ->
     return value if typeof value == 'string'
     return path + Engine.identify(value)
-
-  get: (id, property) ->
-    if property == null
-      property = id
-      id = null
-    if id
-      path = id + '[' + property + ']'
-    else
-      path = property
-    return @values[path]
-
 
 
   # Get or generate uid for a given object.

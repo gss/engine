@@ -103,6 +103,7 @@ module.exports = ->
         src: [
           'components/slightlyoff-cassowary.js/bin/c.js', 
           'lib/input/Expressions.js'
+          'lib/input/Values.js'
           'lib/Engine.js',
           'lib/properties/Equasions.js',
           'lib/commands/Constraints.js',

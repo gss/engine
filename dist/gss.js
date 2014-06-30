@@ -20184,6 +20184,8 @@ this.require || (this.require = function(string) {
 Engine = (function() {
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
+  Engine.prototype.Values = require('./input/Values.js');
+
   function Engine(scope, url) {
     var Document, engine, id;
     if (scope && scope.nodeType) {
@@ -20223,8 +20225,8 @@ Engine = (function() {
         this.commands = new this.Commands(this);
       }
       this.expressions = new this.Expressions(this);
+      this.values = new this.Values(this);
       this.events = {};
-      this.values = {};
       return;
     }
     return new (Engine.Document || Engine)(scope, url);
@@ -20261,7 +20263,7 @@ Engine = (function() {
       }
       this.removed = void 0;
     }
-    this.merge(data);
+    this.values.merge(data);
     this.triggerEvent('solved', data);
     if (this.scope) {
       this.dispatchEvent(this.scope, 'solved', data);
@@ -20282,26 +20284,6 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.merge = function(object) {
-    var old, prop, value;
-    for (prop in object) {
-      value = object[prop];
-      old = this.values[prop];
-      if (old === value) {
-        continue;
-      }
-      if (this._onChange) {
-        this._onChange(prop, value, old);
-      }
-      if (value != null) {
-        this.values[prop] = value;
-      } else {
-        delete this.values[prop];
-      }
-    }
-    return this;
-  };
-
   Engine.prototype.destroy = function() {
     if (this.scope) {
       return Engine[this.scope._gss_id] = void 0;
@@ -20313,20 +20295,6 @@ Engine = (function() {
       return value;
     }
     return path + Engine.identify(value);
-  };
-
-  Engine.prototype.get = function(id, property) {
-    var path;
-    if (property === null) {
-      property = id;
-      id = null;
-    }
-    if (id) {
-      path = id + '[' + property + ']';
-    } else {
-      path = property;
-    }
-    return this.values[path];
   };
 
   Engine.identify = function(object, generate) {
@@ -20933,14 +20901,11 @@ Rules = (function() {
         return 'compute';
       } else if (operation.index === 2 && (!ascender)) {
         condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
-        console.group('if', operation.parent[1], condition && 'then' || 'else');
-        debugger;
         if (condition) {
           this.expressions.evaluate(operation.parent[2], continuation, scope, void 0, void 0, 'overloaded');
         } else if (operation.parent[3]) {
           this.expressions.evaluate(operation.parent[3], continuation, scope, void 0, void 0, 'overloaded');
         }
-        console.groupEnd('if', operation.parent[1], condition && 'then' || 'else');
         return false;
       }
     }
@@ -21177,7 +21142,6 @@ Selectors = (function() {
   };
 
   Selectors.prototype['[*=]'] = function(node, attribute, value, operator) {
-    debugger;
     var _ref;
     if (((_ref = node.getAttribute(attribute)) != null ? _ref.indexOf(value) : void 0) > -1) {
       return node;
@@ -21705,14 +21669,13 @@ Measurements = (function() {
           child = parent;
         }
       }
-      console.log('get', property, primitive);
       if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
         computed = this._compute(id, property, continuation, true);
         if (primitive) {
           return computed;
         }
       } else if (primitive) {
-        return this.get(id, property);
+        return this.values.get(id, property);
       }
       return ['get', id, property, continuation || ''];
     }
@@ -21751,7 +21714,6 @@ Measurements = (function() {
           }
           path = id + "[intrinsic-" + prop + "]";
           (this.computed || (this.computed = {}))[path] = prop === "x" ? x + node.offsetLeft : y + node.offsetTop;
-          console.log(path, y, node.offsetTop);
         }
       }
     }
@@ -21783,7 +21745,6 @@ Measurements = (function() {
       }
       node = node.parentNode;
     }
-    console.log('onResize', reflown);
     return this.reflown = reflown;
   };
 
@@ -21891,7 +21852,7 @@ Measurements = (function() {
           (suggests || (suggests = [])).push(['suggest', property, value, 'required']);
         }
       }
-      this.merge(this.computed);
+      this.values.merge(this.computed);
       this.computed = void 0;
     }
     return suggests;
@@ -22076,7 +22037,6 @@ Expressions = (function() {
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
     var args, evaluate, result, _ref;
-    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -22928,6 +22888,69 @@ Queries = (function() {
 module.exports = Queries;
 
 });
+require.register("gss/lib/input/Values.js", function(exports, require, module){
+var Values;
+
+Values = (function() {
+  function Values(engine) {
+    this.engine = engine;
+  }
+
+  Values.prototype.get = function(id, property) {
+    var path;
+    if (property === null) {
+      property = id;
+      id = null;
+    }
+    if (id) {
+      path = id + '[' + property + ']';
+    } else {
+      path = property;
+    }
+    return this[path];
+  };
+
+  Values.prototype.merge = function(object) {
+    var old, prop, value;
+    for (prop in object) {
+      value = object[prop];
+      old = this[prop];
+      if (old === value) {
+        continue;
+      }
+      if (this.engine._onChange) {
+        this.engine._onChange(prop, value, old);
+      }
+      if (value != null) {
+        this[prop] = value;
+      } else {
+        delete this[prop];
+      }
+    }
+    return this;
+  };
+
+  Values.prototype["export"] = function() {
+    var object, property, value;
+    object = {};
+    for (property in this) {
+      value = this[property];
+      if (this.hasOwnProperty(property)) {
+        if (property !== 'engine') {
+          object[property] = value;
+        }
+      }
+    }
+    return object;
+  };
+
+  return Values;
+
+})();
+
+module.exports = Values;
+
+});
 require.register("gss/lib/output/Solutions.js", function(exports, require, module){
 var Solutions;
 
@@ -22985,7 +23008,7 @@ Solutions = (function() {
     if (this.output) {
       return this.output.pull(results);
     } else {
-      this.engine.merge(results);
+      this.engine.values.merge(results);
       return this.engine.push(results);
     }
   };
@@ -28358,6 +28381,7 @@ module.exports = {
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 
+    "lib/input/Values.js", 
 
     "lib/output/Solutions.js", 
     "lib/output/Styles.js",

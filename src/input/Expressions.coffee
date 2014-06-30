@@ -59,7 +59,7 @@ class Expressions
 
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
-    console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
+    # console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
     # Analyze operation once
     unless operation.def
       @analyze(operation)

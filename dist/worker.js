@@ -86,7 +86,6 @@ Expressions = (function() {
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
     var args, evaluate, result, _ref;
-    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -410,6 +409,67 @@ this.module || (this.module = {});
 
 module.exports = Expressions;
 
+var Values;
+
+Values = (function() {
+  function Values(engine) {
+    this.engine = engine;
+  }
+
+  Values.prototype.get = function(id, property) {
+    var path;
+    if (property === null) {
+      property = id;
+      id = null;
+    }
+    if (id) {
+      path = id + '[' + property + ']';
+    } else {
+      path = property;
+    }
+    return this[path];
+  };
+
+  Values.prototype.merge = function(object) {
+    var old, prop, value;
+    for (prop in object) {
+      value = object[prop];
+      old = this[prop];
+      if (old === value) {
+        continue;
+      }
+      if (this.engine._onChange) {
+        this.engine._onChange(prop, value, old);
+      }
+      if (value != null) {
+        this[prop] = value;
+      } else {
+        delete this[prop];
+      }
+    }
+    return this;
+  };
+
+  Values.prototype["export"] = function() {
+    var object, property, value;
+    object = {};
+    for (property in this) {
+      value = this[property];
+      if (this.hasOwnProperty(property)) {
+        if (property !== 'engine') {
+          object[property] = value;
+        }
+      }
+    }
+    return object;
+  };
+
+  return Values;
+
+})();
+
+module.exports = Values;
+
 var Engine;
 
 this.require || (this.require = function(string) {
@@ -423,6 +483,8 @@ this.require || (this.require = function(string) {
 
 Engine = (function() {
   Engine.prototype.Expressions = require('./input/Expressions.js');
+
+  Engine.prototype.Values = require('./input/Values.js');
 
   function Engine(scope, url) {
     var Document, engine, id;
@@ -463,8 +525,8 @@ Engine = (function() {
         this.commands = new this.Commands(this);
       }
       this.expressions = new this.Expressions(this);
+      this.values = new this.Values(this);
       this.events = {};
-      this.values = {};
       return;
     }
     return new (Engine.Document || Engine)(scope, url);
@@ -501,7 +563,7 @@ Engine = (function() {
       }
       this.removed = void 0;
     }
-    this.merge(data);
+    this.values.merge(data);
     this.triggerEvent('solved', data);
     if (this.scope) {
       this.dispatchEvent(this.scope, 'solved', data);
@@ -522,26 +584,6 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.merge = function(object) {
-    var old, prop, value;
-    for (prop in object) {
-      value = object[prop];
-      old = this.values[prop];
-      if (old === value) {
-        continue;
-      }
-      if (this._onChange) {
-        this._onChange(prop, value, old);
-      }
-      if (value != null) {
-        this.values[prop] = value;
-      } else {
-        delete this.values[prop];
-      }
-    }
-    return this;
-  };
-
   Engine.prototype.destroy = function() {
     if (this.scope) {
       return Engine[this.scope._gss_id] = void 0;
@@ -553,20 +595,6 @@ Engine = (function() {
       return value;
     }
     return path + Engine.identify(value);
-  };
-
-  Engine.prototype.get = function(id, property) {
-    var path;
-    if (property === null) {
-      property = id;
-      id = null;
-    }
-    if (id) {
-      path = id + '[' + property + ']';
-    } else {
-      path = property;
-    }
-    return this.values[path];
   };
 
   Engine.identify = function(object, generate) {
@@ -1007,7 +1035,7 @@ Solutions = (function() {
     if (this.output) {
       return this.output.pull(results);
     } else {
-      this.engine.merge(results);
+      this.engine.values.merge(results);
       return this.engine.push(results);
     }
   };

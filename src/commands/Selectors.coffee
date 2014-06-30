@@ -147,7 +147,6 @@ class Selectors
     return node if node.getAttribute(attribute) == value
 
   '[*=]': (node, attribute, value, operator) ->
-    debugger
     return node if  node.getAttribute(attribute)?.indexOf(value) > -1
   
   '[|=]': (node, attribute, value, operator) ->

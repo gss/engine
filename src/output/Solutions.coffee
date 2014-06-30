@@ -36,7 +36,7 @@ class Solutions
     if @output
       @output.pull(results)
     else
-      @engine.merge(results)
+      @engine.values.merge(results)
       @engine.push(results)
 
   remove: (constrain, path) ->

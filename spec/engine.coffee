@@ -339,7 +339,7 @@ describe 'GSS engine', ->
               ['suggest', 'row-height', .5]
             ]
         else if count is 2
-          expect(engine.values).to.eql 
+          expect(engine.values.export()).to.eql 
             'col-width': 1
             'row-height': .5
           engine.run [
@@ -347,7 +347,7 @@ describe 'GSS engine', ->
               ['suggest', 'row-height', 222]
             ]
         else if count is 3
-          expect(engine.values).to.eql 
+          expect(engine.values.export()).to.eql 
             'col-width': 333
             'row-height': 222
           container.removeEventListener 'solved', onSolved

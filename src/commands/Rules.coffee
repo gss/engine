@@ -48,13 +48,10 @@ class Rules
         return 'compute'
       else if operation.index == 2 && (!ascender) 
         condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
-        console.group('if', operation.parent[1], condition && 'then' || 'else')
-        debugger
         if condition
           @expressions.evaluate operation.parent[2], continuation, scope, undefined, undefined, 'overloaded'
         else if operation.parent[3]
           @expressions.evaluate operation.parent[3], continuation, scope, undefined, undefined, 'overloaded'
-        console.groupEnd('if', operation.parent[1], condition && 'then' || 'else')
         return false
 
 

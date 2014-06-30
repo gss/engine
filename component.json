@@ -26,6 +26,7 @@
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 
+    "lib/input/Values.js", 
 
     "lib/output/Solutions.js", 
     "lib/output/Styles.js",
