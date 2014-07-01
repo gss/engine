@@ -160,7 +160,6 @@ class Measurements
   getComputedProperties: (reflow) ->
     suggests = undefined
     if @reflown
-      debugger
       if (reflow)
         @styles.render(@reflown)
       @reflown = undefined

@@ -8,8 +8,8 @@ class Selectors
     return result if operation.def.hidden
     return @queries.update(node, args, result, operation, continuation, scope)
 
-  remove: (id, continuation, operation) ->
-    @queries.remove(id, continuation, operation)
+  remove: (id, continuation, operation, scope) ->
+    @queries.remove(id, continuation, operation, scope)
     return
 
   # Selector commands

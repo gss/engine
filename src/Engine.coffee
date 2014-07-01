@@ -105,6 +105,9 @@ class Engine
 
   # Return concatenated path for a given object and prefix
   getContinuation: (path, value) ->
+    if path.charAt(path.length - 1) == '–'
+      path = path.substring(0, path.length - 1)
+    return path unless value?
     return value if typeof value == 'string'
     return path + Engine.identify(value)
 

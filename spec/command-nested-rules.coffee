@@ -1117,8 +1117,10 @@ describe 'Nested Rules', ->
               "target-width":900
               "$box1[width]":50
               "$box2[width]":50
-            engine.values.set('target-width', 1000) # Doesnt hit solver
+
+            engine.values.set('target-width', 1000)
           else if counter is 3
+            window.xxx = true
             expect(stringify(engine.values.toObject())).to.eql stringify
               "big":500
               "med":50
@@ -1126,7 +1128,7 @@ describe 'Nested Rules', ->
               "target-width":1000
               "$box1[width]":500
               "$box2[width]":500
-            engine.values.set('target-width', 900) # Doesnt hit solver
+            engine.values.set('target-width', 900)
           else if counter is 4
             expect(stringify(engine.values.toObject())).to.eql stringify
               "big":500
@@ -1135,7 +1137,7 @@ describe 'Nested Rules', ->
               "target-width":900
               "$box1[width]":50
               "$box2[width]":50
-            engine.values.set('target-width', 300) # Doesnt hit solver
+            engine.values.set('target-width', 300)
           else if counter is 5
             expect(stringify(engine.values.toObject())).to.eql stringify
               "big":500
@@ -1144,6 +1146,45 @@ describe 'Nested Rules', ->
               "target-width":300
               "$box1[width]":5
               "$box2[width]":5
+            window.xxx = true
+            engine.$id('box1').classList.remove('box')
+          else if counter is 6
+            expect(stringify(engine.values.toObject())).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":300
+              "$box2[width]":5
+            engine.$id('box2').classList.remove('box')
+          else if counter is 7
+            expect(stringify(engine.values.toObject())).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":300
+            debugger
+            engine.values.set('target-width', 1000)
+            engine.$id('box2').classList.add('box')
+          else if counter is 8 
+            expect(stringify(engine.values.toObject())).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":1000
+              "$box2[width]":500
+            container.innerHTML = ''
+          else if counter is 9 
+            expect(stringify(engine.values.toObject())).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":1000
+            expect(Object.keys(engine.values).length).to.eql(7) # 3 private + 4 property
+            expect(Object.keys(engine.values._watchers).length).to.eql(0)
+            expect(Object.keys(engine.values._observers).length).to.eql(0)
+            expect((k = Object.keys(engine.queries._watchers)).length).to.eql(1)
+            expect(Object.keys(engine.queries._watchers[k[0]]).length).to.eql(9)
+
             container.removeEventListener 'solved', listener
             done()
         container.addEventListener 'solved', listener

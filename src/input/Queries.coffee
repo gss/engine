@@ -219,7 +219,7 @@ class Queries
     return @[continuation]
 
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope) ->
+  remove: (id, continuation, operation, scope, manual) ->
 
     if typeof id == 'object'
       node = id
@@ -236,7 +236,7 @@ class Queries
             return
 
         # Remove element from collection manually
-        if operation && collection?.length
+        if operation && collection?.length && manual
           if (index = collection.indexOf(node)) > -1
             collection.splice(index, 1)
             cleaning = continuation unless collection.length
@@ -252,8 +252,9 @@ class Queries
             unless contd == ref || contd == refforked
               index += 3
               continue
+            subscope = watchers[index + 2]
             watchers.splice(index, 3)
-            @clean(watcher, contd, watcher, scope, true)
+            @clean(watcher, contd, watcher, subscope, true)
           delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries[path])?.length?
@@ -282,26 +283,24 @@ class Queries
 
   clean: (path, continuation, operation, scope, bind) ->
     if path.def
-      if path.def.keys
-        for key in path.def.keys
-          contd = (continuation || '') + (operation.uid || '') + key
-          if @[contd]
-            @clean contd, continuation, operation, scope, bind
-          else
-            delete @[contd]
-        return
-      path = (continuation || '') + (operation.uid || '') + path.key
+      path = (continuation || '') + (path.uid || '') + (path.key || '')
+      console.log('path', path)
     continuation = path if bind
     @engine.values.clean(path, continuation, operation, scope)
-    if result = @[path]
-      if parent = operation?.parent
-        parent.def.release?.call(@engine, result, operation, scope, operation)
+    if (result = @[path]) != undefined
 
-      if result.length != undefined
-        copy = result.slice()
-        @remove child, path, operation for child in copy
-      else if typeof result == 'object'
-        @remove result, continuation, operation
+      if result
+        if parent = operation?.parent
+          parent.def.release?.call(@engine, result, operation, scope, operation)
+
+        if result.length != undefined
+          copy = result.slice()
+          @remove child, path, operation for child in copy
+        else if typeof result == 'object'
+          @remove result, continuation, operation
+
+      if scope
+        @remove @engine.recognize(scope), path, operation
     delete @[path]
     if !result || result.length == undefined
       @engine.expressions.push(['remove', path], true)
@@ -328,9 +327,10 @@ class Queries
       if old
         if old.length != undefined
           removed = undefined
-          for child in old
+          o = old.slice()
+          for child in o
             if !result || Array.prototype.indexOf.call(result, child) == -1
-              @remove child, path
+              @remove child, path, operation, scope
               (removed ||= []).push child
         else if !result
           @clean(path)

@@ -25,16 +25,18 @@ class Values
     observers = @_observers[continuation]
     index = @indexOf observers, operation, path, scope
     observers.splice index, 3
+    delete @_observers[continuation] unless observers.length
 
     watchers = @_watchers[path]
     index = @indexOf watchers, operation, continuation, scope
     watchers.splice index, 3
+    delete @_watchers[path] unless watchers.length
 
   clean: (continuation) ->
-    if observers = @_observers[continuation]
-      console.log('cleaning values observers', observers.slice(), continuation)
-      while observers[0]
-        @unwatch(observers[1], undefined, observers[0], continuation, observers[2])
+    for path in [continuation, continuation + '–']
+      if observers = @_observers[path]
+        while observers[0]
+          @unwatch(observers[1], undefined, observers[0], path, observers[2])
         
   pull: (object) ->
     @merge(object)

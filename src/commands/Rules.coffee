@@ -37,8 +37,6 @@ class Rules
     # Resolve all values in first argument
     primitive: 1
 
-    keys: ['if–', 'unless–']
-
     subscribe: (operation, continuation, scope) ->
       id = scope._gss_id
       watchers = @queries._watchers[id] ||= []
@@ -63,17 +61,12 @@ class Rules
       @commands.$if.subscribe.call(@, operation.parent, continuation, scope)
       operation.parent.uid ||= '@' + (@commands.uid = (@commands.uid ||= 0) + 1)
       condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
-      path = continuation + operation.parent.uid + (condition && 'if' || 'unless') + '–'
-      other = continuation + operation.parent.uid + (condition && 'unless' || 'if') + '–'
-      
-      console.error(@queries[path], @queries[other])
+      path = continuation + operation.parent.uid
       if @queries[path] == undefined || (!!@queries[path] != !!condition)
         console.group(path)
-        unless @queries[other] == undefined
-          debugger
-          console.error('clean', [other, continuation])
-          @queries.clean(other, continuation, operation, scope)
-          @queries.remove(@recognize(scope), other, operation)
+        unless @queries[path] == undefined
+          console.error('clean', [path, continuation])
+          @queries.clean(path, continuation, operation, scope)
         if condition
           @expressions.evaluate operation.parent[2], path, scope
         else if operation.parent[3]
