@@ -1116,7 +1116,16 @@ describe 'Nested Rules', ->
               "small":5
               "target-width":900
               "$box1[width]":50
-              "$box2[width]":50         
+              "$box2[width]":50
+            engine.values.set('target-width', 1000) # Doesnt hit solver
+          else if counter is 3
+            expect(stringify(engine.values.toObject())).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":900
+              "$box1[width]":500
+              "$box2[width]":500
             container.removeEventListener 'solved', listener
             done()
         container.addEventListener 'solved', listener

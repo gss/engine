@@ -37,7 +37,7 @@ class Measurements
         if primitive
           return computed 
       else if primitive
-        return @values.watch(id, property)
+        return @values.watch(id, property, operation, continuation, object)
 
       # Return command for solver with path which will be used to clean it
       return ['get', id, property, continuation || '']
@@ -75,7 +75,6 @@ class Measurements
 
   # Decide common parent for all mutated nodes
   onResize: (node) ->
-    debugger
     return unless intrinsic = @intrinsic
     reflown = undefined
     while node

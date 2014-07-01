@@ -113,9 +113,6 @@ Expressions = (function() {
       result = this.execute(operation, continuation, scope, args);
       continuation = this.log(operation, continuation);
     }
-    if (result === false) {
-      debugger;
-    }
     return this.ascend(operation, continuation, result, scope, ascender);
   };
 
@@ -418,43 +415,40 @@ Values = (function() {
     this._watchers = {};
   }
 
-  Values.prototype.get = function(id, property) {
-    return this[this.engine.getPath(id, property)];
+  Values.prototype.indexOf = function(array, a, b, c) {
+    var index, op, _i, _len;
+    if (array) {
+      for (index = _i = 0, _len = array.length; _i < _len; index = _i += 3) {
+        op = array[index];
+        if (op === a && array[index + 1] === b && array[index + 2] === c) {
+          return index;
+        }
+      }
+    }
+    return -1;
   };
 
   Values.prototype.watch = function(id, property, operation, continuation, scope) {
     var observers, path, watchers, _base, _base1;
     path = this.engine.getPath(id, property);
-    observers = (_base = this._observers)[continuation] || (_base[continuation] = []);
-    observers.push(operation, path, scope);
-    watchers = (_base1 = this._watchers)[path] || (_base1[path] = []);
-    observers.push(operation, continuation, scope);
-    return this.get(id, property);
+    if (this.indexOf(this._watchers[path], operation, continuation, scope) === -1) {
+      observers = (_base = this._observers)[continuation] || (_base[continuation] = []);
+      observers.push(operation, path, scope);
+      watchers = (_base1 = this._watchers)[path] || (_base1[path] = []);
+      watchers.push(operation, continuation, scope);
+    }
+    return this.get(path);
   };
 
   Values.prototype.unwatch = function(id, property, operation, continuation, scope) {
-    var index, observers, op, path, watchers, _i, _j, _len, _len1, _results;
+    var index, observers, path, watchers;
     path = this.engine.getPath(id, property);
     observers = this._observers[continuation];
-    for (index = _i = 0, _len = observers.length; _i < _len; index = _i += 3) {
-      op = observers[index];
-      if (op === operation && observers[index + 1] === path && scope === observers[index + 2]) {
-        observers.splice(index, 3);
-        break;
-      }
-    }
+    index = this.indexOf(observers, operation, path, scope);
+    observers.splice(index, 3);
     watchers = this._watchers[path];
-    _results = [];
-    for (index = _j = 0, _len1 = watchers.length; _j < _len1; index = _j += 3) {
-      op = watchers[index];
-      if (op === operation && watchers[index + 1] === continuation && scope === watchers[index + 2]) {
-        watchers.splice(index, 3);
-        break;
-      } else {
-        _results.push(void 0);
-      }
-    }
-    return _results;
+    index = this.indexOf(watchers, operation, continuation, scope);
+    return watchers.splice(index, 3);
   };
 
   Values.prototype.clean = function(continuation) {
@@ -472,8 +466,16 @@ Values = (function() {
     return this.merge(object);
   };
 
+  Values.prototype.get = function(id, property) {
+    return this[this.engine.getPath(id, property)];
+  };
+
   Values.prototype.set = function(id, property, value) {
-    var index, old, path, watcher, watchers, _i, _len, _ref, _results;
+    var index, old, path, watcher, watchers, _i, _len, _ref;
+    if (arguments.length === 2) {
+      value = property;
+      property = void 0;
+    }
     path = this.engine.getPath(id, property);
     old = this[path];
     if (old === value) {
@@ -487,14 +489,14 @@ Values = (function() {
     if (this.engine._onChange) {
       this.engine._onChange(path, value, old);
     }
-    if (watchers = (_ref = this.engine._watchers) != null ? _ref[path] : void 0) {
-      _results = [];
+    if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
+      debugger;
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
-        _results.push(this.engine.expressions.run(watcher, watchers[index + 1], watchers[index + 2]));
+        this.engine.expressions.evaluate(watcher, watchers[index + 1], watchers[index + 2]);
       }
-      return _results;
     }
+    return value;
   };
 
   Values.prototype.merge = function(object) {

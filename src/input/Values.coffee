@@ -3,42 +3,48 @@ class Values
     @_observers = {}
     @_watchers = {}
 
-  get: (id, property) ->
-    return @[@engine.getPath(id, property)]
+  indexOf: (array, a, b, c) ->
+    if array
+      for op, index in array by 3
+        if op == a && array[index + 1] == b && array[index + 2] == c
+          return index
+    return -1
 
   watch: (id, property, operation, continuation, scope) ->
     path = @engine.getPath(id, property)
-    observers = @_observers[continuation] ||= []
-    observers.push(operation, path, scope)
+    if @indexOf(@_watchers[path], operation, continuation, scope) == -1
+      observers = @_observers[continuation] ||= []
+      observers.push(operation, path, scope)
 
-    watchers = @_watchers[path] ||= []
-    observers.push(operation, continuation, scope)
-    return @get(id, property)
+      watchers = @_watchers[path] ||= []
+      watchers.push(operation, continuation, scope)
+    return @get(path)
 
   unwatch: (id, property, operation, continuation, scope) ->
     path = @engine.getPath(id, property)
     observers = @_observers[continuation]
-    for op, index in observers by 3
-      if op == operation && observers[index + 1] == path && scope == observers[index + 2]
-        observers.splice(index, 3)
-        break
+    index = @indexOf observers, operation, path, scope
+    observers.splice index, 3
 
     watchers = @_watchers[path]
-    for op, index in watchers by 3
-      if op == operation && watchers[index + 1] == continuation && scope == watchers[index + 2]
-        watchers.splice(index, 3)
-        break
+    index = @indexOf watchers, operation, continuation, scope
+    watchers.splice index, 3
 
   clean: (continuation) ->
     if observers = @_observers[continuation]
       while observers[0]
         @unwatch(observers[1], observers[0], continuation, observers[2])
         
-
   pull: (object) ->
     @merge(object)
 
+  get: (id, property) ->
+    return @[@engine.getPath(id, property)]
+
   set: (id, property, value) ->
+    if arguments.length == 2
+      value = property
+      property = undefined
     path = @engine.getPath(id, property)
     old = @[path]
     return if old == value
@@ -48,10 +54,11 @@ class Values
       delete @[path]
     if @engine._onChange
       @engine._onChange path, value, old
-    if watchers = @engine._watchers?[path]
+    if watchers = @_watchers?[path]
+      debugger
       for watcher, index in watchers by 3
-        @engine.expressions.run watcher, watchers[index + 1], watchers[index + 2]
-
+        @engine.expressions.evaluate watcher, watchers[index + 1], watchers[index + 2]
+    return value
   merge: (object) ->
     for path, value of object
       @set path, undefined, value
