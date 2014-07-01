@@ -20901,26 +20901,50 @@ Rules = (function() {
 
   Rules.prototype["$if"] = {
     primitive: 1,
-    capture: function(result, parent, continuation, scope) {
-      if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
-        this.expressions.push(result);
-        return true;
+    keys: ['if–', 'unless–'],
+    subscribe: function(operation, continuation, scope) {
+      var id, watchers, _base;
+      id = scope._gss_id;
+      watchers = (_base = this.queries._watchers)[id] || (_base[id] = []);
+      if (!watchers.length || this.values.indexOf(watchers, operation, continuation, scope) === -1) {
+        return watchers.push(operation, continuation, scope);
       }
     },
-    evaluate: function(operation, continuation, scope, ascender, ascending) {
-      var condition;
+    capture: function(result, operation, continuation, scope) {
       if (operation.index === 1) {
-        return 'compute';
-      } else if (operation.index === 2 && (!ascender)) {
-        condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
-        console.group(continuation + ' ' + (ascending && 'then' || 'else'));
-        if (condition) {
-          this.expressions.evaluate(operation.parent[2], continuation, scope, void 0, void 0, 'overloaded');
-        } else if (operation.parent[3]) {
-          this.expressions.evaluate(operation.parent[3], continuation, scope, void 0, void 0, 'overloaded');
+        this.commands.$if.branch.call(this, operation.parent[1], continuation, scope, void 0, result);
+        return true;
+      } else {
+        console.log('kapture', result);
+        if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
+          this.expressions.push(result);
+          return true;
         }
-        console.groupEnd(continuation + ' ' + (ascending && 'then' || 'else'));
-        return false;
+      }
+    },
+    branch: function(operation, continuation, scope, ascender, ascending) {
+      var condition, other, path, _base, _base1;
+      this.commands.$if.subscribe.call(this, operation.parent, continuation, scope);
+      (_base = operation.parent).uid || (_base.uid = '@' + (this.commands.uid = ((_base1 = this.commands).uid || (_base1.uid = 0)) + 1));
+      condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
+      path = continuation + operation.parent.uid + (condition && 'if' || 'unless') + '–';
+      other = continuation + operation.parent.uid + (condition && 'unless' || 'if') + '–';
+      console.error(this.queries[path], this.queries[other]);
+      if (this.queries[path] === void 0 || (!!this.queries[path] !== !!condition)) {
+        console.group(path);
+        if (this.queries[other] !== void 0) {
+          debugger;
+          console.error('clean', [other, continuation]);
+          this.queries.clean(other, continuation, operation, scope);
+          this.queries.remove(this.recognize(scope), other, operation);
+        }
+        if (condition) {
+          this.expressions.evaluate(operation.parent[2], path, scope);
+        } else if (operation.parent[3]) {
+          this.expressions.evaluate(operation.parent[3], path, scope);
+        }
+        console.groupEnd(path);
+        return this.queries[path] = condition != null ? condition : null;
       }
     }
   };
@@ -21196,27 +21220,25 @@ Selectors = (function() {
     group: '$query',
     separator: ',',
     eager: true,
-    scoped: true,
-    serialize: function(scope, operation) {
+    serialize: function(operation, scope) {
       if (scope && scope !== this.scope) {
-        return this.recognize(scope) + operation.path;
+        return this.recognize(scope) + operation.parent.path;
       } else {
-        return operation.path;
+        return operation.parent.path;
       }
     },
-    command: function(scope, operation) {
-      var continuation;
-      continuation = this.commands[','].serialize.call(this, scope, operation);
+    command: function(operation, continuation, scope) {
+      continuation = this.commands[','].serialize.call(this, operation, scope);
       return this.queries.get(continuation);
     },
     capture: function(result, operation, continuation, scope) {
-      continuation = this.commands[','].serialize.call(this, scope, operation);
+      continuation = this.commands[','].serialize.call(this, operation, scope);
       this.queries.add(result, continuation, scope, scope);
       return true;
     },
     release: function(result, operation, scope, child) {
       var continuation;
-      continuation = this.commands[','].serialize.call(this, scope, operation);
+      continuation = this.commands[','].serialize.call(this, operation, scope);
       this.queries.remove(result, continuation, child, scope);
       return true;
     }
@@ -21657,7 +21679,7 @@ Measurements = (function() {
 
   Measurements.prototype.get = {
     meta: true,
-    command: function(operation, continuation, object, property) {
+    command: function(operation, continuation, scope, object, property) {
       var child, computed, id, parent, primitive, _ref;
       if (property) {
         if (typeof object === 'string') {
@@ -21689,7 +21711,7 @@ Measurements = (function() {
           return computed;
         }
       } else if (primitive) {
-        return this.values.watch(id, property, operation, continuation, object);
+        return this.values.watch(id, property, operation, continuation, scope);
       }
       return ['get', id, property, continuation || ''];
     }
@@ -21973,10 +21995,10 @@ for (property in _ref) {
         if (!(this._isPrimitive(a) && this._isPrimitive(b))) {
           return NaN;
         }
-        fn.binary = true;
         return fn.apply(this, arguments);
       };
     })(property, fn);
+    fn.binary = true;
   }
 }
 
@@ -21996,10 +22018,7 @@ Expressions = (function() {
   Expressions.prototype.pull = function() {
     var buffer, result;
     this.engine.start();
-    if (this.buffer === void 0) {
-      this.buffer = null;
-      buffer = true;
-    }
+    buffer = this.capture();
     result = this.evaluate.apply(this, arguments);
     if (buffer) {
       this.flush();
@@ -22049,14 +22068,17 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
-    var args, evaluate, result, _ref;
+    var args, evaluate, evaluated, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
     if (!meta && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
-      meta = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
-      if (meta === false) {
+      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+      if (evaluated === false) {
         return;
+      }
+      if (typeof evaluated === 'string') {
+        continuation = evaluated;
       }
     }
     if (operation.tail) {
@@ -22163,8 +22185,8 @@ Expressions = (function() {
         continue;
       }
       if (!offset && index === 0 && !operation.def.noop) {
-        args = [operation, continuation || operation.path];
-        shift++;
+        args = [operation, continuation || operation.path, scope];
+        shift += 2;
         continue;
       } else if (ascender === index) {
         argument = ascending;
@@ -22214,7 +22236,7 @@ Expressions = (function() {
           console.groupEnd(continuation);
           return;
         } else if (parent != null ? parent.def.capture : void 0) {
-          captured = parent.def.capture.call(this.engine, result, parent, continuation, scope);
+          captured = parent.def.capture.call(this.engine, result, operation, continuation, scope);
           if (captured === true) {
             return;
           }
@@ -22359,6 +22381,13 @@ Expressions = (function() {
       return continuation;
     } else {
       return operation.path;
+    }
+  };
+
+  Expressions.prototype.capture = function() {
+    if (this.buffer === void 0) {
+      this.buffer = null;
+      return true;
     }
   };
 
@@ -22703,8 +22732,7 @@ Queries = (function() {
               continue;
             }
             watchers.splice(index, 3);
-            path = (contd || '') + watcher.key;
-            this.clean(path, path, watcher);
+            this.clean(watcher, contd, watcher, scope, true);
           }
           if (!watchers.length) {
             delete this._watchers[id];
@@ -22725,9 +22753,7 @@ Queries = (function() {
       if (watchers = this._watchers[id]) {
         index = 0;
         while (watcher = watchers[index]) {
-          contd = watchers[index + 1];
-          path = (contd || '') + watcher.key;
-          this.remove(path, contd, watcher, watchers[index + 2]);
+          this.clean(watcher, watcher[index + 1], watcher, watcher[index + 2]);
           index += 3;
         }
         delete this._watchers[id];
@@ -22738,22 +22764,41 @@ Queries = (function() {
     return this;
   };
 
-  Queries.prototype.clean = function(path, continuation, operation, scope) {
-    var child, copy, parent, result, _i, _len, _ref;
-    this.engine.values.clean(path);
+  Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
+    var child, contd, copy, key, parent, result, _i, _j, _len, _len1, _ref, _ref1;
+    if (path.def) {
+      if (path.def.keys) {
+        _ref = path.def.keys;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          key = _ref[_i];
+          contd = (continuation || '') + (operation.uid || '') + key;
+          if (this[contd]) {
+            this.clean(contd, continuation, operation, scope, bind);
+          } else {
+            delete this[contd];
+          }
+        }
+        return;
+      }
+      path = (continuation || '') + (operation.uid || '') + path.key;
+    }
+    if (bind) {
+      continuation = path;
+    }
+    this.engine.values.clean(path, continuation, operation, scope);
     if (result = this[path]) {
       if (parent = operation != null ? operation.parent : void 0) {
-        if ((_ref = parent.def.release) != null) {
-          _ref.call(this.engine, result, parent, scope, operation);
+        if ((_ref1 = parent.def.release) != null) {
+          _ref1.call(this.engine, result, operation, scope, operation);
         }
       }
       if (result.length !== void 0) {
         copy = result.slice();
-        for (_i = 0, _len = copy.length; _i < _len; _i++) {
-          child = copy[_i];
+        for (_j = 0, _len1 = copy.length; _j < _len1; _j++) {
+          child = copy[_j];
           this.remove(child, path, operation);
         }
-      } else {
+      } else if (typeof result === 'object') {
         this.remove(result, continuation, operation);
       }
     }
@@ -22948,9 +22993,10 @@ Values = (function() {
   Values.prototype.clean = function(continuation) {
     var observers, _results;
     if (observers = this._observers[continuation]) {
+      console.log('cleaning values observers', observers.slice(), continuation);
       _results = [];
       while (observers[0]) {
-        _results.push(this.unwatch(observers[1], observers[0], continuation, observers[2]));
+        _results.push(this.unwatch(observers[1], void 0, observers[0], continuation, observers[2]));
       }
       return _results;
     }
@@ -22965,7 +23011,7 @@ Values = (function() {
   };
 
   Values.prototype.set = function(id, property, value) {
-    var index, old, path, watcher, watchers, _i, _len, _ref;
+    var buffer, index, old, path, watcher, watchers, _i, _len, _ref;
     if (arguments.length === 2) {
       value = property;
       property = void 0;
@@ -22984,10 +23030,16 @@ Values = (function() {
       this.engine._onChange(path, value, old);
     }
     if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
-      debugger;
+      buffer = this.engine.expressions.capture();
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
-        this.engine.expressions.evaluate(watcher, watchers[index + 1], watchers[index + 2]);
+        if (!watcher) {
+          break;
+        }
+        this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
+      }
+      if (buffer) {
+        this.engine.expressions.flush();
       }
     }
     return value;
@@ -23036,7 +23088,6 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    debugger;
     var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1;
     this.response = response = {};
     this.lastInput = commands;
@@ -23057,6 +23108,7 @@ Solutions = (function() {
     } else {
       this.solver.resolve();
     }
+    console.log(JSON.parse(JSON.stringify(this.solver._changed)));
     _ref = this.solver._changed;
     for (property in _ref) {
       value = _ref[property];
@@ -23072,8 +23124,8 @@ Solutions = (function() {
       delete this.nullified;
     }
     this.lastOutput = response;
+    console.log('Solutions output', JSON.parse(JSON.stringify(response)));
     this.push(response);
-    debugger;
   };
 
   Solutions.prototype.push = function(results) {
@@ -23139,7 +23191,12 @@ Solutions = (function() {
           if (typeof path === 'string') {
             _results.push((this[path] || (this[path] = [])).push(command));
           } else {
-            _results.push(path.counter = (path.counter || 0) + 1);
+            path.counter = (path.counter || 0) + 1;
+            if (this.nullified && this.nullified[path.name] !== void 0) {
+              _results.push(delete this.nullified[path.name]);
+            } else {
+              _results.push(void 0);
+            }
           }
         }
         return _results;

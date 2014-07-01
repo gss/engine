@@ -6,7 +6,6 @@ class Solutions
     
   # Read commands
   pull: (commands)->
-    debugger
     @response = response = {}
     @lastInput = commands
     for command in commands
@@ -20,6 +19,7 @@ class Solutions
     else
       @solver.resolve()
 
+    console.log(JSON.parse JSON.stringify @solver._changed)
     for property, value of @solver._changed
       response[property] = value
     @solver._changed = undefined
@@ -28,8 +28,8 @@ class Solutions
         response[property] = null
       delete @nullified
     @lastOutput = response
+    console.log('Solutions output', JSON.parse JSON.stringify response)
     @push(response)
-    debugger
     return
 
   push: (results) ->
@@ -72,6 +72,8 @@ class Solutions
             (@[path] ||= []).push(command)
           else
             path.counter = (path.counter || 0) + 1
+            if @nullified && @nullified[path.name] != undefined
+              delete @nullified[path.name]
           
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))

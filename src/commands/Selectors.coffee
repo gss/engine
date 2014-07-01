@@ -182,33 +182,30 @@ class Selectors
     # Dont let undefined arguments stop execution
     eager: true
 
-    # Comma needs to know its scope element to generate proper cache key
-    scoped: true
-
     # Commas disregard continuation path, because their path is global
     # - comma separated list of selectors. So we prepend scope id to disambiguate 
-    serialize: (scope, operation) ->
+    serialize: (operation, scope) ->
       if scope && scope != @scope
-        return @recognize(scope) + operation.path
+        return @recognize(scope) + operation.parent.path
       else
-        return operation.path
+        return operation.parent.path
 
     # Return deduplicated collection of all found elements
-    command: (scope, operation) ->
-      continuation = @commands[','].serialize.call(@, scope, operation)
+    command: (operation, continuation, scope) ->
+      continuation = @commands[','].serialize.call(@, operation, scope)
       return @queries.get(continuation)
 
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope) -> 
-      continuation = @commands[','].serialize.call(@, scope, operation)
+      continuation = @commands[','].serialize.call(@, operation, scope)
       @queries.add(result, continuation, scope, scope)
       return true
 
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, scope, child) ->
-      continuation = @commands[','].serialize.call(@, scope, operation)
+      continuation = @commands[','].serialize.call(@, operation, scope)
       @queries.remove(result, continuation, child, scope)
       return true
 

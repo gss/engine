@@ -32,10 +32,7 @@ Expressions = (function() {
   Expressions.prototype.pull = function() {
     var buffer, result;
     this.engine.start();
-    if (this.buffer === void 0) {
-      this.buffer = null;
-      buffer = true;
-    }
+    buffer = this.capture();
     result = this.evaluate.apply(this, arguments);
     if (buffer) {
       this.flush();
@@ -85,14 +82,17 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
-    var args, evaluate, result, _ref;
+    var args, evaluate, evaluated, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
     if (!meta && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
-      meta = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
-      if (meta === false) {
+      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+      if (evaluated === false) {
         return;
+      }
+      if (typeof evaluated === 'string') {
+        continuation = evaluated;
       }
     }
     if (operation.tail) {
@@ -199,8 +199,8 @@ Expressions = (function() {
         continue;
       }
       if (!offset && index === 0 && !operation.def.noop) {
-        args = [operation, continuation || operation.path];
-        shift++;
+        args = [operation, continuation || operation.path, scope];
+        shift += 2;
         continue;
       } else if (ascender === index) {
         argument = ascending;
@@ -250,7 +250,7 @@ Expressions = (function() {
           console.groupEnd(continuation);
           return;
         } else if (parent != null ? parent.def.capture : void 0) {
-          captured = parent.def.capture.call(this.engine, result, parent, continuation, scope);
+          captured = parent.def.capture.call(this.engine, result, operation, continuation, scope);
           if (captured === true) {
             return;
           }
@@ -398,6 +398,13 @@ Expressions = (function() {
     }
   };
 
+  Expressions.prototype.capture = function() {
+    if (this.buffer === void 0) {
+      this.buffer = null;
+      return true;
+    }
+  };
+
   return Expressions;
 
 })();
@@ -454,9 +461,10 @@ Values = (function() {
   Values.prototype.clean = function(continuation) {
     var observers, _results;
     if (observers = this._observers[continuation]) {
+      console.log('cleaning values observers', observers.slice(), continuation);
       _results = [];
       while (observers[0]) {
-        _results.push(this.unwatch(observers[1], observers[0], continuation, observers[2]));
+        _results.push(this.unwatch(observers[1], void 0, observers[0], continuation, observers[2]));
       }
       return _results;
     }
@@ -471,7 +479,7 @@ Values = (function() {
   };
 
   Values.prototype.set = function(id, property, value) {
-    var index, old, path, watcher, watchers, _i, _len, _ref;
+    var buffer, index, old, path, watcher, watchers, _i, _len, _ref;
     if (arguments.length === 2) {
       value = property;
       property = void 0;
@@ -490,10 +498,16 @@ Values = (function() {
       this.engine._onChange(path, value, old);
     }
     if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
-      debugger;
+      buffer = this.engine.expressions.capture();
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
-        this.engine.expressions.evaluate(watcher, watchers[index + 1], watchers[index + 2]);
+        if (!watcher) {
+          break;
+        }
+        this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
+      }
+      if (buffer) {
+        this.engine.expressions.flush();
       }
     }
     return value;
@@ -1061,7 +1075,6 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    debugger;
     var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1;
     this.response = response = {};
     this.lastInput = commands;
@@ -1082,6 +1095,7 @@ Solutions = (function() {
     } else {
       this.solver.resolve();
     }
+    console.log(JSON.parse(JSON.stringify(this.solver._changed)));
     _ref = this.solver._changed;
     for (property in _ref) {
       value = _ref[property];
@@ -1097,8 +1111,8 @@ Solutions = (function() {
       delete this.nullified;
     }
     this.lastOutput = response;
+    console.log('Solutions output', JSON.parse(JSON.stringify(response)));
     this.push(response);
-    debugger;
   };
 
   Solutions.prototype.push = function(results) {
@@ -1164,7 +1178,12 @@ Solutions = (function() {
           if (typeof path === 'string') {
             _results.push((this[path] || (this[path] = [])).push(command));
           } else {
-            _results.push(path.counter = (path.counter || 0) + 1);
+            path.counter = (path.counter || 0) + 1;
+            if (this.nullified && this.nullified[path.name] !== void 0) {
+              _results.push(delete this.nullified[path.name]);
+            } else {
+              _results.push(void 0);
+            }
           }
         }
         return _results;

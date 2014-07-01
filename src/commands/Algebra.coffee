@@ -39,7 +39,7 @@ for property, fn of Algebra::
     fn = do (property, fn) ->
       Algebra::[property] = (a, b) ->
         return NaN unless @_isPrimitive(a) && @_isPrimitive(b)
-        fn.binary = true
         return fn.apply(@, arguments)
+    fn.binary = true
 
 module.exports = Algebra

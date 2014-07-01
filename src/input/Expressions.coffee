@@ -15,9 +15,7 @@ class Expressions
   pull: ->
     @engine.start()
 
-    if @buffer == undefined # Enable buffering if nobody enabled it already
-      @buffer = null
-      buffer = true
+    buffer = @capture() # Enable buffering if nobody enabled it already
     result = @evaluate.apply(@, arguments)
     if buffer # Flush buffered output if this function started the buffering
       @flush()
@@ -66,8 +64,10 @@ class Expressions
     
     # Use custom argument evaluator of parent operation if it has one
     if !meta && (evaluate = operation.parent?.def.evaluate)
-      meta = evaluate.call(@engine, operation, continuation, scope, ascender, ascending)
-      return if meta == false
+      evaluated = evaluate.call(@engine, operation, continuation, scope, ascender, ascending)
+      return if evaluated == false
+      if typeof evaluated == 'string'
+        continuation = evaluated
 
 
     # Use a shortcut operation when possible (e.g. native dom query)
@@ -162,8 +162,8 @@ class Expressions
     for argument, index in operation
       continue if offset > index
       if (!offset && index == 0 && !operation.def.noop)
-        args = [operation, continuation || operation.path]
-        shift++
+        args = [operation, continuation || operation.path, scope]
+        shift += 2
         continue
       else if ascender == index
         argument = ascending
@@ -203,9 +203,9 @@ class Expressions
           console.groupEnd continuation
           return
         
-        # Some operations may capturre its arguments (e.g. comma captures nodes by subselectors)
+        # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
         else if parent?.def.capture
-          captured = parent.def.capture.call(@engine, result, parent, continuation, scope)
+          captured = parent.def.capture.call(@engine, result, operation, continuation, scope)
           return if captured == true
         # Topmost operations produce output
         else 
@@ -330,6 +330,11 @@ class Expressions
       return continuation
     else
       return operation.path
+
+  capture: ->
+    if @buffer == undefined
+      @buffer = null
+      return true
 
 
 @module ||= {}

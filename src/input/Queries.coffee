@@ -218,7 +218,7 @@ class Queries
   get: (continuation, scope) ->
     return @[continuation]
 
-  # HOOK: Remove observers and cached node lists
+  # Remove observers and cached node lists
   remove: (id, continuation, operation, scope) ->
 
     if typeof id == 'object'
@@ -253,8 +253,7 @@ class Queries
               index += 3
               continue
             watchers.splice(index, 3)
-            path = (contd || '') + watcher.key
-            @clean(path, path, watcher)
+            @clean(watcher, contd, watcher, scope, true)
           delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries[path])?.length?
@@ -273,9 +272,7 @@ class Queries
       if watchers = @_watchers[id]
         index = 0
         while watcher = watchers[index]
-          contd = watchers[index + 1]
-          path = (contd || '') + watcher.key
-          @remove(path, contd, watcher, watchers[index + 2])
+          @clean(watcher, watcher[index + 1], watcher, watcher[index + 2])
           index += 3
         delete @_watchers[id] 
       (@engine.removing ||= []).push(id)
@@ -283,16 +280,27 @@ class Queries
 
     @
 
-  clean: (path, continuation, operation, scope) ->
-    @engine.values.clean(path)
+  clean: (path, continuation, operation, scope, bind) ->
+    if path.def
+      if path.def.keys
+        for key in path.def.keys
+          contd = (continuation || '') + (operation.uid || '') + key
+          if @[contd]
+            @clean contd, continuation, operation, scope, bind
+          else
+            delete @[contd]
+        return
+      path = (continuation || '') + (operation.uid || '') + path.key
+    continuation = path if bind
+    @engine.values.clean(path, continuation, operation, scope)
     if result = @[path]
       if parent = operation?.parent
-        parent.def.release?.call(@engine, result, parent, scope, operation)
+        parent.def.release?.call(@engine, result, operation, scope, operation)
 
       if result.length != undefined
         copy = result.slice()
         @remove child, path, operation for child in copy
-      else
+      else if typeof result == 'object'
         @remove result, continuation, operation
     delete @[path]
     if !result || result.length == undefined

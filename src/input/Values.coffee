@@ -32,8 +32,9 @@ class Values
 
   clean: (continuation) ->
     if observers = @_observers[continuation]
+      console.log('cleaning values observers', observers.slice(), continuation)
       while observers[0]
-        @unwatch(observers[1], observers[0], continuation, observers[2])
+        @unwatch(observers[1], undefined, observers[0], continuation, observers[2])
         
   pull: (object) ->
     @merge(object)
@@ -55,9 +56,12 @@ class Values
     if @engine._onChange
       @engine._onChange path, value, old
     if watchers = @_watchers?[path]
-      debugger
+      buffer = @engine.expressions.capture()
       for watcher, index in watchers by 3
-        @engine.expressions.evaluate watcher, watchers[index + 1], watchers[index + 2]
+        break unless watcher
+        @engine.expressions.evaluate watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value
+        
+      @engine.expressions.flush() if buffer
     return value
   merge: (object) ->
     for path, value of object
