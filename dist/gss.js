@@ -20291,7 +20291,7 @@ Engine = (function() {
   };
 
   Engine.prototype.getContinuation = function(path, value) {
-    if (path.charAt(path.length - 1) === '–') {
+    if (path && path.charAt(path.length - 1) === '–') {
       path = path.substring(0, path.length - 1);
     }
     if (value == null) {
@@ -20890,6 +20890,34 @@ Rules = (function() {
     }
   };
 
+  Rules.prototype[','] = {
+    group: '$query',
+    separator: ',',
+    serialized: true,
+    eager: true,
+    serialize: function(operation, scope) {
+      if (scope && scope !== this.scope) {
+        return this.recognize(scope) + operation.path;
+      } else {
+        return operation.path;
+      }
+    },
+    command: function(operation, continuation, scope) {
+      continuation = this.commands[','].serialize.call(this, operation, scope);
+      return this.queries.get(continuation);
+    },
+    capture: function(result, operation, continuation, scope) {
+      continuation = this.commands[','].serialize.call(this, operation.parent, scope);
+      this.queries.add(result, continuation, operation.parent, scope);
+      return true;
+    },
+    release: function(result, operation, continuation, scope) {
+      continuation = this.commands[','].serialize.call(this, operation.parent, scope);
+      this.queries.remove(result, continuation, operation.parent, scope, true);
+      return true;
+    }
+  };
+
   Rules.prototype["$rule"] = {
     evaluate: function(operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender) {
@@ -20921,7 +20949,6 @@ Rules = (function() {
         this.commands.$if.branch.call(this, operation.parent[1], continuation, scope, void 0, result);
         return true;
       } else {
-        console.log('kapture', result);
         if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
           this.expressions.push(result);
           return true;
@@ -21160,90 +21187,10 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['$attribute'] = {
-    lookup: true,
-    group: '$query',
-    type: 'qualifier',
-    prefix: '[',
-    suffix: ']',
-    serialize: function() {
-      return function(operation, args) {
-        var name;
-        name = operation.name;
-        return args[1] + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"';
-      };
-    }
-  };
-
-  Selectors.prototype['[=]'] = function(node, attribute, value, operator) {
-    if (node.getAttribute(attribute) === value) {
-      return node;
-    }
-  };
-
-  Selectors.prototype['[*=]'] = function(node, attribute, value, operator) {
-    var _ref;
-    if (((_ref = node.getAttribute(attribute)) != null ? _ref.indexOf(value) : void 0) > -1) {
-      return node;
-    }
-  };
-
-  Selectors.prototype['[|=]'] = function(node, attribute, value, operator) {
-    if (node.getAttribute(attribute) != null) {
-      return node;
-    }
-  };
-
-  Selectors.prototype['[]'] = function(node, attribute, value, operator) {
-    if (node.getAttribute(attribute) != null) {
-      return node;
-    }
-  };
-
-  Selectors.prototype['$pseudo'] = {
-    type: 'qualifier',
-    prefix: ':',
-    lookup: true
-  };
-
   Selectors.prototype['$combinator'] = {
     prefix: '',
     type: 'combinator',
     lookup: true
-  };
-
-  Selectors.prototype['$reserved'] = {
-    type: 'combinator',
-    prefix: '::',
-    lookup: true
-  };
-
-  Selectors.prototype[','] = {
-    group: '$query',
-    separator: ',',
-    eager: true,
-    serialize: function(operation, scope) {
-      if (scope && scope !== this.scope) {
-        return this.recognize(scope) + operation.parent.path;
-      } else {
-        return operation.parent.path;
-      }
-    },
-    command: function(operation, continuation, scope) {
-      continuation = this.commands[','].serialize.call(this, operation, scope);
-      return this.queries.get(continuation);
-    },
-    capture: function(result, operation, continuation, scope) {
-      continuation = this.commands[','].serialize.call(this, operation, scope);
-      this.queries.add(result, continuation, scope, scope);
-      return true;
-    },
-    release: function(result, operation, scope, child) {
-      var continuation;
-      continuation = this.commands[','].serialize.call(this, operation, scope);
-      this.queries.remove(result, continuation, child, scope);
-      return true;
-    }
   };
 
   Selectors.prototype[' '] = {
@@ -21346,6 +21293,80 @@ Selectors = (function() {
     }
   };
 
+  Selectors.prototype['$reserved'] = {
+    type: 'combinator',
+    prefix: '::',
+    lookup: true
+  };
+
+  Selectors.prototype['::this'] = {
+    scoped: true,
+    hidden: true,
+    1: function(node) {
+      return node;
+    }
+  };
+
+  Selectors.prototype['::parent'] = {
+    1: Selectors.prototype['!>'][1]
+  };
+
+  Selectors.prototype['::scope'] = {
+    1: function(node) {
+      return this.scope;
+    }
+  };
+
+  Selectors.prototype['::window'] = function() {
+    return '::window';
+  };
+
+  Selectors.prototype['$attribute'] = {
+    lookup: true,
+    group: '$query',
+    type: 'qualifier',
+    prefix: '[',
+    suffix: ']',
+    serialize: function() {
+      return function(operation, args) {
+        var name;
+        name = operation.name;
+        return args[1] + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"';
+      };
+    }
+  };
+
+  Selectors.prototype['[=]'] = function(node, attribute, value, operator) {
+    if (node.getAttribute(attribute) === value) {
+      return node;
+    }
+  };
+
+  Selectors.prototype['[*=]'] = function(node, attribute, value, operator) {
+    var _ref;
+    if (((_ref = node.getAttribute(attribute)) != null ? _ref.indexOf(value) : void 0) > -1) {
+      return node;
+    }
+  };
+
+  Selectors.prototype['[|=]'] = function(node, attribute, value, operator) {
+    if (node.getAttribute(attribute) != null) {
+      return node;
+    }
+  };
+
+  Selectors.prototype['[]'] = function(node, attribute, value, operator) {
+    if (node.getAttribute(attribute) != null) {
+      return node;
+    }
+  };
+
+  Selectors.prototype['$pseudo'] = {
+    type: 'qualifier',
+    prefix: ':',
+    lookup: true
+  };
+
   Selectors.prototype[':value'] = {
     1: function(node) {
       return node.value;
@@ -21375,28 +21396,6 @@ Selectors = (function() {
         return node;
       }
     }
-  };
-
-  Selectors.prototype['::this'] = {
-    scoped: true,
-    hidden: true,
-    1: function(node) {
-      return node;
-    }
-  };
-
-  Selectors.prototype['::parent'] = {
-    1: Selectors.prototype['!>'][1]
-  };
-
-  Selectors.prototype['::scope'] = {
-    1: function(node) {
-      return this.scope;
-    }
-  };
-
-  Selectors.prototype['::window'] = function() {
-    return '::window';
   };
 
   return Selectors;
@@ -22677,7 +22676,7 @@ Queries = (function() {
     return this.engine._onResize(node);
   };
 
-  Queries.prototype.add = function(node, continuation, scope) {
+  Queries.prototype.add = function(node, continuation, operation, scope) {
     var collection;
     if (scope && scope !== this.engine.scope) {
       continuation = this.engine.recognize(scope) + continuation;
@@ -22755,7 +22754,8 @@ Queries = (function() {
       if (watchers = this._watchers[id]) {
         index = 0;
         while (watcher = watchers[index]) {
-          this.clean(watcher, watcher[index + 1], watcher, watcher[index + 2]);
+          debugger;
+          this.clean(watcher, watchers[index + 1], watcher, watchers[index + 2]);
           index += 3;
         }
         delete this._watchers[id];
@@ -22780,7 +22780,7 @@ Queries = (function() {
       if (result) {
         if (parent = operation != null ? operation.parent : void 0) {
           if ((_ref = parent.def.release) != null) {
-            _ref.call(this.engine, result, operation, scope, operation);
+            _ref.call(this.engine, result, operation, continuation, scope);
           }
         }
         if (result.length !== void 0) {
@@ -22993,25 +22993,17 @@ Values = (function() {
   };
 
   Values.prototype.clean = function(continuation) {
-    var observers, path, _i, _len, _ref, _results;
+    var observers, path, _i, _len, _ref;
     _ref = [continuation, continuation + '–'];
-    _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
       if (observers = this._observers[path]) {
-        _results.push((function() {
-          var _results1;
-          _results1 = [];
-          while (observers[0]) {
-            _results1.push(this.unwatch(observers[1], void 0, observers[0], path, observers[2]));
-          }
-          return _results1;
-        }).call(this));
-      } else {
-        _results.push(void 0);
+        while (observers[0]) {
+          this.unwatch(observers[1], void 0, observers[0], path, observers[2]);
+        }
       }
     }
-    return _results;
+    return this;
   };
 
   Values.prototype.pull = function(object) {

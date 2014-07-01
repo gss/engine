@@ -203,7 +203,7 @@ class Queries
     @engine._onResize(node)
 
   # Manually add element to collection
-  add: (node, continuation, scope) ->
+  add: (node, continuation, operation, scope) ->
     if scope && scope != @engine.scope
       continuation = @engine.recognize(scope) + continuation
     collection = @[continuation] ||= []
@@ -273,7 +273,7 @@ class Queries
       if watchers = @_watchers[id]
         index = 0
         while watcher = watchers[index]
-          @clean(watcher, watcher[index + 1], watcher, watcher[index + 2])
+          @clean(watcher, watchers[index + 1], watcher, watchers[index + 2])
           index += 3
         delete @_watchers[id] 
       (@engine.removing ||= []).push(id)
@@ -291,7 +291,7 @@ class Queries
 
       if result
         if parent = operation?.parent
-          parent.def.release?.call(@engine, result, operation, scope, operation)
+          parent.def.release?.call(@engine, result, operation, continuation, scope)
 
         if result.length != undefined
           copy = result.slice()

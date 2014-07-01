@@ -18,6 +18,46 @@ class Rules
         return value
 
   
+  # Comma combines found elements from multiple selectors without duplicates
+  ',':
+    # If all sub-selectors are native, make a single comma separated selector
+    group: '$query'
+
+    # Separate arguments with commas during serialization
+    separator: ','
+
+    serialized: true
+
+    # Dont let undefined arguments stop execution
+    eager: true
+
+    # Commas disregard continuation path, because their path is global
+    # - comma separated list of selectors. So we prepend scope id to disambiguate 
+    serialize: (operation, scope) ->
+      if scope && scope != @scope
+        return @recognize(scope) + operation.path
+      else
+        return operation.path
+
+    # Return deduplicated collection of all found elements
+    command: (operation, continuation, scope) ->
+      continuation = @commands[','].serialize.call(@, operation, scope)
+      return @queries.get(continuation)
+
+    # Recieve a single element found by one of sub-selectors
+    # Duplicates are stored separately, they dont trigger callbacks
+    capture: (result, operation, continuation, scope) -> 
+      continuation = @commands[','].serialize.call(@, operation.parent, scope)
+      @queries.add(result, continuation, operation.parent, scope)
+      return true
+
+    # Remove a single element that was found by sub-selector
+    # Doesnt trigger callbacks if it was also found by other selector
+    release: (result, operation, continuation, scope) ->
+      continuation = @commands[','].serialize.call(@, operation.parent, scope)
+      @queries.remove(result, continuation, operation.parent, scope, true)
+      return true
+
   # Conditionals
   
   "$rule":
@@ -54,7 +94,6 @@ class Rules
         return true
       else
       # Capture commands bubbled up from branches
-        console.log('kapture', result)
         if typeof result == 'object' && !result.nodeType && !@isCollection(result)
           @expressions.push result
           return true

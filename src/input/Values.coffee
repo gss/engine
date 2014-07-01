@@ -37,7 +37,7 @@ class Values
       if observers = @_observers[path]
         while observers[0]
           @unwatch(observers[1], undefined, observers[0], path, observers[2])
-        
+    @
   pull: (object) ->
     @merge(object)
 

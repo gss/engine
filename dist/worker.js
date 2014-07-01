@@ -465,25 +465,17 @@ Values = (function() {
   };
 
   Values.prototype.clean = function(continuation) {
-    var observers, path, _i, _len, _ref, _results;
+    var observers, path, _i, _len, _ref;
     _ref = [continuation, continuation + '–'];
-    _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
       if (observers = this._observers[path]) {
-        _results.push((function() {
-          var _results1;
-          _results1 = [];
-          while (observers[0]) {
-            _results1.push(this.unwatch(observers[1], void 0, observers[0], path, observers[2]));
-          }
-          return _results1;
-        }).call(this));
-      } else {
-        _results.push(void 0);
+        while (observers[0]) {
+          this.unwatch(observers[1], void 0, observers[0], path, observers[2]);
+        }
       }
     }
-    return _results;
+    return this;
   };
 
   Values.prototype.pull = function(object) {
@@ -679,7 +671,7 @@ Engine = (function() {
   };
 
   Engine.prototype.getContinuation = function(path, value) {
-    if (path.charAt(path.length - 1) === '–') {
+    if (path && path.charAt(path.length - 1) === '–') {
       path = path.substring(0, path.length - 1);
     }
     if (value == null) {

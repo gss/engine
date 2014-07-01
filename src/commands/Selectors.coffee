@@ -130,86 +130,12 @@ class Selectors
           nodes.push(nodes)
       return nodes
 
-
-  # Commands that look up other commands
-  
-  '$attribute':
-    lookup: true
-    group: '$query'
-    type: 'qualifier'
-    prefix: '['
-    suffix: ']'
-    serialize: -> (operation, args) ->
-      name = operation.name
-      return (args[1]) + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"'
-
-  '[=]': (node, attribute, value, operator) ->
-    return node if node.getAttribute(attribute) == value
-
-  '[*=]': (node, attribute, value, operator) ->
-    return node if  node.getAttribute(attribute)?.indexOf(value) > -1
-  
-  '[|=]': (node, attribute, value, operator) ->
-    return node if  node.getAttribute(attribute)?
-  
-  '[]': (node, attribute, value, operator) ->
-    return node if  node.getAttribute(attribute)?
-
-
-  '$pseudo': 
-    type: 'qualifier'
-    prefix: ':'
-    lookup: true
+  # CSS Combinators with reversals
 
   '$combinator':
     prefix: ''
     type: 'combinator'
     lookup: true
-
-  '$reserved':
-    type: 'combinator'
-    prefix: '::'
-    lookup: true
-
-  # Comma combines found elements from multiple selectors without duplicates
-  ',':
-    # If all sub-selectors are native, make a single comma separated selector
-    group: '$query'
-
-    # Separate arguments with commas during serialization
-    separator: ','
-
-    # Dont let undefined arguments stop execution
-    eager: true
-
-    # Commas disregard continuation path, because their path is global
-    # - comma separated list of selectors. So we prepend scope id to disambiguate 
-    serialize: (operation, scope) ->
-      if scope && scope != @scope
-        return @recognize(scope) + operation.parent.path
-      else
-        return operation.parent.path
-
-    # Return deduplicated collection of all found elements
-    command: (operation, continuation, scope) ->
-      continuation = @commands[','].serialize.call(@, operation, scope)
-      return @queries.get(continuation)
-
-    # Recieve a single element found by one of sub-selectors
-    # Duplicates are stored separately, they dont trigger callbacks
-    capture: (result, operation, continuation, scope) -> 
-      continuation = @commands[','].serialize.call(@, operation, scope)
-      @queries.add(result, continuation, scope, scope)
-      return true
-
-    # Remove a single element that was found by sub-selector
-    # Doesnt trigger callbacks if it was also found by other selector
-    release: (result, operation, scope, child) ->
-      continuation = @commands[','].serialize.call(@, operation, scope)
-      @queries.remove(result, continuation, child, scope)
-      return true
-
-  # CSS Combinators with reversals
 
   # All descendant elements
   ' ':
@@ -288,30 +214,14 @@ class Selectors
         prev = prev.nextElementSibling
       return nodes
 
-  # Pseudo classes
-
-  ':value':
-    1: (node) ->
-      return node.value
-    watch: "oninput"
-
-  ':get':
-    2: (node, property) ->
-      return node[property]
-
-  ':first-child':
-    group: '$query'
-    1: (node) ->
-      return node unless node.previousElementSibling
-
-  ':last-child':
-    group: '$query'
-    1: (node) ->
-      return node unless node.nextElementSibling
-
 
 
   # Pseudo elements
+
+  '$reserved':
+    type: 'combinator'
+    prefix: '::'
+    lookup: true
 
   '::this':
     scoped: true
@@ -332,6 +242,57 @@ class Selectors
   '::window': ->
     return '::window' 
 
+
+  '$attribute':
+    lookup: true
+    group: '$query'
+    type: 'qualifier'
+    prefix: '['
+    suffix: ']'
+    serialize: -> (operation, args) ->
+      name = operation.name
+      return (args[1]) + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"'
+
+  '[=]': (node, attribute, value, operator) ->
+    return node if node.getAttribute(attribute) == value
+
+  '[*=]': (node, attribute, value, operator) ->
+    return node if  node.getAttribute(attribute)?.indexOf(value) > -1
+  
+  '[|=]': (node, attribute, value, operator) ->
+    return node if  node.getAttribute(attribute)?
+  
+  '[]': (node, attribute, value, operator) ->
+    return node if  node.getAttribute(attribute)?
+
+
+
+  # Pseudo classes
+
+  '$pseudo': 
+    type: 'qualifier'
+    prefix: ':'
+    lookup: true
+
+  ':value':
+    1: (node) ->
+      return node.value
+    watch: "oninput"
+
+  ':get':
+    2: (node, property) ->
+      return node[property]
+
+  ':first-child':
+    group: '$query'
+    1: (node) ->
+      return node unless node.previousElementSibling
+
+  ':last-child':
+    group: '$query'
+    1: (node) ->
+      return node unless node.nextElementSibling
+      
 # Set up custom trigger for all selector operations
 # to filter out old elements from collections
 for property, command of Selectors::
