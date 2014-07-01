@@ -299,7 +299,7 @@ class Queries
         else if typeof result == 'object'
           @remove result, continuation, operation
 
-      if scope
+      if scope && operation.def.cleaning
         @remove @engine.recognize(scope), path, operation
     delete @[path]
     if !result || result.length == undefined

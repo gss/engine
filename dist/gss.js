@@ -20907,6 +20907,7 @@ Rules = (function() {
 
   Rules.prototype["$if"] = {
     primitive: 1,
+    cleaning: true,
     subscribe: function(operation, continuation, scope) {
       var id, watchers, _base;
       id = scope._gss_id;
@@ -20937,7 +20938,7 @@ Rules = (function() {
         console.group(path);
         if (this.queries[path] !== void 0) {
           console.error('clean', [path, continuation]);
-          this.queries.clean(path, continuation, operation, scope);
+          this.queries.clean(path, continuation, operation.parent, scope);
         }
         if (condition) {
           this.expressions.evaluate(operation.parent[2], path, scope);
@@ -22792,7 +22793,7 @@ Queries = (function() {
           this.remove(result, continuation, operation);
         }
       }
-      if (scope) {
+      if (scope && operation.def.cleaning) {
         this.remove(this.engine.recognize(scope), path, operation);
       }
     }

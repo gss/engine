@@ -37,6 +37,8 @@ class Rules
     # Resolve all values in first argument
     primitive: 1
 
+    cleaning: true
+
     subscribe: (operation, continuation, scope) ->
       id = scope._gss_id
       watchers = @queries._watchers[id] ||= []
@@ -66,7 +68,7 @@ class Rules
         console.group(path)
         unless @queries[path] == undefined
           console.error('clean', [path, continuation])
-          @queries.clean(path, continuation, operation, scope)
+          @queries.clean(path, continuation, operation.parent, scope)
         if condition
           @expressions.evaluate operation.parent[2], path, scope
         else if operation.parent[3]
