@@ -1,5 +1,6 @@
 # CSS rules and conditions
-compiler = require 'gss-compiler'
+GSS.Parser = require 'ccss-compiler'
+
 
 class Rules
   # The wonderful semicolon
@@ -106,7 +107,6 @@ class Rules
       if @queries[path] == undefined || (!!@queries[path] != !!condition)
         console.group(path)
         unless @queries[path] == undefined
-          console.error('clean', [path, continuation])
           @queries.clean(path, continuation, operation.parent, scope)
         if condition
           @expressions.evaluate operation.parent[2], path, scope
@@ -118,10 +118,11 @@ class Rules
 
 
   "$eval": (node, type = 'text/gss') ->
+    debugger
     if (node.type || type) == 'text/gss-ast'
       rules = JSON.parse(node.textContent ? node)
     else
-      rules = compiler.compile(node.textContent ? node)
+      return unless rules = GSS.Parser.parse(node.textContent ? node)?.commands
     scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
     @run rules, undefined, scope
     return

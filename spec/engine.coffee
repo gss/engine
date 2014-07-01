@@ -391,7 +391,6 @@ describe 'GSS engine', ->
         done()
       container.addEventListener 'solved', onSolved
       
-      debugger
       engine.styles.pull {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
       
     
@@ -428,7 +427,7 @@ describe 'GSS engine', ->
           <div id="box2" class="box"></div>
           """
 
-  xdescribe 'GSS Engine Life Cycle', ->  
+  describe 'GSS Engine Life Cycle', ->  
     container = null
   
     before ->
@@ -442,34 +441,27 @@ describe 'GSS engine', ->
       engine1 = null
     
       it 'without GSS rules style tag', ->
-        engine1 = GSS(container)
-        expect(engine1.id).to.be.equal GSS.getId(container)
+        engine1 = new GSS(container)
         expect(engine1.scope).to.be.equal container
     
       it 'after receives GSS style tag', (done) ->
         engine2 = GSS(container)
-        expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
           <style id="gssa" type="text/gss-ast" scoped>
-          [{
-            "type":"constraint",
-            "commands": [
+            [
               ["suggest", "col-width-1", 111]
-            ]          
-          }]
+            ]
           </style>
           """
         listener = (e) ->
-          engine2 = GSS(container)
           expect(engine1).to.equal engine2
-          expect(engine1.vars['col-width-1']).to.equal 111
+          expect(engine1.values['col-width-1']).to.equal 111
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
     
-      it 'after modified GSS style tag', (done) ->
-        expect(engine1.id).to.be.equal GSS.getId(container)
-        styleNode = document.getElementById 'gssa'
+      xit 'after modified GSS style tag', (done) ->
+        styleNode = engine.$id 'gssa'
         styleNode.innerHTML = """
           [{
             "type":"constraint",
@@ -487,7 +479,7 @@ describe 'GSS engine', ->
           done()
         container.addEventListener 'solved', listener
     
-      it 'after replaced GSS style tag', (done) ->
+      xit 'after replaced GSS style tag', (done) ->
         engine2 = GSS(container)
         expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
@@ -511,7 +503,7 @@ describe 'GSS engine', ->
           done()
         container.addEventListener 'solved', listener
     
-      it 'Engine after container replaced multiple GSS style tags', (done) ->
+      xit 'Engine after container replaced multiple GSS style tags', (done) ->
         engine2 = GSS(container)
         expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
@@ -545,7 +537,7 @@ describe 'GSS engine', ->
           done()
         container.addEventListener 'solved', listener
     
-      it 'Engine after container removed', (done) ->
+      xit 'Engine after container removed', (done) ->
         remove(container)
         wait = ->
           expect(engine1.is_destroyed).to.equal true
@@ -553,7 +545,7 @@ describe 'GSS engine', ->
           done()
         setTimeout wait, 1
     
-      it 'new Engine after container re-added', () ->      
+      xit 'new Engine after container re-added', () ->      
         $('#fixtures').appendChild container      
         engine3 = GSS(container)
         expect(engine1).to.not.equal engine3

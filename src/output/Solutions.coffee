@@ -87,10 +87,14 @@ class Solutions
     variable.editing = constraint
     return constraint
 
-  suggest: (variable, value, strength, weight) ->
+  suggest: (path, value, strength, weight) ->
     #@solver.solve()
-    if typeof variable == 'string'
-      return unless variable = @[variable]
+    if typeof path == 'string'
+      unless variable = @[path]
+        return @response[path] = value
+    else
+      variable = path
+
     @edit(variable, strength, weight) unless variable.editing
     @solver.suggestValue(variable, value)
     #@solver.resolve()

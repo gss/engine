@@ -37,7 +37,7 @@
     "vendor/MutationObserver.classList.js"
   ],
   "dependencies": {
-    "the-gss/compiler": "*",
+    "the-gss/ccss-compiler": "new",
     "d4tocchini/customevent-polyfill": "*",
     "slightlyoff/cassowary.js": "*"
   },

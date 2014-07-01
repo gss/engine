@@ -21,7 +21,7 @@ describe 'End - to - End', ->
   container = null
   
   beforeEach ->
-    engine = GSS.engines.root
+    engine ||= new GSS($('#fixtures'))
     container = document.createElement 'div'
     $('#fixtures').appendChild container
     
@@ -32,7 +32,7 @@ describe 'End - to - End', ->
   # Config
   # ===========================================================
   
-  describe 'config', ->
+  xdescribe 'config', ->
   
     describe 'defaultStrength: strong', ->
     
@@ -82,7 +82,7 @@ describe 'End - to - End', ->
   # Vanilla CSS + CCSS
   # ===========================================================
   
-  describe 'Vanilla CSS', ->  
+  xdescribe 'Vanilla CSS', ->  
     
     describe 'just CSS', ->
       engine = null
@@ -168,7 +168,7 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values).to.eql 
             "c": 10
             "x": 0
             "y": 500
