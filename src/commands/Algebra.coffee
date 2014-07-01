@@ -7,31 +7,31 @@ class Algebra
       return object.valueOf != Object.prototype.valueOf
     return true
 
-  eq: (a, b) ->
+  "==": (a, b) ->
     return a == b
 
-  lte: (a, b) ->
+  "<=": (a, b) ->
     return a <= b
 
-  gte: (a, b) ->
+  ">=": (a, b) ->
     return a >= b
 
-  lt: (a, b) ->
+  "<": (a, b) ->
     return a < b
 
-  gt: (a, b) ->
+  ">": (a, b) ->
     return a > b
 
-  plus: (a, b) ->
+  "+": (a, b) ->
     return a + b
 
-  minus: (a, b) ->
+  "-": (a, b) ->
     return a - b
 
-  multiply: (a, b) ->
+  "*": (a, b) ->
     return a * b
 
-  divide: (a, b) ->
+  "/": (a, b) ->
     return a / b
 
 for property, fn of Algebra::

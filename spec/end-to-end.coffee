@@ -168,9 +168,9 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solved', (e) ->     
-          expect(engine.values).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "c": 10
-            "x": 0
+            #"x": 0
             "y": 500
             "z": 510
           done()
@@ -185,7 +185,7 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "grid": 36
             "$billy[x]": 36
           done()

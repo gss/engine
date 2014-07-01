@@ -13,7 +13,9 @@
     "lib/parser.js"
   ],
   "dependencies": {
-    "the-gss/error-reporter": "*"
+    "the-gss/error-reporter": "*",
+    "the-gss/vfl-compiler": "*",
+    "the-gss/vgl-compiler": "*"
   },
   "main": "lib/compiler.js",
   "license": "MIT"

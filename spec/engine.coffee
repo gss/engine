@@ -45,7 +45,7 @@ describe 'GSS engine', ->
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run [
-          ['eq', ['get','x'], 222]
+          ['==', ['get','x'], 222]
         ]
     it 'should destroy', (done)->
       e.destroy()
@@ -61,7 +61,7 @@ describe 'GSS engine', ->
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
       e.run [
-          ['eq', ['get','x'], 222]
+          ['==', ['get','x'], 222]
         ]
     it 'should destroy', (done)->
       e.destroy()
@@ -93,8 +93,8 @@ describe 'GSS engine', ->
           done()
     
         ast = [
-          ['eq', ['get', ['$id','button1'], 'width'], ['get', ['$id','button2'], 'width']]
-          ['eq', ['get', ['$id','button1'], 'width'], 100]
+          ['==', ['get', ['$id','button1'], 'width'], ['get', ['$id','button2'], 'width']]
+          ['==', ['get', ['$id','button1'], 'width'], 100]
         ]
         
         it 'before solving the second button should be wider', ->
@@ -141,8 +141,8 @@ describe 'GSS engine', ->
           done()
     
         ast = [
-            ['eq', ['get',['$tag','h1'],'line-height'], ['get',['$tag','h1'],'font-size']]
-            ['eq', ['get',['$tag','h1'],'line-height'], 42]
+            ['==', ['get',['$tag','h1'],'line-height'], ['get',['$tag','h1'],'font-size']]
+            ['==', ['get',['$tag','h1'],'line-height'], 42]
           ]
         
             
@@ -190,8 +190,8 @@ describe 'GSS engine', ->
       done()
     
     ast = [
-      ['eq', ['get',['$id','button2'],'width'], 222]
-      ['eq', ['get',['$id','button1'],'width'], 111]        
+      ['==', ['get',['$id','button2'],'width'], 222]
+      ['==', ['get',['$id','button1'],'width'], 111]        
     ]
     
     it 'before solving buttons dont exist', ->
@@ -243,15 +243,15 @@ describe 'GSS engine', ->
     
 
     ast = [
-        ["eq", ["get", ["$id","b1"], "right"],  ["get",["$id","b2"],"x"]]
-        ["eq", ["get", ["$id","w"],  "width"],  200]
-        ["eq", ["get", ["$id","w"],  "x"]  ,    ["get",'target']]
-        ["eq", ["get", ["$id","b2"], "right"] , ["get",["$id","w"],"right"]] 
+        ['==', ["get", ["$id","b1"], "right"],  ["get",["$id","b2"],"x"]]
+        ['==', ["get", ["$id","w"],  "width"],  200]
+        ['==', ["get", ["$id","w"],  "x"]  ,    ["get",'target']]
+        ['==', ["get", ["$id","b2"], "right"] , ["get",["$id","w"],"right"]] 
         # b2[right] -> 200
-        ["eq", ["get", ["$id","b1"], "x"   ] ,  ["get","target"]]        
-        ["eq", ["get", ["$id","b1"], "width"] , ["get",["$id","b2"],"width"]]
+        ['==', ["get", ["$id","b1"], "x"   ] ,  ["get","target"]]        
+        ['==', ["get", ["$id","b1"], "width"] , ["get",["$id","b2"],"width"]]
         
-        ["eq", ["get", "target"], 0]
+        ['==', ["get", "target"], 0]
       ]
     
     it 'after solving should have right size', (done) ->
@@ -293,8 +293,8 @@ describe 'GSS engine', ->
         done()
       container.addEventListener 'solved', onSolved
       engine.run [
-        ['eq', ['get', 'y'], 10]
-        ['eq', ['get', 'x'], ['multiply',['get','y'],['divide',1,2]] ]
+        ['==', ['get', 'y'], 10]
+        ['==', ['get', 'x'], ['*',['get','y'],['/',1,2]] ]
       ]
   
   describe 'Engine::vars', ->
@@ -321,8 +321,8 @@ describe 'GSS engine', ->
         done()
       container.addEventListener 'solved', onSolved
       engine.run [
-          ['eq', ['get', 'col-width'], 100]
-          ['eq', ['get', 'row-height'], 50]
+          ['==', ['get', 'col-width'], 100]
+          ['==', ['get', 'row-height'], 50]
         ]
     
     it 'engine.vars are updated after many suggests', (done) ->
@@ -354,8 +354,8 @@ describe 'GSS engine', ->
           done()
       container.addEventListener 'solved', onSolved
       engine.run [
-          ['eq', ['get', 'col-width'], 100, 'medium']
-          ['eq', ['get', 'row-height'], 50, 'medium']
+          ['==', ['get', 'col-width'], 100, 'medium']
+          ['==', ['get', 'row-height'], 50, 'medium']
           ['suggest', 'col-width', 10]
           ['suggest', 'row-height', 5]
         ]
@@ -412,8 +412,8 @@ describe 'GSS engine', ->
       it 'Runs commands from sourceNode', (done) ->
         listener = (e) ->        
           expect(engine.expressions.lastOutput).to.eql [
-              ['eq', ['get','$box1','x','.box$box1'], 100]
-              ['eq', ['get','$box2','x','.box$box2'], 100]
+              ['==', ['get','$box1','x','.box$box1'], 100]
+              ['==', ['get','$box2','x','.box$box2'], 100]
             ]
           container.removeEventListener 'solved', listener
           done()
@@ -421,7 +421,7 @@ describe 'GSS engine', ->
         engine = new GSS(container)
         container.innerHTML =  """
           <style type="text/gss-ast" scoped>
-            ["eq", ["get",["$class", "box"],"x"], 100]
+            ["==", ["get",["$class", "box"],"x"], 100]
           </style>
           <div id="box1" class="box"></div>
           <div id="box2" class="box"></div>
@@ -568,7 +568,7 @@ describe 'GSS engine', ->
             [{
               "type":"constraint",
               "commands": [
-                ["eq", ["get$","width",["$id","boo"]], ["number",100]]
+                ['==', ["get$","width",["$id","boo"]], ["number",100]]
               ]
             }]
             </style>
@@ -756,7 +756,7 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ["eq", ["get$","width",["$id","wrap"]], ["number",69]]
+              ['==', ["get$","width",["$id","wrap"]], ["number",69]]
             ]
           }]
           </style>
@@ -765,7 +765,7 @@ describe 'GSS engine', ->
             [{
               "type":"constraint",
               "commands": [
-                ["eq", ["get$","width",["$id","boo"]], ["get$","width",["$reserved","scope"]]]
+                ['==', ["get$","width",["$id","boo"]], ["get$","width",["$reserved","scope"]]]
               ]
             }]
             </style>

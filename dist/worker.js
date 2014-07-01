@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-07-01) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -300,10 +299,15 @@ Expressions = (function() {
       }
       operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '');
       otherdef = def;
-      if (typeof def.lookup === 'function') {
-        def = def.lookup.call(this, operation);
-      } else {
-        def = this.commands[operation.name];
+      switch (typeof def.lookup) {
+        case 'function':
+          def = def.lookup.call(this, operation);
+          break;
+        case 'string':
+          def = this.commands[def.lookup + operation.name];
+          break;
+        default:
+          def = this.commands[operation.name];
       }
     }
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
@@ -915,19 +919,19 @@ Equasions = (function() {
   function Equasions() {}
 
   Equasions.prototype.right = function(scope, path) {
-    return this._plus(this._get(scope, "x", path), this._get(scope, "width", path));
+    return this['_+'](this._get(scope, "x", path), this._get(scope, "width", path));
   };
 
   Equasions.prototype.bottom = function(scope, path) {
-    return this._plus(this._get(scope, "y", path), this._get(scope, "height", path));
+    return this['_+'](this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
   Equasions.prototype.center = {
     x: function(scope, path) {
-      return this._plus(this._get(scope, "x", path), this._divide(this._get(scope, "width", path), 2));
+      return this['_+'](this._get(scope, "x", path), this['_/'](this._get(scope, "width", path), 2));
     },
     y: function(scope, path) {
-      return this._plus(this._get(scope, "y", path), this._divide(this._get(scope, "height", path), 2));
+      return this['_+'](this._get(scope, "y", path), this['_/'](this._get(scope, "height", path), 2));
     }
   };
 
@@ -1011,39 +1015,39 @@ Constraints = (function() {
     });
   };
 
-  Constraints.prototype.eq = function(left, right, strength, weight) {
+  Constraints.prototype['=='] = function(left, right, strength, weight) {
     return new c.Equation(left, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.lte = function(left, right, strength, weight) {
+  Constraints.prototype['<='] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.gte = function(left, right, strength, weight) {
+  Constraints.prototype['>='] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.lt = function(left, right, strength, weight) {
+  Constraints.prototype['<'] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.gt = function(left, right, strength, weight) {
+  Constraints.prototype['>'] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.plus = function(left, right, strength, weight) {
+  Constraints.prototype['+'] = function(left, right, strength, weight) {
     return c.plus(left, right);
   };
 
-  Constraints.prototype.minus = function(left, right, strength, weight) {
+  Constraints.prototype['-'] = function(left, right, strength, weight) {
     return c.minus(left, right);
   };
 
-  Constraints.prototype.multiply = function(left, right, strength, weight) {
+  Constraints.prototype['*'] = function(left, right, strength, weight) {
     return c.times(left, right);
   };
 
-  Constraints.prototype.divide = function(left, right, strength, weight) {
+  Constraints.prototype['/'] = function(left, right, strength, weight) {
     return c.divide(left, right);
   };
 

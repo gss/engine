@@ -46,7 +46,7 @@ describe 'Nested Rules', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          ["eq", ["get","target-size"], 100]
+          ['==', ["get","target-size"], 100]
         ]
         container.innerHTML =  ""
         if old = container._gss_id && GSS(container)
@@ -55,7 +55,7 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->        
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ["eq", ["get", "", "target-size", ""], 100]
+              ['==', ["get", "", "target-size", ""], 100]
             ]
           done()
         
@@ -63,7 +63,7 @@ describe 'Nested Rules', ->
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
-          ["eq", 
+          ['==', 
             ["get",
               ['$pseudo',
                 ['$tag',
@@ -105,7 +105,7 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->      
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ["eq", 
+              ['==', 
                 ["get", "$s","target-size", "header>h2.gizoogle$h2!$ssection div$d:getparentNode"]
                 , 100
               ]
@@ -117,7 +117,7 @@ describe 'Nested Rules', ->
     describe 'reversed sibling combinators', ->
       it 'should support mixed selectors', (done) ->
         rules = [
-          ["eq", 
+          ['==', 
             ["get",
               ['$tag',
                 ['$combinator', 
@@ -149,8 +149,8 @@ describe 'Nested Rules', ->
         engine = new GSS(container)
         engine.once 'solved', -> 
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-            ["eq", ["get", "$header0", "width", "div+main$main0!~$header0*"], 50]
-            ["eq", ["get", "$box0", "width", "div+main$main0!~$box0*"], 50]
+            ['==', ["get", "$header0", "width", "div+main$main0!~$header0*"], 50]
+            ['==', ["get", "$box0", "width", "div+main$main0!~$box0*"], 50]
           ]
           expect(stringify engine.styles.lastInput).to.eql stringify
             "$header0[width]": 50
@@ -187,7 +187,7 @@ describe 'Nested Rules', ->
                 ['$class', 'vessel']
                 ' ']
               'box']
-            ["eq", 
+            ['==', 
               ["get", ["$reserved","this"], "x"]
               100]
           ]
@@ -207,8 +207,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', -> 
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-              ['eq', ['get', '$box1', 'x', '.vessel .box$box1–'], 100]
-              ['eq', ['get', '$box2', 'x', '.vessel .box$box2–'], 100]
+              ['==', ['get', '$box1', 'x', '.vessel .box$box1–'], 100]
+              ['==', ['get', '$box2', 'x', '.vessel .box$box2–'], 100]
             ]
           done()
         
@@ -218,7 +218,7 @@ describe 'Nested Rules', ->
       it 'should observe selector on ::', (done) ->
         rules = ["$rule",
                   ["$class", "vessel"]
-                  ["eq", 
+                  ['==', 
                     ["get",
                       ["$class", 
                         ['$combinator', 
@@ -247,8 +247,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-            ['eq', ['get', '$box1','x', '.vessel$vessel0– .box$box1'], 100]
-            ['eq', ['get', '$box2','x', '.vessel$vessel0– .box$box2'], 100]
+            ['==', ['get', '$box1','x', '.vessel$vessel0– .box$box1'], 100]
+            ['==', ['get', '$box2','x', '.vessel$vessel0– .box$box2'], 100]
           ])
           # Accumulated solutions
           expect(stringify(engine.values.toObject())).to.eql stringify
@@ -304,7 +304,7 @@ describe 'Nested Rules', ->
             engine.once 'solved', ->
               # Child matches again
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                ['eq', ['get', '$box1', 'x', '.vessel$vessel0– .box$box1'], 100]
+                ['==', ['get', '$box1', 'x', '.vessel$vessel0– .box$box1'], 100]
               ])
               expect(stringify(engine.values.toObject())).to.eql stringify
                 "$box2[x]": 100
@@ -348,8 +348,8 @@ describe 'Nested Rules', ->
                 engine.once 'solved', ->
                   # Parent matches again, re-watch everything 
                   expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                    ['eq', ['get', '$box1', 'x', '.vessel$vessel0– .box$box1'], 100]
-                    ['eq', ['get', '$box2', 'x', '.vessel$vessel0– .box$box2'], 100]
+                    ['==', ['get', '$box1', 'x', '.vessel$vessel0– .box$box1'], 100]
+                    ['==', ['get', '$box2', 'x', '.vessel$vessel0– .box$box2'], 100]
                   ])
                   expect(stringify(engine.values.toObject())).to.eql stringify
                     "$box1[x]": 100
@@ -380,7 +380,7 @@ describe 'Nested Rules', ->
             ['$class', 'vessel']
             ['$id', 'group1']]
 
-          ['eq',
+          ['==',
             ['get'
               ['$pseudo',
                 ['$combinator',
@@ -412,8 +412,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-            ['eq', ['get', '$box1', 'y','.vessel,#group1$vessel0– :first-child$box1'], 100]
-            ['eq', ['get', '$box3', 'y','.vessel,#group1$group1– :first-child$box3'], 100]
+            ['==', ['get', '$box1', 'y','.vessel,#group1$vessel0– :first-child$box1'], 100]
+            ['==', ['get', '$box3', 'y','.vessel,#group1$group1– :first-child$box3'], 100]
           ])
 
           vessel0.classList.remove('vessel')
@@ -430,7 +430,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solved', ->
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                ['eq', ['get', '$box1', 'y','.vessel,#group1$vessel0– :first-child$box1'], 100]
+                ['==', ['get', '$box1', 'y','.vessel,#group1$vessel0– :first-child$box1'], 100]
               ])
               expect(box1.style.top).to.eql('100px')
               expect(box3.style.top).to.eql('100px')
@@ -451,7 +451,7 @@ describe 'Nested Rules', ->
               'div']]
 
 
-          ['eq',
+          ['==',
             ['get'
               ['$pseudo',
                 ['$combinator',
@@ -487,8 +487,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-            ['eq', ['get', '$box1', 'y','#box1!>,>div$vessel0– :first-child$box1'], 100]
-            ['eq', ['get', '$box3', 'y','#box1!>,>div$group1– :first-child$box3'], 100]
+            ['==', ['get', '$box1', 'y','#box1!>,>div$vessel0– :first-child$box1'], 100]
+            ['==', ['get', '$box3', 'y','#box1!>,>div$group1– :first-child$box3'], 100]
           ])
 
           expect(box1.style.top).to.eql('100px')
@@ -501,7 +501,7 @@ describe 'Nested Rules', ->
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
               ['remove',
                 "#box1!>,>div$vessel0– :first-child$box1"]
-              ['eq', ['get', '$box2', 'y','#box1!>,>div$vessel0– :first-child$box2'], 100]
+              ['==', ['get', '$box2', 'y','#box1!>,>div$vessel0– :first-child$box2'], 100]
               ['remove', "#box1!>", "#box1"]
             ])
             expect(box1.style.top).to.eql('')
@@ -539,7 +539,7 @@ describe 'Nested Rules', ->
                 expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
                   ['remove', "#box1!>,>div$group1– :first-child$box3"]
 
-                  ['eq', ['get', '$box4', 'y','#box1!>,>div$group1– :first-child$box4'], 100]
+                  ['==', ['get', '$box4', 'y','#box1!>,>div$group1– :first-child$box4'], 100]
                 ])
                 box4.parentNode.removeChild(box4)
 
@@ -604,8 +604,8 @@ describe 'Nested Rules', ->
         engine.once 'solved', ->  
 
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-              ['lte', ['get','$box1','width', '.vessel .box$box1–::scope'], ['get', '$container0', 'width', '.vessel .box$box1–::scope–']]
-              ['lte', ['get','$box2','width', '.vessel .box$box2–::scope'], ['get', '$container0', 'width', '.vessel .box$box2–::scope–']]
+              ['<=', ['get','$box1','width', '.vessel .box$box1–::scope'], ['get', '$container0', 'width', '.vessel .box$box1–::scope–']]
+              ['<=', ['get','$box2','width', '.vessel .box$box2–::scope'], ['get', '$container0', 'width', '.vessel .box$box2–::scope–']]
             ]
           done()
         
@@ -656,8 +656,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->        
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-              ['lte', ['get','$box2','width', ".group .vessel$vessel1–::scope .box:last-child$box2"], 100],
-              ['lte', ['get','$box4','width', ".group .vessel$vessel1–::scope .box:last-child$box4"], 100]
+              ['<=',['get','$box2','width', ".group .vessel$vessel1–::scope .box:last-child$box2"], 100],
+              ['<=',['get','$box4','width', ".group .vessel$vessel1–::scope .box:last-child$box4"], 100]
             ]
           newLast = document.createElement('div')
           newLast.id = 'box5'
@@ -667,7 +667,7 @@ describe 'Nested Rules', ->
           engine.once 'solved', ->   
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                 ["remove",".group .vessel$vessel1–::scope .box:last-child$box4"],
-                ['lte', ['get', '$box5', 'width', '.group .vessel$vessel1–::scope .box:last-child$box5'], 100]
+                ['<=',['get', '$box5', 'width', '.group .vessel$vessel1–::scope .box:last-child$box5'], 100]
               ]
             container.firstElementChild.classList.remove('group')
 
@@ -683,19 +683,19 @@ describe 'Nested Rules', ->
               engine.once 'solved', ->   
 
                 expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-                    ['lte', ['get','$box2','width', '.group .vessel$vessel1–::scope .box:last-child$box2'], 100],
-                    ['lte', ['get','$box5','width', '.group .vessel$vessel1–::scope .box:last-child$box5'], 100]
+                    ['<=',['get','$box2','width', '.group .vessel$vessel1–::scope .box:last-child$box2'], 100],
+                    ['<=',['get','$box5','width', '.group .vessel$vessel1–::scope .box:last-child$box5'], 100]
                   ]
                 container.appendChild(clone)
                 
                 engine.once 'solved', ->   
                   expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-                      ['lte', ['get', '$box12', 'width', '.group .vessel$vessel1–::scope .box:last-child$box12'], 100]
-                      ['lte', ['get', '$box14', 'width', '.group .vessel$vessel1–::scope .box:last-child$box14'], 100]
-                      ['lte', ['get', '$box2',  'width', '.group .vessel$vessel11–::scope .box:last-child$box2'], 100]
-                      ['lte', ['get', '$box5',  'width', '.group .vessel$vessel11–::scope .box:last-child$box5'], 100]
-                      ['lte', ['get', '$box12', 'width', '.group .vessel$vessel11–::scope .box:last-child$box12'], 100]
-                      ['lte', ['get', '$box14', 'width', '.group .vessel$vessel11–::scope .box:last-child$box14'], 100]
+                      ['<=',['get', '$box12', 'width', '.group .vessel$vessel1–::scope .box:last-child$box12'], 100]
+                      ['<=',['get', '$box14', 'width', '.group .vessel$vessel1–::scope .box:last-child$box14'], 100]
+                      ['<=',['get', '$box2',  'width', '.group .vessel$vessel11–::scope .box:last-child$box2'], 100]
+                      ['<=',['get', '$box5',  'width', '.group .vessel$vessel11–::scope .box:last-child$box5'], 100]
+                      ['<=',['get', '$box12', 'width', '.group .vessel$vessel11–::scope .box:last-child$box12'], 100]
+                      ['<=',['get', '$box14', 'width', '.group .vessel$vessel11–::scope .box:last-child$box14'], 100]
                     ]
                     
                   container.replaceChild(container.firstElementChild, container.lastElementChild)
@@ -717,7 +717,7 @@ describe 'Nested Rules', ->
                     engine.once 'solved', ->
                       expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                           ['remove', '.group .vessel$vessel1–::scope .box:last-child$box2'],
-                          ['lte', ['get', '$box1', 'width', '.group .vessel$vessel1–::scope .box:last-child$box1'], 100],
+                          ['<=',['get', '$box1', 'width', '.group .vessel$vessel1–::scope .box:last-child$box1'], 100],
                         ]
                       vessel = container.getElementsByClassName('vessel')[0]
                       vessel.parentNode.removeChild(vessel)
@@ -780,8 +780,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->       
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-              ['lte', ['get', '$box2', 'width', ".group .vessel$vessel1–::parent .box:last-child$box2"], 100],
-              ['lte', ['get', '$box4', 'width', ".group .vessel$vessel1–::parent .box:last-child$box4"], 100]
+              ['<=',['get', '$box2', 'width', ".group .vessel$vessel1–::parent .box:last-child$box2"], 100],
+              ['<=',['get', '$box4', 'width', ".group .vessel$vessel1–::parent .box:last-child$box4"], 100]
             ]
           newLast = document.createElement('div')
           newLast.id = 'box5'
@@ -791,7 +791,7 @@ describe 'Nested Rules', ->
           engine.once 'solved', -> 
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                 ["remove", ".group .vessel$vessel1–::parent .box:last-child$box4"],
-                ['lte', ['get', '$box5', 'width', '.group .vessel$vessel1–::parent .box:last-child$box5'], 100]
+                ['<=',['get', '$box5', 'width', '.group .vessel$vessel1–::parent .box:last-child$box5'], 100]
               ]
             container.firstElementChild.classList.remove('group')
 
@@ -807,15 +807,15 @@ describe 'Nested Rules', ->
 
               engine.once 'solved', -> 
                 expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-                    ['lte', ['get', '$box2', 'width', ".group .vessel$vessel1–::parent .box:last-child$box2"], 100],
-                    ['lte', ['get', '$box5', 'width', ".group .vessel$vessel1–::parent .box:last-child$box5"], 100]
+                    ['<=',['get', '$box2', 'width', ".group .vessel$vessel1–::parent .box:last-child$box2"], 100],
+                    ['<=',['get', '$box5', 'width', ".group .vessel$vessel1–::parent .box:last-child$box5"], 100]
                   ]
                 container.appendChild(clone)
 
                 engine.once 'solved', -> 
                   expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-                    ['lte', ['get', '$box12', 'width', ".group .vessel$vessel11–::parent .box:last-child$box12"], 100],
-                    ['lte', ['get', '$box14', 'width', ".group .vessel$vessel11–::parent .box:last-child$box14"], 100]
+                    ['<=',['get', '$box12', 'width', ".group .vessel$vessel11–::parent .box:last-child$box12"], 100],
+                    ['<=',['get', '$box14', 'width', ".group .vessel$vessel11–::parent .box:last-child$box14"], 100]
                     ]
                   container.replaceChild(container.firstElementChild, container.lastElementChild)
 
@@ -833,7 +833,7 @@ describe 'Nested Rules', ->
                     engine.once 'solved', -> 
                       expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                           ["remove", ".group .vessel$vessel1–::parent .box:last-child$box2"],
-                          ['lte', ['get', '$box1', 'width', '.group .vessel$vessel1–::parent .box:last-child$box1'], 100]
+                          ['<=',['get', '$box1', 'width', '.group .vessel$vessel1–::parent .box:last-child$box1'], 100]
                         ]
                       vessel = container.getElementsByClassName('vessel')[0]
                       vessel.parentNode.removeChild(vessel)
@@ -899,7 +899,7 @@ describe 'Nested Rules', ->
             ['$rule', 
               ['$class', 'box']
 
-              ["eq", ["get",["$reserved","this"], "x"], 100]
+              ['==', ["get",["$reserved","this"], "x"], 100]
             ]]
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -916,8 +916,8 @@ describe 'Nested Rules', ->
         vessel0 = container.getElementsByClassName('vessel')[0] 
         engine.once 'solved', ->
           expect(stringify engine.expressions.lastOutput).to.eql stringify [
-            ['eq', ['get','$box1','x', ".vessel$vessel0–.box$box1–"], 100]
-            ['eq', ['get','$box2','x', ".vessel$vessel0–.box$box2–"], 100]
+            ['==', ['get','$box1','x', ".vessel$vessel0–.box$box1–"], 100]
+            ['==', ['get','$box2','x', ".vessel$vessel0–.box$box2–"], 100]
           ]
           box1.classList.remove('box')
 
@@ -929,7 +929,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solved', ->
               expect(stringify engine.expressions.lastOutput).to.eql stringify [
-                ['eq', ['get','$box1','x', ".vessel$vessel0–.box$box1–"], 100]
+                ['==', ['get','$box1','x', ".vessel$vessel0–.box$box1–"], 100]
               ]
               vessel0.classList.remove('vessel')
 
@@ -941,8 +941,8 @@ describe 'Nested Rules', ->
 
                 engine.once 'solved', ->
                   expect(stringify engine.expressions.lastOutput).to.eql stringify [
-                    ["eq",["get","$box1","x",".vessel$vessel0–.box$box1–"],100],
-                    ["eq",["get","$box2","x",".vessel$vessel0–.box$box2–"],100]
+                    ['==',["get","$box1","x",".vessel$vessel0–.box$box1–"],100],
+                    ['==',["get","$box2","x",".vessel$vessel0–.box$box2–"],100]
                   ]
                   box1.parentNode.removeChild(box1)
 
@@ -954,7 +954,7 @@ describe 'Nested Rules', ->
 
                     engine.once 'solved', ->
                       expect(stringify engine.expressions.lastOutput).to.eql stringify [
-                        ["eq",["get","$box1","x",".vessel$vessel0–.box$box1–"],100]
+                        ['==',["get","$box1","x",".vessel$vessel0–.box$box1–"],100]
                       ]
                       engine.scope.innerHTML = ""
 
@@ -980,7 +980,7 @@ describe 'Nested Rules', ->
                 ['$class', 'box']
                 'last-child']
 
-              ["eq", ["get",["$reserved","this"], "x"], 100]
+              ['==', ["get",["$reserved","this"], "x"], 100]
             ]]
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -1000,8 +1000,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-                      ["eq",["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100],
-                      ["eq",["get","$box4","x",".vessel,#group1$group1–.box:last-child$box4–"],100]])
+                      ['==',["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100],
+                      ['==',["get","$box4","x",".vessel,#group1$group1–.box:last-child$box4–"],100]])
           box2.classList.remove('box')
           
           engine.once 'solved', ->
@@ -1012,7 +1012,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solved', ->
               expect(stringify engine.expressions.lastOutput).to.eql stringify [
-                ["eq",["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100]
+                ['==',["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100]
               ]
               vessel0.classList.remove('vessel')
                   
@@ -1024,21 +1024,21 @@ describe 'Nested Rules', ->
                     
                 engine.once 'solved', ->
                   expect(stringify engine.expressions.lastOutput).to.eql stringify [
-                    ["eq",["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100]
+                    ['==',["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100]
                   ]
                   vessel0.removeChild(box2)
                       
                   engine.once 'solved', ->
                     expect(stringify engine.expressions.lastOutput).to.eql stringify [
                       ["remove",".vessel,#group1$vessel0–.box:last-child$box2"],
-                      ["eq",["get","$box1","x",".vessel,#group1$vessel0–.box:last-child$box1–"],100]
+                      ['==',["get","$box1","x",".vessel,#group1$vessel0–.box:last-child$box1–"],100]
                     ]
                     vessel0.appendChild(box2)
                         
                     engine.once 'solved', ->
                       expect(stringify engine.expressions.lastOutput).to.eql stringify [
                         ["remove",".vessel,#group1$vessel0–.box:last-child$box1"],
-                        ["eq",["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100]
+                        ['==',["get","$box2","x",".vessel,#group1$vessel0–.box:last-child$box2–"],100]
                       ]
                       engine.scope.innerHTML = ""
 
@@ -1071,10 +1071,10 @@ describe 'Nested Rules', ->
         rules = [
 
 # .vessel .box$box1@if([target-width]>=960)
-          ['eq',['get','big'], 500]
-          ['eq',['get','med'], 50]
-          ['eq',['get','small'],5]
-          ['eq',['get','target-width'], 900]
+          ['==',['get','big'], 500]
+          ['==',['get','med'], 50]
+          ['==',['get','small'],5]
+          ['==',['get','target-width'], 900]
           ['$rule', 
             ['$class',
               ['$combinator'
@@ -1083,18 +1083,16 @@ describe 'Nested Rules', ->
               'box']
 
             ['$if',
-              ['gte'
-                ['get', 'target-width']
+              ['>=',                 ['get', 'target-width']
                 960]
-              ["eq", ["get",["$reserved","this"],"width"], ["get","big"]]
+              ['==', ["get",["$reserved","this"],"width"], ["get","big"]]
               [
                 ['$if',
-                  ['gte'
-                    ['get', 'target-width']
+                  ['>=',                     ['get', 'target-width']
                     500]
-                  ["eq", ["get",["$reserved","this"], 'width'],["get","med"]]
+                  ['==', ["get",["$reserved","this"], 'width'],["get","med"]]
 
-                  ["eq", ["get",["$reserved","this"], 'width'], ["get","small"]]
+                  ['==', ["get",["$reserved","this"], 'width'], ["get","small"]]
                 ]
               ]
             ]

@@ -45,7 +45,7 @@ describe 'Perf', ->
         done()
 
       engine.run [
-        ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
+        ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
       ]
       
 
@@ -63,7 +63,7 @@ describe 'Perf', ->
         console.profileEnd('100 intrinsics at once')
 
       engine.run [
-          ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
+          ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
         ]
       
         
@@ -93,7 +93,7 @@ describe 'Perf', ->
     
 
       engine.run [
-        ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
+        ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
       ]
 
     it '100 intrinsics serially', (done) ->
@@ -119,6 +119,6 @@ describe 'Perf', ->
       engine.addEventListener 'solved', listener
 
       engine.run [
-          ['eq', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
+          ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
         ]
       

@@ -121,7 +121,7 @@ class Styles
       y += offsets.top
 
     # Select all children
-    children = @engine['_>'][1](parent);
+    children = @engine.commands['$>'][1](parent);
 
     if parent.offsetParent == scope
       x -= scope.offsetLeft

@@ -22,7 +22,7 @@ describe("Polymer: poly-test", function() {
     });
     ast = {
       selectors: ['#text'],
-      commands: [['eq', ['get$', 'width', ['$tag', 'poly-test']], ['number', 88]]]
+      commands: [['==', ['get$', 'width', ['$tag', 'poly-test']], ['number', 88]]]
     };
     it('before solving', function() {
       var q;
@@ -71,7 +71,7 @@ describe("Polymer: poly-test", function() {
     });
     ast = {
       selectors: ['#text'],
-      commands: [['eq', ['get$', 'width', ['$class', 'poly-test-child']], ['number', 88]]]
+      commands: [['==', ['get$', 'width', ['$class', 'poly-test-child']], ['number', 88]]]
     };
     it('before solving', function(done) {
       var tag, whenReady;

@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-07-01) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19729,19 +19728,19 @@ Equasions = (function() {
   function Equasions() {}
 
   Equasions.prototype.right = function(scope, path) {
-    return this._plus(this._get(scope, "x", path), this._get(scope, "width", path));
+    return this['_+'](this._get(scope, "x", path), this._get(scope, "width", path));
   };
 
   Equasions.prototype.bottom = function(scope, path) {
-    return this._plus(this._get(scope, "y", path), this._get(scope, "height", path));
+    return this['_+'](this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
   Equasions.prototype.center = {
     x: function(scope, path) {
-      return this._plus(this._get(scope, "x", path), this._divide(this._get(scope, "width", path), 2));
+      return this['_+'](this._get(scope, "x", path), this['_/'](this._get(scope, "width", path), 2));
     },
     y: function(scope, path) {
-      return this._plus(this._get(scope, "y", path), this._divide(this._get(scope, "height", path), 2));
+      return this['_+'](this._get(scope, "y", path), this['_/'](this._get(scope, "height", path), 2));
     }
   };
 
@@ -20080,17 +20079,17 @@ Selectors = (function() {
   Selectors.prototype['$combinator'] = {
     prefix: '',
     type: 'combinator',
-    lookup: true
+    lookup: '$'
   };
 
-  Selectors.prototype[' '] = {
+  Selectors.prototype['$ '] = {
     group: '$query',
     1: function(node) {
       return node.getElementsByTagName("*");
     }
   };
 
-  Selectors.prototype['!'] = {
+  Selectors.prototype['$!'] = {
     1: function(node) {
       var nodes;
       nodes = void 0;
@@ -20103,33 +20102,33 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['>'] = {
+  Selectors.prototype['$>'] = {
     group: '$query',
     1: function(node) {
       return node.children;
     }
   };
 
-  Selectors.prototype['!>'] = {
+  Selectors.prototype['$!>'] = {
     1: function(node) {
       return node.parentElement;
     }
   };
 
-  Selectors.prototype['+'] = {
+  Selectors.prototype['$+'] = {
     group: '$query',
     1: function(node) {
       return node.nextElementSibling;
     }
   };
 
-  Selectors.prototype['!+'] = {
+  Selectors.prototype['$!+'] = {
     1: function(node) {
       return node.previousElementSibling;
     }
   };
 
-  Selectors.prototype['++'] = {
+  Selectors.prototype['$++'] = {
     1: function(node) {
       var next, nodes, prev;
       nodes = void 0;
@@ -20143,7 +20142,7 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['~'] = {
+  Selectors.prototype['$~'] = {
     group: '$query',
     1: function(node) {
       var nodes;
@@ -20155,7 +20154,7 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['!~'] = {
+  Selectors.prototype['$!~'] = {
     1: function(node) {
       var nodes, prev;
       nodes = void 0;
@@ -20168,7 +20167,7 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['~~'] = {
+  Selectors.prototype['$~~'] = {
     1: function(node) {
       var nodes, prev;
       nodes = void 0;
@@ -20198,7 +20197,7 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::parent'] = {
-    1: Selectors.prototype['!>'][1]
+    1: Selectors.prototype['$!>'][1]
   };
 
   Selectors.prototype['::scope'] = {
@@ -20304,7 +20303,7 @@ for (property in _ref) {
 dummy = document.createElement('_');
 
 if (!dummy.hasOwnProperty("parentElement")) {
-  Selectors.prototype['!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
+  Selectors.prototype['$!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
     var parent;
     if (parent = node.parentNode) {
       if (parent.nodeType === 1) {
@@ -20315,7 +20314,7 @@ if (!dummy.hasOwnProperty("parentElement")) {
 }
 
 if (!dummy.hasOwnProperty("nextElementSibling")) {
-  Selectors.prototype['>'][1] = function(node) {
+  Selectors.prototype['$>'][1] = function(node) {
     var child, _i, _len, _ref1, _results;
     _ref1 = node.childNodes;
     _results = [];
@@ -20327,14 +20326,14 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
     }
     return _results;
   };
-  Selectors.prototype['+'][1] = function(node) {
+  Selectors.prototype['$+'][1] = function(node) {
     while (node = node.nextSibling) {
       if (node.nodeType === 1) {
         return node;
       }
     }
   };
-  Selectors.prototype['!+'][1] = function() {
+  Selectors.prototype['$!+'][1] = function() {
     var node;
     while (node = node.previousSibling) {
       if (node.nodeType === 1) {
@@ -20342,7 +20341,7 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
       }
     }
   };
-  Selectors.prototype['++'][1] = function(node) {
+  Selectors.prototype['$++'][1] = function(node) {
     var next, nodes, prev;
     nodes = void 0;
     while (prev = node.previousSibling) {
@@ -20359,7 +20358,7 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
     }
     return nodes;
   };
-  Selectors.prototype['~'][1] = function(node) {
+  Selectors.prototype['$~'][1] = function(node) {
     var nodes;
     nodes = void 0;
     while (node = node.nextSibling) {
@@ -20369,7 +20368,7 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
     }
     return nodes;
   };
-  Selectors.prototype['!~'][1] = function(node) {
+  Selectors.prototype['$!~'][1] = function(node) {
     var nodes, prev;
     nodes = void 0;
     prev = node.parentNode.firstChild;
@@ -20381,7 +20380,7 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
     }
     return nodes;
   };
-  Selectors.prototype['~~'][1] = function(node) {
+  Selectors.prototype['$~~'][1] = function(node) {
     var nodes, prev;
     nodes = void 0;
     prev = node.parentNode.firstChild;
@@ -20495,39 +20494,39 @@ Constraints = (function() {
     });
   };
 
-  Constraints.prototype.eq = function(left, right, strength, weight) {
+  Constraints.prototype['=='] = function(left, right, strength, weight) {
     return new c.Equation(left, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.lte = function(left, right, strength, weight) {
+  Constraints.prototype['<='] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.gte = function(left, right, strength, weight) {
+  Constraints.prototype['>='] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.lt = function(left, right, strength, weight) {
+  Constraints.prototype['<'] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.gt = function(left, right, strength, weight) {
+  Constraints.prototype['>'] = function(left, right, strength, weight) {
     return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
   };
 
-  Constraints.prototype.plus = function(left, right, strength, weight) {
+  Constraints.prototype['+'] = function(left, right, strength, weight) {
     return c.plus(left, right);
   };
 
-  Constraints.prototype.minus = function(left, right, strength, weight) {
+  Constraints.prototype['-'] = function(left, right, strength, weight) {
     return c.minus(left, right);
   };
 
-  Constraints.prototype.multiply = function(left, right, strength, weight) {
+  Constraints.prototype['*'] = function(left, right, strength, weight) {
     return c.times(left, right);
   };
 
-  Constraints.prototype.divide = function(left, right, strength, weight) {
+  Constraints.prototype['/'] = function(left, right, strength, weight) {
     return c.divide(left, right);
   };
 
@@ -20836,39 +20835,39 @@ Algebra = (function() {
     return true;
   };
 
-  Algebra.prototype.eq = function(a, b) {
+  Algebra.prototype["=="] = function(a, b) {
     return a === b;
   };
 
-  Algebra.prototype.lte = function(a, b) {
+  Algebra.prototype["<="] = function(a, b) {
     return a <= b;
   };
 
-  Algebra.prototype.gte = function(a, b) {
+  Algebra.prototype[">="] = function(a, b) {
     return a >= b;
   };
 
-  Algebra.prototype.lt = function(a, b) {
+  Algebra.prototype["<"] = function(a, b) {
     return a < b;
   };
 
-  Algebra.prototype.gt = function(a, b) {
+  Algebra.prototype[">"] = function(a, b) {
     return a > b;
   };
 
-  Algebra.prototype.plus = function(a, b) {
+  Algebra.prototype["+"] = function(a, b) {
     return a + b;
   };
 
-  Algebra.prototype.minus = function(a, b) {
+  Algebra.prototype["-"] = function(a, b) {
     return a - b;
   };
 
-  Algebra.prototype.multiply = function(a, b) {
+  Algebra.prototype["*"] = function(a, b) {
     return a * b;
   };
 
-  Algebra.prototype.divide = function(a, b) {
+  Algebra.prototype["/"] = function(a, b) {
     return a / b;
   };
 
@@ -21176,10 +21175,15 @@ Expressions = (function() {
       }
       operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '');
       otherdef = def;
-      if (typeof def.lookup === 'function') {
-        def = def.lookup.call(this, operation);
-      } else {
-        def = this.commands[operation.name];
+      switch (typeof def.lookup) {
+        case 'function':
+          def = def.lookup.call(this, operation);
+          break;
+        case 'string':
+          def = this.commands[def.lookup + operation.name];
+          break;
+        default:
+          def = this.commands[operation.name];
       }
     }
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
@@ -22297,7 +22301,7 @@ Styles = (function() {
       x += offsets.left;
       y += offsets.top;
     }
-    children = this.engine['_>'][1](parent);
+    children = this.engine.commands['$>'][1](parent);
     if (parent.offsetParent === scope) {
       x -= scope.offsetLeft;
       y -= scope.offsetTop;

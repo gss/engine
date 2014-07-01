@@ -1,19 +1,8 @@
 var Grammar,
-  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 Grammar = (function() {
   /* Private*/
-
-  Grammar._createExpressionAST = function(head, tail) {
-    var index, item, result, _i, _len;
-    result = head;
-    for (index = _i = 0, _len = tail.length; _i < _len; index = ++_i) {
-      item = tail[index];
-      result = [tail[index][1], result, tail[index][3]];
-    }
-    return result;
-  };
 
   Grammar._toString = function(input) {
     if (toString.call(input) === '[object String]') {
@@ -38,39 +27,21 @@ Grammar = (function() {
       'top-right': ['right', 'top']
     };
     expressions = [expression];
-    property = expression[1];
+    property = expression[2];
     properties = mapping[property];
     if (properties != null) {
       expressions = [];
       for (_i = 0, _len = properties.length; _i < _len; _i++) {
         item = properties[_i];
         expression = expression.slice();
-        expression[1] = item;
+        expression[2] = item;
         expressions.push(expression);
       }
     }
     return expressions;
   };
 
-  Grammar.prototype._commands = null;
-
   Grammar.prototype._Error = null;
-
-  Grammar.prototype._selectors = null;
-
-  Grammar.prototype._addCommand = function(command) {
-    return this._commands.push(command);
-  };
-
-  Grammar.prototype._addSelector = function(selector) {
-    if (selector == null) {
-      return;
-    }
-    if (__indexOf.call(this._selectors, selector) < 0) {
-      this._selectors.push(selector);
-    }
-    return selector;
-  };
 
   Grammar.prototype._columnNumber = function() {};
 
@@ -79,89 +50,49 @@ Grammar = (function() {
   /* Public*/
 
 
-  function Grammar(lineNumber, columnNumber, errorType) {
+  Grammar.prototype.nestedDualTermCommands = function(head, tail) {
+    var index, item, result, _i, _len;
+    result = head;
+    for (index = _i = 0, _len = tail.length; _i < _len; index = ++_i) {
+      item = tail[index];
+      result = [tail[index][1], result, tail[index][3]];
+    }
+    return result;
+  };
+
+  Grammar.prototype.createSelectorCommaCommand = function(head, tail) {
+    var index, item, result, _i, _len;
+    result = [',', head];
+    for (index = _i = 0, _len = tail.length; _i < _len; index = ++_i) {
+      item = tail[index];
+      result.push(tail[index][3]);
+    }
+    return result;
+  };
+
+  Grammar.prototype.mergeCommands = function(objs) {
+    var commands, o, _i, _len;
+    commands = [];
+    for (_i = 0, _len = objs.length; _i < _len; _i++) {
+      o = objs[_i];
+      commands = commands.concat(o.commands);
+    }
+    return {
+      commands: commands
+    };
+  };
+
+  function Grammar(parser, lineNumber, columnNumber, errorType) {
     this.chainer = __bind(this.chainer, this);
-    this._commands = [];
-    this._selectors = [];
+    this.parser = parser;
     this._lineNumber = lineNumber;
     this._columnNumber = columnNumber;
     this._Error = errorType();
   }
 
-  Grammar.prototype.start = function() {
-    return {
-      commands: JSON.parse(JSON.stringify(this._commands)),
-      selectors: this._selectors
-    };
-  };
-
-  Grammar.prototype.statement = function() {
-    return {
-      linearConstraint: function(expression) {
-        return expression;
-      },
-      virtual: function(virtual) {
-        return virtual;
-      },
-      conditional: function(conditional) {
-        return conditional;
-      },
-      stay: function(stay) {
-        return stay;
-      },
-      chain: function(chain) {
-        return chain;
-      },
-      forEach: function(javaScript) {
-        return javaScript;
-      }
-    };
-  };
-
-  Grammar.prototype.andOrExpression = function(head, tail) {
-    return Grammar._createExpressionAST(head, tail);
-  };
-
-  Grammar.prototype.andOrOperator = function() {
-    return {
-      and: function() {
-        return '&&';
-      },
-      or: function() {
-        return '||';
-      }
-    };
-  };
-
-  Grammar.prototype.conditionalExpression = function(head, tail) {
-    return Grammar._createExpressionAST(head, tail);
-  };
-
-  Grammar.prototype.conditionalOperator = function() {
-    return {
-      equal: function() {
-        return '?==';
-      },
-      gt: function() {
-        return '?>';
-      },
-      gte: function() {
-        return '?>=';
-      },
-      lt: function() {
-        return '?<';
-      },
-      lte: function() {
-        return '?<=';
-      },
-      notEqual: function() {
-        return '?!=';
-      }
-    };
-  };
-
-  Grammar.prototype.linearConstraint = function(head, tail, strengthAndWeight) {
-    var command, firstExpression, headExpression, headExpressions, index, item, operator, secondExpression, tailExpression, tailExpressions, _i, _j, _len, _len1;
+  Grammar.prototype.constraint = function(head, tail, strengthAndWeight) {
+    var command, commands, firstExpression, headExpression, headExpressions, index, item, operator, secondExpression, tailExpression, tailExpressions, _i, _j, _len, _len1;
+    commands = [];
     firstExpression = head;
     if ((strengthAndWeight == null) || strengthAndWeight.length === 0) {
       strengthAndWeight = [];
@@ -182,86 +113,53 @@ Grammar = (function() {
         headExpression = headExpressions[index];
         if ((headExpression != null) && (tailExpression != null)) {
           command = [operator, headExpression, tailExpression].concat(strengthAndWeight);
-          this._addCommand(command);
+          commands.push(command);
         }
       }
       firstExpression = secondExpression;
     }
-    return "LinaearExpression";
-  };
-
-  Grammar.prototype.linearConstraintOperator = function() {
     return {
-      equal: function() {
-        return 'eq';
-      },
-      gt: function() {
-        return 'gt';
-      },
-      gte: function() {
-        return 'gte';
-      },
-      lt: function() {
-        return 'lt';
-      },
-      lte: function() {
-        return 'lte';
-      }
+      commands: commands
     };
   };
 
-  Grammar.prototype.constraintAdditiveExpression = function(head, tail) {
-    return Grammar._createExpressionAST(head, tail);
+  Grammar.prototype.inlineConstraint = function(prop, op, rest) {
+    var result;
+    prop = prop.join('').trim();
+    rest = rest.join('').trim();
+    result = this.parser.parse("&[" + prop + "] " + op + " " + rest);
+    return result;
   };
 
-  Grammar.prototype.additiveExpression = function(head, tail) {
-    return Grammar._createExpressionAST(head, tail);
-  };
-
-  Grammar.prototype.additiveOperator = function() {
+  Grammar.prototype.inlineSet = function(prop, rest) {
+    var commands;
+    prop = prop.join('').trim();
+    rest = rest.join('').trim();
+    commands = [['set', prop, rest]];
     return {
-      plus: function() {
-        return 'plus';
-      },
-      minus: function() {
-        return 'minus';
-      }
+      commands: commands
     };
   };
 
-  Grammar.prototype.constraintMultiplicativeExpression = function(head, tail) {
-    return Grammar._createExpressionAST(head, tail);
-  };
-
-  Grammar.prototype.multiplicativeExpression = function(head, tail) {
-    return Grammar._createExpressionAST(head, tail);
-  };
-
-  Grammar.prototype.multiplicativeOperator = function() {
+  Grammar.prototype.directive = function(name, terms, commands) {
+    var ast, hook;
+    hook = this.parser.hooks.directives[name];
+    if (hook) {
+      return hook(name, terms, commands);
+    }
+    ast = ['directive', name, terms];
+    if (commands) {
+      ast.push(commands);
+    }
     return {
-      multiply: function() {
-        return 'multiply';
-      },
-      divide: function() {
-        return 'divide';
-      }
-    };
-  };
-
-  Grammar.prototype.constraintPrimaryExpression = function() {
-    return {
-      constraintAdditiveExpression: function(expression) {
-        return expression;
-      }
+      commands: [ast]
     };
   };
 
   Grammar.prototype.variable = function(selector, variableNameCharacters) {
-    var selectorName, variableName;
+    var variableName;
     variableName = variableNameCharacters.join('');
     if ((selector != null) && selector.length !== 0) {
-      selectorName = selector.selector;
-      this._addSelector(selectorName);
       switch (variableName) {
         case 'left':
           variableName = 'x';
@@ -276,7 +174,7 @@ Grammar = (function() {
           variableName = 'center-y';
           break;
       }
-      if (selectorName === '::window') {
+      if (selector.toString().indexOf('$reserved,window') !== -1) {
         switch (variableName) {
           case 'right':
             variableName = 'width';
@@ -287,15 +185,11 @@ Grammar = (function() {
         }
       }
     }
-    if ((selector != null) && ((selectorName != null) || (selector.isVirtual != null))) {
-      return ['get$', variableName, selector.ast];
+    if (selector != null) {
+      return ['get', selector, variableName];
     } else {
-      return ['get', "[" + variableName + "]"];
+      return ['get', variableName];
     }
-  };
-
-  Grammar.prototype.literal = function(value) {
-    return ['number', value];
   };
 
   Grammar.prototype.integer = function(digits) {
@@ -307,10 +201,6 @@ Grammar = (function() {
       integer = 0;
     }
     return parseInt("" + sign + integer, 10);
-  };
-
-  Grammar.prototype.real = function(digits) {
-    return parseFloat(digits.join(''));
   };
 
   Grammar.prototype.signedReal = function(sign, real) {
@@ -328,48 +218,30 @@ Grammar = (function() {
       id: function(nameCharacters) {
         var selectorName;
         selectorName = Grammar._toString(nameCharacters);
-        return {
-          selector: "#" + selectorName,
-          ast: ['$id', selectorName]
-        };
+        return ['$id', selectorName];
       },
       reservedPseudoSelector: function(selectorName) {
-        return {
-          selector: "::" + selectorName,
-          ast: ['$reserved', selectorName]
-        };
+        return ['$reserved', selectorName];
       },
       virtual: function(nameCharacters) {
         var name;
         name = Grammar._toString(nameCharacters);
-        return {
-          isVirtual: true,
-          ast: ['$virtual', name]
-        };
+        return ['$virtual', name];
       },
       "class": function(nameCharacters) {
         var selectorName;
         selectorName = Grammar._toString(nameCharacters);
-        return {
-          selector: "." + selectorName,
-          ast: ['$class', selectorName]
-        };
+        return ['$class', selectorName];
       },
       tag: function(nameCharacters) {
         var selectorName;
         selectorName = Grammar._toString(nameCharacters);
-        return {
-          selector: selectorName,
-          ast: ['$tag', selectorName]
-        };
+        return ['$tag', selectorName];
       },
       all: function(parts) {
         var selector;
         selector = Grammar._toString(parts);
-        return {
-          selector: selector,
-          ast: ['$all', selector]
-        };
+        return ['$all', selector];
       }
     };
   };
@@ -405,58 +277,32 @@ Grammar = (function() {
     };
   };
 
-  Grammar.prototype.weight = function(weight) {
-    return Number(weight.join(''));
-  };
-
-  Grammar.prototype.strength = function(strength) {
-    return {
-      require: function() {
-        return 'require';
-      },
-      strong: function() {
-        return 'strong';
-      },
-      medium: function() {
-        return 'medium';
-      },
-      weak: function() {
-        return 'weak';
-      },
-      required: function() {
-        return 'require';
-      }
-    };
-  };
-
   /* Virtual Elements*/
 
 
   Grammar.prototype.virtualElement = function(names) {
-    var command;
-    command = ['virtual'].concat(names);
-    this._addCommand(command);
-    return command;
-  };
-
-  Grammar.prototype.virtualElementName = function(nameCharacters) {
-    return nameCharacters.join('');
+    return {
+      commands: [['virtual'].concat(names)]
+    };
   };
 
   /* Stays*/
 
 
   Grammar.prototype.stay = function(variables) {
-    var command, expression, expressions, index, stay, _i, _len;
+    var command, commands, expression, expressions, index, stay, _i, _len;
     stay = ['stay'].concat(variables);
     expressions = Grammar._unpack2DExpression(stay[1]);
+    commands = [];
     for (index = _i = 0, _len = expressions.length; _i < _len; index = ++_i) {
       expression = expressions[index];
       command = stay.slice();
       command[1] = expressions[index];
-      this._addCommand(command);
+      commands.push(command);
     }
-    return stay;
+    return {
+      commands: commands
+    };
   };
 
   Grammar.prototype.stayVariable = function(variable) {
@@ -467,18 +313,20 @@ Grammar = (function() {
 
 
   Grammar.prototype.conditional = function(result) {
-    this._addCommand(result);
-    return result;
+    var commands;
+    commands = [result];
+    return {
+      commands: commands
+    };
   };
 
   /* JavaScript hooks*/
 
 
   Grammar.prototype.forEach = function(type, selector, javaScript) {
-    var selectorName;
-    selectorName = selector.selector;
-    this._addSelector(selectorName);
-    return this._addCommand([type, selector.ast, javaScript]);
+    return {
+      commands: [[type, selector, javaScript]]
+    };
   };
 
   Grammar.prototype.javaScript = function(characters) {
@@ -500,15 +348,15 @@ Grammar = (function() {
 
 
   Grammar.prototype.chain = function(selector, chainers) {
-    var ast, chainer, selectorName, _i, _len;
-    selectorName = selector.selector;
-    this._addSelector(selectorName);
-    ast = ['chain', selector.ast];
+    var ast, chainer, _i, _len;
+    ast = ['chain', selector];
     for (_i = 0, _len = chainers.length; _i < _len; _i++) {
       chainer = chainers[_i];
       ast = ast.concat(chainer);
     }
-    return this._addCommand(ast);
+    return {
+      commands: [ast]
+    };
   };
 
   Grammar.prototype.chainer = function(options) {
@@ -571,11 +419,19 @@ Grammar = (function() {
     };
   };
 
-  Grammar.prototype.chainLinearConstraintOperator = function(operator) {
-    if (operator == null) {
-      operator = 'eq';
+  Grammar.prototype.chainConstraintOperator = function(op) {
+    var opMap, operator;
+    if (op == null) {
+      op = '==';
     }
-    operator = "" + operator + "-chain";
+    opMap = {
+      "==": "eq",
+      "<=": "lte",
+      ">=": "gte",
+      "<": "lt",
+      ">": "gt"
+    };
+    operator = "" + opMap[op] + "-chain";
     return operator;
   };
 

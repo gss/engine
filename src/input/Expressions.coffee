@@ -248,11 +248,14 @@ class Expressions
         operation.skip = 1
       operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '')
       otherdef = def
-      if typeof def.lookup == 'function'
-        def = def.lookup.call(@, operation)
-      else
-        def = @commands[operation.name]
-    
+      switch typeof def.lookup
+        when 'function'
+          def = def.lookup.call(@, operation)
+        when 'string'
+          def = @commands[def.lookup + operation.name]
+        else
+          def = @commands[operation.name]
+      
     for child, index in operation
       if child instanceof Array
         @analyze(child, operation)

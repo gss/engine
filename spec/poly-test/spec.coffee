@@ -29,7 +29,7 @@ describe "Polymer: poly-test", ->
         '#text'
       ]
       commands: [
-        ['eq', ['get$','width',['$tag','poly-test']], ['number', 88]]
+        ['==', ['get$','width',['$tag','poly-test']], ['number', 88]]
       ]        
     it 'before solving', ->
       q = document.getElementsByTagName('poly-test')
@@ -78,7 +78,7 @@ describe "Polymer: poly-test", ->
         '#text'
       ]
       commands: [
-        ['eq', ['get$','width',['$class','poly-test-child']], ['number', 88]]
+        ['==', ['get$','width',['$class','poly-test-child']], ['number', 88]]
       ]        
     it 'before solving', (done)->
       tag = document.querySelector('poly-test')

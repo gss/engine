@@ -46,31 +46,31 @@ class Constraints
   varexp: (name) ->
     return new c.Expression name: name
 
-  eq: (left, right, strength, weight) ->
+  '==': (left, right, strength, weight) ->
     return new c.Equation(left, right, @_strength(strength), @_weight(weight))
 
-  lte: (left, right, strength, weight) ->
+  '<=': (left, right, strength, weight) ->
     return new c.Inequality(left, c.LEQ, right, @_strength(strength), @_weight(weight))
 
-  gte: (left, right, strength, weight) ->
+  '>=': (left, right, strength, weight) ->
     return new c.Inequality(left, c.GEQ, right, @_strength(strength), @_weight(weight))
 
-  lt: (left, right, strength, weight) ->
+  '<': (left, right, strength, weight) ->
     return new c.Inequality(left, c.LEQ, right, @_strength(strength), @_weight(weight))
 
-  gt: (left, right, strength, weight) ->
+  '>': (left, right, strength, weight) ->
     return new c.Inequality(left, c.GEQ, right, @_strength(strength), @_weight(weight))
 
-  plus: (left, right, strength, weight) ->
+  '+': (left, right, strength, weight) ->
     return c.plus(left, right)
 
-  minus: (left, right, strength, weight) ->
+  '-': (left, right, strength, weight) ->
     return c.minus(left, right)
 
-  multiply: (left, right, strength, weight) ->
+  '*': (left, right, strength, weight) ->
     return c.times(left, right)
 
-  divide: (left, right, strength, weight) ->
+  '/': (left, right, strength, weight) ->
     return c.divide(left, right)
 
 for property, method of Constraints::

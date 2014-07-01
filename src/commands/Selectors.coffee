@@ -135,16 +135,16 @@ class Selectors
   '$combinator':
     prefix: ''
     type: 'combinator'
-    lookup: true
+    lookup: '$'
 
   # All descendant elements
-  ' ':
+  '$ ':
     group: '$query'
     1: (node) ->
       return node.getElementsByTagName("*")
 
   # All parent elements
-  '!':
+  '$!':
     1: (node) ->
       nodes = undefined
       while node = node.parentNode
@@ -153,29 +153,29 @@ class Selectors
       return nodes
 
   # All children elements
-  '>':
+  '$>':
     group: '$query'
     1: (node) -> 
       return node.children
 
   # Parent element
-  '!>':
+  '$!>':
     1: (node) ->
       return node.parentElement
 
   # Next element
-  '+':
+  '$+':
     group: '$query'
     1: (node) ->
       return node.nextElementSibling
 
   # Previous element
-  '!+':
+  '$!+':
     1: (node) ->
       return node.previousElementSibling
 
   # All direct sibling elements
-  '++':
+  '$++':
     1: (node) ->
       nodes = undefined
       if prev = node.previousElementSibling
@@ -185,7 +185,7 @@ class Selectors
       return nodes
 
   # All succeeding sibling elements
-  '~':
+  '$~':
     group: '$query'
     1: (node) ->
       nodes = undefined
@@ -194,7 +194,7 @@ class Selectors
       return nodes
 
   # All preceeding sibling elements
-  '!~':
+  '$!~':
     1: (node) ->
       nodes = undefined
       prev = node.parentNode.firstElementChild
@@ -204,7 +204,7 @@ class Selectors
       return nodes
 
   # All sibling elements
-  '~~':
+  '$~~':
     1:(node) ->
       nodes = undefined
       prev = node.parentNode.firstElementChild
@@ -231,7 +231,7 @@ class Selectors
 
   # Parent element (alias for !> *)
   '::parent':
-    1: Selectors::['!>'][1]
+    1: Selectors::['$!>'][1]
 
   # Current engine scope (defaults to document)
   '::scope':
@@ -305,19 +305,19 @@ for property, command of Selectors::
 dummy = document.createElement('_')
 
 unless dummy.hasOwnProperty("parentElement") 
-  Selectors::['!>'][1] = Selectors::['::parent'][1] = (node) ->
+  Selectors::['$!>'][1] = Selectors::['::parent'][1] = (node) ->
     if parent = node.parentNode
       return parent if parent.nodeType == 1
 unless dummy.hasOwnProperty("nextElementSibling")
-  Selectors::['>'][1] = (node) ->
+  Selectors::['$>'][1] = (node) ->
       child for child in node.childNodes when child.nodeType == 1
-  Selectors::['+'][1] = (node) ->
+  Selectors::['$+'][1] = (node) ->
     while node = node.nextSibling
       return node if node.nodeType == 1
-  Selectors::['!+'][1] = ->
+  Selectors::['$!+'][1] = ->
     while node = node.previousSibling
       return node if node.nodeType == 1
-  Selectors::['++'][1] = (node) ->
+  Selectors::['$++'][1] = (node) ->
     nodes = undefined
     while prev = node.previousSibling
       if prev.nodeType == 1
@@ -328,19 +328,19 @@ unless dummy.hasOwnProperty("nextElementSibling")
         (nodes ||= []).push(next)
         break
     return nodes;
-  Selectors::['~'][1] = (node) ->
+  Selectors::['$~'][1] = (node) ->
     nodes = undefined
     while node = node.nextSibling
       (nodes ||= []).push(node) if node.nodeType == 1
     return nodes
-  Selectors::['!~'][1] = (node) ->
+  Selectors::['$!~'][1] = (node) ->
     nodes = undefined
     prev = node.parentNode.firstChild
     while prev != node
       (nodes ||= []).push(prev) if pref.nodeType == 1
       node = node.nextSibling
     return nodes
-  Selectors::['~~'][1] = (node) ->
+  Selectors::['$~~'][1] = (node) ->
     nodes = undefined
     prev = node.parentNode.firstChild
     while prev
