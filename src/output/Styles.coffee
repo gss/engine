@@ -71,7 +71,7 @@ class Styles
     @
 
   set: (id, property, value, positioning, intrinsic) ->
-    # parse $id[property] as id
+    # parse $id[property] as [id, property]
     if property == undefined
       path = id
       last = id.lastIndexOf('[')

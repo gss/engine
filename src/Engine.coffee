@@ -108,6 +108,14 @@ class Engine
     return value if typeof value == 'string'
     return path + Engine.identify(value)
 
+  getPath: (id, property) ->
+    unless property
+      property = id
+      id = undefined
+    if property.indexOf('[') > -1 || !id
+      return property
+    else
+      return id + '[' + property + ']'
 
   # Get or generate uid for a given object.
   @identify: (object, generate) ->

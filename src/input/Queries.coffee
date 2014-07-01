@@ -284,6 +284,7 @@ class Queries
     @
 
   clean: (path, continuation, operation, scope) ->
+    @engine.values.clean(path)
     if result = @[path]
       if parent = operation?.parent
         parent.def.release?.call(@engine, result, parent, scope, operation)
@@ -343,7 +344,7 @@ class Queries
     if id = @engine.identify(node)
       if watchers = @_watchers[id]
         for watcher, index in watchers by 3
-          if watcher == operation && watchers[index + 1] == continuation
+          if watcher == operation && watchers[index + 1] == continuation && watchers[index + 2] == scope
             dupe = true
             break
       else

@@ -24,7 +24,6 @@ class Measurements
 
       if operation
         parent = child = operation
-        debugger
         while parent = parent.parent
           if child.index && parent.def.primitive == child.index
             primitive = true
@@ -34,10 +33,11 @@ class Measurements
       # Compute custom property
       if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
         computed = @_compute(id, property, continuation, true)
+        console.log(computed, id, property)
         if primitive
           return computed 
       else if primitive
-        return @values.get(id, property)
+        return @values.watch(id, property)
 
       # Return command for solver with path which will be used to clean it
       return ['get', id, property, continuation || '']
@@ -121,7 +121,7 @@ class Measurements
       id = node
       node = @elements[id]
 
-    path = property.indexOf('[') > -1 && property || id + '[' + property + ']'
+    path = @getPath(id, property)
     return if @computed?[path]?
     if (prop = @properties[id]?[property])? 
       current = @values[path]

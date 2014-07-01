@@ -24,56 +24,56 @@ class Dimensions
 
   intrinsic:
 
-    height: (scope) ->
-      return scope.offsetHeight
+    height: (element) ->
+      return element.offsetHeight
 
-    width: (scope) ->
-      return scope.offsetWidth
+    width: (element) ->
+      return element.offsetWidth
 
-    y: (scope) ->
+    y: (element) ->
       y = 0
-      while scope
-        y = scope.offsetTop
-        scope = scope.offsetParent
-        if scope == @scope
+      while element
+        y += element.offsetTop
+        element = element.offsetParent
+        if element == @scope || !element
           break
-        if scope == @scope.offsetParent
+        if element == @scope.offsetParent
           y -= @scope.offsetTop
       return y
 
-    x: (scope) ->
+    x: (element) ->
       x = 0
-      while scope
-        x = scope.offsetLeft
-        scope = scope.offsetParent
-        if scope == @scope
+      while element
+        x += element.offsetLeft
+        element = element.offsetParent
+        if element == @scope || !element
           break
-        if scope == @scope.offsetParent
+        if element == @scope.offsetParent
           x -= @scope.offsetLeft
       return x
 
   scroll:
 
-    left: (scope) ->
-      return scope.scrollLeft
+    left: (element) ->
+      return element.scrollLeft
 
-    top: (scope) ->
-      return scope.scrollTop
+    top: (element) ->
+      return element.scrollTop
 
   client:
 
-    left: (scope) ->
-      return scope.clientLeft
+    left: (element) ->
+      return element.clientLeft
 
-    top: (scope) ->
-      return scope.clientTop
+    top: (element) ->
+      return element.clientTop
 
   offset:
 
-    left: (scope) ->
-      return scope.offsetLeft
+    left: (element) ->
+      return element.offsetLeft
 
-    top: (scope) ->
-      return scope.offsetTop
+    top: (element) ->
+      return element.offsetTop
 
 module.exports = Dimensions
