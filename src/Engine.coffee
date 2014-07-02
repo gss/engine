@@ -199,7 +199,6 @@ class Engine
 
     for key, property of @properties
       continue if property == @
-      console.error(key)
       Engine.Property(property, key, @properties)
     @running = true
 

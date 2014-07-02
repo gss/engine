@@ -77,8 +77,8 @@ class Engine.Document extends Engine
     super
     console.groupCollapsed('Watch for stylesheets')
     @do [
-      ['$eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
-      ['$load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
+      ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
+      ['load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
     ]
     console.groupEnd('Watch for stylesheets')
     return true

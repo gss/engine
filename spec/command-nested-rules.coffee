@@ -181,7 +181,7 @@ describe 'Nested Rules', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          ['$rule', 
+          ['rule', 
             ['$class',
               ['$combinator'
                 ['$class', 'vessel']
@@ -216,7 +216,7 @@ describe 'Nested Rules', ->
 
     describe 'subqueries', ->
       it 'should observe selector on ::', (done) ->
-        rules = ["$rule",
+        rules = ["rule",
                   ["$class", "vessel"]
                   ['==', 
                     ["get",
@@ -375,7 +375,7 @@ describe 'Nested Rules', ->
     describe '1 level w/ multiple selectors and ::this', ->
       it 'should combine comma separated native selectors', (done) ->
         rules = [
-          '$rule', 
+          'rule', 
           [','
             ['$class', 'vessel']
             ['$id', 'group1']]
@@ -440,7 +440,7 @@ describe 'Nested Rules', ->
     describe '1 level w/ mixed multiple selectors and ::this', ->
       it 'should implement comma for non-native selectors', (done) ->
         rules = [
-          '$rule', 
+          'rule', 
           [',', 
             ['$combinator', 
               ['$id', 'box1']
@@ -579,14 +579,14 @@ describe 'Nested Rules', ->
     describe '1 level w/ ::scope', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          ['$rule', 
+          ['rule', 
             ['$class'
               ['$combinator'
                 ['$class'
                   'vessel']
                 ' ']
               'box'],
-            ["lte", ["get", ["$reserved", "this"], "width"], ["get", ["$reserved","scope"], "width"]]
+            ["<=", ["get", ["$reserved", "this"], "width"], ["get", ["$reserved","scope"], "width"]]
           ]
         ]
         container.id = 'container0'
@@ -615,7 +615,7 @@ describe 'Nested Rules', ->
 
       it 'should resolve selector on ::scope', (done) ->
         rules = 
-          ['$rule', 
+          ['rule', 
             ['$class'
               ['$combinator',
                 ['$class', 
@@ -623,7 +623,7 @@ describe 'Nested Rules', ->
                 ' ']
               'vessel']
 
-            ["lte", 
+            ["<=", 
               ["get",
                 ['$pseudo'
                   ['$class',
@@ -738,7 +738,7 @@ describe 'Nested Rules', ->
     describe '1 level w/ ::parent', ->
       it 'should resolve selector on ::parent', (done) ->
         rules = [
-          ['$rule', 
+          ['rule', 
             ['$class'
               ['$combinator',
                 ['$class',
@@ -747,7 +747,7 @@ describe 'Nested Rules', ->
               'vessel'],
 
 
-            ["lte", 
+            ["<=", 
               ["get",
                 ['$pseudo'
                   ['$class',
@@ -853,7 +853,7 @@ describe 'Nested Rules', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = [
-          ['$rule', 
+          ['rule', 
             ['$class'
               ['$combinator',
                 ['$class',
@@ -861,7 +861,7 @@ describe 'Nested Rules', ->
                 ' ']
               'box'],
 
-            ["lte", ["get", ["$reserved","this"], "width"], ["get", ["$reserved","parent"], "width"]]
+            ["<=", ["get", ["$reserved","this"], "width"], ["get", ["$reserved","parent"], "width"]]
           ]
         ]
         console.info('.vessel .box { ::[width] == ::parent[width] } ')
@@ -879,10 +879,10 @@ describe 'Nested Rules', ->
                               
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-            ["lte",
+            ["<=",
               ["get","$box1","width",".vessel .box$box1–::parent"],
               ["get","$vessel1","width",".vessel .box$box1–::parent–"]],
-            ["lte",
+            ["<=",
               ["get","$box2","width",".vessel .box$box2–::parent"],
               ["get","$vessel1","width",".vessel .box$box2–::parent–"]]]
           done()
@@ -893,10 +893,10 @@ describe 'Nested Rules', ->
     
       it 'Runs commands from sourceNode', (done) ->
         rules = 
-          ['$rule', 
+          ['rule', 
             ['$class', 'vessel']
 
-            ['$rule', 
+            ['rule', 
               ['$class', 'box']
 
               ['==', ["get",["$reserved","this"], "x"], 100]
@@ -969,13 +969,13 @@ describe 'Nested Rules', ->
     describe '2 level /w multiple selectors in parent', (e) ->
       it 'Runs commands from sourceNode', (done) ->
         rules = 
-          ['$rule', 
+          ['rule', 
             [','
               ['$class', 'vessel']
               ['$id', 'group1']
             ]
 
-            ['$rule', 
+            ['rule', 
               ['$pseudo',
                 ['$class', 'box']
                 'last-child']
@@ -1075,19 +1075,19 @@ describe 'Nested Rules', ->
           ['==',['get','med'], 50]
           ['==',['get','small'],5]
           ['==',['get','target-width'], 900]
-          ['$rule', 
+          ['rule', 
             ['$class',
               ['$combinator'
                 ['$class', 'vessel']
                 ' ']
               'box']
 
-            ['$if',
+            ['if',
               ['>=',                 ['get', 'target-width']
                 960]
               ['==', ["get",["$reserved","this"],"width"], ["get","big"]]
               [
-                ['$if',
+                ['if',
                   ['>=',                     ['get', 'target-width']
                     500]
                   ['==', ["get",["$reserved","this"], 'width'],["get","med"]]

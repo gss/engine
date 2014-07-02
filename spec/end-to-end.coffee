@@ -197,12 +197,12 @@ describe 'End - to - End', ->
             <style type="text/gss">              
               #non-pixel {
                 z-index: == 10;
-                opacity: == 0.5;
+                opacity: == .5;
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          style = document.getElementById('non-pixel').style          
+        engine.once 'solved', (e) ->
+          style = document.getElementById('non-pixel').style      
           assert (Number(style['z-index']) is 10) or (Number(style['zIndex']) is 10), 'correct z-index'
           assert Number(style['opacity']) is .5, 'correct opacity'
           done()

@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-02) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -148,6 +149,7 @@ Expressions = (function() {
       return args;
     }
     if (callback = operation.def.callback) {
+      console.log(context || node || scope, result, operation, continuation);
       result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
@@ -217,11 +219,15 @@ Expressions = (function() {
       }
       if (argument === void 0) {
         if (!operation.def.eager || (ascender != null)) {
-          if (!operation.def.noop || operation.parent) {
-            return false;
-          }
-          if (operation.name && !operation.parent) {
+          if (!operation.def.capture && (operation.parent ? operation.def.noop : operation.name)) {
+            if (!operation.def.noop || operation.parent) {
+              debugger;
+            }
             stopping = true;
+          } else {
+            if (!operation.def.noop || operation.parent) {
+              return false;
+            }
           }
         }
         offset += 1;
@@ -825,7 +831,6 @@ Engine = (function() {
       if (property === this) {
         continue;
       }
-      console.error(key);
       Engine.Property(property, key, this.properties);
     }
     return this.running = true;

@@ -98,8 +98,10 @@ class Styles
           property = positioned
       camel = (@camelized ||= {})[property] ||= @engine._camelize(property)
       style = element.style
+      console.log('error', camel, value)
+      debugger
       if style[camel] != undefined
-        if typeof value == 'number' && property != 'zIndex'
+        if typeof value == 'number' && (camel != 'zIndex' && camel != 'opacity')
           pixels = value + 'px'
         if (positioner)
           if !style[camel]
@@ -108,7 +110,7 @@ class Styles
           else if !value
             unless --style.positioning 
               style.position = ''
-        style[camel] = pixels || value
+        style[camel] = pixels ? value
     @
 
   # Position 

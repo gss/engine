@@ -61,7 +61,7 @@ class Rules
 
   # Conditionals
   
-  "$rule":
+  "rule":
     # Set rule body scope to a found element
     evaluate: (operation, continuation, scope, ascender, ascending) ->
       if operation.index == 2 && !ascender
@@ -74,7 +74,7 @@ class Rules
         @expressions.push result
         return true
 
-  "$if":
+  "if":
     # Resolve all values in first argument
     primitive: 1
 
@@ -91,7 +91,7 @@ class Rules
       # Result of condition bubbled up,
       if operation.index == 1
 
-        @commands.$if.branch.call(@, operation.parent[1], continuation, scope, undefined, result)
+        @commands.if.branch.call(@, operation.parent[1], continuation, scope, undefined, result)
         return true
       else
       # Capture commands bubbled up from branches
@@ -100,7 +100,7 @@ class Rules
           return true
 
     branch: (operation, continuation, scope, ascender, ascending) ->
-      @commands.$if.subscribe.call(@, operation.parent, continuation, scope)
+      @commands.if.subscribe.call(@, operation.parent, continuation, scope)
       operation.parent.uid ||= '@' + (@commands.uid = (@commands.uid ||= 0) + 1)
       condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
       path = continuation + operation.parent.uid
@@ -117,17 +117,19 @@ class Rules
         @queries[path] = condition ? null
 
 
-  "$eval": (node, type = 'text/gss') ->
-    debugger
-    if (node.type || type) == 'text/gss-ast'
-      rules = JSON.parse(node.textContent ? node)
-    else
-      return unless rules = GSS.Parser.parse(node.textContent ? node)?.commands
-    scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
-    @run rules, undefined, scope
-    return
+  "eval": 
+    command: (operation, continuation, scope, node, type = 'text/gss') ->
+      if (node.type || type) == 'text/gss-ast'
+        rules = JSON.parse(node.textContent ? node)
+      else
+        return unless rules = GSS.Parser.parse(node.textContent ? node)?.commands
+      scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
+      console.log('Eval', rules, continuation)
+      debugger
+      @run rules, continuation, scope
+      return
 
-  "$load": (node, type, method = 'GET') ->
+  "load": (node, type, method = 'GET') ->
     src = node.href || node.src || node
     type ||= node.type || 'text/gss'
     xhr = new XMLHttpRequest()

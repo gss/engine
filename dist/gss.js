@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-02) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19328,7 +19329,6 @@ Engine = (function() {
       if (property === this) {
         continue;
       }
-      console.error(key);
       Engine.Property(property, key, this.properties);
     }
     return this.running = true;
@@ -19496,7 +19496,7 @@ Engine.Document = (function(_super) {
     }
     Document.__super__.start.apply(this, arguments);
     console.groupCollapsed('Watch for stylesheets');
-    this["do"]([['$eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['$load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+    this["do"]([['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     console.groupEnd('Watch for stylesheets');
     return true;
   };
@@ -19805,7 +19805,7 @@ Rules = (function() {
     }
   };
 
-  Rules.prototype["$rule"] = {
+  Rules.prototype["rule"] = {
     evaluate: function(operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender) {
         this.expressions.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
@@ -19820,7 +19820,7 @@ Rules = (function() {
     }
   };
 
-  Rules.prototype["$if"] = {
+  Rules.prototype["if"] = {
     primitive: 1,
     cleaning: true,
     subscribe: function(operation, continuation, scope) {
@@ -19833,7 +19833,7 @@ Rules = (function() {
     },
     capture: function(result, operation, continuation, scope) {
       if (operation.index === 1) {
-        this.commands.$if.branch.call(this, operation.parent[1], continuation, scope, void 0, result);
+        this.commands["if"].branch.call(this, operation.parent[1], continuation, scope, void 0, result);
         return true;
       } else {
         if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
@@ -19844,7 +19844,7 @@ Rules = (function() {
     },
     branch: function(operation, continuation, scope, ascender, ascending) {
       var condition, path, _base, _base1;
-      this.commands.$if.subscribe.call(this, operation.parent, continuation, scope);
+      this.commands["if"].subscribe.call(this, operation.parent, continuation, scope);
       (_base = operation.parent).uid || (_base.uid = '@' + (this.commands.uid = ((_base1 = this.commands).uid || (_base1.uid = 0)) + 1));
       condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
       path = continuation + operation.parent.uid;
@@ -19864,24 +19864,27 @@ Rules = (function() {
     }
   };
 
-  Rules.prototype["$eval"] = function(node, type) {
-    var rules, scope, _ref, _ref1, _ref2;
-    if (type == null) {
-      type = 'text/gss';
-    }
-    debugger;
-    if ((node.type || type) === 'text/gss-ast') {
-      rules = JSON.parse((_ref = node.textContent) != null ? _ref : node);
-    } else {
-      if (!(rules = (_ref1 = GSS.Parser.parse((_ref2 = node.textContent) != null ? _ref2 : node)) != null ? _ref1.commands : void 0)) {
-        return;
+  Rules.prototype["eval"] = {
+    command: function(operation, continuation, scope, node, type) {
+      var rules, _ref, _ref1, _ref2;
+      if (type == null) {
+        type = 'text/gss';
       }
+      if ((node.type || type) === 'text/gss-ast') {
+        rules = JSON.parse((_ref = node.textContent) != null ? _ref : node);
+      } else {
+        if (!(rules = (_ref1 = GSS.Parser.parse((_ref2 = node.textContent) != null ? _ref2 : node)) != null ? _ref1.commands : void 0)) {
+          return;
+        }
+      }
+      scope = node.nodeType && (node.getAttribute('scoped') != null) && node.parentNode || this.scope;
+      console.log('Eval', rules, continuation);
+      debugger;
+      this.run(rules, continuation, scope);
     }
-    scope = node.nodeType && (node.getAttribute('scoped') != null) && node.parentNode || this.scope;
-    this.run(rules, void 0, scope);
   };
 
-  Rules.prototype["$load"] = function(node, type, method) {
+  Rules.prototype["load"] = function(node, type, method) {
     var src, xhr;
     if (method == null) {
       method = 'GET';
@@ -21024,6 +21027,7 @@ Expressions = (function() {
       return args;
     }
     if (callback = operation.def.callback) {
+      console.log(context || node || scope, result, operation, continuation);
       result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
@@ -21093,11 +21097,15 @@ Expressions = (function() {
       }
       if (argument === void 0) {
         if (!operation.def.eager || (ascender != null)) {
-          if (!operation.def.noop || operation.parent) {
-            return false;
-          }
-          if (operation.name && !operation.parent) {
+          if (!operation.def.capture && (operation.parent ? operation.def.noop : operation.name)) {
+            if (!operation.def.noop || operation.parent) {
+              debugger;
+            }
             stopping = true;
+          } else {
+            if (!operation.def.noop || operation.parent) {
+              return false;
+            }
           }
         }
         offset += 1;
@@ -21660,6 +21668,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
+    debugger;
     var child, copy, parent, result, _i, _len, _ref;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
@@ -22266,8 +22275,10 @@ Styles = (function() {
       }
       camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine._camelize(property));
       style = element.style;
+      console.log('error', camel, value);
+      debugger;
       if (style[camel] !== void 0) {
-        if (typeof value === 'number' && property !== 'zIndex') {
+        if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
           pixels = value + 'px';
         }
         if (positioner) {
@@ -22281,7 +22292,7 @@ Styles = (function() {
             }
           }
         }
-        style[camel] = pixels || value;
+        style[camel] = pixels != null ? pixels : value;
       }
     }
     return this;

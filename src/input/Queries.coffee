@@ -282,6 +282,7 @@ class Queries
     @
 
   clean: (path, continuation, operation, scope, bind) ->
+    debugger
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
       console.log('path', path)

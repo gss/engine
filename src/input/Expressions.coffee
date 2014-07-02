@@ -126,6 +126,8 @@ class Expressions
 
     # Let context transform or filter the result
     if callback = operation.def.callback
+
+      console.log(context || node || scope, result, operation, continuation)
       result = @engine[callback](context || node || scope, args, result, operation, continuation, scope)
 
     
@@ -178,10 +180,13 @@ class Expressions
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
       if argument == undefined
         if !operation.def.eager || ascender?
-          if !operation.def.noop || operation.parent
-            return false 
-          if operation.name && !operation.parent
+          if !operation.def.capture && (if operation.parent then operation.def.noop else operation.name)
+            if (!operation.def.noop || operation.parent)
+              debugger
             stopping = true
+          else
+            if (!operation.def.noop || operation.parent) # || operation.parent
+              return false 
         offset += 1
         continue
       (args ||= [])[index - offset + shift] = prev = argument
