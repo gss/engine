@@ -21,9 +21,9 @@ describe 'End - to - End', ->
   container = null
   
   beforeEach ->
-    engine ||= new GSS($('#fixtures'))
     container = document.createElement 'div'
     $('#fixtures').appendChild container
+    engine = new GSS(container)
     
   afterEach ->
     remove(container)
@@ -478,13 +478,9 @@ describe 'End - to - End', ->
     describe "single file", ->
     
       it 'should compute', (done) ->
-        oldDefault = GSS.config.defaultStrength
-        GSS.config.defaultStrength = "strong"
-      
         listen = (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "external-file": 1000
-          GSS.config.defaultStrength = oldDefault
           done()     
                      
         engine.once 'solved', listen
@@ -496,18 +492,18 @@ describe 'End - to - End', ->
     describe "multiple files", ->
     
       it 'should compute', (done) ->
-        oldDefault = GSS.config.defaultStrength
-        GSS.config.defaultStrength = "strong"
-      
-        listen = (e) ->     
-          expect(engine.vars).to.eql 
-            "external-file": 1000
-            "external-file-2": 2000
-            "external-file-3": 3000
-          GSS.config.defaultStrength = oldDefault
-          done()     
+        counter = 0
+        listen = (e) ->
+          counter++
+          if counter == 3
+            expect(engine.values.toObject()).to.eql 
+              "external-file": 1000
+              "external-file-2": 2000
+              "external-file-3": 3000
+            engine.removeEventListener 'solved', listen
+            done()     
                      
-        engine.once 'solved', listen
+        engine.addEventListener 'solved', listen
     
         container.innerHTML =  """
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
@@ -530,7 +526,6 @@ describe 'End - to - End', ->
           <div id="ship"></div>
           <style type="text/gss" scoped>
             #ship {
-              @virtual "mast";
               "mast"[top] == 0;
               "mast"[bottom] == 100;
               "mast"[left] == 10;
@@ -550,7 +545,7 @@ describe 'End - to - End', ->
   # VGL
   # ===========================================================
   
-  describe 'VGL', ->  
+  xdescribe 'VGL', ->  
     
     describe 'grid-template', ->
       engine = null
@@ -723,7 +718,7 @@ describe 'End - to - End', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "t": 500
             "x": 1
           done()     
@@ -748,12 +743,10 @@ describe 'End - to - End', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "t": 500
             "$b[width]": 1
-          done()          
-          engine.off 'solved', listen                    
-    
+          done()     
         container.innerHTML =  """
             <div id="b"></div>
             <style type="text/gss">
@@ -784,7 +777,7 @@ describe 'End - to - End', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "$box1[width]": 9
             "$box2[width]": 19
             "$box1[height]": 10
@@ -831,19 +824,21 @@ describe 'End - to - End', ->
             .box {
               @if ::[width] < 10 and ::[height] < 10 {
                 $state: == 1;
-              }
-              @else ::[width] > 10 and ::[height] > 10 {
-                $state: == 2;
-              }
-              @else ::[width] == 10 or ::[height] == 10 {
-                $state: == 3;
+              } @else {
+                @if ::[width] > 10 and ::[height] > 10 {
+                  $state: == 2;
+                } @else { 
+                  @if ::[width] == 10 or ::[height] == 10 {
+                    $state: == 3;
+                  }
+                }
               }
             }
           
             </style>
           """
         engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "$box1[width]": 9
             "$box2[width]": 11
             "$box3[width]": 10
@@ -874,19 +869,21 @@ describe 'End - to - End', ->
             .box {
               @if ::[width] + ::[height] < 20 {
                 $state: == 1;
-              }
-              @else ::[width] + ::[height] == 22 {
-                $state: == 2;
-              }
-              @else ::[width] * ::[height] >= 99 {
-                $state: == 3;
-              }
+              } @else {
+                @if ::[width] + ::[height] == 22 {
+                  $state: == 2;
+                } @else {
+                  @if ::[width] * ::[height] >= 99 {
+                    $state: == 3;
+                  }
+                }
+              } 
             }
           
             </style>
           """
         engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "$box1[width]": 9
             "$box2[width]": 11
             "$box3[width]": 10
@@ -917,22 +914,25 @@ describe 'End - to - End', ->
             .box {
               @if (::[width] + ::[height] < 20) and (::[width] == 9) {
                 $state: == 1;
-              }
-              @else (::[width] + ::[height] == 22) and (::[width] == 11) {
-                $state: == 2;
-              }
-              @else (::[width] * ::[height] >= 99) and (::[width] == 999999) {
-                $state: == 4;
-              }
-              @else (::[width] * ::[height] >= 99) and (::[width] == 10) {
-                $state: == 3;
+              } @else {
+                @if (::[width] + ::[height] == 22) and (::[width] == 11) {
+                  $state: == 2;
+                } @else {
+                  @if (::[width] * ::[height] >= 99) and (::[width] == 999999) {
+                    $state: == 4;
+                  } @else {
+                    @if (::[width] * ::[height] >= 99) and (::[width] == 10) {
+                      $state: == 3;
+                    }
+                  }
+                }
               }
             }
           
             </style>
           """
         engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "$box1[width]": 9
             "$box2[width]": 11
             "$box3[width]": 10
@@ -1036,7 +1036,8 @@ describe 'End - to - End', ->
   
       it 'should be ok', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.be.ok
+          debugger
+          expect(engine.values).to.be.ok
           done()          
       
         container.innerHTML =  """

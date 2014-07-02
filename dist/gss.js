@@ -19165,7 +19165,7 @@ Engine = (function() {
     if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
       switch (typeof object[0]) {
         case "object":
-          return !object[0].push;
+          return object[0].nodeType;
         case "undefined":
           return object.length === 0;
       }
@@ -19833,6 +19833,7 @@ Rules = (function() {
       }
     },
     capture: function(result, operation, continuation, scope) {
+      debugger;
       if (operation.index === 1) {
         this.commands["if"].branch.call(this, operation.parent[1], continuation, scope, void 0, result);
         return true;
@@ -19866,7 +19867,7 @@ Rules = (function() {
   };
 
   Rules.prototype["eval"] = {
-    command: function(operation, continuation, scope, node, type) {
+    command: function(operation, continuation, scope, node, type, source) {
       var rules, _ref, _ref1, _ref2;
       if (type == null) {
         type = 'text/gss';
@@ -19874,7 +19875,7 @@ Rules = (function() {
       if ((node.type || type) === 'text/gss-ast') {
         rules = JSON.parse((_ref = node.textContent) != null ? _ref : node);
       } else {
-        if (!(rules = (_ref1 = GSS.Parser.parse((_ref2 = node.textContent) != null ? _ref2 : node)) != null ? _ref1.commands : void 0)) {
+        if (!(rules = (_ref1 = GSS.Parser.parse((_ref2 = source != null ? source : node.textContent) != null ? _ref2 : node)) != null ? _ref1.commands : void 0)) {
           return;
         }
       }
@@ -19886,22 +19887,26 @@ Rules = (function() {
     }
   };
 
-  Rules.prototype["load"] = function(node, type, method) {
-    var src, xhr;
-    if (method == null) {
-      method = 'GET';
-    }
-    src = node.href || node.src || node;
-    type || (type = node.type || 'text/gss');
-    xhr = new XMLHttpRequest();
-    xhr.onstatechange = function() {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          return 1;
-        }
+  Rules.prototype["load"] = {
+    command: function(operation, continuation, scope, node, type, method) {
+      var src, xhr,
+        _this = this;
+      if (method == null) {
+        method = 'GET';
       }
-    };
-    return xhr.open(node.toUpperCase(), src);
+      src = node.href || node.src || node;
+      type || (type = node.type || 'text/gss');
+      xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            return _this._eval.command.call(_this, operation, continuation, scope, node, type, xhr.responseText);
+          }
+        }
+      };
+      xhr.open(method.toUpperCase(), src);
+      return xhr.send();
+    }
   };
 
   return Rules;
@@ -20855,6 +20860,14 @@ Algebra = (function() {
     return true;
   };
 
+  Algebra.prototype["&&"] = function(a, b) {
+    return a && b;
+  };
+
+  Algebra.prototype["||"] = function(a, b) {
+    return a || b;
+  };
+
   Algebra.prototype["=="] = function(a, b) {
     return a === b;
   };
@@ -20963,6 +20976,8 @@ Expressions = (function() {
       return this.output.pull(buffer);
     } else if (this.buffer === void 0) {
       return this.engine.push();
+    } else {
+      return this.buffer = void 0;
     }
   };
 
@@ -21968,10 +21983,14 @@ Values = (function() {
   };
 
   Values.prototype.merge = function(object) {
-    var path, value;
+    var buffer, path, value;
+    buffer = this.engine.expressions.capture();
     for (path in object) {
       value = object[path];
       this.set(path, void 0, value);
+    }
+    if (buffer) {
+      this.engine.expressions.flush();
     }
     return this;
   };

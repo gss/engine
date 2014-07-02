@@ -45,6 +45,8 @@ class Expressions
       @output.pull(buffer)
     else if @buffer == undefined
       @engine.push()
+    else
+      @buffer = undefined
 
   # Run without changing lastOutput or buffer settings
   do: ->

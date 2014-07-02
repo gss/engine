@@ -68,6 +68,8 @@ Expressions = (function() {
       return this.output.pull(buffer);
     } else if (this.buffer === void 0) {
       return this.engine.push();
+    } else {
+      return this.buffer = void 0;
     }
   };
 
@@ -527,10 +529,14 @@ Values = (function() {
   };
 
   Values.prototype.merge = function(object) {
-    var path, value;
+    var buffer, path, value;
+    buffer = this.engine.expressions.capture();
     for (path in object) {
       value = object[path];
       this.set(path, void 0, value);
+    }
+    if (buffer) {
+      this.engine.expressions.flush();
     }
     return this;
   };
@@ -662,7 +668,7 @@ Engine = (function() {
     if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
       switch (typeof object[0]) {
         case "object":
-          return !object[0].push;
+          return object[0].nodeType;
         case "undefined":
           return object.length === 0;
       }

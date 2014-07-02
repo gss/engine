@@ -94,7 +94,7 @@ class Engine
     if object && object.length != undefined && !object.substring && !object.nodeType
       switch typeof object[0]
         when "object"
-          return !object[0].push
+          return object[0].nodeType
         when "undefined"
           return object.length == 0
 

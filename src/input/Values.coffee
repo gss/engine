@@ -65,9 +65,12 @@ class Values
         
       @engine.expressions.flush() if buffer
     return value
+    
   merge: (object) ->
+    buffer = @engine.expressions.capture()
     for path, value of object
       @set path, undefined, value
+    @engine.expressions.flush() if buffer
     @
 
   # Export values in a plain object. Use for tests only

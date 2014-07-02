@@ -7,6 +7,12 @@ class Algebra
       return object.valueOf != Object.prototype.valueOf
     return true
 
+  "&&": (a, b) ->
+    return a && b
+
+  "||": (a, b) ->
+    return a || b
+
   "==": (a, b) ->
     return a == b
 
