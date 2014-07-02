@@ -40,7 +40,7 @@ class Measurements
         return @values.watch(id, property, operation, continuation, scope)
 
       # Return command for solver with path which will be used to clean it
-      return ['get', id, property, continuation || '']
+      return ['get', id, property, @getContinuation(continuation || '')]
 
 
   # Combine subsequent remove commands
@@ -109,6 +109,12 @@ class Measurements
   setStyle: (element, property, value) ->
     element.style[property] = value
 
+  set:
+    command: (operation, continuation, scope, property, value) ->
+      if scope && scope.style[property] != undefined
+        console.error('setting', scope, property, value)
+        @_setStyle(scope, property, value)
+      return true
 
   deferComputation: {'intrinsic-x', 'intrinsic-y'}
 

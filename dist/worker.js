@@ -82,7 +82,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
-    var args, evaluate, evaluated, result, _ref;
+    var args, contd, evaluate, evaluated, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -111,9 +111,10 @@ Expressions = (function() {
       result = args;
     } else {
       result = this.execute(operation, continuation, scope, args);
+      contd = continuation;
       continuation = this.log(operation, continuation);
     }
-    return this.ascend(operation, continuation, result, scope, ascender);
+    return this.ascend(operation, continuation, result, scope, ascender, contd === continuation);
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
@@ -209,7 +210,7 @@ Expressions = (function() {
         shift--;
         continue;
       } else if (argument instanceof Array) {
-        if (ascender < index) {
+        if (ascender != null) {
           contd = continuation;
           if (contd.charAt(contd.length - 1) !== '–') {
             contd += '–';
@@ -241,8 +242,8 @@ Expressions = (function() {
     return args;
   };
 
-  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender) {
-    var breadcrumbs, captured, item, parent, _i, _len;
+  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender, hidden) {
+    var breadcrumbs, item, parent, _i, _len, _ref;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
@@ -254,11 +255,8 @@ Expressions = (function() {
           }
           console.groupEnd(continuation);
           return;
-        } else if (parent != null ? parent.def.capture : void 0) {
-          captured = parent.def.capture.call(this.engine, result, operation, continuation, scope);
-          if (captured === true) {
-            return;
-          }
+        } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
+          return;
         } else {
           if (operation.def.noop || (parent.def.noop && !parent.name)) {
             if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
@@ -267,6 +265,8 @@ Expressions = (function() {
           } else if (parent && ((ascender != null) || result.nodeType)) {
             this.evaluate(parent, continuation, scope, operation.index, result);
             return;
+          } else {
+            return result;
           }
         }
       } else {
@@ -292,6 +292,9 @@ Expressions = (function() {
     }
     def = this.commands[operation.name];
     if (parent) {
+      if (operation.parent) {
+        debugger;
+      }
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
     }
@@ -335,7 +338,7 @@ Expressions = (function() {
       if (def.group) {
         operation.groupped = this.serialize(operation, otherdef, def.group);
         if (groupper = this.commands[def.group]) {
-          groupper.analyze(operation);
+          groupper.analyze(operation, false);
         }
       }
     }
@@ -1098,7 +1101,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1;
+    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
     this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -1129,9 +1132,21 @@ Solutions = (function() {
       _ref1 = this.nullified;
       for (property in _ref1) {
         value = _ref1[property];
-        response[property] = null;
+        if (((_ref2 = this.added) != null ? _ref2[property] : void 0) == null) {
+          response[property] = null;
+        }
       }
-      delete this.nullified;
+      this.nullified = void 0;
+    }
+    if (this.added) {
+      _ref3 = this.added;
+      for (property in _ref3) {
+        value = _ref3[property];
+        if (response[property] == null) {
+          response[property] = 0;
+        }
+      }
+      this.added = void 0;
     }
     this.lastOutput = response;
     console.log('Solutions output', JSON.parse(JSON.stringify(response)));
@@ -1202,8 +1217,8 @@ Solutions = (function() {
             _results.push((this[path] || (this[path] = [])).push(command));
           } else {
             path.counter = (path.counter || 0) + 1;
-            if (this.nullified && this.nullified[path.name] !== void 0) {
-              _results.push(delete this.nullified[path.name]);
+            if (path.counter === 1) {
+              _results.push((this.added || (this.added = {}))[path.name] = 0);
             } else {
               _results.push(void 0);
             }

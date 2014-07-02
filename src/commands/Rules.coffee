@@ -126,6 +126,7 @@ class Rules
       scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
       console.log('Eval', rules, continuation)
       debugger
+      rules = GSS.clone(rules)
       @run rules, continuation, scope
       return
 

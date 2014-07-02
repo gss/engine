@@ -111,7 +111,7 @@ class Styles
             unless --style.positioning 
               style.position = ''
         style[camel] = pixels ? value
-    @
+    value
 
   # Position 
   render: (parent, x = 0, y = 0, positioning, offsetParent, full) ->

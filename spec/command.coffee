@@ -71,8 +71,8 @@ describe 'GSS commands', ->
         ['==', 100,['get','grid-col']]
       ], '%'
       chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['==', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322–"]]
-        ['==', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222–"]]
+        ['==', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322"]]
+        ['==', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222"]]
         ['==', 100, ['get', "", 'grid-col',"%"]]
       ]
         
@@ -87,8 +87,8 @@ describe 'GSS commands', ->
         ['==', 100, ['get','grid-col']]
       ]
       expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['==', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322–"]]
-        ['==', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222–"]]
+        ['==', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322"]]
+        ['==', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222"]]
         ['==', 100,['get', '', 'grid-col', ""]]
       ]
 
@@ -114,9 +114,9 @@ describe 'GSS commands', ->
           ['suggest', '$12322[intrinsic-width]', 111, 'required']
           ['suggest', '$34222[intrinsic-width]', 222, 'required']
           ['suggest', '$35346[intrinsic-width]', 333, 'required']
-          ['==', ['get','$12322','width','.box$12322'],['get','$12322','intrinsic-width','.box$12322–']]
-          ['==', ['get','$34222','width','.box$34222'],['get','$34222','intrinsic-width','.box$34222–']]
-          ['==', ['get','$35346','width','.box$35346'],['get','$35346','intrinsic-width','.box$35346–']]
+          ['==', ['get','$12322','width','.box$12322'],['get','$12322','intrinsic-width','.box$12322']]
+          ['==', ['get','$34222','width','.box$34222'],['get','$34222','intrinsic-width','.box$34222']]
+          ['==', ['get','$35346','width','.box$35346'],['get','$35346','intrinsic-width','.box$35346']]
         ]
         engine.once 'solved', ->
           chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
@@ -146,7 +146,7 @@ describe 'GSS commands', ->
       ]
       chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
         ['suggest', '::window[width]', window.innerWidth, 'required']
-        ['==', ['get', '$12322','width','.box$12322'],['get','::window', 'width',".box$12322–"]]
+        ['==', ['get', '$12322','width','.box$12322'],['get','::window', 'width',".box$12322"]]
       ]
 
 

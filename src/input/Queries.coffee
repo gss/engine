@@ -304,7 +304,7 @@ class Queries
         @remove @engine.recognize(scope), path, operation
     delete @[path]
     if !result || result.length == undefined
-      @engine.expressions.push(['remove', path], true)
+      @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 
   # Filter out known nodes from DOM collections

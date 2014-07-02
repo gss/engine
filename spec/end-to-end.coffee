@@ -170,7 +170,7 @@ describe 'End - to - End', ->
         engine.once 'solved', (e) ->     
           expect(engine.values.toObject()).to.eql 
             "c": 10
-            #"x": 0
+            "x": 0
             "y": 500
             "z": 510
           done()
@@ -227,8 +227,11 @@ describe 'End - to - End', ->
             
             </style>
           """
+        console.error(123)
+        debugger
         engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql 
+          debugger
+          expect(engine.values.toObject()).to.eql 
             "w": 100
             "igap": 3
             "ogap": 10
@@ -239,7 +242,7 @@ describe 'End - to - End', ->
             "md2": 71 / 4
           done()
     
-    describe 'balanced plural selectors', -> 
+    xdescribe 'balanced plural selectors', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="a1" class="a"></div>
@@ -264,7 +267,7 @@ describe 'End - to - End', ->
             "$b3[x]": 100
           done()
     
-    describe 'WARN: unbalanced plural selectors', ->  
+    xdescribe 'WARN: unbalanced plural selectors', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="a1" class="a"></div>
@@ -278,16 +281,9 @@ describe 'End - to - End', ->
               [x] == 100;
               .a[x] == .b[x] == [x];              
             </style>
-          """
-        warned = false
-        onWarn = (message) ->
-          warned = message.indexOf('.a') > 0 and message.indexOf('.b') > 0
-          if warned 
-            GSS.off 'warn', onWarn          
-        GSS.on 'warn', onWarn
+          """        
         engine.once 'display', (e) ->
-          assert warned, "warn message should contain unbalanced selectors"
-          expect(engine.vars).to.eql 
+          expect(engine.values).to.eql 
             "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
@@ -298,7 +294,7 @@ describe 'End - to - End', ->
             "$b4[x]": 100
           done()        
     
-    describe 'complex selectors', -> 
+    xdescribe 'complex selectors', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <section class="section">
@@ -332,26 +328,24 @@ describe 'End - to - End', ->
             <div id="sugar2"></div>
             <style type="text/gss">                            
               #sugar1 {
-                width: 10px !important;
-                height: 10px !important;
+                width: 10px;
+                height: 10px;
                 x: == 5;
                 y: == 5;
-                size: == ::[intrinsic-size];
               }
               #sugar2 {
-                size: == #sugar1[size];
+                size: == #sugar1[intrinsic-size];
               }
               #sugar1[position] == #sugar2[center];              
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solved', (e) ->
+          console.log((JSON.parse JSON.stringify engine.values.toObject()), 44, [engine.$id('sugar1').style.cssText, engine.$id('sugar2').style.cssText])
+          expect(engine.values.toObject()).to.eql 
             "$sugar1[x]": 5
             "$sugar1[y]": 5
             "$sugar1[intrinsic-width]": 10
             "$sugar1[intrinsic-height]": 10
-            "$sugar1[width]": 10
-            "$sugar1[height]": 10
             "$sugar2[width]": 10
             "$sugar2[height]": 10
             "$sugar2[x]": 0

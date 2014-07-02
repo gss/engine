@@ -25,8 +25,14 @@ class Solutions
     @solver._changed = undefined
     if @nullified
       for property, value of @nullified
-        response[property] = null
-      delete @nullified
+        unless @added?[property]?
+          response[property] = null
+      @nullified = undefined
+    if @added
+      for property, value of @added
+        unless response[property]?
+          response[property] = 0
+      @added = undefined
     @lastOutput = response
     console.log('Solutions output', JSON.parse JSON.stringify response)
     @push(response)
@@ -72,8 +78,8 @@ class Solutions
             (@[path] ||= []).push(command)
           else
             path.counter = (path.counter || 0) + 1
-            if @nullified && @nullified[path.name] != undefined
-              delete @nullified[path.name]
+            if path.counter == 1
+              (@added ||= {})[path.name] = 0
           
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))

@@ -88,10 +88,11 @@ class Expressions
       result = args
     else
       result = @execute(operation, continuation, scope, args)
+      contd = continuation
       continuation = @log(operation, continuation)
 
     # Ascend the execution (fork for each item in collection)
-    return @ascend(operation, continuation, result, scope, ascender)
+    return @ascend(operation, continuation, result, scope, ascender, contd == continuation)
 
   # Get result of executing operation with resolved arguments
   execute: (operation, continuation, scope, args) ->
@@ -174,7 +175,7 @@ class Expressions
         continue
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
-        if ascender < index
+        if ascender?
           contd = continuation
           contd += '–' unless contd.charAt(contd.length - 1) == '–'
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
@@ -196,7 +197,7 @@ class Expressions
   # Pass control back to parent operation. 
   # If child op returns DOM collection or node, evaluator recurses to do so.
   # When recursion unrolls all caller ops are discarded
-  ascend: (operation, continuation, result, scope, ascender) ->
+  ascend: (operation, continuation, result, scope, ascender, hidden) ->
     if result? 
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
@@ -209,17 +210,18 @@ class Expressions
           return
         
         # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-        else if parent?.def.capture
-          captured = parent.def.capture.call(@engine, result, operation, continuation, scope)
-          return if captured == true
+        else if parent?.def.capture?.call(@engine, result, operation, continuation, scope) == true
+          return
         # Topmost operations produce output
         else 
           if operation.def.noop || (parent.def.noop && !parent.name)
             if result && (!parent || (parent.def.noop && (!parent.parent || parent.length == 1) || ascender?))
               return @push(if result.length == 1 then result[0] else result)
-          else if parent && (ascender? || result.nodeType)
+          else if parent && (ascender? || result.nodeType)# && (!hidden || ascender?)
             @evaluate parent, continuation, scope, operation.index, result
             return 
+          else
+            return result
       else
         return @push result
 
@@ -236,10 +238,13 @@ class Expressions
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
+
     operation.name = operation[0] if typeof operation[0] == 'string'
     def = @commands[operation.name]
 
     if parent
+      if operation.parent
+        debugger
       operation.parent = parent
       operation.index = parent.indexOf(operation)
 
@@ -280,7 +285,7 @@ class Expressions
         # String representation of operation with arguments filtered by type
         operation.groupped = @serialize(operation, otherdef, def.group)
         if groupper = @commands[def.group]
-          groupper.analyze(operation)
+          groupper.analyze(operation, false)
 
     # Try predefined command if can't dispatch by number of arguments
     if typeof def == 'function'

@@ -29,6 +29,7 @@ class Selectors
       head = operation.head || operation
       name = operation.def.group
       shortcut = [name, head.groupped]
+      console.error('shortcutting', head.groupped)
       shortcut.parent = head.parent
       shortcut.index = head.index
       @expressions.analyze(shortcut)
