@@ -116,8 +116,11 @@ class Selectors
     return found
 
   '$virtual':
-    prefix: '"'
-    suffix: '"'
+    scoped: true
+    serialized: false
+    1: (node, value) ->
+      console.error(arguments)
+      return @identify(node) + '"' + value + '"'
 
   # Filters
 
@@ -297,7 +300,7 @@ class Selectors
 # Set up custom trigger for all selector operations
 # to filter out old elements from collections
 for property, command of Selectors::
-  if typeof command == 'object'
+  if typeof command == 'object' && command.serialized != false
     command.callback = '_onQuery'
     command.serialized = true
 

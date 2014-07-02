@@ -30,6 +30,7 @@ class Measurements
             break
           child = parent
 
+      console.error('get', Array.prototype.slice.call(arguments))
       # Compute custom property
       if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
         computed = @_compute(id, property, continuation, true)

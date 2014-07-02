@@ -534,11 +534,11 @@ describe 'End - to - End', ->
           </style>
           """
         engine.once 'solved', (e) ->
-          expect(stringify(engine.vars)).to.equal stringify
-            '$ship"mast"[y]': 0
+          expect((engine.values.toObject())).to.eql 
             '$ship"mast"[height]': 100
             '$ship"mast"[x]': 10
             '$ship"mast"[width]': 10
+            '$ship"mast"[y]': 0
           done()
   
   

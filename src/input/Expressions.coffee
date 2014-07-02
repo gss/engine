@@ -32,20 +32,19 @@ class Expressions
       return @output.pull.apply(@output, args)
 
   # Output buffered commands
-  flush: (soft) ->
+  flush: ->
     buffer = @buffer
-    unless soft
-      if @engine._onFlush
-        added = @engine._onFlush(buffer)
-        buffer = buffer && added && added.concat(buffer) || buffer || added
-      @lastOutput = GSS.clone buffer
-      console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
+    if @engine._onFlush
+      added = @engine._onFlush(buffer)
+      buffer = buffer && added && added.concat(buffer) || buffer || added
+    @lastOutput = GSS.clone buffer
+    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
 
     if buffer
       @buffer = undefined
       @output.pull(buffer)
-    else
-      @buffer = undefined
+    else if @buffer == undefined
+      @engine.push()
 
   # Run without changing lastOutput or buffer settings
   do: ->
@@ -344,7 +343,12 @@ class Expressions
       return continuation
     else
       return operation.path
-
+  release: () ->
+    if @engine.expressions.buffer
+      @engine.expressions.flush()
+    else
+      @engine.expressions.buffer = undefined
+  
   capture: ->
     if @buffer == undefined
       @buffer = null

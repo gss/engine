@@ -68,15 +68,10 @@ class Values
     return value
     
   merge: (object) ->
-    debugger
     buffer = @engine.expressions.capture()
     for path, value of object
       @set path, undefined, value
-    if buffer
-      if @engine.expressions.buffer
-        @engine.expressions.flush()
-      else
-        @engine.expressions.buffer = undefined
+    @engine.expressions.release(buffer) if buffer
 
     @
 

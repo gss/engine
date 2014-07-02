@@ -54,22 +54,20 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.flush = function(soft) {
+  Expressions.prototype.flush = function() {
     var added, buffer;
     buffer = this.buffer;
-    if (!soft) {
-      if (this.engine._onFlush) {
-        added = this.engine._onFlush(buffer);
-        buffer = buffer && added && added.concat(buffer) || buffer || added;
-      }
-      this.lastOutput = GSS.clone(buffer);
-      console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
+    if (this.engine._onFlush) {
+      added = this.engine._onFlush(buffer);
+      buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
+    this.lastOutput = GSS.clone(buffer);
+    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
     if (buffer) {
       this.buffer = void 0;
       return this.output.pull(buffer);
-    } else {
-      return this.buffer = void 0;
+    } else if (this.buffer === void 0) {
+      return this.engine.push();
     }
   };
 
@@ -405,6 +403,14 @@ Expressions = (function() {
     }
   };
 
+  Expressions.prototype.release = function() {
+    if (this.engine.expressions.buffer) {
+      return this.engine.expressions.flush();
+    } else {
+      return this.engine.expressions.buffer = void 0;
+    }
+  };
+
   Expressions.prototype.capture = function() {
     if (this.buffer === void 0) {
       this.buffer = null;
@@ -529,7 +535,6 @@ Values = (function() {
   };
 
   Values.prototype.merge = function(object) {
-    debugger;
     var buffer, path, value;
     buffer = this.engine.expressions.capture();
     for (path in object) {
@@ -537,11 +542,7 @@ Values = (function() {
       this.set(path, void 0, value);
     }
     if (buffer) {
-      if (this.engine.expressions.buffer) {
-        this.engine.expressions.flush();
-      } else {
-        this.engine.expressions.buffer = void 0;
-      }
+      this.engine.expressions.release(buffer);
     }
     return this;
   };
