@@ -54,20 +54,20 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.flush = function() {
+  Expressions.prototype.flush = function(soft) {
     var added, buffer;
     buffer = this.buffer;
-    if (this.engine._onFlush) {
-      added = this.engine._onFlush(buffer);
-      buffer = buffer && added && added.concat(buffer) || buffer || added;
+    if (!soft) {
+      if (this.engine._onFlush) {
+        added = this.engine._onFlush(buffer);
+        buffer = buffer && added && added.concat(buffer) || buffer || added;
+      }
+      this.lastOutput = GSS.clone(buffer);
+      console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
     }
-    this.lastOutput = GSS.clone(buffer);
-    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
     if (buffer) {
       this.buffer = void 0;
       return this.output.pull(buffer);
-    } else if (this.buffer === void 0) {
-      return this.engine.push();
     } else {
       return this.buffer = void 0;
     }
@@ -529,6 +529,7 @@ Values = (function() {
   };
 
   Values.prototype.merge = function(object) {
+    debugger;
     var buffer, path, value;
     buffer = this.engine.expressions.capture();
     for (path in object) {
@@ -536,7 +537,11 @@ Values = (function() {
       this.set(path, void 0, value);
     }
     if (buffer) {
-      this.engine.expressions.flush();
+      if (this.engine.expressions.buffer) {
+        this.engine.expressions.flush();
+      } else {
+        this.engine.expressions.buffer = void 0;
+      }
     }
     return this;
   };

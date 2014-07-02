@@ -38,6 +38,7 @@ class Values
         while observers[0]
           @unwatch(observers[1], undefined, observers[0], path, observers[2])
     @
+  
   pull: (object) ->
     @merge(object)
 
@@ -67,10 +68,16 @@ class Values
     return value
     
   merge: (object) ->
+    debugger
     buffer = @engine.expressions.capture()
     for path, value of object
       @set path, undefined, value
-    @engine.expressions.flush() if buffer
+    if buffer
+      if @engine.expressions.buffer
+        @engine.expressions.flush()
+      else
+        @engine.expressions.buffer = undefined
+
     @
 
   # Export values in a plain object. Use for tests only
