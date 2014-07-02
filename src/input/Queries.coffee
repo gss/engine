@@ -54,14 +54,17 @@ class Queries
 
     if queries = @lastOutput = @buffer
       @buffer = undefined
-      for query, index in queries by 3
-        continuation = queries[index + 1]
-        scope = queries[index + 2]
-        @output.pull query, continuation, scope
       if @removed
         for id in @removed
           @remove id
         @removed = undefined
+      for query, index in queries by 3
+        continuation = queries[index + 1]
+        scope = queries[index + 2]
+        @output.pull query, continuation, scope
+      if @removing
+        for node in @removing
+          delete node._gss_id
 
     @buffer = @updated = undefined
     @output.flush()
@@ -264,7 +267,7 @@ class Queries
       # Remove cached DOM query
       else 
         @clean(id, continuation, operation, scope)
-        
+      
       delete @[continuation] if collection && !collection.length
 
 
@@ -273,19 +276,16 @@ class Queries
       if watchers = @_watchers[id]
         index = 0
         while watcher = watchers[index]
-          @clean(watcher, watchers[index + 1], watcher, watchers[index + 2])
+          @clean(watcher, watchers[index + 1], watcher, watchers[index + 2], false, 'removing')
           index += 3
         delete @_watchers[id] 
-      (@engine.removing ||= []).push(id)
-      delete node._gss_id
+      (@engine.removing ||= []).push(node)
 
     @
 
-  clean: (path, continuation, operation, scope, bind) ->
-    debugger
+  clean: (path, continuation, operation, scope, bind, removing) ->
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
-      console.log('path', path)
     continuation = path if bind
     @engine.values.clean(path, continuation, operation, scope)
     if (result = @[path]) != undefined
@@ -298,7 +298,7 @@ class Queries
           copy = result.slice()
           @remove child, path, operation for child in copy
         else if typeof result == 'object'
-          @remove result, continuation, operation
+          @remove result, path, operation
 
       if scope && operation.def.cleaning
         @remove @engine.recognize(scope), path, operation
@@ -320,7 +320,7 @@ class Queries
     else
 
       isCollection = result && result.length != undefined
-      if old == result
+      if old == result || (old == undefined && @removed && @removed)
         noop = true unless result && result.manual
         old = undefined
       

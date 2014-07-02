@@ -3,6 +3,7 @@ class Solutions
     @solver = new c.SimplexSolver()
     @solver.autoSolve = false
     c.debug = true
+    @variables = {}
     
   # Read commands
   pull: (commands)->
@@ -25,14 +26,15 @@ class Solutions
     @solver._changed = undefined
     if @nullified
       for property, value of @nullified
-        unless @added?[property]?
+        if !@added || !(@added[property]?)
+          @nullify(value)
           response[property] = null
-      @nullified = undefined
     if @added
       for property, value of @added
-        unless response[property]?
+        if !response[property] && (!@nullified || !@nullified[property])
           response[property] = 0
-      @added = undefined
+    console.error(@added, @nullified)
+    @added = @nullified = undefined
     @lastOutput = response
     console.log('Solutions output', JSON.parse JSON.stringify response)
     @push(response)
@@ -50,22 +52,25 @@ class Solutions
       @solver.removeConstraint(constrain)
       for path in constrain.paths
         if typeof path == 'string'
-          if group = @[path]
+          if group = @variables[path]
             if (index = group.indexOf(constrain)) > -1
               group.splice(index, 1)
             unless group.length
-              delete @[path]
+              delete @variables[path]
         else
           unless --path.counter
-            variable = @[path.name]
-            if variable.editing
-              cei = @solver._editVarMap.get(variable);
-              @solver.removeColumn(cei.editMinus);
-              @solver._editVarMap.delete(variable);
-            delete @[path.name]
-            # Explicitly remove variable from cassowary
-            @solver._externalParametricVars.delete(path)
-            (@nullified ||= {})[path.name] = null
+            (@nullified ||= {})[path.name] = path
+
+  nullify: (path) ->
+    variable = @variables[path.name]
+    if variable.editing
+      cei = @solver._editVarMap.get(variable);
+      @solver.removeColumn(cei.editMinus);
+      @solver._editVarMap.delete(variable);
+    delete @variables[path.name]
+    # Explicitly remove variable from cassowary
+    @solver._externalParametricVars.delete(path)
+            
 
 
   add: (command) ->
@@ -75,11 +80,14 @@ class Solutions
       if command.paths
         for path in command.paths
           if typeof path == 'string'
-            (@[path] ||= []).push(command)
+            (@variables[path] ||= []).push(command)
           else
             path.counter = (path.counter || 0) + 1
             if path.counter == 1
-              (@added ||= {})[path.name] = 0
+              if @nullified && @nullified[path.name]
+                delete @nullified[path.name]
+              else
+                (@added ||= {})[path.name] = 0
           
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))
@@ -95,8 +103,9 @@ class Solutions
 
   suggest: (path, value, strength, weight) ->
     #@solver.solve()
+    console.error('sugges', path, value, strength, weight, @variables[path])
     if typeof path == 'string'
-      unless variable = @[path]
+      unless variable = @variables[path]
         return @response[path] = value
     else
       variable = path

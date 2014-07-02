@@ -70,7 +70,7 @@ class Engine
   defer: ->
     unless @deferred?
       @expressions.buffer ||= null
-      @deferred = setImmediate @expressions.flush.bind(@expressions)
+      @deferred = (window.setImmediate || window.setTimeout)(@expressions.flush.bind(@expressions), 0)
     return @run.apply(@, arguments)
 
   # Hook: Pass output to a subscriber
@@ -253,6 +253,7 @@ class Engine
               context = @
             else
               fn = command.command
+              args = [null, args[2], null, args[0], args[1]]
 
       return fn.apply(context || @, args)
 

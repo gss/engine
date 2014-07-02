@@ -220,24 +220,16 @@ Expressions = (function() {
       }
       if (argument === void 0) {
         if (!operation.def.eager || (ascender != null)) {
-          if (!operation.def.capture && (operation.parent ? operation.def.noop : operation.name)) {
-            if (!operation.def.noop || operation.parent) {
-              debugger;
-            }
+          if (!operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
             stopping = true;
-          } else {
-            if (!operation.def.noop || operation.parent) {
-              return false;
-            }
+          } else if (!operation.def.noop || operation.name) {
+            return false;
           }
         }
         offset += 1;
         continue;
       }
       (args || (args = []))[index - offset + shift] = prev = argument;
-    }
-    if (stopping || (!args && operation.def.noop)) {
-      return false;
     }
     return args;
   };
@@ -258,11 +250,14 @@ Expressions = (function() {
         } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
           return;
         } else {
+          if (operation.def.noop && operation.name && result.length === 1) {
+            return;
+          }
           if (operation.def.noop || (parent.def.noop && !parent.name)) {
             if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
               return this.push(result.length === 1 ? result[0] : result);
             }
-          } else if (parent && ((ascender != null) || result.nodeType)) {
+          } else if (parent && ((ascender != null) || (result.nodeType && (!operation.def.hidden || parent.tail === parent)))) {
             this.evaluate(parent, continuation, scope, operation.index, result);
             return;
           } else {
@@ -292,9 +287,6 @@ Expressions = (function() {
     }
     def = this.commands[operation.name];
     if (parent) {
-      if (operation.parent) {
-        debugger;
-      }
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
     }
@@ -641,7 +633,7 @@ Engine = (function() {
     var _base;
     if (this.deferred == null) {
       (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = setImmediate(this.expressions.flush.bind(this.expressions));
+      this.deferred = (window.setImmediate || window.setTimeout)(this.expressions.flush.bind(this.expressions), 0);
     }
     return this.run.apply(this, arguments);
   };
@@ -905,6 +897,7 @@ Engine = (function() {
               context = this;
             } else {
               fn = command.command;
+              args = [null, args[2], null, args[0], args[1]];
             }
           }
         }
@@ -980,7 +973,7 @@ Constraints = (function() {
 
   Constraints.prototype.get = function(scope, property, path) {
     var variable;
-    if (typeof this.properties[property] === 'function') {
+    if (typeof this.properties[property] === 'function' && scope) {
       return this.properties[property].call(this, scope, path);
     } else {
       variable = this._var(this.getPath(scope, property));
@@ -992,7 +985,7 @@ Constraints = (function() {
     var constrain, constraints, path, _i, _j, _len;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
-      if (constraints = this.solutions[path]) {
+      if (constraints = this.solutions.variables[path]) {
         for (_j = constraints.length - 1; _j >= 0; _j += -1) {
           constrain = constraints[_j];
           this.solutions.remove(constrain, path);
@@ -1004,7 +997,7 @@ Constraints = (function() {
 
   Constraints.prototype["var"] = function(name) {
     var _base;
-    return (_base = this.solutions)[name] || (_base[name] = new c.Variable({
+    return (_base = this.solutions.variables)[name] || (_base[name] = new c.Variable({
       name: name
     }));
   };
@@ -1098,10 +1091,11 @@ Solutions = (function() {
     this.solver = new c.SimplexSolver();
     this.solver.autoSolve = false;
     c.debug = true;
+    this.variables = {};
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -1132,22 +1126,23 @@ Solutions = (function() {
       _ref1 = this.nullified;
       for (property in _ref1) {
         value = _ref1[property];
-        if (((_ref2 = this.added) != null ? _ref2[property] : void 0) == null) {
+        if (!this.added || !(this.added[property] != null)) {
+          this.nullify(value);
           response[property] = null;
         }
       }
-      this.nullified = void 0;
     }
     if (this.added) {
-      _ref3 = this.added;
-      for (property in _ref3) {
-        value = _ref3[property];
-        if (response[property] == null) {
+      _ref2 = this.added;
+      for (property in _ref2) {
+        value = _ref2[property];
+        if (!response[property] && (!this.nullified || !this.nullified[property])) {
           response[property] = 0;
         }
       }
-      this.added = void 0;
     }
+    console.error(this.added, this.nullified);
+    this.added = this.nullified = void 0;
     this.lastOutput = response;
     console.log('Solutions output', JSON.parse(JSON.stringify(response)));
     this.push(response);
@@ -1163,7 +1158,7 @@ Solutions = (function() {
   };
 
   Solutions.prototype.remove = function(constrain, path) {
-    var cei, group, index, variable, _i, _len, _ref, _results;
+    var group, index, _i, _len, _ref, _results;
     if (constrain instanceof c.Constraint) {
       this.solver.removeConstraint(constrain);
       _ref = constrain.paths;
@@ -1171,12 +1166,12 @@ Solutions = (function() {
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         path = _ref[_i];
         if (typeof path === 'string') {
-          if (group = this[path]) {
+          if (group = this.variables[path]) {
             if ((index = group.indexOf(constrain)) > -1) {
               group.splice(index, 1);
             }
             if (!group.length) {
-              _results.push(delete this[path]);
+              _results.push(delete this.variables[path]);
             } else {
               _results.push(void 0);
             }
@@ -1185,15 +1180,7 @@ Solutions = (function() {
           }
         } else {
           if (!--path.counter) {
-            variable = this[path.name];
-            if (variable.editing) {
-              cei = this.solver._editVarMap.get(variable);
-              this.solver.removeColumn(cei.editMinus);
-              this.solver._editVarMap["delete"](variable);
-            }
-            delete this[path.name];
-            this.solver._externalParametricVars["delete"](path);
-            _results.push((this.nullified || (this.nullified = {}))[path.name] = null);
+            _results.push((this.nullified || (this.nullified = {}))[path.name] = path);
           } else {
             _results.push(void 0);
           }
@@ -1203,8 +1190,20 @@ Solutions = (function() {
     }
   };
 
+  Solutions.prototype.nullify = function(path) {
+    var cei, variable;
+    variable = this.variables[path.name];
+    if (variable.editing) {
+      cei = this.solver._editVarMap.get(variable);
+      this.solver.removeColumn(cei.editMinus);
+      this.solver._editVarMap["delete"](variable);
+    }
+    delete this.variables[path.name];
+    return this.solver._externalParametricVars["delete"](path);
+  };
+
   Solutions.prototype.add = function(command) {
-    var path, _i, _len, _ref, _results;
+    var path, _base, _i, _len, _ref, _results;
     if (command instanceof c.Constraint) {
       this.constrained = true;
       this.solver.addConstraint(command);
@@ -1214,11 +1213,15 @@ Solutions = (function() {
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           path = _ref[_i];
           if (typeof path === 'string') {
-            _results.push((this[path] || (this[path] = [])).push(command));
+            _results.push(((_base = this.variables)[path] || (_base[path] = [])).push(command));
           } else {
             path.counter = (path.counter || 0) + 1;
             if (path.counter === 1) {
-              _results.push((this.added || (this.added = {}))[path.name] = 0);
+              if (this.nullified && this.nullified[path.name]) {
+                _results.push(delete this.nullified[path.name]);
+              } else {
+                _results.push((this.added || (this.added = {}))[path.name] = 0);
+              }
             } else {
               _results.push(void 0);
             }
@@ -1244,8 +1247,9 @@ Solutions = (function() {
 
   Solutions.prototype.suggest = function(path, value, strength, weight) {
     var variable;
+    console.error('sugges', path, value, strength, weight, this.variables[path]);
     if (typeof path === 'string') {
-      if (!(variable = this[path])) {
+      if (!(variable = this.variables[path])) {
         return this.response[path] = value;
       }
     } else {

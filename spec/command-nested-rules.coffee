@@ -157,8 +157,8 @@ describe 'Nested Rules', ->
             "$box0[width]": 50 
           expect(all.header0.style.width).to.eql '50px'
           expect(all.box0.style.width).to.eql '50px'
-          expect(engine.solver.solutions["div+main$main0!~$box0*"][0]).to.be.an.instanceOf(c.Constraint)
-          expect(engine.solver.solutions["div+main$main0!~$header0*"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions.variables["div+main$main0!~$box0*"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions.variables["div+main$main0!~$header0*"][0]).to.be.an.instanceOf(c.Constraint)
 
           console.error('Mutation: container.removeChild(#main)')
           parent.removeChild(all.main0) 
@@ -264,13 +264,13 @@ describe 'Nested Rules', ->
           expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
           expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
           # Two constraints are set
-          expect(engine.solver.solutions[".vessel$vessel0– .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
-          expect(engine.solver.solutions[".vessel$vessel0– .box$box1"].length).to.eql(1)
-          expect(engine.solver.solutions[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
-          expect(engine.solver.solutions[".vessel$vessel0– .box$box2"].length).to.eql(1)
+          expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"].length).to.eql(1)
+          expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+          expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"].length).to.eql(1)
           # Each property knows how many constraints reference it (so it can become null)
-          expect(engine.solver.solutions["$box1[x]"].counter).to.eql(1)
-          expect(engine.solver.solutions["$box2[x]"].counter).to.eql(1)
+          expect(engine.solver.solutions.variables["$box1[x]"].counter).to.eql(1)
+          expect(engine.solver.solutions.variables["$box2[x]"].counter).to.eql(1)
 
           expect(box1.style.left).to.eql('100px')
           expect(box2.style.left).to.eql('100px')
@@ -292,11 +292,11 @@ describe 'Nested Rules', ->
             expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0–')
             expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
             expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
-            expect(engine.solver.solutions[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
-            expect(engine.solver.solutions[".vessel$vessel0– .box$box2"].length).to.eql(1)
-            expect(engine.solver.solutions[".vessel$vessel0– .box$box1"]).to.eql(undefined)
-            expect(engine.solver.solutions["$box1[x]"]).to.eql(undefined)
-            expect(engine.solver.solutions["$box2[x]"].counter).to.eql(1)
+            expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+            expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"].length).to.eql(1)
+            expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"]).to.eql(undefined)
+            expect(engine.solver.solutions.variables["$box1[x]"]).to.eql(undefined)
+            expect(engine.solver.solutions.variables["$box2[x]"].counter).to.eql(1)
             expect(box1.style.left).to.eql('')
             expect(box2.style.left).to.eql('100px')
             box1.classList.add('box')
@@ -316,12 +316,12 @@ describe 'Nested Rules', ->
               expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0–')
               expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
               expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
-              expect(engine.solver.solutions[".vessel$vessel0– .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
-              expect(engine.solver.solutions[".vessel$vessel0– .box$box1"].length).to.eql(1)
-              expect(engine.solver.solutions[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
-              expect(engine.solver.solutions[".vessel$vessel0– .box$box2"].length).to.eql(1)
-              expect(engine.solver.solutions["$box1[x]"].counter).to.eql(1)
-              expect(engine.solver.solutions["$box2[x]"].counter).to.eql(1)
+              expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
+              expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"].length).to.eql(1)
+              expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+              expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"].length).to.eql(1)
+              expect(engine.solver.solutions.variables["$box1[x]"].counter).to.eql(1)
+              expect(engine.solver.solutions.variables["$box2[x]"].counter).to.eql(1)
               expect(box1.style.left).to.eql('100px')
               expect(box2.style.left).to.eql('100px')
               vessel0.classList.remove('vessel')
@@ -337,10 +337,10 @@ describe 'Nested Rules', ->
                 expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
                 expect(engine.queries._watchers["$container0"][2]).to.eql(container)
                 expect(engine.queries._watchers["$vessel0"]).to.eql(undefined)
-                expect(engine.solver.solutions[".vessel$vessel0– .box$box1"]).to.eql(undefined)
-                expect(engine.solver.solutions[".vessel$vessel0– .box$box2"]).to.eql(undefined)
-                expect(engine.solver.solutions["$box1[x]"]).to.eql(undefined)
-                expect(engine.solver.solutions["$box2[x]"]).to.eql(undefined)
+                expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"]).to.eql(undefined)
+                expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"]).to.eql(undefined)
+                expect(engine.solver.solutions.variables["$box1[x]"]).to.eql(undefined)
+                expect(engine.solver.solutions.variables["$box2[x]"]).to.eql(undefined)
                 expect(box1.style.left).to.eql('')
                 expect(box2.style.left).to.eql('')
                 vessel0.classList.add('vessel')
@@ -361,12 +361,12 @@ describe 'Nested Rules', ->
                   expect(engine.queries._watchers["$vessel0"][1]).to.eql('.vessel$vessel0–')
                   expect(engine.queries._watchers["$vessel0"][2]).to.eql(vessel0)
                   expect(engine.queries._watchers["$vessel0"][3]).to.eql(undefined)
-                  expect(engine.solver.solutions[".vessel$vessel0– .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
-                  expect(engine.solver.solutions[".vessel$vessel0– .box$box1"].length).to.eql(1)
-                  expect(engine.solver.solutions[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
-                  expect(engine.solver.solutions[".vessel$vessel0– .box$box2"].length).to.eql(1)
-                  expect(engine.solver.solutions["$box1[x]"].counter).to.eql(1)
-                  expect(engine.solver.solutions["$box2[x]"].counter).to.eql(1)
+                  expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"][0]).to.be.an.instanceOf(c.Constraint)
+                  expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box1"].length).to.eql(1)
+                  expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"][0]).to.be.an.instanceOf(c.Constraint)
+                  expect(engine.solver.solutions.variables[".vessel$vessel0– .box$box2"].length).to.eql(1)
+                  expect(engine.solver.solutions.variables["$box1[x]"].counter).to.eql(1)
+                  expect(engine.solver.solutions.variables["$box2[x]"].counter).to.eql(1)
                   expect(box1.style.left).to.eql('100px')
                   expect(box2.style.left).to.eql('100px')
                   done()
@@ -499,10 +499,10 @@ describe 'Nested Rules', ->
           box1.parentNode.removeChild(box1)
           engine.once 'solved', ->
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify([
-              ['remove',
+              ['remove', "#box1!>",
                 "#box1!>,>div$vessel0– :first-child$box1"]
               ['==', ['get', '$box2', 'y','#box1!>,>div$vessel0– :first-child$box2'], 100]
-              ['remove', "#box1!>", "#box1"]
+              ['remove', "#box1"]
             ])
             expect(box1.style.top).to.eql('')
             expect(box2.style.top).to.eql('100px')
@@ -702,13 +702,13 @@ describe 'Nested Rules', ->
                   engine.once 'solved', ->
                     expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                       ['remove',
-                        ".group .vessel$vessel1–::scope .box:last-child$box12",
-                        ".group .vessel$vessel1–::scope .box:last-child$box14",
-                        ".group .vessel$vessel11–::scope .box:last-child$box12",
-                        ".group .vessel$vessel11–::scope .box:last-child$box14",
                         ".group .vessel$vessel11–::scope .box:last-child$box2",
                         ".group .vessel$vessel11–::scope .box:last-child$box5",
+                        ".group .vessel$vessel11–::scope .box:last-child$box12",
+                        ".group .vessel$vessel11–::scope .box:last-child$box14",
                         ".group .vessel$vessel11–::scope",
+                        ".group .vessel$vessel1–::scope .box:last-child$box12",
+                        ".group .vessel$vessel1–::scope .box:last-child$box14",
                         ".group .vessel$vessel11"]
                     ]
                     box2 = container.getElementsByClassName('box')[2]
@@ -1046,8 +1046,8 @@ describe 'Nested Rules', ->
                         expect(stringify engine.expressions.lastOutput).to.eql stringify [[
                           "remove"
                           ".vessel,#group1$vessel0–.box:last-child$box2",
-                          ".vessel,#group1$vessel0",
                           ".vessel,#group1$group1–.box:last-child$box4",
+                          ".vessel,#group1$vessel0",
                           ".vessel,#group1$group1"
                         ]]
                         done()

@@ -119,7 +119,6 @@ class Expressions
       throw new Error("Couldn't find method: #{operation.method}")
 
     result = func.apply(context || @engine, args)
-
     # If it's NaN, then we've done some bad math, leave it to solver
     unless result == result
       args.unshift operation.name
@@ -181,17 +180,17 @@ class Expressions
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
       if argument == undefined
         if !operation.def.eager || ascender?
-          if !operation.def.capture && (if operation.parent then operation.def.noop else operation.name)
-            if (!operation.def.noop || operation.parent)
-              debugger
+          if !operation.def.capture and 
+          (if operation.parent then operation.def.noop else !operation.name)
+
             stopping = true
-          else
-            if (!operation.def.noop || operation.parent) # || operation.parent
-              return false 
+          # Lists are allowed to continue execution when they hit undefined
+          else if (!operation.def.noop || operation.name)
+            return false
         offset += 1
         continue
       (args ||= [])[index - offset + shift] = prev = argument
-    return false if stopping || (!args && operation.def.noop)
+    #return false if stopping || (!args && operation.def.noop)
     return args
 
   # Pass control back to parent operation. 
@@ -213,11 +212,14 @@ class Expressions
         else if parent?.def.capture?.call(@engine, result, operation, continuation, scope) == true
           return
         # Topmost operations produce output
-        else 
+        # TODO: Refactor this mess of nested conditions
+        else
+          if operation.def.noop && operation.name && result.length == 1
+            return 
           if operation.def.noop || (parent.def.noop && !parent.name)
             if result && (!parent || (parent.def.noop && (!parent.parent || parent.length == 1) || ascender?))
               return @push(if result.length == 1 then result[0] else result)
-          else if parent && (ascender? || result.nodeType)# && (!hidden || ascender?)
+          else if parent && (ascender? || (result.nodeType && (!operation.def.hidden || parent.tail == parent)))
             @evaluate parent, continuation, scope, operation.index, result
             return 
           else
@@ -243,8 +245,6 @@ class Expressions
     def = @commands[operation.name]
 
     if parent
-      if operation.parent
-        debugger
       operation.parent = parent
       operation.index = parent.indexOf(operation)
 

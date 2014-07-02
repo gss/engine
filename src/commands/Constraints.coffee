@@ -20,7 +20,7 @@ class Constraints
     return result
 
   get: (scope, property, path) ->
-    if typeof @properties[property] == 'function'
+    if typeof @properties[property] == 'function' && scope
       return @properties[property].call(@, scope, path)
     else
       variable = @_var(@getPath(scope, property))
@@ -28,14 +28,14 @@ class Constraints
 
   remove: () ->
     for path in arguments
-      if constraints = @solutions[path]
+      if constraints = @solutions.variables[path]
         for constrain in constraints by -1
           @solutions.remove(constrain, path)
 
     return @
 
   var: (name) ->
-    return @solutions[name] ||= new c.Variable name: name
+    return @solutions.variables[name] ||= new c.Variable name: name
 
   strength: (strength) ->
     return c.Strength[strength]

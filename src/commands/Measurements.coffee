@@ -36,9 +36,13 @@ class Measurements
         console.log(computed, id, property)
         if primitive
           return computed 
+      # Expand properties like ::window[center-y]
+      else if @properties[id] && @properties[property]
+        return @properties[property].call(@, id, continuation)
       else if primitive
         return @values.watch(id, property, operation, continuation, scope)
-
+      if @getContinuation(continuation || '') == 'style$style999.sync,.async$sync1'
+        debugger
       # Return command for solver with path which will be used to clean it
       return ['get', id, property, @getContinuation(continuation || '')]
 
@@ -114,7 +118,7 @@ class Measurements
       if scope && scope.style[property] != undefined
         console.error('setting', scope, property, value)
         @_setStyle(scope, property, value)
-      return true
+      return 
 
   deferComputation: {'intrinsic-x', 'intrinsic-y'}
 

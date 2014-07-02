@@ -227,10 +227,7 @@ describe 'End - to - End', ->
             
             </style>
           """
-        console.error(123)
-        debugger
         engine.once 'solved', (e) ->
-          debugger
           expect(engine.values.toObject()).to.eql 
             "w": 100
             "igap": 3
@@ -295,7 +292,7 @@ describe 'End - to - End', ->
           done()        
     
     xdescribe 'complex selectors', -> 
-      it 'should compute values', (done) ->                                 
+      xit 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <section class="section">
               <div id="a1" class="a"></div>
@@ -358,32 +355,34 @@ describe 'End - to - End', ->
             <div id="sync1" class="sync"></div>
             <style type="text/gss">                            
               .sync, .async {
-                width: 100px !important;
+                width: 100px;
                 height: == ::[intrinsic-width];
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
             "$sync1[intrinsic-width]": 100
             "$sync1[height]": 100            
           done()
     
+    # This test was the same as previous, I added a regular box sizing check
     describe 'intrinsic & measure-impacting css in same gss block', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="sync1" class="sync"></div>
-            <style type="text/gss">                            
+            <style type="text/gss" id="style999">                            
               .sync, .async {
-                width: 100px !important;
+                width: 100px;
+                padding-left: 20px;
                 height: == ::[intrinsic-width];
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
-            "$sync1[intrinsic-width]": 100
-            "$sync1[height]": 100            
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
+            "$sync1[intrinsic-width]": 120
+            "$sync1[height]": 120            
           done()
     
     
@@ -392,31 +391,30 @@ describe 'End - to - End', ->
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="sync1" class="sync"></div>
-            <style type="text/gss">                            
+            <style type="text/gss" id="style555">                            
               .sync, .async {
-                width: 100px !important;
+                width: 100px;
                 height: == ::[intrinsic-width];
-                -test: == 0;
+                test: == 0;
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
             "$sync1[intrinsic-width]": 100
             "$sync1[height]": 100     
-            "$sync1[-test]": 0
+            "$sync1[test]": 0
           # do again
-          GSS._.defer ->
-            container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
-            engine.once 'display', (e) ->
-              expect(engine.vars).to.eql 
-                "$sync1[intrinsic-width]": 100
-                "$sync1[height]": 100
-                "$sync1[-test]": 0
-                "$async1[intrinsic-width]": 100
-                "$async1[height]": 100
-                "$async1[-test]": 0
-              done()
+          container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
+          engine.once 'solved', (e) ->
+            expect(engine.values.toObject()).to.eql 
+              "$sync1[intrinsic-width]": 100
+              "$sync1[height]": 100
+              "$sync1[test]": 0
+              "$async1[intrinsic-width]": 100
+              "$async1[height]": 100
+              "$async1[test]": 0
+            done()
                   
 
   
@@ -430,16 +428,16 @@ describe 'End - to - End', ->
     describe 'center values', ->  
       it 'should compute values', (done) ->
         engine.once 'solved', (e) ->     
-          w = (window.innerWidth - GSS.get.scrollbarWidth())
+          w = (window.innerWidth)# - GSS.get.scrollbarWidth())
           cx = w / 2
           h = (window.innerHeight)
           cy = h / 2
-          expect(engine.vars).to.eql 
-            "::window[width]": w
-            "::window[center-x]": cx
-            "center-x": cx
+          expect(engine.values.toObject()).to.eql 
             "::window[height]": h
-            "::window[center-y]": cy            
+            "::window[width]": w
+            "::window[x]": 0
+            "::window[y]": 0
+            "center-x": cx
             "center-y": cy
           done()                             
         container.innerHTML =  """
@@ -450,10 +448,10 @@ describe 'End - to - End', ->
           """
     describe 'position values', ->  
       it 'should compute values', (done) ->
-        engine.once 'solved', (e) ->     
-          w = (window.innerWidth - GSS.get.scrollbarWidth())
+        engine.once 'solved', (e) ->
+          w = (window.innerWidth)# - GSS.get.scrollbarWidth())
           h = (window.innerHeight)
-          expect(engine.vars).to.eql 
+          expect(engine.values.toObject()).to.eql 
             "::window[y]": 0
             "top": 0
             "::window[width]": w

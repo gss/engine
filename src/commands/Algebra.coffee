@@ -38,7 +38,7 @@ for property, fn of Algebra::
   unless property == 'isPrimitive'
     fn = do (property, fn) ->
       Algebra::[property] = (a, b) ->
-        return NaN unless @_isPrimitive(a) && @_isPrimitive(b)
+        return [property, a, b] unless @_isPrimitive(a) && @_isPrimitive(b)
         return fn.apply(@, arguments)
     fn.binary = true
 
