@@ -87,7 +87,7 @@ for property, method of Constraints::
         if overloaded
           return @_onConstraint(null, [left, right], value)
         return value
-  Constraints::[property].callback = '_onConstraint'
+  Constraints::[property].after = '_onConstraint'
 
 
 

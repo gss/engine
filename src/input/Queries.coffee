@@ -208,8 +208,6 @@ class Queries
 
   # Manually add element to collection
   add: (node, continuation, operation, scope) ->
-    if scope && scope != @engine.scope
-      continuation = @engine.recognize(scope) + continuation
     collection = @[continuation] ||= []
     collection.manual = true
     console.error('adding', node, collection, continuation)
@@ -220,8 +218,9 @@ class Queries
     return collection
 
   # Return collection by path & scope
-  get: (continuation, scope) ->
-    return @[continuation]
+  get: (operation, continuation) ->
+    if typeof operation == 'string'
+      return @[operation]
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual) ->
@@ -309,27 +308,40 @@ class Queries
     if !result || result.length == undefined
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
+  isBoundToCurrentContext: (args, operation, scope, node) ->
+    if (args.length != 0 && !(args[0]?.nodeType))
+      if !operation.bound && (!scope || scope != node)
+        return false
+    return true;
+
+
+  fetch: (node, args, operation, continuation, scope) ->
+    if @updated && !@isBoundToCurrentContext(args, operation, scope, node)
+      query = @getQueryPath(operation, @engine.identify(scope))
+      return @updated[query]
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
     node ||= scope || args[0]
-    path = (continuation && continuation + operation.key || operation.path)
+    path = @getQueryPath(operation, continuation)
     old = @[path]
 
     # Query fetches elements out of the current scope
-    if (args.length != 0 && !(args[0]?.nodeType))
-      if !operation.bound && (!scope || scope != node)
-        debugger
-        console.error(args, scope, 'SCOPEEED', path, operation)
+    unless @isBoundToCurrentContext(args, operation, scope, node)
+      query = @getQueryPath(operation, @engine.identify(scope || @engine.scope))
+      if group = @updated?[query]
+        result = group[0]
+        @set path, result
+      console.error(args, scope, 'SCOPEEED', path, operation, result)
 
-    if @updated && (group = @updated[path])
+    if (group ||= @updated?[path])
       return if group.indexOf(operation) > -1
-      added = group[0]
-      removed = group[1]
+      added = group[1]
+      removed = group[2]
     else
 
       isCollection = result && result.length != undefined
-      if old == result || (old == undefined && @removed && @removed)
+      if old == result || (old == undefined && @removed)
         noop = true unless result && result.manual
         old = undefined
       
@@ -373,20 +385,24 @@ class Queries
     
     return if noop
     
+    @set path, result
+
+    unless @updated == undefined 
+      group = (@updated ||= {})[query || path] ||= []
+      if group.length
+        group.push operation
+      else
+        group.push result, added, removed, operation
+
+    return if removed && !added
+    return added
+
+  set: (path, result) ->
     if result
       @[path] = result
     else
       delete @[path]
 
-    unless @updated == undefined 
-      group = (@updated ||= {})[path] ||= []
-      if group.length
-        group.push operation
-      else
-        group.push added, removed, operation
-
-    return if removed && !added
-    return added
 
   # Check if a node observes this qualifier or combinator
   match: (node, group, qualifier, changed) ->
@@ -418,5 +434,8 @@ class Queries
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
       @push(operation, continuation, scope)
     @
+
+  getQueryPath: (operation, continuation) ->
+    return (continuation && continuation + operation.key || operation.path)
 
 module.exports = Queries

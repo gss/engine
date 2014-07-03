@@ -125,20 +125,26 @@ class Expressions
           else if command = @commands[method]
             func = @engine[command.reference]
 
-    # Execute the function
     unless func
       throw new Error("Couldn't find method: #{operation.method}")
 
-    result = func.apply(context || @engine, args)
+    # Let context lookup for cached value
+    if onBefore = operation.def.before
+      result = @engine[onBefore](context || node || scope, args, operation, continuation, scope)
+    
+    # Execute the function
+    if result == undefined
+      result = func.apply(context || @engine, args)
+
+    # Let context transform or filter the result
+    if onAfter = operation.def.after
+      result = @engine[onAfter](context || node || scope, args, result, operation, continuation, scope)
+
     # If it's NaN, then we've done some bad math, leave it to solver
     unless result == result
       args.unshift operation.name
       return args
-
-    # Let context transform or filter the result
-    if callback = operation.def.callback
-      result = @engine[callback](context || node || scope, args, result, operation, continuation, scope)
-    
+      
     return result
 
   # Try to read saved results within continuation

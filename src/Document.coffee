@@ -71,6 +71,9 @@ class Engine.Document extends Engine
   onDOMContentLoaded: ->
     @scope.removeEventListener 'DOMContentLoaded', @
 
+  getQueryPath: (operation, continuation) ->
+    return (continuation && continuation + operation.key || operation.path)
+
   # Observe and parse stylesheets
   start: ->
     return if @running

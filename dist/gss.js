@@ -19495,6 +19495,10 @@ Engine.Document = (function(_super) {
     return this.scope.removeEventListener('DOMContentLoaded', this);
   };
 
+  Document.prototype.getQueryPath = function(operation, continuation) {
+    return continuation && continuation + operation.key || operation.path;
+  };
+
   Document.prototype.start = function() {
     if (this.running) {
       return;
@@ -19937,6 +19941,13 @@ var Selectors, command, dummy, property, _ref;
 Selectors = (function() {
   function Selectors() {}
 
+  Selectors.prototype.onBeforeQuery = function(node, args, operation, continuation, scope) {
+    if (operation.def.hidden) {
+      return;
+    }
+    return this.queries.fetch(node, args, operation, continuation, scope);
+  };
+
   Selectors.prototype.onQuery = function(node, args, result, operation, continuation, scope) {
     if (operation.def.hidden) {
       return result;
@@ -20088,7 +20099,6 @@ Selectors = (function() {
     scoped: true,
     serialized: false,
     1: function(node, value) {
-      console.error(arguments);
       return this.identify(node) + '"' + value + '"';
     }
   };
@@ -20328,7 +20338,8 @@ _ref = Selectors.prototype;
 for (property in _ref) {
   command = _ref[property];
   if (typeof command === 'object' && command.serialized !== false) {
-    command.callback = '_onQuery';
+    command.before = '_onBeforeQuery';
+    command.after = '_onQuery';
     command.serialized = true;
   }
 }
@@ -20588,7 +20599,7 @@ for (property in _ref) {
       };
     })(property, method);
   }
-  Constraints.prototype[property].callback = '_onConstraint';
+  Constraints.prototype[property].after = '_onConstraint';
 }
 
 module.exports = Constraints;
@@ -21047,7 +21058,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
-    var callback, command, context, func, method, node, result;
+    var command, context, func, method, node, onAfter, onBefore, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
       node = scope;
@@ -21079,13 +21090,18 @@ Expressions = (function() {
     if (!func) {
       throw new Error("Couldn't find method: " + operation.method);
     }
-    result = func.apply(context || this.engine, args);
+    if (onBefore = operation.def.before) {
+      result = this.engine[onBefore](context || node || scope, args, operation, continuation, scope);
+    }
+    if (result === void 0) {
+      result = func.apply(context || this.engine, args);
+    }
+    if (onAfter = operation.def.after) {
+      result = this.engine[onAfter](context || node || scope, args, result, operation, continuation, scope);
+    }
     if (result !== result) {
       args.unshift(operation.name);
       return args;
-    }
-    if (callback = operation.def.callback) {
-      result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
   };
@@ -21665,9 +21681,6 @@ Queries = (function() {
 
   Queries.prototype.add = function(node, continuation, operation, scope) {
     var collection;
-    if (scope && scope !== this.engine.scope) {
-      continuation = this.engine.recognize(scope) + continuation;
-    }
     collection = this[continuation] || (this[continuation] = []);
     collection.manual = true;
     console.error('adding', node, collection, continuation);
@@ -21679,8 +21692,10 @@ Queries = (function() {
     return collection;
   };
 
-  Queries.prototype.get = function(continuation, scope) {
-    return this[continuation];
+  Queries.prototype.get = function(operation, continuation) {
+    if (typeof operation === 'string') {
+      return this[operation];
+    }
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual) {
@@ -21792,26 +21807,46 @@ Queries = (function() {
     return true;
   };
 
-  Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, removed, watcher, watchers, _base, _i, _j, _k, _len, _len1, _len2, _ref;
-    node || (node = scope || args[0]);
-    path = continuation && continuation + operation.key || operation.path;
-    old = this[path];
+  Queries.prototype.isBoundToCurrentContext = function(args, operation, scope, node) {
+    var _ref;
     if (args.length !== 0 && !((_ref = args[0]) != null ? _ref.nodeType : void 0)) {
       if (!operation.bound && (!scope || scope !== node)) {
-        debugger;
-        console.error(args, scope, 'SCOPEEED', path, operation);
+        return false;
       }
     }
-    if (this.updated && (group = this.updated[path])) {
+    return true;
+  };
+
+  Queries.prototype.fetch = function(node, args, operation, continuation, scope) {
+    var query;
+    if (this.updated && !this.isBoundToCurrentContext(args, operation, scope, node)) {
+      query = this.getQueryPath(operation, this.engine.identify(scope));
+      return this.updated[query];
+    }
+  };
+
+  Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
+    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, query, removed, watcher, watchers, _base, _i, _j, _k, _len, _len1, _len2, _name, _ref, _ref1;
+    node || (node = scope || args[0]);
+    path = this.getQueryPath(operation, continuation);
+    old = this[path];
+    if (!this.isBoundToCurrentContext(args, operation, scope, node)) {
+      query = this.getQueryPath(operation, this.engine.identify(scope || this.engine.scope));
+      if (group = (_ref = this.updated) != null ? _ref[query] : void 0) {
+        result = group[0];
+        this.set(path, result);
+      }
+      console.error(args, scope, 'SCOPEEED', path, operation, result);
+    }
+    if ((group || (group = (_ref1 = this.updated) != null ? _ref1[path] : void 0))) {
       if (group.indexOf(operation) > -1) {
         return;
       }
-      added = group[0];
-      removed = group[1];
+      added = group[1];
+      removed = group[2];
     } else {
       isCollection = result && result.length !== void 0;
-      if (old === result || (old === void 0 && this.removed && this.removed)) {
+      if (old === result || (old === void 0 && this.removed)) {
         if (!(result && result.manual)) {
           noop = true;
         }
@@ -21869,23 +21904,27 @@ Queries = (function() {
     if (noop) {
       return;
     }
-    if (result) {
-      this[path] = result;
-    } else {
-      delete this[path];
-    }
+    this.set(path, result);
     if (this.updated !== void 0) {
-      group = (_base = (this.updated || (this.updated = {})))[path] || (_base[path] = []);
+      group = (_base = (this.updated || (this.updated = {})))[_name = query || path] || (_base[_name] = []);
       if (group.length) {
         group.push(operation);
       } else {
-        group.push(added, removed, operation);
+        group.push(result, added, removed, operation);
       }
     }
     if (removed && !added) {
       return;
     }
     return added;
+  };
+
+  Queries.prototype.set = function(path, result) {
+    if (result) {
+      return this[path] = result;
+    } else {
+      return delete this[path];
+    }
   };
 
   Queries.prototype.match = function(node, group, qualifier, changed) {
@@ -21928,6 +21967,10 @@ Queries = (function() {
       this.push(operation, continuation, scope);
     }
     return this;
+  };
+
+  Queries.prototype.getQueryPath = function(operation, continuation) {
+    return continuation && continuation + operation.key || operation.path;
   };
 
   return Queries;

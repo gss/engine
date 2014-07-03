@@ -122,7 +122,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
-    var callback, command, context, func, method, node, result;
+    var command, context, func, method, node, onAfter, onBefore, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
       node = scope;
@@ -154,13 +154,18 @@ Expressions = (function() {
     if (!func) {
       throw new Error("Couldn't find method: " + operation.method);
     }
-    result = func.apply(context || this.engine, args);
+    if (onBefore = operation.def.before) {
+      result = this.engine[onBefore](context || node || scope, args, operation, continuation, scope);
+    }
+    if (result === void 0) {
+      result = func.apply(context || this.engine, args);
+    }
+    if (onAfter = operation.def.after) {
+      result = this.engine[onAfter](context || node || scope, args, result, operation, continuation, scope);
+    }
     if (result !== result) {
       args.unshift(operation.name);
       return args;
-    }
-    if (callback = operation.def.callback) {
-      result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
   };
@@ -1118,7 +1123,7 @@ for (property in _ref) {
       };
     })(property, method);
   }
-  Constraints.prototype[property].callback = '_onConstraint';
+  Constraints.prototype[property].after = '_onConstraint';
 }
 
 module.exports = Constraints;

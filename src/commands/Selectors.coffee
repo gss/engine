@@ -1,13 +1,17 @@
 # Selectors with custom combinators inspired by Slick of mootools fame (shout-out & credits)
 
 class Selectors
+  # Return cached for DOM queries that we updated this tick
+  onBeforeQuery: (node, args, operation, continuation, scope) ->
+    return if operation.def.hidden
+    return @queries.fetch(node, args, operation, continuation, scope)
 
-  # Set up DOM observer and filter out old elements 
-
+  # Observe hits to DOM, subscribe elements to query 
   onQuery: (node, args, result, operation, continuation, scope) ->
     return result if operation.def.hidden
     return @queries.update(node, args, result, operation, continuation, scope)
 
+  # Remove element by id globally or optionallly from collection
   remove: (id, continuation, operation, scope) ->
     @queries.remove(id, continuation, operation, scope)
     return
@@ -120,7 +124,6 @@ class Selectors
     scoped: true
     serialized: false
     1: (node, value) ->
-      console.error(arguments)
       return @identify(node) + '"' + value + '"'
 
   # Filters
@@ -302,7 +305,8 @@ class Selectors
 # to filter out old elements from collections
 for property, command of Selectors::
   if typeof command == 'object' && command.serialized != false
-    command.callback = '_onQuery'
+    command.before = '_onBeforeQuery'
+    command.after = '_onQuery'
     command.serialized = true
 
 
