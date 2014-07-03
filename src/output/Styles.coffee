@@ -8,7 +8,6 @@ class Styles
     @lastInput = JSON.parse JSON.stringify data
 
     intrinsic = null
-    @engine.start()
 
     # Filter out measurements 
     for path, value of data

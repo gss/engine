@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-03) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-04) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -73,18 +73,9 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype["do"] = function() {
-    var buffer, lastOutput, result;
-    lastOutput = this.lastOutput, buffer = this.buffer;
-    this.lastOutput = this.buffer = void 0;
-    result = this.pull.apply(this, arguments);
-    this.lastOutput = lastOutput;
-    this.buffer = buffer;
-    return result;
-  };
-
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
     var args, contd, evaluate, evaluated, result, _ref;
+    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }

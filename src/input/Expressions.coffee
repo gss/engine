@@ -47,19 +47,10 @@ class Expressions
       @engine.push()
     else
       @buffer = undefined
-
-  # Run without changing lastOutput or buffer settings
-  do: ->
-    {lastOutput, buffer} = @
-    @lastOutput = @buffer = undefined
-    result = @pull.apply(@, arguments)
-    @lastOutput = lastOutput
-    @buffer = buffer
-    return result 
-
+      
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
-    # console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
+    console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
     # Analyze operation once
     unless operation.def
       @analyze(operation)

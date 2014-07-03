@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-03) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-04) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19456,16 +19456,23 @@ Engine.Document = (function(_super) {
     this.expressions.output = this.solver;
     if (this.scope.nodeType === 9) {
       this.scope.addEventListener('DOMContentLoaded', this);
+    } else {
+      this.start();
     }
     this.scope.addEventListener('scroll', this);
     window.addEventListener('resize', this);
   }
 
   Document.prototype.run = function() {
-    var result;
-    this.queries.updated = null;
+    var captured, result;
+    if (this.queries.updated === void 0) {
+      captured = this.queries.updated;
+      this.queries.updated = null;
+    }
     result = this.expressions.pull.apply(this.expressions, arguments);
-    this.queries.updated = void 0;
+    if (captured !== void 0) {
+      this.queries.updated = captured;
+    }
     return result;
   };
 
@@ -19492,7 +19499,8 @@ Engine.Document = (function(_super) {
   };
 
   Document.prototype.onDOMContentLoaded = function() {
-    return this.scope.removeEventListener('DOMContentLoaded', this);
+    this.scope.removeEventListener('DOMContentLoaded', this);
+    return this.engine.start();
   };
 
   Document.prototype.getQueryPath = function(operation, continuation) {
@@ -19505,7 +19513,7 @@ Engine.Document = (function(_super) {
     }
     Document.__super__.start.apply(this, arguments);
     console.groupCollapsed('Watch for stylesheets');
-    this["do"]([['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+    this.run([['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     console.groupEnd('Watch for stylesheets');
     return true;
   };
@@ -21010,18 +21018,9 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype["do"] = function() {
-    var buffer, lastOutput, result;
-    lastOutput = this.lastOutput, buffer = this.buffer;
-    this.lastOutput = this.buffer = void 0;
-    result = this.pull.apply(this, arguments);
-    this.lastOutput = lastOutput;
-    this.buffer = buffer;
-    return result;
-  };
-
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
     var args, contd, evaluate, evaluated, result, _ref;
+    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -21698,8 +21697,8 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.remove = function(id, continuation, operation, scope, manual) {
-    var cleaning, collection, contd, duplicates, index, node, path, plural, plurals, ref, refs, result, subpath, subscope, watcher, watchers, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+  Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural) {
+    var cleaning, collection, contd, duplicates, index, node, path, plurals, ref, refs, result, subpath, subscope, watcher, watchers, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -21725,12 +21724,13 @@ Queries = (function() {
       }
       if (node) {
         if (plurals = (_ref = this._plurals) != null ? _ref[continuation] : void 0) {
-          for (_i = 0, _len = plurals.length; _i < _len; _i += 3) {
-            plural = plurals[_i];
+          for (index = _i = 0, _len = plurals.length; _i < _len; index = _i += 3) {
+            plural = plurals[index];
             subpath = continuation + id + '–' + plural;
-            console.log(1, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
+            this.remove(plurals[index + 2], continuation + id + '–', null, null, null, true);
+            console.log(1, scope, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
             this.clean(continuation + id + '–' + plural, null, null, null, null, true);
-            console.log(2, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
+            console.log(2, scope, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
             debugger;
           }
           console.error('loleo', continuation, (_ref1 = this._plurals) != null ? _ref1[continuation] : void 0);
@@ -21749,7 +21749,7 @@ Queries = (function() {
               }
               subscope = watchers[index + 2];
               watchers.splice(index, 3);
-              this.clean(watcher, contd, watcher, subscope, true);
+              this.clean(watcher, contd, watcher, subscope, true, plural);
             }
             if (!watchers.length) {
               delete this._watchers[id];
@@ -21814,6 +21814,9 @@ Queries = (function() {
       }
     }
     delete this[path];
+    if (path === 'style$2….a$a1–.b$b1') {
+      debugger;
+    }
     if (!result || result.length === void 0) {
       this.engine.expressions.push(['remove', this.engine.getContinuation(path)], true);
     }
@@ -21831,16 +21834,16 @@ Queries = (function() {
   };
 
   Queries.prototype.rebalance = function(path, right) {
-    var added, index, leftNew, leftOld, newLeft, object, pair, removed, rightNew, rightOld, rightPath, _i, _j, _k, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
-    leftNew = ((_ref = this.updated) != null ? (_ref1 = _ref[path]) != null ? _ref1[0] : void 0 : void 0) || this.get(path);
-    leftOld = ((_ref2 = this.updated) != null ? (_ref3 = _ref2[path]) != null ? _ref3[1] : void 0 : void 0) || this.get(path);
+    var added, contd, index, leftNew, leftOld, newLeft, object, pair, removed, rightNew, rightOld, rightPath, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+    leftNew = ((_ref = this.updated) != null ? (_ref1 = _ref[path]) != null ? _ref1[0] : void 0 : void 0) || this.get(path) || [];
+    leftOld = ((_ref2 = this.updated) != null ? (_ref3 = _ref2[path]) != null ? _ref3[1] : void 0 : void 0) || this.get(path) || [];
     if (right["new"]) {
       rightNew = right["new"];
       rightOld = right.old;
     } else {
       rightPath = path + this.engine.recognize(leftNew[0]) + '–' + right.key;
-      rightNew = ((_ref4 = this.updated) != null ? (_ref5 = _ref4[rightPath]) != null ? _ref5[0] : void 0 : void 0) || this.get(rightPath);
-      rightOld = ((_ref6 = this.updated) != null ? (_ref7 = _ref6[rightPath]) != null ? _ref7[1] : void 0 : void 0) || this.get(rightPath);
+      rightNew = ((_ref4 = this.updated) != null ? (_ref5 = _ref4[rightPath]) != null ? _ref5[0] : void 0 : void 0) || this.get(rightPath) || [];
+      rightOld = ((_ref6 = this.updated) != null ? (_ref7 = _ref6[rightPath]) != null ? _ref7[1] : void 0 : void 0) || this.get(rightPath) || [];
     }
     removed = [];
     added = [];
@@ -21863,9 +21866,16 @@ Queries = (function() {
     }
     for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
       pair = removed[_k];
-      1;
+      console.error('remove', path + this.engine.recognize(pair[0]) + '–');
+      this.remove(right.scope, path + this.engine.recognize(pair[0]) + '–');
+      this.clean(path + this.engine.recognize(pair[0]) + '–' + right.key, null, null, null, null, true);
     }
-    return console.log(this.buffer, [path, right], [leftNew, leftOld], "NEED TO REBALANCE DIS", added, removed);
+    for (_l = 0, _len2 = added.length; _l < _len2; _l++) {
+      pair = added[_l];
+      contd = path + this.engine.recognize(pair[0]) + '–' + right.key;
+      this.engine.expressions.pull(right.operation.parent, contd, right.scope, right.operation.index, pair[1]);
+    }
+    return console.log(this.updated, [path, right], [leftNew, leftOld], "NEED TO REBALANCE DIS", added, removed);
   };
 
   Queries.prototype.pluralRegExp = /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]*)$/i;
@@ -21895,12 +21905,16 @@ Queries = (function() {
     var query;
     if (this.updated && !this.isBoundToCurrentContext(args, operation, scope, node)) {
       query = this.getQueryPath(operation, this.engine.identify(scope));
+      console.log('fetched', query, this.updated[query], continuation);
+      if (query === '$1style') {
+        debugger;
+      }
       return this.updated[query];
     }
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, plural, plurals, query, removed, scoped, watcher, watchers, _base, _base1, _i, _j, _k, _l, _len, _len1, _len2, _len3, _name, _ref, _ref1, _ref2;
+    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, plural, plurals, query, removed, scoped, watcher, watchers, _base, _base1, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2;
     node || (node = scope || args[0]);
     path = this.getQueryPath(operation, continuation);
     old = this.get(path);
@@ -21913,10 +21927,10 @@ Queries = (function() {
           scoped = true;
         }
       }
-      if (scoped) {
+      console.error(this.updated, group, query, args, scope, scoped, 'SCOPEEED', path, operation, result);
+      if (!scoped) {
         debugger;
       }
-      console.error(args, scope, scoped, 'SCOPEEED', path, operation, result);
     }
     if ((group || (group = (_ref1 = this.updated) != null ? _ref1[path] : void 0))) {
       if (scoped) {
@@ -22000,7 +22014,10 @@ Queries = (function() {
       }
     }
     if (this.updated !== void 0) {
-      group = (_base1 = (this.updated || (this.updated = {})))[_name = query || path] || (_base1[_name] = []);
+      group = (_base1 = (this.updated || (this.updated = {})))[path] || (_base1[path] = []);
+      if (query) {
+        this.updated[query] = this.updated[path];
+      }
       if (group.length) {
         group.push(operation);
       } else {
@@ -22425,7 +22442,6 @@ Styles = (function() {
     var id, intrinsic, path, positioning, prop, property, styles, suggests, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
-    this.engine.start();
     for (path in data) {
       value = data[path];
       if (property = this.engine._getIntrinsicProperty(path)) {

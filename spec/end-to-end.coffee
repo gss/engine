@@ -306,9 +306,7 @@ describe 'End - to - End', ->
               "$b4[x]": 100
             a1 = engine.$id('a1')
             a1.parentNode.removeChild(a1)
-            console.error('remooovinngngns')
             engine.once 'solved', (e) ->
-              debugger
               expect(engine.values.toObject()).to.eql 
                 "x": 100
                 "$a2[x]": 100
@@ -318,7 +316,27 @@ describe 'End - to - End', ->
                 "$b2[x]": 100
                 "$b3[x]": 100
                 "$b4[x]": 100
-              done()        
+              b4 = engine.$id('b4')
+              b4.parentNode.removeChild(b4)
+              engine.once 'solved', (e) ->
+                expect(engine.values.toObject()).to.eql 
+                  "x": 100
+                  "$a2[x]": 100
+                  "$a3[x]": 100
+                  "$a4[x]": 100
+                  "$b1[x]": 100
+                  "$b2[x]": 100
+                  "$b3[x]": 100
+                  b3 = engine.$id('b3')
+                  b3.parentNode.removeChild(b3)
+                  engine.once 'solved', (e) ->
+                    expect(engine.values.toObject()).to.eql 
+                      "x": 100
+                      "$a2[x]": 100
+                      "$a3[x]": 100
+                      "$b1[x]": 100
+                      "$b2[x]": 100
+                    done()       
     
     xdescribe 'complex selectors', -> 
       xit 'should compute values', (done) ->                                 

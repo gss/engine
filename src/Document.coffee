@@ -43,15 +43,21 @@ class Engine.Document extends Engine
     
     if @scope.nodeType == 9
       @scope.addEventListener 'DOMContentLoaded', @
+    else
+      @start()
 
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
   # Delegate: Pass input to interpreter, buffer DOM queries within command batch
   run: ->
-    @queries.updated = null # Turn on batching
+    # Turn on batching
+    if @queries.updated == undefined
+      captured = @queries.updated
+      @queries.updated = null
     result = @expressions.pull.apply(@expressions, arguments)
-    @queries.updated = undefined # Forget batched stuff 
+    if captured != undefined
+      @queries.updated = captured # Forget batched stuff 
     return result
     
   onresize: (e = '::window') ->
@@ -70,6 +76,7 @@ class Engine.Document extends Engine
   # Observe stylesheets in dom
   onDOMContentLoaded: ->
     @scope.removeEventListener 'DOMContentLoaded', @
+    @engine.start()
 
   getQueryPath: (operation, continuation) ->
     return (continuation && continuation + operation.key || operation.path)
@@ -79,7 +86,7 @@ class Engine.Document extends Engine
     return if @running
     super
     console.groupCollapsed('Watch for stylesheets')
-    @do [
+    @run [
       ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
       ['load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
     ]

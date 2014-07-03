@@ -72,6 +72,7 @@ class Queries
       if @removing
         for node in @removing
           delete node._gss_id
+
     @buffer = @updated = undefined
     @output.flush() if capture
 
@@ -230,7 +231,7 @@ class Queries
         return @[result]
       return result
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope, manual) ->
+  remove: (id, continuation, operation, scope, manual, plural) ->
 
     if typeof id == 'object'
       node = id
@@ -255,11 +256,12 @@ class Queries
       # Detach observer and its subquery when cleaning by id
       if node
         if plurals = @_plurals?[continuation]
-          for plural in plurals by 3
+          for plural, index in plurals by 3
             subpath = continuation + id + '–' + plural
-            console.log(1, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
+            @remove plurals[index + 2], continuation + id + '–', null, null, null, true
+            console.log(1, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
             @clean(continuation + id + '–' + plural, null, null, null, null, true)
-            console.log(2, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
+            console.log(2, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
             debugger
           console.error('loleo', continuation, @_plurals?[continuation])
 
@@ -275,7 +277,7 @@ class Queries
                 continue
               subscope = watchers[index + 2]
               watchers.splice(index, 3)
-              @clean(watcher, contd, watcher, subscope, true)
+              @clean(watcher, contd, watcher, subscope, true, plural)
             delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries.get(path))?.length?
@@ -316,13 +318,16 @@ class Queries
 
           if result.length != undefined
             copy = result.slice()
-            @remove child, path, operation for child in copy
+            for child in copy
+              @remove child, path, operation 
           else if typeof result == 'object'
             @remove result, path, operation
 
         if scope && operation.def.cleaning
           @remove @engine.recognize(scope), path, operation
     delete @[path]
+    if path == 'style$2….a$a1–.b$b1'
+      debugger
     if !result || result.length == undefined
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
@@ -334,15 +339,15 @@ class Queries
     return true;
 
   rebalance: (path, right) ->
-    leftNew = @updated?[path]?[0] || @get(path)
-    leftOld = @updated?[path]?[1] || @get(path)
+    leftNew = @updated?[path]?[0] || @get(path) || []
+    leftOld = @updated?[path]?[1] || @get(path) || []
     if right.new
       rightNew = right.new
       rightOld = right.old
     else # fixme
       rightPath = path + @engine.recognize(leftNew[0]) + '–' + right.key
-      rightNew = @updated?[rightPath]?[0] || @get(rightPath)
-      rightOld = @updated?[rightPath]?[1] || @get(rightPath)
+      rightNew = @updated?[rightPath]?[0] || @get(rightPath) || []
+      rightOld = @updated?[rightPath]?[1] || @get(rightPath) || []
 
     removed = []
     added = []
@@ -360,8 +365,16 @@ class Queries
         added.push([leftNew[index], rightNew[index]])
 
     for pair in removed
-      1#@clean(path + @engine.recognize(pair[0]) + '–' + right.key, null, null, null, null, true)
-    console.log(@buffer, [path, right], [leftNew, leftOld], "NEED TO REBALANCE DIS", added, removed)
+      console.error('remove', path + @engine.recognize(pair[0]) + '–')
+      @remove(right.scope, path + @engine.recognize(pair[0]) + '–')
+      @clean(path + @engine.recognize(pair[0]) + '–' + right.key, null, null, null, null, true)
+    
+    for pair in added
+      contd = path + @engine.recognize(pair[0]) + '–' + right.key
+      @engine.expressions.pull right.operation.parent, contd, right.scope, right.operation.index, pair[1]
+
+
+    console.log(@updated, [path, right], [leftNew, leftOld], "NEED TO REBALANCE DIS", added, removed)
 
   pluralRegExp: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]*)$/i
                   # path1 ^        id ^        ^path2   
@@ -391,6 +404,9 @@ class Queries
   fetch: (node, args, operation, continuation, scope) ->
     if @updated && !@isBoundToCurrentContext(args, operation, scope, node)
       query = @getQueryPath(operation, @engine.identify(scope))
+      console.log('fetched', query, @updated[query], continuation)
+      if (query == '$1style')
+        debugger
       return @updated[query]
 
   # Filter out known nodes from DOM collections
@@ -404,11 +420,11 @@ class Queries
     unless @isBoundToCurrentContext(args, operation, scope, node)
       query = @getQueryPath(operation, @engine.identify(scope || @engine.scope))
       if group = @updated?[query]
+        #old = group[1]
         result = group[0]
         scoped = true unless @[path]?
-      debugger if scoped
-      console.error(args, scope, scoped, 'SCOPEEED', path, operation, result)
-
+      console.error(@updated, group, query, args, scope, scoped, 'SCOPEEED', path, operation, result)
+      debugger if !scoped
     if (group ||= @updated?[path])
       if scoped
         added = result
@@ -474,10 +490,11 @@ class Queries
         }
 
     unless @updated == undefined 
-      group = (@updated ||= {})[query || path] ||= []
+      group = (@updated ||= {})[path] ||= []
+      @updated[query] = @updated[path] if query 
       if group.length
         group.push operation
-      else
+      else# if @engine.isCollection(result)
         group.push result, old, added, removed, operation
 
     return if removed && !added
