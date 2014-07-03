@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-03) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -124,15 +125,21 @@ Expressions = (function() {
     var callback, command, context, func, method, node, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
+      node = scope;
       (args || (args = [])).unshift(scope);
-    }
-    if (typeof args[0] === 'object') {
+    } else if (typeof args[0] === 'object') {
       node = args[0];
+    } else if (!operation.bound) {
+      node = this.engine.scope;
+    } else {
+      node = scope;
     }
     if (!(func = operation.func)) {
       if (method = operation.method) {
         if (node && (func = node[method])) {
-          args.shift();
+          if (args[0] === node) {
+            args.shift();
+          }
           context = node;
         }
         if (!func) {
@@ -297,7 +304,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.analyze = function(operation, parent) {
-    var child, def, func, groupper, index, otherdef, _i, _len;
+    var child, def, func, groupper, index, otherdef, _i, _len, _ref;
     if (typeof operation[0] === 'string') {
       operation.name = operation[0];
     }
@@ -305,6 +312,9 @@ Expressions = (function() {
     if (parent) {
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
+      if (parent.bound || ((_ref = parent.def) != null ? _ref.bound : void 0) === operation.index) {
+        operation.bound = true;
+      }
     }
     operation.arity = operation.length - 1;
     if (def && def.lookup) {
@@ -327,19 +337,18 @@ Expressions = (function() {
           def = this.commands[operation.name];
       }
     }
+    operation.def = def || (def = {
+      noop: true
+    });
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       child = operation[index];
       if (child instanceof Array) {
         this.analyze(child, operation);
       }
     }
-    if (def === void 0) {
-      operation.def = {
-        noop: true
-      };
-      return operation;
+    if (def.noop) {
+      return;
     }
-    operation.def = def;
     if (def.serialized) {
       operation.key = this.serialize(operation, otherdef, false);
       operation.path = this.serialize(operation, otherdef);

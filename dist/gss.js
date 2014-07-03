@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-03) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19803,6 +19804,7 @@ Rules = (function() {
       return true;
     },
     release: function(result, operation, continuation, scope) {
+      debugger;
       continuation = this.commands[','].serialize.call(this, operation.parent, scope);
       this.queries.remove(result, continuation, operation.parent, scope, true);
       return true;
@@ -19810,6 +19812,7 @@ Rules = (function() {
   };
 
   Rules.prototype["rule"] = {
+    bound: 1,
     evaluate: function(operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender) {
         this.expressions.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
@@ -19966,6 +19969,9 @@ Selectors = (function() {
       console.error('shortcutting', head.groupped);
       shortcut.parent = head.parent;
       shortcut.index = head.index;
+      if (head.bound) {
+        shortcut.bound = head.bound;
+      }
       this.expressions.analyze(shortcut);
       tail = operation.tail;
       if (!(global = tail.arity === 1 && tail.length === 2)) {
@@ -20597,7 +20603,6 @@ Measurements = (function() {
   Measurements.prototype.get = {
     meta: true,
     command: function(operation, continuation, scope, object, property) {
-      debugger;
       var child, computed, id, parent, primitive, _ref;
       if (property) {
         if (typeof object === 'string') {
@@ -21045,15 +21050,21 @@ Expressions = (function() {
     var callback, command, context, func, method, node, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
+      node = scope;
       (args || (args = [])).unshift(scope);
-    }
-    if (typeof args[0] === 'object') {
+    } else if (typeof args[0] === 'object') {
       node = args[0];
+    } else if (!operation.bound) {
+      node = this.engine.scope;
+    } else {
+      node = scope;
     }
     if (!(func = operation.func)) {
       if (method = operation.method) {
         if (node && (func = node[method])) {
-          args.shift();
+          if (args[0] === node) {
+            args.shift();
+          }
           context = node;
         }
         if (!func) {
@@ -21218,7 +21229,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.analyze = function(operation, parent) {
-    var child, def, func, groupper, index, otherdef, _i, _len;
+    var child, def, func, groupper, index, otherdef, _i, _len, _ref;
     if (typeof operation[0] === 'string') {
       operation.name = operation[0];
     }
@@ -21226,6 +21237,9 @@ Expressions = (function() {
     if (parent) {
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
+      if (parent.bound || ((_ref = parent.def) != null ? _ref.bound : void 0) === operation.index) {
+        operation.bound = true;
+      }
     }
     operation.arity = operation.length - 1;
     if (def && def.lookup) {
@@ -21248,19 +21262,18 @@ Expressions = (function() {
           def = this.commands[operation.name];
       }
     }
+    operation.def = def || (def = {
+      noop: true
+    });
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       child = operation[index];
       if (child instanceof Array) {
         this.analyze(child, operation);
       }
     }
-    if (def === void 0) {
-      operation.def = {
-        noop: true
-      };
-      return operation;
+    if (def.noop) {
+      return;
     }
-    operation.def = def;
     if (def.serialized) {
       operation.key = this.serialize(operation, otherdef, false);
       operation.path = this.serialize(operation, otherdef);
@@ -21657,6 +21670,7 @@ Queries = (function() {
     }
     collection = this[continuation] || (this[continuation] = []);
     collection.manual = true;
+    console.error('adding', node, collection, continuation);
     if (collection.indexOf(node) === -1) {
       collection.push(node);
     } else {
@@ -21779,10 +21793,16 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, removed, watcher, watchers, _base, _i, _j, _k, _len, _len1, _len2;
+    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, removed, watcher, watchers, _base, _i, _j, _k, _len, _len1, _len2, _ref;
     node || (node = scope || args[0]);
     path = continuation && continuation + operation.key || operation.path;
     old = this[path];
+    if (args.length !== 0 && !((_ref = args[0]) != null ? _ref.nodeType : void 0)) {
+      if (!operation.bound && (!scope || scope !== node)) {
+        debugger;
+        console.error(args, scope, 'SCOPEEED', path, operation);
+      }
+    }
     if (this.updated && (group = this.updated[path])) {
       if (group.indexOf(operation) > -1) {
         return;
@@ -21840,6 +21860,9 @@ Queries = (function() {
         watchers = this._watchers[id] = [];
       }
       if (!dupe) {
+        if (continuation === '#box1') {
+          debugger;
+        }
         watchers.push(operation, continuation, scope);
       }
     }

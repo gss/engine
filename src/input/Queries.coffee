@@ -212,6 +212,7 @@ class Queries
       continuation = @engine.recognize(scope) + continuation
     collection = @[continuation] ||= []
     collection.manual = true
+    console.error('adding', node, collection, continuation)
     if collection.indexOf(node) == -1
       collection.push(node)
     else
@@ -315,6 +316,12 @@ class Queries
     path = (continuation && continuation + operation.key || operation.path)
     old = @[path]
 
+    # Query fetches elements out of the current scope
+    if (args.length != 0 && !(args[0]?.nodeType))
+      if !operation.bound && (!scope || scope != node)
+        debugger
+        console.error(args, scope, 'SCOPEEED', path, operation)
+
     if @updated && (group = @updated[path])
       return if group.indexOf(operation) > -1
       added = group[0]
@@ -361,6 +368,7 @@ class Queries
       else
         watchers = @_watchers[id] = []
       unless dupe
+        debugger if continuation == '#box1'
         watchers.push(operation, continuation, scope)
     
     return if noop

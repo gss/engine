@@ -55,6 +55,7 @@ class Rules
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
+      debugger
       continuation = @commands[','].serialize.call(@, operation.parent, scope)
       @queries.remove(result, continuation, operation.parent, scope, true)
       return true
@@ -62,6 +63,8 @@ class Rules
   # Conditionals
   
   "rule":
+    bound: 1
+
     # Set rule body scope to a found element
     evaluate: (operation, continuation, scope, ascender, ascending) ->
       if operation.index == 2 && !ascender

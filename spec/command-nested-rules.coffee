@@ -863,6 +863,43 @@ describe 'Nested Rules', ->
                 ' ']
               'box'],
 
+            ["<=", ["get", ["$reserved","this"], "width"], ["get", ["$id","vessel1"], "width"]]
+          ]
+        ]
+        console.info('.vessel .box { ::[width] == ::parent[width] } ')
+        container.innerHTML =  """
+          <div id="box0" class="box"></div>
+          <div id="vessel1" class="vessel">
+            <div id="box1" class="box"></div>
+            <div id="box2" class="box"></div>
+          </div>
+          <div id="box3" class="box"></div>
+          <div id="box4" class="box"></div>
+          """
+        
+        engine = new GSS(container)
+                              
+        engine.once 'solved', ->
+          expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+            ["<=",
+              ["get","$box1","width",".vessel .box$box1…#vessel1"],
+              ["get","$vessel1","width",".vessel .box$box1…#vessel1"]],
+            ["<=",
+              ["get","$box2","width",".vessel .box$box2…#vessel1"],
+              ["get","$vessel1","width",".vessel .box$box2…#vessel1"]]]
+          done()
+
+        engine.run rules
+      it 'should handle mix of global and local selector', (done) ->
+        rules = [
+          ['rule', 
+            ['$class'
+              ['$combinator',
+                ['$class',
+                  'vessel']
+                ' ']
+              'box'],
+
             ["<=", ["get", ["$reserved","this"], "width"], ["get", ["$reserved","parent"], "width"]]
           ]
         ]
@@ -890,7 +927,6 @@ describe 'Nested Rules', ->
           done()
 
         engine.run rules
-
     describe '2 level', ->
     
       it 'Runs commands from sourceNode', (done) ->

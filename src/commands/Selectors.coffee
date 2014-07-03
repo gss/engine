@@ -32,6 +32,7 @@ class Selectors
       console.error('shortcutting', head.groupped)
       shortcut.parent = head.parent
       shortcut.index = head.index
+      shortcut.bound = head.bound if head.bound
       @expressions.analyze(shortcut)
       tail = operation.tail
       unless global = tail.arity == 1 && tail.length == 2

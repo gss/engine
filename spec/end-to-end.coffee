@@ -264,7 +264,7 @@ describe 'End - to - End', ->
             "$b3[x]": 100
           done()
     
-    xdescribe 'WARN: unbalanced plural selectors', ->  
+    describe 'WARN: unbalanced plural selectors', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="a1" class="a"></div>
@@ -279,8 +279,8 @@ describe 'End - to - End', ->
               .a[x] == .b[x] == [x];              
             </style>
           """        
-        engine.once 'display', (e) ->
-          expect(engine.values).to.eql 
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
             "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
@@ -289,7 +289,35 @@ describe 'End - to - End', ->
             "$b2[x]": 100
             "$b3[x]": 100
             "$b4[x]": 100
-          done()        
+          a3 = engine.$id('a3')
+          a4 = a3.cloneNode()
+          a4.id = 'a4'
+          a3.parentNode.appendChild(a4)
+          engine.once 'solved', (e) ->
+            expect(engine.values.toObject()).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$a2[x]": 100
+              "$a3[x]": 100
+              "$a4[x]": 100
+              "$b1[x]": 100
+              "$b2[x]": 100
+              "$b3[x]": 100
+              "$b4[x]": 100
+            a1 = engine.$id('a1')
+            a1.parentNode.removeChild(a1)
+            console.error('remooovinngngns')
+            engine.once 'solved', (e) ->
+              debugger
+              expect(engine.values.toObject()).to.eql 
+                "x": 100
+                "$a2[x]": 100
+                "$a3[x]": 100
+                "$a4[x]": 100
+                "$b1[x]": 100
+                "$b2[x]": 100
+                "$b3[x]": 100
+              done()        
     
     xdescribe 'complex selectors', -> 
       xit 'should compute values', (done) ->                                 

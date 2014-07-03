@@ -99,17 +99,25 @@ class Expressions
 
   # Get result of executing operation with resolved arguments
   execute: (operation, continuation, scope, args) ->
+    # Command desires current context (e.g. ::this)
+
     scope ||= @engine.scope
     if operation.def.scoped || !args
+      node = scope
       (args ||= []).unshift scope
-    if typeof args[0] == 'object'
+    # Operation has a context 
+    else if typeof args[0] == 'object'
       node = args[0]
+    else if !operation.bound
+      node = @engine.scope
+    else
+      node = scope
 
     # Use function, or look up method on the first argument. Falls back to builtin
     unless func = operation.func
       if method = operation.method
         if node && func = node[method]
-          args.shift()
+          args.shift() if args[0] == node
           context = node
         unless func
           if !context && (func = scope[method])
@@ -255,6 +263,8 @@ class Expressions
     if parent
       operation.parent = parent
       operation.index = parent.indexOf(operation)
+      if parent.bound || parent.def?.bound == operation.index
+        operation.bound = true
 
     # Handle commands that refer other commands (e.g. [$combinator, node, >])
     operation.arity = operation.length - 1
@@ -274,15 +284,14 @@ class Expressions
         else
           def = @commands[operation.name]
       
+    operation.def = def ||= {noop: true}
+
     for child, index in operation
       if child instanceof Array
         @analyze(child, operation)
 
-    if def == undefined
-      operation.def = {noop: true}
-      return operation
+    return if def.noop
 
-    operation.def  = def
     if def.serialized
       # String representation of operation without complex arguments
       operation.key  = @serialize(operation, otherdef, false)

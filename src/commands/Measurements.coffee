@@ -5,7 +5,6 @@ class Measurements
   get:
     meta: true
     command: (operation, continuation, scope, object, property) ->
-      debugger
       if property
         if typeof object == 'string'
           id = object
