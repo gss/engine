@@ -25,8 +25,7 @@ class Expressions
     return unless args?
     if (buffer = @buffer) != undefined
       unless @engine._onBuffer && @engine._onBuffer(buffer, args, batch) == false
-        console.error(args)
-        debugger
+        #console.error(args)
         (buffer || (@buffer = [])).push args
       return
     else
@@ -158,7 +157,7 @@ class Expressions
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]
         else
-          return @engine.queries[key]
+          return @engine.queries.get(key)
     return false
 
   # Evaluate operation arguments in order, break on undefined
@@ -209,14 +208,14 @@ class Expressions
     if result? 
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
-        if parent && @engine.isCollection(result) && (plural = @getPluralIndex(continuation)) == -1
+        if parent && @engine.isCollection(result) and 
+        (plural = @engine.queries.getPluralBindingIndex(continuation, operation, scope, result)) == undefined
           console.group continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item)
             @evaluate operation.parent, breadcrumbs, scope, operation.index, item
           console.groupEnd continuation
           return
-          console.log('bound to', plural)
         # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
         else if parent?.def.capture?.call(@engine, result, operation, continuation, scope) == true
           return
@@ -224,7 +223,7 @@ class Expressions
         # TODO: Refactor this mess of nested conditions
         else
           if plural?
-            console.log(result, plural)
+            return if plural == -1
             result = result[plural]
           if operation.def.noop && operation.name && result.length == 1
             return 
@@ -242,16 +241,6 @@ class Expressions
     # Ascend without recursion (math, regular functions, constraints)
     return result
 
-  pluralRegExp: /(^|–)([^–]+)(\$[a-z0-9-]+)($|–)/i
-
-  getPluralIndex: (continuation) ->
-    return unless continuation
-    if plural = continuation.match(@pluralRegExp)
-
-      console.log(@engine.queries[plural[2]], 666, @engine.elements[plural[3]], plural[3])
-      debugger
-      return @engine.queries[plural[2]].indexOf(@engine.elements[plural[3]])
-    return -1
   # Advance to a groupped shortcut operation
   skip: (operation, ascender) ->
     if (operation.tail.path == operation.tail.key || ascender?)
@@ -366,6 +355,7 @@ class Expressions
       return continuation
     else
       return operation.path
+
   release: () ->
     if @engine.expressions.buffer
       @engine.expressions.flush()

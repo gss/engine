@@ -108,9 +108,10 @@ class Rules
       operation.parent.uid ||= '@' + (@commands.uid = (@commands.uid ||= 0) + 1)
       condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
       path = continuation + operation.parent.uid
-      if @queries[path] == undefined || (!!@queries[path] != !!condition)
+      query = @queries[path]
+      if query == undefined || (!!query != !!condition)
         console.group(path)
-        unless @queries[path] == undefined
+        unless query == undefined
           @queries.clean(path, continuation, operation.parent, scope)
         if condition
           @expressions.evaluate operation.parent[2], path, scope

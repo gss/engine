@@ -19855,14 +19855,15 @@ Rules = (function() {
       }
     },
     branch: function(operation, continuation, scope, ascender, ascending) {
-      var condition, path, _base, _base1;
+      var condition, path, query, _base, _base1;
       this.commands["if"].subscribe.call(this, operation.parent, continuation, scope);
       (_base = operation.parent).uid || (_base.uid = '@' + (this.commands.uid = ((_base1 = this.commands).uid || (_base1.uid = 0)) + 1));
       condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
       path = continuation + operation.parent.uid;
-      if (this.queries[path] === void 0 || (!!this.queries[path] !== !!condition)) {
+      query = this.queries[path];
+      if (query === void 0 || (!!query !== !!condition)) {
         console.group(path);
-        if (this.queries[path] !== void 0) {
+        if (query !== void 0) {
           this.queries.clean(path, continuation, operation.parent, scope);
         }
         if (condition) {
@@ -20983,8 +20984,6 @@ Expressions = (function() {
     }
     if ((buffer = this.buffer) !== void 0) {
       if (!(this.engine._onBuffer && this.engine._onBuffer(buffer, args, batch) === false)) {
-        console.error(args);
-        debugger;
         (buffer || (this.buffer = [])).push(args);
       }
     } else {
@@ -21120,7 +21119,7 @@ Expressions = (function() {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
         } else {
-          return this.engine.queries[key];
+          return this.engine.queries.get(key);
         }
       }
     }
@@ -21182,7 +21181,7 @@ Expressions = (function() {
     var breadcrumbs, item, parent, plural, _i, _len, _ref;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
-        if (parent && this.engine.isCollection(result) && (plural = this.getPluralIndex(continuation)) === -1) {
+        if (parent && this.engine.isCollection(result) && (plural = this.engine.queries.getPluralBindingIndex(continuation, operation, scope, result)) === void 0) {
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -21191,12 +21190,13 @@ Expressions = (function() {
           }
           console.groupEnd(continuation);
           return;
-          console.log('bound to', plural);
         } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
           return;
         } else {
           if (plural != null) {
-            console.log(result, plural);
+            if (plural === -1) {
+              return;
+            }
             result = result[plural];
           }
           if (operation.def.noop && operation.name && result.length === 1) {
@@ -21218,21 +21218,6 @@ Expressions = (function() {
       }
     }
     return result;
-  };
-
-  Expressions.prototype.pluralRegExp = /(^|–)([^–]+)(\$[a-z0-9-]+)($|–)/i;
-
-  Expressions.prototype.getPluralIndex = function(continuation) {
-    var plural;
-    if (!continuation) {
-      return;
-    }
-    if (plural = continuation.match(this.pluralRegExp)) {
-      console.log(this.engine.queries[plural[2]], 666, this.engine.elements[plural[3]], plural[3]);
-      debugger;
-      return this.engine.queries[plural[2]].indexOf(this.engine.elements[plural[3]]);
-    }
-    return -1;
   };
 
   Expressions.prototype.skip = function(operation, ascender) {
@@ -21424,15 +21409,16 @@ Queries = (function() {
   };
 
   Queries.prototype.push = function(query, continuation, scope) {
+    debugger;
     if (this.buffer === void 0) {
       this.output.pull(query, continuation, scope);
-    } else {
+    } else if (!this.buffer || this.engine.values.indexOf(this.buffer, query, continuation, scope) === -1) {
       (this.buffer || (this.buffer = [])).push(query, continuation, scope);
     }
   };
 
   Queries.prototype.pull = function(mutations) {
-    var capture, continuation, id, index, mutation, node, queries, query, scope, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
+    var capture, continuation, id, index, mutation, node, property, queries, query, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2;
     this.buffer = this.updated = null;
     capture = this.output.capture();
     this.engine.start();
@@ -21463,10 +21449,19 @@ Queries = (function() {
         scope = queries[index + 2];
         this.output.pull(query, continuation, scope);
       }
+      console.error('wtf', this._rebalancing, queries, this.updated);
+      if (this._rebalancing) {
+        _ref1 = this._rebalancing;
+        for (property in _ref1) {
+          value = _ref1[property];
+          this.rebalance(property, value);
+        }
+        this._rebalancing = void 0;
+      }
       if (this.removing) {
-        _ref1 = this.removing;
-        for (_l = 0, _len3 = _ref1.length; _l < _len3; _l++) {
-          node = _ref1[_l];
+        _ref2 = this.removing;
+        for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
+          node = _ref2[_l];
           delete node._gss_id;
         }
       }
@@ -21500,7 +21495,7 @@ Queries = (function() {
     while (parent) {
       $attribute = target === parent && '$attribute' || ' $attribute';
       this.match(parent, $attribute, name, target);
-      if (changed != null ? changed.length : void 0) {
+      if ((changed != null ? changed.length : void 0) && name === 'class') {
         $class = target === parent && '$class' || ' $class';
         for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
           kls = changed[_k];
@@ -21681,8 +21676,8 @@ Queries = (function() {
 
   Queries.prototype.add = function(node, continuation, operation, scope) {
     var collection;
-    collection = this[continuation] || (this[continuation] = []);
-    collection.manual = true;
+    collection = this.get(continuation);
+    (collection || (collection = [])).manual = true;
     console.error('adding', node, collection, continuation);
     if (collection.indexOf(node) === -1) {
       collection.push(node);
@@ -21693,13 +21688,18 @@ Queries = (function() {
   };
 
   Queries.prototype.get = function(operation, continuation) {
+    var result;
     if (typeof operation === 'string') {
-      return this[operation];
+      result = this[operation];
+      if (typeof result === 'string') {
+        return this[result];
+      }
+      return result;
     }
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual) {
-    var cleaning, collection, contd, duplicates, index, node, path, ref, refs, result, subscope, watcher, watchers, _base, _i, _len, _ref, _ref1;
+    var cleaning, collection, contd, duplicates, index, node, path, plural, plurals, ref, refs, result, subpath, subscope, watcher, watchers, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -21707,7 +21707,7 @@ Queries = (function() {
       node = this.engine.elements[id];
     }
     if (continuation) {
-      if (collection = this[continuation]) {
+      if (collection = this.get(continuation)) {
         if ((duplicates = collection.duplicates)) {
           if ((index = duplicates.indexOf(node)) > -1) {
             duplicates.splice(index, 1);
@@ -21724,11 +21724,22 @@ Queries = (function() {
         }
       }
       if (node) {
+        if (plurals = (_ref = this._plurals) != null ? _ref[continuation] : void 0) {
+          for (_i = 0, _len = plurals.length; _i < _len; _i += 3) {
+            plural = plurals[_i];
+            subpath = continuation + id + '–' + plural;
+            console.log(1, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
+            this.clean(continuation + id + '–' + plural, null, null, null, null, true);
+            console.log(2, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
+            debugger;
+          }
+          console.error('loleo', continuation, (_ref1 = this._plurals) != null ? _ref1[continuation] : void 0);
+        }
         if (watchers = this._watchers[id]) {
           ref = continuation + (collection && collection.length !== void 0 && id || '');
-          _ref = this.engine.getPossibleContinuations(ref);
-          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-            refs = _ref[_i];
+          _ref2 = this.engine.getPossibleContinuations(ref);
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            refs = _ref2[_j];
             index = 0;
             while (watcher = watchers[index]) {
               contd = watchers[index + 1];
@@ -21746,7 +21757,7 @@ Queries = (function() {
           }
         }
         path = continuation;
-        if (((_ref1 = (result = this.engine.queries[path])) != null ? _ref1.length : void 0) != null) {
+        if (((_ref3 = (result = this.engine.queries.get(path))) != null ? _ref3.length : void 0) != null) {
           path += id;
           this.clean(path);
         }
@@ -21760,7 +21771,7 @@ Queries = (function() {
       if (watchers = this._watchers[id]) {
         index = 0;
         while (watcher = watchers[index]) {
-          this.clean(watcher, watchers[index + 1], watcher, watchers[index + 2], false, 'removing');
+          this.clean(watcher, watchers[index + 1], watcher, watchers[index + 2]);
           index += 3;
         }
         delete this._watchers[id];
@@ -21770,7 +21781,7 @@ Queries = (function() {
     return this;
   };
 
-  Queries.prototype.clean = function(path, continuation, operation, scope, bind, removing) {
+  Queries.prototype.clean = function(path, continuation, operation, scope, bind, plural) {
     var child, copy, parent, result, _i, _len, _ref;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
@@ -21779,25 +21790,27 @@ Queries = (function() {
       continuation = path;
     }
     this.engine.values.clean(path, continuation, operation, scope);
-    if ((result = this[path]) !== void 0) {
-      if (result) {
-        if (parent = operation != null ? operation.parent : void 0) {
-          if ((_ref = parent.def.release) != null) {
-            _ref.call(this.engine, result, operation, continuation, scope);
+    if (!plural) {
+      if ((result = this.get(path)) !== void 0) {
+        if (result) {
+          if (parent = operation != null ? operation.parent : void 0) {
+            if ((_ref = parent.def.release) != null) {
+              _ref.call(this.engine, result, operation, continuation, scope);
+            }
+          }
+          if (result.length !== void 0) {
+            copy = result.slice();
+            for (_i = 0, _len = copy.length; _i < _len; _i++) {
+              child = copy[_i];
+              this.remove(child, path, operation);
+            }
+          } else if (typeof result === 'object') {
+            this.remove(result, path, operation);
           }
         }
-        if (result.length !== void 0) {
-          copy = result.slice();
-          for (_i = 0, _len = copy.length; _i < _len; _i++) {
-            child = copy[_i];
-            this.remove(child, path, operation);
-          }
-        } else if (typeof result === 'object') {
-          this.remove(result, path, operation);
+        if (scope && operation.def.cleaning) {
+          this.remove(this.engine.recognize(scope), path, operation);
         }
-      }
-      if (scope && operation.def.cleaning) {
-        this.remove(this.engine.recognize(scope), path, operation);
       }
     }
     delete this[path];
@@ -21810,11 +21823,72 @@ Queries = (function() {
   Queries.prototype.isBoundToCurrentContext = function(args, operation, scope, node) {
     var _ref;
     if (args.length !== 0 && !((_ref = args[0]) != null ? _ref.nodeType : void 0)) {
-      if (!operation.bound && (!scope || scope !== node)) {
+      if (!operation.bound && (!scope || scope !== node || scope === this.engine.scope)) {
         return false;
       }
     }
     return true;
+  };
+
+  Queries.prototype.rebalance = function(path, right) {
+    var added, index, leftNew, leftOld, newLeft, object, pair, removed, rightNew, rightOld, rightPath, _i, _j, _k, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+    leftNew = ((_ref = this.updated) != null ? (_ref1 = _ref[path]) != null ? _ref1[0] : void 0 : void 0) || this.get(path);
+    leftOld = ((_ref2 = this.updated) != null ? (_ref3 = _ref2[path]) != null ? _ref3[1] : void 0 : void 0) || this.get(path);
+    if (right["new"]) {
+      rightNew = right["new"];
+      rightOld = right.old;
+    } else {
+      rightPath = path + this.engine.recognize(leftNew[0]) + '–' + right.key;
+      rightNew = ((_ref4 = this.updated) != null ? (_ref5 = _ref4[rightPath]) != null ? _ref5[0] : void 0 : void 0) || this.get(rightPath);
+      rightOld = ((_ref6 = this.updated) != null ? (_ref7 = _ref6[rightPath]) != null ? _ref7[1] : void 0 : void 0) || this.get(rightPath);
+    }
+    removed = [];
+    added = [];
+    newLeft = this.get(path);
+    for (index = _i = 0, _len = leftOld.length; _i < _len; index = ++_i) {
+      object = leftOld[index];
+      if (leftNew[index] !== object || rightOld[index] !== rightNew[index]) {
+        if (rightOld && rightOld[index]) {
+          removed.push([object, rightOld[index]]);
+        }
+        if (leftNew[index]) {
+          added.push([leftNew[index], rightNew[index]]);
+        }
+      }
+    }
+    for (index = _j = _ref8 = leftOld.length, _ref9 = leftNew.length; _ref8 <= _ref9 ? _j < _ref9 : _j > _ref9; index = _ref8 <= _ref9 ? ++_j : --_j) {
+      if (rightNew[index]) {
+        added.push([leftNew[index], rightNew[index]]);
+      }
+    }
+    for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
+      pair = removed[_k];
+      1;
+    }
+    return console.log(this.buffer, [path, right], [leftNew, leftOld], "NEED TO REBALANCE DIS", added, removed);
+  };
+
+  Queries.prototype.pluralRegExp = /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]*)$/i;
+
+  Queries.prototype.getPluralBindingIndex = function(continuation, operation, scope, result) {
+    var collection, element, plural, plurals, _base, _base1, _name, _name1, _ref, _ref1;
+    if (plural = continuation.match(this.pluralRegExp)) {
+      console.error("FUHRER", plural, continuation);
+      plurals = (_base = (this._plurals || (this._plurals = {})))[_name = plural[1]] || (_base[_name] = []);
+      if (plurals.indexOf(plural[3]) === -1) {
+        plurals.push(plural[3], operation, scope);
+      }
+      collection = this.get(plural[1]);
+      element = this.engine.elements[plural[2]];
+      (_base1 = (this._rebalancing || (this._rebalancing = {})))[_name1 = plural[1]] || (_base1[_name1] = {
+        operation: operation,
+        continuation: continuation,
+        key: plural[3],
+        old: ((_ref = this.updated) != null ? (_ref1 = _ref[continuation]) != null ? _ref1[1] : void 0 : void 0) || this.get(continuation),
+        "new": result
+      });
+      return collection.indexOf(element);
+    }
   };
 
   Queries.prototype.fetch = function(node, args, operation, continuation, scope) {
@@ -21826,24 +21900,34 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, query, removed, watcher, watchers, _base, _i, _j, _k, _len, _len1, _len2, _name, _ref, _ref1;
+    var added, child, dupe, group, id, index, isCollection, noop, o, old, path, plural, plurals, query, removed, scoped, watcher, watchers, _base, _base1, _i, _j, _k, _l, _len, _len1, _len2, _len3, _name, _ref, _ref1, _ref2;
     node || (node = scope || args[0]);
     path = this.getQueryPath(operation, continuation);
-    old = this[path];
+    old = this.get(path);
+    console.log(path, args, operation, [scope, node], this.isBoundToCurrentContext(args, operation, scope, node));
     if (!this.isBoundToCurrentContext(args, operation, scope, node)) {
       query = this.getQueryPath(operation, this.engine.identify(scope || this.engine.scope));
       if (group = (_ref = this.updated) != null ? _ref[query] : void 0) {
         result = group[0];
-        this.set(path, result);
+        if (this[path] == null) {
+          scoped = true;
+        }
       }
-      console.error(args, scope, 'SCOPEEED', path, operation, result);
+      if (scoped) {
+        debugger;
+      }
+      console.error(args, scope, scoped, 'SCOPEEED', path, operation, result);
     }
     if ((group || (group = (_ref1 = this.updated) != null ? _ref1[path] : void 0))) {
-      if (group.indexOf(operation) > -1) {
-        return;
+      if (scoped) {
+        added = result;
+      } else {
+        if (group.indexOf(operation) > -1) {
+          return;
+        }
+        added = group[2];
+        removed = group[3];
       }
-      added = group[1];
-      removed = group[2];
     } else {
       isCollection = result && result.length !== void 0;
       if (old === result || (old === void 0 && this.removed)) {
@@ -21905,12 +21989,22 @@ Queries = (function() {
       return;
     }
     this.set(path, result);
+    if (plurals = (_ref2 = this._plurals) != null ? _ref2[path] : void 0) {
+      for (index = _l = 0, _len3 = plurals.length; _l < _len3; index = _l += 3) {
+        plural = plurals[index];
+        (_base = (this._rebalancing || (this._rebalancing = {})))[path] || (_base[path] = {
+          key: plural,
+          operation: plurals[index + 1],
+          scope: plurals[index + 2]
+        });
+      }
+    }
     if (this.updated !== void 0) {
-      group = (_base = (this.updated || (this.updated = {})))[_name = query || path] || (_base[_name] = []);
+      group = (_base1 = (this.updated || (this.updated = {})))[_name = query || path] || (_base1[_name] = []);
       if (group.length) {
         group.push(operation);
       } else {
-        group.push(result, added, removed, operation);
+        group.push(result, old, added, removed, operation);
       }
     }
     if (removed && !added) {
@@ -22157,7 +22251,6 @@ Solutions = (function() {
     } else {
       this.solver.resolve();
     }
-    console.log(JSON.parse(JSON.stringify(this.solver._changed)));
     _ref = this.solver._changed;
     for (property in _ref) {
       value = _ref[property];
@@ -22289,7 +22382,6 @@ Solutions = (function() {
 
   Solutions.prototype.suggest = function(path, value, strength, weight) {
     var variable;
-    console.error('sugges', path, value, strength, weight, this.variables[path]);
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
         return this.response[path] = value;

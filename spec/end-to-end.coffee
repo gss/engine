@@ -317,6 +317,7 @@ describe 'End - to - End', ->
                 "$b1[x]": 100
                 "$b2[x]": 100
                 "$b3[x]": 100
+                "$b4[x]": 100
               done()        
     
     xdescribe 'complex selectors', -> 

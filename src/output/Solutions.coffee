@@ -20,7 +20,6 @@ class Solutions
     else
       @solver.resolve()
 
-    console.log(JSON.parse JSON.stringify @solver._changed)
     for property, value of @solver._changed
       response[property] = value
     @solver._changed = undefined
@@ -103,7 +102,6 @@ class Solutions
 
   suggest: (path, value, strength, weight) ->
     #@solver.solve()
-    console.error('sugges', path, value, strength, weight, @variables[path])
     if typeof path == 'string'
       unless variable = @variables[path]
         return @response[path] = value
