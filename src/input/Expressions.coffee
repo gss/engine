@@ -209,7 +209,7 @@ class Expressions
         # Topmost operations produce output
         # TODO: Refactor this mess of nested conditions
         else
-          if plural
+          if plural?
             console.log(result, plural)
             result = result[plural]
           if operation.def.noop && operation.name && result.length == 1

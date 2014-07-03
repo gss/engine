@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-07-03) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -248,7 +247,7 @@ Expressions = (function() {
         } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
           return;
         } else {
-          if (plural) {
+          if (plural != null) {
             console.log(result, plural);
             result = result[plural];
           }

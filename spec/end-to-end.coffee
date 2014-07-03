@@ -253,8 +253,8 @@ describe 'End - to - End', ->
               .a[x] == .b[x] == [x];              
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
             "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
