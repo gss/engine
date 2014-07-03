@@ -105,11 +105,15 @@ class Engine
 
   # Return concatenated path for a given object and prefix
   getContinuation: (path, value) ->
-    if path && path.charAt(path.length - 1) == '–'
-      path = path.substring(0, path.length - 1)
+    if path
+      path = path.replace(/[–…]$/, '')
     return path unless value?
     return value if typeof value == 'string'
     return path + Engine.identify(value)
+
+  # When cleaning a path, also clean forks and rules
+  getPossibleContinuations: (path) ->
+    [path, path + '–', path + '…']
 
   getPath: (id, property) ->
     unless property

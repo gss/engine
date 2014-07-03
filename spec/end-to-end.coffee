@@ -239,7 +239,7 @@ describe 'End - to - End', ->
             "md2": 71 / 4
           done()
     
-    xdescribe 'balanced plural selectors', -> 
+    describe 'balanced plural selectors', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="a1" class="a"></div>

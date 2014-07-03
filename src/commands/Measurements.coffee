@@ -5,6 +5,7 @@ class Measurements
   get:
     meta: true
     command: (operation, continuation, scope, object, property) ->
+      debugger
       if property
         if typeof object == 'string'
           id = object
@@ -30,11 +31,9 @@ class Measurements
             break
           child = parent
 
-      console.error('get', Array.prototype.slice.call(arguments))
       # Compute custom property
       if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
         computed = @_compute(id, property, continuation, true)
-        console.log(computed, id, property)
         if primitive
           return computed 
       # Expand properties like ::window[center-y]
@@ -42,8 +41,6 @@ class Measurements
         return @properties[property].call(@, id, continuation)
       else if primitive
         return @values.watch(id, property, operation, continuation, scope)
-      if @getContinuation(continuation || '') == 'style$style999.sync,.async$sync1'
-        debugger
       # Return command for solver with path which will be used to clean it
       return ['get', id, property, @getContinuation(continuation || '')]
 
@@ -117,7 +114,6 @@ class Measurements
   set:
     command: (operation, continuation, scope, property, value) ->
       if scope && scope.style[property] != undefined
-        console.error('setting', scope, property, value)
         @_setStyle(scope, property, value)
       return 
 

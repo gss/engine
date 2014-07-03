@@ -126,6 +126,7 @@ describe 'GSS commands', ->
         box0 = scope.getElementsByClassName('box')[0]
         box0.parentNode.removeChild(box0)
 
+      debugger
       engine.run [
         ['==', ['get', ['$class','box'], 'width'],['get', ['$class','box'], 'intrinsic-width']]
       ]

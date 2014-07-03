@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-02) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-03) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -31,8 +31,8 @@ Expressions = (function() {
 
   Expressions.prototype.pull = function() {
     var buffer, result;
-    this.engine.start();
     buffer = this.capture();
+    this.engine.start();
     result = this.evaluate.apply(this, arguments);
     if (buffer) {
       this.flush();
@@ -47,6 +47,8 @@ Expressions = (function() {
     }
     if ((buffer = this.buffer) !== void 0) {
       if (!(this.engine._onBuffer && this.engine._onBuffer(buffer, args, batch) === false)) {
+        console.error(args);
+        debugger;
         (buffer || (this.buffer = [])).push(args);
       }
     } else {
@@ -68,6 +70,8 @@ Expressions = (function() {
       return this.output.pull(buffer);
     } else if (this.buffer === void 0) {
       return this.engine.push();
+    } else {
+      return this.buffer = void 0;
     }
   };
 
@@ -150,41 +154,28 @@ Expressions = (function() {
       return args;
     }
     if (callback = operation.def.callback) {
-      console.log(context || node || scope, result, operation, continuation);
       result = this.engine[callback](context || node || scope, args, result, operation, continuation, scope);
     }
     return result;
   };
 
   Expressions.prototype.reuse = function(path, continuation) {
-    var breaking, id, index, last, separator, start;
-    last = -1;
-    while ((index = continuation.indexOf('–', last + 1))) {
-      if (index === -1) {
-        if (last === continuation.length - 1) {
-          break;
-        }
-        index = continuation.length;
-        breaking = true;
+    var bit, index, key, length, _i, _len, _ref;
+    length = path.length;
+    _ref = continuation.split('–');
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      key = _ref[_i];
+      bit = key;
+      if ((index = bit.indexOf('…')) > -1) {
+        bit = bit.substring(index + 1);
       }
-      start = continuation.substring(last + 1, last + 1 + path.length);
-      if (start === path) {
-        separator = last + 1 + path.length;
-        if (separator < index) {
-          if (continuation.charAt(separator) === '$') {
-            id = continuation.substring(separator, index);
-          }
-        }
-        if (id) {
-          return this.engine.elements[id];
+      if (bit === path || bit.substring(0, path.length) === path) {
+        if (length < bit.length && bit.charAt(length) === '$') {
+          return this.engine.elements[bit.substring(length)];
         } else {
-          return this.engine.queries[continuation.substring(0, separator)];
+          return this.engine.queries[key];
         }
       }
-      if (breaking) {
-        break;
-      }
-      last = index;
     }
     return false;
   };
@@ -212,8 +203,14 @@ Expressions = (function() {
       } else if (argument instanceof Array) {
         if (ascender != null) {
           contd = continuation;
-          if (contd.charAt(contd.length - 1) !== '–') {
-            contd += '–';
+          if (operation.def.rule && ascender === 1) {
+            if (contd.charAt(contd.length - 1) !== '…') {
+              contd += '…';
+            }
+          } else {
+            if (contd.charAt(contd.length - 1) !== '–') {
+              contd += '–';
+            }
           }
         }
         argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
@@ -235,10 +232,10 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender, hidden) {
-    var breadcrumbs, item, parent, _i, _len, _ref;
+    var breadcrumbs, item, parent, plural, _i, _len, _ref;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
-        if (parent && this.engine.isCollection(result)) {
+        if (parent && this.engine.isCollection(result) && (plural = this.getPluralIndex(continuation)) === -1) {
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -247,9 +244,14 @@ Expressions = (function() {
           }
           console.groupEnd(continuation);
           return;
+          console.log('bound to', plural);
         } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
           return;
         } else {
+          if (plural) {
+            console.log(result, plural);
+            result = result[plural];
+          }
           if (operation.def.noop && operation.name && result.length === 1) {
             return;
           }
@@ -269,6 +271,21 @@ Expressions = (function() {
       }
     }
     return result;
+  };
+
+  Expressions.prototype.pluralRegExp = /(^|–)([^–]+)(\$[a-z0-9-]+)($|–)/i;
+
+  Expressions.prototype.getPluralIndex = function(continuation) {
+    var plural;
+    if (!continuation) {
+      return;
+    }
+    if (plural = continuation.match(this.pluralRegExp)) {
+      console.log(this.engine.queries[plural[2]], 666, this.engine.elements[plural[3]], plural[3]);
+      debugger;
+      return this.engine.queries[plural[2]].indexOf(this.engine.elements[plural[3]]);
+    }
+    return -1;
   };
 
   Expressions.prototype.skip = function(operation, ascender) {
@@ -479,7 +496,7 @@ Values = (function() {
 
   Values.prototype.clean = function(continuation) {
     var observers, path, _i, _len, _ref;
-    _ref = [continuation, continuation + '–'];
+    _ref = this.engine.getPossibleContinuations(continuation);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
       if (observers = this._observers[path]) {
@@ -688,8 +705,8 @@ Engine = (function() {
   };
 
   Engine.prototype.getContinuation = function(path, value) {
-    if (path && path.charAt(path.length - 1) === '–') {
-      path = path.substring(0, path.length - 1);
+    if (path) {
+      path = path.replace(/[–…]$/, '');
     }
     if (value == null) {
       return path;
@@ -698,6 +715,10 @@ Engine = (function() {
       return value;
     }
     return path + Engine.identify(value);
+  };
+
+  Engine.prototype.getPossibleContinuations = function(path) {
+    return [path, path + '–', path + '…'];
   };
 
   Engine.prototype.getPath = function(id, property) {

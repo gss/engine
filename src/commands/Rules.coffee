@@ -117,18 +117,20 @@ class Rules
 
         @queries[path] = condition ? null
 
+  "text/gss-ast": (source) ->
+    return JSON.parse(source)
+
+  "text/gss": (source) ->
+    return GSS.Parser.parse(source)?.commands
 
   "eval": 
     command: (operation, continuation, scope, node, type = 'text/gss', source) ->
-      if (node.type || type) == 'text/gss-ast'
-        rules = JSON.parse(node.textContent ? node)
-      else
-        return unless rules = GSS.Parser.parse(source ? node.textContent ? node)?.commands
+      rules = @['_' + (node.type || type)](source ? node.textContent ? node)
       scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
       console.log('Eval', rules, continuation)
       debugger
       rules = GSS.clone(rules)
-      @run rules, continuation, scope
+      @run rules, continuation + '…', scope
       return
 
   "load": 
@@ -143,7 +145,8 @@ class Rules
       xhr.open(method.toUpperCase(), src)
       xhr.send()
 
-
+for property, fn of Rules::
+  fn.rule = true
 
 
 

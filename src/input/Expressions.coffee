@@ -13,9 +13,8 @@ class Expressions
 
   # Hook: Evaluate input and pass produced output
   pull: ->
-    @engine.start()
-
     buffer = @capture() # Enable buffering if nobody enabled it already
+    @engine.start()
     result = @evaluate.apply(@, arguments)
     if buffer # Flush buffered output if this function started the buffering
       @flush()
@@ -26,6 +25,8 @@ class Expressions
     return unless args?
     if (buffer = @buffer) != undefined
       unless @engine._onBuffer && @engine._onBuffer(buffer, args, batch) == false
+        console.error(args)
+        debugger
         (buffer || (@buffer = [])).push args
       return
     else
@@ -45,6 +46,8 @@ class Expressions
       @output.pull(buffer)
     else if @buffer == undefined
       @engine.push()
+    else
+      @buffer = undefined
 
   # Run without changing lastOutput or buffer settings
   do: ->
@@ -126,33 +129,22 @@ class Expressions
 
     # Let context transform or filter the result
     if callback = operation.def.callback
-
-      console.log(context || node || scope, result, operation, continuation)
       result = @engine[callback](context || node || scope, args, result, operation, continuation, scope)
-
     
     return result
 
   # Try to read saved results within continuation
   reuse: (path, continuation) ->
-    last = -1
-    while (index = continuation.indexOf('–', last + 1))
-      if index == -1
-        break if last == continuation.length - 1
-        index = continuation.length
-        breaking = true
-      start = continuation.substring(last + 1, last + 1 + path.length)
-      if start == path
-        separator = last + 1 + path.length
-        if separator < index
-          if continuation.charAt(separator) == '$'
-            id = continuation.substring(separator, index)
-        if id
-          return @engine.elements[id]
+    length = path.length
+    for key in continuation.split('–')
+      bit = key
+      if (index = bit.indexOf('…')) > -1
+        bit = bit.substring(index + 1)
+      if bit == path || bit.substring(0, path.length) == path
+        if length < bit.length && bit.charAt(length) == '$'
+          return @engine.elements[bit.substring(length)]
         else
-          return @engine.queries[continuation.substring(0, separator)]
-      break if breaking
-      last = index
+          return @engine.queries[key]
     return false
 
   # Evaluate operation arguments in order, break on undefined
@@ -176,7 +168,10 @@ class Expressions
         # Leave forking mark in a path when resolving next arguments
         if ascender?
           contd = continuation
-          contd += '–' unless contd.charAt(contd.length - 1) == '–'
+          if operation.def.rule && ascender == 1
+            contd += '…' unless contd.charAt(contd.length - 1) == '…'
+          else
+            contd += '–' unless contd.charAt(contd.length - 1) == '–'
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
       if argument == undefined
         if !operation.def.eager || ascender?
@@ -200,20 +195,23 @@ class Expressions
     if result? 
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
-        if parent && @engine.isCollection(result)
+        if parent && @engine.isCollection(result) && (plural = @getPluralIndex(continuation)) == -1
           console.group continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item)
             @evaluate operation.parent, breadcrumbs, scope, operation.index, item
           console.groupEnd continuation
           return
-        
+          console.log('bound to', plural)
         # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
         else if parent?.def.capture?.call(@engine, result, operation, continuation, scope) == true
           return
         # Topmost operations produce output
         # TODO: Refactor this mess of nested conditions
         else
+          if plural
+            console.log(result, plural)
+            result = result[plural]
           if operation.def.noop && operation.name && result.length == 1
             return 
           if operation.def.noop || (parent.def.noop && !parent.name)
@@ -230,6 +228,16 @@ class Expressions
     # Ascend without recursion (math, regular functions, constraints)
     return result
 
+  pluralRegExp: /(^|–)([^–]+)(\$[a-z0-9-]+)($|–)/i
+
+  getPluralIndex: (continuation) ->
+    return unless continuation
+    if plural = continuation.match(@pluralRegExp)
+
+      console.log(@engine.queries[plural[2]], 666, @engine.elements[plural[3]], plural[3])
+      debugger
+      return @engine.queries[plural[2]].indexOf(@engine.elements[plural[3]])
+    return -1
   # Advance to a groupped shortcut operation
   skip: (operation, ascender) ->
     if (operation.tail.path == operation.tail.key || ascender?)
@@ -348,7 +356,7 @@ class Expressions
       @engine.expressions.flush()
     else
       @engine.expressions.buffer = undefined
-  
+
   capture: ->
     if @buffer == undefined
       @buffer = null

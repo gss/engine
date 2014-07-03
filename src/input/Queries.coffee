@@ -41,7 +41,8 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
-    @output.buffer = @buffer = @updated = null
+    @buffer = @updated = null
+    capture = @output.capture() 
     @engine.start()
     for mutation in mutations
       switch mutation.type
@@ -67,7 +68,7 @@ class Queries
           delete node._gss_id
 
     @buffer = @updated = undefined
-    @output.flush()
+    @output.flush() if capture
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -248,17 +249,18 @@ class Queries
       if node
         if watchers = @_watchers[id]
           ref = continuation + (collection && collection.length != undefined && id || '')
-          refforked = ref + '–'
-          index = 0
-          while watcher = watchers[index]
-            contd = watchers[index + 1]
-            unless contd == ref || contd == refforked
-              index += 3
-              continue
-            subscope = watchers[index + 2]
-            watchers.splice(index, 3)
-            @clean(watcher, contd, watcher, subscope, true)
-          delete @_watchers[id] unless watchers.length
+          # I'm not super excited about this
+          for refs in @engine.getPossibleContinuations(ref)
+            index = 0
+            while watcher = watchers[index]
+              contd = watchers[index + 1]
+              unless contd == refs
+                index += 3
+                continue
+              subscope = watchers[index + 2]
+              watchers.splice(index, 3)
+              @clean(watcher, contd, watcher, subscope, true)
+            delete @_watchers[id] unless watchers.length
         path = continuation
         if (result = @engine.queries[path])?.length?
           path += id

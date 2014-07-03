@@ -33,7 +33,7 @@ class Values
     delete @_watchers[path] unless watchers.length
 
   clean: (continuation) ->
-    for path in [continuation, continuation + '–']
+    for path in @engine.getPossibleContinuations(continuation)
       if observers = @_observers[path]
         while observers[0]
           @unwatch(observers[1], undefined, observers[0], path, observers[2])
