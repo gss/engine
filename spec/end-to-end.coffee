@@ -310,6 +310,7 @@ describe 'End - to - End', ->
             a1.parentNode.removeChild(a1)
             console.error('delete a1')
             engine.once 'solved', (e) ->
+              debugger
               expect(engine.values.toObject()).to.eql 
                 "x": 100
                 "$a2[x]": 100
@@ -346,13 +347,20 @@ describe 'End - to - End', ->
                     a2 = engine.$id('a2')
                     a2.parentNode.removeChild(a2)
                     engine.once 'solved', (e) ->
+                      console.log(123)
+                    
                       expect(engine.values.toObject()).to.eql 
                         "x": 100
                         "$a3[x]": 100
                         "$a4[x]": 100
                         "$b1[x]": 100
                         "$b2[x]": 100
-                      done()  
+                      divs = engine.$tag('div')
+                      while divs[0]
+                        divs[0].parentNode.removeChild(divs[0])
+                      engine.once 'solved', (e) ->
+                        "x": 100
+                    done()  
     xdescribe 'complex selectors', -> 
       xit 'should compute values', (done) ->                                 
         container.innerHTML =  """

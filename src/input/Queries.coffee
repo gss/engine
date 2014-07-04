@@ -343,7 +343,7 @@ class Queries
     leftUpdate = @updated?[path]
     leftNew = (if leftUpdate then leftUpdate[0] else @get(path)) || []
     leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = path + @engine.recognize(leftNew[0]) + '–' + key
+    rightPath = path + @engine.recognize(leftNew[0] || leftOld[0]) + '–' + key
     rightUpdate = @updated?[rightPath]
 
     console.error(rightPath, rightUpdate, @)
@@ -431,8 +431,6 @@ class Queries
       else
         added = group[2]
         removed = group[3]
-      if @updated?[path]
-        continuation = @engine.expressions.log(operation, continuation)
     else
 
       isCollection = result && result.length != undefined
@@ -469,6 +467,8 @@ class Queries
     if id = @engine.identify(node)
       watchers = @_watchers[id] ||= []
       if (@engine.values.indexOf(watchers, operation, continuation, scope) == -1)
+        if continuation == "style$2….a$a1–.b"
+          debugger
         watchers.push(operation, continuation, scope)
     
     return if noop
