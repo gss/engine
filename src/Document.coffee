@@ -41,7 +41,7 @@ class Engine.Document extends Engine
     # Expressions generate commands and pass them to solver
     @expressions.output = @solver
     
-    if @scope.nodeType == 9
+    if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
       @scope.addEventListener 'DOMContentLoaded', @
     else
       @start()

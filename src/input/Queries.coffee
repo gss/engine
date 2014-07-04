@@ -33,7 +33,6 @@ class Queries
   # Re-evaluate updated queries
   # Watchers are stored in a single array in groups of 3 properties
   push: (query, continuation, scope) ->
-    debugger
     if @buffer == undefined
       @output.pull query, continuation, scope
     else if !@buffer || @engine.values.indexOf(@buffer, query, continuation, scope) == -1
@@ -54,6 +53,7 @@ class Queries
 
       @$intrinsics(mutation.target)
 
+    @_rebalancing = null
     if queries = @lastOutput = @buffer
       @buffer = undefined
       if @removed
@@ -64,14 +64,17 @@ class Queries
         continuation = queries[index + 1]
         scope = queries[index + 2]
         @output.pull query, continuation, scope
-      console.error('wtf', @_rebalancing, queries, @updated)
-      if @_rebalancing
-        for property, value of @_rebalancing
-          @rebalance property, value
-        @_rebalancing = undefined
-      if @removing
-        for node in @removing
-          delete node._gss_id
+    console.error('wtf', @_rebalancing, queries, @updated)
+    rebalancing = @_rebalancing
+    @_rebalancing = undefined
+    if rebalancing
+      for property, value of rebalancing
+        if plurals = @_plurals[property]
+          for plural, index in plurals by 3
+            @rebalance property, plural, plurals[index + 1], plurals[index + 2]
+    if @removing
+      for node in @removing
+        delete node._gss_id
 
     @buffer = @updated = undefined
     @output.flush() if capture
@@ -262,7 +265,6 @@ class Queries
             console.log(1, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
             @clean(continuation + id + '–' + plural, null, null, null, null, true)
             console.log(2, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
-            debugger
           console.error('loleo', continuation, @_plurals?[continuation])
 
         if watchers = @_watchers[id]
@@ -326,8 +328,6 @@ class Queries
         if scope && operation.def.cleaning
           @remove @engine.recognize(scope), path, operation
     delete @[path]
-    if path == 'style$2….a$a1–.b$b1'
-      debugger
     if !result || result.length == undefined
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
@@ -338,16 +338,17 @@ class Queries
         return false
     return true;
 
-  rebalance: (path, right) ->
-    leftNew = @updated?[path]?[0] || @get(path) || []
-    leftOld = @updated?[path]?[1] || @get(path) || []
-    if right.new
-      rightNew = right.new
-      rightOld = right.old
-    else # fixme
-      rightPath = path + @engine.recognize(leftNew[0]) + '–' + right.key
-      rightNew = @updated?[rightPath]?[0] || @get(rightPath) || []
-      rightOld = @updated?[rightPath]?[1] || @get(rightPath) || []
+  rebalance: (path, key, operation, scope) ->
+
+    leftUpdate = @updated?[path]
+    leftNew = (if leftUpdate then leftUpdate[0] else @get(path)) || []
+    leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
+    rightPath = path + @engine.recognize(leftNew[0]) + '–' + key
+    rightUpdate = @updated?[rightPath]
+
+    console.error(rightPath, rightUpdate, @)
+    rightNew = (if rightUpdate then rightUpdate[0] else @get(rightPath)) || []
+    rightOld = (if rightUpdate then rightUpdate[1] else @get(rightPath)) || []
 
     removed = []
     added = []
@@ -366,38 +367,36 @@ class Queries
 
     for pair in removed
       console.error('remove', path + @engine.recognize(pair[0]) + '–')
-      @remove(right.scope, path + @engine.recognize(pair[0]) + '–')
-      @clean(path + @engine.recognize(pair[0]) + '–' + right.key, null, null, null, null, true)
+      @remove(scope, path + @engine.recognize(pair[0]) + '–', null, null, null, true)
+      @clean(path + @engine.recognize(pair[0]) + '–' + key, null, null, null, null, true)
     
     for pair in added
-      contd = path + @engine.recognize(pair[0]) + '–' + right.key
-      @engine.expressions.pull right.operation.parent, contd, right.scope, right.operation.index, pair[1]
+      prefix = path + @engine.recognize(pair[0]) + '–'
+      # not too good
+      contd = prefix + key.substring(0, key.length - operation.key.length)
+      console.error(666, contd, key)
+      @engine.expressions.pull operation, contd, scope, true, true
 
 
-    console.log(@updated, [path, right], [leftNew, leftOld], "NEED TO REBALANCE DIS", added, removed)
-
-  pluralRegExp: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]*)$/i
+    console.log(@updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed)
+    debugger
+  pluralRegExp: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i
                   # path1 ^        id ^        ^path2   
 
   # Choose a good match from given collection 
   # for an element found by another plural selector
   getPluralBindingIndex: (continuation, operation, scope, result) ->
-    if plural = continuation.match(@pluralRegExp)
-      console.error("FUHRER", plural, continuation)
-      plurals = (@_plurals ||= {})[plural[1]] ||= []
-      if plurals.indexOf(plural[3]) == -1
-        plurals.push(plural[3], operation, scope)
-      collection = @get(plural[1])
-      element = @engine.elements[plural[2]]
-      (@_rebalancing ||= {})[plural[1]] ||= {
-        operation: operation
-        continuation: continuation
-        key: plural[3]
-        old: @updated?[continuation]?[1] || @get(continuation)
-        new: result
-      }
-        #@rebalance plural, continuation, result
-        # remove paired element, update followers
+    if match = continuation.match(@pluralRegExp)
+      plurals = (@_plurals ||= {})[match[1]] ||= []
+      if plurals.indexOf(match[3]) == -1
+        plurals.push(match[3], operation, scope)
+      collection = @get(match[1])
+      element = @engine.elements[match[2]]
+
+      console.error("FUHRER", match, continuation, collection.indexOf(element))
+      if @_rebalancing != undefined
+        schedule = (@_rebalancing ||= {})[match[1]] = true
+        return -1
       return collection.indexOf(element)
     return
 
@@ -405,8 +404,6 @@ class Queries
     if @updated && !@isBoundToCurrentContext(args, operation, scope, node)
       query = @getQueryPath(operation, @engine.identify(scope))
       console.log('fetched', query, @updated[query], continuation)
-      if (query == '$1style')
-        debugger
       return @updated[query]
 
   # Filter out known nodes from DOM collections
@@ -422,16 +419,20 @@ class Queries
       if group = @updated?[query]
         #old = group[1]
         result = group[0]
-        scoped = true unless @[path]?
+        unless @[path]?
+          scoped = true 
+        else
+          @[path] = group[0]
       console.error(@updated, group, query, args, scope, scoped, 'SCOPEEED', path, operation, result)
-      debugger if !scoped
+    
     if (group ||= @updated?[path])
       if scoped
         added = result
       else
-        return if group.indexOf(operation) > -1
         added = group[2]
         removed = group[3]
+      if @updated?[path]
+        continuation = @engine.expressions.log(operation, continuation)
     else
 
       isCollection = result && result.length != undefined
@@ -466,15 +467,8 @@ class Queries
 
     # Subscribe node to the query
     if id = @engine.identify(node)
-      if watchers = @_watchers[id]
-        for watcher, index in watchers by 3
-          if watcher == operation && watchers[index + 1] == continuation && watchers[index + 2] == scope
-            dupe = true
-            break
-      else
-        watchers = @_watchers[id] = []
-      unless dupe
-        debugger if continuation == '#box1'
+      watchers = @_watchers[id] ||= []
+      if (@engine.values.indexOf(watchers, operation, continuation, scope) == -1)
         watchers.push(operation, continuation, scope)
     
     return if noop
@@ -482,20 +476,22 @@ class Queries
     @set path, result
 
     if plurals = @_plurals?[path]
-      for plural, index in plurals by 3
-        (@_rebalancing ||= {})[path] ||= { 
-          key: plural, 
-          operation: plurals[index + 1], 
-          scope: plurals[index + 2] 
-        }
+      (@_rebalancing ||= {})[path] = true
 
     unless @updated == undefined 
-      group = (@updated ||= {})[path] ||= []
-      @updated[query] = @updated[path] if query 
-      if group.length
-        group.push operation
-      else# if @engine.isCollection(result)
-        group.push result, old, added, removed, operation
+      @updated ||= {}
+      group = @updated[path] ||= group || [result, old, added, removed]
+      @updated[query] = group if query
+
+    contd = continuation
+    if contd && contd.charAt(contd.length - 1) == '–'
+      contd = @engine.expressions.log(operation, contd)
+    if @engine.isCollection(result) && continuation &&
+    (index = @getPluralBindingIndex(contd, operation, scope, result))?
+      if index == -1
+        return
+      else
+        return result[index]
 
     return if removed && !added
     return added

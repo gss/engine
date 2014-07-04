@@ -51,6 +51,10 @@ class Expressions
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
     console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
+    if (continuation == 'style$2….b$b4–')
+
+      
+      debugger
     # Analyze operation once
     unless operation.def
       @analyze(operation)
@@ -199,8 +203,7 @@ class Expressions
     if result? 
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
-        if parent && @engine.isCollection(result) and 
-        (plural = @engine.queries.getPluralBindingIndex(continuation, operation, scope, result)) == undefined
+        if parent && @engine.isCollection(result)
           console.group continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item)
@@ -213,9 +216,6 @@ class Expressions
         # Topmost operations produce output
         # TODO: Refactor this mess of nested conditions
         else
-          if plural?
-            return if plural == -1
-            result = result[plural]
           if operation.def.noop && operation.name && result.length == 1
             return 
           if operation.def.noop || (parent.def.noop && !parent.name)

@@ -76,6 +76,9 @@ Expressions = (function() {
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
     var args, contd, evaluate, evaluated, result, _ref;
     console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
+    if (continuation === 'style$2….b$b4–') {
+      debugger;
+    }
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -232,10 +235,10 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender, hidden) {
-    var breadcrumbs, item, parent, plural, _i, _len, _ref;
+    var breadcrumbs, item, parent, _i, _len, _ref;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
-        if (parent && this.engine.isCollection(result) && (plural = this.engine.queries.getPluralBindingIndex(continuation, operation, scope, result)) === void 0) {
+        if (parent && this.engine.isCollection(result)) {
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -247,12 +250,6 @@ Expressions = (function() {
         } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
           return;
         } else {
-          if (plural != null) {
-            if (plural === -1) {
-              return;
-            }
-            result = result[plural];
-          }
           if (operation.def.noop && operation.name && result.length === 1) {
             return;
           }
