@@ -218,7 +218,7 @@ class Queries
   # Manually add element to collection
   add: (node, continuation, operation, scope) ->
     collection = @get(continuation)
-    (collection ||= []).manual = true
+    (collection ||= @[continuation] = []).manual = true
     console.error('adding', node, collection, continuation)
     if collection.indexOf(node) == -1
       collection.push(node)
@@ -233,9 +233,25 @@ class Queries
       if typeof result == 'string'
         return @[result]
       return result
+
+  unwatch: (id, continuation, plural, refs) ->
+    if continuation != true
+      refs ||= @engine.getPossibleContinuations(continuation)
+    index = 0
+    return unless watchers = @_watchers[id]
+    while watcher = watchers[index]
+      contd = watchers[index + 1]
+      if refs && refs.indexOf(contd) == -1
+        index += 3
+        continue
+      subscope = watchers[index + 2]
+      watchers.splice(index, 3)
+      @clean(watcher, contd, watcher, subscope, true, plural)
+    delete @_watchers[id] unless watchers.length
+
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
-
+    console.error('REMOVE', Array.prototype.slice.call(arguments))
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
@@ -262,62 +278,42 @@ class Queries
           for plural, index in plurals by 3
             subpath = continuation + id + '–' + plural
             @remove plurals[index + 2], continuation + id + '–', null, null, null, true
-            console.log(1, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
             @clean(continuation + id + '–' + plural, null, null, null, null, true)
-            console.log(2, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
-          console.error('loleo', continuation, @_plurals?[continuation])
+            console.log('lol', plurals, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
 
-        if watchers = @_watchers[id]
-          ref = continuation + (collection && collection.length != undefined && id || '')
-          # I'm not super excited about this
-          for refs in @engine.getPossibleContinuations(ref)
-            index = 0
-            while watcher = watchers[index]
-              contd = watchers[index + 1]
-              unless contd == refs
-                index += 3
-                continue
-              subscope = watchers[index + 2]
-              watchers.splice(index, 3)
-              @clean(watcher, contd, watcher, subscope, true, plural)
-            delete @_watchers[id] unless watchers.length
+        ref = continuation + (collection && collection.length != undefined && id || '')
+        @unwatch(id, ref, plural)
+
         path = continuation
         if (result = @engine.queries.get(path))?.length?
           path += id
           @clean(path)
 
       # Remove cached DOM query
-      else 
+      else
+
         @clean(id, continuation, operation, scope)
       
-      delete @[continuation] if collection && !collection.length
-
+      if collection && !collection.length
+        delete @[continuation] 
 
     else if node
       # Detach queries attached to an element when removing element by id
-      if watchers = @_watchers[id]
-        index = 0
-        while watcher = watchers[index]
-          @clean(watcher, watchers[index + 1], watcher, watchers[index + 2])
-          index += 3
-        delete @_watchers[id] 
-      (@engine.removing ||= []).push(node)
+      @unwatch(id, true)
 
     @
 
   clean: (path, continuation, operation, scope, bind, plural) ->
+    console.error('CLEAN', Array.prototype.slice.call(arguments))
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     @engine.values.clean(path, continuation, operation, scope)
     unless plural
       if (result = @get(path)) != undefined
-
         if result
           if parent = operation?.parent
-            parent.
-            def.release?.call(@engine, result, operation, continuation, scope)
-
+            parent.def.release?.call(@engine, result, operation, continuation, scope)
           if result.length != undefined
             copy = result.slice()
             for child in copy
@@ -328,6 +324,8 @@ class Queries
         if scope && operation.def.cleaning
           @remove @engine.recognize(scope), path, operation
     delete @[path]
+
+    @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true

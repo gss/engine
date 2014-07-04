@@ -670,15 +670,14 @@ describe 'Nested Rules', ->
                 ["remove",".group .vessel$vessel1…::scope .box:last-child$box4"],
                 ['<=',['get', '$box5', 'width', '.group .vessel$vessel1…::scope .box:last-child$box5'], 100]
               ]
-            console.log('remove lol')
             container.firstElementChild.classList.remove('group')
 
             engine.once 'solved', ->   
               expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                   ['remove', 
                     '.group .vessel$vessel1…::scope .box:last-child$box2',
-                    '.group .vessel$vessel1…::scope .box:last-child$box5'
-                    '.group .vessel$vessel1…::scope', 
+                    '.group .vessel$vessel1…::scope .box:last-child$box5',  
+                    '.group .vessel$vessel1…::scope'
                     '.group .vessel$vessel1']
                 ]
               container.firstElementChild.classList.add('group')
@@ -853,7 +852,7 @@ describe 'Nested Rules', ->
 
         engine.run(rules)
     
-      it 'Runs commands from sourceNode', (done) ->
+      it 'should handle mix of global and local selector', (done) ->
         rules = [
           ['rule', 
             ['$class'
@@ -866,7 +865,7 @@ describe 'Nested Rules', ->
             ["<=", ["get", ["$reserved","this"], "width"], ["get", ["$id","vessel1"], "width"]]
           ]
         ]
-        console.info('.vessel .box { ::[width] == ::parent[width] } ')
+        console.info('.vessel .box { ::[width] == #vessel1[width] } ')
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div id="vessel1" class="vessel">
@@ -877,7 +876,7 @@ describe 'Nested Rules', ->
           <div id="box4" class="box"></div>
           """
         
-        engine = new GSS(container)
+        window.$engine = engine = new GSS(container)
                               
         engine.once 'solved', ->
           expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
@@ -887,10 +886,40 @@ describe 'Nested Rules', ->
             ["<=",
               ["get","$box2","width",".vessel .box$box2…#vessel1"],
               ["get","$vessel1","width",".vessel .box$box2…#vessel1"]]]
-          done()
+          vessel1 = engine.$id('vessel1')
+          vessel1.parentNode.removeChild(vessel1)
+          engine.once 'solved', ->
+            expect(engine.queries._watchers[engine.scope._gss_id].length).to.eql(9)
+            expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+              ["remove", ".vessel .box$box1…#vessel1", 
+                          ".vessel .box$box2…#vessel1",
+                          ".vessel .box$box1",
+                          ".vessel .box$box2"] 
+            ]
+            container.appendChild(vessel1)
+            engine.once 'solved', ->
+              expect(engine.queries._watchers[engine.scope._gss_id].length).to.eql(15)
+              expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+                ["<=",
+                  ["get","$box1","width",".vessel .box$box1…#vessel1"],
+                  ["get","$vessel1","width",".vessel .box$box1…#vessel1"]],
+                ["<=",
+                  ["get","$box2","width",".vessel .box$box2…#vessel1"],
+                  ["get","$vessel1","width",".vessel .box$box2…#vessel1"]]]
+              vessel1.parentNode.removeChild(vessel1)
+              engine.once 'solved', ->
+                expect(engine.queries._watchers[engine.scope._gss_id].length).to.eql(9)
+                expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+                  ["remove", ".vessel .box$box1…#vessel1", 
+                              ".vessel .box$box2…#vessel1",
+                              ".vessel .box$box1",
+                              ".vessel .box$box2"] 
+                ]
+                done()
 
         engine.run rules
-      it 'should handle mix of global and local selector', (done) ->
+
+      it 'Runs commands from sourceNode', (done) ->
         rules = [
           ['rule', 
             ['$class'

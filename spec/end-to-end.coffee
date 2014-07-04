@@ -239,6 +239,31 @@ describe 'End - to - End', ->
             "md2": 71 / 4
           done()
     
+    describe 'complex plural selectors', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+            <style type="text/gss">                            
+              [x] == 100;
+              .a[x] == (.b !+ .b)[x] == [x];          
+            </style>
+          """
+        window.$engine = engine
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
+            "x": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+            "$b3[x]": 100
+          done()
+
     describe 'balanced plural selectors', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """

@@ -19826,6 +19826,7 @@ Rules = (function() {
   Rules.prototype["rule"] = {
     bound: 1,
     evaluate: function(operation, continuation, scope, ascender, ascending) {
+      console.error("RULE", arguments);
       if (operation.index === 2 && !ascender) {
         this.expressions.evaluate(operation, continuation, ascending, void 0, void 0, operation.parent);
         return false;
@@ -21678,7 +21679,7 @@ Queries = (function() {
   Queries.prototype.add = function(node, continuation, operation, scope) {
     var collection;
     collection = this.get(continuation);
-    (collection || (collection = [])).manual = true;
+    (collection || (collection = this[continuation] = [])).manual = true;
     console.error('adding', node, collection, continuation);
     if (collection.indexOf(node) === -1) {
       collection.push(node);
@@ -21699,8 +21700,33 @@ Queries = (function() {
     }
   };
 
+  Queries.prototype.unwatch = function(id, continuation, plural, refs) {
+    var contd, index, subscope, watcher, watchers;
+    if (continuation !== true) {
+      refs || (refs = this.engine.getPossibleContinuations(continuation));
+    }
+    index = 0;
+    if (!(watchers = this._watchers[id])) {
+      return;
+    }
+    while (watcher = watchers[index]) {
+      contd = watchers[index + 1];
+      if (refs && refs.indexOf(contd) === -1) {
+        index += 3;
+        continue;
+      }
+      subscope = watchers[index + 2];
+      watchers.splice(index, 3);
+      this.clean(watcher, contd, watcher, subscope, true, plural);
+    }
+    if (!watchers.length) {
+      return delete this._watchers[id];
+    }
+  };
+
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural) {
-    var cleaning, collection, contd, duplicates, index, node, path, plurals, ref, refs, result, subpath, subscope, watcher, watchers, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var cleaning, collection, duplicates, index, node, path, plurals, ref, result, subpath, _i, _len, _ref, _ref1;
+    console.error('REMOVE', Array.prototype.slice.call(arguments));
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -21730,35 +21756,14 @@ Queries = (function() {
             plural = plurals[index];
             subpath = continuation + id + '–' + plural;
             this.remove(plurals[index + 2], continuation + id + '–', null, null, null, true);
-            console.log(1, scope, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
             this.clean(continuation + id + '–' + plural, null, null, null, null, true);
-            console.log(2, scope, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
-          }
-          console.error('loleo', continuation, (_ref1 = this._plurals) != null ? _ref1[continuation] : void 0);
-        }
-        if (watchers = this._watchers[id]) {
-          ref = continuation + (collection && collection.length !== void 0 && id || '');
-          _ref2 = this.engine.getPossibleContinuations(ref);
-          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-            refs = _ref2[_j];
-            index = 0;
-            while (watcher = watchers[index]) {
-              contd = watchers[index + 1];
-              if (contd !== refs) {
-                index += 3;
-                continue;
-              }
-              subscope = watchers[index + 2];
-              watchers.splice(index, 3);
-              this.clean(watcher, contd, watcher, subscope, true, plural);
-            }
-            if (!watchers.length) {
-              delete this._watchers[id];
-            }
+            console.log('lol', plurals, scope, continuation + id + '–' + plural, this.get(continuation + id + '–' + plural));
           }
         }
+        ref = continuation + (collection && collection.length !== void 0 && id || '');
+        this.unwatch(id, ref, plural);
         path = continuation;
-        if (((_ref3 = (result = this.engine.queries.get(path))) != null ? _ref3.length : void 0) != null) {
+        if (((_ref1 = (result = this.engine.queries.get(path))) != null ? _ref1.length : void 0) != null) {
           path += id;
           this.clean(path);
         }
@@ -21769,21 +21774,14 @@ Queries = (function() {
         delete this[continuation];
       }
     } else if (node) {
-      if (watchers = this._watchers[id]) {
-        index = 0;
-        while (watcher = watchers[index]) {
-          this.clean(watcher, watchers[index + 1], watcher, watchers[index + 2]);
-          index += 3;
-        }
-        delete this._watchers[id];
-      }
-      ((_base = this.engine).removing || (_base.removing = [])).push(node);
+      this.unwatch(id, true);
     }
     return this;
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, plural) {
     var child, copy, parent, result, _i, _len, _ref;
+    console.error('CLEAN', Array.prototype.slice.call(arguments));
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -21815,6 +21813,7 @@ Queries = (function() {
       }
     }
     delete this[path];
+    this.unwatch(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
       this.engine.expressions.push(['remove', this.engine.getContinuation(path)], true);
     }
