@@ -234,9 +234,9 @@ class Queries
         return @[result]
       return result
 
-  unwatch: (id, continuation, plural, refs) ->
+  unwatch: (id, continuation, plural, quick) ->
     if continuation != true
-      refs ||= @engine.getPossibleContinuations(continuation)
+      refs = @engine.getPossibleContinuations(continuation)
     index = 0
     console.error('unwatch', id, continuation)
     if continuation == ".group .vessel$vessel1… .box:last-child$box5"
@@ -249,7 +249,8 @@ class Queries
         continue
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
-      @clean(watcher, contd, watcher, subscope, true, plural)
+      unless quick
+        @clean(watcher, contd, watcher, subscope, true, plural)
     delete @_watchers[id] unless watchers.length
 
   # Remove observers and cached node lists
@@ -329,9 +330,11 @@ class Queries
     delete @[path]
 
     if @lastOutput
-      @unwatch(@lastOutput, path)
+      @unwatch(@lastOutput, path, null, true)
     @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
+      if path == '.group .vessel$vessel1…::parent .box:last-child'
+        debugger
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 

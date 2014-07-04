@@ -707,7 +707,6 @@ describe 'Nested Rules', ->
                         ".group .vessel$vessel11… .box:last-child$box14",
                         ".group .vessel$vessel11… .box:last-child$box2",
                         ".group .vessel$vessel11… .box:last-child$box5",
-                        ".group .vessel$vessel11… .box:last-child",
                         ".group .vessel$vessel11"]
                     ]
                     box2 = container.getElementsByClassName('box')[2]
@@ -727,7 +726,6 @@ describe 'Nested Rules', ->
                           ['remove', 
                             '.group .vessel$vessel1… .box:last-child$box1'
                             ".group .vessel$vessel1… .box:last-child$box5"
-                            ".group .vessel$vessel1… .box:last-child",
                             ".group .vessel$vessel1"]
                           ]
                         container.innerHTML = ""
