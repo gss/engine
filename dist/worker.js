@@ -239,6 +239,9 @@ Expressions = (function() {
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
+          if (continuation === ".group .vessel$vessel1… .box:last-child") {
+            debugger;
+          }
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];

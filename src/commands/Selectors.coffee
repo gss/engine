@@ -243,6 +243,7 @@ class Selectors
 
   # Current engine scope (defaults to document)
   '::scope':
+    hidden: true
     1: (node) ->
       return @scope
 

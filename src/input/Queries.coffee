@@ -61,10 +61,10 @@ class Queries
           @remove id
         @removed = undefined
       for query, index in queries by 3
+        break unless query
         continuation = queries[index + 1]
         scope = queries[index + 2]
         @output.pull query, continuation, scope
-    console.error('wtf', @_rebalancing, queries, @updated)
     rebalancing = @_rebalancing
     @_rebalancing = undefined
     if rebalancing
@@ -238,7 +238,10 @@ class Queries
     if continuation != true
       refs ||= @engine.getPossibleContinuations(continuation)
     index = 0
-    return unless watchers = @_watchers[id]
+    console.error('unwatch', id, continuation)
+    if continuation == ".group .vessel$vessel1… .box:last-child$box5"
+      debugger
+    return unless (watchers = typeof id == 'object' && id || @_watchers[id])
     while watcher = watchers[index]
       contd = watchers[index + 1]
       if refs && refs.indexOf(contd) == -1
@@ -325,6 +328,8 @@ class Queries
           @remove @engine.recognize(scope), path, operation
     delete @[path]
 
+    if @lastOutput
+      @unwatch(@lastOutput, path)
     @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)

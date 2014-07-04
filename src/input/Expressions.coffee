@@ -204,6 +204,8 @@ class Expressions
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection(result)
+          if continuation == ".group .vessel$vessel1… .box:last-child"
+            debugger
           console.group continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item)

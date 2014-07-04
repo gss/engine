@@ -20254,6 +20254,7 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::scope'] = {
+    hidden: true,
     1: function(node) {
       return this.scope;
     }
@@ -21185,6 +21186,9 @@ Expressions = (function() {
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
+          if (continuation === ".group .vessel$vessel1… .box:last-child") {
+            debugger;
+          }
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -21442,12 +21446,14 @@ Queries = (function() {
       }
       for (index = _k = 0, _len2 = queries.length; _k < _len2; index = _k += 3) {
         query = queries[index];
+        if (!query) {
+          break;
+        }
         continuation = queries[index + 1];
         scope = queries[index + 2];
         this.output.pull(query, continuation, scope);
       }
     }
-    console.error('wtf', this._rebalancing, queries, this.updated);
     rebalancing = this._rebalancing;
     this._rebalancing = void 0;
     if (rebalancing) {
@@ -21706,7 +21712,11 @@ Queries = (function() {
       refs || (refs = this.engine.getPossibleContinuations(continuation));
     }
     index = 0;
-    if (!(watchers = this._watchers[id])) {
+    console.error('unwatch', id, continuation);
+    if (continuation === ".group .vessel$vessel1… .box:last-child$box5") {
+      debugger;
+    }
+    if (!(watchers = typeof id === 'object' && id || this._watchers[id])) {
       return;
     }
     while (watcher = watchers[index]) {
@@ -21813,6 +21823,9 @@ Queries = (function() {
       }
     }
     delete this[path];
+    if (this.lastOutput) {
+      this.unwatch(this.lastOutput, path);
+    }
     this.unwatch(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
       this.engine.expressions.push(['remove', this.engine.getContinuation(path)], true);
