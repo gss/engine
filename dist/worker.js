@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-04) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-05) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -76,9 +76,6 @@ Expressions = (function() {
   Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
     var args, contd, evaluate, evaluated, result, _ref;
     console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
-    if (continuation === 'style$2….b$b4–') {
-      debugger;
-    }
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -239,9 +236,6 @@ Expressions = (function() {
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
-          if (continuation === ".group .vessel$vessel1… .box:last-child") {
-            debugger;
-          }
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];

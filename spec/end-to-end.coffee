@@ -253,7 +253,7 @@ describe 'End - to - End', ->
               .a[x] == (.b !+ .b)[x] == [x];          
             </style>
           """
-        window.$engine = engine
+        $engine = engine
         engine.once 'solved', (e) ->
           expect(engine.values.toObject()).to.eql 
             "x": 100
@@ -383,9 +383,11 @@ describe 'End - to - End', ->
                       divs = engine.$tag('div')
                       while divs[0]
                         divs[0].parentNode.removeChild(divs[0])
+                        
                       engine.once 'solved', (e) ->
-                        "x": 100
-                    done()  
+                        expect(engine.values.toObject()).to.eql 
+                          "x": 100
+                        done()  
     xdescribe 'complex selectors', -> 
       xit 'should compute values', (done) ->                                 
         container.innerHTML =  """

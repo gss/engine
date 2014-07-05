@@ -703,10 +703,10 @@ describe 'Nested Rules', ->
                       ['remove',
                         ".group .vessel$vessel1… .box:last-child$box12",
                         ".group .vessel$vessel1… .box:last-child$box14",
-                        ".group .vessel$vessel11… .box:last-child$box12",
-                        ".group .vessel$vessel11… .box:last-child$box14",
                         ".group .vessel$vessel11… .box:last-child$box2",
                         ".group .vessel$vessel11… .box:last-child$box5",
+                        ".group .vessel$vessel11… .box:last-child$box12",
+                        ".group .vessel$vessel11… .box:last-child$box14",
                         ".group .vessel$vessel11"]
                     ]
                     box2 = container.getElementsByClassName('box')[2]
@@ -721,7 +721,6 @@ describe 'Nested Rules', ->
                       vessel.parentNode.removeChild(vessel)
 
                       engine.once 'solved', ->
-                        debugger
                         expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                           ['remove', 
                             '.group .vessel$vessel1… .box:last-child$box1'
@@ -888,8 +887,8 @@ describe 'Nested Rules', ->
             expect(engine.queries._watchers[engine.scope._gss_id].length).to.eql(9)
             expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
               ["remove", ".vessel .box$box1…#vessel1", 
-                          ".vessel .box$box2…#vessel1",
                           ".vessel .box$box1",
+                          ".vessel .box$box2…#vessel1",
                           ".vessel .box$box2"] 
             ]
             container.appendChild(vessel1)
@@ -907,8 +906,8 @@ describe 'Nested Rules', ->
                 expect(engine.queries._watchers[engine.scope._gss_id].length).to.eql(9)
                 expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
                   ["remove", ".vessel .box$box1…#vessel1", 
-                              ".vessel .box$box2…#vessel1",
                               ".vessel .box$box1",
+                              ".vessel .box$box2…#vessel1",
                               ".vessel .box$box2"] 
                 ]
                 done()
