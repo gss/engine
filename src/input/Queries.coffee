@@ -423,9 +423,11 @@ class Queries
       prefix = path + @engine.recognize(pair[0]) + '–'
       # not too good
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
-      console.error(666, contd, key)
-      @engine.expressions.pull operation, contd, scope, true, true
-
+      console.error(666, operation, scope, contd, key)
+      if operation.path != operation.key
+        @engine.expressions.pull operation.parent, prefix + operation.path, scope, operation.index, pair[1]
+      else
+        @engine.expressions.pull operation, contd, scope, true, true
 
     console.log(@updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed)
   pluralRegExp: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i

@@ -21930,8 +21930,12 @@ Queries = (function() {
       pair = added[_l];
       prefix = path + this.engine.recognize(pair[0]) + '–';
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length);
-      console.error(666, contd, key);
-      this.engine.expressions.pull(operation, contd, scope, true, true);
+      console.error(666, operation, scope, contd, key);
+      if (operation.path !== operation.key) {
+        this.engine.expressions.pull(operation.parent, prefix + operation.path, scope, operation.index, pair[1]);
+      } else {
+        this.engine.expressions.pull(operation, contd, scope, true, true);
+      }
     }
     return console.log(this.updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed);
   };

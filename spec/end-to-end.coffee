@@ -261,7 +261,6 @@ describe 'End - to - End', ->
             "$a2[x]": 100
             "$b1[x]": 100
             "$b2[x]": 100
-            "$b3[x]": 100
           done()
 
     describe 'balanced plural selectors', -> 
