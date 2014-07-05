@@ -220,8 +220,13 @@ class Queries
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
+    console.info('ADDDING', continuation, collection?.slice?())
+    if copy = collection?.slice?()
+      ((@updated ||= {})[continuation] ||= [])[1] ||= copy
+
     (collection ||= @[continuation] = []).manual = true
     keys = collection.keys ||= []
+
     if collection.indexOf(node) == -1
       index = collection.push(node)
       keys.splice(index - 1, 0, key)
@@ -302,6 +307,11 @@ class Queries
 
         # Remove element from collection manually
         if operation && collection?.length && manual
+
+
+          if copy = collection?.slice?()
+            ((@updated ||= {})[continuation] ||= [])[1] ||= copy
+
           if (index = collection.indexOf(node)) > -1
             # Fall back to duplicate with a different key
             if keys
@@ -405,7 +415,7 @@ class Queries
     rightUpdate = @updated?[rightPath]
 
     console.error(rightPath, rightUpdate, @, @updated)
-    rightNew = (if rightUpdate then rightUpdate[0] else @get(rightPath)) || []
+    rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath)) || []
     rightOld = (if rightUpdate then rightUpdate[1] else @get(rightPath)) || []
 
     removed = []
@@ -471,23 +481,25 @@ class Queries
     collection = @get(match[1])
     element = @engine.elements[match[2]]
     #if (operation.path != match[3])
-    console.log(777, continuation, operation, operation.path, result)
     
+    path = match[1] + '–' + operation.path
+    unless @updated?[path]
+      update = @updated?[continuation]
+      if copy = (if update then update[1] else @get(continuation))?.slice?()
+        ((@updated ||= {})[path] ||= [])[1] ||= copy
+    console.log(777, [continuation, path], copy, operation, operation.path, result)
 
     if @engine.isCollection(result)
       if operation.key == operation.path
-        path = match[1] + '–' + operation.path
         console.info(@get(continuation), @get(path))
-        if old = @updated?[path]?[1] || @get(path)
-          @updated[path] ||= [result, old, undefined, undefined]
         @set(path, result)
       else
         for node in result
-          @add(node, match[1] + '–' + operation.path, operation, scope, continuation)
+          @add(node, path, operation, scope, continuation)
     else
-      @add(result, match[1] + '–' + operation.path, operation, scope, continuation)
+      @add(result, path, operation, scope, continuation)
 
-    console.error("FUHRER", result, match[1] + '–' + operation.path, @[continuation], operation.path, match, continuation, collection.indexOf(element))
+    console.error("FUHRER", result, path, @[continuation], operation.path, match, continuation, collection.indexOf(element))
     if @_repairing != undefined
       schedule = (@_repairing ||= {})[match[1]] = true
       return -1
@@ -526,7 +538,6 @@ class Queries
         scoped = true 
       else
         @[path] = group[0]
-    console.error(@updated, group, query, args, scope, scoped, 'SCOPEEED', path, operation, result)
     
     if (group ||= @updated?[path])
       if scoped
@@ -581,7 +592,7 @@ class Queries
 
     unless @updated == undefined 
       @updated ||= {}
-      group = @updated[path] ||= group || [result, old, added, removed]
+      group = @updated[path] ||= group || [result, old?.slice?() || old, added, removed]
       @updated[query] = group if query
 
     contd = continuation

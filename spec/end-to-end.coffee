@@ -242,16 +242,16 @@ describe 'End - to - End', ->
     describe 'complex plural selectors', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              .a[x] == (.b !+ .b)[x] == [x];          
+            </style>
             <div id="a1" class="a"></div>
             <div id="a2" class="a"></div>
             <div id="a3" class="a"></div>            
             <div id="b1" class="b"></div>
             <div id="b2" class="b"></div>
             <div id="b3" class="b"></div>
-            <style type="text/gss">                            
-              [x] == 100;
-              .a[x] == (.b !+ .b)[x] == [x];          
-            </style>
           """
         window.$engine = engine
         engine.once 'solved', (e) ->
@@ -262,7 +262,7 @@ describe 'End - to - End', ->
             "$b1[x]": 100
             "$b2[x]": 100
           b3 = engine.$id('b3')
-          console.error('remove b3')
+          console.info('remove b3')
           b3.parentNode.removeChild(b3)
 
           engine.once 'solved', (e) ->
@@ -270,9 +270,17 @@ describe 'End - to - End', ->
               "x": 100
               "$a1[x]": 100
               "$b1[x]": 100
-            b3 = engine.$id('b3')
-            console.error('remove b3')
-            done()
+            engine.scope.appendChild(b3)
+            console.info('add b3')
+
+            engine.once 'solved', (e) ->
+              expect(engine.values.toObject()).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$a2[x]": 100
+                "$b1[x]": 100
+                "$b2[x]": 100
+              done()
 
     describe 'balanced plural selectors', -> 
       it 'should compute values', (done) ->                                 
@@ -343,9 +351,7 @@ describe 'End - to - End', ->
               "$b4[x]": 100
             a1 = engine.$id('a1')
             a1.parentNode.removeChild(a1)
-            console.error('delete a1')
             engine.once 'solved', (e) ->
-              debugger
               expect(engine.values.toObject()).to.eql 
                 "x": 100
                 "$a2[x]": 100
@@ -371,6 +377,7 @@ describe 'End - to - End', ->
                   console.error('delete b3')
                   b3 = engine.$id('b3')
                   b3.parentNode.removeChild(b3)
+                  
                   engine.once 'solved', (e) ->
                     expect(engine.values.toObject()).to.eql 
                       "x": 100
@@ -380,9 +387,8 @@ describe 'End - to - End', ->
                       "$b2[x]": 100
                     a2 = engine.$id('a2')
                     a2.parentNode.removeChild(a2)
+
                     engine.once 'solved', (e) ->
-                      console.log(123)
-                    
                       expect(engine.values.toObject()).to.eql 
                         "x": 100
                         "$a3[x]": 100
@@ -392,6 +398,7 @@ describe 'End - to - End', ->
                       divs = engine.$tag('div')
                       while divs[0]
                         divs[0].parentNode.removeChild(divs[0])
+
                       engine.once 'solved', (e) ->
                         expect(engine.values.toObject()).to.eql 
                           "x": 100
