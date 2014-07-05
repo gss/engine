@@ -221,7 +221,6 @@ class Queries
   add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
     (collection ||= @[continuation] = []).manual = true
-    console.error('adding', node, collection, continuation)
     keys = collection.keys ||= []
     if collection.indexOf(node) == -1
       index = collection.push(node)
@@ -256,8 +255,12 @@ class Queries
   unwatch: (id, continuation, plural, quick) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
+      if typeof id != 'object'
+        @unpair continuation, @engine.elements[id]
     index = 0
     console.error('unwatch', id, continuation)
+    if continuation == 'style$2….a–.b!+.b$b1'
+      debugger
     return unless (watchers = typeof id == 'object' && id || @_watchers[id])
     while watcher = watchers[index]
       contd = watchers[index + 1]
@@ -273,6 +276,8 @@ class Queries
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
     console.error('REMOVE', Array.prototype.slice.call(arguments))
+    if manual == 'style$2….a$a1–.b$b3'
+      debugger
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
@@ -288,11 +293,10 @@ class Queries
         if (duplicates = collection.duplicates)
           for dup, index in duplicates
             if dup == node
-              if (!keys || keys[length + index] == manual)
+              if (keys[length + index] == manual)
                 duplicates.splice(index, 1)
-                if keys
-                  keys.splice(length + index, 1, 0)
-                return
+                keys.splice(length + index, 1)
+                return true
               else
                 duplicate = index
 
@@ -304,6 +308,8 @@ class Queries
               return unless keys[index] == manual
               if duplicate?
                 collection.duplicates.splice(duplicate, 1)
+                if keys[duplicate + length] == 0
+                  debugger
                 keys[index] = keys[duplicate + length]
                 keys.splice(duplicate + length, 1)
                 return
@@ -347,7 +353,7 @@ class Queries
       # Detach queries attached to an element when removing element by id
       @unwatch(id, true)
 
-    @
+    return
 
   clean: (path, continuation, operation, scope, bind, plural) ->
     if path.def
@@ -355,10 +361,10 @@ class Queries
     continuation = path if bind
     console.error('CLEAN', Array.prototype.slice.call(arguments), @[continuation], @[path])
     @engine.values.clean(path, continuation, operation, scope)
+    result = @get(path)
+    if result
+      @unpair path, result
     unless plural
-      result = @get(path)
-      if result
-        @unpair path, continuation
       if (result = @get(path, undefined, true)) != undefined
         if result
           if parent = operation?.parent
@@ -384,6 +390,8 @@ class Queries
       @unwatch(@lastOutput, path, null, true)
     @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
+      if path == "style$2….a$a2–.b!+.b"
+        debugger
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 
@@ -430,15 +438,15 @@ class Queries
         @engine.expressions.pull operation, contd, scope, true, true
 
     console.log(@updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed)
-  pluralRegExp: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i
+  
+  pairRe: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i
                   # path1 ^        id ^        ^path2   
 
   isPaired: (operation, continuation) ->
-    if match = continuation.match(@pluralRegExp)
-      if !@engine.isCollection(@[continuation]) && (match[3]).indexOf('$') == -1
-        console.error(match, continuation, @[continuation])
-        return
+    if match = continuation.match(@pairRe)
       if operation && operation.parent.def.serialized
+        return
+      if !@engine.isCollection(@[continuation]) && match[3].indexOf('$') == -1
         return
       return match
 
@@ -448,14 +456,15 @@ class Queries
     collection = @get(match[1])
     return unless plurals = @_plurals?[match[1]]
     for plural, index in plurals by 3
-      @remove(node, match[1] + '–' + plural, plurals[index + 1], plurals[index + 2], continuation)
+      if @remove(node, match[1] + '–' + plural, plurals[index + 1], plurals[index + 2], continuation)
+        @clean(match[1] + match[2] + '–' + plural)
     return
 
   # Check if operation is plurally bound with another selector
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   pair: (continuation, operation, scope, result) ->
-    return unless match = @isPaired(operation, continuation)
+    return unless match = @isPaired(operation, continuation, true)
     plurals = (@_plurals ||= {})[match[1]] ||= []
     if plurals.indexOf(operation.path) == -1
       plurals.push(operation.path, operation, scope)

@@ -261,7 +261,18 @@ describe 'End - to - End', ->
             "$a2[x]": 100
             "$b1[x]": 100
             "$b2[x]": 100
-          done()
+          b3 = engine.$id('b3')
+          console.error('remove b3')
+          b3.parentNode.removeChild(b3)
+
+          engine.once 'solved', (e) ->
+            expect(engine.values.toObject()).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$b1[x]": 100
+            b3 = engine.$id('b3')
+            console.error('remove b3')
+            done()
 
     describe 'balanced plural selectors', -> 
       it 'should compute values', (done) ->                                 

@@ -21679,7 +21679,6 @@ Queries = (function() {
     var collection, index, keys;
     collection = this.get(continuation);
     (collection || (collection = this[continuation] = [])).manual = true;
-    console.error('adding', node, collection, continuation);
     keys = collection.keys || (collection.keys = []);
     if (collection.indexOf(node) === -1) {
       index = collection.push(node);
@@ -21725,9 +21724,15 @@ Queries = (function() {
     var contd, index, refs, subscope, watcher, watchers;
     if (continuation !== true) {
       refs = this.engine.getPossibleContinuations(continuation);
+      if (typeof id !== 'object') {
+        this.unpair(continuation, this.engine.elements[id]);
+      }
     }
     index = 0;
     console.error('unwatch', id, continuation);
+    if (continuation === 'style$2….a–.b!+.b$b1') {
+      debugger;
+    }
     if (!(watchers = typeof id === 'object' && id || this._watchers[id])) {
       return;
     }
@@ -21751,6 +21756,9 @@ Queries = (function() {
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural) {
     var cleaning, collection, dup, duplicate, duplicates, index, item, keys, length, node, path, plurals, ref, result, subpath, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
     console.error('REMOVE', Array.prototype.slice.call(arguments));
+    if (manual === 'style$2….a$a1–.b$b3') {
+      debugger;
+    }
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -21766,12 +21774,10 @@ Queries = (function() {
           for (index = _i = 0, _len = duplicates.length; _i < _len; index = ++_i) {
             dup = duplicates[index];
             if (dup === node) {
-              if (!keys || keys[length + index] === manual) {
+              if (keys[length + index] === manual) {
                 duplicates.splice(index, 1);
-                if (keys) {
-                  keys.splice(length + index, 1, 0);
-                }
-                return;
+                keys.splice(length + index, 1);
+                return true;
               } else {
                 duplicate = index;
               }
@@ -21786,6 +21792,9 @@ Queries = (function() {
               }
               if (duplicate != null) {
                 collection.duplicates.splice(duplicate, 1);
+                if (keys[duplicate + length] === 0) {
+                  debugger;
+                }
                 keys[index] = keys[duplicate + length];
                 keys.splice(duplicate + length, 1);
                 return;
@@ -21836,7 +21845,6 @@ Queries = (function() {
     } else if (node) {
       this.unwatch(id, true);
     }
-    return this;
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, plural) {
@@ -21849,11 +21857,11 @@ Queries = (function() {
     }
     console.error('CLEAN', Array.prototype.slice.call(arguments), this[continuation], this[path]);
     this.engine.values.clean(path, continuation, operation, scope);
+    result = this.get(path);
+    if (result) {
+      this.unpair(path, result);
+    }
     if (!plural) {
-      result = this.get(path);
-      if (result) {
-        this.unpair(path, continuation);
-      }
       if ((result = this.get(path, void 0, true)) !== void 0) {
         if (result) {
           if (parent = operation != null ? operation.parent : void 0) {
@@ -21885,6 +21893,9 @@ Queries = (function() {
     }
     this.unwatch(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
+      if (path === "style$2….a$a2–.b!+.b") {
+        debugger;
+      }
       this.engine.expressions.push(['remove', this.engine.getContinuation(path)], true);
     }
     return true;
@@ -21940,16 +21951,15 @@ Queries = (function() {
     return console.log(this.updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed);
   };
 
-  Queries.prototype.pluralRegExp = /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i;
+  Queries.prototype.pairRe = /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i;
 
   Queries.prototype.isPaired = function(operation, continuation) {
     var match;
-    if (match = continuation.match(this.pluralRegExp)) {
-      if (!this.engine.isCollection(this[continuation]) && match[3].indexOf('$') === -1) {
-        console.error(match, continuation, this[continuation]);
+    if (match = continuation.match(this.pairRe)) {
+      if (operation && operation.parent.def.serialized) {
         return;
       }
-      if (operation && operation.parent.def.serialized) {
+      if (!this.engine.isCollection(this[continuation]) && match[3].indexOf('$') === -1) {
         return;
       }
       return match;
@@ -21968,13 +21978,15 @@ Queries = (function() {
     }
     for (index = _i = 0, _len = plurals.length; _i < _len; index = _i += 3) {
       plural = plurals[index];
-      this.remove(node, match[1] + '–' + plural, plurals[index + 1], plurals[index + 2], continuation);
+      if (this.remove(node, match[1] + '–' + plural, plurals[index + 1], plurals[index + 2], continuation)) {
+        this.clean(match[1] + match[2] + '–' + plural);
+      }
     }
   };
 
   Queries.prototype.pair = function(continuation, operation, scope, result) {
     var collection, element, match, node, old, path, plurals, schedule, _base, _base1, _i, _len, _name, _ref, _ref1;
-    if (!(match = this.isPaired(operation, continuation))) {
+    if (!(match = this.isPaired(operation, continuation, true))) {
       return;
     }
     plurals = (_base = (this._plurals || (this._plurals = {})))[_name = match[1]] || (_base[_name] = []);
