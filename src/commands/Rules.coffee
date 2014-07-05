@@ -49,15 +49,14 @@ class Rules
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope) -> 
       continuation = @commands[','].serialize.call(@, operation.parent, scope)
-      @queries.add(result, continuation, operation.parent, scope)
+      @queries.add(result, continuation, operation.parent, scope, ',')
       return true
 
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
-      debugger
       continuation = @commands[','].serialize.call(@, operation.parent, scope)
-      @queries.remove(result, continuation, operation.parent, scope, true)
+      @queries.remove(result, continuation, operation.parent, scope, ',')
       return true
 
   # Conditionals
@@ -67,7 +66,6 @@ class Rules
 
     # Set rule body scope to a found element
     evaluate: (operation, continuation, scope, ascender, ascending) ->
-      console.error("RULE", arguments)
       if operation.index == 2 && !ascender
         @expressions.evaluate operation, continuation, ascending, undefined, undefined, operation.parent
         return false

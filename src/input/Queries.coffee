@@ -216,15 +216,19 @@ class Queries
     return unless document.body.contains(node)
     @engine._onResize(node)
 
-  # Manually add element to collection
-  add: (node, continuation, operation, scope) ->
+  # Manually add element to collection, handle dups
+  # Also stores path which can be used to remove elements
+  add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
     (collection ||= @[continuation] = []).manual = true
     console.error('adding', node, collection, continuation)
+    keys = collection.keys ||= []
     if collection.indexOf(node) == -1
-      collection.push(node)
+      index = collection.push(node)
+      keys.splice(index - 1, 0, key)
     else
       (collection.duplicates ||= []).push(node)
+      keys.push(key)
     return collection
 
   # Return collection by path & scope
@@ -278,15 +282,34 @@ class Queries
     if continuation
       if collection = @get(continuation)
         # Dont remove it if element matches more than one selector
+        length = collection.length
+        keys = collection.keys
+        duplicate = null
         if (duplicates = collection.duplicates)
-          if (index = duplicates.indexOf(node)) > -1
-            duplicates.splice(index, 1)
-            return
+          for dup, index in duplicates
+            if dup == node
+              if (!keys || keys[length + index] == manual)
+                duplicates.splice(index, 1)
+                if keys
+                  keys.splice(length + index, 1, 0)
+                return
+              else
+                duplicate = index
 
         # Remove element from collection manually
         if operation && collection?.length && manual
           if (index = collection.indexOf(node)) > -1
+            # Fall back to duplicate with a different key
+            if keys
+              return unless keys[index] == manual
+              if duplicate?
+                collection.duplicates.splice(duplicate, 1)
+                keys[index] = keys[duplicate + length]
+                keys.splice(duplicate + length, 1)
+                return
             collection.splice(index, 1)
+            if keys
+              keys.splice(index, 1)
             cleaning = continuation unless collection.length
 
       # Detach observer and its subquery when cleaning by id
@@ -303,9 +326,15 @@ class Queries
 
         path = continuation
         if (result = @engine.queries.get(path))?.length?
-          path += id
-          @clean(path)
+          if manual && @isPaired(null, manual)
+            for item in result
+              @unpair(path, item)
+          else
+            path += id
 
+            @clean(path)
+        else if result
+          @unpair path, result
       # Remove cached DOM query
       else
 
@@ -321,13 +350,15 @@ class Queries
     @
 
   clean: (path, continuation, operation, scope, bind, plural) ->
-    console.error('CLEAN', Array.prototype.slice.call(arguments))
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
+    console.error('CLEAN', Array.prototype.slice.call(arguments), @[continuation], @[path])
     @engine.values.clean(path, continuation, operation, scope)
     unless plural
       result = @get(path)
+      if result
+        @unpair path, continuation
       if (result = @get(path, undefined, true)) != undefined
         if result
           if parent = operation?.parent
@@ -343,6 +374,7 @@ class Queries
 
         if scope && operation.def.cleaning
           @remove @engine.recognize(scope), path, operation
+
     delete @[path]
 
     if @_plurals?[path]
@@ -352,8 +384,6 @@ class Queries
       @unwatch(@lastOutput, path, null, true)
     @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
-      if path == ".group .vessel$vessel1… .box:last-child$box14"
-        debugger
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 
@@ -363,17 +393,15 @@ class Queries
     leftUpdate = @updated?[path]
     leftNew = (if leftUpdate then leftUpdate[0] else @get(path)) || []
     leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = path + @engine.recognize(leftNew[0] || leftOld[0]) + '–' + key
+    rightPath = path + '–' + key
     rightUpdate = @updated?[rightPath]
 
-    console.error(rightPath, rightUpdate, @)
+    console.error(rightPath, rightUpdate, @, @updated)
     rightNew = (if rightUpdate then rightUpdate[0] else @get(rightPath)) || []
     rightOld = (if rightUpdate then rightUpdate[1] else @get(rightPath)) || []
 
     removed = []
     added = []
-
-    newLeft = @get(path)
 
     for object, index in leftOld
       if leftNew[index] != object || rightOld[index] != rightNew[index]
@@ -381,9 +409,10 @@ class Queries
           removed.push([object, rightOld[index]])
         if leftNew[index] && rightNew[index]
           added.push([leftNew[index], rightNew[index]])
-    for index in [leftOld.length ... leftNew.length]
-      if rightNew[index]
-        added.push([leftNew[index], rightNew[index]])
+    if leftOld.length < leftNew.length
+      for index in [leftOld.length ... leftNew.length]
+        if rightNew[index]
+          added.push([leftNew[index], rightNew[index]])
 
     for pair in removed
       console.error('remove', path + @engine.recognize(pair[0]) + '–')
@@ -399,7 +428,6 @@ class Queries
 
 
     console.log(@updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed)
-    debugger
   pluralRegExp: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i
                   # path1 ^        id ^        ^path2   
 
@@ -408,12 +436,18 @@ class Queries
       if !@engine.isCollection(@[continuation]) && (match[3]).indexOf('$') == -1
         console.error(match, continuation, @[continuation])
         return
-      if operation.parent.def.serialized
+      if operation && operation.parent.def.serialized
         return
       return match
 
-  unpair: (continuation, operation, scope, result) ->
-
+  unpair: (continuation, node) ->
+    return unless match = @isPaired(null, continuation)
+    console.info(continuation, node, match)
+    collection = @get(match[1])
+    return unless plurals = @_plurals?[match[1]]
+    for plural, index in plurals by 3
+      @remove(node, match[1] + '–' + plural, plurals[index + 1], plurals[index + 2], continuation)
+    return
 
   # Check if operation is plurally bound with another selector
   # Choose a good match for element from the first collection
@@ -425,14 +459,23 @@ class Queries
       plurals.push(operation.path, operation, scope)
     collection = @get(match[1])
     element = @engine.elements[match[2]]
-    if (operation.path != match[3])
-      console.log(777, operation, operation.path, result)
-      if @engine.isCollection(result)
-        for node in result
-          @add(node, match[1] + '–' + operation.path, operation, scope)
+    #if (operation.path != match[3])
+    console.log(777, continuation, operation, operation.path, result)
+    
+
+    if @engine.isCollection(result)
+      if operation.key == operation.path
+        path = match[1] + '–' + operation.path
+        console.info(@get(continuation), @get(path))
+        if old = @updated?[path]?[1] || @get(path)
+          @updated[path] ||= [result, old, undefined, undefined]
+        @set(path, result)
       else
-        @add(result, match[1] + '–' + operation.path, operation, scope)
-    debugger
+        for node in result
+          @add(node, match[1] + '–' + operation.path, operation, scope, continuation)
+    else
+      @add(result, match[1] + '–' + operation.path, operation, scope, continuation)
+
     console.error("FUHRER", result, match[1] + '–' + operation.path, @[continuation], operation.path, match, continuation, collection.indexOf(element))
     if @_repairing != undefined
       schedule = (@_repairing ||= {})[match[1]] = true
@@ -452,7 +495,7 @@ class Queries
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @getContext(args, operation, scope, node)
-    if @updated && node != scope
+    if @updated# && node != scope
       query = @getQueryPath(operation, @engine.identify(node))
       console.log('fetched', query, @updated[query], continuation)
       return @updated[query]
@@ -463,18 +506,16 @@ class Queries
     path = @getQueryPath(operation, continuation)
     old = @get(path)
 
-    # Check if query fetches elements relative to something else than current scope 
-    unless node == scope
-      query = @getQueryPath(operation, @engine.identify(node))
-      if group = @updated?[query]
-        debugger if query.indexOf('$container0 .b') > -1
-        #old = group[1]
-        result = group[0]
-        unless @[path]?
-          scoped = true 
-        else
-          @[path] = group[0]
-      console.error(@updated, group, query, args, scope, scoped, 'SCOPEEED', path, operation, result)
+    # Normalize query to reuse results
+    query = @getQueryPath(operation, @engine.identify(node))
+    if group = @updated?[query]
+      old ||= group[1]
+      result = group[0]
+      unless @[path]?
+        scoped = true 
+      else
+        @[path] = group[0]
+    console.error(@updated, group, query, args, scope, scoped, 'SCOPEEED', path, operation, result)
     
     if (group ||= @updated?[path])
       if scoped
@@ -583,7 +624,6 @@ class Queries
     @
 
   getQueryPath: (operation, continuation) ->
-    return (continuation && continuation + operation.key || operation.path)
     if continuation
       if continuation.nodeType
         return @engine.identify(continuation) + operation.path

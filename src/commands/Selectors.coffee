@@ -180,7 +180,6 @@ class Selectors
   # Previous element
   '$!+':
     1: (node) ->
-      debugger
       return node.previousElementSibling
 
   # All direct sibling elements
