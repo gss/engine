@@ -280,7 +280,18 @@ describe 'End - to - End', ->
                 "$a2[x]": 100
                 "$b1[x]": 100
                 "$b2[x]": 100
-              done()
+                divs = engine.$tag('div')
+                while divs[0]
+                  divs[0].parentNode.removeChild(divs[0])
+
+              engine.once 'solved', (e) ->
+                expect(engine.values.toObject()).to.eql 
+                  "x": 100
+                engine.scope.innerHTML = ""
+
+                engine.once 'solved', (e) ->
+                  expect(engine.values.toObject()).to.eql {}
+                  done()
 
     describe 'balanced plural selectors', -> 
       it 'should compute values', (done) ->                                 
@@ -351,6 +362,7 @@ describe 'End - to - End', ->
               "$b4[x]": 100
             a1 = engine.$id('a1')
             a1.parentNode.removeChild(a1)
+            console.error('remove a1')
             engine.once 'solved', (e) ->
               expect(engine.values.toObject()).to.eql 
                 "x": 100
@@ -374,35 +386,37 @@ describe 'End - to - End', ->
                   "$b2[x]": 100
                   "$b3[x]": 100
 
-                  console.error('delete b3')
-                  b3 = engine.$id('b3')
-                  b3.parentNode.removeChild(b3)
-                  
+                console.error('delete b3')
+                b3 = engine.$id('b3')
+                b3.parentNode.removeChild(b3)
+
+                engine.once 'solved', (e) ->
+                  expect(engine.values.toObject()).to.eql 
+                    "x": 100
+                    "$a2[x]": 100
+                    "$a3[x]": 100
+                    "$b1[x]": 100
+                    "$b2[x]": 100
+                  a2 = engine.$id('a2')
+                  a2.parentNode.removeChild(a2)
+
+                  console.error('delete a2')
                   engine.once 'solved', (e) ->
                     expect(engine.values.toObject()).to.eql 
                       "x": 100
-                      "$a2[x]": 100
                       "$a3[x]": 100
+                      "$a4[x]": 100
                       "$b1[x]": 100
                       "$b2[x]": 100
-                    a2 = engine.$id('a2')
-                    a2.parentNode.removeChild(a2)
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
 
+                    console.error('delete all')
                     engine.once 'solved', (e) ->
                       expect(engine.values.toObject()).to.eql 
                         "x": 100
-                        "$a3[x]": 100
-                        "$a4[x]": 100
-                        "$b1[x]": 100
-                        "$b2[x]": 100
-                      divs = engine.$tag('div')
-                      while divs[0]
-                        divs[0].parentNode.removeChild(divs[0])
-
-                      engine.once 'solved', (e) ->
-                        expect(engine.values.toObject()).to.eql 
-                          "x": 100
-                        done()
+                      done()
     xdescribe 'complex selectors', -> 
       xit 'should compute values', (done) ->                                 
         container.innerHTML =  """

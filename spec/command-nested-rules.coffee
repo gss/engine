@@ -255,8 +255,8 @@ describe 'Nested Rules', ->
             "$box1[x]": 100
             "$box2[x]": 100
           # Snapshots of nodelists: Two elements match nested selector
-          expect(engine.queries['.vessel']).to.eql [vessel0]
-          expect(engine.queries['.vessel$vessel0… .box']).to.eql [box1, box2]
+          expect(engine.queries['.vessel'].slice()).to.eql [vessel0]
+          expect(engine.queries['.vessel$vessel0… .box'].slice()).to.eql [box1, box2]
           # Two elements observe a query. Query is stored with scope & continuation key by element id
           expect(engine.queries._watchers["$container0"][1]).to.eql(undefined)
           expect(engine.queries._watchers["$container0"][2]).to.eql(container)

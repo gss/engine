@@ -41,6 +41,8 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
+    if window.xa
+      debugger
     @buffer = @updated = null
     capture = @output.capture() 
     @engine.start()
@@ -54,12 +56,13 @@ class Queries
       @$intrinsics(mutation.target)
 
     @_repairing = null
+    if @removed
+      for id in @removed
+        @remove id
+      @removed = undefined
+
     if queries = @lastOutput = @buffer
       @buffer = undefined
-      if @removed
-        for id in @removed
-          @remove id
-        @removed = undefined
       for query, index in queries by 3
         break unless query
         continuation = queries[index + 1]
@@ -70,14 +73,17 @@ class Queries
     if repairing
       for property, value of repairing
         if plurals = @_plurals[property]
-          for plural, index in plurals by 3
-            @repair property, plural, plurals[index + 1], plurals[index + 2]
+          for plural, index in plurals by 4
+            @repair property, plural, plurals[index + 1], plurals[index + 2], plurals[index + 3]
     if @removing
       for node in @removing
         delete node._gss_id
 
     console.log('Updated', @updated)
     @buffer = @updated = undefined
+    for path, query of @
+      if query && query.old != undefined
+        delete query.old
     @output.flush() if capture
 
   $attribute: (target, name, changed) ->
@@ -192,8 +198,8 @@ class Queries
     parent = target
     while parent.nodeType == 1
       # Let parents know about inserted nodes
-      @match(parent, ' ', undefined, allAdded)
-      for child in allAdded
+      @match(parent, ' ', undefined, allChanged)
+      for child in allChanged
         @match(child, '!', undefined, parent)
 
       for prop, values of update
@@ -263,9 +269,6 @@ class Queries
       if typeof id != 'object'
         @unpair continuation, @engine.elements[id]
     index = 0
-    console.error('unwatch', id, continuation)
-    if continuation == 'style$2….a–.b!+.b$b1'
-      debugger
     return unless (watchers = typeof id == 'object' && id || @_watchers[id])
     while watcher = watchers[index]
       contd = watchers[index + 1]
@@ -280,9 +283,6 @@ class Queries
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
-    console.error('REMOVE', Array.prototype.slice.call(arguments))
-    if manual == 'style$2….a$a1–.b$b3'
-      debugger
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
@@ -318,8 +318,6 @@ class Queries
               return unless keys[index] == manual
               if duplicate?
                 collection.duplicates.splice(duplicate, 1)
-                if keys[duplicate + length] == 0
-                  debugger
                 keys[index] = keys[duplicate + length]
                 keys.splice(duplicate + length, 1)
                 return
@@ -331,7 +329,7 @@ class Queries
       # Detach observer and its subquery when cleaning by id
       if node
         if plurals = @_plurals?[continuation]
-          for plural, index in plurals by 3
+          for plural, index in plurals by 4
             subpath = continuation + id + '–' + plural
             @remove plurals[index + 2], continuation + id + '–', null, null, null, true
             @clean(continuation + id + '–' + plural, null, null, null, null, true)
@@ -369,10 +367,10 @@ class Queries
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
-    console.error('CLEAN', Array.prototype.slice.call(arguments), @[continuation], @[path])
-    @engine.values.clean(path, continuation, operation, scope)
     result = @get(path)
-    if result
+    console.error('CLEAN', result, Array.prototype.slice.call(arguments), @[continuation], @[path])
+    @engine.values.clean(path, continuation, operation, scope)
+    if result && !@engine.isCollection(result)
       @unpair path, result
     unless plural
       if (result = @get(path, undefined, true)) != undefined
@@ -400,23 +398,39 @@ class Queries
       @unwatch(@lastOutput, path, null, true)
     @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
-      if path == "style$2….a$a2–.b!+.b"
-        debugger
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 
   # Update bindings of two plural collections
-  repair: (path, key, operation, scope) ->
+  repair: (path, key, operation, scope, collected) ->
 
     leftUpdate = @updated?[path]
     leftNew = (if leftUpdate then leftUpdate[0] else @get(path)) || []
-    leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
+    if leftNew.old != undefined
+      leftOld = leftNew.old || []
+    else
+      leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
     rightPath = path + '–' + key
     rightUpdate = @updated?[rightPath]
 
     console.error(rightPath, rightUpdate, @, @updated)
-    rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath)) || []
-    rightOld = (if rightUpdate then rightUpdate[1] else @get(rightPath)) || []
+    rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
+
+    if !rightNew && collected
+      rightNew = @get(path + @engine.identify(leftNew[0] || leftOld[0]) + '–' + key)
+      console.error(rightOld, path + '–' + @engine.identify(leftNew[0] || leftOld[0]) + key, 4444444)
+      
+    rightNew ||= []
+
+    if rightNew.old != undefined
+      rightOld = rightNew.old
+    else if rightUpdate?[1] != undefined
+      rightOld = rightUpdate[1]
+    else
+      rightOld = @get(rightPath)
+      rightOld = rightNew if rightOld == undefined
+
+    rightOld ||= []
 
     removed = []
     added = []
@@ -433,9 +447,10 @@ class Queries
           added.push([leftNew[index], rightNew[index]])
 
     for pair in removed
-      console.error('remove', path + @engine.recognize(pair[0]) + '–')
-      @remove(scope, path + @engine.recognize(pair[0]) + '–', null, null, null, true)
-      @clean(path + @engine.recognize(pair[0]) + '–' + key, null, null, null, null, true)
+      prefix = path + @engine.recognize(pair[0]) + '–'
+      console.error('remove', prefix)
+      @remove(scope, prefix, null, null, null, true)
+      @clean(prefix + key, null, null, null, null, true)
     
     for pair in added
       prefix = path + @engine.recognize(pair[0]) + '–'
@@ -465,9 +480,11 @@ class Queries
     console.info(continuation, node, match)
     collection = @get(match[1])
     return unless plurals = @_plurals?[match[1]]
-    for plural, index in plurals by 3
-      if @remove(node, match[1] + '–' + plural, plurals[index + 1], plurals[index + 2], continuation)
+    for plural, index in plurals by 4
+      path = match[1] + '–' + plural
+      if @remove(node, path, plurals[index + 1], plurals[index + 2], continuation)
         @clean(match[1] + match[2] + '–' + plural)
+      ((@updated ||= {})[path] ||= [])[0] = @get(path)
     return
 
   # Check if operation is plurally bound with another selector
@@ -477,7 +494,7 @@ class Queries
     return unless match = @isPaired(operation, continuation, true)
     plurals = (@_plurals ||= {})[match[1]] ||= []
     if plurals.indexOf(operation.path) == -1
-      plurals.push(operation.path, operation, scope)
+      pushed = plurals.push(operation.path, operation, scope, undefined)
     collection = @get(match[1])
     element = @engine.elements[match[2]]
     #if (operation.path != match[3])
@@ -486,20 +503,20 @@ class Queries
     unless @updated?[path]
       update = @updated?[continuation]
       if copy = (if update then update[1] else @get(continuation))?.slice?()
-        ((@updated ||= {})[path] ||= [])[1] ||= copy
+        update = ((@updated ||= {})[path] ||= [])[1] ||= copy
     console.log(777, [continuation, path], copy, operation, operation.path, result)
 
     if @engine.isCollection(result)
-      if operation.key == operation.path
-        console.info(@get(continuation), @get(path))
-        @set(path, result)
-      else
+      if operation.key != operation.path
         for node in result
           @add(node, path, operation, scope, continuation)
+      else
+        plurals[pushed - 1] = continuation if pushed
     else
       @add(result, path, operation, scope, continuation)
 
-    console.error("FUHRER", result, path, @[continuation], operation.path, match, continuation, collection.indexOf(element))
+    ((@updated ||= {})[path] ||= [])[0] = @get(path)
+
     if @_repairing != undefined
       schedule = (@_repairing ||= {})[match[1]] = true
       return -1
@@ -537,7 +554,7 @@ class Queries
       unless @[path]?
         scoped = true 
       else
-        @[path] = group[0]
+        @set path, group[0]
     
     if (group ||= @updated?[path])
       if scoped
@@ -574,6 +591,7 @@ class Queries
         # Snapshot live node list for future reference
         if result && result.item
           result = Array.prototype.slice.call(result, 0)
+        result.old = o || old || null
       else
         added = result
 
