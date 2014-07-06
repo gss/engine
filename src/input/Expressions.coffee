@@ -51,7 +51,7 @@ class Expressions
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
     console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
-
+      
     # Analyze operation once
     unless operation.def
       @analyze(operation)
@@ -141,10 +141,11 @@ class Expressions
   # Try to read saved results within continuation
   reuse: (path, continuation) ->
     length = path.length
-    for key in continuation.split('–')
+    for key in continuation.split('→')
       bit = key
-      if (index = bit.indexOf('…')) > -1
+      if (index = bit.indexOf('↓')) > -1
         bit = bit.substring(index + 1)
+      console.error(bit, 'reuse', path, continuation)
       if bit == path || bit.substring(0, path.length) == path
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]
@@ -172,11 +173,11 @@ class Expressions
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
         if ascender?
-          contd = continuation
-          if operation.def.rule && ascender == 1
-            contd += '…' unless contd.charAt(contd.length - 1) == '…'
+          mark = operation.def.rule && ascender == 1 && '↓' || '→'
+          if mark
+            contd = @engine.getContinuation(continuation, null, mark)
           else
-            contd += '–' unless contd.charAt(contd.length - 1) == '–'
+            contd = continuation
         argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
       if argument == undefined
         if !operation.def.eager || ascender?
@@ -204,7 +205,7 @@ class Expressions
         if parent && @engine.isCollection(result)
           console.group continuation
           for item in result
-            breadcrumbs = @engine.getContinuation(continuation, item)
+            breadcrumbs = @engine.getContinuation(continuation, item, '↑')
             @evaluate operation.parent, breadcrumbs, scope, operation.index, item
           console.groupEnd continuation
           return

@@ -281,6 +281,7 @@ class Queries
     return unless (watchers = typeof id == 'object' && id || @_watchers[id])
     while watcher = watchers[index]
       contd = watchers[index + 1]
+      console.error(watcher, contd, refs)
       if refs && refs.indexOf(contd) == -1
         index += 3
         continue
@@ -339,10 +340,10 @@ class Queries
       if node
         if plurals = @_plurals?[continuation]
           for plural, index in plurals by 4
-            subpath = continuation + id + '–' + plural
-            @remove plurals[index + 2], continuation + id + '–', null, null, null, true
-            @clean(continuation + id + '–' + plural, null, null, null, null, true)
-            console.log('lol', plurals, scope, continuation + id + '–' + plural, @get(continuation + id + '–' + plural))
+            subpath = continuation + id + '→' + plural
+            @remove plurals[index + 2], continuation + id + '→', null, null, null, true
+            @clean(continuation + id + '→' + plural, null, null, null, null, true)
+            console.log('lol', plurals, scope, continuation + id + '→' + plural, @get(continuation + id + '→' + plural))
 
         ref = continuation + (collection && collection.length != undefined && id || '')
         @unwatch(id, ref, plural)
@@ -419,15 +420,15 @@ class Queries
       leftOld = leftNew.old || []
     else
       leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = path + '–' + key
+    rightPath = path + '→' + key
     rightUpdate = @updated?[rightPath]
 
     console.error(rightPath, rightUpdate, @, @updated)
     rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
 
     if !rightNew && collected
-      rightNew = @get(path + @engine.identify(leftNew[0] || leftOld[0]) + '–' + key)
-      console.error(rightOld, path + '–' + @engine.identify(leftNew[0] || leftOld[0]) + key, 4444444)
+      rightNew = @get(path + @engine.identify(leftNew[0] || leftOld[0]) + '→' + key)
+      console.error(rightOld, path + '→' + @engine.identify(leftNew[0] || leftOld[0]) + key, 4444444)
       
     rightNew ||= []
 
@@ -456,13 +457,13 @@ class Queries
           added.push([leftNew[index], rightNew[index]])
 
     for pair in removed
-      prefix = path + @engine.recognize(pair[0]) + '–'
+      prefix = @engine.getContinuation(path, pair[0], '→')
       console.error('remove', prefix)
       @remove(scope, prefix, null, null, null, true)
       @clean(prefix + key, null, null, null, null, true)
     
     for pair in added
-      prefix = path + @engine.recognize(pair[0]) + '–'
+      prefix = @engine.getContinuation(path, pair[0], '→')
       # not too good
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
       console.error(666, operation, scope, contd, key)
@@ -473,7 +474,7 @@ class Queries
 
     console.log(@updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed)
   
-  pairRe: /(?:^|–)([^–]+)(\$[a-z0-9-]+)–([^–]+)–?$/i
+  pairRe: /(?:^|→)([^→]+)(\$[a-z0-9-]+)→([^→]+)→?$/i
                   # path1 ^        id ^        ^path2   
 
   isPaired: (operation, continuation) ->
@@ -490,9 +491,9 @@ class Queries
     collection = @get(match[1])
     return unless plurals = @_plurals?[match[1]]
     for plural, index in plurals by 4
-      path = match[1] + '–' + plural
+      path = match[1] + '→' + plural
       if @remove(node, path, plurals[index + 1], plurals[index + 2], continuation)
-        @clean(match[1] + match[2] + '–' + plural)
+        @clean(match[1] + match[2] + '→' + plural)
       ((@updated ||= {})[path] ||= [])[0] = @get(path)
     return
 
@@ -508,7 +509,7 @@ class Queries
     element = @engine.elements[match[2]]
     #if (operation.path != match[3])
     
-    path = match[1] + '–' + operation.path
+    path = match[1] + '→' + operation.path
     unless @updated?[path]
       update = @updated?[continuation]
       if copy = (if update then update[1] else @get(continuation))?.slice?()
@@ -623,7 +624,7 @@ class Queries
       @updated[query] = group if query
 
     contd = continuation
-    if contd && contd.charAt(contd.length - 1) == '–'
+    if contd && contd.charAt(contd.length - 1) == '→'
       contd = @engine.expressions.log(operation, contd)
     if continuation && (index = @pair(contd, operation, scope, result))?
       if index == -1

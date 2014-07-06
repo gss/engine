@@ -162,13 +162,14 @@ Expressions = (function() {
   Expressions.prototype.reuse = function(path, continuation) {
     var bit, index, key, length, _i, _len, _ref;
     length = path.length;
-    _ref = continuation.split('–');
+    _ref = continuation.split('→');
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       key = _ref[_i];
       bit = key;
-      if ((index = bit.indexOf('…')) > -1) {
+      if ((index = bit.indexOf('↓')) > -1) {
         bit = bit.substring(index + 1);
       }
+      console.error(bit, 'reuse', path, continuation);
       if (bit === path || bit.substring(0, path.length) === path) {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
@@ -181,7 +182,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending, meta) {
-    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
+    var args, argument, contd, index, mark, offset, prev, shift, skip, stopping, _i, _len;
     args = prev = void 0;
     skip = operation.skip;
     shift = 0;
@@ -202,15 +203,11 @@ Expressions = (function() {
         continue;
       } else if (argument instanceof Array) {
         if (ascender != null) {
-          contd = continuation;
-          if (operation.def.rule && ascender === 1) {
-            if (contd.charAt(contd.length - 1) !== '…') {
-              contd += '…';
-            }
+          mark = operation.def.rule && ascender === 1 && '↓' || '→';
+          if (mark) {
+            contd = this.engine.getContinuation(continuation, null, mark);
           } else {
-            if (contd.charAt(contd.length - 1) !== '–') {
-              contd += '–';
-            }
+            contd = continuation;
           }
         }
         argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
@@ -239,7 +236,7 @@ Expressions = (function() {
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
-            breadcrumbs = this.engine.getContinuation(continuation, item);
+            breadcrumbs = this.engine.getContinuation(continuation, item, '↑');
             this.evaluate(operation.parent, breadcrumbs, scope, operation.index, item);
           }
           console.groupEnd(continuation);
@@ -686,21 +683,21 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.getContinuation = function(path, value) {
-    if (path) {
-      path = path.replace(/[–…]$/, '');
+  Engine.prototype.getContinuation = function(path, value, suffix) {
+    if (suffix == null) {
+      suffix = '';
     }
-    if (value == null) {
-      return path;
+    if (path) {
+      path = path.replace(/[→↓↑]$/, '');
     }
     if (typeof value === 'string') {
       return value;
     }
-    return path + Engine.identify(value);
+    return path + (value && Engine.identify(value) || '') + suffix;
   };
 
   Engine.prototype.getPossibleContinuations = function(path) {
-    return [path, path + '–', path + '…'];
+    return [path, path + '↑', path + '→', path + '↓'];
   };
 
   Engine.prototype.getPath = function(id, property) {

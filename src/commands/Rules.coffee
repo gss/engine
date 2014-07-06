@@ -136,9 +136,9 @@ class Rules
           @queries.clean(nodeContinuation)
           continuation = nodeContinuation
         else if !operation
-          continuation = 'style' + @recognize(node)
+          continuation = @getContinuation(node.tagName.toLowerCase(), node)
         else
-          continuation = node._continuation = (continuation || '') + '…'
+          continuation = node._continuation = @getContinuation(continuation || '', null,  '↓')
         if node.getAttribute('scoped')?
           scope = node.parentNode
 

@@ -102,9 +102,9 @@ describe 'GSS commands', ->
         ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
       ]
       expect(stringify engine.expressions.lastOutput).to.eql stringify [
-        ['<=',['get', '$box1' , 'width','.box$box1–#box1'],['get','$box1','width','.box$box1–#box1']]
-        ['<=',['get', '$34222', 'width','.box$34222–#box1'],['get','$box1','width','.box$34222–#box1']]
-        ['<=',['get', '$35346', 'width','.box$35346–#box1'],['get','$box1','width','.box$35346–#box1']]
+        ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
+        ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
+        ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
       ]
 
     it 'intrinsic-width with class', (done) ->

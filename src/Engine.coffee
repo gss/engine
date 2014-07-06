@@ -104,16 +104,16 @@ class Engine
       Engine[@scope._gss_id] = undefined
 
   # Return concatenated path for a given object and prefix
-  getContinuation: (path, value) ->
+  getContinuation: (path, value, suffix = '') ->
     if path
-      path = path.replace(/[–…]$/, '')
-    return path unless value?
+      path = path.replace(/[→↓↑]$/, '')
+    #return path unless value?
     return value if typeof value == 'string'
-    return path + Engine.identify(value)
+    return path + (value && Engine.identify(value) || '') + suffix
 
   # When cleaning a path, also clean forks and rules
   getPossibleContinuations: (path) ->
-    [path, path + '–', path + '…']
+    [path, path + '↑', path + '→', path + '↓']
 
   getPath: (id, property) ->
     unless property
