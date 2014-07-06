@@ -478,49 +478,38 @@ describe 'GSS engine', ->
           done()
         container.addEventListener 'solved', listener
     
-      xit 'after replaced GSS style tag', (done) ->
+      it 'after replaced GSS style tag', (done) ->
         engine2 = GSS(container)
-        expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
           <style id="gssb" type="text/gss-ast" scoped>
-          [{
-            "type":"constraint",
-            "commands": [
-              ["suggest", "col-width-2", 222]
-            ]          
-          }]
+          [
+            ["suggest", "col-width-2", 222]
+          ]  
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
         listener = (e) ->
           engine2 = GSS(container)
           assert engine1 is engine2, "engine is maintained" 
-          assert !engine1.vars['col-width-1']?, "engine1.vars['col-width-1'] removed" 
-          expect(engine1.vars['col-width-11']).to.equal undefined
-          expect(engine1.vars['col-width-2']).to.equal 222
+          assert !engine1.values['col-width-1']?, "engine1.vars['col-width-1'] removed" 
+          expect(engine1.values['col-width-11']).to.equal undefined
+          expect(engine1.values['col-width-2']).to.equal 222
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
     
-      xit 'Engine after container replaced multiple GSS style tags', (done) ->
+      it 'Engine after container replaced multiple GSS style tags', (done) ->
         engine2 = GSS(container)
-        expect(engine1.id).to.be.equal GSS.getId(container)
         container.innerHTML =  """
           <style id="gssc" type="text/gss-ast" scoped>
-          [{
-            "type":"constraint",
-            "commands": [
-              ["suggest", "col-width-3", 333]
-            ]          
-          }]
+          [
+            ["suggest", "col-width-3", 333]
+          ]  
           </style>
           <style id="gssd" type="text/gss-ast" scoped>
-          [{
-            "type":"constraint",
-            "commands": [
-              ["suggest", "col-width-4", 444]
-            ]          
-          }]
+          [
+            ["suggest", "col-width-4", 444]
+          ]  
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
@@ -528,10 +517,10 @@ describe 'GSS engine', ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
           #expect(engine1.styleNode).to.equal document.getElementById 'gssb'
-          expect(engine1.vars['col-width-1']).to.equal undefined
-          expect(engine1.vars['col-width-2']).to.equal undefined
-          expect(engine1.vars['col-width-3']).to.equal 333
-          expect(engine1.vars['col-width-4']).to.equal 444
+          expect(engine1.values['col-width-1']).to.equal undefined
+          expect(engine1.values['col-width-2']).to.equal undefined
+          expect(engine1.values['col-width-3']).to.equal 333
+          expect(engine1.values['col-width-4']).to.equal 444
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener

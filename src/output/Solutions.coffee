@@ -66,9 +66,9 @@ class Solutions
 
   nullify: (variable) ->
     if variable.editing
-      cei = @solver._editVarMap.get(variable);
-      @solver.removeColumn(cei.editMinus);
-      @solver._editVarMap.delete(variable);
+      if cei = @solver._editVarMap.get(variable)
+        @solver.removeColumn(cei.editMinus)
+        @solver._editVarMap.delete(variable)
     delete @variables[variable.name]
     # Explicitly remove variable from cassowary
     @solver._externalParametricVars.delete(variable)

@@ -1212,9 +1212,10 @@ Solutions = (function() {
   Solutions.prototype.nullify = function(variable) {
     var cei;
     if (variable.editing) {
-      cei = this.solver._editVarMap.get(variable);
-      this.solver.removeColumn(cei.editMinus);
-      this.solver._editVarMap["delete"](variable);
+      if (cei = this.solver._editVarMap.get(variable)) {
+        this.solver.removeColumn(cei.editMinus);
+        this.solver._editVarMap["delete"](variable);
+      }
     }
     delete this.variables[variable.name];
     return this.solver._externalParametricVars["delete"](variable);
