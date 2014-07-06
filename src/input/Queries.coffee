@@ -52,6 +52,8 @@ class Queries
           @$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
         when "childList"
           @$children(mutation.target, mutation)
+        when "characterData"
+          @$characterData(mutation.target, mutation)
 
       @$intrinsics(mutation.target)
 
@@ -217,6 +219,13 @@ class Queries
       if id = @engine.recognize(removed)
         (@removed ||= []).push(id)
     @
+
+  $characterData: (target) ->
+    parent = target.parentNode
+    if id = @engine.recognize(parent)
+      if parent.tagName == 'STYLE' 
+        if parent.getAttribute('type')?.indexOf('text/gss') > -1
+          @engine._eval(parent)
 
   $intrinsics: (node) ->
     return unless document.body.contains(node)

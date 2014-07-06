@@ -59,16 +59,19 @@ class Solutions
         else
           unless --path.counter
             (@nullified ||= {})[path.name] = path
+    else if constrain instanceof c.Variable
+      debugger
+      if constrain.editing
+        (@nullified ||= {})[constrain.name] = constrain
 
-  nullify: (path) ->
-    variable = @variables[path.name]
+  nullify: (variable) ->
     if variable.editing
       cei = @solver._editVarMap.get(variable);
       @solver.removeColumn(cei.editMinus);
       @solver._editVarMap.delete(variable);
-    delete @variables[path.name]
+    delete @variables[variable.name]
     # Explicitly remove variable from cassowary
-    @solver._externalParametricVars.delete(path)
+    @solver._externalParametricVars.delete(variable)
             
 
 
@@ -91,7 +94,7 @@ class Solutions
     else if @[command[0]]
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))
 
-  edit: (variable, strength, weight) ->
+  edit: (variable, strength, weight, continuation) ->
     strength = @engine._strength(strength)
     weight = @engine._weight(weight)
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
@@ -100,15 +103,23 @@ class Solutions
     variable.editing = constraint
     return constraint
 
-  suggest: (path, value, strength, weight) ->
+  suggest: (path, value, strength, weight, continuation) ->
     #@solver.solve()
+    debugger
     if typeof path == 'string'
       unless variable = @variables[path]
-        return @response[path] = value
+        if continuation
+          variable = @engine._var(path)
+          variables = (@variables[continuation] ||= [])
+          if variables.indexOf(variable) == -1
+            variables.push(variable)
+        else
+          return @response[path] = value
     else
       variable = path
 
-    @edit(variable, strength, weight) unless variable.editing
+    unless variable.editing
+      @edit(variable, strength, weight, continuation)
     @solver.suggestValue(variable, value)
     #@solver.resolve()
     return variable

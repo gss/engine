@@ -187,6 +187,7 @@ class Expressions
           # Lists are allowed to continue execution when they hit undefined
           else if (!operation.def.noop || operation.name)
             return false
+            
         offset += 1
         continue
       (args ||= [])[index - offset + shift] = prev = argument

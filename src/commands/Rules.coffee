@@ -128,12 +128,24 @@ class Rules
 
   "eval": 
     command: (operation, continuation, scope, node, type = 'text/gss', source) ->
-      rules = @['_' + (node.type || type)](source ? node.textContent ? node)
-      scope = node.nodeType && node.getAttribute('scoped')? && node.parentNode || @scope
+      if node.nodeType
+        if nodeType = node.getAttribute('type')
+          type = nodeType
+        source ||= node.textContent || node 
+        if (nodeContinuation = node._continuation)?
+          @queries.clean(nodeContinuation)
+          continuation = nodeContinuation
+        else if !operation
+          continuation = 'style' + @recognize(node)
+        else
+          continuation = node._continuation = (continuation || '') + '…'
+        if node.getAttribute('scoped')?
+          scope = node.parentNode
+
+      rules = @['_' + type](source)
       console.log('Eval', rules, continuation)
-      debugger
       rules = GSS.clone(rules)
-      @run rules, continuation + '…', scope
+      @run rules, continuation, scope
       return
 
   "load": 

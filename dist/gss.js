@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-06) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19894,16 +19895,31 @@ Rules = (function() {
 
   Rules.prototype["eval"] = {
     command: function(operation, continuation, scope, node, type, source) {
-      var rules, _ref;
+      var nodeContinuation, nodeType, rules;
       if (type == null) {
         type = 'text/gss';
       }
-      rules = this['_' + (node.type || type)]((_ref = source != null ? source : node.textContent) != null ? _ref : node);
-      scope = node.nodeType && (node.getAttribute('scoped') != null) && node.parentNode || this.scope;
+      if (node.nodeType) {
+        if (nodeType = node.getAttribute('type')) {
+          type = nodeType;
+        }
+        source || (source = node.textContent || node);
+        if ((nodeContinuation = node._continuation) != null) {
+          this.queries.clean(nodeContinuation);
+          continuation = nodeContinuation;
+        } else if (!operation) {
+          continuation = 'style' + this.recognize(node);
+        } else {
+          continuation = node._continuation = (continuation || '') + '…';
+        }
+        if (node.getAttribute('scoped') != null) {
+          scope = node.parentNode;
+        }
+      }
+      rules = this['_' + type](source);
       console.log('Eval', rules, continuation);
-      debugger;
       rules = GSS.clone(rules);
-      this.run(rules, continuation + '…', scope);
+      this.run(rules, continuation, scope);
     }
   };
 
@@ -20619,8 +20635,14 @@ var Measurements;
 Measurements = (function() {
   function Measurements() {}
 
+  Measurements.prototype.suggest = {
+    command: function(operation, continuation, scope, variable, value, strength, weight, contd) {
+      contd || (contd = this.getContinuation(continuation));
+      return ['suggest', variable, value, strength != null ? strength : null, weight != null ? weight : null, contd != null ? contd : null];
+    }
+  };
+
   Measurements.prototype.get = {
-    meta: true,
     command: function(operation, continuation, scope, object, property) {
       var child, computed, id, parent, primitive, _ref;
       if (property) {
@@ -21424,6 +21446,9 @@ Queries = (function() {
           break;
         case "childList":
           this.$children(mutation.target, mutation);
+          break;
+        case "characterData":
+          this.$characterData(mutation.target, mutation);
       }
       this.$intrinsics(mutation.target);
     }
@@ -21674,6 +21699,18 @@ Queries = (function() {
       }
     }
     return this;
+  };
+
+  Queries.prototype.$characterData = function(target) {
+    var id, parent, _ref;
+    parent = target.parentNode;
+    if (id = this.engine.recognize(parent)) {
+      if (parent.tagName === 'STYLE') {
+        if (((_ref = parent.getAttribute('type')) != null ? _ref.indexOf('text/gss') : void 0) > -1) {
+          return this.engine._eval(parent);
+        }
+      }
+    }
   };
 
   Queries.prototype.$intrinsics = function(node) {
@@ -22484,19 +22521,23 @@ Solutions = (function() {
         }
       }
       return _results;
+    } else if (constrain instanceof c.Variable) {
+      debugger;
+      if (constrain.editing) {
+        return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
+      }
     }
   };
 
-  Solutions.prototype.nullify = function(path) {
-    var cei, variable;
-    variable = this.variables[path.name];
+  Solutions.prototype.nullify = function(variable) {
+    var cei;
     if (variable.editing) {
       cei = this.solver._editVarMap.get(variable);
       this.solver.removeColumn(cei.editMinus);
       this.solver._editVarMap["delete"](variable);
     }
-    delete this.variables[path.name];
-    return this.solver._externalParametricVars["delete"](path);
+    delete this.variables[variable.name];
+    return this.solver._externalParametricVars["delete"](variable);
   };
 
   Solutions.prototype.add = function(command) {
@@ -22531,7 +22572,7 @@ Solutions = (function() {
     }
   };
 
-  Solutions.prototype.edit = function(variable, strength, weight) {
+  Solutions.prototype.edit = function(variable, strength, weight, continuation) {
     var constraint;
     strength = this.engine._strength(strength);
     weight = this.engine._weight(weight);
@@ -22542,17 +22583,26 @@ Solutions = (function() {
     return constraint;
   };
 
-  Solutions.prototype.suggest = function(path, value, strength, weight) {
-    var variable;
+  Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
+    debugger;
+    var variable, variables, _base;
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
-        return this.response[path] = value;
+        if (continuation) {
+          variable = this.engine._var(path);
+          variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
+          if (variables.indexOf(variable) === -1) {
+            variables.push(variable);
+          }
+        } else {
+          return this.response[path] = value;
+        }
       }
     } else {
       variable = path;
     }
     if (!variable.editing) {
-      this.edit(variable, strength, weight);
+      this.edit(variable, strength, weight, continuation);
     }
     this.solver.suggestValue(variable, value);
     return variable;

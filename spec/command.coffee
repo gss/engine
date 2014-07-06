@@ -126,7 +126,6 @@ describe 'GSS commands', ->
         box0 = scope.getElementsByClassName('box')[0]
         box0.parentNode.removeChild(box0)
 
-      debugger
       engine.run [
         ['==', ['get', ['$class','box'], 'width'],['get', ['$class','box'], 'intrinsic-width']]
       ]
@@ -279,7 +278,7 @@ describe 'GSS commands', ->
             
           else if count is 2     
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]' ,1110, 'required']
+                ['suggest', '$box1[intrinsic-width]' ,1110, 'required', null, null]
               ]
             chai.expect(engine.values['$box1[intrinsic-width]']).to.equal 1110
             chai.expect(engine.values['$box2[height]']).to.equal 1110
@@ -303,7 +302,7 @@ describe 'GSS commands', ->
             engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]', 111, 'required']
+                ['suggest', '$box1[intrinsic-width]', 111, 'required', null, null]
               ]
             engine.removeEventListener 'solved', listener
             done()
@@ -326,12 +325,12 @@ describe 'GSS commands', ->
             el.innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2            
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]', 111, 'required']
+                ['suggest', '$box1[intrinsic-width]', 111, 'required', null, null]
               ]
             el.innerHTML = ""            
           else if count is 3
             chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]', 0, 'required']
+                ['suggest', '$box1[intrinsic-width]', 0, 'required', null, null]
               ]
             engine.removeEventListener 'solved', listener
             done()

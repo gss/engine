@@ -433,6 +433,7 @@ describe 'GSS engine', ->
   
     before ->
       container = document.createElement 'div'
+      new GSS(container)
       $('#fixtures').appendChild container
   
     after ->
@@ -442,11 +443,11 @@ describe 'GSS engine', ->
       engine1 = null
     
       it 'without GSS rules style tag', ->
-        engine1 = new GSS(container)
+        engine1 = GSS(container)
         expect(engine1.scope).to.be.equal container
     
       it 'after receives GSS style tag', (done) ->
-        engine2 = GSS(container)
+        engine1 = GSS(container)
         container.innerHTML =  """
           <style id="gssa" type="text/gss-ast" scoped>
             [
@@ -455,27 +456,24 @@ describe 'GSS engine', ->
           </style>
           """
         listener = (e) ->
-          expect(engine1).to.equal engine2
           expect(engine1.values['col-width-1']).to.equal 111
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener
     
-      xit 'after modified GSS style tag', (done) ->
+      it 'after modified GSS style tag', (done) ->
+        engine = GSS(container)
         styleNode = engine.$id 'gssa'
         styleNode.innerHTML = """
-          [{
-            "type":"constraint",
-            "commands": [
-              ["suggest", "col-width-11", 1111]
-            ]          
-          }]
+          [
+            ["suggest", "col-width-11", 1111]
+          ]  
         """        
         listener = (e) ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
-          expect(engine1.vars['col-width-1']).to.equal undefined
-          expect(engine1.vars['col-width-11']).to.equal 1111
+          expect(engine1.values['col-width-1']).to.equal undefined
+          expect(engine1.values['col-width-11']).to.equal 1111
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener

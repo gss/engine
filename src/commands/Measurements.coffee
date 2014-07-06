@@ -1,9 +1,15 @@
 # Buffer up measurements
 class Measurements
 
+  # Add continuation to suggest command, because suggest creates a variable
+  # if its undefined. It will ensure the solver will be able to clean up
+  suggest:
+    command: (operation, continuation, scope, variable, value, strength, weight, contd) ->
+      contd ||= @getContinuation(continuation)
+      return ['suggest', variable, value, strength ? null, weight ? null, contd ? null]
+
   # Generate command to create a variable
   get:
-    meta: true
     command: (operation, continuation, scope, object, property) ->
       if property
         if typeof object == 'string'

@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-06) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -1200,19 +1201,23 @@ Solutions = (function() {
         }
       }
       return _results;
+    } else if (constrain instanceof c.Variable) {
+      debugger;
+      if (constrain.editing) {
+        return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
+      }
     }
   };
 
-  Solutions.prototype.nullify = function(path) {
-    var cei, variable;
-    variable = this.variables[path.name];
+  Solutions.prototype.nullify = function(variable) {
+    var cei;
     if (variable.editing) {
       cei = this.solver._editVarMap.get(variable);
       this.solver.removeColumn(cei.editMinus);
       this.solver._editVarMap["delete"](variable);
     }
-    delete this.variables[path.name];
-    return this.solver._externalParametricVars["delete"](path);
+    delete this.variables[variable.name];
+    return this.solver._externalParametricVars["delete"](variable);
   };
 
   Solutions.prototype.add = function(command) {
@@ -1247,7 +1252,7 @@ Solutions = (function() {
     }
   };
 
-  Solutions.prototype.edit = function(variable, strength, weight) {
+  Solutions.prototype.edit = function(variable, strength, weight, continuation) {
     var constraint;
     strength = this.engine._strength(strength);
     weight = this.engine._weight(weight);
@@ -1258,17 +1263,26 @@ Solutions = (function() {
     return constraint;
   };
 
-  Solutions.prototype.suggest = function(path, value, strength, weight) {
-    var variable;
+  Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
+    debugger;
+    var variable, variables, _base;
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
-        return this.response[path] = value;
+        if (continuation) {
+          variable = this.engine._var(path);
+          variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
+          if (variables.indexOf(variable) === -1) {
+            variables.push(variable);
+          }
+        } else {
+          return this.response[path] = value;
+        }
       }
     } else {
       variable = path;
     }
     if (!variable.editing) {
-      this.edit(variable, strength, weight);
+      this.edit(variable, strength, weight, continuation);
     }
     this.solver.suggestValue(variable, value);
     return variable;
