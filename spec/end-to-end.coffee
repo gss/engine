@@ -206,6 +206,53 @@ describe 'End - to - End', ->
           assert (Number(style['z-index']) is 10) or (Number(style['zIndex']) is 10), 'correct z-index'
           assert Number(style['opacity']) is .5, 'correct opacity'
           done()
+    
+    describe 'transform props', ->  
+      it 'should be ok', (done) ->                                 
+        container.innerHTML =  """
+            <div id="transfomer"></div>
+            <style type="text/gss">              
+              #transfomer {                
+                rotate:   == 44;
+                rotate-x: == 45;
+                rotate-y: == 46;
+                rotate-z: == 47;
+                scale:   == 1;
+                scale-x: == 2;
+                scale-y: == 3;
+                scale-z: == 4;
+                translate:   == 10;
+                translate-x: == 20;
+                translate-y: == 30;
+                translate-z: == 40;
+                skew-x: == 100;
+                skew-y: == 200;
+                perspective: == 999;
+              }
+            </style>
+          """
+        engine.once 'display', (e) ->
+          style = document.getElementById('transfomer').style          
+          prop = style[GSS._.transformPrefix]
+          console.log document.getElementById('transfomer')
+          
+          assert (prop.indexOf('rotate(44deg)') >= 0), 'correct rotate'
+          assert (prop.indexOf('rotateX(45deg)') >= 0), 'correct rotate-x'
+          assert (prop.indexOf('rotateY(46deg)') >= 0), 'correct rotate-y'
+          assert (prop.indexOf('rotateZ(47deg)') >= 0), 'correct rotate-z'
+          
+          assert (prop.indexOf('scale(1)') >= 0), 'correct scale'
+          assert (prop.indexOf('scaleX(2)') >= 0), 'correct scale-x'
+          assert (prop.indexOf('scaleY(3)') >= 0), 'correct scale-y'
+          assert (prop.indexOf('scaleZ(4)') >= 0), 'correct scale-z'
+          
+          assert (prop.indexOf('translate(10px)') >= 0),  'correct translate'
+          assert (prop.indexOf('translateX(20px)') >= 0), 'correct translate-x'
+          assert (prop.indexOf('translateY(30px)') >= 0), 'correct translate-y'
+          assert (prop.indexOf('translateZ(40px)') >= 0), 'correct translate-z'
+          
+          
+          done()
           
     describe 'order of operations', ->  
       it 'should compute values', (done) ->                                 
@@ -1413,7 +1460,7 @@ describe 'End - to - End', ->
           """
         engine.once 'solved', (e) ->     
           assert true
-          done()  
+          done()
     
       
           

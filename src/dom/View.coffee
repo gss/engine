@@ -112,6 +112,30 @@ class View
       @values.yLocal = yLocal
       @_positionMatrix(xLocal, yLocal)
     
+    transformPropUnit = 
+      'rotate'      :'deg'
+      'rotate-x'    :'deg'
+      'rotate-y'    :'deg'
+      'rotate-z'    :'deg'
+      'scale'       :''
+      'scale-x'     :''
+      'scale-y'     :''
+      'scale-z'     :''
+      'translate'   :'px'
+      'translate-x' :'px'
+      'translate-y' :'px'
+      'translate-z' :'px'
+      'skew-x'      :'deg'
+      'skew-y'      :'deg'
+      'perspective' :'px'
+    
+    for prop, unit of transformPropUnit
+      val = o[prop]
+      if val?
+        if !@style[transformPrefix] then @style[transformPrefix] = ''
+        @style[transformPrefix] += " #{GSS._.camelize(prop)}(#{val}#{unit})"
+        delete o[prop]
+    
     if o['z-index']?
       @style['zIndex'] = o['z-index']
       delete o['z-index']
@@ -136,6 +160,7 @@ class View
       @style[key] = val + "px"
     for key, val of @style
       @el.style[key] = val
+      console.log key, val
     @
   
   ###

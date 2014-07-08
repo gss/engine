@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-06-17) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-08) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20931,7 +20931,7 @@ View = (function() {
   View.prototype.needsDisplay = false;
 
   View.prototype.display = function(offsets) {
-    var key, o, val, xLocal, yLocal, _ref, _ref1;
+    var key, o, prop, transformPropUnit, unit, val, xLocal, yLocal, _ref, _ref1;
     if (!this.values) {
       return;
     }
@@ -20966,6 +20966,34 @@ View = (function() {
       this.values.yLocal = yLocal;
       this._positionMatrix(xLocal, yLocal);
     }
+    transformPropUnit = {
+      'rotate': 'deg',
+      'rotate-x': 'deg',
+      'rotate-y': 'deg',
+      'rotate-z': 'deg',
+      'scale': '',
+      'scale-x': '',
+      'scale-y': '',
+      'scale-z': '',
+      'translate': 'px',
+      'translate-x': 'px',
+      'translate-y': 'px',
+      'translate-z': 'px',
+      'skew-x': 'deg',
+      'skew-y': 'deg',
+      'perspective': 'px'
+    };
+    for (prop in transformPropUnit) {
+      unit = transformPropUnit[prop];
+      val = o[prop];
+      if (val != null) {
+        if (!this.style[transformPrefix]) {
+          this.style[transformPrefix] = '';
+        }
+        this.style[transformPrefix] += " " + (GSS._.camelize(prop)) + "(" + val + unit + ")";
+        delete o[prop];
+      }
+    }
     if (o['z-index'] != null) {
       this.style['zIndex'] = o['z-index'];
       delete o['z-index'];
@@ -20997,6 +21025,7 @@ View = (function() {
     for (key in _ref1) {
       val = _ref1[key];
       this.el.style[key] = val;
+      console.log(key, val);
     }
     return this;
   };
