@@ -145,7 +145,9 @@ class Rules
       rules = @['_' + type](source)
       console.log('Eval', rules, continuation)
       rules = GSS.clone(rules)
+      capture = @expressions.capture(type)
       @run rules, continuation, scope
+      @expressions.release() if capture
       return
 
   "load": 
@@ -156,7 +158,9 @@ class Rules
       xhr.onreadystatechange = =>
         if xhr.readyState == 4
           if xhr.status == 200
+            capture = @expressions.capture(src)
             @_eval.command.call(@, operation, continuation, scope, node, type, xhr.responseText)
+            @expressions.release() if capture
       xhr.open(method.toUpperCase(), src)
       xhr.send()
 

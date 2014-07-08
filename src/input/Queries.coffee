@@ -42,7 +42,7 @@ class Queries
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
     @buffer = @updated = null
-    capture = @output.capture(mutations.length + ' mutations') 
+    capture = @output.capture(mutations.length + ' mutation' + (mutations.length > 1 && 's' || '')) 
     @engine.start()
     for mutation in mutations
       switch mutation.type
@@ -84,7 +84,11 @@ class Queries
     for path, query of @
       if query && query.old != undefined
         delete query.old
-    @output.release() if capture
+    if capture
+      if @engine.expressions.buffer
+        @output.release()
+      else
+        @output.flush()
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -390,7 +394,7 @@ class Queries
       debugger
     @engine.values.clean(path, continuation, operation, scope)
     if result && !@engine.isCollection(result)
-      if continuation != (oppath = @getOperationPath(continuation))
+      if continuation && continuation != (oppath = @getOperationPath(continuation))
         @remove result, oppath
     @unpair path, result if result
     unless plural
@@ -570,10 +574,12 @@ class Queries
   updateSharedCollection: (operation, path, scope, added, removed) ->
     if path != (oppath = @getOperationPath(path))
       collection = @get(oppath)
-      return debugger if removed && removed == collection
+      if removed && removed == collection
+        console.error('removing', oppath, collection)
+        return debugger if removed && removed == collection
       copy = collection?.slice() || null
       console.log('%c' + oppath, 'font-weight: bold', copy, path, added, removed)
-      console.error('oldie', collection?.old, oppath)
+      console.error('oldie', collection?.old, oppath, [removed, added])
       if removed
         if removed.length != undefined
           for item in removed
@@ -603,7 +609,8 @@ class Queries
         scoped = true 
       else
         @set path, group[0]
-    
+    else if !old? && (result && result.length == 0) && continuation
+      old = @get(@getOperationPath(path))
     if (group ||= @updated?[path])
       if scoped
         added = result
@@ -640,12 +647,12 @@ class Queries
         # Snapshot live node list for future reference
         if result && result.item
           result = Array.prototype.slice.call(result, 0)
-        #result.old = o || old || null
+          # result.old = o || old || null
       else
         added = result
 
-      @updateSharedCollection operation, path, scope, added, removed
-
+      if (added || removed)
+        @updateSharedCollection operation, path, scope, added, removed
     # Subscribe node to the query
     if id = @engine.identify(node)
       watchers = @_watchers[id] ||= []

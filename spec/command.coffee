@@ -270,11 +270,13 @@ describe 'GSS commands', ->
       it 'element resized by style change', (done) ->
         count = 0
         el = null
+        window.$engine = engine
         listener = (e) ->
           count++
           if count is 1
             el = engine.$id('box1')
             GSS.setStyle el, "width", "1110px"
+            console.log('solved', el, el.style.width)
             
           else if count is 2     
             chai.expect(engine.expressions.lastOutput).to.eql [

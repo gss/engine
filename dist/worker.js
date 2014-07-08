@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-08) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-09) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -32,7 +32,7 @@ Expressions = (function() {
   Expressions.prototype.pull = function(expression) {
     var buffer, result;
     if (expression) {
-      buffer = this.capture();
+      buffer = this.capture(expression.length + ' command' + (expression.length > 1 && 's' || ''));
       console.log('Input', expression);
       this.engine.start();
       result = this.evaluate.apply(this, arguments);
@@ -512,8 +512,8 @@ Values = (function() {
     return this[this.engine.getPath(id, property)];
   };
 
-  Values.prototype.set = function(id, property, value) {
-    var buffer, index, old, path, watcher, watchers, _i, _len, _ref;
+  Values.prototype.set = function(id, property, value, buffered) {
+    var capture, index, old, path, watcher, watchers, _i, _len, _ref;
     if (arguments.length === 2) {
       value = property;
       property = void 0;
@@ -537,13 +537,13 @@ Values = (function() {
         if (!watcher) {
           break;
         }
-        if (!buffer) {
-          buffer = this.engine.expressions.capture(path + ' changed');
+        if (typeof capture === "undefined" || capture === null) {
+          capture = this.engine.expressions.capture(path + ' changed') || false;
         }
         this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
       }
-      if (buffer) {
-        this.engine.expressions.flush();
+      if (capture && !buffered) {
+        this.engine.expressions.release();
       }
     }
     return value;
@@ -554,10 +554,10 @@ Values = (function() {
     buffer = this.engine.expressions.buffer === void 0;
     for (path in object) {
       value = object[path];
-      this.set(path, void 0, value);
+      this.set(path, void 0, value, buffer);
     }
     if (buffer) {
-      this.engine.expressions.release(buffer);
+      this.engine.expressions.release();
     }
     return this;
   };

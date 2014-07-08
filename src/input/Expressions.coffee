@@ -14,7 +14,7 @@ class Expressions
   # Hook: Evaluate input and pass produced output
   pull: (expression) ->
     if expression
-      buffer = @capture() # Enable buffering if nobody enabled it already
+      buffer = @capture(expression.length + ' command' + (expression.length > 1 && 's' || '')) # Enable buffering if nobody enabled it already
       console.log('Input', expression)
       @engine.start()
       result = @evaluate.apply(@, arguments)
@@ -352,7 +352,7 @@ class Expressions
     else
       return operation.path
 
-  release: ->
+  release: () ->
     console.groupEnd()
     if @engine.expressions.buffer
       @engine.expressions.flush()

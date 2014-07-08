@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-08) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-09) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19904,7 +19904,7 @@ Rules = (function() {
 
   Rules.prototype["eval"] = {
     command: function(operation, continuation, scope, node, type, source) {
-      var nodeContinuation, nodeType, rules;
+      var capture, nodeContinuation, nodeType, rules;
       if (type == null) {
         type = 'text/gss';
       }
@@ -19928,7 +19928,11 @@ Rules = (function() {
       rules = this['_' + type](source);
       console.log('Eval', rules, continuation);
       rules = GSS.clone(rules);
+      capture = this.expressions.capture(type);
       this.run(rules, continuation, scope);
+      if (capture) {
+        this.expressions.release();
+      }
     }
   };
 
@@ -19943,9 +19947,14 @@ Rules = (function() {
       type || (type = node.type || 'text/gss');
       xhr = new XMLHttpRequest();
       xhr.onreadystatechange = function() {
+        var capture;
         if (xhr.readyState === 4) {
           if (xhr.status === 200) {
-            return _this._eval.command.call(_this, operation, continuation, scope, node, type, xhr.responseText);
+            capture = _this.expressions.capture(src);
+            _this._eval.command.call(_this, operation, continuation, scope, node, type, xhr.responseText);
+            if (capture) {
+              return _this.expressions.release();
+            }
           }
         }
       };
@@ -21009,7 +21018,7 @@ Expressions = (function() {
   Expressions.prototype.pull = function(expression) {
     var buffer, result;
     if (expression) {
-      buffer = this.capture();
+      buffer = this.capture(expression.length + ' command' + (expression.length > 1 && 's' || ''));
       console.log('Input', expression);
       this.engine.start();
       result = this.evaluate.apply(this, arguments);
@@ -21458,7 +21467,7 @@ Queries = (function() {
   Queries.prototype.pull = function(mutations) {
     var capture, continuation, id, index, mutation, node, path, plural, plurals, property, queries, query, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
     this.buffer = this.updated = null;
-    capture = this.output.capture(mutations.length + ' mutations');
+    capture = this.output.capture(mutations.length + ' mutation' + (mutations.length > 1 && 's' || ''));
     this.engine.start();
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
@@ -21524,7 +21533,11 @@ Queries = (function() {
       }
     }
     if (capture) {
-      return this.output.release();
+      if (this.engine.expressions.buffer) {
+        return this.output.release();
+      } else {
+        return this.output.flush();
+      }
     }
   };
 
@@ -21941,7 +21954,7 @@ Queries = (function() {
     }
     this.engine.values.clean(path, continuation, operation, scope);
     if (result && !this.engine.isCollection(result)) {
-      if (continuation !== (oppath = this.getOperationPath(continuation))) {
+      if (continuation && continuation !== (oppath = this.getOperationPath(continuation))) {
         this.remove(result, oppath);
       }
     }
@@ -22166,13 +22179,16 @@ Queries = (function() {
     if (path !== (oppath = this.getOperationPath(path))) {
       collection = this.get(oppath);
       if (removed && removed === collection) {
-        return (function() {
-          debugger;
-        })();
+        console.error('removing', oppath, collection);
+        if (removed && removed === collection) {
+          return (function() {
+            debugger;
+          })();
+        }
       }
       copy = (collection != null ? collection.slice() : void 0) || null;
       console.log('%c' + oppath, 'font-weight: bold', copy, path, added, removed);
-      console.error('oldie', collection != null ? collection.old : void 0, oppath);
+      console.error('oldie', collection != null ? collection.old : void 0, oppath, [removed, added]);
       if (removed) {
         if (removed.length !== void 0) {
           for (_i = 0, _len = removed.length; _i < _len; _i++) {
@@ -22212,6 +22228,8 @@ Queries = (function() {
       } else {
         this.set(path, group[0]);
       }
+    } else if ((old == null) && (result && result.length === 0) && continuation) {
+      old = this.get(this.getOperationPath(path));
     }
     if ((group || (group = (_ref1 = this.updated) != null ? _ref1[path] : void 0))) {
       if (scoped) {
@@ -22258,7 +22276,9 @@ Queries = (function() {
       } else {
         added = result;
       }
-      this.updateSharedCollection(operation, path, scope, added, removed);
+      if (added || removed) {
+        this.updateSharedCollection(operation, path, scope, added, removed);
+      }
     }
     if (id = this.engine.identify(node)) {
       watchers = (_base = this._watchers)[id] || (_base[id] = []);
@@ -22444,8 +22464,8 @@ Values = (function() {
     return this[this.engine.getPath(id, property)];
   };
 
-  Values.prototype.set = function(id, property, value) {
-    var buffer, index, old, path, watcher, watchers, _i, _len, _ref;
+  Values.prototype.set = function(id, property, value, buffered) {
+    var capture, index, old, path, watcher, watchers, _i, _len, _ref;
     if (arguments.length === 2) {
       value = property;
       property = void 0;
@@ -22469,13 +22489,13 @@ Values = (function() {
         if (!watcher) {
           break;
         }
-        if (!buffer) {
-          buffer = this.engine.expressions.capture(path + ' changed');
+        if (typeof capture === "undefined" || capture === null) {
+          capture = this.engine.expressions.capture(path + ' changed') || false;
         }
         this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
       }
-      if (buffer) {
-        this.engine.expressions.flush();
+      if (capture && !buffered) {
+        this.engine.expressions.release();
       }
     }
     return value;
@@ -22486,10 +22506,10 @@ Values = (function() {
     buffer = this.engine.expressions.buffer === void 0;
     for (path in object) {
       value = object[path];
-      this.set(path, void 0, value);
+      this.set(path, void 0, value, buffer);
     }
     if (buffer) {
-      this.engine.expressions.release(buffer);
+      this.engine.expressions.release();
     }
     return this;
   };
@@ -22780,10 +22800,10 @@ Styles = (function() {
     }
     this.data = data;
     if (suggests = this.engine._getComputedProperties()) {
-      capture = this.expressions.capture(suggests.length + ' intrinsics');
+      capture = this.engine.expressions.capture(suggests.length + ' intrinsics');
       this.engine.pull(suggests);
       if (capture) {
-        return this.expressions.release();
+        return this.engine.expressions.release();
       }
     } else {
       this.data = void 0;

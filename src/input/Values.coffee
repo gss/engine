@@ -45,7 +45,7 @@ class Values
   get: (id, property) ->
     return @[@engine.getPath(id, property)]
 
-  set: (id, property, value) ->
+  set: (id, property, value, buffered) ->
     if arguments.length == 2
       value = property
       property = undefined
@@ -61,17 +61,19 @@ class Values
     if watchers = @_watchers?[path]
       for watcher, index in watchers by 3
         break unless watcher
-        buffer = @engine.expressions.capture(path + ' changed') unless buffer
+        unless capture?
+          capture = @engine.expressions.capture(path + ' changed') || false
+
         @engine.expressions.evaluate watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value
         
-      @engine.expressions.flush() if buffer
+      @engine.expressions.release() if capture && !buffered
     return value
     
   merge: (object) ->
     buffer = @engine.expressions.buffer == undefined
     for path, value of object
-      @set path, undefined, value
-    @engine.expressions.release(buffer) if buffer
+      @set path, undefined, value, buffer
+    @engine.expressions.release() if buffer
 
     @
 
