@@ -85,14 +85,15 @@ class Engine.Document extends Engine
   start: ->
     return if @running
     super
-    console.groupCollapsed('Watch for stylesheets')
+    capture = @expressions.capture('load stylesheets')
     @run [
       ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
       ['load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
     ]
-    console.groupEnd('Watch for stylesheets')
+    @expressions.release() if capture
     return true
     
+  
 # Export all DOM commands as helper functions 
 for target in [Engine, Engine.Document::, Engine.Document]
   for source in [Engine.Document::Commands::]

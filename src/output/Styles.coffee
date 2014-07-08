@@ -49,7 +49,9 @@ class Styles
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
     @data = data
     if suggests = @engine._getComputedProperties()
+      capture = @expressions.capture(suggests.length + ' intrinsics')
       @engine.pull(suggests)
+      @expressions.release() if capture
     else
       @data = undefined
       @push(data)

@@ -59,16 +59,16 @@ class Values
     if @engine._onChange
       @engine._onChange path, value, old
     if watchers = @_watchers?[path]
-      buffer = @engine.expressions.capture()
       for watcher, index in watchers by 3
         break unless watcher
+        buffer = @engine.expressions.capture(path + ' changed') unless buffer
         @engine.expressions.evaluate watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value
         
       @engine.expressions.flush() if buffer
     return value
     
   merge: (object) ->
-    buffer = @engine.expressions.capture()
+    buffer = @engine.expressions.buffer == undefined
     for path, value of object
       @set path, undefined, value
     @engine.expressions.release(buffer) if buffer

@@ -12,7 +12,7 @@ class Engine.Solver extends Engine
 
   Properties:
     require('./properties/Equasions.js')
-  
+
   constructor: (@input, @output, url) -> 
     return context if context = super()
 
@@ -51,7 +51,6 @@ class Engine.Solver extends Engine
   getPath: (scope, property) ->
     return scope || property unless scope && property
     return (scope || '') + '[' + (property || '') + ']'
-
 
 # Solver inside a worker, initialized lazily on first message
 # Solver -> Solver

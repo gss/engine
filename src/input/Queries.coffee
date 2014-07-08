@@ -41,10 +41,8 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
-    if window.xa
-      debugger
     @buffer = @updated = null
-    capture = @output.capture() 
+    capture = @output.capture(mutations.length + ' mutations') 
     @engine.start()
     for mutation in mutations
       switch mutation.type
@@ -75,18 +73,18 @@ class Queries
     if repairing
       for property, value of repairing
         if plurals = @_plurals[property]
-          for plural, index in plurals by 4
+          for plural, index in plurals by 3
             @repair property, plural, plurals[index + 1], plurals[index + 2], plurals[index + 3]
     if @removing
       for node in @removing
         delete node._gss_id
 
-    console.log('Updated', @updated)
+    console.log('Queries', @updated)
     @buffer = @updated = undefined
     for path, query of @
       if query && query.old != undefined
         delete query.old
-    @output.flush() if capture
+    @output.release() if capture
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -235,11 +233,15 @@ class Queries
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
+    update = (@updated ||= {})[continuation] ||= []
     console.info('ADDDING', continuation, collection?.slice?())
-    if copy = collection?.slice?()
-      ((@updated ||= {})[continuation] ||= [])[1] ||= copy
+    if update[1] == undefined 
+      update[1] = (copy = collection?.slice?()) || null
 
-    (collection ||= @[continuation] = []).manual = true
+    if collection
+      return unless collection.keys
+    else
+      @[continuation] = collection = []
     keys = collection.keys ||= []
 
     if collection.indexOf(node) == -1
@@ -281,10 +283,10 @@ class Queries
     return unless (watchers = typeof id == 'object' && id || @_watchers[id])
     while watcher = watchers[index]
       contd = watchers[index + 1]
-      console.error(watcher, contd, refs)
       if refs && refs.indexOf(contd) == -1
         index += 3
         continue
+      console.log('Unwatch', watcher.path, contd, refs)
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       unless quick
@@ -293,6 +295,9 @@ class Queries
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
+    if (id.nodeType && @engine.identify(id) || id) == '$b4'
+      debugger
+    console.group('Remove ' + (id.nodeType && @engine.identify(id) || id) + ' from ' + (continuation || ''))
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
@@ -325,12 +330,12 @@ class Queries
           if (index = collection.indexOf(node)) > -1
             # Fall back to duplicate with a different key
             if keys
-              return unless keys[index] == manual
+              return console.groupEnd() unless keys[index] == manual
               if duplicate?
                 collection.duplicates.splice(duplicate, 1)
                 keys[index] = keys[duplicate + length]
                 keys.splice(duplicate + length, 1)
-                return
+                return console.groupEnd()
             collection.splice(index, 1)
             if keys
               keys.splice(index, 1)
@@ -339,7 +344,7 @@ class Queries
       # Detach observer and its subquery when cleaning by id
       if node
         if plurals = @_plurals?[continuation]
-          for plural, index in plurals by 4
+          for plural, index in plurals by 3
             subpath = continuation + id + '→' + plural
             @remove plurals[index + 2], continuation + id + '→', null, null, null, true
             @clean(continuation + id + '→' + plural, null, null, null, null, true)
@@ -349,16 +354,18 @@ class Queries
         @unwatch(id, ref, plural)
 
         path = continuation
-        if (result = @engine.queries.get(path))?.length?
-          if manual && @isPaired(null, manual)
-            for item in result
-              @unpair(path, item)
-          else
-            path += id
+        if (result = @engine.queries.get(path))?
+          @updateSharedCollection operation, path, scope, undefined, result
+          if result.length?
+            if typeof manual == 'string' && @isPaired(null, manual)
+              for item in result
+                @unpair(path, item)
+            else
+              path += id
 
-            @clean(path)
-        else if result
-          @unpair path, result
+              @clean(path)
+          else
+            @unpair path, result
       # Remove cached DOM query
       else
 
@@ -371,17 +378,21 @@ class Queries
       # Detach queries attached to an element when removing element by id
       @unwatch(id, true)
 
-    return
+    return console.groupEnd()
 
   clean: (path, continuation, operation, scope, bind, plural) ->
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
-    console.error('CLEAN', result, Array.prototype.slice.call(arguments), @[continuation], @[path])
+    console.warn('CLEAN', path, 777, continuation, Array.prototype.slice.call(arguments), @[continuation], @[path])
+    if (path == "style$2↓.a$a3↑!+.a→.b")
+      debugger
     @engine.values.clean(path, continuation, operation, scope)
     if result && !@engine.isCollection(result)
-      @unpair path, result
+      if continuation != (oppath = @getOperationPath(continuation))
+        @remove result, oppath
+    @unpair path, result if result
     unless plural
       if (result = @get(path, undefined, true)) != undefined
         if result
@@ -408,24 +419,24 @@ class Queries
       @unwatch(@lastOutput, path, null, true)
     @unwatch(@engine.scope._gss_id, path)
     if !result || result.length == undefined
+      if @engine.getContinuation(path) == "style$2↓.a!+.a$b1→.b"
+        debugger
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 
   # Update bindings of two plural collections
   repair: (path, key, operation, scope, collected) ->
-
     leftUpdate = @updated?[path]
-    leftNew = (if leftUpdate then leftUpdate[0] else @get(path)) || []
+    leftNew = (if leftUpdate?[0] != undefined then leftUpdate[0] else @get(path)) || []
     if leftNew.old != undefined
       leftOld = leftNew.old || []
     else
       leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = path + '→' + key
+    rightPath = @getScopePath(path) + key
     rightUpdate = @updated?[rightPath]
 
     console.error(rightPath, rightUpdate, @, @updated)
     rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
-
     if !rightNew && collected
       rightNew = @get(path + @engine.identify(leftNew[0] || leftOld[0]) + '→' + key)
       console.error(rightOld, path + '→' + @engine.identify(leftNew[0] || leftOld[0]) + key, 4444444)
@@ -458,7 +469,7 @@ class Queries
 
     for pair in removed
       prefix = @engine.getContinuation(path, pair[0], '→')
-      console.error('remove', prefix)
+      console.error('remove', prefix, key)
       @remove(scope, prefix, null, null, null, true)
       @clean(prefix + key, null, null, null, null, true)
     
@@ -472,29 +483,52 @@ class Queries
       else
         @engine.expressions.pull operation, contd, scope, true, true
 
-    console.log(@updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed)
-  
-  pairRe: /(?:^|→)([^→]+)(\$[a-z0-9-]+)→([^→]+)→?$/i
+    console.log('Repair', path, GSS.RIGHT, key, [added, removed], [leftNew, leftOld], [rightNew, rightOld])
+
+  isPariedRegExp: /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i
                   # path1 ^        id ^        ^path2   
 
+  forkMarkRegExp: /\$[^↑]+(?:↑|$)/g
+
   isPaired: (operation, continuation) ->
-    if match = continuation.match(@pairRe)
+    if match = continuation.match(@isPariedRegExp)
       if operation && operation.parent.def.serialized
         return
       if !@engine.isCollection(@[continuation]) && match[3].indexOf('$') == -1
         return
       return match
 
+  # Remove all fork marks from a path
+  getOperationPath: (continuation, compact) ->
+    bits = continuation.split(GSS.DOWN);
+    last = bits[bits.length - 1]
+    last = bits[bits.length - 1] = last.split(GSS.RIGHT).pop().replace(@forkMarkRegExp, '')
+    return last if compact
+    return bits.join(GSS.DOWN)
+
+  # Get path of a parent
+  getScopePath: (continuation) ->
+    bits = continuation.split(GSS.DOWN)
+    bits[bits.length - 1] = ""
+    return bits.join(GSS.DOWN)
+
   unpair: (continuation, node) ->
     return unless match = @isPaired(null, continuation)
-    console.info(continuation, node, match)
-    collection = @get(match[1])
-    return unless plurals = @_plurals?[match[1]]
-    for plural, index in plurals by 4
-      path = match[1] + '→' + plural
-      if @remove(node, path, plurals[index + 1], plurals[index + 2], continuation)
-        @clean(match[1] + match[2] + '→' + plural)
-      ((@updated ||= {})[path] ||= [])[0] = @get(path)
+    console.error(continuation, node, @isPaired(null, continuation))
+    path = @getOperationPath(match[1])
+    collection = @get(path)
+    return unless plurals = @_plurals?[path]
+
+    oppath = @getOperationPath(continuation, true)
+    console.log('Heyz', oppath, plurals)
+    for plural, index in plurals by 3
+      continue unless oppath == plural
+      contd = path + '→' + plural
+      @remove(node, contd, plurals[index + 1], plurals[index + 2], continuation)
+      #@clean(path + match[2] + '→' + plural)
+      ((@updated ||= {})[contd] ||= [])[0] = @get(contd)
+      if @_repairing != undefined
+        schedule = (@_repairing ||= {})[path] = true
     return
 
   # Check if operation is plurally bound with another selector
@@ -502,33 +536,16 @@ class Queries
   # Currently bails out and schedules re-pairing 
   pair: (continuation, operation, scope, result) ->
     return unless match = @isPaired(operation, continuation, true)
-    plurals = (@_plurals ||= {})[match[1]] ||= []
+    left = @getOperationPath(match[1])
+    console.log('Hey pair up', match[1], left)
+    plurals = (@_plurals ||= {})[left] ||= []
     if plurals.indexOf(operation.path) == -1
-      pushed = plurals.push(operation.path, operation, scope, undefined)
-    collection = @get(match[1])
-    element = @engine.elements[match[2]]
-    #if (operation.path != match[3])
-    
-    path = match[1] + '→' + operation.path
-    unless @updated?[path]
-      update = @updated?[continuation]
-      if copy = (if update then update[1] else @get(continuation))?.slice?()
-        update = ((@updated ||= {})[path] ||= [])[1] ||= copy
-    console.log(777, [continuation, path], copy, operation, operation.path, result)
-
-    if @engine.isCollection(result)
-      if operation.key != operation.path
-        for node in result
-          @add(node, path, operation, scope, continuation)
-      else
-        plurals[pushed - 1] = continuation if pushed
-    else
-      @add(result, path, operation, scope, continuation)
-
-    ((@updated ||= {})[path] ||= [])[0] = @get(path)
+      pushed = plurals.push(operation.path, operation, scope)
+    collection = @get(left)
+    element =  if match[2] then @engine.elements[match[2]] else @get(match[1])
 
     if @_repairing != undefined
-      schedule = (@_repairing ||= {})[match[1]] = true
+      schedule = (@_repairing ||= {})[left] = true
       return -1
     return collection.indexOf(element)
 
@@ -550,6 +567,27 @@ class Queries
       console.log('fetched', query, @updated[query], continuation)
       return @updated[query]
 
+  updateSharedCollection: (operation, path, scope, added, removed) ->
+    if path != (oppath = @getOperationPath(path))
+      collection = @get(oppath)
+      return debugger if removed && removed == collection
+      copy = collection?.slice() || null
+      console.log('%c' + oppath, 'font-weight: bold', copy, path, added, removed)
+      console.error('oldie', collection?.old, oppath)
+      if removed
+        if removed.length != undefined
+          for item in removed
+            @remove item, oppath, operation, scope, true
+        else
+          @remove removed, oppath, operation, scope, true
+      if added
+        if added.length != undefined
+          for item in added
+            @add item, oppath, operation, scope, true
+        else
+          @add added, oppath, operation, scope, true
+      #@get(oppath)?.old = copy
+
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
     node ||= @getContext(args, operation, scope, node)
@@ -559,9 +597,9 @@ class Queries
     # Normalize query to reuse results
     query = @getQueryPath(operation, @engine.identify(node))
     if group = @updated?[query]
-      old ||= group[1]
       result = group[0]
-      unless @[path]?
+      unless old?
+        old = group[1]
         scoped = true 
       else
         @set path, group[0]
@@ -576,7 +614,7 @@ class Queries
 
       isCollection = result && result.length != undefined
       if old == result || (old == undefined && @removed)
-        noop = true unless result && result.manual
+        noop = true unless result && result.keys
         old = undefined
       
       # Clean refs of nodes that dont match anymore
@@ -590,6 +628,7 @@ class Queries
               (removed ||= []).push child
         else if !result
           @clean(path)
+          removed = old
 
       # Register newly found nodes
       if isCollection
@@ -601,9 +640,11 @@ class Queries
         # Snapshot live node list for future reference
         if result && result.item
           result = Array.prototype.slice.call(result, 0)
-        result.old = o || old || null
+        #result.old = o || old || null
       else
         added = result
+
+      @updateSharedCollection operation, path, scope, added, removed
 
     # Subscribe node to the query
     if id = @engine.identify(node)
@@ -620,8 +661,13 @@ class Queries
 
     unless @updated == undefined 
       @updated ||= {}
-      group = @updated[path] ||= group || [result, old?.slice?() || old, added, removed]
-      @updated[query] = group if query
+      
+      group = @updated[query] ||= [] if query
+      @updated[path] ||= group || []
+      group[0] ||= result
+      group[1] ||= old?.slice?()
+      group[2] ||= added
+      group[3] ||= removed
 
     contd = continuation
     if contd && contd.charAt(contd.length - 1) == '→'

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-06) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-08) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19191,8 +19191,14 @@ Engine = (function() {
     return path + (value && Engine.identify(value) || '') + suffix;
   };
 
+  Engine.UP = '↑';
+
+  Engine.RIGHT = '→';
+
+  Engine.DOWN = '↓';
+
   Engine.prototype.getPossibleContinuations = function(path) {
-    return [path, path + '↑', path + '→', path + '↓'];
+    return [path, path + Engine.UP, path + Engine.RIGHT, path + Engine.DOWN];
   };
 
   Engine.prototype.getPath = function(id, property) {
@@ -19508,13 +19514,16 @@ Engine.Document = (function(_super) {
   };
 
   Document.prototype.start = function() {
+    var capture;
     if (this.running) {
       return;
     }
     Document.__super__.start.apply(this, arguments);
-    console.groupCollapsed('Watch for stylesheets');
+    capture = this.expressions.capture('load stylesheets');
     this.run([['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
-    console.groupEnd('Watch for stylesheets');
+    if (capture) {
+      this.expressions.release();
+    }
     return true;
   };
 
@@ -20997,13 +21006,16 @@ Expressions = (function() {
     this.commands = this.engine && this.engine.commands || this;
   }
 
-  Expressions.prototype.pull = function() {
+  Expressions.prototype.pull = function(expression) {
     var buffer, result;
-    buffer = this.capture();
-    this.engine.start();
-    result = this.evaluate.apply(this, arguments);
-    if (buffer) {
-      this.flush();
+    if (expression) {
+      buffer = this.capture();
+      console.log('Input', expression);
+      this.engine.start();
+      result = this.evaluate.apply(this, arguments);
+      if (buffer) {
+        this.release();
+      }
     }
     return result;
   };
@@ -21030,7 +21042,9 @@ Expressions = (function() {
       buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
     this.lastOutput = GSS.clone(buffer);
-    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
+    if (this.engine.onDOMContentLoaded) {
+      console.log('Commands', this.lastOutput);
+    }
     if (buffer) {
       this.buffer = void 0;
       return this.output.pull(buffer);
@@ -21075,7 +21089,7 @@ Expressions = (function() {
       contd = continuation;
       continuation = this.log(operation, continuation);
     }
-    return this.ascend(operation, continuation, result, scope, ascender, contd === continuation);
+    return this.ascend(operation, continuation, result, scope, ascender);
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
@@ -21142,7 +21156,7 @@ Expressions = (function() {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
         } else {
-          return this.engine.queries.get(key);
+          return this.engine.queries[key];
         }
       }
     }
@@ -21196,11 +21210,17 @@ Expressions = (function() {
     return args;
   };
 
-  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender, hidden) {
-    var breadcrumbs, item, parent, _i, _len, _ref;
+  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender) {
+    var breadcrumbs, item, parent, _base, _i, _len, _ref;
     if (result != null) {
+      if (typeof (_base = this.engine)._onAscend === "function") {
+        _base._onAscend(operation, continuation, result, scope, ascender);
+      }
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
+          if (continuation === "style$2↓.a$a2↑!+.a→.b") {
+            debugger;
+          }
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -21368,6 +21388,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.release = function() {
+    console.groupEnd();
     if (this.engine.expressions.buffer) {
       return this.engine.expressions.flush();
     } else {
@@ -21375,8 +21396,13 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.capture = function() {
+  Expressions.prototype.capture = function(reason) {
     if (this.buffer === void 0) {
+      if (this.engine.onDOMContentLoaded) {
+        console.group('Document' + (reason && ' (' + reason + ')' || ''));
+      } else {
+        console.groupCollapsed('Solver');
+      }
       this.buffer = null;
       return true;
     }
@@ -21431,11 +21457,8 @@ Queries = (function() {
 
   Queries.prototype.pull = function(mutations) {
     var capture, continuation, id, index, mutation, node, path, plural, plurals, property, queries, query, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
-    if (window.xa) {
-      debugger;
-    }
     this.buffer = this.updated = null;
-    capture = this.output.capture();
+    capture = this.output.capture(mutations.length + ' mutations');
     this.engine.start();
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
@@ -21478,7 +21501,7 @@ Queries = (function() {
       for (property in repairing) {
         value = repairing[property];
         if (plurals = this._plurals[property]) {
-          for (index = _l = 0, _len3 = plurals.length; _l < _len3; index = _l += 4) {
+          for (index = _l = 0, _len3 = plurals.length; _l < _len3; index = _l += 3) {
             plural = plurals[index];
             this.repair(property, plural, plurals[index + 1], plurals[index + 2], plurals[index + 3]);
           }
@@ -21492,7 +21515,7 @@ Queries = (function() {
         delete node._gss_id;
       }
     }
-    console.log('Updated', this.updated);
+    console.log('Queries', this.updated);
     this.buffer = this.updated = void 0;
     for (path in this) {
       query = this[path];
@@ -21501,7 +21524,7 @@ Queries = (function() {
       }
     }
     if (capture) {
-      return this.output.flush();
+      return this.output.release();
     }
   };
 
@@ -21720,13 +21743,20 @@ Queries = (function() {
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
-    var collection, copy, index, keys, _base, _base1;
+    var collection, copy, index, keys, update, _base;
     collection = this.get(continuation);
+    update = (_base = (this.updated || (this.updated = {})))[continuation] || (_base[continuation] = []);
     console.info('ADDDING', continuation, collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0);
-    if (copy = collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0) {
-      (_base = ((_base1 = (this.updated || (this.updated = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = copy);
+    if (update[1] === void 0) {
+      update[1] = (copy = collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0) || null;
     }
-    (collection || (collection = this[continuation] = [])).manual = true;
+    if (collection) {
+      if (!collection.keys) {
+        return;
+      }
+    } else {
+      this[continuation] = collection = [];
+    }
     keys = collection.keys || (collection.keys = []);
     if (collection.indexOf(node) === -1) {
       index = collection.push(node);
@@ -21782,11 +21812,11 @@ Queries = (function() {
     }
     while (watcher = watchers[index]) {
       contd = watchers[index + 1];
-      console.error(watcher, contd, refs);
       if (refs && refs.indexOf(contd) === -1) {
         index += 3;
         continue;
       }
+      console.log('Unwatch', watcher.path, contd, refs);
       subscope = watchers[index + 2];
       watchers.splice(index, 3);
       if (!quick) {
@@ -21799,7 +21829,11 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural) {
-    var cleaning, collection, copy, dup, duplicate, duplicates, index, item, keys, length, node, path, plurals, ref, result, subpath, _base, _base1, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
+    var cleaning, collection, copy, dup, duplicate, duplicates, index, item, keys, length, node, path, plurals, ref, result, subpath, _base, _base1, _i, _j, _k, _len, _len1, _len2, _ref;
+    if ((id.nodeType && this.engine.identify(id) || id) === '$b4') {
+      debugger;
+    }
+    console.group('Remove ' + (id.nodeType && this.engine.identify(id) || id) + ' from ' + (continuation || ''));
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -21832,13 +21866,13 @@ Queries = (function() {
           if ((index = collection.indexOf(node)) > -1) {
             if (keys) {
               if (keys[index] !== manual) {
-                return;
+                return console.groupEnd();
               }
               if (duplicate != null) {
                 collection.duplicates.splice(duplicate, 1);
                 keys[index] = keys[duplicate + length];
                 keys.splice(duplicate + length, 1);
-                return;
+                return console.groupEnd();
               }
             }
             collection.splice(index, 1);
@@ -21853,7 +21887,7 @@ Queries = (function() {
       }
       if (node) {
         if (plurals = (_ref = this._plurals) != null ? _ref[continuation] : void 0) {
-          for (index = _j = 0, _len1 = plurals.length; _j < _len1; index = _j += 4) {
+          for (index = _j = 0, _len1 = plurals.length; _j < _len1; index = _j += 3) {
             plural = plurals[index];
             subpath = continuation + id + '→' + plural;
             this.remove(plurals[index + 2], continuation + id + '→', null, null, null, true);
@@ -21864,18 +21898,21 @@ Queries = (function() {
         ref = continuation + (collection && collection.length !== void 0 && id || '');
         this.unwatch(id, ref, plural);
         path = continuation;
-        if (((_ref1 = (result = this.engine.queries.get(path))) != null ? _ref1.length : void 0) != null) {
-          if (manual && this.isPaired(null, manual)) {
-            for (_k = 0, _len2 = result.length; _k < _len2; _k++) {
-              item = result[_k];
-              this.unpair(path, item);
+        if ((result = this.engine.queries.get(path)) != null) {
+          this.updateSharedCollection(operation, path, scope, void 0, result);
+          if (result.length != null) {
+            if (typeof manual === 'string' && this.isPaired(null, manual)) {
+              for (_k = 0, _len2 = result.length; _k < _len2; _k++) {
+                item = result[_k];
+                this.unpair(path, item);
+              }
+            } else {
+              path += id;
+              this.clean(path);
             }
           } else {
-            path += id;
-            this.clean(path);
+            this.unpair(path, result);
           }
-        } else if (result) {
-          this.unpair(path, result);
         }
       } else {
         this.clean(id, continuation, operation, scope);
@@ -21886,10 +21923,11 @@ Queries = (function() {
     } else if (node) {
       this.unwatch(id, true);
     }
+    return console.groupEnd();
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, plural) {
-    var child, copy, parent, result, _i, _len, _ref, _ref1;
+    var child, copy, oppath, parent, result, _i, _len, _ref, _ref1;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -21897,9 +21935,17 @@ Queries = (function() {
       continuation = path;
     }
     result = this.get(path);
-    console.error('CLEAN', result, Array.prototype.slice.call(arguments), this[continuation], this[path]);
+    console.warn('CLEAN', path, 777, continuation, Array.prototype.slice.call(arguments), this[continuation], this[path]);
+    if (path === "style$2↓.a$a3↑!+.a→.b") {
+      debugger;
+    }
     this.engine.values.clean(path, continuation, operation, scope);
     if (result && !this.engine.isCollection(result)) {
+      if (continuation !== (oppath = this.getOperationPath(continuation))) {
+        this.remove(result, oppath);
+      }
+    }
+    if (result) {
       this.unpair(path, result);
     }
     if (!plural) {
@@ -21934,6 +21980,9 @@ Queries = (function() {
     }
     this.unwatch(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
+      if (this.engine.getContinuation(path) === "style$2↓.a!+.a$b1→.b") {
+        debugger;
+      }
       this.engine.expressions.push(['remove', this.engine.getContinuation(path)], true);
     }
     return true;
@@ -21942,13 +21991,13 @@ Queries = (function() {
   Queries.prototype.repair = function(path, key, operation, scope, collected) {
     var added, contd, index, leftNew, leftOld, leftUpdate, object, pair, prefix, removed, rightNew, rightOld, rightPath, rightUpdate, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
     leftUpdate = (_ref = this.updated) != null ? _ref[path] : void 0;
-    leftNew = (leftUpdate ? leftUpdate[0] : this.get(path)) || [];
+    leftNew = ((leftUpdate != null ? leftUpdate[0] : void 0) !== void 0 ? leftUpdate[0] : this.get(path)) || [];
     if (leftNew.old !== void 0) {
       leftOld = leftNew.old || [];
     } else {
       leftOld = (leftUpdate ? leftUpdate[1] : this.get(path)) || [];
     }
-    rightPath = path + '→' + key;
+    rightPath = this.getScopePath(path) + key;
     rightUpdate = (_ref1 = this.updated) != null ? _ref1[rightPath] : void 0;
     console.error(rightPath, rightUpdate, this, this.updated);
     rightNew = rightUpdate && rightUpdate[0] || this.get(rightPath);
@@ -21991,7 +22040,7 @@ Queries = (function() {
     for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
       pair = removed[_k];
       prefix = this.engine.getContinuation(path, pair[0], '→');
-      console.error('remove', prefix);
+      console.error('remove', prefix, key);
       this.remove(scope, prefix, null, null, null, true);
       this.clean(prefix + key, null, null, null, null, true);
     }
@@ -22006,14 +22055,16 @@ Queries = (function() {
         this.engine.expressions.pull(operation, contd, scope, true, true);
       }
     }
-    return console.log(this.updated, [path, key], [leftNew, leftOld], [rightNew, rightOld], "NEED TO REBALANCE DIS", added, removed);
+    return console.log('Repair', path, GSS.RIGHT, key, [added, removed], [leftNew, leftOld], [rightNew, rightOld]);
   };
 
-  Queries.prototype.pairRe = /(?:^|→)([^→]+)(\$[a-z0-9-]+)→([^→]+)→?$/i;
+  Queries.prototype.isPariedRegExp = /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i;
+
+  Queries.prototype.forkMarkRegExp = /\$[^↑]+(?:↑|$)/g;
 
   Queries.prototype.isPaired = function(operation, continuation) {
     var match;
-    if (match = continuation.match(this.pairRe)) {
+    if (match = continuation.match(this.isPariedRegExp)) {
       if (operation && operation.parent.def.serialized) {
         return;
       }
@@ -22024,62 +22075,66 @@ Queries = (function() {
     }
   };
 
+  Queries.prototype.getOperationPath = function(continuation, compact) {
+    var bits, last;
+    bits = continuation.split(GSS.DOWN);
+    last = bits[bits.length - 1];
+    last = bits[bits.length - 1] = last.split(GSS.RIGHT).pop().replace(this.forkMarkRegExp, '');
+    if (compact) {
+      return last;
+    }
+    return bits.join(GSS.DOWN);
+  };
+
+  Queries.prototype.getScopePath = function(continuation) {
+    var bits;
+    bits = continuation.split(GSS.DOWN);
+    bits[bits.length - 1] = "";
+    return bits.join(GSS.DOWN);
+  };
+
   Queries.prototype.unpair = function(continuation, node) {
-    var collection, index, match, path, plural, plurals, _base, _i, _len, _ref;
+    var collection, contd, index, match, oppath, path, plural, plurals, schedule, _base, _i, _len, _ref;
     if (!(match = this.isPaired(null, continuation))) {
       return;
     }
-    console.info(continuation, node, match);
-    collection = this.get(match[1]);
-    if (!(plurals = (_ref = this._plurals) != null ? _ref[match[1]] : void 0)) {
+    console.error(continuation, node, this.isPaired(null, continuation));
+    path = this.getOperationPath(match[1]);
+    collection = this.get(path);
+    if (!(plurals = (_ref = this._plurals) != null ? _ref[path] : void 0)) {
       return;
     }
-    for (index = _i = 0, _len = plurals.length; _i < _len; index = _i += 4) {
+    oppath = this.getOperationPath(continuation, true);
+    console.log('Heyz', oppath, plurals);
+    for (index = _i = 0, _len = plurals.length; _i < _len; index = _i += 3) {
       plural = plurals[index];
-      path = match[1] + '→' + plural;
-      if (this.remove(node, path, plurals[index + 1], plurals[index + 2], continuation)) {
-        this.clean(match[1] + match[2] + '→' + plural);
+      if (oppath !== plural) {
+        continue;
       }
-      ((_base = (this.updated || (this.updated = {})))[path] || (_base[path] = []))[0] = this.get(path);
+      contd = path + '→' + plural;
+      this.remove(node, contd, plurals[index + 1], plurals[index + 2], continuation);
+      ((_base = (this.updated || (this.updated = {})))[contd] || (_base[contd] = []))[0] = this.get(contd);
+      if (this._repairing !== void 0) {
+        schedule = (this._repairing || (this._repairing = {}))[path] = true;
+      }
     }
   };
 
   Queries.prototype.pair = function(continuation, operation, scope, result) {
-    var collection, copy, element, match, node, path, plurals, pushed, schedule, update, _base, _base1, _base2, _base3, _i, _len, _name, _ref, _ref1, _ref2;
+    var collection, element, left, match, plurals, pushed, schedule, _base;
     if (!(match = this.isPaired(operation, continuation, true))) {
       return;
     }
-    plurals = (_base = (this._plurals || (this._plurals = {})))[_name = match[1]] || (_base[_name] = []);
+    left = this.getOperationPath(match[1]);
+    console.log('Hey pair up', match[1], left);
+    plurals = (_base = (this._plurals || (this._plurals = {})))[left] || (_base[left] = []);
     if (plurals.indexOf(operation.path) === -1) {
-      pushed = plurals.push(operation.path, operation, scope, void 0);
+      pushed = plurals.push(operation.path, operation, scope);
     }
-    collection = this.get(match[1]);
-    element = this.engine.elements[match[2]];
-    path = match[1] + '→' + operation.path;
-    if (!((_ref = this.updated) != null ? _ref[path] : void 0)) {
-      update = (_ref1 = this.updated) != null ? _ref1[continuation] : void 0;
-      if (copy = (_ref2 = (update ? update[1] : this.get(continuation))) != null ? typeof _ref2.slice === "function" ? _ref2.slice() : void 0 : void 0) {
-        update = (_base1 = ((_base2 = (this.updated || (this.updated = {})))[path] || (_base2[path] = [])))[1] || (_base1[1] = copy);
-      }
-    }
-    console.log(777, [continuation, path], copy, operation, operation.path, result);
-    if (this.engine.isCollection(result)) {
-      if (operation.key !== operation.path) {
-        for (_i = 0, _len = result.length; _i < _len; _i++) {
-          node = result[_i];
-          this.add(node, path, operation, scope, continuation);
-        }
-      } else {
-        if (pushed) {
-          plurals[pushed - 1] = continuation;
-        }
-      }
-    } else {
-      this.add(result, path, operation, scope, continuation);
-    }
-    ((_base3 = (this.updated || (this.updated = {})))[path] || (_base3[path] = []))[0] = this.get(path);
+    collection = this.get(left);
+    element = match[2] ? this.engine.elements[match[2]] : this.get(match[1]);
     if (this._repairing !== void 0) {
-      schedule = (this._repairing || (this._repairing = {}))[match[1]] = true;
+      schedule = (this._repairing || (this._repairing = {}))[left] = true;
       return -1;
     }
     return collection.indexOf(element);
@@ -22106,16 +22161,53 @@ Queries = (function() {
     }
   };
 
+  Queries.prototype.updateSharedCollection = function(operation, path, scope, added, removed) {
+    var collection, copy, item, oppath, _i, _j, _len, _len1, _results;
+    if (path !== (oppath = this.getOperationPath(path))) {
+      collection = this.get(oppath);
+      if (removed && removed === collection) {
+        return (function() {
+          debugger;
+        })();
+      }
+      copy = (collection != null ? collection.slice() : void 0) || null;
+      console.log('%c' + oppath, 'font-weight: bold', copy, path, added, removed);
+      console.error('oldie', collection != null ? collection.old : void 0, oppath);
+      if (removed) {
+        if (removed.length !== void 0) {
+          for (_i = 0, _len = removed.length; _i < _len; _i++) {
+            item = removed[_i];
+            this.remove(item, oppath, operation, scope, true);
+          }
+        } else {
+          this.remove(removed, oppath, operation, scope, true);
+        }
+      }
+      if (added) {
+        if (added.length !== void 0) {
+          _results = [];
+          for (_j = 0, _len1 = added.length; _j < _len1; _j++) {
+            item = added[_j];
+            _results.push(this.add(item, oppath, operation, scope, true));
+          }
+          return _results;
+        } else {
+          return this.add(added, oppath, operation, scope, true);
+        }
+      }
+    }
+  };
+
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, contd, group, id, index, isCollection, noop, o, old, path, plurals, query, removed, scoped, watchers, _base, _base1, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var added, child, contd, group, id, index, isCollection, noop, o, old, path, plurals, query, removed, scoped, watchers, _base, _base1, _base2, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     node || (node = this.getContext(args, operation, scope, node));
     path = this.getQueryPath(operation, continuation);
     old = this.get(path);
     query = this.getQueryPath(operation, this.engine.identify(node));
     if (group = (_ref = this.updated) != null ? _ref[query] : void 0) {
-      old || (old = group[1]);
       result = group[0];
-      if (this[path] == null) {
+      if (old == null) {
+        old = group[1];
         scoped = true;
       } else {
         this.set(path, group[0]);
@@ -22131,7 +22223,7 @@ Queries = (function() {
     } else {
       isCollection = result && result.length !== void 0;
       if (old === result || (old === void 0 && this.removed)) {
-        if (!(result && result.manual)) {
+        if (!(result && result.keys)) {
           noop = true;
         }
         old = void 0;
@@ -22149,6 +22241,7 @@ Queries = (function() {
           }
         } else if (!result) {
           this.clean(path);
+          removed = old;
         }
       }
       if (isCollection) {
@@ -22162,10 +22255,10 @@ Queries = (function() {
         if (result && result.item) {
           result = Array.prototype.slice.call(result, 0);
         }
-        result.old = o || old || null;
       } else {
         added = result;
       }
+      this.updateSharedCollection(operation, path, scope, added, removed);
     }
     if (id = this.engine.identify(node)) {
       watchers = (_base = this._watchers)[id] || (_base[id] = []);
@@ -22182,10 +22275,14 @@ Queries = (function() {
     }
     if (this.updated !== void 0) {
       this.updated || (this.updated = {});
-      group = (_base1 = this.updated)[path] || (_base1[path] = group || [result, (old != null ? typeof old.slice === "function" ? old.slice() : void 0 : void 0) || old, added, removed]);
       if (query) {
-        this.updated[query] = group;
+        group = (_base1 = this.updated)[query] || (_base1[query] = []);
       }
+      (_base2 = this.updated)[path] || (_base2[path] = group || []);
+      group[0] || (group[0] = result);
+      group[1] || (group[1] = old != null ? typeof old.slice === "function" ? old.slice() : void 0 : void 0);
+      group[2] || (group[2] = added);
+      group[3] || (group[3] = removed);
     }
     contd = continuation;
     if (contd && contd.charAt(contd.length - 1) === '→') {
@@ -22367,11 +22464,13 @@ Values = (function() {
       this.engine._onChange(path, value, old);
     }
     if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
-      buffer = this.engine.expressions.capture();
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
         if (!watcher) {
           break;
+        }
+        if (!buffer) {
+          buffer = this.engine.expressions.capture(path + ' changed');
         }
         this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
       }
@@ -22384,7 +22483,7 @@ Values = (function() {
 
   Values.prototype.merge = function(object) {
     var buffer, path, value;
-    buffer = this.engine.expressions.capture();
+    buffer = this.engine.expressions.buffer === void 0;
     for (path in object) {
       value = object[path];
       this.set(path, void 0, value);
@@ -22475,10 +22574,9 @@ Solutions = (function() {
         }
       }
     }
-    console.error(this.added, this.nullified);
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    console.log('Solutions output', JSON.parse(JSON.stringify(response)));
+    console.info('Solutions', JSON.parse(JSON.stringify(response)));
     this.push(response);
   };
 
@@ -22635,7 +22733,7 @@ Styles = (function() {
   }
 
   Styles.prototype.pull = function(data) {
-    var id, intrinsic, path, positioning, prop, property, styles, suggests, value, _ref;
+    var capture, id, intrinsic, path, positioning, prop, property, styles, suggests, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
     for (path in data) {
@@ -22682,7 +22780,11 @@ Styles = (function() {
     }
     this.data = data;
     if (suggests = this.engine._getComputedProperties()) {
-      return this.engine.pull(suggests);
+      capture = this.expressions.capture(suggests.length + ' intrinsics');
+      this.engine.pull(suggests);
+      if (capture) {
+        return this.expressions.release();
+      }
     } else {
       this.data = void 0;
       return this.push(data);

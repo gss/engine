@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-06) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-08) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -29,13 +29,16 @@ Expressions = (function() {
     this.commands = this.engine && this.engine.commands || this;
   }
 
-  Expressions.prototype.pull = function() {
+  Expressions.prototype.pull = function(expression) {
     var buffer, result;
-    buffer = this.capture();
-    this.engine.start();
-    result = this.evaluate.apply(this, arguments);
-    if (buffer) {
-      this.flush();
+    if (expression) {
+      buffer = this.capture();
+      console.log('Input', expression);
+      this.engine.start();
+      result = this.evaluate.apply(this, arguments);
+      if (buffer) {
+        this.release();
+      }
     }
     return result;
   };
@@ -62,7 +65,9 @@ Expressions = (function() {
       buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
     this.lastOutput = GSS.clone(buffer);
-    console.log(this.engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer);
+    if (this.engine.onDOMContentLoaded) {
+      console.log('Commands', this.lastOutput);
+    }
     if (buffer) {
       this.buffer = void 0;
       return this.output.pull(buffer);
@@ -107,7 +112,7 @@ Expressions = (function() {
       contd = continuation;
       continuation = this.log(operation, continuation);
     }
-    return this.ascend(operation, continuation, result, scope, ascender, contd === continuation);
+    return this.ascend(operation, continuation, result, scope, ascender);
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
@@ -174,7 +179,7 @@ Expressions = (function() {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
         } else {
-          return this.engine.queries.get(key);
+          return this.engine.queries[key];
         }
       }
     }
@@ -228,11 +233,17 @@ Expressions = (function() {
     return args;
   };
 
-  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender, hidden) {
-    var breadcrumbs, item, parent, _i, _len, _ref;
+  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender) {
+    var breadcrumbs, item, parent, _base, _i, _len, _ref;
     if (result != null) {
+      if (typeof (_base = this.engine)._onAscend === "function") {
+        _base._onAscend(operation, continuation, result, scope, ascender);
+      }
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
+          if (continuation === "style$2↓.a$a2↑!+.a→.b") {
+            debugger;
+          }
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -400,6 +411,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.release = function() {
+    console.groupEnd();
     if (this.engine.expressions.buffer) {
       return this.engine.expressions.flush();
     } else {
@@ -407,8 +419,13 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.capture = function() {
+  Expressions.prototype.capture = function(reason) {
     if (this.buffer === void 0) {
+      if (this.engine.onDOMContentLoaded) {
+        console.group('Document' + (reason && ' (' + reason + ')' || ''));
+      } else {
+        console.groupCollapsed('Solver');
+      }
       this.buffer = null;
       return true;
     }
@@ -515,11 +532,13 @@ Values = (function() {
       this.engine._onChange(path, value, old);
     }
     if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
-      buffer = this.engine.expressions.capture();
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
         if (!watcher) {
           break;
+        }
+        if (!buffer) {
+          buffer = this.engine.expressions.capture(path + ' changed');
         }
         this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
       }
@@ -532,7 +551,7 @@ Values = (function() {
 
   Values.prototype.merge = function(object) {
     var buffer, path, value;
-    buffer = this.engine.expressions.capture();
+    buffer = this.engine.expressions.buffer === void 0;
     for (path in object) {
       value = object[path];
       this.set(path, void 0, value);
@@ -696,8 +715,14 @@ Engine = (function() {
     return path + (value && Engine.identify(value) || '') + suffix;
   };
 
+  Engine.UP = '↑';
+
+  Engine.RIGHT = '→';
+
+  Engine.DOWN = '↓';
+
   Engine.prototype.getPossibleContinuations = function(path) {
-    return [path, path + '↑', path + '→', path + '↓'];
+    return [path, path + Engine.UP, path + Engine.RIGHT, path + Engine.DOWN];
   };
 
   Engine.prototype.getPath = function(id, property) {
@@ -1152,10 +1177,9 @@ Solutions = (function() {
         }
       }
     }
-    console.error(this.added, this.nullified);
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    console.log('Solutions output', JSON.parse(JSON.stringify(response)));
+    console.info('Solutions', JSON.parse(JSON.stringify(response)));
     this.push(response);
   };
 

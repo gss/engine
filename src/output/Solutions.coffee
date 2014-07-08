@@ -32,10 +32,11 @@ class Solutions
       for property, value of @added
         if !response[property] && (!@nullified || !@nullified[property])
           response[property] = 0
-    console.error(@added, @nullified)
     @added = @nullified = undefined
     @lastOutput = response
-    console.log('Solutions output', JSON.parse JSON.stringify response)
+
+    console.info('Solutions', JSON.parse JSON.stringify response)
+    
     @push(response)
     return
 

@@ -12,12 +12,14 @@ class Expressions
     @commands = @engine && @engine.commands || @
 
   # Hook: Evaluate input and pass produced output
-  pull: ->
-    buffer = @capture() # Enable buffering if nobody enabled it already
-    @engine.start()
-    result = @evaluate.apply(@, arguments)
-    if buffer # Flush buffered output if this function started the buffering
-      @flush()
+  pull: (expression) ->
+    if expression
+      buffer = @capture() # Enable buffering if nobody enabled it already
+      console.log('Input', expression)
+      @engine.start()
+      result = @evaluate.apply(@, arguments)
+      if buffer # Flush buffered output if this function started the buffering
+        @release()
     return result
 
   # Hook: Output commands in batch
@@ -38,8 +40,8 @@ class Expressions
       added = @engine._onFlush(buffer)
       buffer = buffer && added && added.concat(buffer) || buffer || added
     @lastOutput = GSS.clone buffer
-    console.log(@engine.onDOMContentLoaded && 'Document' || 'Worker', 'Output:', buffer)
-
+    if @engine.onDOMContentLoaded
+      console.log('Commands', @lastOutput)
     if buffer
       @buffer = undefined
       @output.pull(buffer)
@@ -47,6 +49,7 @@ class Expressions
       @engine.push()
     else
       @buffer = undefined
+
       
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
@@ -86,13 +89,12 @@ class Expressions
       continuation = @log(operation, continuation)
 
     # Ascend the execution (fork for each item in collection)
-    return @ascend(operation, continuation, result, scope, ascender, contd == continuation)
+    return @ascend(operation, continuation, result, scope, ascender)
 
   # Get result of executing operation with resolved arguments
   execute: (operation, continuation, scope, args) ->
-    # Command desires current context (e.g. ::this)
-
     scope ||= @engine.scope
+    # Command needs current context (e.g. ::this)
     if operation.def.scoped || !args
       node = scope
       (args ||= []).unshift scope
@@ -150,7 +152,7 @@ class Expressions
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]
         else
-          return @engine.queries.get(key)
+          return @engine.queries[key]
     return false
 
   # Evaluate operation arguments in order, break on undefined
@@ -198,15 +200,19 @@ class Expressions
   # Pass control back to parent operation. 
   # If child op returns DOM collection or node, evaluator recurses to do so.
   # When recursion unrolls all caller ops are discarded
-  ascend: (operation, continuation, result, scope, ascender, hidden) ->
-    if result? 
+  ascend: (operation, continuation, result, scope, ascender) ->
+    if result?
+      @engine._onAscend?(operation, continuation, result, scope, ascender)
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection(result)
+          if continuation == "style$2↓.a$a2↑!+.a→.b"
+            debugger
           console.group continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item, '↑')
             @evaluate operation.parent, breadcrumbs, scope, operation.index, item
+
           console.groupEnd continuation
           return
         # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
@@ -346,14 +352,19 @@ class Expressions
     else
       return operation.path
 
-  release: () ->
+  release: ->
+    console.groupEnd()
     if @engine.expressions.buffer
       @engine.expressions.flush()
     else
       @engine.expressions.buffer = undefined
 
-  capture: ->
+  capture: (reason) ->
     if @buffer == undefined
+      if @engine.onDOMContentLoaded
+        console.group('Document' + (reason && ' (' + reason + ')' || ''))
+      else
+        console.groupCollapsed('Solver')
       @buffer = null
       return true
 

@@ -239,7 +239,95 @@ describe 'End - to - End', ->
             "md2": 71 / 4
           done()
     
-    describe 'complex plural selectors', -> 
+    describe 'complex plural selectors on the left', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              (.a !+ .a)[x] == .b[x] == [x];          
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+          """
+        window.$engine = engine
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
+            "x": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+            "$b3[x]": 100
+          b3 = engine.$id('b3')
+          console.info('remove b3')
+          b3.parentNode.removeChild(b3)
+
+          engine.once 'solved', (e) ->
+            expect(engine.values.toObject()).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$a2[x]": 100
+              "$b1[x]": 100
+              "$b2[x]": 100
+            b2 = engine.$id('b2')
+            console.info('remove b2')
+            b2.parentNode.removeChild(b2)
+            engine.once 'solved', (e) ->
+              expect(engine.values.toObject()).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$b1[x]": 100
+              console.info('add b2')
+              engine.scope.appendChild(b2)
+              engine.once 'solved', (e) ->
+                expect(engine.values.toObject()).to.eql 
+                  "x": 100
+                  "$a1[x]": 100
+                  "$a2[x]": 100
+                  "$b1[x]": 100
+                  "$b2[x]": 100
+                a1 = engine.$id('a1')
+                console.info('remove a1')
+                a1.parentNode.removeChild(a1)
+                engine.once 'solved', (e) ->
+                  expect(engine.values.toObject()).to.eql 
+                    "x": 100
+                    "$a2[x]": 100
+                    "$b1[x]": 100
+                    "$b2[x]": 100
+                  b2 = engine.$id('b2')
+                  console.info('remove b2')
+                  b2.parentNode.removeChild(b2)
+                  engine.once 'solved', (e) ->
+                    expect(engine.values.toObject()).to.eql 
+                      "x": 100
+                      "$a2[x]": 100
+                      "$b1[x]": 100
+                    console.info('add a1 && b2')
+                    engine.scope.insertBefore(a1, engine.$id('b1'))
+                    engine.scope.appendChild(b2)
+                    engine.once 'solved', (e) ->
+                      expect(engine.values.toObject()).to.eql 
+                        "x": 100
+                        "$b1[x]": 100
+                        "$b2[x]": 100
+                        "$a2[x]": 100
+                        "$a3[x]": 100
+                        divs = engine.$tag('div')
+                        while divs[0]
+                          divs[0].parentNode.removeChild(divs[0])
+                        window.zz = true
+                        engine.once 'solved', (e) ->
+                          expect(engine.values.toObject()).to.eql 
+                            "x": 100
+                          done()
+
+
+    describe 'complex plural selectors on the right', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <style type="text/gss">                            

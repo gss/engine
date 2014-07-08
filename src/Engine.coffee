@@ -111,9 +111,16 @@ class Engine
     return value if typeof value == 'string'
     return path + (value && Engine.identify(value) || '') + suffix
 
-  # When cleaning a path, also clean forks and rules
+  # Execution has forked (found many elements, trying brute force to complete selector)
+  @UP:    '↑'
+  # One selector was resolved, expecting another selector to pair up
+  @RIGHT: '→'
+  # Execution goes depth first (inside stylesheet or css rule)
+  @DOWN:  '↓'
+
+  # When cleaning a path, also clean forks, rules and pairs
   getPossibleContinuations: (path) ->
-    [path, path + '↑', path + '→', path + '↓']
+    [path, path + Engine.UP, path + Engine.RIGHT, path + Engine.DOWN]
 
   getPath: (id, property) ->
     unless property
