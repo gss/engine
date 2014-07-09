@@ -238,6 +238,28 @@ describe 'End - to - End', ->
             "blah2": 70
             "md2": 71 / 4
           done()
+    describe 'order dependent selectors', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              .a {
+                width: == 100
+                ::[right] == ::next[left]
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div> 
+        """
+        engine.once 'solved', ->
+          expect(engine.values.toObject()).to.eql
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100,
+            "$a1[left]": 100,
+            "$a2[left]": 100,
+            "$a3[left]": 200,
+
     
     describe 'complex plural selectors on the left', -> 
       it 'should compute values', (done) ->                                 
@@ -381,7 +403,59 @@ describe 'End - to - End', ->
                   expect(engine.values.toObject()).to.eql {}
                   done()
 
-    describe 'balanced plural selectors', -> 
+
+    describe 'complex plural selectors on both sides', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              (.a !+ .a)[x] == (.b !+ .b)[x] == [x];          
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+          """
+        window.$engine = engine
+        engine.once 'solved', (e) ->
+          expect(engine.values.toObject()).to.eql 
+            "x": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+          b3 = engine.$id('b3')
+          b3.parentNode.removeChild(b3)
+          console.error('remove b3')
+          engine.once 'solved', (e) ->
+            expect(engine.values.toObject()).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$b1[x]": 100
+            engine.scope.appendChild(b3)
+            console.error('add b3')
+            engine.once 'solved', (e) ->
+              expect(engine.values.toObject()).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$a2[x]": 100
+                "$b1[x]": 100
+                "$b2[x]": 100
+              console.error('remove a1')
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+              engine.once 'solved', (e) ->
+                ###
+                expect(engine.values.toObject()).to.eql 
+                  "x": 100
+                  "$a2[x]": 100
+                  "$b1[x]": 100
+                  "$b2[x]": 100
+                ###
+                done()
+    describe 'balanced plural selectors', ->
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="a1" class="a"></div>

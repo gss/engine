@@ -278,6 +278,7 @@ class Queries
         return @[result]
       return result
 
+  # Remove observers from element
   unwatch: (id, continuation, plural, quick) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
@@ -297,31 +298,31 @@ class Queries
         @clean(watcher, contd, watcher, subscope, true, plural)
     delete @_watchers[id] unless watchers.length
 
+  # Detach everything related to continuation from specific element
   removeFromNode: (id, continuation, operation, scope, plural) ->
     collection = @get(continuation)
+    # Unbind paired elements 
     if plurals = @_plurals?[continuation]
       for subpath, index in plurals by 3
         subpath = continuation + id + '→' + subpath
         @remove plurals[index + 2], continuation + id + '→', null, null, null, true
         @clean(continuation + id + '→' + subpath, null, null, null, null, true)
-        console.log('lol', plurals, scope, continuation + id + '→' + subpath, @get(continuation + id + '→' + plural))
-
+       
+    # Remove all watchers that match continuation path
     ref = continuation + (collection && collection.length != undefined && id || '')
     @unwatch(id, ref, plural)
 
-    path = continuation
-    if (result = @engine.queries.get(path))?
-      @updateSharedCollection operation, path, scope, undefined, result
-      if result.length?
-        if typeof manual == 'string' && @isPaired(null, manual)
-          for item in result
-            @unpair(path, item)
-        else
-          path += id
+    return unless (result = @engine.queries.get(continuation))?
 
-          @clean(path)
+    @updateOperationCollection operation, continuation, scope, undefined, result
+    if result.length?
+      if typeof manual == 'string' && @isPaired(null, manual)
+        for item in result
+          @unpair(continuation, item)
       else
-        @unpair path, result
+        @clean(continuation + id)
+    else
+      @unpair continuation, result
 
   # Remove element from collection manually
   removeFromCollection: (node, continuation, operation, scope, manual) ->
@@ -560,18 +561,18 @@ class Queries
       console.log('fetched', query, @updated[query], continuation)
       return @updated[query]
 
-  updateSharedCollection: (operation, path, scope, added, removed) ->
-    if path != (oppath = @getOperationPath(path))
-      collection = @get(oppath)
-      if removed && removed == collection
-        console.error('removing', oppath, collection)
-        return debugger if removed && removed == collection
-      if removed
-        @each 'remove', removed, oppath, operation, scope, true
-      if added
-        @each 'add', added, oppath, operation, scope, true
-      #@get(oppath)?.old = copy
+  # Combine nodes from multiple selector paths
+  updateOperationCollection: (operation, path, scope, added, removed) ->
+    oppath = @getOperationPath(path)
+    return if path == oppath
+    collection = @get(oppath)
+    return if removed && removed == collection
+    if removed
+      @each 'remove', removed, oppath, operation, scope, true
+    if added
+      @each 'add', added, oppath, operation, scope, true
 
+  # Perform method over each node in nodelist, or against given node
   each: (method, result, continuation, operation, scope, manual) ->
     if result.length != undefined
       copy = result.slice()
@@ -638,7 +639,7 @@ class Queries
         added = result
 
       if (added || removed)
-        @updateSharedCollection operation, path, scope, added, removed
+        @updateOperationCollection operation, path, scope, added, removed
     # Subscribe node to the query
     if id = @engine.identify(node)
       watchers = @_watchers[id] ||= []
