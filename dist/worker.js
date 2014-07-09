@@ -58,7 +58,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.flush = function() {
-    var added, buffer;
+    var added, buffer, time;
     buffer = this.buffer;
     if (this.engine._onFlush) {
       added = this.engine._onFlush(buffer);
@@ -66,7 +66,8 @@ Expressions = (function() {
     }
     this.lastOutput = GSS.clone(buffer);
     if (this.engine.onDOMContentLoaded) {
-      console.log('Commands', this.lastOutput);
+      time = new Date - this.lastTime;
+      console.log('%cConstraints %c' + time + 'ms', '', 'color: #999', this.lastOutput);
     }
     if (buffer) {
       this.buffer = void 0;
@@ -412,20 +413,27 @@ Expressions = (function() {
 
   Expressions.prototype.release = function() {
     console.groupEnd();
+    this.lastTime = this.time;
+    this.time = void 0;
     if (this.engine.expressions.buffer) {
-      return this.engine.expressions.flush();
+      this.engine.expressions.flush();
     } else {
-      return this.engine.expressions.buffer = void 0;
+      this.engine.expressions.buffer = void 0;
     }
+    return this.lastTime;
   };
 
   Expressions.prototype.capture = function(reason) {
+    var style;
     if (this.buffer === void 0) {
+      reason || (reason = '');
+      style = 'font-weight: normal; color: #999';
       if (this.engine.onDOMContentLoaded) {
-        console.group('Document' + (reason && ' (' + reason + ')' || ''));
+        console.group('%cDocument%c ' + reason, '', style);
       } else {
-        console.groupCollapsed('Solver');
+        console.group('%cSolver%c ' + reason, '', style);
       }
+      this.time = +(new Date);
       this.buffer = null;
       return true;
     }
@@ -1132,7 +1140,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var command, property, response, subcommand, time, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -1179,7 +1187,8 @@ Solutions = (function() {
     }
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    console.info('Solutions', JSON.parse(JSON.stringify(response)));
+    time = new Date - this.engine.expressions.lastTime;
+    console.log('%cValues %c' + time + 'ms', '', 'color: #999', JSON.parse(JSON.stringify(response)));
     this.push(response);
   };
 

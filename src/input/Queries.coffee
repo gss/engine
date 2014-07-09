@@ -297,10 +297,68 @@ class Queries
         @clean(watcher, contd, watcher, subscope, true, plural)
     delete @_watchers[id] unless watchers.length
 
+  removeFromNode: (id, continuation, operation, scope, plural) ->
+    collection = @get(continuation)
+    if plurals = @_plurals?[continuation]
+      for subpath, index in plurals by 3
+        subpath = continuation + id + '→' + subpath
+        @remove plurals[index + 2], continuation + id + '→', null, null, null, true
+        @clean(continuation + id + '→' + subpath, null, null, null, null, true)
+        console.log('lol', plurals, scope, continuation + id + '→' + subpath, @get(continuation + id + '→' + plural))
+
+    ref = continuation + (collection && collection.length != undefined && id || '')
+    @unwatch(id, ref, plural)
+
+    path = continuation
+    if (result = @engine.queries.get(path))?
+      @updateSharedCollection operation, path, scope, undefined, result
+      if result.length?
+        if typeof manual == 'string' && @isPaired(null, manual)
+          for item in result
+            @unpair(path, item)
+        else
+          path += id
+
+          @clean(path)
+      else
+        @unpair path, result
+
+  # Remove element from collection manually
+  removeFromCollection: (node, continuation, operation, scope, manual) ->
+    return unless collection = @get(continuation)
+    length = collection.length
+    keys = collection.keys
+    duplicate = null
+
+    # Dont remove it if element matches more than one selector
+    if (duplicates = collection.duplicates)
+      for dup, index in duplicates
+        if dup == node
+          if (keys[length + index] == manual)
+            duplicates.splice(index, 1)
+            keys.splice(length + index, 1)
+            return false
+          else
+            duplicate = index
+
+    if operation && length && manual
+      if copy = collection.slice()
+        ((@updated ||= {})[continuation] ||= [])[1] ||= copy
+
+      if (index = collection.indexOf(node)) > -1
+        # Fall back to duplicate with a different key
+        if keys
+          return false unless keys[index] == manual
+          if duplicate?
+            duplicates.splice(duplicate, 1)
+            keys[index] = keys[duplicate + length]
+            keys.splice(duplicate + length, 1)
+            return false
+        collection.splice(index, 1)
+        if keys
+          keys.splice(index, 1)
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
-    if (id.nodeType && @engine.identify(id) || id) == '$b4'
-      debugger
     console.group('Remove ' + (id.nodeType && @engine.identify(id) || id) + ' from ' + (continuation || ''))
     if typeof id == 'object'
       node = id
@@ -309,71 +367,10 @@ class Queries
       node = @engine.elements[id]
 
     if continuation
-      if collection = @get(continuation)
-        # Dont remove it if element matches more than one selector
-        length = collection.length
-        keys = collection.keys
-        duplicate = null
-        if (duplicates = collection.duplicates)
-          for dup, index in duplicates
-            if dup == node
-              if (keys[length + index] == manual)
-                duplicates.splice(index, 1)
-                keys.splice(length + index, 1)
-                return true
-              else
-                duplicate = index
+      collection = @get(continuation)
 
-        # Remove element from collection manually
-        if operation && collection?.length && manual
-
-
-          if copy = collection?.slice?()
-            ((@updated ||= {})[continuation] ||= [])[1] ||= copy
-
-          if (index = collection.indexOf(node)) > -1
-            # Fall back to duplicate with a different key
-            if keys
-              return console.groupEnd() unless keys[index] == manual
-              if duplicate?
-                collection.duplicates.splice(duplicate, 1)
-                keys[index] = keys[duplicate + length]
-                keys.splice(duplicate + length, 1)
-                return console.groupEnd()
-            collection.splice(index, 1)
-            if keys
-              keys.splice(index, 1)
-            cleaning = continuation unless collection.length
-
-      # Detach observer and its subquery when cleaning by id
-      if node
-        if plurals = @_plurals?[continuation]
-          for plural, index in plurals by 3
-            subpath = continuation + id + '→' + plural
-            @remove plurals[index + 2], continuation + id + '→', null, null, null, true
-            @clean(continuation + id + '→' + plural, null, null, null, null, true)
-            console.log('lol', plurals, scope, continuation + id + '→' + plural, @get(continuation + id + '→' + plural))
-
-        ref = continuation + (collection && collection.length != undefined && id || '')
-        @unwatch(id, ref, plural)
-
-        path = continuation
-        if (result = @engine.queries.get(path))?
-          @updateSharedCollection operation, path, scope, undefined, result
-          if result.length?
-            if typeof manual == 'string' && @isPaired(null, manual)
-              for item in result
-                @unpair(path, item)
-            else
-              path += id
-
-              @clean(path)
-          else
-            @unpair path, result
-      # Remove cached DOM query
-      else
-
-        @clean(id, continuation, operation, scope)
+      unless @removeFromCollection(node, continuation, operation, scope, manual) == false
+        @removeFromNode(id, continuation, operation, scope, plural)
       
       if collection && !collection.length
         delete @[continuation] 
@@ -389,9 +386,6 @@ class Queries
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
-    console.warn('CLEAN', path, 777, continuation, Array.prototype.slice.call(arguments), @[continuation], @[path])
-    if (path == "style$2↓.a$a3↑!+.a→.b")
-      debugger
     @engine.values.clean(path, continuation, operation, scope)
     if result && !@engine.isCollection(result)
       if continuation && continuation != (oppath = @getOperationPath(continuation))
@@ -402,14 +396,8 @@ class Queries
         if result
           if parent = operation?.parent
             parent.def.release?.call(@engine, result, operation, continuation, scope)
-          if result.length != undefined
-            copy = result.slice()
-            for child in copy
-              @remove child, path, operation 
-          else if typeof result == 'object'
-            @remove result, path, operation
 
-
+          @each 'remove', result, path, operation
 
         if scope && operation.def.cleaning
           @remove @engine.recognize(scope), path, operation
@@ -419,12 +407,13 @@ class Queries
     if @_plurals?[path]
       delete @_plurals[path]
 
+    # Remove queries in queue and global watchers that match the path 
     if @lastOutput
       @unwatch(@lastOutput, path, null, true)
+
     @unwatch(@engine.scope._gss_id, path)
+
     if !result || result.length == undefined
-      if @engine.getContinuation(path) == "style$2↓.a!+.a$b1→.b"
-        debugger
       @engine.expressions.push(['remove', @engine.getContinuation(path)], true)
     return true
 
@@ -577,22 +566,19 @@ class Queries
       if removed && removed == collection
         console.error('removing', oppath, collection)
         return debugger if removed && removed == collection
-      copy = collection?.slice() || null
-      console.log('%c' + oppath, 'font-weight: bold', copy, path, added, removed)
-      console.error('oldie', collection?.old, oppath, [removed, added])
       if removed
-        if removed.length != undefined
-          for item in removed
-            @remove item, oppath, operation, scope, true
-        else
-          @remove removed, oppath, operation, scope, true
+        @each 'remove', removed, oppath, operation, scope, true
       if added
-        if added.length != undefined
-          for item in added
-            @add item, oppath, operation, scope, true
-        else
-          @add added, oppath, operation, scope, true
+        @each 'add', added, oppath, operation, scope, true
       #@get(oppath)?.old = copy
+
+  each: (method, result, continuation, operation, scope, manual) ->
+    if result.length != undefined
+      copy = result.slice()
+      for child in copy
+        @[method] child, continuation, operation, scope, manual
+    else if typeof result == 'object'
+      @[method] result, continuation, operation, scope, manual
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
