@@ -41,7 +41,8 @@ class Expressions
       buffer = buffer && added && added.concat(buffer) || buffer || added
     @lastOutput = GSS.clone buffer
     if @engine.onDOMContentLoaded
-      console.log('Commands', @lastOutput)
+      time = (new Date - @lastTime)
+      console.log('%cConstraints %c' + time + 'ms', '', 'color: #999', @lastOutput)
     if buffer
       @buffer = undefined
       @output.pull(buffer)
@@ -354,17 +355,23 @@ class Expressions
 
   release: () ->
     console.groupEnd()
+    @lastTime = @time
+    @time = undefined
     if @engine.expressions.buffer
       @engine.expressions.flush()
     else
       @engine.expressions.buffer = undefined
+    return @lastTime
 
   capture: (reason) ->
     if @buffer == undefined
+      reason ||= ''
+      style = 'font-weight: normal; color: #999'
       if @engine.onDOMContentLoaded
-        console.group('Document' + (reason && ' (' + reason + ')' || ''))
+        console.group('%cDocument%c ' + reason, '', style)
       else
-        console.groupCollapsed('Solver')
+        console.group('%cSolver%c ' + reason, '', style)
+      @time = +(new Date)
       @buffer = null
       return true
 

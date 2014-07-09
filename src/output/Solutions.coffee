@@ -35,8 +35,9 @@ class Solutions
     @added = @nullified = undefined
     @lastOutput = response
 
-    console.info('Solutions', JSON.parse JSON.stringify response)
-    
+    time = new Date - @engine.expressions.lastTime
+    console.log('%cValues %c' + time + 'ms', '', 'color: #999', JSON.parse JSON.stringify response)
+
     @push(response)
     return
 
