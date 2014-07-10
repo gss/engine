@@ -143,7 +143,8 @@ class Rules
         if xhr.readyState == 4
           if xhr.status == 200
             capture = @expressions.capture(src)
-            @_eval.command.call(@, operation, continuation, scope, node, type, xhr.responseText)
+            @_eval.command.call(@, operation, continuation, scope, meta,
+                                   node, type, xhr.responseText)
             @expressions.release() if capture
       xhr.open(method.toUpperCase(), src)
       xhr.send()

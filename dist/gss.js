@@ -19955,7 +19955,7 @@ Rules = (function() {
         if (xhr.readyState === 4) {
           if (xhr.status === 200) {
             capture = _this.expressions.capture(src);
-            _this._eval.command.call(_this, operation, continuation, scope, node, type, xhr.responseText);
+            _this._eval.command.call(_this, operation, continuation, scope, meta, node, type, xhr.responseText);
             if (capture) {
               return _this.expressions.release();
             }
