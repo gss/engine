@@ -11,6 +11,23 @@ class Selectors
     return result if operation.def.hidden
     return @queries.update(node, args, result, operation, continuation, scope)
 
+   # Walk through commands in selector to make a dictionary used by Observer
+  onSelector: (operation, parent) ->
+    prefix = (parent || (operation[0] != '$combinator' && typeof operation[1] != 'object')) && ' ' || ''
+    switch operation[0]
+      when '$tag'
+        if (!parent || operation == operation.tail) && operation[1][0] != '$combinator'
+          group = ' '
+          index = (operation[2] || operation[1]).toUpperCase()
+      when '$combinator'
+        group = prefix +  operation.name
+        index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
+      when '$class', '$pseudo', '$attribute', '$id'
+        group = prefix + operation[0]
+        index = (operation[2] || operation[1])
+    return unless group
+    (((parent || operation)[group] ||= {})[index] ||= []).push operation
+
   # Remove element by id globally or optionallly from collection
   remove: (id, continuation, operation, scope) ->
     @queries.remove(id, continuation, operation, scope)
@@ -43,31 +60,13 @@ class Selectors
         shortcut.splice(1, 0, tail[1])
       op = head
       while op
-        @commands['$query'].analyze.call @, op, shortcut
+        @_onSelector op, shortcut
         break if op == tail
         op = op[1]
       if (tail.parent == operation)
         unless global
           shortcut.splice(1, 0, tail[1])
       return shortcut
-
-
-    # Walk through commands in selector to make a dictionary used by Observer
-    analyze: (operation, parent) ->
-      prefix = (parent || (operation[0] != '$combinator' && typeof operation[1] != 'object')) && ' ' || ''
-      switch operation[0]
-        when '$tag'
-          if (!parent || operation == operation.tail) && operation[1][0] != '$combinator'
-            group = ' '
-            index = (operation[2] || operation[1]).toUpperCase()
-        when '$combinator'
-          group = prefix +  operation.name
-          index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
-        when '$class', '$pseudo', '$attribute', '$id'
-          group = prefix + operation[0]
-          index = (operation[2] || operation[1])
-      return unless group
-      (((parent || operation)[group] ||= {})[index] ||= []).push operation
 
     # Add * to a combinator at the end of native selector (e.g. `+` transforms to `+ *`)
     promise: (operation, parent) ->
@@ -301,6 +300,39 @@ class Selectors
     group: '$query'
     1: (node) ->
       return node unless node.nextElementSibling
+
+  ':next':
+    command: (operation, continuation, scope, node) ->
+      path = @getContinuation(@queries.getOperationPath(continuation))
+      collection = @queries.get path
+      console.info(path, continuation)
+      index = collection?.indexOf(node)
+      console.error('nextizzle', collection[index + 1], path)
+      return if !index? || index == -1 || index == collection.length - 1
+      return collection[index + 1]
+
+  ':previous':
+    command: (operation, continuation, scope, node) ->
+      path = @getContinuation(@queries.getOperationPath(continuation))
+      collection = @queries.get path
+      index = collection?.indexOf(node)
+      return if index == -1 || !index
+      console.error('precious', collection.slice(), collection[index - 1], path)
+      return collection[index - 1]
+
+  ':last':
+    command: (operation, continuation, scope, node) ->
+      path = @getContinuation(@queries.getOperationPath(continuation))
+      collection = @queries.get path
+      index = collection?.indexOf(node)
+      return node if !index? || index == collection.length - 1
+
+  ':first':
+    command: (operation, continuation, scope, node) ->
+      path = @getContinuation(@queries.getOperationPath(continuation))
+      collection = @queries.get path
+      index = collection?.indexOf(node)
+      return node if index == 0
       
 # Set up custom trigger for all selector operations
 # to filter out old elements from collections
@@ -308,6 +340,7 @@ for property, command of Selectors::
   if typeof command == 'object' && command.serialized != false
     command.before = '_onBeforeQuery'
     command.after = '_onQuery'
+    command.init = '_onSelector'
     command.serialized = true
 
 

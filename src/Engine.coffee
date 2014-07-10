@@ -111,6 +111,17 @@ class Engine
     return value if typeof value == 'string'
     return path + (value && Engine.identify(value) || '') + suffix
 
+
+  # Check if selector is bound to current scope's element
+  getContext: (args, operation, scope, node) ->
+    index = args[0].def && 3 || 0
+    if (args.length != index && (args[index]?.nodeType))
+      return args[index]
+    if !operation.bound
+      return @scope
+    return scope;
+    
+
   # Execution has forked (found many elements, trying brute force to complete selector)
   @UP:    '↑'
   # One selector was resolved, expecting another selector to pair up

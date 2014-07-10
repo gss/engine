@@ -243,22 +243,79 @@ describe 'End - to - End', ->
         container.innerHTML =  """
             <style type="text/gss">                            
               .a {
-                width: == 100
-                ::[right] == ::next[left]
+                (&:first)[left] == 0;
+                &[width] == 100;
+                (&:previous)[right] == &[left];
               }       
             </style>
             <div id="a1" class="a"></div>
             <div id="a2" class="a"></div>
             <div id="a3" class="a"></div> 
         """
+        window.$engine = engine
         engine.once 'solved', ->
           expect(engine.values.toObject()).to.eql
             "$a1[width]": 100,
             "$a2[width]": 100,
             "$a3[width]": 100,
-            "$a1[left]": 100,
-            "$a2[left]": 100,
-            "$a3[left]": 200,
+            "$a1[x]": 0,
+            "$a2[x]": 100,
+            "$a3[x]": 200,
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+          console.log('remove a3')
+          engine.once 'solved', ->
+            expect(engine.values.toObject()).to.eql
+              "$a1[width]": 100,
+              "$a2[width]": 100,
+              "$a1[x]": 0,
+              "$a2[x]": 100,
+            engine.scope.appendChild(a3)
+            console.info('add a3')
+            engine.once 'solved', ->
+              expect(engine.values.toObject()).to.eql
+                "$a1[width]": 100,
+                "$a2[width]": 100,
+                "$a3[width]": 100,
+                "$a1[x]": 0,
+                "$a2[x]": 100,
+                "$a3[x]": 200,
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+              console.info('remove a1')
+              engine.once 'solved', ->
+                expect(engine.values.toObject()).to.eql
+                  "$a2[width]": 100,
+                  "$a3[width]": 100,
+                  "$a2[x]": 0,
+                  "$a3[x]": 100,
+                engine.scope.appendChild(a1)
+                console.info('add a1')
+
+                engine.once 'solved', ->
+                  expect(engine.values.toObject()).to.eql
+                    "$a1[width]": 100,
+                    "$a2[width]": 100,
+                    "$a3[width]": 100,
+                    "$a2[x]": 0,
+                    "$a3[x]": 100,
+                    "$a1[x]": 200,
+                  a3 = engine.$id('a3')
+                  a3.parentNode.removeChild(a3)
+                  console.info('remove a3')
+                  engine.once 'solved', ->
+                    expect(engine.values.toObject()).to.eql
+                      "$a1[width]": 100,
+                      "$a2[width]": 100,
+                      "$a2[x]": 0,
+                      "$a1[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+                    engine.once 'solved', ->
+                      expect(engine.values.toObject()).to.eql {}
+
+                      done()
 
     
     describe 'complex plural selectors on the left', -> 
@@ -348,6 +405,164 @@ describe 'End - to - End', ->
                             "x": 100
                           done()
 
+    describe 'order dependent complex selectors', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss" id="style">                            
+              #style !> > .a {
+                (&:first)[left] == 0;
+                &[width] == 100;
+                (&:previous)[right] == &[left];
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div> 
+        """
+        window.$engine = engine
+        engine.once 'solved', ->
+          expect(engine.values.toObject()).to.eql
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100,
+            "$a1[x]": 0,
+            "$a2[x]": 100,
+            "$a3[x]": 200,
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+          console.log('remove a3')
+          engine.once 'solved', ->
+            expect(engine.values.toObject()).to.eql
+              "$a1[width]": 100,
+              "$a2[width]": 100,
+              "$a1[x]": 0,
+              "$a2[x]": 100,
+            engine.scope.appendChild(a3)
+            console.info('add a3')
+            engine.once 'solved', ->
+              expect(engine.values.toObject()).to.eql
+                "$a1[width]": 100,
+                "$a2[width]": 100,
+                "$a3[width]": 100,
+                "$a1[x]": 0,
+                "$a2[x]": 100,
+                "$a3[x]": 200,
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+              console.info('remove a1')
+              engine.once 'solved', ->
+                expect(engine.values.toObject()).to.eql
+                  "$a2[width]": 100,
+                  "$a3[width]": 100,
+                  "$a2[x]": 0,
+                  "$a3[x]": 100,
+                engine.scope.appendChild(a1)
+                console.info('add a1')
+
+                engine.once 'solved', ->
+                  expect(engine.values.toObject()).to.eql
+                    "$a1[width]": 100,
+                    "$a2[width]": 100,
+                    "$a3[width]": 100,
+                    "$a2[x]": 0,
+                    "$a3[x]": 100,
+                    "$a1[x]": 200,
+                  a3 = engine.$id('a3')
+                  a3.parentNode.removeChild(a3)
+                  console.info('remove a3')
+                  engine.once 'solved', ->
+                    expect(engine.values.toObject()).to.eql
+                      "$a1[width]": 100,
+                      "$a2[width]": 100,
+                      "$a2[x]": 0,
+                      "$a1[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+                    engine.once 'solved', ->
+                      expect(engine.values.toObject()).to.eql {}
+
+                      done()
+
+                      describe 'order dependent complex selectors', ->
+    describe 'order dependent selectors with comma', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss" id="style">                            
+              .a + .a, #style + .a {
+                (&:first)[left] == 0;
+                &[width] == 100;
+                (&:previous)[right] == &[left];
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div> 
+        """
+        window.$engine = engine
+        engine.once 'solved', ->
+          expect(engine.values.toObject()).to.eql
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100,
+            "$a1[x]": 0,
+            "$a2[x]": 100,
+            "$a3[x]": 200,
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+          console.log('remove a3')
+          engine.once 'solved', ->
+            expect(engine.values.toObject()).to.eql
+              "$a1[width]": 100,
+              "$a2[width]": 100,
+              "$a1[x]": 0,
+              "$a2[x]": 100,
+            engine.scope.appendChild(a3)
+            console.info('add a3')
+            engine.once 'solved', ->
+              expect(engine.values.toObject()).to.eql
+                "$a1[width]": 100,
+                "$a2[width]": 100,
+                "$a3[width]": 100,
+                "$a1[x]": 0,
+                "$a2[x]": 100,
+                "$a3[x]": 200,
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+              console.info('remove a1')
+              engine.once 'solved', ->
+                expect(engine.values.toObject()).to.eql
+                  "$a2[width]": 100,
+                  "$a3[width]": 100,
+                  "$a2[x]": 0,
+                  "$a3[x]": 100,
+                engine.scope.appendChild(a1)
+                console.info('add a1')
+
+                engine.once 'solved', ->
+                  expect(engine.values.toObject()).to.eql
+                    "$a1[width]": 100,
+                    "$a2[width]": 100,
+                    "$a3[width]": 100,
+                    "$a2[x]": 0,
+                    "$a3[x]": 100,
+                    "$a1[x]": 200,
+                  a3 = engine.$id('a3')
+                  a3.parentNode.removeChild(a3)
+                  console.info('remove a3')
+                  engine.once 'solved', ->
+                    expect(engine.values.toObject()).to.eql
+                      "$a1[width]": 100,
+                      "$a2[width]": 100,
+                      "$a2[x]": 0,
+                      "$a1[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+                    engine.once 'solved', ->
+                      expect(engine.values.toObject()).to.eql {}
+
+                      done()
 
     describe 'complex plural selectors on the right', -> 
       it 'should compute values', (done) ->                                 

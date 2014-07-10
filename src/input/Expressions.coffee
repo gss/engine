@@ -42,7 +42,7 @@ class Expressions
     @lastOutput = GSS.clone buffer
     if @engine.onDOMContentLoaded
       time = (new Date - @lastTime)
-      console.log('%cConstraints %c' + time + 'ms', '', 'color: #999', @lastOutput)
+      console.log('%cConstraints ' + time + 'ms', 'color: #999', @lastOutput)
     if buffer
       @buffer = undefined
       @output.pull(buffer)
@@ -100,12 +100,8 @@ class Expressions
       node = scope
       (args ||= []).unshift scope
     # Operation has a context 
-    else if typeof args[0] == 'object'
-      node = args[0]
-    else if !operation.bound
-      node = @engine.scope
-    else
-      node = scope
+    else 
+      node = @engine.getContext(args, operation, scope, node)
 
     # Use function, or look up method on the first argument. Falls back to builtin
     unless func = operation.func
@@ -144,12 +140,12 @@ class Expressions
   # Try to read saved results within continuation
   reuse: (path, continuation) ->
     length = path.length
-    for key in continuation.split('→')
+    for key in continuation.split(GSS.RIGHT)
       bit = key
-      if (index = bit.indexOf('↓')) > -1
+      if (index = bit.indexOf(GSS.DOWN)) > -1
         bit = bit.substring(index + 1)
-      console.error(bit, 'reuse', path, continuation)
       if bit == path || bit.substring(0, path.length) == path
+        console.error(bit, 'reuse', path, continuation)
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]
         else
@@ -164,6 +160,7 @@ class Expressions
     offset = operation.offset || 0
     for argument, index in operation
       continue if offset > index
+      console.error(operation, operation.def.meta, index)
       if (!offset && index == 0 && !operation.def.noop)
         args = [operation, continuation || operation.path, scope]
         shift += 2
@@ -293,8 +290,9 @@ class Expressions
       if def.group
         # String representation of operation with arguments filtered by type
         operation.groupped = @serialize(operation, otherdef, def.group)
-        if groupper = @commands[def.group]
-          groupper.analyze(operation, false)
+
+    if def.init
+      @engine[def.init](operation, false)
 
     # Try predefined command if can't dispatch by number of arguments
     if typeof def == 'function'
@@ -366,11 +364,10 @@ class Expressions
   capture: (reason) ->
     if @buffer == undefined
       reason ||= ''
-      style = 'font-weight: normal; color: #999'
       if @engine.onDOMContentLoaded
-        console.group('%cDocument%c ' + reason, '', style)
+        console.group('%cDocument%c ' + reason, 'font-weight: normal', 'color: #666')
       else
-        console.group('%cSolver%c ' + reason, '', style)
+        console.groupCollapsed('%cSolver%c ' + reason, 'font-weight: normal', 'font-weight: normal; color: #999')
       @time = +(new Date)
       @buffer = null
       return true

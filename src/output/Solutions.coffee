@@ -36,7 +36,7 @@ class Solutions
     @lastOutput = response
 
     time = new Date - @engine.expressions.lastTime
-    console.log('%cValues %c' + time + 'ms', '', 'color: #999', JSON.parse JSON.stringify response)
+    console.log('%cValues ' + time + 'ms', 'color: #999', JSON.parse JSON.stringify response)
 
     @push(response)
     return

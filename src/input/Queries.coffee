@@ -41,7 +41,7 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
-    @buffer = @updated = null
+    @buffer = @updated = @lastOutput = null
     capture = @output.capture(mutations.length + ' mutation' + (mutations.length > 1 && 's' || '')) 
     @engine.start()
     for mutation in mutations
@@ -61,13 +61,17 @@ class Queries
         @remove id
       @removed = undefined
 
-    if queries = @lastOutput = @buffer
-      @buffer = undefined
+    while queries = @buffer
+      @buffer = null
+      @lastOutput = (@lastOutput && @lastOutput.concat(queries) || queries)
+      console.info(queries, 111)
       for query, index in queries by 3
         break unless query
         continuation = queries[index + 1]
         scope = queries[index + 2]
         @output.pull query, continuation, scope
+
+    @buffer = undefined
     repairing = @_repairing
     @_repairing = undefined
     if repairing
@@ -145,16 +149,17 @@ class Queries
     while (prev = prev.previousSibling)
       if prev.nodeType == 1
         if firstPrev
-          @match(prev, '+') 
-          @match(prev, '++')
+          @match(prev, '+', undefined, '*') 
+          @match(prev, '++', undefined, '*')
           firstPrev = false
         @match(prev, '~', undefined, changedTags)
         @match(prev, '~~', undefined, changedTags)
+        next = prev
     while (next = next.nextSibling)
       if next.nodeType == 1
         if firstNext
-          @match(next, '!+') 
-          @match(next, '++')
+          @match(next, '!+', undefined, '*') 
+          @match(next, '++', undefined, '*')
           firstNext = false
         @match(next, '!~', undefined, changedTags)
         @match(next, '~~', undefined, changedTags)
@@ -238,7 +243,6 @@ class Queries
   add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
     update = (@updated ||= {})[continuation] ||= []
-    console.info('ADDDING', continuation, collection?.slice?())
     if update[1] == undefined 
       update[1] = (copy = collection?.slice?()) || null
 
@@ -248,8 +252,16 @@ class Queries
       @[continuation] = collection = []
     keys = collection.keys ||= []
 
+    console.error('add', node, continuation, collection)
     if collection.indexOf(node) == -1
-      index = collection.push(node)
+      console.info('insherted ad', index)
+      for el, index in collection
+        if @comparePosition(el, node) != 4
+          break
+      console.info('insherted ad', index)
+      collection.splice(index, 0, node)
+      @chain collection[index - 1], node, collection, continuation
+      @chain node, collection[index + 1], collection, continuation
       keys.splice(index - 1, 0, key)
     else
       (collection.duplicates ||= []).push(node)
@@ -358,6 +370,11 @@ class Queries
         collection.splice(index, 1)
         if keys
           keys.splice(index, 1)
+        console.log(1234676876872, node, continuation, collection.slice())
+        @chain collection[index - 1], node, collection.slice(), continuation
+        @chain node, collection[index], collection.slice(), continuation
+
+
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
     console.group('Remove ' + (id.nodeType && @engine.identify(id) || id) + ' from ' + (continuation || ''))
@@ -374,7 +391,7 @@ class Queries
         @removeFromNode(id, continuation, operation, scope, plural)
       
       if collection && !collection.length
-        delete @[continuation] 
+        this.set continuation, undefined 
 
     else if node
       # Detach queries attached to an element when removing element by id
@@ -403,7 +420,7 @@ class Queries
         if scope && operation.def.cleaning
           @remove @engine.recognize(scope), path, operation
 
-    delete @[path]
+    @set path, undefined
 
     if @_plurals?[path]
       delete @_plurals[path]
@@ -492,9 +509,11 @@ class Queries
         return
       return match
 
+
+
   # Remove all fork marks from a path
   getOperationPath: (continuation, compact) ->
-    bits = continuation.split(GSS.DOWN);
+    bits = @engine.getContinuation(continuation).split(GSS.DOWN);
     last = bits[bits.length - 1]
     last = bits[bits.length - 1] = last.split(GSS.RIGHT).pop().replace(@forkMarkRegExp, '')
     return last if compact
@@ -543,23 +562,25 @@ class Queries
       return -1
     return collection.indexOf(element)
 
-
-  # Check if selector is bound to current scope's element
-  getContext: (args, operation, scope, node) ->
-    if (args.length != 0 && (args[0]?.nodeType))
-      return args[0]
-    if !operation.bound
-      return @engine.scope
-    return scope;
-
   # If a query selects element from some other node than current scope
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
-    node ||= @getContext(args, operation, scope, node)
+    node ||= @engine.getContext(args, operation, scope, node)
     if @updated# && node != scope
       query = @getQueryPath(operation, @engine.identify(node))
       console.log('fetched', query, @updated[query], continuation)
       return @updated[query]
+
+  chain: (left, right, collection, continuation) ->
+    console.log('CHZ', [left, right], collection, continuation)
+    #if continuation == "style$style↓#style!>>.a" 
+    #  debugger
+    if left
+      @match(left, '$pseudo', 'last', undefined, continuation)
+      @match(left, '$pseudo', 'next', undefined, continuation)
+    if right
+      @match(right, '$pseudo', 'previous', undefined, continuation)
+      @match(right, '$pseudo', 'first', undefined, continuation)
 
   # Combine nodes from multiple selector paths
   updateOperationCollection: (operation, path, scope, added, removed) ->
@@ -583,12 +604,12 @@ class Queries
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
-    node ||= @getContext(args, operation, scope, node)
+    node ||= @engine.getContext(args, operation, scope, node)
     path = @getQueryPath(operation, continuation)
     old = @get(path)
 
     # Normalize query to reuse results
-    query = @getQueryPath(operation, @engine.identify(node))
+    query = @getQueryPath(operation, node, scope)
     if group = @updated?[query]
       result = group[0]
       unless old?
@@ -620,7 +641,7 @@ class Queries
             if !result || Array.prototype.indexOf.call(result, child) == -1
               @remove child, path, operation, scope
               (removed ||= []).push child
-        else if !result
+        else# if !result
           @clean(path)
           removed = old
 
@@ -640,6 +661,7 @@ class Queries
 
       if (added || removed)
         @updateOperationCollection operation, path, scope, added, removed
+
     # Subscribe node to the query
     if id = @engine.identify(node)
       watchers = @_watchers[id] ||= []
@@ -678,33 +700,48 @@ class Queries
   set: (path, result) ->
     if result
       @[path] = result
+
+      if result.length != undefined
+        for item, index in result
+          @chain item, result[index - 1], result, path
+        @chain item, result[result.length - 1], undefined, path
     else
       delete @[path]
 
+    if removed = @updated?[path]?[3]
+      for item in removed
+        @match(item, '$pseudo', 'next', undefined, path)
+        @match(item, '$pseudo', 'first', undefined, path)
+        @match(item, '$pseudo', 'previous', undefined, path)
+        @match(item, '$pseudo', 'last', undefined, path)
+    return
 
   # Check if a node observes this qualifier or combinator
-  match: (node, group, qualifier, changed) ->
+  match: (node, group, qualifier, changed, continuation) ->
     return unless id = node._gss_id
     return unless watchers = @_watchers[id]
+    if continuation
+      path = @getOperationPath(continuation)
     for operation, index in watchers by 3
       if groupped = operation[group]
-        continuation = watchers[index + 1]
+        contd = watchers[index + 1]
+        continue if path && path != @getOperationPath(contd)
         scope = watchers[index + 2]
         # Check qualifier value
         if qualifier
-          @qualify(operation, continuation, scope, groupped, qualifier)
+          @qualify(operation, contd, scope, groupped, qualifier)
         # Check combinator and tag name of a given element
         else if changed.nodeType
-          @qualify(operation, continuation, scope, groupped, changed.tagName, '*')
+          @qualify(operation, contd, scope, groupped, changed.tagName, '*')
         # Check combinator and given tag name
         else if typeof changed == 'string'
-          @qualify(operation, continuation, scope, groupped, changed, '*')
+          @qualify(operation, contd, scope, groupped, changed, '*')
         # Ditto in bulk: Qualify combinator with nodelist or array of tag names
         else for change in changed
           if typeof change == 'string'
-            @qualify(operation, continuation, scope, groupped, change, '*')
+            @qualify(operation, contd, scope, groupped, change, '*')
           else
-            @qualify(operation, continuation, scope, groupped, change.tagName, '*')
+            @qualify(operation, contd, scope, groupped, change.tagName, '*')
     @
 
   # Check if query observes qualifier by combinator 
@@ -722,4 +759,13 @@ class Queries
     else
       return operation.key
 
+  comparePosition: (a, b) ->
+    return a.compareDocumentPosition?(b) ?
+          (a != b && a.contains(b) && 16) +
+          (a != b && b.contains(a) && 8) +
+          if a.sourceIndex >= 0 && b.sourceIndex >= 0
+            (a.sourceIndex < b.sourceIndex && 4) + 
+            (a.sourceIndex > b.sourceIndex && 2)
+          else
+            1
 module.exports = Queries

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-09) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-10) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -67,7 +67,7 @@ Expressions = (function() {
     this.lastOutput = GSS.clone(buffer);
     if (this.engine.onDOMContentLoaded) {
       time = new Date - this.lastTime;
-      console.log('%cConstraints %c' + time + 'ms', '', 'color: #999', this.lastOutput);
+      console.log('%cConstraints ' + time + 'ms', 'color: #999', this.lastOutput);
     }
     if (buffer) {
       this.buffer = void 0;
@@ -122,12 +122,8 @@ Expressions = (function() {
     if (operation.def.scoped || !args) {
       node = scope;
       (args || (args = [])).unshift(scope);
-    } else if (typeof args[0] === 'object') {
-      node = args[0];
-    } else if (!operation.bound) {
-      node = this.engine.scope;
     } else {
-      node = scope;
+      node = this.engine.getContext(args, operation, scope, node);
     }
     if (!(func = operation.func)) {
       if (method = operation.method) {
@@ -168,15 +164,15 @@ Expressions = (function() {
   Expressions.prototype.reuse = function(path, continuation) {
     var bit, index, key, length, _i, _len, _ref;
     length = path.length;
-    _ref = continuation.split('→');
+    _ref = continuation.split(GSS.RIGHT);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       key = _ref[_i];
       bit = key;
-      if ((index = bit.indexOf('↓')) > -1) {
+      if ((index = bit.indexOf(GSS.DOWN)) > -1) {
         bit = bit.substring(index + 1);
       }
-      console.error(bit, 'reuse', path, continuation);
       if (bit === path || bit.substring(0, path.length) === path) {
+        console.error(bit, 'reuse', path, continuation);
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
         } else {
@@ -198,6 +194,7 @@ Expressions = (function() {
       if (offset > index) {
         continue;
       }
+      console.error(operation, operation.def.meta, index);
       if (!offset && index === 0 && !operation.def.noop) {
         args = [operation, continuation || operation.path, scope];
         shift += 2;
@@ -287,7 +284,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.analyze = function(operation, parent) {
-    var child, def, func, groupper, index, otherdef, _i, _len, _ref;
+    var child, def, func, index, otherdef, _i, _len, _ref;
     if (typeof operation[0] === 'string') {
       operation.name = operation[0];
     }
@@ -337,10 +334,10 @@ Expressions = (function() {
       operation.path = this.serialize(operation, otherdef);
       if (def.group) {
         operation.groupped = this.serialize(operation, otherdef, def.group);
-        if (groupper = this.commands[def.group]) {
-          groupper.analyze(operation, false);
-        }
       }
+    }
+    if (def.init) {
+      this.engine[def.init](operation, false);
     }
     if (typeof def === 'function') {
       func = def;
@@ -424,14 +421,12 @@ Expressions = (function() {
   };
 
   Expressions.prototype.capture = function(reason) {
-    var style;
     if (this.buffer === void 0) {
       reason || (reason = '');
-      style = 'font-weight: normal; color: #999';
       if (this.engine.onDOMContentLoaded) {
-        console.group('%cDocument%c ' + reason, '', style);
+        console.group('%cDocument%c ' + reason, 'font-weight: normal', 'color: #666');
       } else {
-        console.group('%cSolver%c ' + reason, '', style);
+        console.groupCollapsed('%cSolver%c ' + reason, 'font-weight: normal', 'font-weight: normal; color: #999');
       }
       this.time = +(new Date);
       this.buffer = null;
@@ -721,6 +716,18 @@ Engine = (function() {
       return value;
     }
     return path + (value && Engine.identify(value) || '') + suffix;
+  };
+
+  Engine.prototype.getContext = function(args, operation, scope, node) {
+    var index, _ref;
+    index = args[0].def && 3 || 0;
+    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
+      return args[index];
+    }
+    if (!operation.bound) {
+      return this.scope;
+    }
+    return scope;
   };
 
   Engine.UP = '↑';
@@ -1188,7 +1195,7 @@ Solutions = (function() {
     this.added = this.nullified = void 0;
     this.lastOutput = response;
     time = new Date - this.engine.expressions.lastTime;
-    console.log('%cValues %c' + time + 'ms', '', 'color: #999', JSON.parse(JSON.stringify(response)));
+    console.log('%cValues ' + time + 'ms', 'color: #999', JSON.parse(JSON.stringify(response)));
     this.push(response);
   };
 
