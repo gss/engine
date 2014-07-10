@@ -41,8 +41,11 @@ class Expressions
       buffer = buffer && added && added.concat(buffer) || buffer || added
     @lastOutput = GSS.clone buffer
     if @engine.onDOMContentLoaded
-      time = (new Date - @lastTime)
-      console.log('%cConstraints ' + time + 'ms', 'color: #999', @lastOutput)
+      if @lastTime
+        time = GSS.time(@lastTime)
+        console.log('%c%o' + time + 'ms', 'color: #999', @lastOutput)
+        @lastTime = undefined
+
     if buffer
       @buffer = undefined
       @output.pull(buffer)
@@ -53,7 +56,7 @@ class Expressions
 
       
   # Evaluate operation depth first
-  evaluate: (operation, continuation, scope, ascender, ascending, meta) ->
+  evaluate: (operation, continuation, scope, meta, ascender, ascending) ->
     console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
       
     # Analyze operation once
@@ -61,8 +64,8 @@ class Expressions
       @analyze(operation)
     
     # Use custom argument evaluator of parent operation if it has one
-    if !meta && (evaluate = operation.parent?.def.evaluate)
-      evaluated = evaluate.call(@engine, operation, continuation, scope, ascender, ascending)
+    if meta != true && (evaluate = operation.parent?.def.evaluate)
+      evaluated = evaluate.call(@engine, operation, continuation, scope, meta, ascender, ascending)
       return if evaluated == false
       if typeof evaluated == 'string'
         continuation = evaluated
@@ -78,7 +81,7 @@ class Expressions
         return result
 
     # Recursively evaluate arguments,stop on undefined
-    args = @resolve(operation, continuation, scope, ascender, ascending, meta)
+    args = @resolve(operation, continuation, scope, meta, ascender, ascending)
     return if args == false
 
     # Execute function and log it in continuation path
@@ -90,7 +93,7 @@ class Expressions
       continuation = @log(operation, continuation)
 
     # Ascend the execution (fork for each item in collection)
-    return @ascend(operation, continuation, result, scope, ascender)
+    return @ascend(operation, continuation, result, scope, meta, ascender)
 
   # Get result of executing operation with resolved arguments
   execute: (operation, continuation, scope, args) ->
@@ -153,7 +156,7 @@ class Expressions
     return false
 
   # Evaluate operation arguments in order, break on undefined
-  resolve: (operation, continuation, scope, ascender, ascending, meta) ->
+  resolve: (operation, continuation, scope, meta, ascender, ascending) ->
     args = prev = undefined
     skip = operation.skip
     shift = 0
@@ -162,8 +165,8 @@ class Expressions
       continue if offset > index
       console.error(operation, operation.def.meta, index)
       if (!offset && index == 0 && !operation.def.noop)
-        args = [operation, continuation || operation.path, scope]
-        shift += 2
+        args = [operation, continuation || operation.path, scope, meta]
+        shift += 3
         continue
       else if ascender == index
         argument = ascending
@@ -173,15 +176,15 @@ class Expressions
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
         if ascender?
-          mark = operation.def.rule && ascender == 1 && '↓' || '→'
+          mark = operation.def.rule && ascender == 1 && GSS.DOWN || GSS.RIGHT
           if mark
             contd = @engine.getContinuation(continuation, null, mark)
           else
             contd = continuation
-        argument = @evaluate(argument, contd || continuation, scope, undefined, prev)
+        argument = @evaluate(argument, contd || continuation, scope, meta, undefined, prev)
       if argument == undefined
         if !operation.def.eager || ascender?
-          if !operation.def.capture and 
+          if operation.def.capture and 
           (if operation.parent then operation.def.noop else !operation.name)
 
             stopping = true
@@ -192,40 +195,43 @@ class Expressions
         offset += 1
         continue
       (args ||= [])[index - offset + shift] = prev = argument
-    #return false if stopping || (!args && operation.def.noop)
     return args
 
   # Pass control back to parent operation. 
   # If child op returns DOM collection or node, evaluator recurses to do so.
   # When recursion unrolls all caller ops are discarded
-  ascend: (operation, continuation, result, scope, ascender) ->
+  ascend: (operation, continuation, result, scope, meta, ascender) ->
     if result?
-      @engine._onAscend?(operation, continuation, result, scope, ascender)
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection(result)
-          if continuation == "style$2↓.a$a2↑!+.a→.b"
-            debugger
           console.group continuation
           for item in result
-            breadcrumbs = @engine.getContinuation(continuation, item, '↑')
-            @evaluate operation.parent, breadcrumbs, scope, operation.index, item
+            breadcrumbs = @engine.getContinuation(continuation, item, GSS.UP)
+            @evaluate operation.parent, breadcrumbs, scope, meta, operation.index, item
 
           console.groupEnd continuation
           return
-        # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-        else if parent?.def.capture?.call(@engine, result, operation, continuation, scope) == true
-          return
-        # Topmost operations produce output
-        # TODO: Refactor this mess of nested conditions
-        else
+        else 
+          # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
+          captured = parent?.def.capture?.call(@engine, result, operation, continuation, scope, meta)
+          switch captured
+            when true then return
+            else 
+              if typeof captured == 'string'
+                continuation = captured
+                operation = operation.parent
+                parent = parent.parent
+
+          # Topmost operations produce output
+          # TODO: Refactor this mess of nested conditions
           if operation.def.noop && operation.name && result.length == 1
             return 
           if operation.def.noop || (parent.def.noop && !parent.name)
             if result && (!parent || (parent.def.noop && (!parent.parent || parent.length == 1) || ascender?))
               return @push(if result.length == 1 then result[0] else result)
           else if parent && (ascender? || (result.nodeType && (!operation.def.hidden || parent.tail == parent)))
-            @evaluate parent, continuation, scope, operation.index, result
+            @evaluate parent, continuation, scope, meta, operation.index, result
             return 
           else
             return result
@@ -346,7 +352,7 @@ class Expressions
   log: (operation, continuation) ->
     if continuation?
       if operation.def.serialized && !operation.def.hidden
-        return continuation + operation.key 
+        return continuation + (operation.key || operation.path)
       return continuation
     else
       return operation.path
@@ -368,7 +374,7 @@ class Expressions
         console.group('%cDocument%c ' + reason, 'font-weight: normal', 'color: #666')
       else
         console.groupCollapsed('%cSolver%c ' + reason, 'font-weight: normal', 'font-weight: normal; color: #999')
-      @time = +(new Date)
+      @time = GSS.time()
       @buffer = null
       return true
 

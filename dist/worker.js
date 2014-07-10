@@ -66,8 +66,11 @@ Expressions = (function() {
     }
     this.lastOutput = GSS.clone(buffer);
     if (this.engine.onDOMContentLoaded) {
-      time = new Date - this.lastTime;
-      console.log('%cConstraints ' + time + 'ms', 'color: #999', this.lastOutput);
+      if (this.lastTime) {
+        time = GSS.time(this.lastTime);
+        console.log('%c%o' + time + 'ms', 'color: #999', this.lastOutput);
+        this.lastTime = void 0;
+      }
     }
     if (buffer) {
       this.buffer = void 0;
@@ -79,14 +82,14 @@ Expressions = (function() {
     }
   };
 
-  Expressions.prototype.evaluate = function(operation, continuation, scope, ascender, ascending, meta) {
+  Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
     var args, contd, evaluate, evaluated, result, _ref;
     console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (!meta && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
-      evaluated = evaluate.call(this.engine, operation, continuation, scope, ascender, ascending);
+    if (meta !== true && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
+      evaluated = evaluate.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
       if (evaluated === false) {
         return;
       }
@@ -102,7 +105,7 @@ Expressions = (function() {
         return result;
       }
     }
-    args = this.resolve(operation, continuation, scope, ascender, ascending, meta);
+    args = this.resolve(operation, continuation, scope, meta, ascender, ascending);
     if (args === false) {
       return;
     }
@@ -113,7 +116,7 @@ Expressions = (function() {
       contd = continuation;
       continuation = this.log(operation, continuation);
     }
-    return this.ascend(operation, continuation, result, scope, ascender);
+    return this.ascend(operation, continuation, result, scope, meta, ascender);
   };
 
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
@@ -183,7 +186,7 @@ Expressions = (function() {
     return false;
   };
 
-  Expressions.prototype.resolve = function(operation, continuation, scope, ascender, ascending, meta) {
+  Expressions.prototype.resolve = function(operation, continuation, scope, meta, ascender, ascending) {
     var args, argument, contd, index, mark, offset, prev, shift, skip, stopping, _i, _len;
     args = prev = void 0;
     skip = operation.skip;
@@ -196,8 +199,8 @@ Expressions = (function() {
       }
       console.error(operation, operation.def.meta, index);
       if (!offset && index === 0 && !operation.def.noop) {
-        args = [operation, continuation || operation.path, scope];
-        shift += 2;
+        args = [operation, continuation || operation.path, scope, meta];
+        shift += 3;
         continue;
       } else if (ascender === index) {
         argument = ascending;
@@ -206,18 +209,18 @@ Expressions = (function() {
         continue;
       } else if (argument instanceof Array) {
         if (ascender != null) {
-          mark = operation.def.rule && ascender === 1 && '↓' || '→';
+          mark = operation.def.rule && ascender === 1 && GSS.DOWN || GSS.RIGHT;
           if (mark) {
             contd = this.engine.getContinuation(continuation, null, mark);
           } else {
             contd = continuation;
           }
         }
-        argument = this.evaluate(argument, contd || continuation, scope, void 0, prev);
+        argument = this.evaluate(argument, contd || continuation, scope, meta, void 0, prev);
       }
       if (argument === void 0) {
         if (!operation.def.eager || (ascender != null)) {
-          if (!operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
+          if (operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
             stopping = true;
           } else if (!operation.def.noop || operation.name) {
             return false;
@@ -231,28 +234,31 @@ Expressions = (function() {
     return args;
   };
 
-  Expressions.prototype.ascend = function(operation, continuation, result, scope, ascender) {
-    var breadcrumbs, item, parent, _base, _i, _len, _ref;
+  Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
+    var breadcrumbs, captured, item, parent, _i, _len, _ref;
     if (result != null) {
-      if (typeof (_base = this.engine)._onAscend === "function") {
-        _base._onAscend(operation, continuation, result, scope, ascender);
-      }
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
-          if (continuation === "style$2↓.a$a2↑!+.a→.b") {
-            debugger;
-          }
           console.group(continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
-            breadcrumbs = this.engine.getContinuation(continuation, item, '↑');
-            this.evaluate(operation.parent, breadcrumbs, scope, operation.index, item);
+            breadcrumbs = this.engine.getContinuation(continuation, item, GSS.UP);
+            this.evaluate(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
           console.groupEnd(continuation);
           return;
-        } else if ((parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope) : void 0 : void 0) === true) {
-          return;
         } else {
+          captured = parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta) : void 0 : void 0;
+          switch (captured) {
+            case true:
+              return;
+            default:
+              if (typeof captured === 'string') {
+                continuation = captured;
+                operation = operation.parent;
+                parent = parent.parent;
+              }
+          }
           if (operation.def.noop && operation.name && result.length === 1) {
             return;
           }
@@ -261,7 +267,7 @@ Expressions = (function() {
               return this.push(result.length === 1 ? result[0] : result);
             }
           } else if (parent && ((ascender != null) || (result.nodeType && (!operation.def.hidden || parent.tail === parent)))) {
-            this.evaluate(parent, continuation, scope, operation.index, result);
+            this.evaluate(parent, continuation, scope, meta, operation.index, result);
             return;
           } else {
             return result;
@@ -400,7 +406,7 @@ Expressions = (function() {
   Expressions.prototype.log = function(operation, continuation) {
     if (continuation != null) {
       if (operation.def.serialized && !operation.def.hidden) {
-        return continuation + operation.key;
+        return continuation + (operation.key || operation.path);
       }
       return continuation;
     } else {
@@ -428,7 +434,7 @@ Expressions = (function() {
       } else {
         console.groupCollapsed('%cSolver%c ' + reason, 'font-weight: normal', 'font-weight: normal; color: #999');
       }
-      this.time = +(new Date);
+      this.time = GSS.time();
       this.buffer = null;
       return true;
     }
@@ -515,7 +521,7 @@ Values = (function() {
     return this[this.engine.getPath(id, property)];
   };
 
-  Values.prototype.set = function(id, property, value, buffered) {
+  Values.prototype.set = function(id, property, value, buffered, meta) {
     var capture, index, old, path, watcher, watchers, _i, _len, _ref;
     if (arguments.length === 2) {
       value = property;
@@ -543,7 +549,7 @@ Values = (function() {
         if (typeof capture === "undefined" || capture === null) {
           capture = this.engine.expressions.capture(path + ' changed') || false;
         }
-        this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value);
+        this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value);
       }
       if (capture && !buffered) {
         this.engine.expressions.release();
@@ -720,7 +726,7 @@ Engine = (function() {
 
   Engine.prototype.getContext = function(args, operation, scope, node) {
     var index, _ref;
-    index = args[0].def && 3 || 0;
+    index = args[0].def && 4 || 0;
     if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
       return args[index];
     }
@@ -949,13 +955,22 @@ Engine = (function() {
               context = this;
             } else {
               fn = command.command;
-              args = [null, args[2], null, args[0], args[1]];
+              args = [null, args[2], null, null, args[0], args[1]];
             }
           }
         }
       }
       return fn.apply(context || this, args);
     };
+  };
+
+  Engine.time = function(other) {
+    var time;
+    time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date);
+    if (!other) {
+      return time;
+    }
+    return Math.floor((time - other) * 100) / 100;
   };
 
   return Engine;
@@ -1194,8 +1209,8 @@ Solutions = (function() {
     }
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    time = new Date - this.engine.expressions.lastTime;
-    console.log('%cValues ' + time + 'ms', 'color: #999', JSON.parse(JSON.stringify(response)));
+    time = GSS.time(this.engine.expressions.lastTime);
+    console.log('%c%o' + time + 'ms', 'color: #999', JSON.parse(JSON.stringify(response)));
     this.push(response);
   };
 

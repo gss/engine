@@ -45,7 +45,7 @@ class Values
   get: (id, property) ->
     return @[@engine.getPath(id, property)]
 
-  set: (id, property, value, buffered) ->
+  set: (id, property, value, buffered, meta) ->
     if arguments.length == 2
       value = property
       property = undefined
@@ -64,7 +64,7 @@ class Values
         unless capture?
           capture = @engine.expressions.capture(path + ' changed') || false
 
-        @engine.expressions.evaluate watcher.parent, watchers[index + 1], watchers[index + 2], watcher.index, value
+        @engine.expressions.evaluate watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value
         
       @engine.expressions.release() if capture && !buffered
     return value

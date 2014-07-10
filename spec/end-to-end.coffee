@@ -238,7 +238,7 @@ describe 'End - to - End', ->
             "blah2": 70
             "md2": 71 / 4
           done()
-    describe 'order dependent selectors', ->
+    describe 'simple order dependent selectors', ->
       it 'should compute values', (done) ->                        
         container.innerHTML =  """
             <style type="text/gss">                            
@@ -489,7 +489,7 @@ describe 'End - to - End', ->
       it 'should compute values', (done) ->                        
         container.innerHTML =  """
             <style type="text/gss" id="style">                            
-              .a + .a, #style + .a {
+              #a2 ++ .a, #style ~~ .a {
                 (&:first)[left] == 0;
                 &[width] == 100;
                 (&:previous)[right] == &[left];

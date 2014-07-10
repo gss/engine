@@ -4,13 +4,13 @@ class Measurements
   # Add continuation to suggest command, because suggest creates a variable
   # if its undefined. It will ensure the solver will be able to clean up
   suggest:
-    command: (operation, continuation, scope, variable, value, strength, weight, contd) ->
+    command: (operation, continuation, scope, meta, variable, value, strength, weight, contd) ->
       contd ||= @getContinuation(continuation) if continuation
       return ['suggest', variable, value, strength ? null, weight ? null, contd ? null]
 
   # Generate command to create a variable
   get:
-    command: (operation, continuation, scope, object, property) ->
+    command: (operation, continuation, scope, meta, object, property) ->
       if property
         if typeof object == 'string'
           id = object
@@ -117,7 +117,7 @@ class Measurements
     element.style[property] = value
 
   set:
-    command: (operation, continuation, scope, property, value) ->
+    command: (operation, continuation, scope, meta, property, value) ->
       if scope && scope.style[property] != undefined
         @_setStyle(scope, property, value)
       return 

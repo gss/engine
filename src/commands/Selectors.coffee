@@ -302,7 +302,8 @@ class Selectors
       return node unless node.nextElementSibling
 
   ':next':
-    command: (operation, continuation, scope, node) ->
+    relative: true
+    command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@queries.getOperationPath(continuation))
       collection = @queries.get path
       console.info(path, continuation)
@@ -312,23 +313,28 @@ class Selectors
       return collection[index + 1]
 
   ':previous':
-    command: (operation, continuation, scope, node) ->
+    relative: true
+    command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@queries.getOperationPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
       return if index == -1 || !index
+      if continuation?.indexOf(',') == -1
+        debugger
       console.error('precious', collection.slice(), collection[index - 1], path)
       return collection[index - 1]
 
   ':last':
-    command: (operation, continuation, scope, node) ->
+    relative: true
+    command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@queries.getOperationPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
       return node if !index? || index == collection.length - 1
 
   ':first':
-    command: (operation, continuation, scope, node) ->
+    relative: true
+    command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@queries.getOperationPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)

@@ -114,7 +114,7 @@ class Engine
 
   # Check if selector is bound to current scope's element
   getContext: (args, operation, scope, node) ->
-    index = args[0].def && 3 || 0
+    index = args[0].def && 4 || 0
     if (args.length != index && (args[index]?.nodeType))
       return args[index]
     if !operation.bound
@@ -275,9 +275,14 @@ class Engine
               context = @
             else
               fn = command.command
-              args = [null, args[2], null, args[0], args[1]]
+              args = [null, args[2], null, null, args[0], args[1]]
 
       return fn.apply(context || @, args)
+
+  @time: (other) ->
+    time = performance?.now() || Date.now?() || + (new Date)
+    return time unless other
+    return Math.floor((time - other) * 100) / 100
 
 
 this.GSS = Engine

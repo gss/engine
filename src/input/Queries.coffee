@@ -69,7 +69,7 @@ class Queries
         break unless query
         continuation = queries[index + 1]
         scope = queries[index + 2]
-        @output.pull query, continuation, scope
+        @output.pull query, continuation, scope, GSS.UP, undefined, undefined
 
     @buffer = undefined
     repairing = @_repairing
@@ -256,8 +256,7 @@ class Queries
     if collection.indexOf(node) == -1
       console.info('insherted ad', index)
       for el, index in collection
-        if @comparePosition(el, node) != 4
-          break
+        break unless @comparePosition(el, node) == 4
       console.info('insherted ad', index)
       collection.splice(index, 0, node)
       @chain collection[index - 1], node, collection, continuation
@@ -490,9 +489,9 @@ class Queries
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
       console.error(666, operation, scope, contd, key)
       if operation.path != operation.key
-        @engine.expressions.pull operation.parent, prefix + operation.path, scope, operation.index, pair[1]
+        @engine.expressions.pull operation.parent, prefix + operation.path, scope, GSS.UP, operation.index, pair[1]
       else
-        @engine.expressions.pull operation, contd, scope, true, true
+        @engine.expressions.pull operation, contd, scope, GSS.UP, true, true
 
     console.log('Repair', path, GSS.RIGHT, key, [added, removed], [leftNew, leftOld], [rightNew, rightOld])
 
@@ -573,8 +572,6 @@ class Queries
 
   chain: (left, right, collection, continuation) ->
     console.log('CHZ', [left, right], collection, continuation)
-    #if continuation == "style$style↓#style!>>.a" 
-    #  debugger
     if left
       @match(left, '$pseudo', 'last', undefined, continuation)
       @match(left, '$pseudo', 'next', undefined, continuation)
@@ -609,8 +606,8 @@ class Queries
     old = @get(path)
 
     # Normalize query to reuse results
-    query = @getQueryPath(operation, node, scope)
-    if group = @updated?[query]
+    query = !operation.def.relative && @getQueryPath(operation, node, scope)
+    if group = (query && @updated?[query])
       result = group[0]
       unless old?
         old = group[1]
@@ -679,7 +676,7 @@ class Queries
       @updated ||= {}
       
       group = @updated[query] ||= [] if query
-      @updated[path] ||= group || []
+      @updated[path] ||= group ||= []
       group[0] ||= result
       group[1] ||= old?.slice?()
       group[2] ||= added
@@ -703,8 +700,8 @@ class Queries
 
       if result.length != undefined
         for item, index in result
-          @chain item, result[index - 1], result, path
-        @chain item, result[result.length - 1], undefined, path
+          @chain result[index - 1], item, result, path
+        @chain item, undefined, result, path
     else
       delete @[path]
 
