@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-10) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-11) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21081,11 +21081,11 @@ Expressions = (function() {
     this.commands = this.engine && this.engine.commands || this;
   }
 
-  Expressions.prototype.pull = function(expression) {
+  Expressions.prototype.pull = function(expression, continuation) {
     var buffer, result;
     if (expression) {
       buffer = this.capture(expression.length + ' command' + (expression.length > 1 && 's' || ''));
-      console.log('Input', expression);
+      console.log('%c\t\t\t\t%o\t\t\t%s', 'color: #666', expression, continuation || '');
       this.engine.start();
       result = this.evaluate.apply(this, arguments);
       if (buffer) {
@@ -21135,8 +21135,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, contd, evaluate, evaluated, result, _ref;
-    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
+    var args, contd, evaluate, evaluated, padding, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -21160,6 +21159,10 @@ Expressions = (function() {
     args = this.resolve(operation, continuation, scope, meta, ascender, ascending);
     if (args === false) {
       return;
+    }
+    if (operation.name) {
+      padding = Array(5 - Math.floor(operation.name.length / 4)).join('\t');
+      console.log('%c%s%s%o\t\t%s', 'color: #666', operation.name, padding, args, continuation || "");
     }
     if (operation.def.noop) {
       result = args;
@@ -21227,7 +21230,6 @@ Expressions = (function() {
         bit = bit.substring(index + 1);
       }
       if (bit === path || bit.substring(0, path.length) === path) {
-        console.error(bit, 'reuse', path, continuation);
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
         } else {
@@ -21249,7 +21251,6 @@ Expressions = (function() {
       if (offset > index) {
         continue;
       }
-      console.error(operation, operation.def.meta, index);
       if (!offset && index === 0 && !operation.def.noop) {
         args = [operation, continuation || operation.path, scope, meta];
         shift += 3;
@@ -21570,7 +21571,6 @@ Queries = (function() {
     while (queries = this.buffer) {
       this.buffer = null;
       this.lastOutput = this.lastOutput && this.lastOutput.concat(queries) || queries;
-      console.info(queries, 111);
       for (index = _k = 0, _len2 = queries.length; _k < _len2; index = _k += 3) {
         query = queries[index];
         if (!query) {
@@ -21849,16 +21849,13 @@ Queries = (function() {
       this[continuation] = collection = [];
     }
     keys = collection.keys || (collection.keys = []);
-    console.error('add', node, continuation, collection);
     if (collection.indexOf(node) === -1) {
-      console.info('insherted ad', index);
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
         if (this.comparePosition(el, node) !== 4) {
           break;
         }
       }
-      console.info('insherted ad', index);
       collection.splice(index, 0, node);
       this.chain(collection[index - 1], node, collection, continuation);
       this.chain(node, collection[index + 1], collection, continuation);
@@ -22005,7 +22002,6 @@ Queries = (function() {
         if (keys) {
           keys.splice(index, 1);
         }
-        console.log(1234676876872, node, continuation, collection.slice());
         this.chain(collection[index - 1], node, collection.slice(), continuation);
         return this.chain(node, collection[index], collection.slice(), continuation);
       }
@@ -22134,7 +22130,6 @@ Queries = (function() {
     for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
       pair = removed[_k];
       prefix = this.engine.getContinuation(path, pair[0], '→');
-      console.error('remove', prefix, key);
       this.remove(scope, prefix, null, null, null, true);
       this.clean(prefix + key, null, null, null, null, true);
     }
@@ -22142,7 +22137,6 @@ Queries = (function() {
       pair = added[_l];
       prefix = this.engine.getContinuation(path, pair[0], '→');
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length);
-      console.error(666, operation, scope, contd, key);
       if (operation.path !== operation.key) {
         this.engine.expressions.pull(operation.parent, prefix + operation.path, scope, GSS.UP, operation.index, pair[1]);
       } else {
@@ -22192,14 +22186,12 @@ Queries = (function() {
     if (!(match = this.isPaired(null, continuation))) {
       return;
     }
-    console.error(continuation, node, this.isPaired(null, continuation));
     path = this.getOperationPath(match[1]);
     collection = this.get(path);
     if (!(plurals = (_ref = this._plurals) != null ? _ref[path] : void 0)) {
       return;
     }
     oppath = this.getOperationPath(continuation, true);
-    console.log('Heyz', oppath, plurals);
     for (index = _i = 0, _len = plurals.length; _i < _len; index = _i += 3) {
       plural = plurals[index];
       if (oppath !== plural) {
@@ -22220,7 +22212,6 @@ Queries = (function() {
       return;
     }
     left = this.getOperationPath(match[1]);
-    console.log('Hey pair up', match[1], left);
     plurals = (_base = (this._plurals || (this._plurals = {})))[left] || (_base[left] = []);
     if (plurals.indexOf(operation.path) === -1) {
       pushed = plurals.push(operation.path, operation, scope);
@@ -22239,13 +22230,11 @@ Queries = (function() {
     node || (node = this.engine.getContext(args, operation, scope, node));
     if (this.updated) {
       query = this.getQueryPath(operation, this.engine.identify(node));
-      console.log('fetched', query, this.updated[query], continuation);
       return this.updated[query];
     }
   };
 
   Queries.prototype.chain = function(left, right, collection, continuation) {
-    console.log('CHZ', [left, right], collection, continuation);
     if (left) {
       this.match(left, '$pseudo', 'last', void 0, continuation);
       this.match(left, '$pseudo', 'next', void 0, continuation);

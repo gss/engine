@@ -12,10 +12,10 @@ class Expressions
     @commands = @engine && @engine.commands || @
 
   # Hook: Evaluate input and pass produced output
-  pull: (expression) ->
+  pull: (expression, continuation) ->
     if expression
-      buffer = @capture(expression.length + ' command' + (expression.length > 1 && 's' || '')) # Enable buffering if nobody enabled it already
-      console.log('Input', expression)
+      buffer = @capture(expression.length + ' command' + (expression.length > 1 && 's' || ''))
+      console.log('%c\t\t\t\t%o\t\t\t%s', 'color: #666', expression, continuation || '')
       @engine.start()
       result = @evaluate.apply(@, arguments)
       if buffer # Flush buffered output if this function started the buffering
@@ -27,7 +27,6 @@ class Expressions
     return unless args?
     if (buffer = @buffer) != undefined
       unless @engine._onBuffer && @engine._onBuffer(buffer, args, batch) == false
-        #console.error(args)
         (buffer || (@buffer = [])).push args
       return
     else
@@ -57,7 +56,6 @@ class Expressions
       
   # Evaluate operation depth first
   evaluate: (operation, continuation, scope, meta, ascender, ascending) ->
-    console.log('Evaluating', operation, continuation, [ascender, ascending, meta])
       
     # Analyze operation once
     unless operation.def
@@ -82,7 +80,12 @@ class Expressions
 
     # Recursively evaluate arguments,stop on undefined
     args = @resolve(operation, continuation, scope, meta, ascender, ascending)
+    
     return if args == false
+
+    if operation.name
+      padding = Array(5 - Math.floor((operation.name).length / 4) ).join('\t')
+      console.log('%c%s%s%o\t\t%s', 'color: #666', operation.name, padding, args, continuation || "")
 
     # Execute function and log it in continuation path
     if operation.def.noop
@@ -148,7 +151,6 @@ class Expressions
       if (index = bit.indexOf(GSS.DOWN)) > -1
         bit = bit.substring(index + 1)
       if bit == path || bit.substring(0, path.length) == path
-        console.error(bit, 'reuse', path, continuation)
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]
         else
@@ -163,7 +165,6 @@ class Expressions
     offset = operation.offset || 0
     for argument, index in operation
       continue if offset > index
-      console.error(operation, operation.def.meta, index)
       if (!offset && index == 0 && !operation.def.noop)
         args = [operation, continuation || operation.path, scope, meta]
         shift += 3

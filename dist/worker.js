@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-10) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-11) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -29,11 +29,11 @@ Expressions = (function() {
     this.commands = this.engine && this.engine.commands || this;
   }
 
-  Expressions.prototype.pull = function(expression) {
+  Expressions.prototype.pull = function(expression, continuation) {
     var buffer, result;
     if (expression) {
       buffer = this.capture(expression.length + ' command' + (expression.length > 1 && 's' || ''));
-      console.log('Input', expression);
+      console.log('%c\t\t\t\t%o\t\t\t%s', 'color: #666', expression, continuation || '');
       this.engine.start();
       result = this.evaluate.apply(this, arguments);
       if (buffer) {
@@ -83,8 +83,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, contd, evaluate, evaluated, result, _ref;
-    console.log('Evaluating', operation, continuation, [ascender, ascending, meta]);
+    var args, contd, evaluate, evaluated, padding, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -108,6 +107,10 @@ Expressions = (function() {
     args = this.resolve(operation, continuation, scope, meta, ascender, ascending);
     if (args === false) {
       return;
+    }
+    if (operation.name) {
+      padding = Array(5 - Math.floor(operation.name.length / 4)).join('\t');
+      console.log('%c%s%s%o\t\t%s', 'color: #666', operation.name, padding, args, continuation || "");
     }
     if (operation.def.noop) {
       result = args;
@@ -175,7 +178,6 @@ Expressions = (function() {
         bit = bit.substring(index + 1);
       }
       if (bit === path || bit.substring(0, path.length) === path) {
-        console.error(bit, 'reuse', path, continuation);
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
         } else {
@@ -197,7 +199,6 @@ Expressions = (function() {
       if (offset > index) {
         continue;
       }
-      console.error(operation, operation.def.meta, index);
       if (!offset && index === 0 && !operation.def.noop) {
         args = [operation, continuation || operation.path, scope, meta];
         shift += 3;

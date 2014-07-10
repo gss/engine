@@ -64,7 +64,6 @@ class Queries
     while queries = @buffer
       @buffer = null
       @lastOutput = (@lastOutput && @lastOutput.concat(queries) || queries)
-      console.info(queries, 111)
       for query, index in queries by 3
         break unless query
         continuation = queries[index + 1]
@@ -252,12 +251,9 @@ class Queries
       @[continuation] = collection = []
     keys = collection.keys ||= []
 
-    console.error('add', node, continuation, collection)
     if collection.indexOf(node) == -1
-      console.info('insherted ad', index)
       for el, index in collection
         break unless @comparePosition(el, node) == 4
-      console.info('insherted ad', index)
       collection.splice(index, 0, node)
       @chain collection[index - 1], node, collection, continuation
       @chain node, collection[index + 1], collection, continuation
@@ -369,7 +365,6 @@ class Queries
         collection.splice(index, 1)
         if keys
           keys.splice(index, 1)
-        console.log(1234676876872, node, continuation, collection.slice())
         @chain collection[index - 1], node, collection.slice(), continuation
         @chain node, collection[index], collection.slice(), continuation
 
@@ -479,7 +474,6 @@ class Queries
 
     for pair in removed
       prefix = @engine.getContinuation(path, pair[0], '→')
-      console.error('remove', prefix, key)
       @remove(scope, prefix, null, null, null, true)
       @clean(prefix + key, null, null, null, null, true)
     
@@ -487,7 +481,6 @@ class Queries
       prefix = @engine.getContinuation(path, pair[0], '→')
       # not too good
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
-      console.error(666, operation, scope, contd, key)
       if operation.path != operation.key
         @engine.expressions.pull operation.parent, prefix + operation.path, scope, GSS.UP, operation.index, pair[1]
       else
@@ -526,13 +519,11 @@ class Queries
 
   unpair: (continuation, node) ->
     return unless match = @isPaired(null, continuation)
-    console.error(continuation, node, @isPaired(null, continuation))
     path = @getOperationPath(match[1])
     collection = @get(path)
     return unless plurals = @_plurals?[path]
 
     oppath = @getOperationPath(continuation, true)
-    console.log('Heyz', oppath, plurals)
     for plural, index in plurals by 3
       continue unless oppath == plural
       contd = path + '→' + plural
@@ -549,7 +540,6 @@ class Queries
   pair: (continuation, operation, scope, result) ->
     return unless match = @isPaired(operation, continuation, true)
     left = @getOperationPath(match[1])
-    console.log('Hey pair up', match[1], left)
     plurals = (@_plurals ||= {})[left] ||= []
     if plurals.indexOf(operation.path) == -1
       pushed = plurals.push(operation.path, operation, scope)
@@ -567,11 +557,9 @@ class Queries
     node ||= @engine.getContext(args, operation, scope, node)
     if @updated# && node != scope
       query = @getQueryPath(operation, @engine.identify(node))
-      console.log('fetched', query, @updated[query], continuation)
       return @updated[query]
 
   chain: (left, right, collection, continuation) ->
-    console.log('CHZ', [left, right], collection, continuation)
     if left
       @match(left, '$pseudo', 'last', undefined, continuation)
       @match(left, '$pseudo', 'next', undefined, continuation)

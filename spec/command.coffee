@@ -376,71 +376,68 @@ describe 'GSS commands', ->
     
     describe "Chain", ->
       
-      xit '@chain .thing width()', (done) ->
-        scope.innerHTML = """
-          <div id="thing1" class="thing"></div>
-          <div id="thing2" class="thing"></div>
-        """
-        engine.run [
-          [
-            'chain', 
-            ['$class','thing'], 
-            ['eq-chain', 'width', 100],
-            ['eq-chain', 100, 'width']
-          ]
-        ]
+      it '@chain .box width(+[hgap]*2)', (done) ->
         el = null
-        listener = (e) ->
-          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
-          chai.expect(engine.vars["$thing2[width]"]).to.eql 100
-          scope.removeEventListener 'solved', listener
-          done()
-        scope.addEventListener 'solved', listener
 
-      
-      xit '@chain .box width(+[hgap]*2)', (done) ->
-        scope.innerHTML = """
-          <div id="thing1" class="thing"></div>
-          <div id="thing2" class="thing"></div>
-        """
         engine.run [  
-              ['==', ['get','hgap'], 20]
-              ['==', ['get','width',['$id','thing1']], 100]
-              [
-                'chain', 
-                ['$class', 'thing'], 
-                ['eq-chain',['plus-chain','width',['*',['get','hgap'],2]],'width']
+          ['==', ['get','hgap'], 20]
+          ['==', ['get',['$id','thing1'],'width'], 100]
+          [
+            'rule', 
+            ['$class', 'thing'], 
+            ['=='
+              ['get'
+                ['$reserved', 'this'],
+                'width'],
+              ['+',
+                ['get'
+                  ['$pseudo', ['$reserved', 'this'], 'previous'],
+                  'width']
+                ['*'
+                  ['get', 'hgap'],
+                  2
+                ]
               ]
             ]
-        el = null
-        listener = (e) ->
-          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
-          chai.expect(engine.vars["$thing2[width]"]).to.eql 140
-          scope.removeEventListener 'solved', listener
+          ]
+        ]
+        engine.once 'solved', ->
+          chai.expect(engine.values["$thing1[width]"]).to.eql 100
+          chai.expect(engine.values["$thing2[width]"]).to.eql 140
+          chai.expect(engine.values["$thing3[width]"]).to.eql 180
           done()
-        scope.addEventListener 'solved', listener
+
+        scope.innerHTML = """
+          <div id="thing1" class="thing"></div>
+          <div id="thing2" class="thing"></div>
+          <div id="thing3" class="thing"></div>
+        """
       
-      xit '@chain .thing right()left', (done) ->
+      it '@chain .thing right()left', (done) ->
+        engine.once 'solved', ->
+          chai.expect(engine.values["$thing1[width]"]).to.eql 100
+          done()
+    
+        engine.run [
+          ['==', ['get',['$id','thing1'],'x'], 10]
+          ['==', ['get',['$id','thing2'],'x'], 110]
+          ['rule'
+            ['$class','thing'],
+            ['=='
+              ['get'
+                ['$pseudo', ['$reserved', 'this'], 'previous'],
+                'right']
+              ['get'
+                ['$reserved', 'this'],
+                'x']
+            ]
+          ]
+        ]
         scope.innerHTML = """
           <div id="thing1" class="thing"></div>
           <div id="thing2" class="thing"></div>
         """
-        engine.run [
-          ['==', ['get','x',['$id','thing1']], 10]
-          ['==', ['get','x',['$id','thing2']], 110]
-          [
-            'chain', 
-            ['$class','thing'], 
-            ['eq-chain', 'right', 'left'],
-          ]
-        ]
         el = null
-        listener = (e) ->
-          chai.expect(engine.vars["$thing1[width]"]).to.eql 100
-          scope.removeEventListener 'solved', listener
-          done()
-        scope.addEventListener 'solved', listener
-    
       
   
 
