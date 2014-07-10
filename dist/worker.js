@@ -88,7 +88,7 @@ Expressions = (function() {
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (meta !== true && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
+    if (meta !== operation && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
       evaluated = evaluate.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
       if (evaluated === false) {
         return;

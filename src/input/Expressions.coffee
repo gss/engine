@@ -64,7 +64,7 @@ class Expressions
       @analyze(operation)
     
     # Use custom argument evaluator of parent operation if it has one
-    if meta != true && (evaluate = operation.parent?.def.evaluate)
+    if meta != operation && (evaluate = operation.parent?.def.evaluate)
       evaluated = evaluate.call(@engine, operation, continuation, scope, meta, ascender, ascending)
       return if evaluated == false
       if typeof evaluated == 'string'
