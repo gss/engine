@@ -91,14 +91,14 @@ class Rules
       path = continuation + operation.parent.uid
       query = @queries[path]
       if query == undefined || (!!query != !!condition)
-        console.group(path)
+        @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent, 'font-weight: normal; color: #999', continuation
         unless query == undefined
           @queries.clean(path, continuation, operation.parent, scope)
         if condition
           @expressions.evaluate operation.parent[2], path, scope, meta
         else if operation.parent[3]
           @expressions.evaluate operation.parent[3], path, scope, meta
-        console.groupEnd(path)
+        @console.groupEnd(path)
 
         @queries[path] = condition ? null
 
@@ -126,7 +126,6 @@ class Rules
           scope = node.parentNode
 
       rules = @['_' + type](source)
-      console.log('Eval', rules, continuation)
       rules = GSS.clone(rules)
       capture = @expressions.capture(type)
       @run rules, continuation, scope, GSS.DOWN

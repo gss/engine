@@ -122,8 +122,6 @@ class Measurements
         @_setStyle(scope, property, value)
       return 
 
-  deferComputation: {'intrinsic-x', 'intrinsic-y'}
-
   # Compute value of a property, reads the styles on elements
   compute: (node, property, continuation, old) ->
     if node.nodeType

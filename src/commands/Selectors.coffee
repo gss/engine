@@ -50,7 +50,6 @@ class Selectors
       head = operation.head || operation
       name = operation.def.group
       shortcut = [name, head.groupped]
-      console.error('shortcutting', head.groupped)
       shortcut.parent = head.parent
       shortcut.index = head.index
       shortcut.bound = head.bound if head.bound
@@ -306,9 +305,7 @@ class Selectors
     command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@queries.getOperationPath(continuation))
       collection = @queries.get path
-      console.info(path, continuation)
       index = collection?.indexOf(node)
-      console.error('nextizzle', collection[index + 1], path)
       return if !index? || index == -1 || index == collection.length - 1
       return collection[index + 1]
 
@@ -319,9 +316,6 @@ class Selectors
       collection = @queries.get path
       index = collection?.indexOf(node)
       return if index == -1 || !index
-      if continuation?.indexOf(',') == -1
-        debugger
-      console.error('precious', collection.slice(), collection[index - 1], path)
       return collection[index - 1]
 
   ':last':

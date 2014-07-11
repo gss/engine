@@ -42,7 +42,7 @@ class Queries
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
     @buffer = @updated = @lastOutput = null
-    capture = @output.capture(mutations.length + ' mutation' + (mutations.length > 1 && 's' || '')) 
+    capture = @output.capture(mutations) 
     @engine.start()
     for mutation in mutations
       switch mutation.type
@@ -61,6 +61,7 @@ class Queries
         @remove id
       @removed = undefined
 
+    queryTime = GSS.time()
     while queries = @buffer
       @buffer = null
       @lastOutput = (@lastOutput && @lastOutput.concat(queries) || queries)
@@ -81,8 +82,11 @@ class Queries
     if @removing
       for node in @removing
         delete node._gss_id
+    if @updated
+      evalDiff = GSS.time(@engine.expressions.endTime, @engine.expressions.startTime)
+      queryDiff = GSS.time(queryTime)
 
-    console.log('Queries', @updated)
+      @engine.console.row('queries', @updated, evalDiff + 'ms + ' + queryDiff + 'ms')
     @buffer = @updated = undefined
     for path, query of @
       if query && query.old != undefined
@@ -298,7 +302,6 @@ class Queries
       if refs && refs.indexOf(contd) == -1
         index += 3
         continue
-      console.log('Unwatch', watcher.path, contd, refs)
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       unless quick
@@ -371,7 +374,9 @@ class Queries
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
-    console.group('Remove ' + (id.nodeType && @engine.identify(id) || id) + ' from ' + (continuation || ''))
+    if continuation == 'style$2↓.a$a3↑!+.a→'
+      debugger
+    @engine.console.row('remove', (id.nodeType && @engine.identify(id) || id), continuation)
     if typeof id == 'object'
       node = id
       id = @engine.identify(id)
@@ -383,15 +388,13 @@ class Queries
 
       unless @removeFromCollection(node, continuation, operation, scope, manual) == false
         @removeFromNode(id, continuation, operation, scope, plural)
-      
+      console.log(continuation, collection?.length, id)
       if collection && !collection.length
         this.set continuation, undefined 
 
     else if node
       # Detach queries attached to an element when removing element by id
       @unwatch(id, true)
-
-    return console.groupEnd()
 
   clean: (path, continuation, operation, scope, bind, plural) ->
     if path.def
@@ -402,7 +405,7 @@ class Queries
     if result && !@engine.isCollection(result)
       if continuation && continuation != (oppath = @getOperationPath(continuation))
         @remove result, oppath
-    @unpair path, result if result
+    @unpair path, result if result?.nodeType
     unless plural
       if (result = @get(path, undefined, true)) != undefined
         if result
@@ -440,11 +443,9 @@ class Queries
     rightPath = @getScopePath(path) + key
     rightUpdate = @updated?[rightPath]
 
-    console.error(rightPath, rightUpdate, @, @updated)
     rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
     if !rightNew && collected
       rightNew = @get(path + @engine.identify(leftNew[0] || leftOld[0]) + '→' + key)
-      console.error(rightOld, path + '→' + @engine.identify(leftNew[0] || leftOld[0]) + key, 4444444)
       
     rightNew ||= []
 
@@ -486,7 +487,7 @@ class Queries
       else
         @engine.expressions.pull operation, contd, scope, GSS.UP, true, true
 
-    console.log('Repair', path, GSS.RIGHT, key, [added, removed], [leftNew, leftOld], [rightNew, rightOld])
+    @engine.console.row('repair', [added, removed], [leftNew, leftOld], [rightNew, rightOld])
 
   isPariedRegExp: /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i
                   # path1 ^        id ^        ^path2   

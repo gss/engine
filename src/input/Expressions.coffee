@@ -14,12 +14,11 @@ class Expressions
   # Hook: Evaluate input and pass produced output
   pull: (expression, continuation) ->
     if expression
-      buffer = @capture(expression.length + ' command' + (expression.length > 1 && 's' || ''))
-      console.log('%c\t\t\t\t%o\t\t\t%s', 'color: #666', expression, continuation || '')
+      capture = @capture(expression)
       @engine.start()
       result = @evaluate.apply(@, arguments)
-      if buffer # Flush buffered output if this function started the buffering
-        @release()
+      @release() if capture
+       
     return result
 
   # Hook: Output commands in batch
@@ -35,15 +34,11 @@ class Expressions
   # Output buffered commands
   flush: ->
     buffer = @buffer
+    @engine.console.groupEnd()
     if @engine._onFlush
       added = @engine._onFlush(buffer)
       buffer = buffer && added && added.concat(buffer) || buffer || added
     @lastOutput = GSS.clone buffer
-    if @engine.onDOMContentLoaded
-      if @lastTime
-        time = GSS.time(@lastTime)
-        console.log('%c%o' + time + 'ms', 'color: #999', @lastOutput)
-        @lastTime = undefined
 
     if buffer
       @buffer = undefined
@@ -84,8 +79,7 @@ class Expressions
     return if args == false
 
     if operation.name
-      padding = Array(5 - Math.floor((operation.name).length / 4) ).join('\t')
-      console.log('%c%s%s%o\t\t%s', 'color: #666', operation.name, padding, args, continuation || "")
+      @engine.console.row(operation, args, continuation || "")
 
     # Execute function and log it in continuation path
     if operation.def.noop
@@ -206,12 +200,12 @@ class Expressions
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection(result)
-          console.group continuation
+          @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', GSS.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item, GSS.UP)
             @evaluate operation.parent, breadcrumbs, scope, meta, operation.index, item
 
-          console.groupEnd continuation
+          @engine.console.groupEnd()
           return
         else 
           # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
@@ -359,25 +353,32 @@ class Expressions
       return operation.path
 
   release: () ->
-    console.groupEnd()
-    @lastTime = @time
-    @time = undefined
-    if @engine.expressions.buffer
-      @engine.expressions.flush()
+    @endTime = GSS.time()
+    if @buffer
+      @flush()
     else
-      @engine.expressions.buffer = undefined
-    return @lastTime
+      @buffer = undefined
+      @engine.console.groupEnd()
+    return @endTime
 
-  capture: (reason) ->
-    if @buffer == undefined
-      reason ||= ''
-      if @engine.onDOMContentLoaded
-        console.group('%cDocument%c ' + reason, 'font-weight: normal', 'color: #666')
-      else
-        console.groupCollapsed('%cSolver%c ' + reason, 'font-weight: normal', 'font-weight: normal; color: #999')
-      @time = GSS.time()
-      @buffer = null
-      return true
+  capture: (reason, type = 'command') ->
+    return unless @buffer == undefined
+    fmt = '%c%s%c'
+    
+    if typeof reason != 'string'
+      reason = GSS.clone(reason) if reason.slice
+      fmt += '  \t\t%O'
+    else
+      fmt += '  \t\t%s'
+    if @engine.onDOMContentLoaded
+      name = 'Document'
+    else
+      name = 'Solver  '
+      method = 'groupCollapsed'
+    @engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason)
+    @startTime = GSS.time()
+    @buffer = null
+    return true
 
 
 @module ||= {}

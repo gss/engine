@@ -35,8 +35,8 @@ class Solutions
     @added = @nullified = undefined
     @lastOutput = response
 
-    time = GSS.time(@engine.expressions.lastTime)
-    console.log('%c%o' + time + 'ms', 'color: #999', JSON.parse JSON.stringify response)
+    if lastTime = @engine.expressions.lastTime
+      @engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(lastTime) + 'ms')
 
     @push(response)
     return

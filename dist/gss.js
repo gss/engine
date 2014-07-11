@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-07-11) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19070,6 +19069,8 @@ this.require || (this.require = function(string) {
 });
 
 Engine = (function() {
+  var method, _i, _len, _ref;
+
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
   Engine.prototype.Values = require('./input/Values.js');
@@ -19227,6 +19228,9 @@ Engine = (function() {
 
   Engine.identify = function(object, generate) {
     var id;
+    if ((object != null ? object.push : void 0) != null) {
+      debugger;
+    }
     if (!(id = object._gss_id)) {
       if (object === document) {
         object = window;
@@ -19431,14 +19435,52 @@ Engine = (function() {
     };
   };
 
-  Engine.time = function(other) {
-    var time;
-    time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date);
+  Engine.time = function(other, time) {
+    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
     if (!other) {
       return time;
     }
     return Math.floor((time - other) * 100) / 100;
   };
+
+  Engine.Console = function(level) {
+    this.level = level;
+  };
+
+  Engine.Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
+
+  Engine.Console.prototype.groups = 0;
+
+  Engine.Console.prototype.row = function(a, b, c) {
+    var p1, p2;
+    a = a.name || a;
+    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
+    if (typeof b === 'object') {
+      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
+    } else {
+      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
+      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
+    }
+  };
+
+  _ref = Engine.Console.prototype.methods;
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    method = _ref[_i];
+    Engine.Console.prototype[method] = (function(method) {
+      return function() {
+        if (method === 'group' || method === 'groupCollapsed') {
+          Engine.Console.prototype.groups++;
+        } else if (method === 'groupEnd') {
+          Engine.Console.prototype.groups--;
+        }
+        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
+      };
+    })(method);
+  }
+
+  Engine.console = new Engine.Console;
+
+  Engine.prototype.console = Engine.console;
 
   return Engine;
 
@@ -19540,7 +19582,7 @@ Engine.Document = (function(_super) {
       return;
     }
     Document.__super__.start.apply(this, arguments);
-    capture = this.expressions.capture('load stylesheets');
+    capture = this.expressions.capture('initial');
     this.run([['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     if (capture) {
       this.expressions.release();
@@ -19882,7 +19924,7 @@ Rules = (function() {
       path = continuation + operation.parent.uid;
       query = this.queries[path];
       if (query === void 0 || (!!query !== !!condition)) {
-        console.group(path);
+        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent, 'font-weight: normal; color: #999', continuation);
         if (query !== void 0) {
           this.queries.clean(path, continuation, operation.parent, scope);
         }
@@ -19891,7 +19933,7 @@ Rules = (function() {
         } else if (operation.parent[3]) {
           this.expressions.evaluate(operation.parent[3], path, scope, meta);
         }
-        console.groupEnd(path);
+        this.console.groupEnd(path);
         return this.queries[path] = condition != null ? condition : null;
       }
     }
@@ -19930,7 +19972,6 @@ Rules = (function() {
         }
       }
       rules = this['_' + type](source);
-      console.log('Eval', rules, continuation);
       rules = GSS.clone(rules);
       capture = this.expressions.capture(type);
       this.run(rules, continuation, scope, GSS.DOWN);
@@ -20049,7 +20090,6 @@ Selectors = (function() {
       head = operation.head || operation;
       name = operation.def.group;
       shortcut = [name, head.groupped];
-      console.error('shortcutting', head.groupped);
       shortcut.parent = head.parent;
       shortcut.index = head.index;
       if (head.bound) {
@@ -20383,9 +20423,7 @@ Selectors = (function() {
       var collection, index, path;
       path = this.getContinuation(this.queries.getOperationPath(continuation));
       collection = this.queries.get(path);
-      console.info(path, continuation);
       index = collection != null ? collection.indexOf(node) : void 0;
-      console.error('nextizzle', collection[index + 1], path);
       if ((index == null) || index === -1 || index === collection.length - 1) {
         return;
       }
@@ -20403,10 +20441,6 @@ Selectors = (function() {
       if (index === -1 || !index) {
         return;
       }
-      if ((continuation != null ? continuation.indexOf(',') : void 0) === -1) {
-        debugger;
-      }
-      console.error('precious', collection.slice(), collection[index - 1], path);
       return collection[index - 1];
     }
   };
@@ -20866,11 +20900,6 @@ Measurements = (function() {
     }
   };
 
-  Measurements.prototype.deferComputation = {
-    'intrinsic-x': 'intrinsic-x',
-    'intrinsic-y': 'intrinsic-y'
-  };
-
   Measurements.prototype.compute = function(node, property, continuation, old) {
     var current, id, path, prop, value, _ref, _ref1;
     if (node.nodeType) {
@@ -21082,13 +21111,12 @@ Expressions = (function() {
   }
 
   Expressions.prototype.pull = function(expression, continuation) {
-    var buffer, result;
+    var capture, result;
     if (expression) {
-      buffer = this.capture(expression.length + ' command' + (expression.length > 1 && 's' || ''));
-      console.log('%c\t\t\t\t%o\t\t\t%s', 'color: #666', expression, continuation || '');
+      capture = this.capture(expression);
       this.engine.start();
       result = this.evaluate.apply(this, arguments);
-      if (buffer) {
+      if (capture) {
         this.release();
       }
     }
@@ -21110,20 +21138,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.flush = function() {
-    var added, buffer, time;
+    var added, buffer;
     buffer = this.buffer;
+    this.engine.console.groupEnd();
     if (this.engine._onFlush) {
       added = this.engine._onFlush(buffer);
       buffer = buffer && added && added.concat(buffer) || buffer || added;
     }
     this.lastOutput = GSS.clone(buffer);
-    if (this.engine.onDOMContentLoaded) {
-      if (this.lastTime) {
-        time = GSS.time(this.lastTime);
-        console.log('%c%o' + time + 'ms', 'color: #999', this.lastOutput);
-        this.lastTime = void 0;
-      }
-    }
     if (buffer) {
       this.buffer = void 0;
       return this.output.pull(buffer);
@@ -21135,7 +21157,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, contd, evaluate, evaluated, padding, result, _ref;
+    var args, contd, evaluate, evaluated, result, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
@@ -21161,8 +21183,7 @@ Expressions = (function() {
       return;
     }
     if (operation.name) {
-      padding = Array(5 - Math.floor(operation.name.length / 4)).join('\t');
-      console.log('%c%s%s%o\t\t%s', 'color: #666', operation.name, padding, args, continuation || "");
+      this.engine.console.row(operation, args, continuation || "");
     }
     if (operation.def.noop) {
       result = args;
@@ -21292,13 +21313,13 @@ Expressions = (function() {
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
         if (parent && this.engine.isCollection(result)) {
-          console.group(continuation);
+          this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             breadcrumbs = this.engine.getContinuation(continuation, item, GSS.UP);
             this.evaluate(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
-          console.groupEnd(continuation);
+          this.engine.console.groupEnd();
           return;
         } else {
           captured = parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta) : void 0 : void 0;
@@ -21468,29 +21489,43 @@ Expressions = (function() {
   };
 
   Expressions.prototype.release = function() {
-    console.groupEnd();
-    this.lastTime = this.time;
-    this.time = void 0;
-    if (this.engine.expressions.buffer) {
-      this.engine.expressions.flush();
+    this.endTime = GSS.time();
+    if (this.buffer) {
+      this.flush();
     } else {
-      this.engine.expressions.buffer = void 0;
+      this.buffer = void 0;
+      this.engine.console.groupEnd();
     }
-    return this.lastTime;
+    return this.endTime;
   };
 
-  Expressions.prototype.capture = function(reason) {
-    if (this.buffer === void 0) {
-      reason || (reason = '');
-      if (this.engine.onDOMContentLoaded) {
-        console.group('%cDocument%c ' + reason, 'font-weight: normal', 'color: #666');
-      } else {
-        console.groupCollapsed('%cSolver%c ' + reason, 'font-weight: normal', 'font-weight: normal; color: #999');
-      }
-      this.time = GSS.time();
-      this.buffer = null;
-      return true;
+  Expressions.prototype.capture = function(reason, type) {
+    var fmt, method, name;
+    if (type == null) {
+      type = 'command';
     }
+    if (this.buffer !== void 0) {
+      return;
+    }
+    fmt = '%c%s%c';
+    if (typeof reason !== 'string') {
+      if (reason.slice) {
+        reason = GSS.clone(reason);
+      }
+      fmt += '  \t\t%O';
+    } else {
+      fmt += '  \t\t%s';
+    }
+    if (this.engine.onDOMContentLoaded) {
+      name = 'Document';
+    } else {
+      name = 'Solver  ';
+      method = 'groupCollapsed';
+    }
+    this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
+    this.startTime = GSS.time();
+    this.buffer = null;
+    return true;
   };
 
   return Expressions;
@@ -21541,9 +21576,9 @@ Queries = (function() {
   };
 
   Queries.prototype.pull = function(mutations) {
-    var capture, continuation, id, index, mutation, node, path, plural, plurals, property, queries, query, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
+    var capture, continuation, evalDiff, id, index, mutation, node, path, plural, plurals, property, queries, query, queryDiff, queryTime, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
     this.buffer = this.updated = this.lastOutput = null;
-    capture = this.output.capture(mutations.length + ' mutation' + (mutations.length > 1 && 's' || ''));
+    capture = this.output.capture(mutations);
     this.engine.start();
     for (_i = 0, _len = mutations.length; _i < _len; _i++) {
       mutation = mutations[_i];
@@ -21568,6 +21603,7 @@ Queries = (function() {
       }
       this.removed = void 0;
     }
+    queryTime = GSS.time();
     while (queries = this.buffer) {
       this.buffer = null;
       this.lastOutput = this.lastOutput && this.lastOutput.concat(queries) || queries;
@@ -21602,7 +21638,11 @@ Queries = (function() {
         delete node._gss_id;
       }
     }
-    console.log('Queries', this.updated);
+    if (this.updated) {
+      evalDiff = GSS.time(this.engine.expressions.endTime, this.engine.expressions.startTime);
+      queryDiff = GSS.time(queryTime);
+      this.engine.console.row('queries', this.updated, evalDiff + 'ms + ' + queryDiff + 'ms');
+    }
     this.buffer = this.updated = void 0;
     for (path in this) {
       query = this[path];
@@ -21915,7 +21955,6 @@ Queries = (function() {
         index += 3;
         continue;
       }
-      console.log('Unwatch', watcher.path, contd, refs);
       subscope = watchers[index + 2];
       watchers.splice(index, 3);
       if (!quick) {
@@ -22010,7 +22049,10 @@ Queries = (function() {
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural) {
     var collection, node;
-    console.group('Remove ' + (id.nodeType && this.engine.identify(id) || id) + ' from ' + (continuation || ''));
+    if (continuation === 'style$2↓.a$a3↑!+.a→') {
+      debugger;
+    }
+    this.engine.console.row('remove', id.nodeType && this.engine.identify(id) || id, continuation);
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identify(id);
@@ -22022,13 +22064,13 @@ Queries = (function() {
       if (this.removeFromCollection(node, continuation, operation, scope, manual) !== false) {
         this.removeFromNode(id, continuation, operation, scope, plural);
       }
+      console.log(continuation, collection != null ? collection.length : void 0, id);
       if (collection && !collection.length) {
-        this.set(continuation, void 0);
+        return this.set(continuation, void 0);
       }
     } else if (node) {
-      this.unwatch(id, true);
+      return this.unwatch(id, true);
     }
-    return console.groupEnd();
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, plural) {
@@ -22046,7 +22088,7 @@ Queries = (function() {
         this.remove(result, oppath);
       }
     }
-    if (result) {
+    if (result != null ? result.nodeType : void 0) {
       this.unpair(path, result);
     }
     if (!plural) {
@@ -22089,11 +22131,9 @@ Queries = (function() {
     }
     rightPath = this.getScopePath(path) + key;
     rightUpdate = (_ref1 = this.updated) != null ? _ref1[rightPath] : void 0;
-    console.error(rightPath, rightUpdate, this, this.updated);
     rightNew = rightUpdate && rightUpdate[0] || this.get(rightPath);
     if (!rightNew && collected) {
       rightNew = this.get(path + this.engine.identify(leftNew[0] || leftOld[0]) + '→' + key);
-      console.error(rightOld, path + '→' + this.engine.identify(leftNew[0] || leftOld[0]) + key, 4444444);
     }
     rightNew || (rightNew = []);
     if (rightNew.old !== void 0) {
@@ -22143,7 +22183,7 @@ Queries = (function() {
         this.engine.expressions.pull(operation, contd, scope, GSS.UP, true, true);
       }
     }
-    return console.log('Repair', path, GSS.RIGHT, key, [added, removed], [leftNew, leftOld], [rightNew, rightOld]);
+    return this.engine.console.row('repair', [added, removed], [leftNew, leftOld], [rightNew, rightOld]);
   };
 
   Queries.prototype.isPariedRegExp = /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i;
@@ -22582,7 +22622,7 @@ Values = (function() {
           break;
         }
         if (typeof capture === "undefined" || capture === null) {
-          capture = this.engine.expressions.capture(path + ' changed') || false;
+          capture = this.engine.expressions.capture(path) || false;
         }
         this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value);
       }
@@ -22594,13 +22634,13 @@ Values = (function() {
   };
 
   Values.prototype.merge = function(object) {
-    var buffer, path, value;
-    buffer = this.engine.expressions.buffer === void 0;
+    var capturing, path, value;
+    capturing = this.engine.expressions.buffer === void 0;
     for (path in object) {
       value = object[path];
-      this.set(path, void 0, value, buffer);
+      this.set(path, void 0, value, capturing);
     }
-    if (buffer) {
+    if (capturing && this.engine.expressions.buffer !== void 0) {
       this.engine.expressions.release();
     }
     return this;
@@ -22641,7 +22681,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, property, response, subcommand, time, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var command, lastTime, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -22688,8 +22728,9 @@ Solutions = (function() {
     }
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    time = GSS.time(this.engine.expressions.lastTime);
-    console.log('%c%o' + time + 'ms', 'color: #999', JSON.parse(JSON.stringify(response)));
+    if (lastTime = this.engine.expressions.lastTime) {
+      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(lastTime) + 'ms');
+    }
     this.push(response);
   };
 

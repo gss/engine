@@ -144,6 +144,8 @@ class Engine
 
   # Get or generate uid for a given object.
   @identify: (object, generate) ->
+    if object?.push?
+      debugger
     unless id = object._gss_id
       if object == document
         object = window
@@ -279,11 +281,35 @@ class Engine
 
       return fn.apply(context || @, args)
 
-  @time: (other) ->
-    time = performance?.now() || Date.now?() || + (new Date)
+  @time: (other, time) ->
+    time ||= performance?.now() || Date.now?() || + (new Date)
     return time unless other
     return Math.floor((time - other) * 100) / 100
 
+  @Console: (@level) ->
+  @Console::methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
+  @Console::groups = 0
+
+  @Console::row = (a, b, c) ->
+    a = a.name || a
+    p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
+    if typeof b == 'object'
+      @log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "")
+    else
+      p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
+      @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
+
+  for method in @Console::methods 
+    @Console::[method] = do (method) ->
+      return ->
+        if method == 'group' || method == 'groupCollapsed'
+          Engine.Console::groups++
+        else if method == 'groupEnd'
+          Engine.Console::groups--
+        console?[method]?(arguments...)
+
+  @console: new Engine.Console
+  console: Engine.console
 
 this.GSS = Engine
 

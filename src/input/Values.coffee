@@ -62,7 +62,7 @@ class Values
       for watcher, index in watchers by 3
         break unless watcher
         unless capture?
-          capture = @engine.expressions.capture(path + ' changed') || false
+          capture = @engine.expressions.capture(path) || false
 
         @engine.expressions.evaluate watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value
         
@@ -70,10 +70,10 @@ class Values
     return value
     
   merge: (object) ->
-    buffer = @engine.expressions.buffer == undefined
+    capturing = @engine.expressions.buffer == undefined
     for path, value of object
-      @set path, undefined, value, buffer
-    @engine.expressions.release() if buffer
+      @set path, undefined, value, capturing
+    @engine.expressions.release() if capturing && @engine.expressions.buffer != undefined
 
     @
 

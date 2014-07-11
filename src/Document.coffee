@@ -85,7 +85,7 @@ class Engine.Document extends Engine
   start: ->
     return if @running
     super
-    capture = @expressions.capture('load stylesheets')
+    capture = @expressions.capture('initial')
     @run [
       ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
       ['load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
