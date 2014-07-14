@@ -30,32 +30,12 @@ class Queries
   disconnect: ->
     @listener.disconnect()
 
-  # Re-evaluate updated queries
-  # Watchers are stored in a single array in groups of 3 properties
-  push: (query, continuation, scope) ->
-    if @buffer == undefined
-      @output.pull query, continuation, scope
-    else if !@buffer || @engine.values.indexOf(@buffer, query, continuation, scope) == -1
-      (@buffer ||= []).push(query, continuation, scope)
-    return
-
-  # Listen to changes in DOM to broadcast them all around, update queries in batch
-  pull: (mutations) ->
+  capture: (mutations) ->
     @buffer = @updated = @lastOutput = null
-    capture = @output.capture(mutations) 
-    @engine.start()
-    for mutation in mutations
-      switch mutation.type
-        when "attributes"
-          @$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
-        when "childList"
-          @$children(mutation.target, mutation)
-        when "characterData"
-          @$characterData(mutation.target, mutation)
-
-      @$intrinsics(mutation.target)
-
     @_repairing = null
+    @output.capture(mutations)
+
+  release: ->
     if @removed
       for id in @removed
         @remove id
@@ -88,14 +68,38 @@ class Queries
 
       @engine.console.row('queries', @updated, evalDiff + 'ms + ' + queryDiff + 'ms')
     @buffer = @updated = undefined
-    for path, query of @
-      if query && query.old != undefined
-        delete query.old
-    if capture
-      if @engine.expressions.buffer
-        @output.release()
-      else
-        @output.flush()
+
+    if @engine.expressions.buffer
+      @output.release()
+    else
+      @output.flush()
+
+
+  # Re-evaluate updated queries
+  # Watchers are stored in a single array in groups of 3 properties
+  push: (query, continuation, scope) ->
+    if @buffer == undefined
+      @output.pull query, continuation, scope
+    else if !@buffer || @engine.values.indexOf(@buffer, query, continuation, scope) == -1
+      (@buffer ||= []).push(query, continuation, scope)
+    return
+
+  # Listen to changes in DOM to broadcast them all around, update queries in batch
+  pull: (mutations) ->
+    updating = @capture(mutations)
+    debugger
+    for mutation in mutations
+      switch mutation.type
+        when "attributes"
+          @$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
+        when "childList"
+          @$children(mutation.target, mutation)
+        when "characterData"
+          @$characterData(mutation.target, mutation)
+
+      @$intrinsics(mutation.target)
+
+    @release() if updating
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -487,7 +491,7 @@ class Queries
       else
         @engine.expressions.pull operation, contd, scope, GSS.UP, true, true
 
-    @engine.console.row('repair', [added, removed], [leftNew, leftOld], [rightNew, rightOld])
+    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path)
 
   isPariedRegExp: /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i
                   # path1 ^        id ^        ^path2   
@@ -539,8 +543,9 @@ class Queries
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   pair: (continuation, operation, scope, result) ->
-    console.error(continuation, @isPaired(operation, continuation, true))
+    console.error(continuation, @isPaired(operation, continuation, true), 'pair the fuck up')
     return unless match = @isPaired(operation, continuation, true)
+    debugger
     left = @getOperationPath(match[1])
     plurals = (@_plurals ||= {})[left] ||= []
     if plurals.indexOf(operation.path) == -1
@@ -642,7 +647,6 @@ class Queries
         # Snapshot live node list for future reference
         if result && result.item
           result = Array.prototype.slice.call(result, 0)
-          # result.old = o || old || null
       else
         added = result
 

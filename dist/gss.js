@@ -19537,13 +19537,10 @@ Engine.Document = (function(_super) {
 
   Document.prototype.run = function() {
     var captured, result;
-    if (this.queries.updated === void 0) {
-      captured = this.queries.updated;
-      this.queries.updated = null;
-    }
+    captured = this.queries.capture();
     result = this.expressions.pull.apply(this.expressions, arguments);
-    if (captured !== void 0) {
-      this.queries.updated = captured;
+    if (captured) {
+      this.queries.release();
     }
     return result;
   };
@@ -19597,10 +19594,10 @@ Engine.Document = (function(_super) {
       return;
     }
     Document.__super__.start.apply(this, arguments);
-    capture = this.expressions.capture('initial');
+    capture = this.queries.capture('initial');
     this.run([['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     if (capture) {
-      this.expressions.release();
+      this.queries.release();
     }
     return true;
   };
@@ -20850,6 +20847,7 @@ Measurements = (function() {
 
   Measurements.prototype.onMeasure = function(node, x, y, styles, full) {
     var id, path, prop, properties, _i, _len;
+    console.error('onMeasure', node, x, y, styles, this.intrinsic, full);
     if (!this.intrinsic) {
       return;
     }
@@ -20970,7 +20968,6 @@ Measurements = (function() {
       value = this[property](node, continuation);
     }
     (this.computed || (this.computed = {}))[path] = value;
-    console.warn('kompooted', path, value);
     return path;
   };
 
@@ -21149,7 +21146,6 @@ Expressions = (function() {
     var capture, result;
     if (expression) {
       capture = this.capture(expression);
-      this.engine.start();
       result = this.evaluate.apply(this, arguments);
       if (capture) {
         this.release();
@@ -21217,6 +21213,9 @@ Expressions = (function() {
       return;
     }
     if (operation.name) {
+      if (operation.name === '$class') {
+        debugger;
+      }
       this.engine.console.row(operation, args, continuation || "");
     }
     if (operation.def.noop) {
@@ -21533,14 +21532,15 @@ Expressions = (function() {
     if (this.buffer !== void 0) {
       return;
     }
+    this.engine.start();
     fmt = '%c%s%c';
     if (typeof reason !== 'string') {
-      if (reason.slice) {
+      if (reason != null ? reason.slice : void 0) {
         reason = GSS.clone(reason);
       }
       fmt += '\t\t%O';
     } else {
-      fmt += '\t\t%s';
+      fmt += '\t%s';
     }
     if (this.engine.onDOMContentLoaded) {
       name = 'GSS.Document';
@@ -21593,38 +21593,18 @@ Queries = (function() {
     return this.listener.disconnect();
   };
 
-  Queries.prototype.push = function(query, continuation, scope) {
-    if (this.buffer === void 0) {
-      this.output.pull(query, continuation, scope);
-    } else if (!this.buffer || this.engine.values.indexOf(this.buffer, query, continuation, scope) === -1) {
-      (this.buffer || (this.buffer = [])).push(query, continuation, scope);
-    }
+  Queries.prototype.capture = function(mutations) {
+    this.buffer = this.updated = this.lastOutput = null;
+    this._repairing = null;
+    return this.output.capture(mutations);
   };
 
-  Queries.prototype.pull = function(mutations) {
-    var capture, continuation, evalDiff, id, index, mutation, node, path, plural, plurals, property, queries, query, queryDiff, queryTime, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
-    this.buffer = this.updated = this.lastOutput = null;
-    capture = this.output.capture(mutations);
-    this.engine.start();
-    for (_i = 0, _len = mutations.length; _i < _len; _i++) {
-      mutation = mutations[_i];
-      switch (mutation.type) {
-        case "attributes":
-          this.$attribute(mutation.target, mutation.attributeName, mutation.oldValue);
-          break;
-        case "childList":
-          this.$children(mutation.target, mutation);
-          break;
-        case "characterData":
-          this.$characterData(mutation.target, mutation);
-      }
-      this.$intrinsics(mutation.target);
-    }
-    this._repairing = null;
+  Queries.prototype.release = function() {
+    var continuation, evalDiff, id, index, node, plural, plurals, property, queries, query, queryDiff, queryTime, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
     if (this.removed) {
       _ref = this.removed;
-      for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-        id = _ref[_j];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        id = _ref[_i];
         this.remove(id);
       }
       this.removed = void 0;
@@ -21633,7 +21613,7 @@ Queries = (function() {
     while (queries = this.buffer) {
       this.buffer = null;
       this.lastOutput = this.lastOutput && this.lastOutput.concat(queries) || queries;
-      for (index = _k = 0, _len2 = queries.length; _k < _len2; index = _k += 3) {
+      for (index = _j = 0, _len1 = queries.length; _j < _len1; index = _j += 3) {
         query = queries[index];
         if (!query) {
           break;
@@ -21650,7 +21630,7 @@ Queries = (function() {
       for (property in repairing) {
         value = repairing[property];
         if (plurals = this._plurals[property]) {
-          for (index = _l = 0, _len3 = plurals.length; _l < _len3; index = _l += 3) {
+          for (index = _k = 0, _len2 = plurals.length; _k < _len2; index = _k += 3) {
             plural = plurals[index];
             this.repair(property, plural, plurals[index + 1], plurals[index + 2], plurals[index + 3]);
           }
@@ -21659,8 +21639,8 @@ Queries = (function() {
     }
     if (this.removing) {
       _ref1 = this.removing;
-      for (_m = 0, _len4 = _ref1.length; _m < _len4; _m++) {
-        node = _ref1[_m];
+      for (_l = 0, _len3 = _ref1.length; _l < _len3; _l++) {
+        node = _ref1[_l];
         delete node._gss_id;
       }
     }
@@ -21670,18 +21650,41 @@ Queries = (function() {
       this.engine.console.row('queries', this.updated, evalDiff + 'ms + ' + queryDiff + 'ms');
     }
     this.buffer = this.updated = void 0;
-    for (path in this) {
-      query = this[path];
-      if (query && query.old !== void 0) {
-        delete query.old;
-      }
+    if (this.engine.expressions.buffer) {
+      return this.output.release();
+    } else {
+      return this.output.flush();
     }
-    if (capture) {
-      if (this.engine.expressions.buffer) {
-        return this.output.release();
-      } else {
-        return this.output.flush();
+  };
+
+  Queries.prototype.push = function(query, continuation, scope) {
+    if (this.buffer === void 0) {
+      this.output.pull(query, continuation, scope);
+    } else if (!this.buffer || this.engine.values.indexOf(this.buffer, query, continuation, scope) === -1) {
+      (this.buffer || (this.buffer = [])).push(query, continuation, scope);
+    }
+  };
+
+  Queries.prototype.pull = function(mutations) {
+    var mutation, updating, _i, _len;
+    updating = this.capture(mutations);
+    debugger;
+    for (_i = 0, _len = mutations.length; _i < _len; _i++) {
+      mutation = mutations[_i];
+      switch (mutation.type) {
+        case "attributes":
+          this.$attribute(mutation.target, mutation.attributeName, mutation.oldValue);
+          break;
+        case "childList":
+          this.$children(mutation.target, mutation);
+          break;
+        case "characterData":
+          this.$characterData(mutation.target, mutation);
       }
+      this.$intrinsics(mutation.target);
+    }
+    if (updating) {
+      return this.release();
     }
   };
 
@@ -22209,7 +22212,7 @@ Queries = (function() {
         this.engine.expressions.pull(operation, contd, scope, GSS.UP, true, true);
       }
     }
-    return this.engine.console.row('repair', [added, removed], [leftNew, leftOld], [rightNew, rightOld]);
+    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path);
   };
 
   Queries.prototype.isPariedRegExp = /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i;
@@ -22274,10 +22277,11 @@ Queries = (function() {
 
   Queries.prototype.pair = function(continuation, operation, scope, result) {
     var collection, element, left, match, plurals, pushed, schedule, _base;
-    console.error(continuation, this.isPaired(operation, continuation, true));
+    console.error(continuation, this.isPaired(operation, continuation, true), 'pair the fuck up');
     if (!(match = this.isPaired(operation, continuation, true))) {
       return;
     }
+    debugger;
     left = this.getOperationPath(match[1]);
     plurals = (_base = (this._plurals || (this._plurals = {})))[left] || (_base[left] = []);
     if (plurals.indexOf(operation.path) === -1) {
@@ -23016,7 +23020,6 @@ Styles = (function() {
         if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
           pixels = value + 'px';
         }
-        console.error(element, pixels);
         if (positioner) {
           if (!style[camel]) {
             if ((style.positioning = (style.positioning || 0) + 1) === 1) {
@@ -23046,7 +23049,7 @@ Styles = (function() {
         }
       }
     }
-    this.adjust(node, null, null, positioning, null, true);
+    this.adjust(node, null, null, positioning, null, !!data);
     for (id in positioning) {
       styles = positioning[id];
       for (prop in styles) {
@@ -23055,7 +23058,6 @@ Styles = (function() {
       }
     }
     queries = this.engine.queries.connect();
-    console.error(positioning);
     return positioning;
   };
 
@@ -23097,12 +23099,12 @@ Styles = (function() {
     if (uid = element._gss_id) {
       styles = positioning != null ? positioning[uid] : void 0;
       if (values = this.engine.values) {
-        if ((styles != null ? styles.x : void 0) == null) {
+        if ((styles != null ? styles.x : void 0) === void 0) {
           if ((left = values[uid + '[x]']) != null) {
             (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).x = left;
           }
         }
-        if ((styles != null ? styles.y : void 0) == null) {
+        if ((styles != null ? styles.y : void 0) === void 0) {
           if ((top = values[uid + '[y]']) != null) {
             (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).y = top;
           }

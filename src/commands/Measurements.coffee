@@ -71,6 +71,7 @@ class Measurements
     return @_getSuggestions(!buffer)
 
   onMeasure: (node, x, y, styles, full) ->
+    console.error('onMeasure', node, x, y, styles, @intrinsic, full)
     return unless @intrinsic
     if id = node._gss_id
       if properties = @intrinsic[id]
@@ -163,7 +164,6 @@ class Measurements
       value = @[property](node, continuation)
 
     (@computed ||= {})[path] = value
-    console.warn('kompooted', path, value)
     return path
 
   getCommonParent: (a, b) ->

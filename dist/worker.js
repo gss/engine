@@ -33,7 +33,6 @@ Expressions = (function() {
     var capture, result;
     if (expression) {
       capture = this.capture(expression);
-      this.engine.start();
       result = this.evaluate.apply(this, arguments);
       if (capture) {
         this.release();
@@ -101,6 +100,9 @@ Expressions = (function() {
       return;
     }
     if (operation.name) {
+      if (operation.name === '$class') {
+        debugger;
+      }
       this.engine.console.row(operation, args, continuation || "");
     }
     if (operation.def.noop) {
@@ -417,14 +419,15 @@ Expressions = (function() {
     if (this.buffer !== void 0) {
       return;
     }
+    this.engine.start();
     fmt = '%c%s%c';
     if (typeof reason !== 'string') {
-      if (reason.slice) {
+      if (reason != null ? reason.slice : void 0) {
         reason = GSS.clone(reason);
       }
       fmt += '\t\t%O';
     } else {
-      fmt += '\t\t%s';
+      fmt += '\t%s';
     }
     if (this.engine.onDOMContentLoaded) {
       name = 'GSS.Document';

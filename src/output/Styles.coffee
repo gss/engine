@@ -87,7 +87,6 @@ class Styles
       if style[camel] != undefined
         if typeof value == 'number' && (camel != 'zIndex' && camel != 'opacity')
           pixels = value + 'px'
-        console.error(element, pixels)
         if (positioner)
           if !style[camel]
             if (style.positioning = (style.positioning || 0) + 1) == 1
@@ -110,7 +109,7 @@ class Styles
           @set(path, undefined, value, positioning)
 
     # Adjust positioning styles to respect element offsets 
-    @adjust(node, null, null, positioning, null, true)
+    @adjust(node, null, null, positioning, null, !!data)
 
     #  Set new positions in bulk (Reflow)
     for id, styles of positioning
@@ -118,7 +117,6 @@ class Styles
         @set id, prop, value
         
     queries = @engine.queries.connect()
-    console.error(positioning)
     return positioning
 
   # Position things
@@ -155,10 +153,10 @@ class Styles
       # Adjust newly set positions to respect parent offsets
       styles = positioning?[uid]
       if values = @engine.values
-        unless styles?.x?
+        if styles?.x == undefined
           if (left = values[uid + '[x]'])?
             (styles ||= (positioning[uid] ||= {})).x = left
-        unless styles?.y?
+        if styles?.y == undefined
           if (top = values[uid + '[y]'])?
             (styles ||= (positioning[uid] ||= {})).y = top
 

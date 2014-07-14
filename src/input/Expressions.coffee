@@ -15,7 +15,6 @@ class Expressions
   pull: (expression, continuation) ->
     if expression
       capture = @capture(expression)
-      @engine.start()
       result = @evaluate.apply(@, arguments)
       @release() if capture
        
@@ -78,6 +77,8 @@ class Expressions
     return if args == false
 
     if operation.name
+      if operation.name == '$class'
+        debugger
       @engine.console.row(operation, args, continuation || "")
 
     # Execute function and log it in continuation path
@@ -358,13 +359,14 @@ class Expressions
 
   capture: (reason) ->
     return unless @buffer == undefined
+    @engine.start()
     fmt = '%c%s%c'
     
     if typeof reason != 'string'
-      reason = GSS.clone(reason) if reason.slice
+      reason = GSS.clone(reason) if reason?.slice
       fmt += '\t\t%O'
     else
-      fmt += '\t\t%s'
+      fmt += '\t%s'
     if @engine.onDOMContentLoaded
       name = 'GSS.Document'
     else

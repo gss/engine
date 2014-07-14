@@ -46,6 +46,7 @@ describe 'GSS commands', ->
         <div class="box block" id="12322">One</div>
         <div class="box block" id="34222">One</div>
       """
+      window.$engine = engine
       engine.run [
           ['stay', ['get', ['$class','box']  , 'x'    , '%1']]
           ['stay', ['get', ['$class','box']  , 'y'    , '%2']]

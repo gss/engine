@@ -49,16 +49,12 @@ class Engine.Document extends Engine
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
-  # Delegate: Pass input to interpreter, buffer DOM queries within command batch
+  # Delegate: Pass input to interpreter
   run: ->
-    # Turn on batching
-    if @queries.updated == undefined
-      captured = @queries.updated
-      @queries.updated = null
+    captured = @queries.capture()
     result = @expressions.pull.apply(@expressions, arguments)
-    if captured != undefined
-      @queries.updated = captured # Forget batched stuff 
-    return result
+    @queries.release() if captured
+    result
     
   onresize: (e = '::window') ->
     id = e.target && @identify(e.target) || e
@@ -91,12 +87,12 @@ class Engine.Document extends Engine
   start: ->
     return if @running
     super
-    capture = @expressions.capture('initial')
+    capture = @queries.capture('initial')
     @run [
       ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
       ['load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
     ]
-    @expressions.release() if capture
+    @queries.release() if capture
     return true
     
   
