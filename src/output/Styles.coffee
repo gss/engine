@@ -16,25 +16,10 @@ class Styles
         if property != 'intrinsic-x' && property != 'intrinsic-y'
           (intrinsic ||= {})[path] = value
 
-    # Apply changed styles in batch, 
-    # leave out positioning properties (Restyle/Reflow)
-    positioning = {}
-    @engine.queries.disconnect()
-    for path, value of data
-      unless value == undefined
-        @set(path, undefined, value, positioning)
-    @engine.queries.connect()
 
-    # Adjust positioning styles to respect 
-    # element offsets 
-    @render(null, null, null, positioning, null, true)
-
-    #  Set new positions in bulk (Restyle)
-    for id, styles of positioning
-      for prop, value of styles
-        @set id, prop, value
-
-    # Re-measure elements (Reflow)
+    positioning = @render(data)
+    
+    # Re-measure elements
     if intrinsic
       for path, value of intrinsic
         data[path] = @set(path, undefined, value, positioning, true)
@@ -48,9 +33,9 @@ class Styles
 
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
     @data = data
-    if suggests = @engine._getComputedProperties()
-      capture = @engine.expressions.capture(suggests.length + ' intrinsics')
-      @engine.pull(suggests)
+    if suggestions = @engine._getSuggestions()
+      capture = @engine.expressions.capture(suggestions.length + ' intrinsics')
+      @engine.pull(suggestions)
       @engine.expressions.release() if capture
     else
       @data = undefined
@@ -88,9 +73,9 @@ class Styles
     else
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        measured = @engine._compute(element,  property, undefined, value)
-        if measured?
-          value = measured
+        path = @engine._compute(element,  property, undefined, value)
+        if (val = @engine.computed[path])?
+          value = val
         return value
         
       if positioner
@@ -102,24 +87,48 @@ class Styles
       if style[camel] != undefined
         if typeof value == 'number' && (camel != 'zIndex' && camel != 'opacity')
           pixels = value + 'px'
+        console.error(element, pixels)
         if (positioner)
           if !style[camel]
             if (style.positioning = (style.positioning || 0) + 1) == 1
               style.position = 'absolute'
-          else if !value
+          else unless value?
             unless --style.positioning 
               style.position = ''
         style[camel] = pixels ? value
     value
 
-  # Position 
-  render: (parent, x = 0, y = 0, positioning, offsetParent, full) ->
+  render: (data, node) ->
+    @engine.queries.disconnect()
+
+    # Apply changed styles in batch, 
+    # leave out positioning properties (Restyle/Reflow)
+    positioning = {}
+    if data
+      for path, value of data
+        unless value == undefined
+          @set(path, undefined, value, positioning)
+
+    # Adjust positioning styles to respect element offsets 
+    @adjust(node, null, null, positioning, null, true)
+
+    #  Set new positions in bulk (Reflow)
+    for id, styles of positioning
+      for prop, value of styles
+        @set id, prop, value
+        
+    queries = @engine.queries.connect()
+    console.error(positioning)
+    return positioning
+
+  # Position things
+  adjust: (parent, x = 0, y = 0, positioning, offsetParent, full) ->
     scope = @engine.scope
     parent ||= scope
     # Calculate new offsets for given element and styles
     if offsets = @placehold(positioning, parent, x, y, full)
-      x += offsets.left
-      y += offsets.top
+      x += offsets.x || 0
+      y += offsets.y || 0
 
     # Select all children
     children = @engine.commands['$>'][1](parent);
@@ -134,26 +143,37 @@ class Styles
         y += parent.offsetTop + parent.clientTop
         offsetParent = parent
 
-
     # Position children
     for child in children
-      @render(child, x, y, positioning, offsetParent, full)
-    return @
+      @adjust(child, x, y, positioning, offsetParent, full)
+    return positioning
 
   # Calculate offsets according to new values (but dont set anything)
   placehold: (positioning, element, x, y, full) ->
+    offsets = undefined
     if uid = element._gss_id
-      if styles = positioning?[uid]
-        offsets = {left: 0, top: 0}
+      # Adjust newly set positions to respect parent offsets
+      styles = positioning?[uid]
+      if values = @engine.values
+        unless styles?.x?
+          if (left = values[uid + '[x]'])?
+            (styles ||= (positioning[uid] ||= {})).x = left
+        unless styles?.y?
+          if (top = values[uid + '[y]'])?
+            (styles ||= (positioning[uid] ||= {})).y = top
+
+      if styles
         for property, value of styles
           unless value == null
             switch property
               when "x"
                 styles.x = value - x
-                offsets.left = value - x
+                (offsets ||= {}).x = value - x
               when "y"
                 styles.y = value - y
-                offsets.top = value - y
+                (offsets ||= {}).y = value - y
+
+      # Let other measurements hook up into this batch
       @engine._onMeasure(element, x, y, styles, full)
 
 

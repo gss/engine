@@ -1,3 +1,5 @@
+require('cassowary')
+
 class Solutions
   constructor: (@engine, @output) ->
     @solver = new c.SimplexSolver()
@@ -35,8 +37,9 @@ class Solutions
     @added = @nullified = undefined
     @lastOutput = response
 
-    if lastTime = @engine.expressions.lastTime
-      @engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(lastTime) + 'ms')
+    if startTime = @engine.expressions.startTime
+      
+      @engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(startTime) + 'ms')
 
     @push(response)
     return
@@ -62,7 +65,6 @@ class Solutions
           unless --path.counter
             (@nullified ||= {})[path.name] = path
     else if constrain instanceof c.Variable
-      debugger
       if constrain.editing
         (@nullified ||= {})[constrain.name] = constrain
 
@@ -74,6 +76,7 @@ class Solutions
     delete @variables[variable.name]
     # Explicitly remove variable from cassowary
     @solver._externalParametricVars.delete(variable)
+    console.log('nullify', variable.name)
             
 
 
@@ -107,7 +110,6 @@ class Solutions
 
   suggest: (path, value, strength, weight, continuation) ->
     #@solver.solve()
-    debugger
     if typeof path == 'string'
       unless variable = @variables[path]
         if continuation

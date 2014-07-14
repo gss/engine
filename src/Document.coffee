@@ -61,12 +61,18 @@ class Engine.Document extends Engine
     return result
     
   onresize: (e = '::window') ->
-    @_compute(e.target || e, "width", undefined, false)
-    @_compute(e.target || e, "height", undefined, false)
-
+    id = e.target && @identify(e.target) || e
+    captured = @expressions.capture(id + ' resized') 
+    @_compute(id, "width", undefined, false)
+    @_compute(id, "height", undefined, false)
+    @expressions.release() if captured
+    
   onscroll: (e = '::window') ->
-    @_compute(e.target || e, "scroll-top", undefined, false)
-    @_compute(e.target || e, "scroll-left", undefined, false)
+    id = e.target && @identify(e.target) || e
+    captured = @expressions.capture(id + ' scrolled') 
+    @_compute(id, "scroll-top", undefined, false)
+    @_compute(id, "scroll-left", undefined, false)
+    @expressions.release() if captured
 
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @
@@ -76,7 +82,7 @@ class Engine.Document extends Engine
   # Observe stylesheets in dom
   onDOMContentLoaded: ->
     @scope.removeEventListener 'DOMContentLoaded', @
-    @engine.start()
+    @start()
 
   getQueryPath: (operation, continuation) ->
     return (continuation && continuation + operation.key || operation.path)

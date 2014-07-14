@@ -38,9 +38,14 @@ class Measurements
 
       # Compute custom property
       if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
-        computed = @_compute(id, property, continuation, true)
+        path = @_compute(id, property, continuation, true)
+        if (index = path.indexOf('[')) > -1
+          id = path.substring(0, index)
+          property = path.substring(index + 1, path.length - 1)
         if primitive
-          return computed 
+          return @values.watch(id, property, operation, @getContinuation(continuation || '')  , scope)
+        #return @computed?[path] 
+        console.info(id, property, path)
       # Expand properties like ::window[center-y]
       else if @properties[id] && @properties[property]
         return @properties[property].call(@, id, continuation)
@@ -63,7 +68,7 @@ class Measurements
   # Triggers measure pass if no commands were sent 
   # and something is set for re-measurement
   onFlush: (buffer) ->
-    return @_getComputedProperties(!buffer)
+    return @_getSuggestions(!buffer)
 
   onMeasure: (node, x, y, styles, full) ->
     return unless @intrinsic
@@ -124,21 +129,28 @@ class Measurements
 
   # Compute value of a property, reads the styles on elements
   compute: (node, property, continuation, old) ->
-    if node.nodeType
+    if node == window
+      id = '::window'
+    else if node.nodeType
       id = @identify(node)
     else
       id = node
       node = @elements[id]
 
     path = @getPath(id, property)
-    return if @computed?[path]?
+
+    return path if @computed?[path]?
     if (prop = @properties[id]?[property])? 
       current = @values[path]
-      if current == undefined || old == true
-        if typeof prop == 'function'
-          value = prop.call(@, node, continuation)
-        else
-          value = prop
+      if current == undefined || old == false
+        switch typeof prop
+          when 'function'
+            value = prop.call(@, node, continuation)
+          when 'string'
+            path = prop
+            value = @properties[prop].call(@, node, continuation)
+          else
+            value = prop
     else if property.indexOf('intrinsic-') > -1
       if document.body.contains(node)
         if prop = @properties[property]
@@ -150,7 +162,9 @@ class Measurements
     else
       value = @[property](node, continuation)
 
-    return (@computed ||= {})[path] = value
+    (@computed ||= {})[path] = value
+    console.warn('kompooted', path, value)
+    return path
 
   getCommonParent: (a, b) ->
     aps = []
@@ -167,20 +181,19 @@ class Measurements
       if aps.indexOf(bp) > -1
         return bp
 
-  getComputedProperties: (reflow) ->
-    suggests = undefined
-    if @reflown
-      if (reflow)
-        @styles.render(@reflown)
-      @reflown = undefined
+  getSuggestions: (reflow) ->
+    suggestions = undefined
+    if (reflow)
+      @styles.render(null, @reflown)
+    @reflown = undefined
     if @computed
       for property, value of @computed
         if value? && value != @values[property]
-          (suggests ||= []).push ['suggest', property, value, 'required']
+          (suggestions ||= []).push ['suggest', property, value, 'required']
       @values.merge @computed
       @computed = undefined
 
-    return suggests
+    return suggestions
 
   getIntrinsicProperty: (path) ->
     index = path.indexOf('[intrinsic-')

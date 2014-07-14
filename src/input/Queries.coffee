@@ -208,7 +208,7 @@ class Queries
       @index update, ' +', child.tagName
 
     parent = target
-    while parent.nodeType == 1
+    while parent#.nodeType == 1
       # Let parents know about inserted nodes
       @match(parent, ' ', undefined, allChanged)
       for child in allChanged
@@ -539,6 +539,7 @@ class Queries
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   pair: (continuation, operation, scope, result) ->
+    console.error(continuation, @isPaired(operation, continuation, true))
     return unless match = @isPaired(operation, continuation, true)
     left = @getOperationPath(match[1])
     plurals = (@_plurals ||= {})[left] ||= []

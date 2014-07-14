@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-14) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19228,15 +19229,14 @@ Engine = (function() {
 
   Engine.identify = function(object, generate) {
     var id;
-    if ((object != null ? object.push : void 0) != null) {
-      debugger;
-    }
     if (!(id = object._gss_id)) {
       if (object === document) {
-        object = window;
+        id = "::document";
+      } else if (object === window) {
+        id = "::window";
       }
       if (generate !== false) {
-        object._gss_id = id = "$" + (object.id || ++Engine.uid);
+        object._gss_id = id || (id = "$" + (object.id || ++Engine.uid));
       }
       Engine.prototype.elements[id] = object;
     }
@@ -19361,17 +19361,20 @@ Engine = (function() {
   };
 
   Engine.Property = function(property, reference, properties) {
-    var key, path, value;
+    var index, key, path, value, _base, _name;
     if (typeof property === 'object') {
       for (key in property) {
         value = property[key];
         if (property === 'shortcut') {
 
         } else {
-          if (reference.match(/^[a-z]/i)) {
+          if ((index = reference.indexOf('[')) > -1) {
+            path = reference.replace(']', '-' + key + ']');
+            (_base = properties[reference.substring(0, index)])[_name = path.substring(index + 1, path.length - 1)] || (_base[_name] = Engine.Property(value, path, properties));
+          } else if (reference.match(/^[a-z]/i)) {
             path = reference + '-' + key;
           } else {
-            path = reference + key;
+            path = reference + '[' + key + ']';
           }
           properties[path] = Engine.Property(value, path, properties);
         }
@@ -19546,19 +19549,31 @@ Engine.Document = (function(_super) {
   };
 
   Document.prototype.onresize = function(e) {
+    var captured, id;
     if (e == null) {
       e = '::window';
     }
-    this._compute(e.target || e, "width", void 0, false);
-    return this._compute(e.target || e, "height", void 0, false);
+    id = e.target && this.identify(e.target) || e;
+    captured = this.expressions.capture(id + ' resized');
+    this._compute(id, "width", void 0, false);
+    this._compute(id, "height", void 0, false);
+    if (captured) {
+      return this.expressions.release();
+    }
   };
 
   Document.prototype.onscroll = function(e) {
+    var captured, id;
     if (e == null) {
       e = '::window';
     }
-    this._compute(e.target || e, "scroll-top", void 0, false);
-    return this._compute(e.target || e, "scroll-left", void 0, false);
+    id = e.target && this.identify(e.target) || e;
+    captured = this.expressions.capture(id + ' scrolled');
+    this._compute(id, "scroll-top", void 0, false);
+    this._compute(id, "scroll-left", void 0, false);
+    if (captured) {
+      return this.expressions.release();
+    }
   };
 
   Document.prototype.destroy = function() {
@@ -19569,7 +19584,7 @@ Engine.Document = (function(_super) {
 
   Document.prototype.onDOMContentLoaded = function() {
     this.scope.removeEventListener('DOMContentLoaded', this);
-    return this.engine.start();
+    return this.start();
   };
 
   Document.prototype.getQueryPath = function(operation, continuation) {
@@ -19737,6 +19752,15 @@ Dimensions = (function() {
     y: 0
   };
 
+  Dimensions.prototype['::document'] = {
+    scroll: {
+      left: '::window[scroll-left]',
+      top: '::window[scroll-top]'
+    },
+    x: '::window[x]',
+    y: '::window[y]'
+  };
+
   Dimensions.prototype.intrinsic = {
     height: function(element) {
       return element.offsetHeight;
@@ -19854,7 +19878,6 @@ Rules = (function() {
     serialized: true,
     eager: true,
     command: function(operation, continuation, scope, meta) {
-      debugger;
       var contd;
       contd = this.queries.getScopePath(continuation) + operation.path;
       return this.queries.get(contd);
@@ -19905,7 +19928,6 @@ Rules = (function() {
       }
     },
     capture: function(result, operation, continuation, scope, meta) {
-      debugger;
       if (operation.index === 1) {
         this.commands["if"].branch.call(this, operation.parent[1], continuation, scope, meta, void 0, result);
         return true;
@@ -19917,21 +19939,21 @@ Rules = (function() {
       }
     },
     branch: function(operation, continuation, scope, meta, ascender, ascending) {
-      var condition, path, query, _base, _base1;
+      var branch, condition, index, path, query, _base, _base1;
       this.commands["if"].subscribe.call(this, operation.parent, continuation, scope);
       (_base = operation.parent).uid || (_base.uid = '@' + (this.commands.uid = ((_base1 = this.commands).uid || (_base1.uid = 0)) + 1));
       condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
       path = continuation + operation.parent.uid;
       query = this.queries[path];
       if (query === void 0 || (!!query !== !!condition)) {
-        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent, 'font-weight: normal; color: #999', continuation);
+        debugger;
+        index = condition && 2 || 3;
+        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (query !== void 0) {
           this.queries.clean(path, continuation, operation.parent, scope);
         }
-        if (condition) {
-          this.expressions.evaluate(operation.parent[2], path, scope, meta);
-        } else if (operation.parent[3]) {
-          this.expressions.evaluate(operation.parent[3], path, scope, meta);
+        if (branch = operation.parent[index]) {
+          this.expressions.evaluate(branch, path, scope, meta);
         }
         this.console.groupEnd(path);
         return this.queries[path] = condition != null ? condition : null;
@@ -20764,7 +20786,7 @@ Measurements = (function() {
 
   Measurements.prototype.get = {
     command: function(operation, continuation, scope, meta, object, property) {
-      var child, computed, id, parent, primitive, _ref;
+      var child, id, index, parent, path, primitive, _ref;
       if (property) {
         if (typeof object === 'string') {
           id = object;
@@ -20789,10 +20811,15 @@ Measurements = (function() {
         }
       }
       if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
-        computed = this._compute(id, property, continuation, true);
-        if (primitive) {
-          return computed;
+        path = this._compute(id, property, continuation, true);
+        if ((index = path.indexOf('[')) > -1) {
+          id = path.substring(0, index);
+          property = path.substring(index + 1, path.length - 1);
         }
+        if (primitive) {
+          return this.values.watch(id, property, operation, this.getContinuation(continuation || ''), scope);
+        }
+        console.info(id, property, path);
       } else if (this.properties[id] && this.properties[property]) {
         return this.properties[property].call(this, id, continuation);
       } else if (primitive) {
@@ -20818,7 +20845,7 @@ Measurements = (function() {
   };
 
   Measurements.prototype.onFlush = function(buffer) {
-    return this._getComputedProperties(!buffer);
+    return this._getSuggestions(!buffer);
   };
 
   Measurements.prototype.onMeasure = function(node, x, y, styles, full) {
@@ -20902,7 +20929,9 @@ Measurements = (function() {
 
   Measurements.prototype.compute = function(node, property, continuation, old) {
     var current, id, path, prop, value, _ref, _ref1;
-    if (node.nodeType) {
+    if (node === window) {
+      id = '::window';
+    } else if (node.nodeType) {
       id = this.identify(node);
     } else {
       id = node;
@@ -20910,15 +20939,21 @@ Measurements = (function() {
     }
     path = this.getPath(id, property);
     if (((_ref = this.computed) != null ? _ref[path] : void 0) != null) {
-      return;
+      return path;
     }
     if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
       current = this.values[path];
-      if (current === void 0 || old === true) {
-        if (typeof prop === 'function') {
-          value = prop.call(this, node, continuation);
-        } else {
-          value = prop;
+      if (current === void 0 || old === false) {
+        switch (typeof prop) {
+          case 'function':
+            value = prop.call(this, node, continuation);
+            break;
+          case 'string':
+            path = prop;
+            value = this.properties[prop].call(this, node, continuation);
+            break;
+          default:
+            value = prop;
         }
       }
     } else if (property.indexOf('intrinsic-') > -1) {
@@ -20934,7 +20969,9 @@ Measurements = (function() {
     } else {
       value = this[property](node, continuation);
     }
-    return (this.computed || (this.computed = {}))[path] = value;
+    (this.computed || (this.computed = {}))[path] = value;
+    console.warn('kompooted', path, value);
+    return path;
   };
 
   Measurements.prototype.getCommonParent = function(a, b) {
@@ -20957,27 +20994,25 @@ Measurements = (function() {
     }
   };
 
-  Measurements.prototype.getComputedProperties = function(reflow) {
-    var property, suggests, value, _ref;
-    suggests = void 0;
-    if (this.reflown) {
-      if (reflow) {
-        this.styles.render(this.reflown);
-      }
-      this.reflown = void 0;
+  Measurements.prototype.getSuggestions = function(reflow) {
+    var property, suggestions, value, _ref;
+    suggestions = void 0;
+    if (reflow) {
+      this.styles.render(null, this.reflown);
     }
+    this.reflown = void 0;
     if (this.computed) {
       _ref = this.computed;
       for (property in _ref) {
         value = _ref[property];
         if ((value != null) && value !== this.values[property]) {
-          (suggests || (suggests = [])).push(['suggest', property, value, 'required']);
+          (suggestions || (suggestions = [])).push(['suggest', property, value, 'required']);
         }
       }
       this.values.merge(this.computed);
       this.computed = void 0;
     }
-    return suggests;
+    return suggestions;
   };
 
   Measurements.prototype.getIntrinsicProperty = function(path) {
@@ -21139,21 +21174,20 @@ Expressions = (function() {
 
   Expressions.prototype.flush = function() {
     var added, buffer;
-    buffer = this.buffer;
-    this.engine.console.groupEnd();
     if (this.engine._onFlush) {
-      added = this.engine._onFlush(buffer);
-      buffer = buffer && added && added.concat(buffer) || buffer || added;
+      added = this.engine._onFlush(this.buffer);
     }
+    buffer = this.buffer && added && added.concat(this.buffer) || this.buffer || added;
     this.lastOutput = GSS.clone(buffer);
     if (buffer) {
       this.buffer = void 0;
-      return this.output.pull(buffer);
+      this.output.pull(buffer);
     } else if (this.buffer === void 0) {
-      return this.engine.push();
+      this.engine.push();
     } else {
-      return this.buffer = void 0;
+      this.buffer = void 0;
     }
+    return this.engine.console.groupEnd();
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
@@ -21490,20 +21524,12 @@ Expressions = (function() {
 
   Expressions.prototype.release = function() {
     this.endTime = GSS.time();
-    if (this.buffer) {
-      this.flush();
-    } else {
-      this.buffer = void 0;
-      this.engine.console.groupEnd();
-    }
+    this.flush();
     return this.endTime;
   };
 
-  Expressions.prototype.capture = function(reason, type) {
+  Expressions.prototype.capture = function(reason) {
     var fmt, method, name;
-    if (type == null) {
-      type = 'command';
-    }
     if (this.buffer !== void 0) {
       return;
     }
@@ -21512,14 +21538,14 @@ Expressions = (function() {
       if (reason.slice) {
         reason = GSS.clone(reason);
       }
-      fmt += '  \t\t%O';
+      fmt += '\t\t%O';
     } else {
-      fmt += '  \t\t%s';
+      fmt += '\t\t%s';
     }
     if (this.engine.onDOMContentLoaded) {
-      name = 'Document';
+      name = 'GSS.Document';
     } else {
-      name = 'Solver  ';
+      name = 'GSS.Solver';
       method = 'groupCollapsed';
     }
     this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
@@ -21822,7 +21848,7 @@ Queries = (function() {
       this.index(update, ' +', child.tagName);
     }
     parent = target;
-    while (parent.nodeType === 1) {
+    while (parent) {
       this.match(parent, ' ', void 0, allChanged);
       for (_q = 0, _len8 = allChanged.length; _q < _len8; _q++) {
         child = allChanged[_q];
@@ -22248,6 +22274,7 @@ Queries = (function() {
 
   Queries.prototype.pair = function(continuation, operation, scope, result) {
     var collection, element, left, match, plurals, pushed, schedule, _base;
+    console.error(continuation, this.isPaired(operation, continuation, true));
     if (!(match = this.isPaired(operation, continuation, true))) {
       return;
     }
@@ -22670,6 +22697,8 @@ module.exports = Values;
 require.register("gss/lib/output/Solutions.js", function(exports, require, module){
 var Solutions;
 
+require('cassowary');
+
 Solutions = (function() {
   function Solutions(engine, output) {
     this.engine = engine;
@@ -22681,7 +22710,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, lastTime, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var command, property, response, startTime, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -22728,8 +22757,8 @@ Solutions = (function() {
     }
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    if (lastTime = this.engine.expressions.lastTime) {
-      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(lastTime) + 'ms');
+    if (startTime = this.engine.expressions.startTime) {
+      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(startTime) + 'ms');
     }
     this.push(response);
   };
@@ -22774,7 +22803,6 @@ Solutions = (function() {
       }
       return _results;
     } else if (constrain instanceof c.Variable) {
-      debugger;
       if (constrain.editing) {
         return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
       }
@@ -22790,7 +22818,8 @@ Solutions = (function() {
       }
     }
     delete this.variables[variable.name];
-    return this.solver._externalParametricVars["delete"](variable);
+    this.solver._externalParametricVars["delete"](variable);
+    return console.log('nullify', variable.name);
   };
 
   Solutions.prototype.add = function(command) {
@@ -22837,7 +22866,6 @@ Solutions = (function() {
   };
 
   Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
-    debugger;
     var variable, variables, _base;
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
@@ -22887,7 +22915,7 @@ Styles = (function() {
   }
 
   Styles.prototype.pull = function(data) {
-    var capture, id, intrinsic, path, positioning, prop, property, styles, suggests, value, _ref;
+    var capture, intrinsic, path, positioning, property, suggestions, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
     for (path in data) {
@@ -22899,23 +22927,7 @@ Styles = (function() {
         }
       }
     }
-    positioning = {};
-    this.engine.queries.disconnect();
-    for (path in data) {
-      value = data[path];
-      if (value !== void 0) {
-        this.set(path, void 0, value, positioning);
-      }
-    }
-    this.engine.queries.connect();
-    this.render(null, null, null, positioning, null, true);
-    for (id in positioning) {
-      styles = positioning[id];
-      for (prop in styles) {
-        value = styles[prop];
-        this.set(id, prop, value);
-      }
-    }
+    positioning = this.render(data);
     if (intrinsic) {
       for (path in intrinsic) {
         value = intrinsic[path];
@@ -22933,9 +22945,9 @@ Styles = (function() {
       this.data = void 0;
     }
     this.data = data;
-    if (suggests = this.engine._getComputedProperties()) {
-      capture = this.engine.expressions.capture(suggests.length + ' intrinsics');
-      this.engine.pull(suggests);
+    if (suggestions = this.engine._getSuggestions()) {
+      capture = this.engine.expressions.capture(suggestions.length + ' intrinsics');
+      this.engine.pull(suggestions);
       if (capture) {
         return this.engine.expressions.release();
       }
@@ -22966,7 +22978,7 @@ Styles = (function() {
   };
 
   Styles.prototype.set = function(id, property, value, positioning, intrinsic) {
-    var camel, element, last, measured, path, pixels, positioned, positioner, style, _base;
+    var camel, element, last, path, pixels, positioned, positioner, style, val, _base;
     if (property === void 0) {
       path = id;
       last = id.lastIndexOf('[');
@@ -22986,9 +22998,9 @@ Styles = (function() {
       (positioning[id] || (positioning[id] = {}))[property] = value;
     } else {
       if (intrinsic) {
-        measured = this.engine._compute(element, property, void 0, value);
-        if (measured != null) {
-          value = measured;
+        path = this.engine._compute(element, property, void 0, value);
+        if ((val = this.engine.computed[path]) != null) {
+          value = val;
         }
         return value;
       }
@@ -23004,12 +23016,13 @@ Styles = (function() {
         if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
           pixels = value + 'px';
         }
+        console.error(element, pixels);
         if (positioner) {
           if (!style[camel]) {
             if ((style.positioning = (style.positioning || 0) + 1) === 1) {
               style.position = 'absolute';
             }
-          } else if (!value) {
+          } else if (value == null) {
             if (!--style.positioning) {
               style.position = '';
             }
@@ -23021,7 +23034,32 @@ Styles = (function() {
     return value;
   };
 
-  Styles.prototype.render = function(parent, x, y, positioning, offsetParent, full) {
+  Styles.prototype.render = function(data, node) {
+    var id, path, positioning, prop, queries, styles, value;
+    this.engine.queries.disconnect();
+    positioning = {};
+    if (data) {
+      for (path in data) {
+        value = data[path];
+        if (value !== void 0) {
+          this.set(path, void 0, value, positioning);
+        }
+      }
+    }
+    this.adjust(node, null, null, positioning, null, true);
+    for (id in positioning) {
+      styles = positioning[id];
+      for (prop in styles) {
+        value = styles[prop];
+        this.set(id, prop, value);
+      }
+    }
+    queries = this.engine.queries.connect();
+    console.error(positioning);
+    return positioning;
+  };
+
+  Styles.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
     var child, children, offsets, scope, _i, _len;
     if (x == null) {
       x = 0;
@@ -23032,8 +23070,8 @@ Styles = (function() {
     scope = this.engine.scope;
     parent || (parent = scope);
     if (offsets = this.placehold(positioning, parent, x, y, full)) {
-      x += offsets.left;
-      y += offsets.top;
+      x += offsets.x || 0;
+      y += offsets.y || 0;
     }
     children = this.engine.commands['$>'][1](parent);
     if (parent.offsetParent === scope) {
@@ -23048,30 +23086,40 @@ Styles = (function() {
     }
     for (_i = 0, _len = children.length; _i < _len; _i++) {
       child = children[_i];
-      this.render(child, x, y, positioning, offsetParent, full);
+      this.adjust(child, x, y, positioning, offsetParent, full);
     }
-    return this;
+    return positioning;
   };
 
   Styles.prototype.placehold = function(positioning, element, x, y, full) {
-    var offsets, property, styles, uid, value;
+    var left, offsets, property, styles, top, uid, value, values;
+    offsets = void 0;
     if (uid = element._gss_id) {
-      if (styles = positioning != null ? positioning[uid] : void 0) {
-        offsets = {
-          left: 0,
-          top: 0
-        };
+      styles = positioning != null ? positioning[uid] : void 0;
+      if (values = this.engine.values) {
+        if ((styles != null ? styles.x : void 0) == null) {
+          if ((left = values[uid + '[x]']) != null) {
+            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).x = left;
+          }
+        }
+        if ((styles != null ? styles.y : void 0) == null) {
+          if ((top = values[uid + '[y]']) != null) {
+            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).y = top;
+          }
+        }
+      }
+      if (styles) {
         for (property in styles) {
           value = styles[property];
           if (value !== null) {
             switch (property) {
               case "x":
                 styles.x = value - x;
-                offsets.left = value - x;
+                (offsets || (offsets = {})).x = value - x;
                 break;
               case "y":
                 styles.y = value - y;
-                offsets.top = value - y;
+                (offsets || (offsets = {})).y = value - y;
             }
           }
         }

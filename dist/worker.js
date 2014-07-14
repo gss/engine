@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-07-14) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -57,21 +58,20 @@ Expressions = (function() {
 
   Expressions.prototype.flush = function() {
     var added, buffer;
-    buffer = this.buffer;
-    this.engine.console.groupEnd();
     if (this.engine._onFlush) {
-      added = this.engine._onFlush(buffer);
-      buffer = buffer && added && added.concat(buffer) || buffer || added;
+      added = this.engine._onFlush(this.buffer);
     }
+    buffer = this.buffer && added && added.concat(this.buffer) || this.buffer || added;
     this.lastOutput = GSS.clone(buffer);
     if (buffer) {
       this.buffer = void 0;
-      return this.output.pull(buffer);
+      this.output.pull(buffer);
     } else if (this.buffer === void 0) {
-      return this.engine.push();
+      this.engine.push();
     } else {
-      return this.buffer = void 0;
+      this.buffer = void 0;
     }
+    return this.engine.console.groupEnd();
   };
 
   Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
@@ -408,20 +408,12 @@ Expressions = (function() {
 
   Expressions.prototype.release = function() {
     this.endTime = GSS.time();
-    if (this.buffer) {
-      this.flush();
-    } else {
-      this.buffer = void 0;
-      this.engine.console.groupEnd();
-    }
+    this.flush();
     return this.endTime;
   };
 
-  Expressions.prototype.capture = function(reason, type) {
+  Expressions.prototype.capture = function(reason) {
     var fmt, method, name;
-    if (type == null) {
-      type = 'command';
-    }
     if (this.buffer !== void 0) {
       return;
     }
@@ -430,14 +422,14 @@ Expressions = (function() {
       if (reason.slice) {
         reason = GSS.clone(reason);
       }
-      fmt += '  \t\t%O';
+      fmt += '\t\t%O';
     } else {
-      fmt += '  \t\t%s';
+      fmt += '\t\t%s';
     }
     if (this.engine.onDOMContentLoaded) {
-      name = 'Document';
+      name = 'GSS.Document';
     } else {
-      name = 'Solver  ';
+      name = 'GSS.Solver';
       method = 'groupCollapsed';
     }
     this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
@@ -768,15 +760,14 @@ Engine = (function() {
 
   Engine.identify = function(object, generate) {
     var id;
-    if ((object != null ? object.push : void 0) != null) {
-      debugger;
-    }
     if (!(id = object._gss_id)) {
       if (object === document) {
-        object = window;
+        id = "::document";
+      } else if (object === window) {
+        id = "::window";
       }
       if (generate !== false) {
-        object._gss_id = id = "$" + (object.id || ++Engine.uid);
+        object._gss_id = id || (id = "$" + (object.id || ++Engine.uid));
       }
       Engine.prototype.elements[id] = object;
     }
@@ -901,17 +892,20 @@ Engine = (function() {
   };
 
   Engine.Property = function(property, reference, properties) {
-    var key, path, value;
+    var index, key, path, value, _base, _name;
     if (typeof property === 'object') {
       for (key in property) {
         value = property[key];
         if (property === 'shortcut') {
 
         } else {
-          if (reference.match(/^[a-z]/i)) {
+          if ((index = reference.indexOf('[')) > -1) {
+            path = reference.replace(']', '-' + key + ']');
+            (_base = properties[reference.substring(0, index)])[_name = path.substring(index + 1, path.length - 1)] || (_base[_name] = Engine.Property(value, path, properties));
+          } else if (reference.match(/^[a-z]/i)) {
             path = reference + '-' + key;
           } else {
-            path = reference + key;
+            path = reference + '[' + key + ']';
           }
           properties[path] = Engine.Property(value, path, properties);
         }
@@ -1200,6 +1194,8 @@ module.exports = Constraints;
 
 var Solutions;
 
+require('cassowary');
+
 Solutions = (function() {
   function Solutions(engine, output) {
     this.engine = engine;
@@ -1211,7 +1207,7 @@ Solutions = (function() {
   }
 
   Solutions.prototype.pull = function(commands) {
-    var command, lastTime, property, response, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    var command, property, response, startTime, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     this.response = response = {};
     this.lastInput = commands;
     for (_i = 0, _len = commands.length; _i < _len; _i++) {
@@ -1258,8 +1254,8 @@ Solutions = (function() {
     }
     this.added = this.nullified = void 0;
     this.lastOutput = response;
-    if (lastTime = this.engine.expressions.lastTime) {
-      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(lastTime) + 'ms');
+    if (startTime = this.engine.expressions.startTime) {
+      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(startTime) + 'ms');
     }
     this.push(response);
   };
@@ -1304,7 +1300,6 @@ Solutions = (function() {
       }
       return _results;
     } else if (constrain instanceof c.Variable) {
-      debugger;
       if (constrain.editing) {
         return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
       }
@@ -1320,7 +1315,8 @@ Solutions = (function() {
       }
     }
     delete this.variables[variable.name];
-    return this.solver._externalParametricVars["delete"](variable);
+    this.solver._externalParametricVars["delete"](variable);
+    return console.log('nullify', variable.name);
   };
 
   Solutions.prototype.add = function(command) {
@@ -1367,7 +1363,6 @@ Solutions = (function() {
   };
 
   Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
-    debugger;
     var variable, variables, _base;
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {

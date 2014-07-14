@@ -1,6 +1,7 @@
 class Dimensions
   # Global variables managed by the engine
 
+
   '::window':
       
     width: ->
@@ -21,6 +22,15 @@ class Dimensions
     x: 0
 
     y: 0
+
+  '::document':
+
+    scroll:
+      left: '::window[scroll-left]'
+      top: '::window[scroll-top]'
+      
+    x: '::window[x]'
+    y: '::window[y]'
 
   intrinsic:
 

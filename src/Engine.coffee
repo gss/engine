@@ -144,13 +144,14 @@ class Engine
 
   # Get or generate uid for a given object.
   @identify: (object, generate) ->
-    if object?.push?
-      debugger
     unless id = object._gss_id
       if object == document
-        object = window
+        id = "::document"
+      else if object == window
+        id = "::window"
+
       unless generate == false
-        object._gss_id = id = "$" + (object.id || ++Engine.uid)
+        object._gss_id = id ||= "$" + (object.id || ++Engine.uid)
       Engine::elements[id] = object
     return id
 
@@ -232,10 +233,13 @@ class Engine
         if property == 'shortcut'
 
         else
-          if reference.match(/^[a-z]/i)
+          if (index = reference.indexOf('[')) > -1
+            path = reference.replace(']', '-' + key + ']')
+            properties[reference.substring(0, index)][path.substring(index + 1, path.length - 1)] ||= Engine.Property(value, path, properties)
+          else if reference.match(/^[a-z]/i) 
             path = reference + '-' + key
           else
-            path = reference + key
+            path = reference + '[' + key + ']'
 
           properties[path] = Engine.Property(value, path, properties)
     return property

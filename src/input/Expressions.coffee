@@ -33,11 +33,9 @@ class Expressions
 
   # Output buffered commands
   flush: ->
-    buffer = @buffer
-    @engine.console.groupEnd()
     if @engine._onFlush
-      added = @engine._onFlush(buffer)
-      buffer = buffer && added && added.concat(buffer) || buffer || added
+      added = @engine._onFlush(@buffer)
+    buffer = @buffer && added && added.concat(@buffer) || @buffer || added
     @lastOutput = GSS.clone buffer
 
     if buffer
@@ -47,6 +45,7 @@ class Expressions
       @engine.push()
     else
       @buffer = undefined
+    @engine.console.groupEnd()
 
       
   # Evaluate operation depth first
@@ -354,26 +353,23 @@ class Expressions
 
   release: () ->
     @endTime = GSS.time()
-    if @buffer
-      @flush()
-    else
-      @buffer = undefined
-      @engine.console.groupEnd()
+    @flush()
     return @endTime
 
-  capture: (reason, type = 'command') ->
+  capture: (reason) ->
     return unless @buffer == undefined
     fmt = '%c%s%c'
     
     if typeof reason != 'string'
       reason = GSS.clone(reason) if reason.slice
-      fmt += '  \t\t%O'
+      fmt += '\t\t%O'
     else
-      fmt += '  \t\t%s'
+      fmt += '\t\t%s'
     if @engine.onDOMContentLoaded
-      name = 'Document'
+      name = 'GSS.Document'
     else
-      name = 'Solver  '
+      name = 'GSS.Solver'
+
       method = 'groupCollapsed'
     @engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason)
     @startTime = GSS.time()

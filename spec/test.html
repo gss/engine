@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>GSS engine in browser</title>
+    <script src="../vendor/weakmap.js"></script>
+    <script src="../vendor/MutationObserver.js"></script>
+    <script src="../dist/gss.js"></script>
+    <!--<script src="../vendor/c.js"></script> -->
+    <script>
+      GSS.document = new GSS.Document
+    </script>
+
+    <style>
+      #mocha .test {
+        overflow: auto;
+      }
+      header {
+        background: orange;
+        height: 50px;
+      }
+
+      main {
+        background: yellow;
+        height: 100px;
+      }
+
+      footer {
+        background: red;
+        width: 10px;
+        height: 20px;
+      }
+
+      aside {
+        background: blue
+      }
+
+      ul li {
+        list-style: none;
+        background: green;
+        top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <style type="text/gss">
+      [left-margin] == (main)[right];
+
+      header {
+        ::[left] == 0;
+        @if (::window[width] > ::window[height]) {
+          ::[width] == ::window[width] / 4;
+        } @else {
+          ::[width] == ::window[width] / 2;
+        }
+      }
+      footer {
+        ::[top] == (main)[top] + (main)[height];
+        ::[height] == ::window[height] * 2;
+      }
+      main {
+        ::[top] == ::window[scroll-top];
+        ::[width] == 100;
+        ::[left] == (header)[right];
+        ::[height] == ::window[height] - (#header)[intrinsic-height];
+      }
+      ul li {
+        ::[width] == [li-width];
+        (&:first)[x] == 0;
+        (&:last)[right] == [left-margin];
+        (&:previous)[right] == &[left];
+      }
+    </style>
+
+    <header id="header"></header>
+    <main id="main">
+      <ul>
+        <li id="li1">1</li>
+        <li id="li2">2</li>
+        <li id="li3">3</li>
+      </ul>
+    </main>
+    <aside id="aside"></aside>
+    <footer id="footer"></footer>
+
+  </body>
+</html>
