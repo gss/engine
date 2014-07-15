@@ -77,8 +77,6 @@ class Expressions
     return if args == false
 
     if operation.name
-      if operation.name == '$class'
-        debugger
       @engine.console.row(operation, args, continuation || "")
 
     # Execute function and log it in continuation path
@@ -142,8 +140,9 @@ class Expressions
     length = path.length
     for key in continuation.split(GSS.RIGHT)
       bit = key
-      if (index = bit.indexOf(GSS.DOWN)) > -1
+      if (index = bit.lastIndexOf(GSS.DOWN)) > -1
         bit = bit.substring(index + 1)
+      console.error(bit, path)
       if bit == path || bit.substring(0, path.length) == path
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]

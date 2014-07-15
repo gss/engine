@@ -13,7 +13,10 @@ class Selectors
 
    # Walk through commands in selector to make a dictionary used by Observer
   onSelector: (operation, parent) ->
-    prefix = (parent || (operation[0] != '$combinator' && typeof operation[1] != 'object')) && ' ' || ''
+    console.error(operation.name, 444)
+    prefix = ((parent && operation.name != ' ') || 
+              (operation[0] != '$combinator' && typeof operation[1] != 'object')) && 
+              ' ' || ''
     switch operation[0]
       when '$tag'
         if (!parent || operation == operation.tail) && operation[1][0] != '$combinator'

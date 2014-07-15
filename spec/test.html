@@ -23,6 +23,7 @@
       main {
         background: yellow;
         height: 100px;
+        z-index: 10;
       }
 
       footer {
@@ -44,10 +45,12 @@
   </head>
   <body>
     <style type="text/gss">
+      // plural selectors can be used as singular, a la jQ
       [left-margin] == (main)[right];
 
       header {
         ::[left] == 0;
+        // condition inside css rule
         @if (::window[width] > ::window[height]) {
           ::[width] == ::window[width] / 4;
         } @else {
@@ -55,22 +58,28 @@
         }
       }
       footer {
-        ::[top] == (main)[top] + (main)[height];
+        // Plural binding for 2 instances of the same DOM query in one exp
+        ::[top] == (main)[height]; 
         ::[height] == ::window[height] * 2;
       }
       main {
-        ::[top] == ::window[scroll-top];
+        // Bind things to scroll position
+        ::[top] == ::window[scroll-top] + (#header)[intrinsic-height] + (#header)[intrinsic-y];
         ::[width] == 100;
+        //
         ::[left] == (header)[right];
-        ::[height] == ::window[height] - (#header)[intrinsic-height];
+        ::[height] == ::window[height] - (#header)[intrinsic-height] - 10;
       }
       ul li {
+        // justify by using variable
         ::[width] == [li-width];
-        (&:first)[x] == 0;
-        (&:last)[right] == [left-margin];
+
         (&:previous)[right] == &[left];
+        (&:last)[right] == ::window[width] - 16;
+        (&:first)[left] == 0;
       }
     </style>
+
 
     <header id="header"></header>
     <main id="main">
@@ -83,5 +92,20 @@
     <aside id="aside"></aside>
     <footer id="footer"></footer>
 
+
+    <script>
+      counter = GSS.$query('ul li').length
+      document.onclick = function(e) {
+        for (var node = e.target; node; node = node.parentNode)
+          if (node.tagName == 'LI')
+            return node.parentNode.removeChild(node)
+
+        counter++
+        li = document.createElement('li')
+        li.id = 'li' + counter
+        li.innerHTML = counter
+        ul = GSS.$tag('ul')[0].appendChild(li)
+      }
+    </script>
   </body>
 </html>

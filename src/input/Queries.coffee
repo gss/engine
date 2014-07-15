@@ -87,7 +87,6 @@ class Queries
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
     updating = @capture(mutations)
-    debugger
     for mutation in mutations
       switch mutation.type
         when "attributes"
@@ -378,8 +377,6 @@ class Queries
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
-    if continuation == 'style$2↓.a$a3↑!+.a→'
-      debugger
     @engine.console.row('remove', (id.nodeType && @engine.identify(id) || id), continuation)
     if typeof id == 'object'
       node = id
@@ -392,7 +389,6 @@ class Queries
 
       unless @removeFromCollection(node, continuation, operation, scope, manual) == false
         @removeFromNode(id, continuation, operation, scope, plural)
-      console.log(continuation, collection?.length, id)
       if collection && !collection.length
         this.set continuation, undefined 
 
@@ -438,6 +434,7 @@ class Queries
 
   # Update bindings of two plural collections
   repair: (path, key, operation, scope, collected) ->
+    debugger
     leftUpdate = @updated?[path]
     leftNew = (if leftUpdate?[0] != undefined then leftUpdate[0] else @get(path)) || []
     if leftNew.old != undefined
@@ -457,7 +454,7 @@ class Queries
       rightOld = rightNew.old
     else if rightUpdate?[1] != undefined
       rightOld = rightUpdate[1]
-    else
+    else if !rightUpdate
       rightOld = @get(rightPath)
       rightOld = rightNew if rightOld == undefined
 
@@ -563,7 +560,7 @@ class Queries
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     if @updated# && node != scope
-      query = @getQueryPath(operation, @engine.identify(node))
+      query = @getQueryPath(operation, node)
       return @updated[query]
 
   chain: (left, right, collection, continuation) ->
@@ -668,11 +665,10 @@ class Queries
 
     unless @updated == undefined 
       @updated ||= {}
-      
       group = @updated[query] ||= [] if query
       @updated[path] ||= group ||= []
       group[0] ||= result
-      group[1] ||= old?.slice?()
+      group[1] ||= old?.slice?() unless old == result
       group[2] ||= added
       group[3] ||= removed
 
@@ -744,7 +740,7 @@ class Queries
   getQueryPath: (operation, continuation) ->
     if continuation
       if continuation.nodeType
-        return @engine.identify(continuation) + operation.path
+        return @engine.identify(continuation) + ' ' + operation.path
       else
         return continuation + operation.key
     else

@@ -287,7 +287,7 @@ class Engine
 
   @time: (other, time) ->
     time ||= performance?.now() || Date.now?() || + (new Date)
-    return time unless other
+    return time if time && !other
     return Math.floor((time - other) * 100) / 100
 
   @Console: (@level) ->

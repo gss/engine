@@ -71,7 +71,6 @@ class Measurements
     return @_getSuggestions(!buffer)
 
   onMeasure: (node, x, y, styles, full) ->
-    console.error('onMeasure', node, x, y, styles, @intrinsic, full)
     return unless @intrinsic
     if id = node._gss_id
       if properties = @intrinsic[id]
@@ -80,10 +79,15 @@ class Measurements
 
           path = id + "[intrinsic-" + prop + "]"
           (@computed ||= {})[path] = 
-            if prop == "x" 
-              x + node.offsetLeft
-            else
-              y + node.offsetTop
+            switch prop
+              when "x"
+                x + node.offsetLeft
+              when "y"
+                y + node.offsetTop
+              when "width"
+                node.offsetWidth
+              when "height"
+                node.offsetHeight
     return
 
   # Decide common parent for all mutated nodes

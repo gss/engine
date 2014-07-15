@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-14) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-15) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -100,9 +100,6 @@ Expressions = (function() {
       return;
     }
     if (operation.name) {
-      if (operation.name === '$class') {
-        debugger;
-      }
       this.engine.console.row(operation, args, continuation || "");
     }
     if (operation.def.noop) {
@@ -167,9 +164,10 @@ Expressions = (function() {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       key = _ref[_i];
       bit = key;
-      if ((index = bit.indexOf(GSS.DOWN)) > -1) {
+      if ((index = bit.lastIndexOf(GSS.DOWN)) > -1) {
         bit = bit.substring(index + 1);
       }
+      console.error(bit, path);
       if (bit === path || bit.substring(0, path.length) === path) {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
@@ -974,7 +972,7 @@ Engine = (function() {
 
   Engine.time = function(other, time) {
     time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
-    if (!other) {
+    if (time && !other) {
       return time;
     }
     return Math.floor((time - other) * 100) / 100;

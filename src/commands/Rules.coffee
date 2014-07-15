@@ -36,7 +36,6 @@ class Rules
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
       contd = @queries.getScopePath(continuation) + operation.parent.path
-      debugger
       @queries.remove(result, contd, operation.parent, scope, true)
       return true
 
@@ -89,7 +88,6 @@ class Rules
       path = continuation + operation.parent.uid
       query = @queries[path]
       if query == undefined || (!!query != !!condition)
-        debugger
         index = condition && 2 || 3
         @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation
         unless query == undefined
