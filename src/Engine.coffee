@@ -310,7 +310,7 @@ class Engine
           Engine.Console::groups++
         else if method == 'groupEnd'
           Engine.Console::groups--
-        #console?[method]?(arguments...)
+        console?[method]?(arguments...)
 
   @console: new Engine.Console
   console: Engine.console

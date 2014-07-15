@@ -19472,10 +19472,11 @@ Engine = (function() {
     Engine.Console.prototype[method] = (function(method) {
       return function() {
         if (method === 'group' || method === 'groupCollapsed') {
-          return Engine.Console.prototype.groups++;
+          Engine.Console.prototype.groups++;
         } else if (method === 'groupEnd') {
-          return Engine.Console.prototype.groups--;
+          Engine.Console.prototype.groups--;
         }
+        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
       };
     })(method);
   }
