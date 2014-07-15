@@ -167,7 +167,6 @@ Expressions = (function() {
       if ((index = bit.lastIndexOf(GSS.DOWN)) > -1) {
         bit = bit.substring(index + 1);
       }
-      console.error(bit, path);
       if (bit === path || bit.substring(0, path.length) === path) {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
@@ -1004,11 +1003,10 @@ Engine = (function() {
     Engine.Console.prototype[method] = (function(method) {
       return function() {
         if (method === 'group' || method === 'groupCollapsed') {
-          Engine.Console.prototype.groups++;
+          return Engine.Console.prototype.groups++;
         } else if (method === 'groupEnd') {
-          Engine.Console.prototype.groups--;
+          return Engine.Console.prototype.groups--;
         }
-        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
       };
     })(method);
   }

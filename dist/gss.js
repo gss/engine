@@ -19472,11 +19472,10 @@ Engine = (function() {
     Engine.Console.prototype[method] = (function(method) {
       return function() {
         if (method === 'group' || method === 'groupCollapsed') {
-          Engine.Console.prototype.groups++;
+          return Engine.Console.prototype.groups++;
         } else if (method === 'groupEnd') {
-          Engine.Console.prototype.groups--;
+          return Engine.Console.prototype.groups--;
         }
-        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
       };
     })(method);
   }
@@ -20512,7 +20511,7 @@ if (!dummy.hasOwnProperty("parentElement")) {
   };
 }
 
-if (!dummy.hasOwnProperty("nextElementSibling")) {
+if (!dummy.hasOwnProperty("children")) {
   Selectors.prototype['$>'][1] = function(node) {
     var child, _i, _len, _ref1, _results;
     _ref1 = node.childNodes;
@@ -20525,6 +20524,9 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
     }
     return _results;
   };
+}
+
+if (!dummy.hasOwnProperty("nextElementSibling")) {
   Selectors.prototype['$+'][1] = function(node) {
     while (node = node.nextSibling) {
       if (node.nodeType === 1) {
@@ -21284,7 +21286,6 @@ Expressions = (function() {
       if ((index = bit.lastIndexOf(GSS.DOWN)) > -1) {
         bit = bit.substring(index + 1);
       }
-      console.error(bit, path);
       if (bit === path || bit.substring(0, path.length) === path) {
         if (length < bit.length && bit.charAt(length) === '$') {
           return this.engine.elements[bit.substring(length)];
@@ -22275,11 +22276,9 @@ Queries = (function() {
 
   Queries.prototype.pair = function(continuation, operation, scope, result) {
     var collection, element, left, match, plurals, pushed, schedule, _base;
-    console.error(continuation, this.isPaired(operation, continuation, true), 'pair the fuck up');
     if (!(match = this.isPaired(operation, continuation, true))) {
       return;
     }
-    debugger;
     left = this.getOperationPath(match[1]);
     plurals = (_base = (this._plurals || (this._plurals = {})))[left] || (_base[left] = []);
     if (plurals.indexOf(operation.path) === -1) {
@@ -23075,20 +23074,25 @@ Styles = (function() {
       x += offsets.x || 0;
       y += offsets.y || 0;
     }
+    if (parent === document) {
+      parent = document.body;
+    }
     children = this.engine.commands['$>'][1](parent);
     if (parent.offsetParent === scope) {
       x -= scope.offsetLeft;
       y -= scope.offsetTop;
     } else if (parent !== scope) {
-      if (!offsets && children.length && children[0].offsetParent === parent) {
+      if (!offsets && (children != null ? children.length : void 0) && children[0].offsetParent === parent) {
         x += parent.offsetLeft + parent.clientLeft;
         y += parent.offsetTop + parent.clientTop;
         offsetParent = parent;
       }
     }
-    for (_i = 0, _len = children.length; _i < _len; _i++) {
-      child = children[_i];
-      this.adjust(child, x, y, positioning, offsetParent, full);
+    if (children) {
+      for (_i = 0, _len = children.length; _i < _len; _i++) {
+        child = children[_i];
+        this.adjust(child, x, y, positioning, offsetParent, full);
+      }
     }
     return positioning;
   };

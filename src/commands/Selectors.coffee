@@ -353,9 +353,10 @@ unless dummy.hasOwnProperty("parentElement")
   Selectors::['$!>'][1] = Selectors::['::parent'][1] = (node) ->
     if parent = node.parentNode
       return parent if parent.nodeType == 1
-unless dummy.hasOwnProperty("nextElementSibling")
+unless dummy.hasOwnProperty("children")
   Selectors::['$>'][1] = (node) ->
       child for child in node.childNodes when child.nodeType == 1
+unless dummy.hasOwnProperty("nextElementSibling")
   Selectors::['$+'][1] = (node) ->
     while node = node.nextSibling
       return node if node.nodeType == 1

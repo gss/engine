@@ -142,7 +142,6 @@ class Expressions
       bit = key
       if (index = bit.lastIndexOf(GSS.DOWN)) > -1
         bit = bit.substring(index + 1)
-      console.error(bit, path)
       if bit == path || bit.substring(0, path.length) == path
         if length < bit.length && bit.charAt(length) == '$'
           return @engine.elements[bit.substring(length)]

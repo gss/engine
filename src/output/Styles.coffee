@@ -129,6 +129,8 @@ class Styles
       y += offsets.y || 0
 
     # Select all children
+    if parent == document
+      parent = document.body
     children = @engine.commands['$>'][1](parent);
 
     if parent.offsetParent == scope
@@ -136,14 +138,15 @@ class Styles
       y -= scope.offsetTop
     else if parent != scope
       # When rendering a positioned element, measure its offsets
-      if !offsets && children.length && children[0].offsetParent == parent
+      if !offsets && children?.length && children[0].offsetParent == parent
         x += parent.offsetLeft + parent.clientLeft
         y += parent.offsetTop + parent.clientTop
         offsetParent = parent
 
     # Position children
-    for child in children
-      @adjust(child, x, y, positioning, offsetParent, full)
+    if children
+      for child in children
+        @adjust(child, x, y, positioning, offsetParent, full)
     return positioning
 
   # Calculate offsets according to new values (but dont set anything)
