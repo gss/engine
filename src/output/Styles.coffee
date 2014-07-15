@@ -86,7 +86,7 @@ class Styles
       style = element.style
       if style[camel] != undefined
         if typeof value == 'number' && (camel != 'zIndex' && camel != 'opacity')
-          pixels = value + 'px'
+          pixels = Math.round(value) + 'px'
         if (positioner)
           if !style[camel]
             if (style.positioning = (style.positioning || 0) + 1) == 1

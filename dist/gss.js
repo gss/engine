@@ -23018,7 +23018,7 @@ Styles = (function() {
       style = element.style;
       if (style[camel] !== void 0) {
         if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
-          pixels = value + 'px';
+          pixels = Math.round(value) + 'px';
         }
         if (positioner) {
           if (!style[camel]) {
