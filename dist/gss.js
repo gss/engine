@@ -20056,7 +20056,6 @@ Selectors = (function() {
 
   Selectors.prototype.onSelector = function(operation, parent) {
     var group, index, prefix, _base, _base1;
-    console.error(operation.name, 444);
     prefix = ((parent && operation.name !== ' ') || (operation[0] !== '$combinator' && typeof operation[1] !== 'object')) && ' ' || '';
     switch (operation[0]) {
       case '$tag':

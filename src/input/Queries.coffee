@@ -540,9 +540,7 @@ class Queries
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   pair: (continuation, operation, scope, result) ->
-    console.error(continuation, @isPaired(operation, continuation, true), 'pair the fuck up')
     return unless match = @isPaired(operation, continuation, true)
-    debugger
     left = @getOperationPath(match[1])
     plurals = (@_plurals ||= {})[left] ||= []
     if plurals.indexOf(operation.path) == -1
