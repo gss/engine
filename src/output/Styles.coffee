@@ -73,10 +73,7 @@ class Styles
     else
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        path = @engine._compute(element,  property, undefined, value)
-        if (val = @engine.computed[path])?
-          value = val
-        return value
+        return @engine._measure(element,  property, undefined, value)
         
       if positioner
         positioned = positioner(element)

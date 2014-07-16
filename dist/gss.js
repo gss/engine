@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-15) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19552,8 +19552,8 @@ Engine.Document = (function(_super) {
     }
     id = e.target && this.identify(e.target) || e;
     captured = this.expressions.capture(id + ' resized');
-    this._compute(id, "width", void 0, false);
-    this._compute(id, "height", void 0, false);
+    this._measure(id, "width", void 0, false);
+    this._measure(id, "height", void 0, false);
     if (captured) {
       return this.expressions.release();
     }
@@ -19566,8 +19566,8 @@ Engine.Document = (function(_super) {
     }
     id = e.target && this.identify(e.target) || e;
     captured = this.expressions.capture(id + ' scrolled');
-    this._compute(id, "scroll-top", void 0, false);
-    this._compute(id, "scroll-left", void 0, false);
+    this._measure(id, "scroll-top", void 0, false);
+    this._measure(id, "scroll-left", void 0, false);
     if (captured) {
       return this.expressions.release();
     }
@@ -19799,6 +19799,12 @@ Dimensions = (function() {
     },
     top: function(element) {
       return element.scrollTop;
+    },
+    height: function(element) {
+      return element.scrollHeight;
+    },
+    width: function(element) {
+      return element.scrollWidth;
     }
   };
 
@@ -19808,6 +19814,12 @@ Dimensions = (function() {
     },
     top: function(element) {
       return element.clientTop;
+    },
+    height: function(element) {
+      return element.clientHeight;
+    },
+    width: function(element) {
+      return element.clientWidth;
     }
   };
 
@@ -19817,6 +19829,12 @@ Dimensions = (function() {
     },
     top: function(element) {
       return element.offsetTop;
+    },
+    height: function(element) {
+      return element.offsetHeight;
+    },
+    width: function(element) {
+      return element.offsetWidth;
     }
   };
 
@@ -19838,6 +19856,7 @@ Equasions = (function() {
   };
 
   Equasions.prototype.bottom = function(scope, path) {
+    debugger;
     return this['_+'](this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
@@ -20499,7 +20518,7 @@ for (property in _ref) {
   }
 }
 
-dummy = document.createElement('_');
+dummy = (this.GSS || this.Engine || Selectors).dummy = document.createElement('_');
 
 if (!dummy.hasOwnProperty("parentElement")) {
   Selectors.prototype['$!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
@@ -20509,21 +20528,6 @@ if (!dummy.hasOwnProperty("parentElement")) {
         return parent;
       }
     }
-  };
-}
-
-if (!dummy.hasOwnProperty("children")) {
-  Selectors.prototype['$>'][1] = function(node) {
-    var child, _i, _len, _ref1, _results;
-    _ref1 = node.childNodes;
-    _results = [];
-    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-      child = _ref1[_i];
-      if (child.nodeType === 1) {
-        _results.push(child);
-      }
-    }
-    return _results;
   };
 }
 
@@ -20683,7 +20687,7 @@ Constraints = (function() {
   };
 
   Constraints.prototype.strength = function(strength) {
-    return c.Strength[strength];
+    return c.Strength[strength] || c.Strength.medium;
   };
 
   Constraints.prototype.weight = function(weight) {
@@ -20780,7 +20784,7 @@ Measurements = (function() {
 
   Measurements.prototype.get = {
     command: function(operation, continuation, scope, meta, object, property) {
-      var child, id, index, parent, path, primitive, _ref;
+      var assignment, child, id, index, parent, path, primitive, _ref;
       if (property) {
         if (typeof object === 'string') {
           id = object;
@@ -20797,26 +20801,34 @@ Measurements = (function() {
       if (operation) {
         parent = child = operation;
         while (parent = parent.parent) {
-          if (child.index && parent.def.primitive === child.index) {
-            primitive = true;
-            break;
+          if (child.index) {
+            if (parent.def.primitive === child.index) {
+              primitive = true;
+              break;
+            }
+            if (parent.def.noop && parent.def.name && child.index === 1) {
+              assignment = true;
+            }
           }
           child = parent;
         }
       }
+      if (property === 'bottom') {
+        debugger;
+      }
       if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
-        path = this._compute(id, property, continuation, true);
-        if ((index = path.indexOf('[')) > -1) {
+        path = this._measure(id, property, continuation, true, true);
+        if (path && (index = path.indexOf('[')) > -1) {
           id = path.substring(0, index);
           property = path.substring(index + 1, path.length - 1);
         }
-        if (primitive) {
-          return this.values.watch(id, property, operation, this.getContinuation(continuation || ''), scope);
+      } else {
+        if (id && typeof this.properties[property] === 'function') {
+          debugger;
+          return this.properties[property].call(this, id, continuation);
         }
-        console.info(id, property, path);
-      } else if (this.properties[id] && this.properties[property]) {
-        return this.properties[property].call(this, id, continuation);
-      } else if (primitive) {
+      }
+      if (primitive) {
         return this.values.watch(id, property, operation, continuation, scope);
       }
       return ['get', id, property, this.getContinuation(continuation || '')];
@@ -20855,7 +20867,7 @@ Measurements = (function() {
             continue;
           }
           path = id + "[intrinsic-" + prop + "]";
-          (this.computed || (this.computed = {}))[path] = (function() {
+          (this.measured || (this.measured = {}))[path] = (function() {
             switch (prop) {
               case "x":
                 return x + node.offsetLeft;
@@ -20918,7 +20930,9 @@ Measurements = (function() {
     }
   };
 
-  Measurements.prototype.getStyle = function(element, property) {};
+  Measurements.prototype.getStyle = function(element, property) {
+    return element.getComputedStyle(element).property;
+  };
 
   Measurements.prototype.setStyle = function(element, property, value) {
     return element.style[property] = value;
@@ -20932,8 +20946,8 @@ Measurements = (function() {
     }
   };
 
-  Measurements.prototype.compute = function(node, property, continuation, old) {
-    var current, id, path, prop, value, _ref, _ref1;
+  Measurements.prototype.measure = function(node, property, continuation, old, returnPath) {
+    var current, id, path, prop, val, value, _ref, _ref1;
     if (node === window) {
       id = '::window';
     } else if (node.nodeType) {
@@ -20943,39 +20957,50 @@ Measurements = (function() {
       node = this.elements[id];
     }
     path = this.getPath(id, property);
-    if (((_ref = this.computed) != null ? _ref[path] : void 0) != null) {
-      return path;
-    }
-    if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
-      current = this.values[path];
-      if (current === void 0 || old === false) {
-        switch (typeof prop) {
-          case 'function':
-            value = prop.call(this, node, continuation);
-            break;
-          case 'string':
-            path = prop;
-            value = this.properties[prop].call(this, node, continuation);
-            break;
-          default:
-            value = prop;
+    if ((value = (_ref = this.measured) != null ? _ref[path] : void 0) == null) {
+      if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
+        current = this.values[path];
+        if (current === void 0 || old === false) {
+          switch (typeof prop) {
+            case 'function':
+              value = prop.call(this, node, continuation);
+              break;
+            case 'string':
+              path = prop;
+              value = this.properties[prop].call(this, node, continuation);
+              break;
+            default:
+              value = prop;
+          }
         }
-      }
-    } else if (property.indexOf('intrinsic-') > -1) {
-      if (document.body.contains(node)) {
-        if (prop = this.properties[property]) {
-          value = prop.call(this, node, property, continuation);
+      } else if (property.indexOf('intrinsic-') > -1) {
+        if (document.body.contains(node)) {
+          if (prop || (prop = this.properties[property])) {
+            value = prop.call(this, node, property, continuation);
+          }
         } else {
-          value = this._getStyle(node, property, continuation);
+          value = null;
         }
+      } else if ((node != null ? node.style.hasOwnProperty(property) : void 0) || (property === 'x' || property === 'y')) {
+        if (this.properties.intrinsic[property]) {
+          val = this.properties.intrinsic[property].call(this, node, continuation);
+          console.error('precalc', node, property, value);
+          (this.computed || (this.computed = {}))[path] = val;
+        }
+      } else if (this[property]) {
+        value = this[property](node, continuation);
       } else {
-        value = null;
+        return;
       }
-    } else {
-      value = this[property](node, continuation);
     }
-    (this.computed || (this.computed = {}))[path] = value;
-    return path;
+    if (value !== void 0) {
+      (this.measured || (this.measured = {}))[path] = value;
+    }
+    if (returnPath) {
+      return path;
+    } else {
+      return value;
+    }
   };
 
   Measurements.prototype.getCommonParent = function(a, b) {
@@ -21005,16 +21030,16 @@ Measurements = (function() {
       this.styles.render(null, this.reflown);
     }
     this.reflown = void 0;
-    if (this.computed) {
-      _ref = this.computed;
+    if (this.measured) {
+      _ref = this.measured;
       for (property in _ref) {
         value = _ref[property];
         if ((value != null) && value !== this.values[property]) {
           (suggestions || (suggestions = [])).push(['suggest', property, value, 'required']);
         }
       }
-      this.values.merge(this.computed);
-      this.computed = void 0;
+      this.values.merge(this.measured);
+      this.measured = void 0;
     }
     return suggestions;
   };
@@ -21649,16 +21674,16 @@ Queries = (function() {
       }
     }
     if (this.updated) {
-      evalDiff = GSS.time(this.engine.expressions.endTime, this.engine.expressions.startTime);
+      evalDiff = GSS.time(this.engine.expressions.startTime);
       queryDiff = GSS.time(queryTime);
       this.engine.console.row('queries', this.updated, evalDiff + 'ms + ' + queryDiff + 'ms');
     }
-    this.buffer = this.updated = void 0;
     if (this.engine.expressions.buffer) {
-      return this.output.release();
+      this.output.release();
     } else {
-      return this.output.flush();
+      this.output.flush();
     }
+    return this.buffer = this.updated = void 0;
   };
 
   Queries.prototype.push = function(query, continuation, scope) {
@@ -22982,7 +23007,7 @@ Styles = (function() {
   };
 
   Styles.prototype.set = function(id, property, value, positioning, intrinsic) {
-    var camel, element, last, path, pixels, positioned, positioner, style, val, _base;
+    var camel, element, last, path, pixels, positioned, positioner, style, _base;
     if (property === void 0) {
       path = id;
       last = id.lastIndexOf('[');
@@ -23002,11 +23027,7 @@ Styles = (function() {
       (positioning[id] || (positioning[id] = {}))[property] = value;
     } else {
       if (intrinsic) {
-        path = this.engine._compute(element, property, void 0, value);
-        if ((val = this.engine.computed[path]) != null) {
-          value = val;
-        }
-        return value;
+        return this.engine._measure(element, property, void 0, value);
       }
       if (positioner) {
         positioned = positioner(element);

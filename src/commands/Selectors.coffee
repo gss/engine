@@ -347,15 +347,12 @@ for property, command of Selectors::
 
 
 # Add shims for IE<=8 that dont support some DOM properties
-dummy = document.createElement('_')
+dummy = (@GSS || @Engine || Selectors).dummy = document.createElement('_')
 
 unless dummy.hasOwnProperty("parentElement") 
   Selectors::['$!>'][1] = Selectors::['::parent'][1] = (node) ->
     if parent = node.parentNode
       return parent if parent.nodeType == 1
-unless dummy.hasOwnProperty("children")
-  Selectors::['$>'][1] = (node) ->
-      child for child in node.childNodes when child.nodeType == 1
 unless dummy.hasOwnProperty("nextElementSibling")
   Selectors::['$+'][1] = (node) ->
     while node = node.nextSibling

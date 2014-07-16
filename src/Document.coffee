@@ -59,15 +59,15 @@ class Engine.Document extends Engine
   onresize: (e = '::window') ->
     id = e.target && @identify(e.target) || e
     captured = @expressions.capture(id + ' resized') 
-    @_compute(id, "width", undefined, false)
-    @_compute(id, "height", undefined, false)
+    @_measure(id, "width", undefined, false)
+    @_measure(id, "height", undefined, false)
     @expressions.release() if captured
     
   onscroll: (e = '::window') ->
     id = e.target && @identify(e.target) || e
     captured = @expressions.capture(id + ' scrolled') 
-    @_compute(id, "scroll-top", undefined, false)
-    @_compute(id, "scroll-left", undefined, false)
+    @_measure(id, "scroll-top", undefined, false)
+    @_measure(id, "scroll-left", undefined, false)
     @expressions.release() if captured
 
   destroy: ->

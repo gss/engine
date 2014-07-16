@@ -285,6 +285,7 @@ class Engine
 
       return fn.apply(context || @, args)
 
+  # Console & debug helpers
   @time: (other, time) ->
     time ||= performance?.now() || Date.now?() || + (new Date)
     return time if time && !other

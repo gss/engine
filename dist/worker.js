@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-15) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-16) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -1034,6 +1034,7 @@ Equasions = (function() {
   };
 
   Equasions.prototype.bottom = function(scope, path) {
+    debugger;
     return this['_+'](this._get(scope, "y", path), this._get(scope, "height", path));
   };
 
@@ -1113,7 +1114,7 @@ Constraints = (function() {
   };
 
   Constraints.prototype.strength = function(strength) {
-    return c.Strength[strength];
+    return c.Strength[strength] || c.Strength.medium;
   };
 
   Constraints.prototype.weight = function(weight) {

@@ -38,7 +38,7 @@ class Constraints
     return @solutions.variables[name] ||= new c.Variable name: name
 
   strength: (strength) ->
-    return c.Strength[strength]
+    return c.Strength[strength] || c.Strength.medium
 
   weight: (weight) ->
     return weight

@@ -213,7 +213,7 @@ describe 'Cassowary Thread', ->
     it 'tracking by selector', () ->
       thread = new GSS.Solver()
       thread.run [
-          ['==', ['get','$112', 'x', '.big-box'],1000]
+          ['==', ['get','$112', 'x', '.big-box'],1000, 'required']
           ['==', ['get','$112', 'x', '.box'],50,'strong']
         ]
       expect(thread.solutions.lastOutput).to.eql

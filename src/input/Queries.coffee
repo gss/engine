@@ -62,17 +62,19 @@ class Queries
     if @removing
       for node in @removing
         delete node._gss_id
+
     if @updated
-      evalDiff = GSS.time(@engine.expressions.endTime, @engine.expressions.startTime)
+      evalDiff = GSS.time(@engine.expressions.startTime)
       queryDiff = GSS.time(queryTime)
 
       @engine.console.row('queries', @updated, evalDiff + 'ms + ' + queryDiff + 'ms')
-    @buffer = @updated = undefined
 
     if @engine.expressions.buffer
       @output.release()
     else
       @output.flush()
+
+    @buffer = @updated = undefined
 
 
   # Re-evaluate updated queries

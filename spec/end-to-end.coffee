@@ -317,7 +317,28 @@ describe 'End - to - End', ->
 
                       done()
 
-    
+    describe 'auto-intrinsics', ->
+      it 'should use intrinsic value when there is no regular value set', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss"> 
+              #b1[width] == #a1[width];   
+              #a2[width] == #b2[width];  
+            </style>
+            <div class="a" id="a1" style="width: 15px; height: 10px"></div>
+            <div class="a" id="a2" style="width: 20px; height: 25px"></div>
+
+            <div class="b" id="b1"></div>
+            <div class="b" id="b2"></div>
+          """
+        window.$engine = engine
+        engine.once 'solved', (e) ->
+          expect(stringify engine.values.toObject()).to.eql stringify
+            "$a1[width]": 15
+            "$b1[width]": 15
+            "$a2[width]": 20
+            "$b2[width]": 20
+          done()
+
     describe 'complex plural selectors on the left', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """

@@ -7,9 +7,6 @@
     <script src="../vendor/MutationObserver.js"></script>
     <script src="../dist/gss.js"></script>
     <!--<script src="../vendor/c.js"></script> -->
-    <script>
-      GSS.document = new GSS.Document
-    </script>
 
     <style>
       #mocha .test {
@@ -33,7 +30,8 @@
       }
 
       aside {
-        background: blue
+        background: blue;
+        width: 100px;
       }
 
       ul li {
@@ -58,17 +56,22 @@
         }
       }
       footer {
-        // Plural binding for 2 instances of the same DOM query in one exp
         ::[top] == (main)[height]; 
         ::[height] == ::window[height] * 2;
       }
+      aside {
+        ::[left] == (main)[right];
+        ::[height] == 100;
+        ::[top] == (header)[intrinsic-y];
+      }
       main {
         // Bind things to scroll position
-        ::[top] == ::window[scroll-top] + (#header)[intrinsic-height] + (#header)[intrinsic-y];
-        ::[width] == 100;
-        //
+        ::[top] == ::window[scroll-top] + (header)[bottom];
+        ::[width] == (aside)[width];
         ::[left] == (header)[right];
-        ::[height] == ::window[height] - (#header)[intrinsic-height] - 10;
+        // use intrinsic-height to avoid binding. Should be:
+        // height: :window[height] - (header)[height];
+        ::[height] == ::window[height] - (header)[intrinsic-height];
       }
       ul li {
         // justify by using variable
@@ -92,6 +95,9 @@
     <aside id="aside"></aside>
     <footer id="footer"></footer>
 
+    <script>
+      GSS.document = new GSS.Document
+    </script>
 
     <script>
       counter = GSS.$query('ul li').length

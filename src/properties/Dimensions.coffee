@@ -70,6 +70,12 @@ class Dimensions
     top: (element) ->
       return element.scrollTop
 
+    height: (element) ->
+      return element.scrollHeight
+
+    width: (element) ->
+      return element.scrollWidth
+      
   client:
 
     left: (element) ->
@@ -78,6 +84,12 @@ class Dimensions
     top: (element) ->
       return element.clientTop
 
+    height: (element) ->
+      return element.clientHeight
+
+    width: (element) ->
+      return element.clientWidth
+
   offset:
 
     left: (element) ->
@@ -85,5 +97,11 @@ class Dimensions
 
     top: (element) ->
       return element.offsetTop
+
+    height: (element) ->
+      return element.offsetHeight
+
+    width: (element) ->
+      return element.offsetWidth
 
 module.exports = Dimensions

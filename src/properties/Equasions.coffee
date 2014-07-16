@@ -9,6 +9,7 @@ class Equasions
     return @['_+'](@_get(scope, "x", path), @_get(scope, "width", path))
   
   bottom: (scope, path) ->
+    debugger
     return @['_+'](@_get(scope, "y", path), @_get(scope, "height", path))
   
   center:
@@ -17,5 +18,5 @@ class Equasions
 
     y: (scope, path) ->
       return @['_+'](@_get(scope, "y", path), @['_/'](@_get(scope, "height", path), 2))
-
+      
 module.exports = Equasions

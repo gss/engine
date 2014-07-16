@@ -31,27 +31,37 @@ class Measurements
       if operation
         parent = child = operation
         while parent = parent.parent
-          if child.index && parent.def.primitive == child.index
-            primitive = true
-            break
+          if child.index
+            if parent.def.primitive == child.index
+              primitive = true
+              break
+            if parent.def.noop && parent.def.name && child.index == 1
+              assignment = true
+
           child = parent
 
-      # Compute custom property
-      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? # || @[property]?
-        path = @_compute(id, property, continuation, true)
-        if (index = path.indexOf('[')) > -1
+      if property == 'bottom'
+        debugger
+      # Compute custom property, normalize alias
+      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]?# || (!assignment && id)
+        
+        path = @_measure(id, property, continuation, true, true)
+        if path && (index = path.indexOf('[')) > -1
           id = path.substring(0, index)
           property = path.substring(index + 1, path.length - 1)
-        if primitive
-          return @values.watch(id, property, operation, @getContinuation(continuation || '')  , scope)
-        #return @computed?[path] 
-        console.info(id, property, path)
-      # Expand properties like ::window[center-y]
-      else if @properties[id] && @properties[property]
-        return @properties[property].call(@, id, continuation)
-      else if primitive
+      else
+        
+        # Expand properties like [center-y]
+        if id && typeof @properties[property] == 'function'
+          debugger
+          return @properties[property].call(@, id, continuation)
+
+
+      # Resolve conditionals on document side
+      if primitive
         return @values.watch(id, property, operation, continuation, scope)
-      # Return command for solver with path which will be used to clean it
+      
+      # Return command for solver together with tracking label for removal
       return ['get', id, property, @getContinuation(continuation || '')]
 
 
@@ -78,7 +88,7 @@ class Measurements
           continue if full && (prop == 'width' || prop == 'height')
 
           path = id + "[intrinsic-" + prop + "]"
-          (@computed ||= {})[path] = 
+          (@measured ||= {})[path] = 
             switch prop
               when "x"
                 x + node.offsetLeft
@@ -122,6 +132,7 @@ class Measurements
           delete @intrinsic[id] unless group.length
 
   getStyle: (element, property) ->
+    element.getComputedStyle(element).property
 
   setStyle: (element, property, value) ->
     element.style[property] = value
@@ -133,7 +144,7 @@ class Measurements
       return 
 
   # Compute value of a property, reads the styles on elements
-  compute: (node, property, continuation, old) ->
+  measure: (node, property, continuation, old, returnPath) ->
     if node == window
       id = '::window'
     else if node.nodeType
@@ -144,31 +155,36 @@ class Measurements
 
     path = @getPath(id, property)
 
-    return path if @computed?[path]?
-    if (prop = @properties[id]?[property])? 
-      current = @values[path]
-      if current == undefined || old == false
-        switch typeof prop
-          when 'function'
-            value = prop.call(@, node, continuation)
-          when 'string'
-            path = prop
-            value = @properties[prop].call(@, node, continuation)
-          else
-            value = prop
-    else if property.indexOf('intrinsic-') > -1
-      if document.body.contains(node)
-        if prop = @properties[property]
-          value = prop.call(@, node, property, continuation)
-        else
-          value = @_getStyle(node, property, continuation)
-      else
-        value = null
-    else
-      value = @[property](node, continuation)
+    unless (value = @measured?[path])?
+      if (prop = @properties[id]?[property])? 
+        current = @values[path]
+        if current == undefined || old == false
+          switch typeof prop
+            when 'function'
+              value = prop.call(@, node, continuation)
+            when 'string'
+              path = prop
+              value = @properties[prop].call(@, node, continuation)
+            else
+              value = prop
+      else if (property.indexOf('intrinsic-') > -1)
 
-    (@computed ||= {})[path] = value
-    return path
+        if document.body.contains(node)
+          if prop ||= @properties[property]
+            value = prop.call(@, node, property, continuation)
+        else
+          value = null
+      else if node?.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
+        if @properties.intrinsic[property]
+          val = @properties.intrinsic[property].call(@, node, continuation)
+          console.error('precalc', node, property, value)
+          (@computed ||= {})[path] = val
+      else if @[property]
+        value = @[property](node, continuation)
+      else return
+    if value != undefined
+      (@measured ||= {})[path] = value
+    return if returnPath then path else value
 
   getCommonParent: (a, b) ->
     aps = []
@@ -190,12 +206,18 @@ class Measurements
     if (reflow)
       @styles.render(null, @reflown)
     @reflown = undefined
-    if @computed
-      for property, value of @computed
+    if @measured
+      for property, value of @measured
         if value? && value != @values[property]
           (suggestions ||= []).push ['suggest', property, value, 'required']
-      @values.merge @computed
-      @computed = undefined
+      @values.merge @measured
+      @measured = undefined
+    #if @computed
+    #  for property, value of @computed
+    #    if value? && value != @values[property]
+    #      (suggestions ||= []).push ['suggest', property, value, 'weak']
+    #  @values.merge @computed
+    #  @computed = undefined
 
     return suggestions
 
