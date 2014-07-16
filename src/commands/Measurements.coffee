@@ -180,11 +180,11 @@ class Measurements
             value = prop.call(@, node, property, continuation)
         else
           value = null
-      else if GSS.dummy.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
-        if @properties.intrinsic[property]
-          val = @properties.intrinsic[property].call(@, node, continuation)
-          console.error('precalc', node, property, value)
-          (@computed ||= {})[path] = val
+      #else if GSS.dummy.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
+      #  if @properties.intrinsic[property]
+      #    val = @properties.intrinsic[property].call(@, node, continuation)
+      #    console.error('precalc', node, property, value)
+      #    (@computed ||= {})[path] = val
       else if @[property]
         value = @[property](node, continuation)
       else return

@@ -20950,7 +20950,7 @@ Measurements = (function() {
   };
 
   Measurements.prototype.measure = function(node, property, continuation, old, returnPath) {
-    var current, id, path, prop, val, value, _ref, _ref1;
+    var current, id, path, prop, value, _ref, _ref1;
     if (node === window) {
       id = '::window';
     } else if (node.nodeType) {
@@ -20983,12 +20983,6 @@ Measurements = (function() {
           }
         } else {
           value = null;
-        }
-      } else if (GSS.dummy.style.hasOwnProperty(property) || (property === 'x' || property === 'y')) {
-        if (this.properties.intrinsic[property]) {
-          val = this.properties.intrinsic[property].call(this, node, continuation);
-          console.error('precalc', node, property, value);
-          (this.computed || (this.computed = {}))[path] = val;
         }
       } else if (this[property]) {
         value = this[property](node, continuation);

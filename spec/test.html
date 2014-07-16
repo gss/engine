@@ -77,11 +77,11 @@
         ::[height] == 100;
         ::[top] == (header)[intrinsic-height] + (header)[intrinsic-y];
       }
-      
+
       main {
         // Bind things to scroll position
         ::[top] == ::window[scroll-top] + (header)[intrinsic-y];
-        ::[width] == (aside)[width];
+        ::[width] == (aside)[intrinsic-width];
         ::[left] == (header)[right];
 
         // use intrinsic-height to avoid binding. Should be:
