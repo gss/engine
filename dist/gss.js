@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-16) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-17) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19932,6 +19932,9 @@ Rules = (function() {
     cleaning: true,
     subscribe: function(operation, continuation, scope) {
       var id, watchers, _base;
+      if (scope == null) {
+        scope = this.scope;
+      }
       id = scope._gss_id;
       watchers = (_base = this.queries._watchers)[id] || (_base[id] = []);
       if (!watchers.length || this.values.indexOf(watchers, operation, continuation, scope) === -1) {
@@ -20813,10 +20816,7 @@ Measurements = (function() {
           child = parent;
         }
       }
-      if (property === 'bottom') {
-        debugger;
-      }
-      if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
+      if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null) || (!assignment && id)) {
         path = this._measure(id, property, continuation, true, true);
         if (path && (index = path.indexOf('[')) > -1) {
           id = path.substring(0, index);
@@ -20824,7 +20824,6 @@ Measurements = (function() {
         }
       } else {
         if (id && typeof this.properties[property] === 'function') {
-          debugger;
           return this.properties[property].call(this, id, continuation);
         }
       }
@@ -20934,14 +20933,18 @@ Measurements = (function() {
     return element.getComputedStyle(element).property;
   };
 
+  Measurements.prototype.simpleValueRegExp = /^[#0-9a-z]*$/;
+
   Measurements.prototype.setStyle = function(element, property, value) {
     return element.style[property] = value;
   };
 
   Measurements.prototype.set = {
     command: function(operation, continuation, scope, meta, property, value) {
-      if (scope && scope.style[property] !== void 0) {
-        this._setStyle(scope, property, value);
+      var prop;
+      prop = this._camelize(property);
+      if (scope && scope.style[prop] !== void 0) {
+        this._setStyle(scope, prop, value);
       }
     }
   };
@@ -20981,7 +20984,7 @@ Measurements = (function() {
         } else {
           value = null;
         }
-      } else if ((node != null ? node.style.hasOwnProperty(property) : void 0) || (property === 'x' || property === 'y')) {
+      } else if (GSS.dummy.style.hasOwnProperty(property) || (property === 'x' || property === 'y')) {
         if (this.properties.intrinsic[property]) {
           val = this.properties.intrinsic[property].call(this, node, continuation);
           console.error('precalc', node, property, value);
@@ -21024,7 +21027,7 @@ Measurements = (function() {
   };
 
   Measurements.prototype.getSuggestions = function(reflow) {
-    var property, suggestions, value, _ref;
+    var property, suggestions, value, _ref, _ref1;
     suggestions = void 0;
     if (reflow) {
       this.styles.render(null, this.reflown);
@@ -21040,6 +21043,17 @@ Measurements = (function() {
       }
       this.values.merge(this.measured);
       this.measured = void 0;
+    }
+    if (this.computed) {
+      _ref1 = this.computed;
+      for (property in _ref1) {
+        value = _ref1[property];
+        if ((value != null) && value !== this.values[property]) {
+          (suggestions || (suggestions = [])).push(['suggest', property, value, 'weak']);
+        }
+      }
+      this.values.merge(this.computed);
+      this.computed = void 0;
     }
     return suggestions;
   };

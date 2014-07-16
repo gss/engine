@@ -40,10 +40,8 @@ class Measurements
 
           child = parent
 
-      if property == 'bottom'
-        debugger
       # Compute custom property, normalize alias
-      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]?# || (!assignment && id)
+      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? || (!assignment && id)
         
         path = @_measure(id, property, continuation, true, true)
         if path && (index = path.indexOf('[')) > -1
@@ -53,7 +51,6 @@ class Measurements
         
         # Expand properties like [center-y]
         if id && typeof @properties[property] == 'function'
-          debugger
           return @properties[property].call(@, id, continuation)
 
 
@@ -134,13 +131,22 @@ class Measurements
   getStyle: (element, property) ->
     element.getComputedStyle(element).property
 
+  simpleValueRegExp: /^[#0-9a-z]*$/,
+
   setStyle: (element, property, value) ->
+    #if (value.test(@_simpleValueRegExp))
     element.style[property] = value
+    #else
+    #  #FIXME
+    #  value = property + ': == ' + value
+    #  operation = GSS.Parser.parse(value).commands[0][2]
+
 
   set:
     command: (operation, continuation, scope, meta, property, value) ->
-      if scope && scope.style[property] != undefined
-        @_setStyle(scope, property, value)
+      prop = @_camelize(property)
+      if scope && scope.style[prop] != undefined
+        @_setStyle(scope, prop, value)
       return 
 
   # Compute value of a property, reads the styles on elements
@@ -174,7 +180,7 @@ class Measurements
             value = prop.call(@, node, property, continuation)
         else
           value = null
-      else if node?.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
+      else if GSS.dummy.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
         if @properties.intrinsic[property]
           val = @properties.intrinsic[property].call(@, node, continuation)
           console.error('precalc', node, property, value)
@@ -212,12 +218,12 @@ class Measurements
           (suggestions ||= []).push ['suggest', property, value, 'required']
       @values.merge @measured
       @measured = undefined
-    #if @computed
-    #  for property, value of @computed
-    #    if value? && value != @values[property]
-    #      (suggestions ||= []).push ['suggest', property, value, 'weak']
-    #  @values.merge @computed
-    #  @computed = undefined
+    if @computed
+      for property, value of @computed
+        if value? && value != @values[property]
+          (suggestions ||= []).push ['suggest', property, value, 'weak']
+      @values.merge @computed
+      @computed = undefined
 
     return suggestions
 

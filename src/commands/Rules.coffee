@@ -62,7 +62,7 @@ class Rules
 
     cleaning: true
 
-    subscribe: (operation, continuation, scope) ->
+    subscribe: (operation, continuation, scope = @scope) ->
       id = scope._gss_id
       watchers = @queries._watchers[id] ||= []
       if !watchers.length || @values.indexOf(watchers, operation, continuation, scope) == -1

@@ -46,6 +46,17 @@
       // plural selectors can be used as singular, a la jQ
       [left-margin] == (main)[right];
 
+      // global condition with nested rules
+      @if (#main)[top] > 50 {
+        main {
+          background: red;
+        }
+      } @else {
+        main {
+          background: yellow;
+        }
+      }
+
       header {
         ::[left] == 0;
         // condition inside css rule
@@ -55,24 +66,39 @@
           ::[width] == ::window[width] / 2;
         }
       }
+
       footer {
         ::[top] == (main)[height]; 
         ::[height] == ::window[height] * 2;
       }
+
       aside {
         ::[left] == (main)[right];
         ::[height] == 100;
-        ::[top] == (header)[intrinsic-y];
+        ::[top] == (header)[intrinsic-height] + (header)[intrinsic-y];
       }
+      
       main {
         // Bind things to scroll position
-        ::[top] == ::window[scroll-top] + (header)[bottom];
+        ::[top] == ::window[scroll-top] + (header)[intrinsic-y];
         ::[width] == (aside)[width];
         ::[left] == (header)[right];
+
         // use intrinsic-height to avoid binding. Should be:
         // height: :window[height] - (header)[height];
         ::[height] == ::window[height] - (header)[intrinsic-height];
       }
+
+      // Custom combinators
+      ul li !~ li {
+
+        ::[height] == 30;
+        
+        // FIXME: Regular css style is never removed (needs specificity sorting and groupping);
+        background-color: yellowgreen;
+      }
+
+      // Chains
       ul li {
         // justify by using variable
         ::[width] == [li-width];
