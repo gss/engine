@@ -1,4 +1,5 @@
 /node_modules/
+/components/
 .DS_Store
 /spec/*.js
 sauce_connect.log*
