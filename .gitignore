@@ -1,5 +1,7 @@
 /node_modules/
 /components/
+/dist/*.min.js
+/dist/slightlyoff-cassowary.js/
 .DS_Store
 /spec/*.js
 sauce_connect.log*
