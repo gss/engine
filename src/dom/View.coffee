@@ -160,7 +160,6 @@ class View
       @style[key] = val + "px"
     for key, val of @style
       @el.style[key] = val
-      console.log key, val
     @
   
   ###
