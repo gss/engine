@@ -111,8 +111,8 @@ describe 'Cassowary Thread', ->
     #c.trace = true
     thread = new GSS.Solver()
     thread.run [
-        ['==', ['get','hgap'],20, 'require']                
-        ['==', ['get','width'],['+',['get','intrinsic-width'],['get','hgap']],'require']
+        ['==', ['get','hgap'], 20, 'required']                
+        ['==', ['get','width'],['+',['get','intrinsic-width'],['get','hgap']],'required']
         ['suggest', ['get','intrinsic-width'], 100, 'required']
         ['==', ['get','width'], 20, 'strong']  
       ]

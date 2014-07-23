@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-17) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-23) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -47,7 +47,7 @@ Expressions = (function() {
       return;
     }
     if ((buffer = this.buffer) !== void 0) {
-      if (!(this.engine._onBuffer && this.engine._onBuffer(buffer, args, batch) === false)) {
+      if (!(this.engine.onBuffer && this.engine.onBuffer(buffer, args, batch) === false)) {
         (buffer || (this.buffer = [])).push(args);
       }
     } else {
@@ -57,11 +57,11 @@ Expressions = (function() {
 
   Expressions.prototype.flush = function() {
     var added, buffer;
-    if (this.engine._onFlush) {
-      added = this.engine._onFlush(this.buffer);
+    if (this.engine.onFlush) {
+      added = this.engine.onFlush(this.buffer);
     }
     buffer = this.buffer && added && added.concat(this.buffer) || this.buffer || added;
-    this.lastOutput = GSS.clone(buffer);
+    this.lastOutput = this.engine.clone(buffer);
     if (buffer) {
       this.buffer = void 0;
       this.output.pull(buffer);
@@ -133,7 +133,7 @@ Expressions = (function() {
           if (!context && (func = scope[method])) {
             context = scope;
           } else if (command = this.commands[method]) {
-            func = this.engine[command.reference];
+            func = this.engine[command.displayName];
           }
         }
       }
@@ -160,11 +160,11 @@ Expressions = (function() {
   Expressions.prototype.reuse = function(path, continuation) {
     var bit, index, key, length, _i, _len, _ref;
     length = path.length;
-    _ref = continuation.split(GSS.RIGHT);
+    _ref = continuation.split(this.engine.RIGHT);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       key = _ref[_i];
       bit = key;
-      if ((index = bit.lastIndexOf(GSS.DOWN)) > -1) {
+      if ((index = bit.lastIndexOf(this.engine.DOWN)) > -1) {
         bit = bit.substring(index + 1);
       }
       if (bit === path || bit.substring(0, path.length) === path) {
@@ -200,7 +200,7 @@ Expressions = (function() {
         continue;
       } else if (argument instanceof Array) {
         if (ascender != null) {
-          mark = operation.def.rule && ascender === 1 && GSS.DOWN || GSS.RIGHT;
+          mark = operation.def.rule && ascender === 1 && this.engine.DOWN || this.engine.RIGHT;
           if (mark) {
             contd = this.engine.getContinuation(continuation, null, mark);
           } else {
@@ -226,14 +226,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var breadcrumbs, captured, item, parent, _i, _len, _ref;
+    var breadcrumbs, captured, item, parent, _base, _i, _len, _ref;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
-        if (parent && this.engine.isCollection(result)) {
-          this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
+        if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
+          this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
-            breadcrumbs = this.engine.getContinuation(continuation, item, GSS.UP);
+            breadcrumbs = this.engine.getContinuation(continuation, item, this.engine.UP);
             this.evaluate(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
           this.engine.console.groupEnd();
@@ -406,7 +406,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.release = function() {
-    this.endTime = GSS.time();
+    this.endTime = this.engine.time();
     this.flush();
     return this.endTime;
   };
@@ -420,7 +420,7 @@ Expressions = (function() {
     fmt = '%c%s%c';
     if (typeof reason !== 'string') {
       if (reason != null ? reason.slice : void 0) {
-        reason = GSS.clone(reason);
+        reason = this.engine.clone(reason);
       }
       fmt += '\t\t%O';
     } else {
@@ -433,7 +433,7 @@ Expressions = (function() {
       method = 'groupCollapsed';
     }
     this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
-    this.startTime = GSS.time();
+    this.startTime = this.engine.time();
     this.buffer = null;
     return true;
   };
@@ -445,6 +445,307 @@ Expressions = (function() {
 this.module || (this.module = {});
 
 module.exports = Expressions;
+
+var Conventions;
+
+Conventions = (function() {
+  function Conventions() {}
+
+  Conventions.prototype.getContinuation = function(path, value, suffix) {
+    if (suffix == null) {
+      suffix = '';
+    }
+    if (path) {
+      path = path.replace(/[→↓↑]$/, '');
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    return path + (value && this.identify(value) || '') + suffix;
+  };
+
+  Conventions.prototype.getPossibleContinuations = function(path) {
+    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
+  };
+
+  Conventions.prototype.getPath = function(id, property) {
+    if (!property) {
+      property = id;
+      id = void 0;
+    }
+    if (property.indexOf('[') > -1 || !id) {
+      return property;
+    } else {
+      return id + '[' + property + ']';
+    }
+  };
+
+  Conventions.prototype.isCollection = function(object) {
+    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      switch (typeof object[0]) {
+        case "object":
+          return object[0].nodeType;
+        case "undefined":
+          return object.length === 0;
+      }
+    }
+  };
+
+  Conventions.prototype.getQueryPath = function(operation, continuation) {
+    if (continuation) {
+      if (continuation.nodeType) {
+        return this.identify(continuation) + ' ' + operation.path;
+      } else {
+        return continuation + operation.key;
+      }
+    } else {
+      return operation.key;
+    }
+  };
+
+  Conventions.prototype.getContext = function(args, operation, scope, node) {
+    var index, _ref;
+    index = args[0].def && 4 || 0;
+    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
+      return args[index];
+    }
+    if (!operation.bound) {
+      return this.scope;
+    }
+    return scope;
+  };
+
+  Conventions.prototype.getIntrinsicProperty = function(path) {
+    var index, property;
+    index = path.indexOf('[intrinsic-');
+    if (index > -1) {
+      return property = path.substring(index + 11, path.length - 1);
+    }
+  };
+
+  Conventions.prototype.UP = '↑';
+
+  Conventions.prototype.RIGHT = '→';
+
+  Conventions.prototype.DOWN = '↓';
+
+  return Conventions;
+
+})();
+
+module.exports = Conventions;
+
+var Command;
+
+Command = function(command, reference) {
+  var helper, key, value;
+  if (typeof command === 'object') {
+    helper = this.Helper(command, false, reference);
+    for (key in command) {
+      value = command[key];
+      helper[key] = value;
+    }
+    return helper;
+  }
+  command.displayName = reference;
+  return command;
+};
+
+module.exports = Command;
+
+var Console, method, _i, _len, _ref;
+
+Console = (function() {
+  function Console(level) {
+    this.level = level;
+  }
+
+  Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
+
+  Console.prototype.groups = 0;
+
+  Console.prototype.row = function(a, b, c) {
+    var p1, p2;
+    a = a.name || a;
+    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
+    if (typeof b === 'object') {
+      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
+    } else {
+      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
+      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
+    }
+  };
+
+  Console.time = function(other, time) {
+    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
+    if (time && !other) {
+      return time;
+    }
+    return Math.floor((time - other) * 100) / 100;
+  };
+
+  return Console;
+
+})();
+
+_ref = Console.prototype.methods;
+for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+  method = _ref[_i];
+  Console.prototype[method] = (function(method) {
+    return function() {
+      if (method === 'group' || method === 'groupCollapsed') {
+        Console.prototype.groups++;
+      } else if (method === 'groupEnd') {
+        Console.prototype.groups--;
+      }
+      if (typeof document !== "undefined" && document !== null) {
+        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
+      }
+    };
+  })(method);
+}
+
+module.exports = Console;
+
+var EventTrigger;
+
+EventTrigger = (function() {
+  function EventTrigger() {}
+
+  EventTrigger.prototype.once = function(type, fn) {
+    fn.once = true;
+    return this.addEventListener(type, fn);
+  };
+
+  EventTrigger.prototype.addEventListener = function(type, fn) {
+    var _base;
+    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
+  };
+
+  EventTrigger.prototype.removeEventListener = function(type, fn) {
+    var group, index;
+    if (group = this.events[type]) {
+      if ((index = group.indexOf(fn)) > -1) {
+        return group.splice(index, 1);
+      }
+    }
+  };
+
+  EventTrigger.prototype.triggerEvent = function(type, a, b, c) {
+    var fn, group, index, method, _i;
+    if (group = this.events[type]) {
+      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
+        fn = group[index];
+        if (fn.once) {
+          group.splice(index, 1);
+        }
+        fn.call(this, a, b, c);
+      }
+    }
+    if (this[method = 'on' + type]) {
+      return this[method](a, b, c);
+    }
+  };
+
+  EventTrigger.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
+    if (!this.scope) {
+      return;
+    }
+    (detail || (detail = {})).engine = this;
+    return element.dispatchEvent(new CustomEvent(type, {
+      detail: detail,
+      bubbles: bubbles,
+      cancelable: cancelable
+    }));
+  };
+
+  EventTrigger.prototype.handleEvent = function(e) {
+    return this.triggerEvent(e.type, e);
+  };
+
+  return EventTrigger;
+
+})();
+
+module.exports = EventTrigger;
+
+var Helper;
+
+Helper = function(command, scoped, displayName) {
+  var func, helper;
+  if (typeof command === 'function') {
+    func = command;
+  }
+  helper = function(scope) {
+    var args, context, fn, length, method;
+    args = Array.prototype.slice.call(arguments, 0);
+    length = arguments.length;
+    if (scoped || command.serialized) {
+      if (!(scope && scope.nodeType)) {
+        scope = this.scope || document;
+        if (typeof command[args.length] === 'string') {
+          context = scope;
+        } else {
+          args.unshift(scope);
+        }
+      } else {
+        if (typeof command[args.length - 1] === 'string') {
+          context = scope = args.shift();
+        }
+      }
+    }
+    if (!(fn = func)) {
+      if (typeof (method = command[args.length]) === 'function') {
+        fn = method;
+      } else {
+        if (!(method && (fn = scope[method]))) {
+          if (fn = this.commands[method]) {
+            context = this;
+          } else {
+            fn = command.command;
+            args = [null, args[2], null, null, args[0], args[1]];
+          }
+        }
+      }
+    }
+    return fn.apply(context || this, args);
+  };
+  if (displayName) {
+    helper.displayName = displayName;
+  }
+  return helper;
+};
+
+module.exports = Helper;
+
+var Property;
+
+Property = function(property, reference, properties) {
+  var index, key, left, path, right, value, _base;
+  if (typeof property === 'object') {
+    if (property.push) {
+      return properties[path] = this.Style(property, reference, properties);
+    } else {
+      for (key in property) {
+        value = property[key];
+        if ((index = reference.indexOf('[')) > -1) {
+          path = reference.replace(']', '-' + key + ']');
+          left = reference.substring(0, index);
+          right = path.substring(index + 1, path.length - 1);
+          (_base = properties[left])[right] || (_base[right] = this.Property(value, path, properties));
+        } else if (reference.match(/^[a-z]/i)) {
+          path = reference + '-' + key;
+        } else {
+          path = reference + '[' + key + ']';
+        }
+        properties[path] = this.Property(value, path, properties);
+      }
+    }
+  }
+  return property;
+};
+
+module.exports = Property;
 
 var Values;
 
@@ -535,8 +836,8 @@ Values = (function() {
     } else {
       delete this[path];
     }
-    if (this.engine._onChange) {
-      this.engine._onChange(path, value, old);
+    if (this.engine.onChange) {
+      this.engine.onChange(path, value, old);
     }
     if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
@@ -589,23 +890,37 @@ Values = (function() {
 
 module.exports = Values;
 
-var Engine;
+var Engine, EventTrigger,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 this.require || (this.require = function(string) {
   var bits;
-  bits = string.replace('.js', '').split('/');
   if (string === 'cassowary') {
     return c;
   }
+  bits = string.replace('.js', '').split('/');
   return this[bits[bits.length - 1]];
 });
 
-Engine = (function() {
-  var method, _i, _len, _ref;
+EventTrigger = require('./concepts/EventTrigger');
+
+Engine = (function(_super) {
+  __extends(Engine, _super);
 
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
   Engine.prototype.Values = require('./input/Values.js');
+
+  Engine.prototype.Commands = require('./commands/Conventions.js');
+
+  Engine.prototype.Property = require('./concepts/Property.js');
+
+  Engine.prototype.Command = require('./concepts/Command.js');
+
+  Engine.prototype.Helper = require('./concepts/Helper.js');
+
+  Engine.prototype.Console = require('./concepts/Console.js');
 
   function Engine(scope, url) {
     var Document, engine, id;
@@ -653,27 +968,6 @@ Engine = (function() {
     return new (Engine.Document || Engine)(scope, url);
   }
 
-  Engine.prototype.run = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.pull = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype["do"] = function() {
-    return this.expressions["do"].apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.defer = function() {
-    var _base;
-    if (this.deferred == null) {
-      (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = (window.setImmediate || window.setTimeout)(this.expressions.flush.bind(this.expressions), 0);
-    }
-    return this.run.apply(this, arguments);
-  };
-
   Engine.prototype.push = function(data) {
     var id, _i, _len, _ref;
     if (this.removed) {
@@ -694,67 +988,26 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.isCollection = function(object) {
-    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
-      switch (typeof object[0]) {
-        case "object":
-          return object[0].nodeType;
-        case "undefined":
-          return object.length === 0;
-      }
+  Engine.prototype.run = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.pull = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.defer = function() {
+    var _base;
+    if (this.deferred == null) {
+      (_base = this.expressions).buffer || (_base.buffer = null);
+      this.deferred = (window.setImmediate || window.setTimeout)(this.expressions.flush.bind(this.expressions), 0);
     }
+    return this.run.apply(this, arguments);
   };
 
   Engine.prototype.destroy = function() {
     if (this.scope) {
       return Engine[this.scope._gss_id] = void 0;
-    }
-  };
-
-  Engine.prototype.getContinuation = function(path, value, suffix) {
-    if (suffix == null) {
-      suffix = '';
-    }
-    if (path) {
-      path = path.replace(/[→↓↑]$/, '');
-    }
-    if (typeof value === 'string') {
-      return value;
-    }
-    return path + (value && Engine.identify(value) || '') + suffix;
-  };
-
-  Engine.prototype.getContext = function(args, operation, scope, node) {
-    var index, _ref;
-    index = args[0].def && 4 || 0;
-    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
-      return args[index];
-    }
-    if (!operation.bound) {
-      return this.scope;
-    }
-    return scope;
-  };
-
-  Engine.UP = '↑';
-
-  Engine.RIGHT = '→';
-
-  Engine.DOWN = '↓';
-
-  Engine.prototype.getPossibleContinuations = function(path) {
-    return [path, path + Engine.UP, path + Engine.RIGHT, path + Engine.DOWN];
-  };
-
-  Engine.prototype.getPath = function(id, property) {
-    if (!property) {
-      property = id;
-      id = void 0;
-    }
-    if (property.indexOf('[') > -1 || !id) {
-      return property;
-    } else {
-      return id + '[' + property + ']';
     }
   };
 
@@ -792,60 +1045,6 @@ Engine = (function() {
 
   Engine.prototype.engines = {};
 
-  Engine.prototype.once = function(type, fn) {
-    fn.once = true;
-    return this.addEventListener(type, fn);
-  };
-
-  Engine.prototype.addEventListener = function(type, fn) {
-    var _base;
-    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
-  };
-
-  Engine.prototype.removeEventListener = function(type, fn) {
-    var group, index;
-    if (group = this.events && this.events[type]) {
-      if ((index = group.indexOf(fn)) > -1) {
-        return group.splice(index, 1);
-      }
-    }
-  };
-
-  Engine.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method, _i;
-    if (group = this.events[type]) {
-      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
-        fn = group[index];
-        if (fn.once) {
-          group.splice(index, 1);
-        }
-        fn.call(this, a, b, c);
-      }
-    }
-    if (this[method = 'on' + type]) {
-      return this[method](a, b, c);
-    }
-  };
-
-  Engine.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
-    if (!this.scope) {
-      return;
-    }
-    (detail || (detail = {})).engine = this;
-    return element.dispatchEvent(new CustomEvent(type, {
-      detail: detail,
-      bubbles: bubbles,
-      cancelable: cancelable
-    }));
-  };
-
-  Engine.clone = function(object) {
-    if (object && object.map) {
-      return object.map(this.clone, this);
-    }
-    return object;
-  };
-
   Engine.include = function() {
     var Context, fn, mixin, name, _i, _len, _ref;
     Context = function(engine) {
@@ -862,163 +1061,73 @@ Engine = (function() {
     return Context;
   };
 
-  Engine.prototype.handleEvent = function(e) {
-    return this.triggerEvent(e.type, e);
-  };
-
   Engine.prototype.start = function() {
-    var command, key, property, _ref, _ref1;
     if (this.running) {
       return;
     }
-    _ref = this.commands;
-    for (key in _ref) {
-      command = _ref[key];
-      if (command === this) {
-        continue;
-      }
-      command.reference = '_' + key;
-      this[command.reference] = Engine.Command(command, command.reference);
+    if (this.constructor.prototype.running === void 0) {
+      this.constructor.prototype.running = null;
+      this.constructor.prototype.compile();
     }
-    _ref1 = this.properties;
-    for (key in _ref1) {
-      property = _ref1[key];
-      if (property === this) {
-        continue;
-      }
-      Engine.Property(property, key, this.properties);
-    }
+    this.compile();
     return this.running = true;
   };
 
-  Engine.Property = function(property, reference, properties) {
-    var index, key, path, value, _base, _name;
-    if (typeof property === 'object') {
-      for (key in property) {
-        value = property[key];
-        if (property === 'shortcut') {
-
-        } else {
-          if ((index = reference.indexOf('[')) > -1) {
-            path = reference.replace(']', '-' + key + ']');
-            (_base = properties[reference.substring(0, index)])[_name = path.substring(index + 1, path.length - 1)] || (_base[_name] = Engine.Property(value, path, properties));
-          } else if (reference.match(/^[a-z]/i)) {
-            path = reference + '-' + key;
-          } else {
-            path = reference + '[' + key + ']';
-          }
-          properties[path] = Engine.Property(value, path, properties);
+  Engine.prototype.compile = function() {
+    var command, commands, key, prop, properties, property, subkey, _name, _name1;
+    commands = this.commands || this.Commands.prototype;
+    commands.engine || (commands.engine = this);
+    for (key in commands) {
+      command = commands[key];
+      if (command === this || !commands.hasOwnProperty(key)) {
+        continue;
+      }
+      if (key.charAt(0) !== '_') {
+        subkey = '_' + key;
+        command = this.Command(command, subkey);
+        if (this[subkey] == null) {
+          this[subkey] = command;
         }
       }
-    }
-    return property;
-  };
-
-  Engine.Command = function(command, reference) {
-    var helper, key, value;
-    if (typeof command !== 'function') {
-      helper = Engine.Helper(command);
-      for (key in command) {
-        value = command[key];
-        helper[key] = value;
+      if (this[key] == null) {
+        this[key] = command;
       }
-      command = helper;
     }
-    command.reference = reference;
-    return command;
-  };
-
-  Engine.Helper = function(command, scoped) {
-    var func;
-    if (typeof command === 'function') {
-      func = command;
-    }
-    return function(scope) {
-      var args, context, fn, length, method;
-      args = Array.prototype.slice.call(arguments, 0);
-      length = arguments.length;
-      if (scoped || command.serialized) {
-        if (!(scope && scope.nodeType)) {
-          scope = this.scope || document;
-          if (typeof command[args.length] === 'string') {
-            context = scope;
-          } else {
-            args.unshift(scope);
-          }
-        } else {
-          if (typeof command[args.length - 1] === 'string') {
-            context = scope = args.shift();
-          }
-        }
+    properties = this.properties || this.Properties.prototype;
+    properties.engine || (properties.engine = this);
+    for (key in properties) {
+      property = properties[key];
+      if (property === this || !properties.hasOwnProperty(key)) {
+        continue;
       }
-      if (!(fn = func)) {
-        if (typeof (method = command[args.length]) === 'function') {
-          fn = method;
-        } else {
-          if (!(method && (fn = scope[method]))) {
-            if (fn = this.commands[method]) {
-              context = this;
-            } else {
-              fn = command.command;
-              args = [null, args[2], null, null, args[0], args[1]];
-            }
-          }
-        }
+      prop = this.Property(property, key, properties);
+      if (this[_name = '_' + key] == null) {
+        this[_name] = prop;
       }
-      return fn.apply(context || this, args);
-    };
-  };
-
-  Engine.time = function(other, time) {
-    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
-    if (time && !other) {
-      return time;
     }
-    return Math.floor((time - other) * 100) / 100;
-  };
-
-  Engine.Console = function(level) {
-    this.level = level;
-  };
-
-  Engine.Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
-
-  Engine.Console.prototype.groups = 0;
-
-  Engine.Console.prototype.row = function(a, b, c) {
-    var p1, p2;
-    a = a.name || a;
-    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
-    if (typeof b === 'object') {
-      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
-    } else {
-      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
-      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
+    for (key in properties) {
+      property = properties[key];
+      if (this[_name1 = '_' + key] == null) {
+        this[_name1] = property;
+      }
     }
+    return this;
   };
 
-  _ref = Engine.Console.prototype.methods;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    method = _ref[_i];
-    Engine.Console.prototype[method] = (function(method) {
-      return function() {
-        if (method === 'group' || method === 'groupCollapsed') {
-          Engine.Console.prototype.groups++;
-        } else if (method === 'groupEnd') {
-          Engine.Console.prototype.groups--;
-        }
-        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
-      };
-    })(method);
-  }
+  Engine.prototype.console = Engine.console = new Engine.prototype.Console;
 
-  Engine.console = new Engine.Console;
+  Engine.prototype.time = Engine.time = Engine.prototype.Console.time;
 
-  Engine.prototype.console = Engine.console;
+  Engine.prototype.clone = Engine.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
+  };
 
   return Engine;
 
-})();
+})(EventTrigger);
 
 this.GSS = Engine;
 
@@ -1030,20 +1139,19 @@ Equasions = (function() {
   function Equasions() {}
 
   Equasions.prototype.right = function(scope, path) {
-    return this['_+'](this._get(scope, "x", path), this._get(scope, "width", path));
+    return this['+'](this.get(scope, "x", path), this.get(scope, "width", path));
   };
 
   Equasions.prototype.bottom = function(scope, path) {
-    debugger;
-    return this['_+'](this._get(scope, "y", path), this._get(scope, "height", path));
+    return this['+'](this.get(scope, "y", path), this.get(scope, "height", path));
   };
 
   Equasions.prototype.center = {
     x: function(scope, path) {
-      return this['_+'](this._get(scope, "x", path), this['_/'](this._get(scope, "width", path), 2));
+      return this['+'](this.get(scope, "x", path), this['/'](this.get(scope, "width", path), 2));
     },
     y: function(scope, path) {
-      return this['_+'](this._get(scope, "y", path), this['_/'](this._get(scope, "height", path), 2));
+      return this['+'](this.get(scope, "y", path), this['/'](this.get(scope, "height", path), 2));
     }
   };
 
@@ -1087,7 +1195,7 @@ Constraints = (function() {
     if (typeof this.properties[property] === 'function' && scope) {
       return this.properties[property].call(this, scope, path);
     } else {
-      variable = this._var(this.getPath(scope, property));
+      variable = this["var"](this.getPath(scope, property));
     }
     return [variable, path || (property && scope) || ''];
   };
@@ -1128,23 +1236,23 @@ Constraints = (function() {
   };
 
   Constraints.prototype['=='] = function(left, right, strength, weight) {
-    return new c.Equation(left, right, this._strength(strength), this._weight(weight));
+    return new c.Equation(left, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['<='] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['>='] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['<'] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['>'] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['+'] = function(left, right, strength, weight) {
@@ -1175,20 +1283,20 @@ for (property in _ref) {
       return Constraints.prototype[property] = function(left, right, strength, weight) {
         var overloaded, value;
         if (left.push) {
-          overloaded = left = this._onConstraint(null, null, left);
+          overloaded = left = this.onConstraint(null, null, left);
         }
         if (right.push) {
-          overloaded = right = this._onConstraint(null, null, right);
+          overloaded = right = this.onConstraint(null, null, right);
         }
         value = method.call(this, left, right, strength, weight);
         if (overloaded) {
-          return this._onConstraint(null, [left, right], value);
+          return this.onConstraint(null, [left, right], value);
         }
         return value;
       };
     })(property, method);
   }
-  Constraints.prototype[property].after = '_onConstraint';
+  Constraints.prototype[property].after = 'onConstraint';
 }
 
 module.exports = Constraints;
@@ -1354,8 +1462,8 @@ Solutions = (function() {
 
   Solutions.prototype.edit = function(variable, strength, weight, continuation) {
     var constraint;
-    strength = this.engine._strength(strength);
-    weight = this.engine._weight(weight);
+    strength = this.engine.strength(strength);
+    weight = this.engine.weight(weight);
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
     constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight);
     this.solver.addConstraint(constraint);
@@ -1368,7 +1476,7 @@ Solutions = (function() {
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
         if (continuation) {
-          variable = this.engine._var(path);
+          variable = this.engine["var"](path);
           variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
           if (variables.indexOf(variable) === -1) {
             variables.push(variable);
@@ -1412,7 +1520,7 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.Solutions = require('./output/Solutions.js');
 
-  Solver.prototype.Commands = require('./commands/Constraints.js');
+  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints.js'));
 
   Solver.prototype.Properties = require('./properties/Equasions.js');
 

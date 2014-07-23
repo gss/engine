@@ -41,7 +41,7 @@ class Queries
         @remove id
       @removed = undefined
 
-    queryTime = GSS.time()
+    queryTime = @engine.time()
     while queries = @buffer
       @buffer = null
       @lastOutput = (@lastOutput && @lastOutput.concat(queries) || queries)
@@ -49,7 +49,7 @@ class Queries
         break unless query
         continuation = queries[index + 1]
         scope = queries[index + 2]
-        @output.pull query, continuation, scope, GSS.UP, undefined, undefined
+        @output.pull query, continuation, scope, @engine.UP, undefined, undefined
 
     @buffer = undefined
     repairing = @_repairing
@@ -64,8 +64,8 @@ class Queries
         delete node._gss_id
 
     if @updated
-      evalDiff = GSS.time(@engine.expressions.startTime)
-      queryDiff = GSS.time(queryTime)
+      evalDiff = @engine.time(@engine.expressions.startTime)
+      queryDiff = @engine.time(queryTime)
 
       @engine.console.row('queries', @updated, evalDiff + 'ms + ' + queryDiff + 'ms')
 
@@ -240,11 +240,11 @@ class Queries
     if id = @engine.recognize(parent)
       if parent.tagName == 'STYLE' 
         if parent.getAttribute('type')?.indexOf('text/gss') > -1
-          @engine._eval(parent)
+          @engine.eval(parent)
 
   $intrinsics: (node) ->
     return unless document.body.contains(node)
-    @engine._onResize(node)
+    @engine.onResize(node)
 
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
@@ -486,9 +486,9 @@ class Queries
       # not too good
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
       if operation.path != operation.key
-        @engine.expressions.pull operation.parent, prefix + operation.path, scope, GSS.UP, operation.index, pair[1]
+        @engine.expressions.pull operation.parent, prefix + operation.path, scope, @engine.UP, operation.index, pair[1]
       else
-        @engine.expressions.pull operation, contd, scope, GSS.UP, true, true
+        @engine.expressions.pull operation, contd, scope, @engine.UP, true, true
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path)
 
@@ -509,17 +509,17 @@ class Queries
 
   # Remove all fork marks from a path
   getOperationPath: (continuation, compact) ->
-    bits = @engine.getContinuation(continuation).split(GSS.DOWN);
+    bits = @engine.getContinuation(continuation).split(@engine.DOWN);
     last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.split(GSS.RIGHT).pop().replace(@forkMarkRegExp, '')
+    last = bits[bits.length - 1] = last.split(@engine.RIGHT).pop().replace(@forkMarkRegExp, '')
     return last if compact
-    return bits.join(GSS.DOWN)
+    return bits.join(@engine.DOWN)
 
   # Get path of a parent
   getScopePath: (continuation) ->
-    bits = continuation.split(GSS.DOWN)
+    bits = continuation.split(@engine.DOWN)
     bits[bits.length - 1] = ""
-    return bits.join(GSS.DOWN)
+    return bits.join(@engine.DOWN)
 
   unpair: (continuation, node) ->
     return unless match = @isPaired(null, continuation)
@@ -560,7 +560,7 @@ class Queries
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     if @updated# && node != scope
-      query = @getQueryPath(operation, node)
+      query = @engine.getQueryPath(operation, node)
       return @updated[query]
 
   chain: (left, right, collection, continuation) ->
@@ -594,11 +594,11 @@ class Queries
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    path = @getQueryPath(operation, continuation)
+    path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
 
     # Normalize query to reuse results
-    query = !operation.def.relative && @getQueryPath(operation, node, scope)
+    query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
     if group = (query && @updated?[query])
       result = group[0]
       unless old?
@@ -736,15 +736,6 @@ class Queries
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
       @push(operation, continuation, scope)
     @
-
-  getQueryPath: (operation, continuation) ->
-    if continuation
-      if continuation.nodeType
-        return @engine.identify(continuation) + ' ' + operation.path
-      else
-        return continuation + operation.key
-    else
-      return operation.key
 
   comparePosition: (a, b) ->
     return a.compareDocumentPosition?(b) ?

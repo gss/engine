@@ -6,17 +6,16 @@ class Equasions
   # Formulas
 
   right: (scope, path) ->
-    return @['_+'](@_get(scope, "x", path), @_get(scope, "width", path))
+    return @['+'](@get(scope, "x", path), @get(scope, "width", path))
   
   bottom: (scope, path) ->
-    debugger
-    return @['_+'](@_get(scope, "y", path), @_get(scope, "height", path))
+    return @['+'](@get(scope, "y", path), @get(scope, "height", path))
   
   center:
     x: (scope, path) ->
-      return @['_+'](@_get(scope, "x", path), @['_/'](@_get(scope, "width", path), 2))
+      return @['+'](@get(scope, "x", path), @['/'](@get(scope, "width", path), 2))
 
     y: (scope, path) ->
-      return @['_+'](@_get(scope, "y", path), @['_/'](@_get(scope, "height", path), 2))
+      return @['+'](@get(scope, "y", path), @['/'](@get(scope, "height", path), 2))
       
 module.exports = Equasions

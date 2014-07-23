@@ -28,7 +28,7 @@ class Rules
       
       contd = @queries.getScopePath(continuation) + operation.parent.path
       @queries.add(result, contd, operation.parent, scope, true)
-      return contd + @identify(result) if meta == GSS.UP
+      return contd + @identify(result) if meta == @UP
       return true
 
 
@@ -89,7 +89,7 @@ class Rules
       query = @queries[path]
       if query == undefined || (!!query != !!condition)
         index = condition && 2 || 3
-        @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation
+        @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation
         unless query == undefined
           @queries.clean(path, continuation, operation.parent, scope)
         if branch = operation.parent[index]
@@ -117,14 +117,14 @@ class Rules
         else if !operation
           continuation = @getContinuation(node.tagName.toLowerCase(), node)
         else
-          continuation = node._continuation = @getContinuation(continuation || '', null,  GSS.DOWN)
+          continuation = node._continuation = @getContinuation(continuation || '', null,  @engine.DOWN)
         if node.getAttribute('scoped')?
           scope = node.parentNode
 
       rules = @['_' + type](source)
-      rules = GSS.clone(rules)
+      rules = @clone(rules)
       capture = @expressions.capture(type)
-      @run rules, continuation, scope, GSS.DOWN
+      @run rules, continuation, scope, @engine.DOWN
       @expressions.release() if capture
       return
 
@@ -138,7 +138,7 @@ class Rules
         if xhr.readyState == 4
           if xhr.status == 200
             capture = @expressions.capture(src)
-            @_eval.command.call(@, operation, continuation, scope, meta,
+            @eval.command.call(@, operation, continuation, scope, meta,
                                    node, type, xhr.responseText)
             @expressions.release() if capture
       xhr.open(method.toUpperCase(), src)

@@ -392,7 +392,7 @@ describe 'GSS engine', ->
         done()
       container.addEventListener 'solved', onSolved
       
-      engine.styles.pull {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
+      engine.restyles.pull {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
       
     
 

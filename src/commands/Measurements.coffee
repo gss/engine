@@ -11,6 +11,8 @@ class Measurements
   # Generate command to create a variable
   get:
     command: (operation, continuation, scope, meta, object, property) ->
+      
+      debugger
       if property
         if typeof object == 'string'
           id = object
@@ -35,20 +37,19 @@ class Measurements
             if parent.def.primitive == child.index
               primitive = true
               break
-            if parent.def.noop && parent.def.name && child.index == 1
-              assignment = true
 
           child = parent
 
       # Compute custom property, normalize alias
-      if property.indexOf('intrinsic-') > -1 || @properties[id]?[property]? || (!assignment && id)
+      if ((property.indexOf('intrinsic-') > -1) ||
+            @properties[id]?[property]? || 
+            @properties[property]?.initial != undefined)
         
-        path = @_measure(id, property, continuation, true, true)
+        path = @measure(id, property, continuation, true, true)
         if path && (index = path.indexOf('[')) > -1
           id = path.substring(0, index)
           property = path.substring(index + 1, path.length - 1)
       else
-        
         # Expand properties like [center-y]
         if id && typeof @properties[property] == 'function'
           return @properties[property].call(@, id, continuation)
@@ -75,7 +76,7 @@ class Measurements
   # Triggers measure pass if no commands were sent 
   # and something is set for re-measurement
   onFlush: (buffer) ->
-    return @_getSuggestions(!buffer)
+    return @getSuggestions(!buffer)
 
   onMeasure: (node, x, y, styles, full) ->
     return unless @intrinsic
@@ -104,7 +105,7 @@ class Measurements
     while node
       if node == @scope
         if @reflown
-          reflown = @_getCommonParent(reflown, @reflown)
+          reflown = @getCommonParent(reflown, @reflown)
         else
           reflown = @scope
         break
@@ -119,7 +120,7 @@ class Measurements
   # Register intrinsic values assigned to engine
   onChange: (path, value, old) ->
     unless old? == value? 
-      if prop = @_getIntrinsicProperty(path)
+      if prop = @getIntrinsicProperty(path)
         id = path.substring(0, path.length - prop.length - 10 - 2)
         if value?
           ((@intrinsic ||= {})[id] ||= []).push(prop)
@@ -128,8 +129,17 @@ class Measurements
           group.splice group.indexOf(path), 1
           delete @intrinsic[id] unless group.length
 
+  getComputedStyle: (element, force) ->
+    unless (old = element.currentStyle)?
+      computed = (@computed ||= {})
+      id = @identify(element)
+      old = computed[id]
+      if force || !old?
+        return computed[id] = element.getComputedStyle(element)
+    return old
+
   getStyle: (element, property) ->
-    element.getComputedStyle(element).property
+    @getComputedStyle(element)[property]
 
   simpleValueRegExp: /^[#0-9a-z]*$/,
 
@@ -144,9 +154,9 @@ class Measurements
 
   set:
     command: (operation, continuation, scope, meta, property, value) ->
-      prop = @_camelize(property)
+      prop = @camelize(property)
       if scope && scope.style[prop] != undefined
-        @_setStyle(scope, prop, value)
+        @setStyle(scope, prop, value)
       return 
 
   # Compute value of a property, reads the styles on elements
@@ -161,7 +171,9 @@ class Measurements
 
     path = @getPath(id, property)
 
+    debugger
     unless (value = @measured?[path])?
+      # property on specific element (e.g. ::window[height])
       if (prop = @properties[id]?[property])? 
         current = @values[path]
         if current == undefined || old == false
@@ -173,7 +185,8 @@ class Measurements
               value = @properties[prop].call(@, node, continuation)
             else
               value = prop
-      else if (property.indexOf('intrinsic-') > -1)
+      # dommeasurement
+      else if property.indexOf('intrinsic-') > -1
 
         if document.body.contains(node)
           if prop ||= @properties[property]
@@ -210,27 +223,17 @@ class Measurements
   getSuggestions: (reflow) ->
     suggestions = undefined
     if (reflow)
-      @styles.render(null, @reflown)
+      @restyles.render(null, @reflown)
     @reflown = undefined
+
     if @measured
       for property, value of @measured
         if value? && value != @values[property]
           (suggestions ||= []).push ['suggest', property, value, 'required']
       @values.merge @measured
       @measured = undefined
-    if @computed
-      for property, value of @computed
-        if value? && value != @values[property]
-          (suggestions ||= []).push ['suggest', property, value, 'weak']
-      @values.merge @computed
-      @computed = undefined
 
     return suggestions
-
-  getIntrinsicProperty: (path) ->
-    index = path.indexOf('[intrinsic-')
-    if index > -1
-      return property = path.substring(index + 11, path.length - 1)
 
 
 module.exports = Measurements

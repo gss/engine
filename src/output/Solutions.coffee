@@ -100,8 +100,8 @@ class Solutions
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))
 
   edit: (variable, strength, weight, continuation) ->
-    strength = @engine._strength(strength)
-    weight = @engine._weight(weight)
+    strength = @engine.strength(strength)
+    weight = @engine.weight(weight)
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
     constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight)
     @solver.addConstraint(constraint)
@@ -113,7 +113,7 @@ class Solutions
     if typeof path == 'string'
       unless variable = @variables[path]
         if continuation
-          variable = @engine._var(path)
+          variable = @engine.var(path)
           variables = (@variables[continuation] ||= [])
           if variables.indexOf(variable) == -1
             variables.push(variable)

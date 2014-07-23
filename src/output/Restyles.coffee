@@ -1,6 +1,4 @@
-class Styles
-  @Matrix: require('../../vendor/gl-matrix.js')
-
+class Restyles
   constructor: (@engine) -> 
 
   # Receive solved styles
@@ -11,7 +9,7 @@ class Styles
 
     # Filter out measurements 
     for path, value of data
-      if property = @engine._getIntrinsicProperty(path)
+      if property = @engine.getIntrinsicProperty(path)
         data[path] = undefined
         if property != 'intrinsic-x' && property != 'intrinsic-y'
           (intrinsic ||= {})[path] = value
@@ -33,7 +31,7 @@ class Styles
 
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
     @data = data
-    if suggestions = @engine._getSuggestions()
+    if suggestions = @engine.getSuggestions()
       capture = @engine.expressions.capture(suggestions.length + ' intrinsics')
       @engine.pull(suggestions)
       @engine.expressions.release() if capture
@@ -49,7 +47,7 @@ class Styles
 
   get: (path, property, value) ->
     element = @engine[path]
-    camel = (@camelized ||= {})[property] ||= @engine._camelize(property)
+    camel = (@camelized ||= {})[property] ||= @engine.camelize(property)
     style = element.style
     value = style[camel]
     if value != undefined
@@ -66,20 +64,20 @@ class Styles
 
     return unless id.charAt(0) != ':'
     unless element = @engine.elements[id]
-      return unless element = @engine._getElementById(@engine.scope, id.substring(1))
+      return unless element = @engine.getElementById(@engine.scope, id.substring(1))
     positioner = this.positioners[property]
     if positioning && positioner
       (positioning[id] ||= {})[property] = value
     else
       # Re-measure and re-suggest intrinsics if necessary
       if intrinsic
-        return @engine._measure(element,  property, undefined, value)
+        return @engine.measure(element,  property, undefined, value)
         
       if positioner
         positioned = positioner(element)
         if typeof positioned == 'string'
           property = positioned
-      camel = (@camelized ||= {})[property] ||= @engine._camelize(property)
+      camel = (@camelized ||= {})[property] ||= @engine.camelize(property)
       style = element.style
       if style[camel] != undefined
         if typeof value == 'number' && (camel != 'zIndex' && camel != 'opacity')
@@ -172,7 +170,7 @@ class Styles
                 (offsets ||= {}).y = value - y
 
       # Let other measurements hook up into this batch
-      @engine._onMeasure(element, x, y, styles, full)
+      @engine.onMeasure(element, x, y, styles, full)
 
 
     return offsets
@@ -181,4 +179,4 @@ class Styles
     x: -> 'left'
     y: -> 'top'
     
-module.exports = Styles
+module.exports = Restyles

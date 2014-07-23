@@ -24,7 +24,7 @@ class Expressions
   push: (args, batch) ->
     return unless args?
     if (buffer = @buffer) != undefined
-      unless @engine._onBuffer && @engine._onBuffer(buffer, args, batch) == false
+      unless @engine.onBuffer && @engine.onBuffer(buffer, args, batch) == false
         (buffer || (@buffer = [])).push args
       return
     else
@@ -32,10 +32,10 @@ class Expressions
 
   # Output buffered commands
   flush: ->
-    if @engine._onFlush
-      added = @engine._onFlush(@buffer)
+    if @engine.onFlush
+      added = @engine.onFlush(@buffer)
     buffer = @buffer && added && added.concat(@buffer) || @buffer || added
-    @lastOutput = GSS.clone buffer
+    @lastOutput = @engine.clone buffer
 
     if buffer
       @buffer = undefined
@@ -111,7 +111,7 @@ class Expressions
           if !context && (func = scope[method])
             context = scope
           else if command = @commands[method]
-            func = @engine[command.reference]
+            func = @engine[command.displayName]
 
     unless func
       throw new Error("Couldn't find method: #{operation.method}")
@@ -138,9 +138,9 @@ class Expressions
   # Try to read saved results within continuation
   reuse: (path, continuation) ->
     length = path.length
-    for key in continuation.split(GSS.RIGHT)
+    for key in continuation.split(@engine.RIGHT)
       bit = key
-      if (index = bit.lastIndexOf(GSS.DOWN)) > -1
+      if (index = bit.lastIndexOf(@engine.DOWN)) > -1
         bit = bit.substring(index + 1)
       if bit == path || bit.substring(0, path.length) == path
         if length < bit.length && bit.charAt(length) == '$'
@@ -169,7 +169,7 @@ class Expressions
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
         if ascender?
-          mark = operation.def.rule && ascender == 1 && GSS.DOWN || GSS.RIGHT
+          mark = operation.def.rule && ascender == 1 && @engine.DOWN || @engine.RIGHT
           if mark
             contd = @engine.getContinuation(continuation, null, mark)
           else
@@ -197,10 +197,10 @@ class Expressions
     if result?
       if (parent = operation.parent) || operation.def.noop
         # For each node in collection, we recurse to a parent op with a distinct continuation key
-        if parent && @engine.isCollection(result)
-          @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', GSS.UP, operation.parent, 'font-weight: normal; color: #999', continuation
+        if parent && @engine.isCollection?(result)
+          @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
-            breadcrumbs = @engine.getContinuation(continuation, item, GSS.UP)
+            breadcrumbs = @engine.getContinuation(continuation, item, @engine.UP)
             @evaluate operation.parent, breadcrumbs, scope, meta, operation.index, item
 
           @engine.console.groupEnd()
@@ -247,7 +247,7 @@ class Expressions
 
     operation.name = operation[0] if typeof operation[0] == 'string'
     def = @commands[operation.name]
-
+        
     if parent
       operation.parent = parent
       operation.index = parent.indexOf(operation)
@@ -351,7 +351,7 @@ class Expressions
       return operation.path
 
   release: () ->
-    @endTime = GSS.time()
+    @endTime = @engine.time()
     @flush()
     return @endTime
 
@@ -361,7 +361,7 @@ class Expressions
     fmt = '%c%s%c'
     
     if typeof reason != 'string'
-      reason = GSS.clone(reason) if reason?.slice
+      reason = @engine.clone(reason) if reason?.slice
       fmt += '\t\t%O'
     else
       fmt += '\t%s'
@@ -372,7 +372,7 @@ class Expressions
 
       method = 'groupCollapsed'
     @engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason)
-    @startTime = GSS.time()
+    @startTime = @engine.time()
     @buffer = null
     return true
 

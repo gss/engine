@@ -7,8 +7,10 @@ class Engine.Solver extends Engine
   Solutions: 
     require('./output/Solutions.js')
 
-  Commands: 
+  Commands:  Engine.include(
+    Engine::Commands
     require('./commands/Constraints.js')
+  )
 
   Properties:
     require('./properties/Equasions.js')

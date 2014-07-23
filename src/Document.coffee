@@ -7,36 +7,53 @@ class Engine.Document extends Engine
   Queries:       
     require('./input/Queries.js')
 
-  Styles:          
-    require('./output/Styles.js')
+  Restyles:          
+    require('./output/Restyles.js')
 
   Solver:
     require('./Solver.js')
 
+  Style:
+    require('./concepts/Style.js')
+
+  Types:
+    require('./commands/Types.js')
+
+  Units:
+    require('./commands/Units.js')
+
   Commands: Engine.include(
-    require('./commands/Measurements.js'),
-    require('./commands/Selectors.js'),
-    require('./commands/Rules.js'),
-    require('./commands/Native.js'),
+    Engine::Commands
+    Document::Units
+    Document::Types
+    require('./commands/Measurements.js')
+    require('./commands/Selectors.js')
+    require('./commands/Rules.js')
+    require('./commands/Native.js')
     require('./commands/Algebra.js')
+    require('./commands/Transformations.js')
   )
 
   Properties: Engine.include(
     require('./properties/Dimensions.js'),
     require('./properties/Equasions.js')
+    require('./properties/Styles.js')
   )
 
   constructor: (scope = document, url) ->
     return context if context = super(scope, url)
 
     # Element style properties are assigned by Styles object
-    @styles    = new @Styles(@)
+    @restyles  = new @Restyles(@)
 
     # Solver returns data to set element styles
-    @solver    = new @Solver(@, @styles, url)
+    @solver    = new @Solver(@, @restyles, url)
 
     # DOM Queries trigger expression re-evaluation
     @queries   = new @Queries(@, @expressions)
+
+    @types     = new @Types(@)
+    @units     = new @Units(@)
 
     # Expressions generate commands and pass them to solver
     @expressions.output = @solver
@@ -46,6 +63,7 @@ class Engine.Document extends Engine
     else
       @start()
 
+      @types       = new @Types(@)       if @Types
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
@@ -59,15 +77,15 @@ class Engine.Document extends Engine
   onresize: (e = '::window') ->
     id = e.target && @identify(e.target) || e
     captured = @expressions.capture(id + ' resized') 
-    @_measure(id, "width", undefined, false)
-    @_measure(id, "height", undefined, false)
+    @measure(id, "width", undefined, false)
+    @measure(id, "height", undefined, false)
     @expressions.release() if captured
     
   onscroll: (e = '::window') ->
     id = e.target && @identify(e.target) || e
     captured = @expressions.capture(id + ' scrolled') 
-    @_measure(id, "scroll-top", undefined, false)
-    @_measure(id, "scroll-left", undefined, false)
+    @measure(id, "scroll-top", undefined, false)
+    @measure(id, "scroll-left", undefined, false)
     @expressions.release() if captured
 
   destroy: ->
@@ -97,7 +115,7 @@ class Engine.Document extends Engine
 for target in [Engine, Engine.Document::, Engine.Document]
   for source in [Engine.Document::Commands::]
     for property, command of source
-      target[property] ||= Engine.Helper(command, true)
+      target[property] ||= Engine::Command(command, true, property)
 
   target.engine = Engine
 

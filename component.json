@@ -16,6 +16,7 @@
 
     "lib/properties/Dimensions.js", 
     "lib/properties/Equasions.js",
+    "lib/properties/Styles.js",
 
     "lib/commands/Rules.js", 
     "lib/commands/Selectors.js", 
@@ -23,13 +24,27 @@
     "lib/commands/Measurements.js", 
     "lib/commands/Native.js", 
     "lib/commands/Algebra.js", 
+    "lib/commands/Types.js", 
+    "lib/commands/Units.js", 
+    "lib/commands/Transformations.js", 
+    "lib/commands/Conventions.js", 
+
+    "lib/concepts/EventTrigger.js",
+    "lib/concepts/Console.js",
+    "lib/concepts/Helper.js",
+    "lib/concepts/Command.js",
+    "lib/concepts/Property.js",
+    "lib/concepts/Style.js",
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 
     "lib/input/Values.js", 
 
     "lib/output/Solutions.js", 
-    "lib/output/Styles.js",
+    "lib/output/Restyles.js",
+
+    "lib/output/Solutions.js", 
+    "lib/output/Restyles.js",
 
     "vendor/gl-matrix.js",
     "vendor/MutationObserver.js",

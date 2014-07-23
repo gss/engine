@@ -1,142 +1,154 @@
-class Styles 
-  animation:                [[['animationName', 'animationDuration', 'animationDelay',
-                            'animationDirection','animationTimingFunction']]],
-  animationName:            ['strings'],
-  animationDuration:        ['length'],
-  animationDelay:           ['length'],
-  animationDirection:       ['reverse', 'normal'],
-  animationTimingFunction:  ['ease-in', 'ease-out', 'ease-in-out', 'linear'],
+class Styles
+
+  transform: [[
+    -> mat4.create(),
+    'matrix'
+  ]]
+
+  animation: [[[
+    name:              ['none', 'String']
+    duration:          ['time']
+    delay:             ['time']
+    direction:         ['normal', 'reverse', 'alternate']
+    'timing-function': ['timing'],
+    'iteration-count': [1, 'infinite', 'Number']
+    'fill-mode':       ['none', 'both', 'forwards', 'backwards']
+    'play-state':      ['running', 'paused']
+  ]]]
   
-  transition:               [[['transitionProperty', 'transitionDuration', 
-                            'transitionDelay', 'transitionTimingFunction']]],
-  transitionProperty:       ['strings'],
-  transitionDuration:       ['length'],
-  transitionDelay:          ['length'],
-  transitionTimingFunction: ['ease-in', 'ease-out', 'ease-in-out', 'linear']
+  transition: [[[
+    property:          ['all', 'property', 'none']
+    duration:          ['time']
+    delay:             ['time']
+    direction:         ['reverse', 'normal']
+    'timing-function': ['timing']
+  ]]]
+
+  background: [[[
+    image:             ['Image', 'Gradient', 'none']
+    position:         
+      x:               ['Length', 'Percentage', 'center', 'left', 'right']
+      y:               ['Length', 'Percentage', 'center', 'top', 'bottom']
+    size: 
+      x:               ['Length', 'Percentage', 'cover', 'contain']
+      y:               ['Length', 'Percentage']
+    repeat:            ['repeat', 'no-repeat', 'repeat-x', 'repeat-y', 'space', 'round']
+    attachment:        ['fixed', 'scroll', 'local']
+    origin:            ['padding-box', 'border-box', 'content-box']
+    clip:              ['border-box', 'content-box', 'padding-box']
+  ]]
+  [ 
+    color:             ['Color', 'transparent'] 
+  ]]
+
+  text:
+    shadow: [[[
+      offset:
+        x:             ['Length']
+        y:             ['Length']
+      blur:            ['Length']
+      color:           ['Color']
+    ]]]
+
+    decoration:        ['none', 'capitalize', 'uppercase', 'lowercase']
+    align:             ['left', 'right', 'center', 'justify']
+    ident:             ['Length', 'Percentage']
+
+  box:
+    shadow: [[
+      [ inset:         ['inset'] ]
+      offset:
+        x:             ['Length']
+        y:             ['Length']
+      [ 
+        blur:          ['Length']
+        spread:        ['Length'] 
+      ]
+      color:           ['Color']
+    ]]
+
+    sizing:            ['padding-box', 'border-box', 'content-box']
+
+  outline: [
+    width:             ['medium', 'Length']
+    style:             ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset']
+    color:             ['invert', 'Color']
+  ]
 
 
-  background:           [[['backgroundColor', 'backgroundImage', 'backgroundRepeat',
-                        'backgroundAttachment', 'backgroundPositionX', 'backgroundPositionY']], 'multiple'],
-  backgroundColor:      ['color', 'transparent', 'inherit'],
-  backgroundImage:      ['url', 'none', 'inherit'],
-  backgroundRepeat:     ['repeat', 'no-repeat', 'repeat-x', 'repeat-y', 'inherit', 'space', 'round'],
-  backgroundAttachment: ['fixed', 'scroll', 'inherit', 'local', 'fixed'],
-  backgroundPosition:   [['backgroundPositionX', 'backgroundPositionY']],
-  backgroundPositionX:  ['percentage', 'center', 'left', 'right', 'length', 'inherit'],
-  backgroundPositionY:  ['percentage', 'center', 'top', 'bottom', 'length', 'inherit'],
+  'line-height':       ['normal', 'Number', 'Length', 'Percentage']
 
-  textShadow:           [['textShadowBlur', 'textShadowOffsetX', 'textShadowOffsetY', 'textShadowColor'], 'multiple', 'virtual'],
-  textShadowBlur:       ['length'],
-  textShadowOffsetX:    ['length'],
-  textShadowOffsetY:    ['length'],
-  textShadowColor:      ['color'],
+  font: [
+    [ 
+      style:           ['normal', 'italic', 'oblique']
+      variant:         ['normal', 'small-caps']
+      weight:          ['normal', 'Number', 'bold']
+    ]
+    size:              ['Size', 'Length', 'Percentage']
+    [ 
+      #'/',
+      'line-height':   ['normal', 'Number', 'Length', 'Percentage'] 
+    ]
+    family:            ['inherit', 'strings']
+  ]
 
-  boxShadow:            [['boxShadowBlur', 'boxShadowOffsetX', 'boxShadowOffsetY', 'boxShadowColor'], 'multiple', 'virtual'],
-  boxShadowBlur:        ['length'],
-  boxShadowOffsetX:     ['length'],
-  boxShadowOffsetY:     ['length'],
-  boxShadowColor:       ['color'],
+  'font-stretch':      ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 
+                        'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded' ] 
+  'font-size-adjust':  ['Float']
 
-  outline:              ['outlineWidth', 'outlineStyle', 'outlineColor'],
-  outlineWidth:         ['length'],
-  outlineStyle:         ['dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'],
-  outlineColor:         ['color'],
+  'letter-spacing':    ['normal', 'Length'],
+  
+  list:
+    style: [
+      type:            ['disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-roman', 'upper-roman',
+                       'lower-greek', 'lower-latin', 'upper-latin', 'armenian', 'georgian', 'lower-alpha', 'none',
+                       'upper-alpha'],
+      image:           ['none', 'URL']
+      position:        ['outside', 'inside', 'none']
+    ]
 
-  font:                 [[['fontStyle', 'fontVariant', 'fontWeight'], 'fontSize', ['lineHeight'], 'fontFamily']],
-  fontStyle:            ['normal', 'italic', 'oblique', 'inherit'],
-  fontVariant:          ['normal', 'small-caps', 'inherit'],
-  fontWeight:           ['normal', 'number', 'bold', 'inherit'],
-  fontFamily:           ['strings', 'inherit'],
-  fontSize:             ['length', 'percentage', 'inherit',
-                         'xx-small', 'x-small', 'small', 'medium', 'large', 'x-large', 'xx-large', 'smaller', 'larger'],
+  height:              ['Length', 'auto']
+  min:
+    width:             ['Length', 'auto']
+    height:            ['Length', 'auto']
+  max:
+    width:             ['Length', 'auto']
+    height:            ['Length', 'auto']
 
-  color:                ['color'],
-  letterSpacing:        ['normal', 'length', 'inherit'],
-  textDecoration:       ['none', 'capitalize', 'uppercase', 'lowercase'],
-  textAlign:            ['left', 'right', 'center', 'justify'],
-  textIdent:            ['length', 'percentage'],
-  lineHeight:           ['normal', 'number', 'length', 'percentage'],
-
-  listStyle:            [['list-style-type', 'list-style-position', 'list-style-image']],
-  listStyleType:        ['disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-roman', 'upper-roman',
-                         'lower-greek', 'lower-latin', 'upper-latin', 'armenian', 'georgian', 'lower-alpha', 'none',
-                         'upper-alpha', 'inherit'],
-  listStyleImage:       ['url', 'none', 'inherit'],
-  listStylePosition:    ['inside', 'outside', 'none'],
-
-  height:               ['length', 'auto'],
-  maxHeight:            ['length', 'auto'],
-  minHeight:            ['length', 'auto'],
-  width:                ['length', 'auto'],
-  maxWidth:             ['length', 'auto'],
-  minWidth:             ['length', 'auto'],
-
-  display:              ['inline', 'block', 'list-item', 'run-in', 'inline-block', 'table', 'inline-table', 'none',
-                         'table-row-group', 'table-header-group', 'table-footer-group', 'table-row',
-                         'table-column-group', 'table-column', 'table-cell', 'table-caption'],
-  visibility:           ['visible', 'hidden'],
-  float:                ['none', 'left', 'right'],
-  clear:                ['none', 'left', 'right', 'both', 'inherit'],
-  overflow:             ['visible', 'hidden', 'scroll', 'auto'],
-  position:             ['static', 'relative', 'absolute', 'fixed'],
-  top:                  ['length', 'auto'],
-  left:                 ['length', 'auto'],
-  right:                ['length', 'auto'],
-  bottom:               ['length', 'auto'],
-  zIndex:               ['integer'],
-  cursor:               ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize',
-                         'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help'],
-
-Setter = (style) ->
-  if typeof style[0] == 'object'
-
-  else
-    Setter.Simple.call(@, style)
-
-Setter.Simple = (style) ->
-  keywords = {}
-  for property in style
-    unless @[property]
-      setter.keywords[property] = style
-  setter = (value) ->
-
-  setter.keywords
+  display:             ['inline', 'inline-block', 'block', 'list-item', 'run-in', 'table', 'inline-table', 'none',
+                        'table-row-group', 'table-header-group', 'table-footer-group', 'table-row',
+                        'table-column-group', 'table-column', 'table-cell', 'table-caption']
+  visibility:          ['visible', 'hidden']
+  float:               ['none', 'left', 'right']
+  clear:               ['none', 'left', 'right', 'both']
+  overflow:            ['visible', 'hidden', 'scroll', 'auto']
+  position:            ['static', 'relative', 'absolute', 'fixed', 'sticky']
+  top:                 ['Length', 'Percentage', 'auto']
+  left:                ['Length', 'Percentage', 'auto']
+  right:               ['Length', 'Percentage', 'auto']
+  bottom:              ['Length', 'Percentage', 'auto']
+  'z-index':           ['Integer']
+  cursor:              ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize',
+                       'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help']
+  color:               ['color']
 
 
-Setter.Shorthand = ->
 
+  for side, index in sides = ['top', 'right', 'bottom', 'left']
+    (Styles::margin  ||= [{'pad'}])[0][side] = ['Length', 'Percentage', 'auto']
+    (Styles::padding ||= [{'pad'}])[0][side] = ['Length', 'Percentage', 'auto']
+    (Styles::border  ||= [{'pad'}])[0][side] = [[
+      width: ['Length', 'thin', 'thick', 'medium'],
+      style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none']
+      color: ['Color']
+    ]]
+    for type in ['width', 'color', 'style']
+      (Styles::['border-' + type] ||= [[{'pad'}]])[0][+
+        0]['border-' + side + '-' + type] = 
+          Styles::border[0][side][0][0][type]
 
-Setter.List = ->
-
-Types =
-  # Decimal value (e.g. line-height: 2.2)
-  float: (obj) ->
-    if typeof obj == 'number'
-      return obj
-
-  # Integer value (e.g. z-index: 1)
-  integer: (obj) ->
-    if (obj % 1 == 0 && ((0 + obj).toString() == obj))
-      return obj
-
-  # Style-specific unquoted word 
-  keywords: (set) ->
-    
-  # Array of strings (e.g. font-family)
-  strings: (obj) ->
-    if typeof obj == 'string' || obj.push
-      return obj
-
-  # Keywords for background-position and alike
-  positions: {"top", "bottom", "left", "right"}
-  position: (obj) ->
-    if Type.positions[obj]
-      return obj
-
-  # Length with % unit
-  percentage: (obj) ->
-    if obj.name == '%'
-      return Type.length(obj, '%')
-
+    if index % 2
+      for i in [1 ... 3] by 2 
+        ((Styles::['border-radius'] ||= {'pad'})[side] ||= {'pad'})[sides[i + 1]] = ['Length', 'none']
 
 module.exports = Styles

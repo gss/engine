@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-17) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-23) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19058,23 +19058,37 @@ c._api = function() {
 
 });
 require.register("gss/lib/Engine.js", function(exports, require, module){
-var Engine;
+var Engine, EventTrigger,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 this.require || (this.require = function(string) {
   var bits;
-  bits = string.replace('.js', '').split('/');
   if (string === 'cassowary') {
     return c;
   }
+  bits = string.replace('.js', '').split('/');
   return this[bits[bits.length - 1]];
 });
 
-Engine = (function() {
-  var method, _i, _len, _ref;
+EventTrigger = require('./concepts/EventTrigger');
+
+Engine = (function(_super) {
+  __extends(Engine, _super);
 
   Engine.prototype.Expressions = require('./input/Expressions.js');
 
   Engine.prototype.Values = require('./input/Values.js');
+
+  Engine.prototype.Commands = require('./commands/Conventions.js');
+
+  Engine.prototype.Property = require('./concepts/Property.js');
+
+  Engine.prototype.Command = require('./concepts/Command.js');
+
+  Engine.prototype.Helper = require('./concepts/Helper.js');
+
+  Engine.prototype.Console = require('./concepts/Console.js');
 
   function Engine(scope, url) {
     var Document, engine, id;
@@ -19122,27 +19136,6 @@ Engine = (function() {
     return new (Engine.Document || Engine)(scope, url);
   }
 
-  Engine.prototype.run = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.pull = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype["do"] = function() {
-    return this.expressions["do"].apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.defer = function() {
-    var _base;
-    if (this.deferred == null) {
-      (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = (window.setImmediate || window.setTimeout)(this.expressions.flush.bind(this.expressions), 0);
-    }
-    return this.run.apply(this, arguments);
-  };
-
   Engine.prototype.push = function(data) {
     var id, _i, _len, _ref;
     if (this.removed) {
@@ -19163,67 +19156,26 @@ Engine = (function() {
     }
   };
 
-  Engine.prototype.isCollection = function(object) {
-    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
-      switch (typeof object[0]) {
-        case "object":
-          return object[0].nodeType;
-        case "undefined":
-          return object.length === 0;
-      }
+  Engine.prototype.run = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.pull = function() {
+    return this.expressions.pull.apply(this.expressions, arguments);
+  };
+
+  Engine.prototype.defer = function() {
+    var _base;
+    if (this.deferred == null) {
+      (_base = this.expressions).buffer || (_base.buffer = null);
+      this.deferred = (window.setImmediate || window.setTimeout)(this.expressions.flush.bind(this.expressions), 0);
     }
+    return this.run.apply(this, arguments);
   };
 
   Engine.prototype.destroy = function() {
     if (this.scope) {
       return Engine[this.scope._gss_id] = void 0;
-    }
-  };
-
-  Engine.prototype.getContinuation = function(path, value, suffix) {
-    if (suffix == null) {
-      suffix = '';
-    }
-    if (path) {
-      path = path.replace(/[→↓↑]$/, '');
-    }
-    if (typeof value === 'string') {
-      return value;
-    }
-    return path + (value && Engine.identify(value) || '') + suffix;
-  };
-
-  Engine.prototype.getContext = function(args, operation, scope, node) {
-    var index, _ref;
-    index = args[0].def && 4 || 0;
-    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
-      return args[index];
-    }
-    if (!operation.bound) {
-      return this.scope;
-    }
-    return scope;
-  };
-
-  Engine.UP = '↑';
-
-  Engine.RIGHT = '→';
-
-  Engine.DOWN = '↓';
-
-  Engine.prototype.getPossibleContinuations = function(path) {
-    return [path, path + Engine.UP, path + Engine.RIGHT, path + Engine.DOWN];
-  };
-
-  Engine.prototype.getPath = function(id, property) {
-    if (!property) {
-      property = id;
-      id = void 0;
-    }
-    if (property.indexOf('[') > -1 || !id) {
-      return property;
-    } else {
-      return id + '[' + property + ']';
     }
   };
 
@@ -19261,60 +19213,6 @@ Engine = (function() {
 
   Engine.prototype.engines = {};
 
-  Engine.prototype.once = function(type, fn) {
-    fn.once = true;
-    return this.addEventListener(type, fn);
-  };
-
-  Engine.prototype.addEventListener = function(type, fn) {
-    var _base;
-    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
-  };
-
-  Engine.prototype.removeEventListener = function(type, fn) {
-    var group, index;
-    if (group = this.events && this.events[type]) {
-      if ((index = group.indexOf(fn)) > -1) {
-        return group.splice(index, 1);
-      }
-    }
-  };
-
-  Engine.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method, _i;
-    if (group = this.events[type]) {
-      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
-        fn = group[index];
-        if (fn.once) {
-          group.splice(index, 1);
-        }
-        fn.call(this, a, b, c);
-      }
-    }
-    if (this[method = 'on' + type]) {
-      return this[method](a, b, c);
-    }
-  };
-
-  Engine.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
-    if (!this.scope) {
-      return;
-    }
-    (detail || (detail = {})).engine = this;
-    return element.dispatchEvent(new CustomEvent(type, {
-      detail: detail,
-      bubbles: bubbles,
-      cancelable: cancelable
-    }));
-  };
-
-  Engine.clone = function(object) {
-    if (object && object.map) {
-      return object.map(this.clone, this);
-    }
-    return object;
-  };
-
   Engine.include = function() {
     var Context, fn, mixin, name, _i, _len, _ref;
     Context = function(engine) {
@@ -19331,163 +19229,73 @@ Engine = (function() {
     return Context;
   };
 
-  Engine.prototype.handleEvent = function(e) {
-    return this.triggerEvent(e.type, e);
-  };
-
   Engine.prototype.start = function() {
-    var command, key, property, _ref, _ref1;
     if (this.running) {
       return;
     }
-    _ref = this.commands;
-    for (key in _ref) {
-      command = _ref[key];
-      if (command === this) {
-        continue;
-      }
-      command.reference = '_' + key;
-      this[command.reference] = Engine.Command(command, command.reference);
+    if (this.constructor.prototype.running === void 0) {
+      this.constructor.prototype.running = null;
+      this.constructor.prototype.compile();
     }
-    _ref1 = this.properties;
-    for (key in _ref1) {
-      property = _ref1[key];
-      if (property === this) {
-        continue;
-      }
-      Engine.Property(property, key, this.properties);
-    }
+    this.compile();
     return this.running = true;
   };
 
-  Engine.Property = function(property, reference, properties) {
-    var index, key, path, value, _base, _name;
-    if (typeof property === 'object') {
-      for (key in property) {
-        value = property[key];
-        if (property === 'shortcut') {
-
-        } else {
-          if ((index = reference.indexOf('[')) > -1) {
-            path = reference.replace(']', '-' + key + ']');
-            (_base = properties[reference.substring(0, index)])[_name = path.substring(index + 1, path.length - 1)] || (_base[_name] = Engine.Property(value, path, properties));
-          } else if (reference.match(/^[a-z]/i)) {
-            path = reference + '-' + key;
-          } else {
-            path = reference + '[' + key + ']';
-          }
-          properties[path] = Engine.Property(value, path, properties);
+  Engine.prototype.compile = function() {
+    var command, commands, key, prop, properties, property, subkey, _name, _name1;
+    commands = this.commands || this.Commands.prototype;
+    commands.engine || (commands.engine = this);
+    for (key in commands) {
+      command = commands[key];
+      if (command === this || !commands.hasOwnProperty(key)) {
+        continue;
+      }
+      if (key.charAt(0) !== '_') {
+        subkey = '_' + key;
+        command = this.Command(command, subkey);
+        if (this[subkey] == null) {
+          this[subkey] = command;
         }
       }
-    }
-    return property;
-  };
-
-  Engine.Command = function(command, reference) {
-    var helper, key, value;
-    if (typeof command !== 'function') {
-      helper = Engine.Helper(command);
-      for (key in command) {
-        value = command[key];
-        helper[key] = value;
+      if (this[key] == null) {
+        this[key] = command;
       }
-      command = helper;
     }
-    command.reference = reference;
-    return command;
-  };
-
-  Engine.Helper = function(command, scoped) {
-    var func;
-    if (typeof command === 'function') {
-      func = command;
-    }
-    return function(scope) {
-      var args, context, fn, length, method;
-      args = Array.prototype.slice.call(arguments, 0);
-      length = arguments.length;
-      if (scoped || command.serialized) {
-        if (!(scope && scope.nodeType)) {
-          scope = this.scope || document;
-          if (typeof command[args.length] === 'string') {
-            context = scope;
-          } else {
-            args.unshift(scope);
-          }
-        } else {
-          if (typeof command[args.length - 1] === 'string') {
-            context = scope = args.shift();
-          }
-        }
+    properties = this.properties || this.Properties.prototype;
+    properties.engine || (properties.engine = this);
+    for (key in properties) {
+      property = properties[key];
+      if (property === this || !properties.hasOwnProperty(key)) {
+        continue;
       }
-      if (!(fn = func)) {
-        if (typeof (method = command[args.length]) === 'function') {
-          fn = method;
-        } else {
-          if (!(method && (fn = scope[method]))) {
-            if (fn = this.commands[method]) {
-              context = this;
-            } else {
-              fn = command.command;
-              args = [null, args[2], null, null, args[0], args[1]];
-            }
-          }
-        }
+      prop = this.Property(property, key, properties);
+      if (this[_name = '_' + key] == null) {
+        this[_name] = prop;
       }
-      return fn.apply(context || this, args);
-    };
-  };
-
-  Engine.time = function(other, time) {
-    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
-    if (time && !other) {
-      return time;
     }
-    return Math.floor((time - other) * 100) / 100;
-  };
-
-  Engine.Console = function(level) {
-    this.level = level;
-  };
-
-  Engine.Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
-
-  Engine.Console.prototype.groups = 0;
-
-  Engine.Console.prototype.row = function(a, b, c) {
-    var p1, p2;
-    a = a.name || a;
-    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
-    if (typeof b === 'object') {
-      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
-    } else {
-      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
-      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
+    for (key in properties) {
+      property = properties[key];
+      if (this[_name1 = '_' + key] == null) {
+        this[_name1] = property;
+      }
     }
+    return this;
   };
 
-  _ref = Engine.Console.prototype.methods;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    method = _ref[_i];
-    Engine.Console.prototype[method] = (function(method) {
-      return function() {
-        if (method === 'group' || method === 'groupCollapsed') {
-          Engine.Console.prototype.groups++;
-        } else if (method === 'groupEnd') {
-          Engine.Console.prototype.groups--;
-        }
-        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
-      };
-    })(method);
-  }
+  Engine.prototype.console = Engine.console = new Engine.prototype.Console;
 
-  Engine.console = new Engine.Console;
+  Engine.prototype.time = Engine.time = Engine.prototype.Console.time;
 
-  Engine.prototype.console = Engine.console;
+  Engine.prototype.clone = Engine.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
+  };
 
   return Engine;
 
-})();
+})(EventTrigger);
 
 this.GSS = Engine;
 
@@ -19506,13 +19314,19 @@ Engine.Document = (function(_super) {
 
   Document.prototype.Queries = require('./input/Queries.js');
 
-  Document.prototype.Styles = require('./output/Styles.js');
+  Document.prototype.Restyles = require('./output/Restyles.js');
 
   Document.prototype.Solver = require('./Solver.js');
 
-  Document.prototype.Commands = Engine.include(require('./commands/Measurements.js'), require('./commands/Selectors.js'), require('./commands/Rules.js'), require('./commands/Native.js'), require('./commands/Algebra.js'));
+  Document.prototype.Style = require('./concepts/Style.js');
 
-  Document.prototype.Properties = Engine.include(require('./properties/Dimensions.js'), require('./properties/Equasions.js'));
+  Document.prototype.Types = require('./commands/Types.js');
+
+  Document.prototype.Units = require('./commands/Units.js');
+
+  Document.prototype.Commands = Engine.include(Engine.prototype.Commands, Document.prototype.Units, Document.prototype.Types, require('./commands/Measurements.js'), require('./commands/Selectors.js'), require('./commands/Rules.js'), require('./commands/Native.js'), require('./commands/Algebra.js'), require('./commands/Transformations.js'));
+
+  Document.prototype.Properties = Engine.include(require('./properties/Dimensions.js'), require('./properties/Equasions.js'), require('./properties/Styles.js'));
 
   function Document(scope, url) {
     var context;
@@ -19522,14 +19336,19 @@ Engine.Document = (function(_super) {
     if (context = Document.__super__.constructor.call(this, scope, url)) {
       return context;
     }
-    this.styles = new this.Styles(this);
-    this.solver = new this.Solver(this, this.styles, url);
+    this.restyles = new this.Restyles(this);
+    this.solver = new this.Solver(this, this.restyles, url);
     this.queries = new this.Queries(this, this.expressions);
+    this.types = new this.Types(this);
+    this.units = new this.Units(this);
     this.expressions.output = this.solver;
     if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
       this.scope.addEventListener('DOMContentLoaded', this);
     } else {
       this.start();
+      if (this.Types) {
+        this.types = new this.Types(this);
+      }
     }
     this.scope.addEventListener('scroll', this);
     window.addEventListener('resize', this);
@@ -19552,8 +19371,8 @@ Engine.Document = (function(_super) {
     }
     id = e.target && this.identify(e.target) || e;
     captured = this.expressions.capture(id + ' resized');
-    this._measure(id, "width", void 0, false);
-    this._measure(id, "height", void 0, false);
+    this.measure(id, "width", void 0, false);
+    this.measure(id, "height", void 0, false);
     if (captured) {
       return this.expressions.release();
     }
@@ -19566,8 +19385,8 @@ Engine.Document = (function(_super) {
     }
     id = e.target && this.identify(e.target) || e;
     captured = this.expressions.capture(id + ' scrolled');
-    this._measure(id, "scroll-top", void 0, false);
-    this._measure(id, "scroll-left", void 0, false);
+    this.measure(id, "scroll-top", void 0, false);
+    this.measure(id, "scroll-left", void 0, false);
     if (captured) {
       return this.expressions.release();
     }
@@ -19610,7 +19429,7 @@ for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     source = _ref1[_j];
     for (property in source) {
       command = source[property];
-      target[property] || (target[property] = Engine.Helper(command, true));
+      target[property] || (target[property] = Engine.prototype.Command(command, true, property));
     }
   }
   target.engine = Engine;
@@ -19631,7 +19450,7 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.Solutions = require('./output/Solutions.js');
 
-  Solver.prototype.Commands = require('./commands/Constraints.js');
+  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints.js'));
 
   Solver.prototype.Properties = require('./properties/Equasions.js');
 
@@ -19852,20 +19671,19 @@ Equasions = (function() {
   function Equasions() {}
 
   Equasions.prototype.right = function(scope, path) {
-    return this['_+'](this._get(scope, "x", path), this._get(scope, "width", path));
+    return this['+'](this.get(scope, "x", path), this.get(scope, "width", path));
   };
 
   Equasions.prototype.bottom = function(scope, path) {
-    debugger;
-    return this['_+'](this._get(scope, "y", path), this._get(scope, "height", path));
+    return this['+'](this.get(scope, "y", path), this.get(scope, "height", path));
   };
 
   Equasions.prototype.center = {
     x: function(scope, path) {
-      return this['_+'](this._get(scope, "x", path), this['_/'](this._get(scope, "width", path), 2));
+      return this['+'](this.get(scope, "x", path), this['/'](this.get(scope, "width", path), 2));
     },
     y: function(scope, path) {
-      return this['_+'](this._get(scope, "y", path), this['_/'](this._get(scope, "height", path), 2));
+      return this['+'](this.get(scope, "y", path), this['/'](this.get(scope, "height", path), 2));
     }
   };
 
@@ -19874,6 +19692,261 @@ Equasions = (function() {
 })();
 
 module.exports = Equasions;
+
+});
+require.register("gss/lib/properties/Styles.js", function(exports, require, module){
+var Styles;
+
+Styles = (function() {
+  var i, index, side, sides, type, _base, _base1, _base2, _base3, _base4, _base5, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
+
+  function Styles() {}
+
+  Styles.prototype.transform = [
+    [
+      function() {
+        return mat4.create();
+      }, 'matrix'
+    ]
+  ];
+
+  Styles.prototype.animation = [
+    [
+      [
+        {
+          name: ['none', 'String'],
+          duration: ['time'],
+          delay: ['time'],
+          direction: ['normal', 'reverse', 'alternate'],
+          'timing-function': ['timing'],
+          'iteration-count': [1, 'infinite', 'Number'],
+          'fill-mode': ['none', 'both', 'forwards', 'backwards'],
+          'play-state': ['running', 'paused']
+        }
+      ]
+    ]
+  ];
+
+  Styles.prototype.transition = [
+    [
+      [
+        {
+          property: ['all', 'property', 'none'],
+          duration: ['time'],
+          delay: ['time'],
+          direction: ['reverse', 'normal'],
+          'timing-function': ['timing']
+        }
+      ]
+    ]
+  ];
+
+  Styles.prototype.background = [
+    [
+      [
+        {
+          image: ['Image', 'Gradient', 'none'],
+          position: {
+            x: ['Length', 'Percentage', 'center', 'left', 'right'],
+            y: ['Length', 'Percentage', 'center', 'top', 'bottom']
+          },
+          size: {
+            x: ['Length', 'Percentage', 'cover', 'contain'],
+            y: ['Length', 'Percentage']
+          },
+          repeat: ['repeat', 'no-repeat', 'repeat-x', 'repeat-y', 'space', 'round'],
+          attachment: ['fixed', 'scroll', 'local'],
+          origin: ['padding-box', 'border-box', 'content-box'],
+          clip: ['border-box', 'content-box', 'padding-box']
+        }
+      ]
+    ], [
+      {
+        color: ['Color', 'transparent']
+      }
+    ]
+  ];
+
+  Styles.prototype.text = {
+    shadow: [
+      [
+        [
+          {
+            offset: {
+              x: ['Length'],
+              y: ['Length']
+            },
+            blur: ['Length'],
+            color: ['Color']
+          }
+        ]
+      ]
+    ],
+    decoration: ['none', 'capitalize', 'uppercase', 'lowercase'],
+    align: ['left', 'right', 'center', 'justify'],
+    ident: ['Length', 'Percentage']
+  };
+
+  Styles.prototype.box = {
+    shadow: [
+      [
+        [
+          {
+            inset: ['inset']
+          }
+        ], {
+          offset: {
+            x: ['Length'],
+            y: ['Length']
+          }
+        }, [
+          {
+            blur: ['Length'],
+            spread: ['Length']
+          }
+        ], {
+          color: ['Color']
+        }
+      ]
+    ],
+    sizing: ['padding-box', 'border-box', 'content-box']
+  };
+
+  Styles.prototype.outline = [
+    {
+      width: ['medium', 'Length'],
+      style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'],
+      color: ['invert', 'Color']
+    }
+  ];
+
+  Styles.prototype['line-height'] = ['normal', 'Number', 'Length', 'Percentage'];
+
+  Styles.prototype.font = [
+    [
+      {
+        style: ['normal', 'italic', 'oblique'],
+        variant: ['normal', 'small-caps'],
+        weight: ['normal', 'Number', 'bold']
+      }
+    ], {
+      size: ['Size', 'Length', 'Percentage']
+    }, [
+      {
+        'line-height': ['normal', 'Number', 'Length', 'Percentage']
+      }
+    ], {
+      family: ['inherit', 'strings']
+    }
+  ];
+
+  Styles.prototype['font-stretch'] = ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded'];
+
+  Styles.prototype['font-size-adjust'] = ['Float'];
+
+  Styles.prototype['letter-spacing'] = ['normal', 'Length'];
+
+  Styles.prototype.list = {
+    style: [
+      {
+        type: ['disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-roman', 'upper-roman', 'lower-greek', 'lower-latin', 'upper-latin', 'armenian', 'georgian', 'lower-alpha', 'none', 'upper-alpha'],
+        image: ['none', 'URL'],
+        position: ['outside', 'inside', 'none']
+      }
+    ]
+  };
+
+  Styles.prototype.height = ['Length', 'auto'];
+
+  Styles.prototype.min = {
+    width: ['Length', 'auto'],
+    height: ['Length', 'auto']
+  };
+
+  Styles.prototype.max = {
+    width: ['Length', 'auto'],
+    height: ['Length', 'auto']
+  };
+
+  Styles.prototype.display = ['inline', 'inline-block', 'block', 'list-item', 'run-in', 'table', 'inline-table', 'none', 'table-row-group', 'table-header-group', 'table-footer-group', 'table-row', 'table-column-group', 'table-column', 'table-cell', 'table-caption'];
+
+  Styles.prototype.visibility = ['visible', 'hidden'];
+
+  Styles.prototype.float = ['none', 'left', 'right'];
+
+  Styles.prototype.clear = ['none', 'left', 'right', 'both'];
+
+  Styles.prototype.overflow = ['visible', 'hidden', 'scroll', 'auto'];
+
+  Styles.prototype.position = ['static', 'relative', 'absolute', 'fixed', 'sticky'];
+
+  Styles.prototype.top = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.left = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.right = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.bottom = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype['z-index'] = ['Integer'];
+
+  Styles.prototype.cursor = ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize', 'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help'];
+
+  Styles.prototype.color = ['color'];
+
+  _ref = sides = ['top', 'right', 'bottom', 'left'];
+  for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+    side = _ref[index];
+    ((_base = Styles.prototype).margin || (_base.margin = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = ['Length', 'Percentage', 'auto'];
+    ((_base1 = Styles.prototype).padding || (_base1.padding = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = ['Length', 'Percentage', 'auto'];
+    ((_base2 = Styles.prototype).border || (_base2.border = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = [
+      [
+        {
+          width: ['Length', 'thin', 'thick', 'medium'],
+          style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'],
+          color: ['Color']
+        }
+      ]
+    ];
+    _ref1 = ['width', 'color', 'style'];
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      type = _ref1[_j];
+      ((_base3 = Styles.prototype)[_name = 'border-' + type] || (_base3[_name] = [
+        [
+          {
+            'pad': 'pad'
+          }
+        ]
+      ]))[0][+0]['border-' + side + '-' + type] = Styles.prototype.border[0][side][0][0][type];
+    }
+    if (index % 2) {
+      for (i = _k = 1; _k < 3; i = _k += 2) {
+        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = {
+          'pad': 'pad'
+        })))[side] || (_base4[side] = {
+          'pad': 'pad'
+        }))[sides[i + 1]] = ['Length', 'none'];
+      }
+    }
+  }
+
+  return Styles;
+
+})();
+
+module.exports = Styles;
 
 });
 require.register("gss/lib/commands/Rules.js", function(exports, require, module){
@@ -19898,7 +19971,7 @@ Rules = (function() {
       var contd;
       contd = this.queries.getScopePath(continuation) + operation.parent.path;
       this.queries.add(result, contd, operation.parent, scope, true);
-      if (meta === GSS.UP) {
+      if (meta === this.UP) {
         return contd + this.identify(result);
       }
       return true;
@@ -19961,7 +20034,7 @@ Rules = (function() {
       query = this.queries[path];
       if (query === void 0 || (!!query !== !!condition)) {
         index = condition && 2 || 3;
-        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
+        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (query !== void 0) {
           this.queries.clean(path, continuation, operation.parent, scope);
         }
@@ -20000,16 +20073,16 @@ Rules = (function() {
         } else if (!operation) {
           continuation = this.getContinuation(node.tagName.toLowerCase(), node);
         } else {
-          continuation = node._continuation = this.getContinuation(continuation || '', null, GSS.DOWN);
+          continuation = node._continuation = this.getContinuation(continuation || '', null, this.engine.DOWN);
         }
         if (node.getAttribute('scoped') != null) {
           scope = node.parentNode;
         }
       }
       rules = this['_' + type](source);
-      rules = GSS.clone(rules);
+      rules = this.clone(rules);
       capture = this.expressions.capture(type);
-      this.run(rules, continuation, scope, GSS.DOWN);
+      this.run(rules, continuation, scope, this.engine.DOWN);
       if (capture) {
         this.expressions.release();
       }
@@ -20031,7 +20104,7 @@ Rules = (function() {
         if (xhr.readyState === 4) {
           if (xhr.status === 200) {
             capture = _this.expressions.capture(src);
-            _this._eval.command.call(_this, operation, continuation, scope, meta, node, type, xhr.responseText);
+            _this["eval"].command.call(_this, operation, continuation, scope, meta, node, type, xhr.responseText);
             if (capture) {
               return _this.expressions.release();
             }
@@ -20137,7 +20210,7 @@ Selectors = (function() {
       }
       op = head;
       while (op) {
-        this._onSelector(op, shortcut);
+        this.onSelector(op, shortcut);
         if (op === tail) {
           break;
         }
@@ -20663,7 +20736,7 @@ Constraints = (function() {
     if (typeof this.properties[property] === 'function' && scope) {
       return this.properties[property].call(this, scope, path);
     } else {
-      variable = this._var(this.getPath(scope, property));
+      variable = this["var"](this.getPath(scope, property));
     }
     return [variable, path || (property && scope) || ''];
   };
@@ -20704,23 +20777,23 @@ Constraints = (function() {
   };
 
   Constraints.prototype['=='] = function(left, right, strength, weight) {
-    return new c.Equation(left, right, this._strength(strength), this._weight(weight));
+    return new c.Equation(left, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['<='] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['>='] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['<'] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['>'] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this._strength(strength), this._weight(weight));
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
   };
 
   Constraints.prototype['+'] = function(left, right, strength, weight) {
@@ -20751,20 +20824,20 @@ for (property in _ref) {
       return Constraints.prototype[property] = function(left, right, strength, weight) {
         var overloaded, value;
         if (left.push) {
-          overloaded = left = this._onConstraint(null, null, left);
+          overloaded = left = this.onConstraint(null, null, left);
         }
         if (right.push) {
-          overloaded = right = this._onConstraint(null, null, right);
+          overloaded = right = this.onConstraint(null, null, right);
         }
         value = method.call(this, left, right, strength, weight);
         if (overloaded) {
-          return this._onConstraint(null, [left, right], value);
+          return this.onConstraint(null, [left, right], value);
         }
         return value;
       };
     })(property, method);
   }
-  Constraints.prototype[property].after = '_onConstraint';
+  Constraints.prototype[property].after = 'onConstraint';
 }
 
 module.exports = Constraints;
@@ -20787,7 +20860,8 @@ Measurements = (function() {
 
   Measurements.prototype.get = {
     command: function(operation, continuation, scope, meta, object, property) {
-      var assignment, child, id, index, parent, path, primitive, _ref;
+      debugger;
+      var child, id, index, parent, path, primitive, _ref, _ref1;
       if (property) {
         if (typeof object === 'string') {
           id = object;
@@ -20809,15 +20883,12 @@ Measurements = (function() {
               primitive = true;
               break;
             }
-            if (parent.def.noop && parent.def.name && child.index === 1) {
-              assignment = true;
-            }
           }
           child = parent;
         }
       }
-      if (property.indexOf('intrinsic-') > -1 || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null) || (!assignment && id)) {
-        path = this._measure(id, property, continuation, true, true);
+      if ((property.indexOf('intrinsic-') > -1) || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null) || ((_ref1 = this.properties[property]) != null ? _ref1.initial : void 0) !== void 0) {
+        path = this.measure(id, property, continuation, true, true);
         if (path && (index = path.indexOf('[')) > -1) {
           id = path.substring(0, index);
           property = path.substring(index + 1, path.length - 1);
@@ -20850,7 +20921,7 @@ Measurements = (function() {
   };
 
   Measurements.prototype.onFlush = function(buffer) {
-    return this._getSuggestions(!buffer);
+    return this.getSuggestions(!buffer);
   };
 
   Measurements.prototype.onMeasure = function(node, x, y, styles, full) {
@@ -20892,7 +20963,7 @@ Measurements = (function() {
     while (node) {
       if (node === this.scope) {
         if (this.reflown) {
-          reflown = this._getCommonParent(reflown, this.reflown);
+          reflown = this.getCommonParent(reflown, this.reflown);
         } else {
           reflown = this.scope;
         }
@@ -20914,7 +20985,7 @@ Measurements = (function() {
   Measurements.prototype.onChange = function(path, value, old) {
     var group, id, prop, _base;
     if ((old != null) !== (value != null)) {
-      if (prop = this._getIntrinsicProperty(path)) {
+      if (prop = this.getIntrinsicProperty(path)) {
         id = path.substring(0, path.length - prop.length - 10 - 2);
         if (value != null) {
           return ((_base = (this.intrinsic || (this.intrinsic = {})))[id] || (_base[id] = [])).push(prop);
@@ -20929,8 +21000,21 @@ Measurements = (function() {
     }
   };
 
+  Measurements.prototype.getComputedStyle = function(element, force) {
+    var computed, id, old;
+    if ((old = element.currentStyle) == null) {
+      computed = (this.computed || (this.computed = {}));
+      id = this.identify(element);
+      old = computed[id];
+      if (force || (old == null)) {
+        return computed[id] = element.getComputedStyle(element);
+      }
+    }
+    return old;
+  };
+
   Measurements.prototype.getStyle = function(element, property) {
-    return element.getComputedStyle(element).property;
+    return this.getComputedStyle(element)[property];
   };
 
   Measurements.prototype.simpleValueRegExp = /^[#0-9a-z]*$/;
@@ -20942,9 +21026,9 @@ Measurements = (function() {
   Measurements.prototype.set = {
     command: function(operation, continuation, scope, meta, property, value) {
       var prop;
-      prop = this._camelize(property);
+      prop = this.camelize(property);
       if (scope && scope.style[prop] !== void 0) {
-        this._setStyle(scope, prop, value);
+        this.setStyle(scope, prop, value);
       }
     }
   };
@@ -20960,6 +21044,7 @@ Measurements = (function() {
       node = this.elements[id];
     }
     path = this.getPath(id, property);
+    debugger;
     if ((value = (_ref = this.measured) != null ? _ref[path] : void 0) == null) {
       if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
         current = this.values[path];
@@ -21021,10 +21106,10 @@ Measurements = (function() {
   };
 
   Measurements.prototype.getSuggestions = function(reflow) {
-    var property, suggestions, value, _ref, _ref1;
+    var property, suggestions, value, _ref;
     suggestions = void 0;
     if (reflow) {
-      this.styles.render(null, this.reflown);
+      this.restyles.render(null, this.reflown);
     }
     this.reflown = void 0;
     if (this.measured) {
@@ -21038,26 +21123,7 @@ Measurements = (function() {
       this.values.merge(this.measured);
       this.measured = void 0;
     }
-    if (this.computed) {
-      _ref1 = this.computed;
-      for (property in _ref1) {
-        value = _ref1[property];
-        if ((value != null) && value !== this.values[property]) {
-          (suggestions || (suggestions = [])).push(['suggest', property, value, 'weak']);
-        }
-      }
-      this.values.merge(this.computed);
-      this.computed = void 0;
-    }
     return suggestions;
-  };
-
-  Measurements.prototype.getIntrinsicProperty = function(path) {
-    var index, property;
-    index = path.indexOf('[intrinsic-');
-    if (index > -1) {
-      return property = path.substring(index + 11, path.length - 1);
-    }
   };
 
   return Measurements;
@@ -21149,6 +21215,12 @@ Algebra = (function() {
     return a / b;
   };
 
+  Algebra.prototype['Math'] = Math;
+
+  Algebra.prototype['Infinity'] = Infinity;
+
+  Algebra.prototype['NaN'] = NaN;
+
   return Algebra;
 
 })();
@@ -21159,8 +21231,11 @@ for (property in _ref) {
   if (property !== 'isPrimitive') {
     fn = (function(property, fn) {
       return Algebra.prototype[property] = function(a, b) {
-        if (!(this._isPrimitive(a) && this._isPrimitive(b))) {
-          return [property, a, b];
+        var args;
+        args = [property];
+        args.push.apply(args, arguments);
+        if (!(this.isPrimitive(a) && this.isPrimitive(b))) {
+          return args;
         }
         return fn.apply(this, arguments);
       };
@@ -21170,6 +21245,1084 @@ for (property in _ref) {
 }
 
 module.exports = Algebra;
+
+});
+require.register("gss/lib/commands/Types.js", function(exports, require, module){
+var Types;
+
+Types = (function() {
+  function Types() {}
+
+  Types.prototype.Float = function(obj) {
+    var parsed;
+    parsed = parseFloat(obj);
+    if (parsed === obj) {
+      return parsed;
+    }
+  };
+
+  Types.prototype.Integer = function(obj) {
+    var parsed;
+    parsed = parseInt(obj);
+    if (parsed === parsed && String(parsed) == obj) {
+      return parsed;
+    }
+  };
+
+  Types.prototype.String = function(obj) {
+    if (typeof obj === 'string') {
+      return obj;
+    }
+  };
+
+  Types.prototype.Strings = function(obj) {
+    if (typeof obj === 'string' || obj.push) {
+      return obj;
+    }
+  };
+
+  Types.prototype.Timings = {
+    'ease': ['cubic-bezier', .42, 0, 1, 1],
+    'ease-in': ['cubic-bezier', .42, 0, 1, 1],
+    'ease-out': ['cubic-bezier', 0, 0, .58, 1],
+    'ease-in-out': ['cubic-bezier', .42, 0, .58, 1],
+    'linear': ['cubic-bezier', 0, 0, 1, 1],
+    'step-start': 'step-start',
+    'step-end': 'step-end'
+  };
+
+  Types.prototype.Timing = function(obj) {
+    if (obj == null) {
+      obj = 'ease';
+    }
+    if (typeof obj === 'string') {
+      if (obj = this.Timings[obj]) {
+        return obj;
+      }
+    } else if (obj[0] === 'steps' || obj[0] === 'cubic-bezier') {
+      return obj;
+    }
+  };
+
+  Types.prototype.Length = function(obj) {
+    if (typeof obj === 'number') {
+      return obj;
+    }
+    if ((this.units || this.Units.prototype)[obj[0]]) {
+      if (obj[1] === 0) {
+        return 0;
+      }
+      return obj;
+    }
+  };
+
+  Types.prototype.Percentage = function(obj) {
+    if (obj[0] === '%') {
+      return obj;
+    }
+  };
+
+  Types.prototype.Positions = {
+    "top": "top",
+    "bottom": "bottom",
+    "left": "left",
+    "right": "right"
+  };
+
+  Types.prototype.Position = function(obj) {
+    if (this.Positions[obj]) {
+      return obj;
+    }
+  };
+
+  Types.prototype.Times = {
+    's': 's',
+    'ms': 'ms',
+    'm': 'm'
+  };
+
+  Types.prototype.Time = function(obj) {
+    if (this.Times[obj[0]]) {
+      return obj;
+    }
+  };
+
+  Types.prototype.Colors = {
+    'transparent': 'transparent',
+    'hsl': 'hsl',
+    'rgb': 'rgb',
+    'hsla': 'hsla',
+    'rgba': 'rgba',
+    'hsb': 'hsb'
+  };
+
+  Types.prototype.Pseudocolors = {
+    'transparent': 'transparent',
+    'currentColor': 'currentColor'
+  };
+
+  Types.prototype.Color = function(obj) {
+    if (typeof obj === 'string') {
+      if (this.Pseudocolors[obj]) {
+        return obj;
+      }
+    } else {
+      if (this.Colors[obj[0]]) {
+        return obj;
+      }
+    }
+  };
+
+  Types.prototype.Sizes = {
+    'medium': 'medium',
+    'xx-small': 'xx-small',
+    'x-small': 'x-small',
+    'small': 'small',
+    'large': 'large',
+    'x-large': 'x-large',
+    'xx-large': 'xx-large',
+    'smaller': 'smaller',
+    'larger': 'larger'
+  };
+
+  Types.prototype.Size = function(obj) {
+    if (this.Sizes[obj]) {
+      return obj;
+    }
+  };
+
+  Types.prototype.Gradients = {
+    'linear-gradient': 'linear-gradient',
+    'radial-gradient': 'radial-gradient',
+    'repeating-linear-gradient': 'repeating-linear-gradient',
+    'repeating-radial-gradient': 'repeating-radial-gradient'
+  };
+
+  Types.prototype.Gradient = function(obj) {
+    if (this.Gradients[obj[0]]) {
+      return obj;
+    }
+  };
+
+  Types.prototype.URLs = {
+    'url': 'url',
+    'src': 'src'
+  };
+
+  Types.prototype.URL = function(obj) {
+    if (this.URLs[obj[0]]) {
+      return obj;
+    }
+  };
+
+  Types.prototype.Property = function(obj) {
+    if (this.properties[obj]) {
+      return obj;
+    }
+  };
+
+  Types.prototype.Matrix = function(obj) {
+    if (typeof obj === 'object' && object.length !== void 0) {
+      return obj;
+    }
+  };
+
+  return Types;
+
+})();
+
+module.exports = Types;
+
+});
+require.register("gss/lib/commands/Units.js", function(exports, require, module){
+var Units;
+
+Units = (function() {
+  function Units() {}
+
+  Units.prototype.px = function(value) {
+    return value;
+  };
+
+  Units.prototype.pt = function(value) {
+    return value;
+  };
+
+  Units.prototype.cm = function(value) {
+    return this['*'](value, 37.8);
+  };
+
+  Units.prototype.mm = function(value) {
+    return this['*'](value, 3.78);
+  };
+
+  Units.prototype["in"] = function(value) {
+    return this['*'](value, 96);
+  };
+
+  Units.prototype.deg = function(value) {
+    return this['*'](value, Math.PI / 180);
+  };
+
+  Units.prototype.grad = function(value) {
+    return this.deg(this['/'](value, 360 / 400));
+  };
+
+  Units.prototype.turn = function(value) {
+    return this.deg(this['*'](value, 360));
+  };
+
+  Units.prototype.rad = function(value) {
+    return value;
+  };
+
+  Units.prototype.em = {
+    command: function(operation, continuation, scope, meta, value) {
+      return this['*'](this.get(scope, 'font-size', continuation), value);
+    }
+  };
+
+  Units.prototype.rem = {
+    command: function(operation, continuation, scope, meta, value) {
+      return this['*'](this.get('::window', 'font-size', continuation), value);
+    }
+  };
+
+  Units.prototype.vw = {
+    command: function(operation, continuation, scope, meta, value) {
+      return this['*'](this['/'](this.get('::window', 'width', continuation), 100), value);
+    }
+  };
+
+  Units.prototype.vh = {
+    command: function(operation, continuation, scope, meta, value) {
+      return this['*'](this['/'](this.get('::window', 'height', continuation), 100), value);
+    }
+  };
+
+  Units.prototype.vmin = {
+    command: function(operation, continuation, scope, meta, value) {
+      return this['*'](this['/'](this.get('::window', 'min', continuation), 100), value);
+    }
+  };
+
+  Units.prototype.vmax = {
+    command: function(operation, continuation, scope, meta, value) {
+      return this['*'](this['/'](this.get('::window', 'max', continuation), 100), value);
+    }
+  };
+
+  return Units;
+
+})();
+
+module.exports = Units;
+
+});
+require.register("gss/lib/commands/Transformations.js", function(exports, require, module){
+var Transformations, property, value;
+
+Transformations = (function() {
+  function Transformations() {}
+
+  Transformations.Matrix = require('../../vendor/gl-matrix.js');
+
+  Transformations.prototype.matrix = function() {};
+
+  Transformations.prototype.matrix3d = function() {};
+
+  Transformations.prototype._transform = function(matrix, method, a, b, c) {
+    if (matrix.length === 9) {
+      return mat3[method](matrix, matrix, a, b, c);
+    } else {
+      return mat4[method](matrix, matrix, a, b, c);
+    }
+  };
+
+  Transformations.prototype._transform3d = function(matrix, method, a, b, c) {
+    if (matrix.length === 9) {
+      matrix = mat4.fromMat3(matrix);
+    }
+    return mat4[method](matrix, matrix, a, b, c);
+  };
+
+  Transformations.prototype.translate = [
+    function(matrix, x, y) {
+      if (y == null) {
+        y = x;
+      }
+      return this._transform(matrix, 'translate', [x, y]);
+    }, {
+      "3d": function(matrix, x, y, z) {
+        if (y == null) {
+          y = x;
+        }
+        if (z == null) {
+          z = 0;
+        }
+        if (z === 0) {
+          return this._transform(matrix, 'translate', [x, y]);
+        } else {
+          return this._transform3d(matrix, 'translate', [x, y, z]);
+        }
+      },
+      x: function(matrix, x) {
+        return this._transform(matrix, 'translate', [x, 1, 1]);
+      },
+      y: function(matrix, y) {
+        return this._transform(matrix, 'translate', [1, y, 1]);
+      },
+      z: function(matrix, z) {
+        return this._transform3d(matrix, 'translate', [1, 1, z]);
+      }
+    }
+  ];
+
+  Transformations.prototype.rotate = [
+    function(matrix, x, y, angle) {
+      return this._transform(matrix, 'rotate', [x, y], angle);
+    }, {
+      "3d": function(matrix, x, y, z, angle) {
+        return this._transform3d(matrix, 'rotate', [x, y, z], angle);
+      },
+      x: function(matrix, x) {
+        return this._transform(matrix, 'rotateX', x);
+      },
+      y: function(matrix, y) {
+        return this._transform(matrix, 'rotateY', y);
+      },
+      z: function(matrix, z) {
+        return this._transform3d(matrix, 'rotateZ', z);
+      }
+    }
+  ];
+
+  Transformations.prototype.scale = [
+    function(matrix, x, y, z) {
+      if (y == null) {
+        y = x;
+      }
+      if (z == null) {
+        z = 1;
+      }
+      if (z === 1) {
+        return this._transform(matrix, 'scale', [x, y]);
+      } else {
+        return this._transform3d(matrix, 'scale', [x, y, z]);
+      }
+    }, {
+      x: function(matrix, x) {
+        return this._transform(matrix, 'scale', [x, 1, 1]);
+      },
+      y: function(matrix, y) {
+        return this._transform(matrix, 'scale', [1, y, 1]);
+      },
+      z: function(matrix, z) {
+        return this._transform3d(matrix, 'scale', [1, 1, z]);
+      }
+    }
+  ];
+
+  return Transformations;
+
+})();
+
+/*
+  skew: [
+    x:
+    y:
+  ]
+*/
+
+
+for (property in Transformations) {
+  value = Transformations[property];
+  value.invoker = 'transform';
+}
+
+});
+require.register("gss/lib/commands/Conventions.js", function(exports, require, module){
+var Conventions;
+
+Conventions = (function() {
+  function Conventions() {}
+
+  Conventions.prototype.getContinuation = function(path, value, suffix) {
+    if (suffix == null) {
+      suffix = '';
+    }
+    if (path) {
+      path = path.replace(/[→↓↑]$/, '');
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    return path + (value && this.identify(value) || '') + suffix;
+  };
+
+  Conventions.prototype.getPossibleContinuations = function(path) {
+    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
+  };
+
+  Conventions.prototype.getPath = function(id, property) {
+    if (!property) {
+      property = id;
+      id = void 0;
+    }
+    if (property.indexOf('[') > -1 || !id) {
+      return property;
+    } else {
+      return id + '[' + property + ']';
+    }
+  };
+
+  Conventions.prototype.isCollection = function(object) {
+    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      switch (typeof object[0]) {
+        case "object":
+          return object[0].nodeType;
+        case "undefined":
+          return object.length === 0;
+      }
+    }
+  };
+
+  Conventions.prototype.getQueryPath = function(operation, continuation) {
+    if (continuation) {
+      if (continuation.nodeType) {
+        return this.identify(continuation) + ' ' + operation.path;
+      } else {
+        return continuation + operation.key;
+      }
+    } else {
+      return operation.key;
+    }
+  };
+
+  Conventions.prototype.getContext = function(args, operation, scope, node) {
+    var index, _ref;
+    index = args[0].def && 4 || 0;
+    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
+      return args[index];
+    }
+    if (!operation.bound) {
+      return this.scope;
+    }
+    return scope;
+  };
+
+  Conventions.prototype.getIntrinsicProperty = function(path) {
+    var index, property;
+    index = path.indexOf('[intrinsic-');
+    if (index > -1) {
+      return property = path.substring(index + 11, path.length - 1);
+    }
+  };
+
+  Conventions.prototype.UP = '↑';
+
+  Conventions.prototype.RIGHT = '→';
+
+  Conventions.prototype.DOWN = '↓';
+
+  return Conventions;
+
+})();
+
+module.exports = Conventions;
+
+});
+require.register("gss/lib/concepts/EventTrigger.js", function(exports, require, module){
+var EventTrigger;
+
+EventTrigger = (function() {
+  function EventTrigger() {}
+
+  EventTrigger.prototype.once = function(type, fn) {
+    fn.once = true;
+    return this.addEventListener(type, fn);
+  };
+
+  EventTrigger.prototype.addEventListener = function(type, fn) {
+    var _base;
+    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
+  };
+
+  EventTrigger.prototype.removeEventListener = function(type, fn) {
+    var group, index;
+    if (group = this.events[type]) {
+      if ((index = group.indexOf(fn)) > -1) {
+        return group.splice(index, 1);
+      }
+    }
+  };
+
+  EventTrigger.prototype.triggerEvent = function(type, a, b, c) {
+    var fn, group, index, method, _i;
+    if (group = this.events[type]) {
+      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
+        fn = group[index];
+        if (fn.once) {
+          group.splice(index, 1);
+        }
+        fn.call(this, a, b, c);
+      }
+    }
+    if (this[method = 'on' + type]) {
+      return this[method](a, b, c);
+    }
+  };
+
+  EventTrigger.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
+    if (!this.scope) {
+      return;
+    }
+    (detail || (detail = {})).engine = this;
+    return element.dispatchEvent(new CustomEvent(type, {
+      detail: detail,
+      bubbles: bubbles,
+      cancelable: cancelable
+    }));
+  };
+
+  EventTrigger.prototype.handleEvent = function(e) {
+    return this.triggerEvent(e.type, e);
+  };
+
+  return EventTrigger;
+
+})();
+
+module.exports = EventTrigger;
+
+});
+require.register("gss/lib/concepts/Console.js", function(exports, require, module){
+var Console, method, _i, _len, _ref;
+
+Console = (function() {
+  function Console(level) {
+    this.level = level;
+  }
+
+  Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
+
+  Console.prototype.groups = 0;
+
+  Console.prototype.row = function(a, b, c) {
+    var p1, p2;
+    a = a.name || a;
+    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
+    if (typeof b === 'object') {
+      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
+    } else {
+      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
+      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
+    }
+  };
+
+  Console.time = function(other, time) {
+    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
+    if (time && !other) {
+      return time;
+    }
+    return Math.floor((time - other) * 100) / 100;
+  };
+
+  return Console;
+
+})();
+
+_ref = Console.prototype.methods;
+for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+  method = _ref[_i];
+  Console.prototype[method] = (function(method) {
+    return function() {
+      if (method === 'group' || method === 'groupCollapsed') {
+        Console.prototype.groups++;
+      } else if (method === 'groupEnd') {
+        Console.prototype.groups--;
+      }
+      if (typeof document !== "undefined" && document !== null) {
+        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
+      }
+    };
+  })(method);
+}
+
+module.exports = Console;
+
+});
+require.register("gss/lib/concepts/Helper.js", function(exports, require, module){
+var Helper;
+
+Helper = function(command, scoped, displayName) {
+  var func, helper;
+  if (typeof command === 'function') {
+    func = command;
+  }
+  helper = function(scope) {
+    var args, context, fn, length, method;
+    args = Array.prototype.slice.call(arguments, 0);
+    length = arguments.length;
+    if (scoped || command.serialized) {
+      if (!(scope && scope.nodeType)) {
+        scope = this.scope || document;
+        if (typeof command[args.length] === 'string') {
+          context = scope;
+        } else {
+          args.unshift(scope);
+        }
+      } else {
+        if (typeof command[args.length - 1] === 'string') {
+          context = scope = args.shift();
+        }
+      }
+    }
+    if (!(fn = func)) {
+      if (typeof (method = command[args.length]) === 'function') {
+        fn = method;
+      } else {
+        if (!(method && (fn = scope[method]))) {
+          if (fn = this.commands[method]) {
+            context = this;
+          } else {
+            fn = command.command;
+            args = [null, args[2], null, null, args[0], args[1]];
+          }
+        }
+      }
+    }
+    return fn.apply(context || this, args);
+  };
+  if (displayName) {
+    helper.displayName = displayName;
+  }
+  return helper;
+};
+
+module.exports = Helper;
+
+});
+require.register("gss/lib/concepts/Command.js", function(exports, require, module){
+var Command;
+
+Command = function(command, reference) {
+  var helper, key, value;
+  if (typeof command === 'object') {
+    helper = this.Helper(command, false, reference);
+    for (key in command) {
+      value = command[key];
+      helper[key] = value;
+    }
+    return helper;
+  }
+  command.displayName = reference;
+  return command;
+};
+
+module.exports = Command;
+
+});
+require.register("gss/lib/concepts/Property.js", function(exports, require, module){
+var Property;
+
+Property = function(property, reference, properties) {
+  var index, key, left, path, right, value, _base;
+  if (typeof property === 'object') {
+    if (property.push) {
+      return properties[path] = this.Style(property, reference, properties);
+    } else {
+      for (key in property) {
+        value = property[key];
+        if ((index = reference.indexOf('[')) > -1) {
+          path = reference.replace(']', '-' + key + ']');
+          left = reference.substring(0, index);
+          right = path.substring(index + 1, path.length - 1);
+          (_base = properties[left])[right] || (_base[right] = this.Property(value, path, properties));
+        } else if (reference.match(/^[a-z]/i)) {
+          path = reference + '-' + key;
+        } else {
+          path = reference + '[' + key + ']';
+        }
+        properties[path] = this.Property(value, path, properties);
+      }
+    }
+  }
+  return property;
+};
+
+module.exports = Property;
+
+});
+require.register("gss/lib/concepts/Style.js", function(exports, require, module){
+var Matcher, Shorthand, Style;
+
+Style = function(definition, name, styles, keywords, types, keys, properties, required, optional, depth) {
+  var Types, callback, def, index, initial, item, key, matcher, max, p, pad, previous, prop, property, requirement, storage, style, substyle, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3;
+  if (keywords == null) {
+    keywords = {};
+  }
+  if (types == null) {
+    types = [];
+  }
+  if (keys == null) {
+    keys = [];
+  }
+  if (properties == null) {
+    properties = [];
+  }
+  if (required == null) {
+    required = {};
+  }
+  if (depth == null) {
+    depth = 0;
+  }
+  requirement = true;
+  pad = initial = previous = void 0;
+  max = depth;
+  if (definition.length === void 0) {
+    for (key in definition) {
+      def = definition[key];
+      if (typeof def !== 'object') {
+        continue;
+      }
+      property = key.indexOf('-') > -1 && styles[key] && key || name + '-' + key;
+      style = this.Style(def, property, styles, null, null, null, null, null, null, null, depth);
+      if (optional !== true) {
+        required[property] = optional || requirement;
+        requirement = property;
+      }
+      if (style.types) {
+        _ref = style.types;
+        for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+          type = _ref[index];
+          types.push(type);
+          prop = ((_ref1 = style.keys) != null ? _ref1[index] : void 0) || property;
+          keys.push(prop);
+          if (properties.indexOf(prop) === -1) {
+            properties.push(prop);
+          }
+        }
+      }
+      if (style.keywords) {
+        _ref2 = style.keywords;
+        for (prop in _ref2) {
+          value = _ref2[prop];
+          for (_j = 0, _len1 = value.length; _j < _len1; _j++) {
+            item = value[_j];
+            _ref3 = item.push && item || [item];
+            for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+              p = _ref3[_k];
+              if (properties.indexOf(p) === -1) {
+                properties.push(p);
+              }
+            }
+          }
+          (keywords[prop] || (keywords[prop] = [])).push(value);
+        }
+      }
+    }
+  } else {
+    for (index = _l = 0, _len3 = definition.length; _l < _len3; index = ++_l) {
+      property = definition[index];
+      switch (typeof property) {
+        case "object":
+          substyle = this.Style(property, name, styles, keywords, types, keys, properties, required, (property.push && (requirement || true)) || optional, depth + 1);
+          pad = property.pad || substyle.pad;
+          max = Math.max(substyle.depth, max);
+          break;
+        case "string":
+          Types = this.types || this.Types.prototype;
+          if (type = Types[property]) {
+            types.push(type);
+            if (initial === void 0) {
+              if (type.displayName === void 0) {
+                for (key in Types) {
+                  value = Types[key];
+                  if (value === type) {
+                    type.displayName = key;
+                    break;
+                  }
+                }
+              }
+              if (storage = Types[type.displayName + 's']) {
+                for (key in storage) {
+                  if (type.call(this, key)) {
+                    initial = key;
+                  }
+                  break;
+                }
+              }
+              if (initial == null) {
+                initial = 0;
+              }
+            }
+          } else {
+            if (initial == null) {
+              initial = property;
+            }
+            (keywords[property] || (keywords[property] = [])).push(name);
+          }
+          break;
+        default:
+          if (initial == null) {
+            initial = property;
+          }
+      }
+    }
+  }
+  if (typeof initial === 'function') {
+    callback = initial;
+    initial = void 0;
+  }
+  if (initial === void 0) {
+    initial = new Shorthand;
+    initial.displayName = initial.prototype.property = name;
+    for (_m = 0, _len4 = properties.length; _m < _len4; _m++) {
+      property = properties[_m];
+      initial.prototype[property] = styles[property].initial;
+    }
+  } else if (keys.length === 0) {
+    keys = void 0;
+  }
+  matcher = new Matcher(name, keywords, types, keys, required, pad, max, initial, callback);
+  if (initial != null ? initial.displayName : void 0) {
+    initial.prototype.style = matcher;
+    initial.prototype.styles = styles;
+    initial.prototype.properties = properties;
+  }
+  return styles[name] = matcher;
+};
+
+Shorthand = (function() {
+  function Shorthand(callback) {
+    callback || (callback = function(options) {
+      var key, value;
+      if (options) {
+        for (key in options) {
+          value = options[key];
+          this[key] = value;
+        }
+      }
+      return this;
+    });
+    callback.prototype = this;
+    return callback;
+  }
+
+  Shorthand.prototype.toString = function(styles, number) {
+    var expression, i, index, k, key, keys, pad, prefix, previous, string, style, types, value, _i, _j, _len, _ref, _ref1;
+    string = void 0;
+    if (this.style.keys) {
+      while (style = this[i = (i != null ? i : -1) + 1]) {
+        string = (string && string + ', ' || '') + style.toString(styles, i + 1);
+      }
+      pad = this.style.pad;
+      _ref = keys = this.properties;
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        key = _ref[index];
+        if (index && pad) {
+          if (index > 2) {
+            if (this.equals(key, keys[1])) {
+              continue;
+            }
+          } else if (index > 1) {
+            if (this.equals(key, keys[0]) && (!this.hasOwnProperty[keys[3]] || this.equals(keys[3], keys[1]))) {
+              continue;
+            }
+          } else {
+            if (this.equals(key, keys[0]) && this.equals(keys[1], keys[2]) && this.equals(keys[2], keys[3])) {
+              continue;
+            }
+          }
+        } else {
+          if (styles && number && ((value = styles[key + '-' + number]) != null)) {
+            prefix = previous = void 0;
+            if (typeof value !== 'string') {
+              keys = this.style.keys;
+              types = this.style.types;
+              for (index = _j = _ref1 = keys.indexOf(key) - 1; _j > 0; index = _j += -1) {
+                if ((k = keys[index]) !== previous) {
+                  if (this.hasOwnProperty(k)) {
+                    break;
+                  }
+                  if (types[index] === this.styles.engine.Length) {
+                    expression = this.toExpressionString(k, this[k]);
+                    prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
+                    previous = k;
+                  }
+                }
+              }
+            }
+            if (prefix) {
+              string += prefix;
+            }
+          } else {
+            if (!this.hasOwnProperty(key)) {
+              continue;
+            }
+            value = this[key];
+          }
+        }
+        expression = this.toExpressionString(key, value);
+        string = (string && string + ' ' || '') + expression;
+      }
+    }
+    return string;
+  };
+
+  Shorthand.prototype.equals = function(first, second) {
+    var a, b;
+    a = this[first];
+    b = this[second];
+    if (typeof a !== 'object') {
+      return a === b;
+    } else {
+      return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+    }
+  };
+
+  Shorthand.prototype.toExpressionString = function(key, operation, expression) {
+    var engine, index, name, string, types, units, _i, _ref;
+    switch (typeof operation) {
+      case 'object':
+        name = operation[0];
+        engine = this.styles.engine;
+        units = engine.units || engine.Units.prototype;
+        if (name === '%' || units[name] || engine.Times[name]) {
+          return this.toExpressionString(key, operation[1], true) + name;
+        } else {
+          string = name + '(';
+          for (index = _i = 1, _ref = operation.length - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; index = 1 <= _ref ? ++_i : --_i) {
+            if (index !== 1) {
+              string += ',';
+            }
+            string += this.toExpressionString(key, operation[index], true);
+          }
+          return string + ')';
+        }
+        break;
+      case 'number':
+        if (!expression) {
+          types = this.styles[key].types;
+          if (operation !== 0 && types.indexOf('number') === -1 && types.indexOf('float') === -1) {
+            operation += 'px';
+          }
+        }
+    }
+    return operation;
+  };
+
+  return Shorthand;
+
+})();
+
+Matcher = function(name, keywords, types, keys, required, pad, depth, initial, callback) {
+  var matcher;
+  matcher = function() {
+    var arg, args, argument, i, index, j, matched, property, props, req, result, returned, type, typed, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
+    result = matched = void 0;
+    if (pad && arguments.length < 4) {
+      args = [arguments[0], (_ref = arguments[1]) != null ? _ref : arguments[0], (_ref1 = arguments[2]) != null ? _ref1 : arguments[0], (_ref2 = (_ref3 = arguments[3]) != null ? _ref3 : arguments[1]) != null ? _ref2 : arguments[0]];
+    }
+    _ref4 = args || arguments;
+    for (i = _i = 0, _len = _ref4.length; _i < _len; i = ++_i) {
+      argument = _ref4[i];
+      switch (typeof argument) {
+        case 'object':
+          if (typeof argument[0] !== 'string' || argument.length === 1) {
+            if (matched = matcher.apply(this, argument)) {
+              (result || (result = new initial))[i] = matched;
+            } else {
+              return;
+            }
+          }
+          break;
+        case 'string':
+          if (props = keywords[argument]) {
+            if (keys) {
+              j = pad && i || 0;
+              while ((property = props[j++]) != null) {
+                if (!result || !result.hasOwnProperty(property)) {
+                  if (!required[property] || (result && result[required[property]] !== void 0)) {
+                    matched = (result || (result = new initial))[property] = argument;
+                    break;
+                  }
+                } else if (props.length === 1 && argument !== result[property]) {
+                  arg = argument;
+                  argument = result[property];
+                  result[property] = arg;
+                  if (typeof argument === 'string' && (props = keywords[argument])) {
+                    j = pad && i || 0;
+                    continue;
+                  }
+                  break;
+                }
+                if (pad) {
+                  break;
+                }
+              }
+            } else {
+              return argument;
+            }
+          }
+      }
+      if (types && (matched == null)) {
+        if (keys) {
+          for (index = _j = 0, _len1 = keys.length; _j < _len1; index = ++_j) {
+            property = keys[index];
+            if (!result || (!result.hasOwnProperty(property) && (!(req = required[property]) || result.hasOwnProperty(req)))) {
+              if ((matched = types[index].call(this, argument)) !== void 0) {
+                (result || (result = new initial))[property] = matched;
+                break;
+              }
+            }
+          }
+        } else {
+          for (index = _k = 0, _len2 = types.length; _k < _len2; index = ++_k) {
+            type = types[index];
+            if ((typed = type.call(this, argument)) !== void 0) {
+              return typed;
+            }
+          }
+        }
+      }
+      if (matched == null) {
+        return;
+      }
+      matched = void 0;
+    }
+    if (callback && ((returned = callback(result)) != null)) {
+      return returned;
+    }
+    return result;
+  };
+  matcher.displayName = name;
+  if (keywords != null) {
+    matcher.keywords = keywords;
+  }
+  if (types != null) {
+    matcher.types = types;
+  }
+  if (keys != null) {
+    matcher.keys = keys;
+  }
+  if (pad != null) {
+    matcher.pad = pad;
+  }
+  if (depth != null) {
+    matcher.depth = depth;
+  }
+  if (initial != null) {
+    matcher.initial = initial;
+  }
+  if (callback != null) {
+    matcher.callback = callback;
+  }
+  return matcher;
+};
+
+module.exports = Style;
 
 });
 require.register("gss/lib/input/Expressions.js", function(exports, require, module){
@@ -21200,7 +22353,7 @@ Expressions = (function() {
       return;
     }
     if ((buffer = this.buffer) !== void 0) {
-      if (!(this.engine._onBuffer && this.engine._onBuffer(buffer, args, batch) === false)) {
+      if (!(this.engine.onBuffer && this.engine.onBuffer(buffer, args, batch) === false)) {
         (buffer || (this.buffer = [])).push(args);
       }
     } else {
@@ -21210,11 +22363,11 @@ Expressions = (function() {
 
   Expressions.prototype.flush = function() {
     var added, buffer;
-    if (this.engine._onFlush) {
-      added = this.engine._onFlush(this.buffer);
+    if (this.engine.onFlush) {
+      added = this.engine.onFlush(this.buffer);
     }
     buffer = this.buffer && added && added.concat(this.buffer) || this.buffer || added;
-    this.lastOutput = GSS.clone(buffer);
+    this.lastOutput = this.engine.clone(buffer);
     if (buffer) {
       this.buffer = void 0;
       this.output.pull(buffer);
@@ -21286,7 +22439,7 @@ Expressions = (function() {
           if (!context && (func = scope[method])) {
             context = scope;
           } else if (command = this.commands[method]) {
-            func = this.engine[command.reference];
+            func = this.engine[command.displayName];
           }
         }
       }
@@ -21313,11 +22466,11 @@ Expressions = (function() {
   Expressions.prototype.reuse = function(path, continuation) {
     var bit, index, key, length, _i, _len, _ref;
     length = path.length;
-    _ref = continuation.split(GSS.RIGHT);
+    _ref = continuation.split(this.engine.RIGHT);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       key = _ref[_i];
       bit = key;
-      if ((index = bit.lastIndexOf(GSS.DOWN)) > -1) {
+      if ((index = bit.lastIndexOf(this.engine.DOWN)) > -1) {
         bit = bit.substring(index + 1);
       }
       if (bit === path || bit.substring(0, path.length) === path) {
@@ -21353,7 +22506,7 @@ Expressions = (function() {
         continue;
       } else if (argument instanceof Array) {
         if (ascender != null) {
-          mark = operation.def.rule && ascender === 1 && GSS.DOWN || GSS.RIGHT;
+          mark = operation.def.rule && ascender === 1 && this.engine.DOWN || this.engine.RIGHT;
           if (mark) {
             contd = this.engine.getContinuation(continuation, null, mark);
           } else {
@@ -21379,14 +22532,14 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var breadcrumbs, captured, item, parent, _i, _len, _ref;
+    var breadcrumbs, captured, item, parent, _base, _i, _len, _ref;
     if (result != null) {
       if ((parent = operation.parent) || operation.def.noop) {
-        if (parent && this.engine.isCollection(result)) {
-          this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', GSS.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
+        if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
+          this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
-            breadcrumbs = this.engine.getContinuation(continuation, item, GSS.UP);
+            breadcrumbs = this.engine.getContinuation(continuation, item, this.engine.UP);
             this.evaluate(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
           this.engine.console.groupEnd();
@@ -21559,7 +22712,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.release = function() {
-    this.endTime = GSS.time();
+    this.endTime = this.engine.time();
     this.flush();
     return this.endTime;
   };
@@ -21573,7 +22726,7 @@ Expressions = (function() {
     fmt = '%c%s%c';
     if (typeof reason !== 'string') {
       if (reason != null ? reason.slice : void 0) {
-        reason = GSS.clone(reason);
+        reason = this.engine.clone(reason);
       }
       fmt += '\t\t%O';
     } else {
@@ -21586,7 +22739,7 @@ Expressions = (function() {
       method = 'groupCollapsed';
     }
     this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
-    this.startTime = GSS.time();
+    this.startTime = this.engine.time();
     this.buffer = null;
     return true;
   };
@@ -21646,7 +22799,7 @@ Queries = (function() {
       }
       this.removed = void 0;
     }
-    queryTime = GSS.time();
+    queryTime = this.engine.time();
     while (queries = this.buffer) {
       this.buffer = null;
       this.lastOutput = this.lastOutput && this.lastOutput.concat(queries) || queries;
@@ -21657,7 +22810,7 @@ Queries = (function() {
         }
         continuation = queries[index + 1];
         scope = queries[index + 2];
-        this.output.pull(query, continuation, scope, GSS.UP, void 0, void 0);
+        this.output.pull(query, continuation, scope, this.engine.UP, void 0, void 0);
       }
     }
     this.buffer = void 0;
@@ -21682,8 +22835,8 @@ Queries = (function() {
       }
     }
     if (this.updated) {
-      evalDiff = GSS.time(this.engine.expressions.startTime);
-      queryDiff = GSS.time(queryTime);
+      evalDiff = this.engine.time(this.engine.expressions.startTime);
+      queryDiff = this.engine.time(queryTime);
       this.engine.console.row('queries', this.updated, evalDiff + 'ms + ' + queryDiff + 'ms');
     }
     if (this.engine.expressions.buffer) {
@@ -21926,7 +23079,7 @@ Queries = (function() {
     if (id = this.engine.recognize(parent)) {
       if (parent.tagName === 'STYLE') {
         if (((_ref = parent.getAttribute('type')) != null ? _ref.indexOf('text/gss') : void 0) > -1) {
-          return this.engine._eval(parent);
+          return this.engine["eval"](parent);
         }
       }
     }
@@ -21936,7 +23089,7 @@ Queries = (function() {
     if (!document.body.contains(node)) {
       return;
     }
-    return this.engine._onResize(node);
+    return this.engine.onResize(node);
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
@@ -22240,9 +23393,9 @@ Queries = (function() {
       prefix = this.engine.getContinuation(path, pair[0], '→');
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length);
       if (operation.path !== operation.key) {
-        this.engine.expressions.pull(operation.parent, prefix + operation.path, scope, GSS.UP, operation.index, pair[1]);
+        this.engine.expressions.pull(operation.parent, prefix + operation.path, scope, this.engine.UP, operation.index, pair[1]);
       } else {
-        this.engine.expressions.pull(operation, contd, scope, GSS.UP, true, true);
+        this.engine.expressions.pull(operation, contd, scope, this.engine.UP, true, true);
       }
     }
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path);
@@ -22267,20 +23420,20 @@ Queries = (function() {
 
   Queries.prototype.getOperationPath = function(continuation, compact) {
     var bits, last;
-    bits = this.engine.getContinuation(continuation).split(GSS.DOWN);
+    bits = this.engine.getContinuation(continuation).split(this.engine.DOWN);
     last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.split(GSS.RIGHT).pop().replace(this.forkMarkRegExp, '');
+    last = bits[bits.length - 1] = last.split(this.engine.RIGHT).pop().replace(this.forkMarkRegExp, '');
     if (compact) {
       return last;
     }
-    return bits.join(GSS.DOWN);
+    return bits.join(this.engine.DOWN);
   };
 
   Queries.prototype.getScopePath = function(continuation) {
     var bits;
-    bits = continuation.split(GSS.DOWN);
+    bits = continuation.split(this.engine.DOWN);
     bits[bits.length - 1] = "";
-    return bits.join(GSS.DOWN);
+    return bits.join(this.engine.DOWN);
   };
 
   Queries.prototype.unpair = function(continuation, node) {
@@ -22331,7 +23484,7 @@ Queries = (function() {
     var query;
     node || (node = this.engine.getContext(args, operation, scope, node));
     if (this.updated) {
-      query = this.getQueryPath(operation, node);
+      query = this.engine.getQueryPath(operation, node);
       return this.updated[query];
     }
   };
@@ -22383,9 +23536,9 @@ Queries = (function() {
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
     var added, child, contd, group, id, index, isCollection, noop, o, old, path, plurals, query, removed, scoped, watchers, _base, _base1, _base2, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     node || (node = this.engine.getContext(args, operation, scope, node));
-    path = this.getQueryPath(operation, continuation);
+    path = this.engine.getQueryPath(operation, continuation);
     old = this.get(path);
-    query = !operation.def.relative && this.getQueryPath(operation, node, scope);
+    query = !operation.def.relative && this.engine.getQueryPath(operation, node, scope);
     if (group = query && ((_ref = this.updated) != null ? _ref[query] : void 0)) {
       result = group[0];
       if (old == null) {
@@ -22562,18 +23715,6 @@ Queries = (function() {
     return this;
   };
 
-  Queries.prototype.getQueryPath = function(operation, continuation) {
-    if (continuation) {
-      if (continuation.nodeType) {
-        return this.engine.identify(continuation) + ' ' + operation.path;
-      } else {
-        return continuation + operation.key;
-      }
-    } else {
-      return operation.key;
-    }
-  };
-
   Queries.prototype.comparePosition = function(a, b) {
     var _ref;
     return (_ref = typeof a.compareDocumentPosition === "function" ? a.compareDocumentPosition(b) : void 0) != null ? _ref : (a !== b && a.contains(b) && 16) + (a !== b && b.contains(a) && 8) + (a.sourceIndex >= 0 && b.sourceIndex >= 0 ? (a.sourceIndex < b.sourceIndex && 4) + (a.sourceIndex > b.sourceIndex && 2) : 1);
@@ -22676,8 +23817,8 @@ Values = (function() {
     } else {
       delete this[path];
     }
-    if (this.engine._onChange) {
-      this.engine._onChange(path, value, old);
+    if (this.engine.onChange) {
+      this.engine.onChange(path, value, old);
     }
     if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
@@ -22893,8 +24034,8 @@ Solutions = (function() {
 
   Solutions.prototype.edit = function(variable, strength, weight, continuation) {
     var constraint;
-    strength = this.engine._strength(strength);
-    weight = this.engine._weight(weight);
+    strength = this.engine.strength(strength);
+    weight = this.engine.weight(weight);
     c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
     constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight);
     this.solver.addConstraint(constraint);
@@ -22907,7 +24048,7 @@ Solutions = (function() {
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
         if (continuation) {
-          variable = this.engine._var(path);
+          variable = this.engine["var"](path);
           variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
           if (variables.indexOf(variable) === -1) {
             variables.push(variable);
@@ -22941,23 +24082,21 @@ Solutions = (function() {
 module.exports = Solutions;
 
 });
-require.register("gss/lib/output/Styles.js", function(exports, require, module){
-var Styles;
+require.register("gss/lib/output/Restyles.js", function(exports, require, module){
+var Restyles;
 
-Styles = (function() {
-  Styles.Matrix = require('../../vendor/gl-matrix.js');
-
-  function Styles(engine) {
+Restyles = (function() {
+  function Restyles(engine) {
     this.engine = engine;
   }
 
-  Styles.prototype.pull = function(data) {
+  Restyles.prototype.pull = function(data) {
     var capture, intrinsic, path, positioning, property, suggestions, value, _ref;
     this.lastInput = JSON.parse(JSON.stringify(data));
     intrinsic = null;
     for (path in data) {
       value = data[path];
-      if (property = this.engine._getIntrinsicProperty(path)) {
+      if (property = this.engine.getIntrinsicProperty(path)) {
         data[path] = void 0;
         if (property !== 'intrinsic-x' && property !== 'intrinsic-y') {
           (intrinsic || (intrinsic = {}))[path] = value;
@@ -22982,7 +24121,7 @@ Styles = (function() {
       this.data = void 0;
     }
     this.data = data;
-    if (suggestions = this.engine._getSuggestions()) {
+    if (suggestions = this.engine.getSuggestions()) {
       capture = this.engine.expressions.capture(suggestions.length + ' intrinsics');
       this.engine.pull(suggestions);
       if (capture) {
@@ -22994,18 +24133,18 @@ Styles = (function() {
     }
   };
 
-  Styles.prototype.push = function(data) {
+  Restyles.prototype.push = function(data) {
     return this.engine.push(data);
   };
 
-  Styles.prototype.remove = function(id) {
+  Restyles.prototype.remove = function(id) {
     return delete this[id];
   };
 
-  Styles.prototype.get = function(path, property, value) {
+  Restyles.prototype.get = function(path, property, value) {
     var camel, element, style, _base;
     element = this.engine[path];
-    camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine._camelize(property));
+    camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
     style = element.style;
     value = style[camel];
     if (value !== void 0) {
@@ -23014,7 +24153,7 @@ Styles = (function() {
     return this;
   };
 
-  Styles.prototype.set = function(id, property, value, positioning, intrinsic) {
+  Restyles.prototype.set = function(id, property, value, positioning, intrinsic) {
     var camel, element, last, path, pixels, positioned, positioner, style, _base;
     if (property === void 0) {
       path = id;
@@ -23026,7 +24165,7 @@ Styles = (function() {
       return;
     }
     if (!(element = this.engine.elements[id])) {
-      if (!(element = this.engine._getElementById(this.engine.scope, id.substring(1)))) {
+      if (!(element = this.engine.getElementById(this.engine.scope, id.substring(1)))) {
         return;
       }
     }
@@ -23035,7 +24174,7 @@ Styles = (function() {
       (positioning[id] || (positioning[id] = {}))[property] = value;
     } else {
       if (intrinsic) {
-        return this.engine._measure(element, property, void 0, value);
+        return this.engine.measure(element, property, void 0, value);
       }
       if (positioner) {
         positioned = positioner(element);
@@ -23043,7 +24182,7 @@ Styles = (function() {
           property = positioned;
         }
       }
-      camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine._camelize(property));
+      camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
       style = element.style;
       if (style[camel] !== void 0) {
         if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
@@ -23066,7 +24205,7 @@ Styles = (function() {
     return value;
   };
 
-  Styles.prototype.render = function(data, node) {
+  Restyles.prototype.render = function(data, node) {
     var id, path, positioning, prop, queries, styles, value;
     this.engine.queries.disconnect();
     positioning = {};
@@ -23090,7 +24229,7 @@ Styles = (function() {
     return positioning;
   };
 
-  Styles.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
+  Restyles.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
     var child, children, offsets, scope, _i, _len;
     if (x == null) {
       x = 0;
@@ -23127,7 +24266,7 @@ Styles = (function() {
     return positioning;
   };
 
-  Styles.prototype.placehold = function(positioning, element, x, y, full) {
+  Restyles.prototype.placehold = function(positioning, element, x, y, full) {
     var left, offsets, property, styles, top, uid, value, values;
     offsets = void 0;
     if (uid = element._gss_id) {
@@ -23160,12 +24299,12 @@ Styles = (function() {
           }
         }
       }
-      this.engine._onMeasure(element, x, y, styles, full);
+      this.engine.onMeasure(element, x, y, styles, full);
     }
     return offsets;
   };
 
-  Styles.prototype.positioners = {
+  Restyles.prototype.positioners = {
     x: function() {
       return 'left';
     },
@@ -23174,11 +24313,459 @@ Styles = (function() {
     }
   };
 
-  return Styles;
+  return Restyles;
 
 })();
 
-module.exports = Styles;
+module.exports = Restyles;
+
+});
+require.register("gss/lib/output/Solutions.js", function(exports, require, module){
+var Solutions;
+
+require('cassowary');
+
+Solutions = (function() {
+  function Solutions(engine, output) {
+    this.engine = engine;
+    this.output = output;
+    this.solver = new c.SimplexSolver();
+    this.solver.autoSolve = false;
+    c.debug = true;
+    this.variables = {};
+  }
+
+  Solutions.prototype.pull = function(commands) {
+    var command, property, response, startTime, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    this.response = response = {};
+    this.lastInput = commands;
+    for (_i = 0, _len = commands.length; _i < _len; _i++) {
+      command = commands[_i];
+      if (command instanceof Array && typeof command[0] === 'object') {
+        for (_j = 0, _len1 = command.length; _j < _len1; _j++) {
+          subcommand = command[_j];
+          this.add(subcommand);
+        }
+      } else {
+        this.add(command);
+      }
+    }
+    if (this.constrained) {
+      this.constrained = void 0;
+      this.solver.solve();
+    } else {
+      this.solver.resolve();
+    }
+    _ref = this.solver._changed;
+    for (property in _ref) {
+      value = _ref[property];
+      response[property] = value;
+    }
+    this.solver._changed = void 0;
+    if (this.nullified) {
+      _ref1 = this.nullified;
+      for (property in _ref1) {
+        value = _ref1[property];
+        if (!this.added || !(this.added[property] != null)) {
+          this.nullify(value);
+          response[property] = null;
+        }
+      }
+    }
+    if (this.added) {
+      _ref2 = this.added;
+      for (property in _ref2) {
+        value = _ref2[property];
+        if (!response[property] && (!this.nullified || !this.nullified[property])) {
+          response[property] = 0;
+        }
+      }
+    }
+    this.added = this.nullified = void 0;
+    this.lastOutput = response;
+    if (startTime = this.engine.expressions.startTime) {
+      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(startTime) + 'ms');
+    }
+    this.push(response);
+  };
+
+  Solutions.prototype.push = function(results) {
+    if (this.output) {
+      return this.output.pull(results);
+    } else {
+      this.engine.values.merge(results);
+      return this.engine.push(results);
+    }
+  };
+
+  Solutions.prototype.remove = function(constrain, path) {
+    var group, index, _i, _len, _ref, _results;
+    if (constrain instanceof c.Constraint) {
+      this.solver.removeConstraint(constrain);
+      _ref = constrain.paths;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        path = _ref[_i];
+        if (typeof path === 'string') {
+          if (group = this.variables[path]) {
+            if ((index = group.indexOf(constrain)) > -1) {
+              group.splice(index, 1);
+            }
+            if (!group.length) {
+              _results.push(delete this.variables[path]);
+            } else {
+              _results.push(void 0);
+            }
+          } else {
+            _results.push(void 0);
+          }
+        } else {
+          if (!--path.counter) {
+            _results.push((this.nullified || (this.nullified = {}))[path.name] = path);
+          } else {
+            _results.push(void 0);
+          }
+        }
+      }
+      return _results;
+    } else if (constrain instanceof c.Variable) {
+      if (constrain.editing) {
+        return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
+      }
+    }
+  };
+
+  Solutions.prototype.nullify = function(variable) {
+    var cei;
+    if (variable.editing) {
+      if (cei = this.solver._editVarMap.get(variable)) {
+        this.solver.removeColumn(cei.editMinus);
+        this.solver._editVarMap["delete"](variable);
+      }
+    }
+    delete this.variables[variable.name];
+    this.solver._externalParametricVars["delete"](variable);
+    return console.log('nullify', variable.name);
+  };
+
+  Solutions.prototype.add = function(command) {
+    var path, _base, _i, _len, _ref, _results;
+    if (command instanceof c.Constraint) {
+      this.constrained = true;
+      this.solver.addConstraint(command);
+      if (command.paths) {
+        _ref = command.paths;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          path = _ref[_i];
+          if (typeof path === 'string') {
+            _results.push(((_base = this.variables)[path] || (_base[path] = [])).push(command));
+          } else {
+            path.counter = (path.counter || 0) + 1;
+            if (path.counter === 1) {
+              if (this.nullified && this.nullified[path.name]) {
+                _results.push(delete this.nullified[path.name]);
+              } else {
+                _results.push((this.added || (this.added = {}))[path.name] = 0);
+              }
+            } else {
+              _results.push(void 0);
+            }
+          }
+        }
+        return _results;
+      }
+    } else if (this[command[0]]) {
+      return this[command[0]].apply(this, Array.prototype.slice.call(command, 1));
+    }
+  };
+
+  Solutions.prototype.edit = function(variable, strength, weight, continuation) {
+    var constraint;
+    strength = this.engine.strength(strength);
+    weight = this.engine.weight(weight);
+    c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
+    constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight);
+    this.solver.addConstraint(constraint);
+    variable.editing = constraint;
+    return constraint;
+  };
+
+  Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
+    var variable, variables, _base;
+    if (typeof path === 'string') {
+      if (!(variable = this.variables[path])) {
+        if (continuation) {
+          variable = this.engine["var"](path);
+          variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
+          if (variables.indexOf(variable) === -1) {
+            variables.push(variable);
+          }
+        } else {
+          return this.response[path] = value;
+        }
+      }
+    } else {
+      variable = path;
+    }
+    if (!variable.editing) {
+      this.edit(variable, strength, weight, continuation);
+    }
+    this.solver.suggestValue(variable, value);
+    return variable;
+  };
+
+  Solutions.prototype.stay = function() {
+    var arg, _i, _len;
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      arg = arguments[_i];
+      this.solver.addStay(arg);
+    }
+  };
+
+  return Solutions;
+
+})();
+
+module.exports = Solutions;
+
+});
+require.register("gss/lib/output/Restyles.js", function(exports, require, module){
+var Restyles;
+
+Restyles = (function() {
+  function Restyles(engine) {
+    this.engine = engine;
+  }
+
+  Restyles.prototype.pull = function(data) {
+    var capture, intrinsic, path, positioning, property, suggestions, value, _ref;
+    this.lastInput = JSON.parse(JSON.stringify(data));
+    intrinsic = null;
+    for (path in data) {
+      value = data[path];
+      if (property = this.engine.getIntrinsicProperty(path)) {
+        data[path] = void 0;
+        if (property !== 'intrinsic-x' && property !== 'intrinsic-y') {
+          (intrinsic || (intrinsic = {}))[path] = value;
+        }
+      }
+    }
+    positioning = this.render(data);
+    if (intrinsic) {
+      for (path in intrinsic) {
+        value = intrinsic[path];
+        data[path] = this.set(path, void 0, value, positioning, true);
+      }
+    }
+    if (this.data) {
+      _ref = this.data;
+      for (path in _ref) {
+        value = _ref[path];
+        if (data[path] === void 0 && value !== void 0) {
+          data[path] = value;
+        }
+      }
+      this.data = void 0;
+    }
+    this.data = data;
+    if (suggestions = this.engine.getSuggestions()) {
+      capture = this.engine.expressions.capture(suggestions.length + ' intrinsics');
+      this.engine.pull(suggestions);
+      if (capture) {
+        return this.engine.expressions.release();
+      }
+    } else {
+      this.data = void 0;
+      return this.push(data);
+    }
+  };
+
+  Restyles.prototype.push = function(data) {
+    return this.engine.push(data);
+  };
+
+  Restyles.prototype.remove = function(id) {
+    return delete this[id];
+  };
+
+  Restyles.prototype.get = function(path, property, value) {
+    var camel, element, style, _base;
+    element = this.engine[path];
+    camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
+    style = element.style;
+    value = style[camel];
+    if (value !== void 0) {
+      return value;
+    }
+    return this;
+  };
+
+  Restyles.prototype.set = function(id, property, value, positioning, intrinsic) {
+    var camel, element, last, path, pixels, positioned, positioner, style, _base;
+    if (property === void 0) {
+      path = id;
+      last = id.lastIndexOf('[');
+      property = path.substring(last + 1, id.length - 1);
+      id = id.substring(0, last);
+    }
+    if (id.charAt(0) === ':') {
+      return;
+    }
+    if (!(element = this.engine.elements[id])) {
+      if (!(element = this.engine.getElementById(this.engine.scope, id.substring(1)))) {
+        return;
+      }
+    }
+    positioner = this.positioners[property];
+    if (positioning && positioner) {
+      (positioning[id] || (positioning[id] = {}))[property] = value;
+    } else {
+      if (intrinsic) {
+        return this.engine.measure(element, property, void 0, value);
+      }
+      if (positioner) {
+        positioned = positioner(element);
+        if (typeof positioned === 'string') {
+          property = positioned;
+        }
+      }
+      camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
+      style = element.style;
+      if (style[camel] !== void 0) {
+        if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
+          pixels = Math.round(value) + 'px';
+        }
+        if (positioner) {
+          if (!style[camel]) {
+            if ((style.positioning = (style.positioning || 0) + 1) === 1) {
+              style.position = 'absolute';
+            }
+          } else if (value == null) {
+            if (!--style.positioning) {
+              style.position = '';
+            }
+          }
+        }
+        style[camel] = pixels != null ? pixels : value;
+      }
+    }
+    return value;
+  };
+
+  Restyles.prototype.render = function(data, node) {
+    var id, path, positioning, prop, queries, styles, value;
+    this.engine.queries.disconnect();
+    positioning = {};
+    if (data) {
+      for (path in data) {
+        value = data[path];
+        if (value !== void 0) {
+          this.set(path, void 0, value, positioning);
+        }
+      }
+    }
+    this.adjust(node, null, null, positioning, null, !!data);
+    for (id in positioning) {
+      styles = positioning[id];
+      for (prop in styles) {
+        value = styles[prop];
+        this.set(id, prop, value);
+      }
+    }
+    queries = this.engine.queries.connect();
+    return positioning;
+  };
+
+  Restyles.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
+    var child, children, offsets, scope, _i, _len;
+    if (x == null) {
+      x = 0;
+    }
+    if (y == null) {
+      y = 0;
+    }
+    scope = this.engine.scope;
+    parent || (parent = scope);
+    if (offsets = this.placehold(positioning, parent, x, y, full)) {
+      x += offsets.x || 0;
+      y += offsets.y || 0;
+    }
+    if (parent === document) {
+      parent = document.body;
+    }
+    children = this.engine.commands['$>'][1](parent);
+    if (parent.offsetParent === scope) {
+      x -= scope.offsetLeft;
+      y -= scope.offsetTop;
+    } else if (parent !== scope) {
+      if (!offsets && (children != null ? children.length : void 0) && children[0].offsetParent === parent) {
+        x += parent.offsetLeft + parent.clientLeft;
+        y += parent.offsetTop + parent.clientTop;
+        offsetParent = parent;
+      }
+    }
+    if (children) {
+      for (_i = 0, _len = children.length; _i < _len; _i++) {
+        child = children[_i];
+        this.adjust(child, x, y, positioning, offsetParent, full);
+      }
+    }
+    return positioning;
+  };
+
+  Restyles.prototype.placehold = function(positioning, element, x, y, full) {
+    var left, offsets, property, styles, top, uid, value, values;
+    offsets = void 0;
+    if (uid = element._gss_id) {
+      styles = positioning != null ? positioning[uid] : void 0;
+      if (values = this.engine.values) {
+        if ((styles != null ? styles.x : void 0) === void 0) {
+          if ((left = values[uid + '[x]']) != null) {
+            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).x = left;
+          }
+        }
+        if ((styles != null ? styles.y : void 0) === void 0) {
+          if ((top = values[uid + '[y]']) != null) {
+            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).y = top;
+          }
+        }
+      }
+      if (styles) {
+        for (property in styles) {
+          value = styles[property];
+          if (value !== null) {
+            switch (property) {
+              case "x":
+                styles.x = value - x;
+                (offsets || (offsets = {})).x = value - x;
+                break;
+              case "y":
+                styles.y = value - y;
+                (offsets || (offsets = {})).y = value - y;
+            }
+          }
+        }
+      }
+      this.engine.onMeasure(element, x, y, styles, full);
+    }
+    return offsets;
+  };
+
+  Restyles.prototype.positioners = {
+    x: function() {
+      return 'left';
+    },
+    y: function() {
+      return 'top';
+    }
+  };
+
+  return Restyles;
+
+})();
+
+module.exports = Restyles;
 
 });
 require.register("gss/vendor/gl-matrix.js", function(exports, require, module){
@@ -28177,6 +29764,7 @@ module.exports = {
 
     "lib/properties/Dimensions.js", 
     "lib/properties/Equasions.js",
+    "lib/properties/Styles.js",
 
     "lib/commands/Rules.js", 
     "lib/commands/Selectors.js", 
@@ -28184,13 +29772,27 @@ module.exports = {
     "lib/commands/Measurements.js", 
     "lib/commands/Native.js", 
     "lib/commands/Algebra.js", 
+    "lib/commands/Types.js", 
+    "lib/commands/Units.js", 
+    "lib/commands/Transformations.js", 
+    "lib/commands/Conventions.js", 
+
+    "lib/concepts/EventTrigger.js",
+    "lib/concepts/Console.js",
+    "lib/concepts/Helper.js",
+    "lib/concepts/Command.js",
+    "lib/concepts/Property.js",
+    "lib/concepts/Style.js",
 
     "lib/input/Expressions.js", 
     "lib/input/Queries.js", 
     "lib/input/Values.js", 
 
     "lib/output/Solutions.js", 
-    "lib/output/Styles.js",
+    "lib/output/Restyles.js",
+
+    "lib/output/Solutions.js", 
+    "lib/output/Restyles.js",
 
     "vendor/gl-matrix.js",
     "vendor/MutationObserver.js",

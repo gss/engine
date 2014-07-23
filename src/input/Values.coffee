@@ -56,8 +56,8 @@ class Values
       @[path] = value
     else
       delete @[path]
-    if @engine._onChange
-      @engine._onChange path, value, old
+    if @engine.onChange
+      @engine.onChange path, value, old
     if watchers = @_watchers?[path]
       for watcher, index in watchers by 3
         break unless watcher

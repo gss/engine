@@ -152,7 +152,7 @@ describe 'Nested Rules', ->
             ['==', ["get", "$header0", "width", "div+main$main0↑!~$header0↑*"], 50]
             ['==', ["get", "$box0", "width", "div+main$main0↑!~$box0↑*"], 50]
           ]
-          expect(stringify engine.styles.lastInput).to.eql stringify
+          expect(stringify engine.restyles.lastInput).to.eql stringify
             "$header0[width]": 50
             "$box0[width]": 50 
           expect(all.header0.style.width).to.eql '50px'

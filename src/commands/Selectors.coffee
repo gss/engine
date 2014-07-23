@@ -61,7 +61,7 @@ class Selectors
         shortcut.splice(1, 0, tail[1])
       op = head
       while op
-        @_onSelector op, shortcut
+        @onSelector op, shortcut
         break if op == tail
         op = op[1]
       if (tail.parent == operation)

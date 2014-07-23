@@ -23,7 +23,7 @@ class Constraints
     if typeof @properties[property] == 'function' && scope
       return @properties[property].call(@, scope, path)
     else
-      variable = @_var(@getPath(scope, property))
+      variable = @var(@getPath(scope, property))
     return [variable, path || (property && scope) || '']
 
   remove: () ->
@@ -47,19 +47,19 @@ class Constraints
     return new c.Expression name: name
 
   '==': (left, right, strength, weight) ->
-    return new c.Equation(left, right, @_strength(strength), @_weight(weight))
+    return new c.Equation(left, right, @strength(strength), @weight(weight))
 
   '<=': (left, right, strength, weight) ->
-    return new c.Inequality(left, c.LEQ, right, @_strength(strength), @_weight(weight))
+    return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
 
   '>=': (left, right, strength, weight) ->
-    return new c.Inequality(left, c.GEQ, right, @_strength(strength), @_weight(weight))
+    return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
 
   '<': (left, right, strength, weight) ->
-    return new c.Inequality(left, c.LEQ, right, @_strength(strength), @_weight(weight))
+    return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
 
   '>': (left, right, strength, weight) ->
-    return new c.Inequality(left, c.GEQ, right, @_strength(strength), @_weight(weight))
+    return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
 
   '+': (left, right, strength, weight) ->
     return c.plus(left, right)
@@ -80,14 +80,14 @@ for property, method of Constraints::
     do (property, method) ->
       Constraints::[property] = (left, right, strength, weight) ->
         if left.push
-          overloaded = left = @_onConstraint(null, null, left)
+          overloaded = left = @onConstraint(null, null, left)
         if right.push
-          overloaded = right = @_onConstraint(null, null, right)
+          overloaded = right = @onConstraint(null, null, right)
         value = method.call(@, left, right, strength, weight)
         if overloaded
-          return @_onConstraint(null, [left, right], value)
+          return @onConstraint(null, [left, right], value)
         return value
-  Constraints::[property].after = '_onConstraint'
+  Constraints::[property].after = 'onConstraint'
 
 
 

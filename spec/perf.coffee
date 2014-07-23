@@ -78,16 +78,19 @@ describe 'Perf', ->
       scope.insertAdjacentHTML 'beforeend', """
           <div class='box' id='gen-35346#{count}'>One</div>
         """    
-      console.profile('100 serially')  
+      #console.profile('100 serially')  
       listener = (e) ->       
         count++
-        scope.insertAdjacentHTML 'beforeend', """
-            <div class='box' id='gen-35346#{count}'>One</div>
-          """
+        #console.error(count)
         if count is 100
           engine.removeEventListener 'solved', listener
-          console.profileEnd('100 serially')
+          #console.profileEnd('100 serially')
           done()
+          debugger
+        else
+          scope.insertAdjacentHTML 'beforeend', """
+              <div class='box' id='gen-35346#{count}'>One</div>
+            """
 
       engine.addEventListener 'solved', listener
     

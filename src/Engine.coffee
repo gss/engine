@@ -7,18 +7,31 @@
 
 # Little shim for require.js so we dont have to carry it around
 this.require ||= (string) ->
-  bits = string.replace('.js', '').split('/')
   if string == 'cassowary'
     return c
+  bits = string.replace('.js', '').split('/')
   return this[bits[bits.length - 1]]
 
+EventTrigger = require('./concepts/EventTrigger')
 
-class Engine
+class Engine extends EventTrigger
 
   Expressions:
     require('./input/Expressions.js')
   Values:
     require('./input/Values.js')
+
+  Commands:
+    require('./commands/Conventions.js')
+
+  Property:
+    require('./concepts/Property.js')
+  Command:
+    require('./concepts/Command.js')
+  Helper:
+    require('./concepts/Helper.js')
+  Console:
+    require('./concepts/Console.js')
 
   constructor: (scope, url) ->
     if scope && scope.nodeType
@@ -56,15 +69,32 @@ class Engine
     # GSS.Document() and GSS() create new GSS.Document on root initially
     return new (Engine.Document || Engine)(scope, url)
 
+  # Hook: Pass output to a subscriber
+  push: (data) ->
+
+    # Unreference removed elements
+    if @removed
+      for id in @removed
+        delete @engine.elements[id]
+      @removed = undefined
+
+    # Store solutions
+    @values.merge data
+
+    # Trigger events on engine and scope node
+    @triggerEvent('solved', data)
+    @dispatchEvent(@scope, 'solved', data) if @scope
+
+    # Proceed
+    return @output.pull.apply(@output, arguments) if @output
+
+
   # Delegate: Pass input to interpreter
   run: ->
     return @expressions.pull.apply(@expressions, arguments)
 
   pull: ->
     return @expressions.pull.apply(@expressions, arguments)
-
-  do: ->
-    return @expressions.do.apply(@expressions, arguments)
 
   # Schedule execution of expressions to the next tick, buffer input
   defer: ->
@@ -73,74 +103,10 @@ class Engine
       @deferred = (window.setImmediate || window.setTimeout)(@expressions.flush.bind(@expressions), 0)
     return @run.apply(@, arguments)
 
-  # Hook: Pass output to a subscriber
-  push: (data) ->
-    # Unreference removed elements
-    if @removed
-      for id in @removed
-        delete @engine.elements[id]
-      @removed = undefined
-    # Store solutions
-    @values.merge data
-    # Trigger events on engine and scope node
-    @triggerEvent('solved', data)
-    @dispatchEvent(@scope, 'solved', data) if @scope
-    # Proceed
-    return @output.pull.apply(@output, arguments) if @output
-
-  # Hook: Should interpreter iterate returned object?
-  isCollection: (object) ->
-    # (yes, if it's a collection of objects or empty array)
-    if object && object.length != undefined && !object.substring && !object.nodeType
-      switch typeof object[0]
-        when "object"
-          return object[0].nodeType
-        when "undefined"
-          return object.length == 0
-
   # Destroy engine
   destroy: ->
     if @scope
       Engine[@scope._gss_id] = undefined
-
-  # Return concatenated path for a given object and prefix
-  getContinuation: (path, value, suffix = '') ->
-    if path
-      path = path.replace(/[→↓↑]$/, '')
-    #return path unless value?
-    return value if typeof value == 'string'
-    return path + (value && Engine.identify(value) || '') + suffix
-
-
-  # Check if selector is bound to current scope's element
-  getContext: (args, operation, scope, node) ->
-    index = args[0].def && 4 || 0
-    if (args.length != index && (args[index]?.nodeType))
-      return args[index]
-    if !operation.bound
-      return @scope
-    return scope;
-    
-
-  # Execution has forked (found many elements, trying brute force to complete selector)
-  @UP:    '↑'
-  # One selector was resolved, expecting another selector to pair up
-  @RIGHT: '→'
-  # Execution goes depth first (inside stylesheet or css rule)
-  @DOWN:  '↓'
-
-  # When cleaning a path, also clean forks, rules and pairs
-  getPossibleContinuations: (path) ->
-    [path, path + Engine.UP, path + Engine.RIGHT, path + Engine.DOWN]
-
-  getPath: (id, property) ->
-    unless property
-      property = id
-      id = undefined
-    if property.indexOf('[') > -1 || !id
-      return property
-    else
-      return id + '[' + property + ']'
 
   # Get or generate uid for a given object.
   @identify: (object, generate) ->
@@ -169,37 +135,6 @@ class Engine
   elements: {}
   engines: {}
 
-  # Simple EventTrigger that fires @on<event>
-  once: (type, fn) ->
-    fn.once = true
-    @addEventListener(type, fn)
-
-  addEventListener: (type, fn) ->
-    (@events[type] ||= []).push(fn)
-
-  removeEventListener: (type, fn) ->
-    if group = @events && @events[type]
-      if (index = group.indexOf(fn)) > -1
-        group.splice(index, 1)
-
-  triggerEvent: (type, a, b, c) ->
-    if group = @events[type]
-      for fn, index in group by -1
-        group.splice(index, 1) if fn.once
-        fn.call(@, a, b, c)
-    if @[method = 'on' + type]
-      return @[method](a, b, c)
-
-  dispatchEvent: (element, type, detail, bubbles, cancelable) ->
-    return unless @scope
-    (detail ||= {}).engine = @
-    element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
-
-  @clone: (object) -> 
-    if object && object.map
-      return object.map @clone, @
-    return object
-
   # Combine mixins
   @include = ->
     Context = (@engine) ->
@@ -208,114 +143,51 @@ class Engine
         Context::[name] = fn
     return Context
 
-  # Catch-all event listener 
-  handleEvent: (e) ->
-    @triggerEvent(e.type, e)
-
   # Export all commands as underscored functions into engine
   # This ensures commands are called in engine context
   # Doing so on first run allows commands to be set after init
+  # Built in commands are compiled on the prototype
   start: ->
     return if @running
-    for key, command of @commands
-      continue if command == @
-      command.reference = '_' + key
-      @[command.reference] = Engine.Command(command, command.reference)
-
-    for key, property of @properties
-      continue if property == @
-      Engine.Property(property, key, @properties)
+    if @constructor::running == undefined
+      @constructor::running = null
+      @constructor::compile()
+    @compile()
     @running = true
 
-  @Property: (property, reference, properties) ->
-    if typeof property == 'object'
-      for key, value of property
-        if property == 'shortcut'
+  # Make helpers, styles and properties callable
+  compile: ->
+    commands = (@commands || @Commands::)
+    commands.engine ||= @
+    for key, command of commands
+      continue if command == @ || !commands.hasOwnProperty(key)
+      if key.charAt(0) != '_'
+        subkey = '_' + key
+        command = @Command(command, subkey)
+        @[subkey] ?= command
 
-        else
-          if (index = reference.indexOf('[')) > -1
-            path = reference.replace(']', '-' + key + ']')
-            properties[reference.substring(0, index)][path.substring(index + 1, path.length - 1)] ||= Engine.Property(value, path, properties)
-          else if reference.match(/^[a-z]/i) 
-            path = reference + '-' + key
-          else
-            path = reference + '[' + key + ']'
+      @[key] ?= command
 
-          properties[path] = Engine.Property(value, path, properties)
-    return property
+    properties = (@properties || @Properties::)
+    properties.engine ||= @
+    for key, property of properties
+      continue if property == @ || !properties.hasOwnProperty(key)
+      prop = @Property(property, key, properties)
+      @['_' + key] ?= prop
 
-  # Helperize non-callable commands, keep original command properties
-  @Command: (command, reference) ->
-    unless typeof command == 'function'
-      helper = Engine.Helper(command)
-      for key, value of command
-        helper[key] = value
-      command = helper
-    command.reference = reference
-    return command
+    for key, property of properties
+      @['_' + key] ?= property
+    @
 
-  # Export given commands as self-contained functions to be used as helpers 
-  @Helper: (command, scoped)  ->
-    if typeof command == 'function'
-      func = command
-    return (scope) ->
-      args = Array.prototype.slice.call(arguments, 0)
-      length = arguments.length
-      if scoped || command.serialized
-        unless scope && scope.nodeType
-          scope = @scope || document
-          if typeof command[args.length] == 'string'
-            context = scope
-          else
-            args.unshift(scope)
-        else
-          if typeof command[args.length - 1] == 'string'
-            context = scope = args.shift()
+  console: @console = new Engine::Console
+  time:    @time    = Engine::Console.time
 
-      unless fn = func
-        if typeof (method = command[args.length]) == 'function'
-          fn = method
-        else
-          unless method && (fn = scope[method])
-            if fn = @commands[method]
-              context = @
-            else
-              fn = command.command
-              args = [null, args[2], null, null, args[0], args[1]]
+  # Recursively slice arrays
+  clone:   @clone   = (object) -> 
+    if object && object.map
+      return object.map @clone, @
+    return object
 
-      return fn.apply(context || @, args)
-
-  # Console & debug helpers
-  @time: (other, time) ->
-    time ||= performance?.now() || Date.now?() || + (new Date)
-    return time if time && !other
-    return Math.floor((time - other) * 100) / 100
-
-  @Console: (@level) ->
-  @Console::methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
-  @Console::groups = 0
-
-  @Console::row = (a, b, c) ->
-    a = a.name || a
-    p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
-    if typeof b == 'object'
-      @log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "")
-    else
-      p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
-      @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
-
-  for method in @Console::methods 
-    @Console::[method] = do (method) ->
-      return ->
-        if method == 'group' || method == 'groupCollapsed'
-          Engine.Console::groups++
-        else if method == 'groupEnd'
-          Engine.Console::groups--
-        console?[method]?(arguments...)
-
-  @console: new Engine.Console
-  console: Engine.console
-
-this.GSS = Engine
+@GSS = Engine
 
 module.exports = Engine

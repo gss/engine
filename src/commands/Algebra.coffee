@@ -40,11 +40,17 @@ class Algebra
   "/": (a, b) ->
     return a / b
 
+  'Math': Math
+  'Infinity': Infinity
+  'NaN': NaN
+
 for property, fn of Algebra::
   unless property == 'isPrimitive'
     fn = do (property, fn) ->
       Algebra::[property] = (a, b) ->
-        return [property, a, b] unless @_isPrimitive(a) && @_isPrimitive(b)
+        args = [property]
+        args.push.apply(args, arguments)
+        return args unless @isPrimitive(a) && @isPrimitive(b)
         return fn.apply(@, arguments)
     fn.binary = true
 

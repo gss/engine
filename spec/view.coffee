@@ -104,7 +104,7 @@ describe "GSS.View", ->
       engine.once 'solved', ->
         expect(engine.values['$floater[y]']).to.eql 20
 
-        engine._setStyle(engine.$id('pusher'), 'paddingTop', '11px') 
+        engine.setStyle(engine.$id('pusher'), 'paddingTop', '11px') 
 
         engine.once 'solved', ->  
           expect(engine.values['$floater[y]']).to.eql 31        
