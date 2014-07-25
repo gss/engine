@@ -28,7 +28,7 @@ for method in Console::methods
       else if method == 'groupEnd'
         Console::groups--
 
-      if document?
+      if document? && window.location?.href.indexOf('log=0') == -1
         console?[method]?(arguments...)
 
 module.exports = Console

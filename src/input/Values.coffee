@@ -1,3 +1,23 @@
+### Input: Observed values
+
+Manages solutions and document properties.
+
+Interface:
+
+  - (un)watch() - (un)subscribe expression to property updates
+  - set()       - dispatches updates to subscribed expressions
+  - get()       - retrieve value
+  - clean()     - detach observes by continuation
+
+
+State:
+  - @_watchers[key] - List of oservers of specific properties
+                      as [operation, continuation, scope] triplets
+
+  - @_observers[continuation] - List of observers by continuation
+                                as [operation, key, scope] triplets
+
+###
 class Values
   constructor: (@engine) ->
     @_observers = {}
@@ -68,13 +88,23 @@ class Values
         
       @engine.expressions.release() if capture && !buffered
     return value
+
+  suggest: (id, property, value) ->
+    if arguments.length == 2
+      value = property
+      property = undefined
+    (@engine.measured ||= {})[@engine.getPath(id, property)] = value
+    if capture = @engine.expressions.capture('suggest ' + (id || '') + '[' + (property || '') + '] ' + value)
+      @engine.flush()
+    return value
+
     
   merge: (object) ->
     capturing = @engine.expressions.buffer == undefined
     for path, value of object
       @set path, undefined, value, capturing
-    @engine.expressions.release() if capturing && @engine.expressions.buffer != undefined
-
+    if capturing && @engine.expressions.buffer != undefined
+      @engine.expressions.release() 
     @
 
   # Export values in a plain object. Use for tests only

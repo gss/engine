@@ -26,7 +26,6 @@ describe 'Perf', ->
   describe 'live command perfs1', ->
     
     it '100 at once', (done) ->
-      console.timeline()
 
       innerHTML = "" 
       for i in [0...100] 
@@ -45,7 +44,7 @@ describe 'Perf', ->
         done()
 
       engine.run [
-        ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
+        ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'],'x']]
       ]
       
 
@@ -57,13 +56,13 @@ describe 'Perf', ->
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
 
-      console.profile('100 intrinsics at once')
+      #console.profile('100 intrinsics at once')
       engine.once 'solved', ->     
+        #console.profileEnd('100 intrinsics at once')
         done()
-        console.profileEnd('100 intrinsics at once')
-
+        
       engine.run [
-          ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
+          ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'], 'intrinsic-width']]
         ]
       
         
@@ -76,27 +75,26 @@ describe 'Perf', ->
       
       # first one here otherwise, nothing to solve
       scope.insertAdjacentHTML 'beforeend', """
-          <div class='box' id='gen-35346#{count}'>One</div>
+          <div class='box' style="position: absolute" id='gen-35346#{count}'>One</div>
         """    
-      #console.profile('100 serially')  
+      console.profile('100 serially')  
       listener = (e) ->       
         count++
         #console.error(count)
         if count is 100
           engine.removeEventListener 'solved', listener
-          #console.profileEnd('100 serially')
+          console.profileEnd('100 serially')
           done()
-          debugger
         else
           scope.insertAdjacentHTML 'beforeend', """
-              <div class='box' id='gen-35346#{count}'>One</div>
-            """
+            <div class='box' id='gen-35346#{count}'>One</div>
+          """
 
       engine.addEventListener 'solved', listener
     
 
       engine.run [
-        ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'],'[x]']]
+        ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'],'x']]
       ]
 
     it '100 intrinsics serially', (done) ->
@@ -122,6 +120,6 @@ describe 'Perf', ->
       engine.addEventListener 'solved', listener
 
       engine.run [
-          ['==', ['get', ['$class','box'], '[width]'], ['get', ['$class','box'], '[intrinsic-width]']]
+          ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'], 'intrinsic-width']]
         ]
       

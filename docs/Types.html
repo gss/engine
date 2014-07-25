@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Types.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Types.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Types</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Decimal value (e.g. line-height: 1.0)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">Float</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    parsed = parseFloat(obj)
+    <span class="hljs-keyword">if</span> parsed == obj
+      <span class="hljs-keyword">return</span> parsed</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Integer value (e.g. z-index: 1)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">Integer</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    parsed = parseInt(obj)
+    <span class="hljs-keyword">if</span> parsed == parsed &amp;&amp; `<span class="javascript"><span class="hljs-built_in">String</span>(parsed) == obj</span>`
+      <span class="hljs-keyword">return</span> parsed</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Style-specific unquoted word </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">String</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> obj == <span class="hljs-string">'string'</span>
+      <span class="hljs-keyword">return</span> obj</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Array of strings (e.g. font-family)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">Strings</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> obj == <span class="hljs-string">'string'</span> || obj.push
+      <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">Timings</span>:
+    <span class="hljs-string">'ease'</span>:        [<span class="hljs-string">'cubic-bezier'</span>, <span class="hljs-number">.42</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>,   <span class="hljs-number">1</span>]
+    <span class="hljs-string">'ease-in'</span>:     [<span class="hljs-string">'cubic-bezier'</span>, <span class="hljs-number">.42</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>,   <span class="hljs-number">1</span>]
+    <span class="hljs-string">'ease-out'</span>:    [<span class="hljs-string">'cubic-bezier'</span>, <span class="hljs-number">0</span>,   <span class="hljs-number">0</span>, <span class="hljs-number">.58</span>, <span class="hljs-number">1</span>]
+    <span class="hljs-string">'ease-in-out'</span>: [<span class="hljs-string">'cubic-bezier'</span>, <span class="hljs-number">.42</span>, <span class="hljs-number">0</span>, <span class="hljs-number">.58</span>, <span class="hljs-number">1</span>]
+    <span class="hljs-string">'linear'</span>:      [<span class="hljs-string">'cubic-bezier'</span>, <span class="hljs-number">0</span>,   <span class="hljs-number">0</span>, <span class="hljs-number">1</span>,   <span class="hljs-number">1</span>]
+    <span class="hljs-string">'step-start'</span>:  <span class="hljs-string">'step-start'</span>
+    <span class="hljs-string">'step-end'</span>:    <span class="hljs-string">'step-end'</span>
+
+  <span class="hljs-attribute">Timing</span>: <span class="hljs-function"><span class="hljs-params">(obj = <span class="hljs-string">'ease'</span>)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> obj == <span class="hljs-string">'string'</span>
+      <span class="hljs-keyword">if</span> obj = <span class="hljs-property">@Timings</span>[obj]
+        <span class="hljs-keyword">return</span> obj
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> obj[<span class="hljs-number">0</span>] == <span class="hljs-string">'steps'</span> || obj[<span class="hljs-number">0</span>] == <span class="hljs-string">'cubic-bezier'</span>
+      <span class="hljs-keyword">return</span> obj
+
+
+  <span class="hljs-attribute">Length</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> obj == <span class="hljs-string">'number'</span>
+      <span class="hljs-keyword">return</span> obj
+    <span class="hljs-keyword">if</span> (<span class="hljs-property">@units</span> || <span class="hljs-property">@Units</span>.prototype)[obj[<span class="hljs-number">0</span>]]
+      <span class="hljs-keyword">if</span> obj[<span class="hljs-number">1</span>] == <span class="hljs-number">0</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>
+      <span class="hljs-keyword">return</span> obj</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Length with % unit</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">Percentage</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> obj[<span class="hljs-number">0</span>] == <span class="hljs-string">'%'</span>
+      <span class="hljs-keyword">return</span> obj</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Keywords for background-position and alike</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">Positions</span>: {<span class="hljs-string">"top"</span>, <span class="hljs-string">"bottom"</span>, <span class="hljs-string">"left"</span>, <span class="hljs-string">"right"</span>}
+  <span class="hljs-attribute">Position</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@Positions</span>[obj]
+      <span class="hljs-keyword">return</span> obj</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Length with % unit</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">Times</span>: {<span class="hljs-string">'s'</span>, <span class="hljs-string">'ms'</span>, <span class="hljs-string">'m'</span>}
+  <span class="hljs-attribute">Time</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@Times</span>[obj[<span class="hljs-number">0</span>]]
+      <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">Colors</span>: {<span class="hljs-string">'transparent'</span>, <span class="hljs-string">'hsl'</span>, <span class="hljs-string">'rgb'</span>, <span class="hljs-string">'hsla'</span>, <span class="hljs-string">'rgba'</span>, <span class="hljs-string">'hsb'</span>}
+  <span class="hljs-attribute">Pseudocolors</span>: {<span class="hljs-string">'transparent'</span>, <span class="hljs-string">'currentColor'</span>}
+  <span class="hljs-attribute">Color</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> obj == <span class="hljs-string">'string'</span>
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@Pseudocolors</span>[obj]
+        <span class="hljs-keyword">return</span> obj
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@Colors</span>[obj[<span class="hljs-number">0</span>]]
+        <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">Sizes</span>: {<span class="hljs-string">'medium'</span>, <span class="hljs-string">'xx-small'</span>, <span class="hljs-string">'x-small'</span>, <span class="hljs-string">'small'</span>, <span class="hljs-string">'large'</span>, <span class="hljs-string">'x-large'</span>, <span class="hljs-string">'xx-large'</span>, <span class="hljs-string">'smaller'</span>, <span class="hljs-string">'larger'</span> }
+  <span class="hljs-attribute">Size</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@Sizes</span>[obj]
+      <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">Gradients</span>: {<span class="hljs-string">'linear-gradient'</span>, <span class="hljs-string">'radial-gradient'</span>, <span class="hljs-string">'repeating-linear-gradient'</span>, <span class="hljs-string">'repeating-radial-gradient'</span>}
+  <span class="hljs-attribute">Gradient</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@Gradients</span>[obj[<span class="hljs-number">0</span>]]
+      <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">URLs</span>: {<span class="hljs-string">'url'</span>, <span class="hljs-string">'src'</span>}
+  <span class="hljs-attribute">URL</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@URLs</span>[obj[<span class="hljs-number">0</span>]]
+      <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">Property</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@properties</span>[obj]
+      <span class="hljs-keyword">return</span> obj
+
+  <span class="hljs-attribute">Matrix</span>: <span class="hljs-function"><span class="hljs-params">(obj)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> obj == <span class="hljs-string">'object'</span> &amp;&amp; object.length != <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">return</span> obj
+
+<span class="hljs-built_in">module</span>.exports = Types</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

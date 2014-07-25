@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-23) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-25) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -20,26 +20,332 @@ var l=this.rows.get(this._objective);a.trace&&console.log(l);var m=b.strength.sy
       (module.compiled = true && module) : this
 );
 
-var Expressions;
+/* 
 
-Expressions = (function() {
+# # Conventions
+# 
+# Okay what's the deal with those → ↓ ↑ arrows? 
+# Open your mind and think beyond this Unicode madness. 
+# 
+# Dynamic systems need to be able to clean up side effects
+# Instead of linking things together, we are use a tracking system
+# that generates determenistic unique string keys
+# that are used for multiple purposes.
+
+↑  Caching, e.g. to jump to results of dom query,
+   or to figure out which element in that collection 
+   called this function (↑)
+
+→  Linking, that allows lazy evaluation, by making arguments
+   depend on previously resolved arguments,
+   e.g. for plural binding or to generate unique argument signature
+
+↓  Nesting, as a way for expressions to own side effects,
+   e.g. to remove stylesheet, css rule or conditional branch
+
+# These arrows are delimeters that combined together 
+# enable bottom-up evaluation and continuations
+# without leaving any state behind. 
+# Continuations without explicit state.
+# 
+# It's a lot easier to clean up stateless systems. 
+# Whenever a string key is set to be cleaned up,
+# it broadcasts that intent to all subsystems, 
+# like constraint solver, dom observer, etc.
+# So they can clean up things related to that key
+# by triggering more remove commands for known sub-keys.
+# 
+# This removal cascade allows components to have strict
+# and arbitarily deep hierarchy, without knowing of it.
+
+    style$my-stylesheet   # my stylesheet
+               ↓ h1$h1    # found heading
+               ↑ !+img    # preceeded by image
+               → #header  # bound to header element
+
+    <style id="my-stylesheet">
+      (h1 !+ img)[width] == #header[width]
+    </style>
+    <header id="header">
+      <img>
+      <h1 id="h1"></h1>
+    </header>
+
+.
+*/
+
+var Conventions;
+
+this.require || (this.require = function(string) {
+  var bits;
+  if (string === 'cassowary') {
+    return c;
+  }
+  bits = string.replace('', '').split('/');
+  return this[bits[bits.length - 1]];
+});
+
+this.module || (this.module = {});
+
+Conventions = (function() {
+  function Conventions() {}
+
+  Conventions.prototype.getContinuation = function(path, value, suffix) {
+    if (suffix == null) {
+      suffix = '';
+    }
+    if (path) {
+      path = path.replace(/[→↓↑]$/, '');
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    return path + (value && this.identify(value) || '') + suffix;
+  };
+
+  Conventions.prototype.getPossibleContinuations = function(path) {
+    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
+  };
+
+  Conventions.prototype.getPath = function(id, property) {
+    if (!property) {
+      property = id;
+      id = void 0;
+    }
+    if (property.indexOf('[') > -1 || !id) {
+      return property;
+    } else {
+      return id + '[' + property + ']';
+    }
+  };
+
+  Conventions.prototype.isCollection = function(object) {
+    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      switch (typeof object[0]) {
+        case "object":
+          return object[0].nodeType;
+        case "undefined":
+          return object.length === 0;
+      }
+    }
+  };
+
+  Conventions.prototype.getQueryPath = function(operation, continuation) {
+    if (continuation) {
+      if (continuation.nodeType) {
+        return this.identify(continuation) + ' ' + operation.path;
+      } else {
+        return continuation + operation.key;
+      }
+    } else {
+      return operation.key;
+    }
+  };
+
+  Conventions.prototype.forkMarkRegExp = /\$[^↑]+(?:↑|$)/g;
+
+  Conventions.prototype.getCanonicalPath = function(continuation, compact) {
+    var bits, last;
+    bits = this.getContinuation(continuation).split(this.DOWN);
+    last = bits[bits.length - 1];
+    last = bits[bits.length - 1] = last.split(this.RIGHT).pop().replace(this.forkMarkRegExp, '');
+    if (compact) {
+      return last;
+    }
+    return bits.join(this.DOWN);
+  };
+
+  Conventions.prototype.getScopePath = function(continuation) {
+    var bits;
+    bits = continuation.split(this.DOWN);
+    bits[bits.length - 1] = "";
+    return bits.join(this.DOWN);
+  };
+
+  Conventions.prototype.getOperationPath = function(operation, continuation) {
+    if (continuation != null) {
+      if (operation.def.serialized && !operation.def.hidden) {
+        return continuation + (operation.key || operation.path);
+      }
+      return continuation;
+    } else {
+      return operation.path;
+    }
+  };
+
+  Conventions.prototype.getContext = function(args, operation, scope, node) {
+    var index, _ref;
+    index = args[0].def && 4 || 0;
+    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
+      return args[index];
+    }
+    if (!operation.bound) {
+      return this.scope;
+    }
+    return scope;
+  };
+
+  Conventions.prototype.getIntrinsicProperty = function(path) {
+    var index, last, property;
+    index = path.indexOf('intrinsic-');
+    if (index > -1) {
+      if ((last = path.indexOf(']', index)) === -1) {
+        last = void 0;
+      }
+      return property = path.substring(index + 10, last);
+    }
+  };
+
+  Conventions.prototype.isPrimitive = function(object) {
+    if (typeof object === 'object') {
+      return object.valueOf !== Object.prototype.valueOf;
+    }
+    return true;
+  };
+
+  Conventions.prototype.UP = '↑';
+
+  Conventions.prototype.RIGHT = '→';
+
+  Conventions.prototype.DOWN = '↓';
+
+  return Conventions;
+
+})();
+
+module.exports = Conventions;
+
+var Buffer;
+
+Buffer = (function() {
+  function Buffer() {}
+
+  Buffer.prototype.push = function() {
+    var output;
+    if (output = this.output) {
+      return output.pull.apply(output, arguments);
+    }
+  };
+
+  Buffer.prototype.pull = function() {
+    var captured, input, pulled;
+    if (this.puller || (input = this.input)) {
+      captured = this.capture(arguments[0]);
+      if (input.pull) {
+        pulled = input.pull.apply(input, arguments);
+      } else {
+        pulled = this[input].apply(this, arguments);
+      }
+      if (captured) {
+        this.release();
+      }
+      return pulled;
+    }
+  };
+
+  Buffer.prototype.flush = function() {
+    var input;
+    if (input = this.input) {
+      return input.flush.apply(input, arguments);
+    }
+  };
+
+  Buffer.prototype.run = function() {
+    return this.pull.apply(this, arguments);
+  };
+
+  Buffer.prototype.release = function() {
+    var _ref;
+    if ((_ref = this.capturer) != null) {
+      _ref.onRelease();
+    }
+    this.endTime = this.engine.time();
+    this.flush();
+    return this.endTime;
+  };
+
+  Buffer.prototype.capture = function(reason) {
+    var fmt, method, name, result, _ref;
+    if (this.buffer === void 0) {
+      if ((_ref = this.capturer) != null) {
+        _ref.onCapture();
+      }
+      this.buffer = null;
+      this.engine.start();
+      fmt = '%c%s%c';
+      if (typeof reason !== 'string') {
+        if (reason != null ? reason.slice : void 0) {
+          reason = this.engine.clone(reason);
+        }
+        fmt += '\t\t%O';
+      } else {
+        fmt += '\t%s';
+      }
+      if (this.engine.onDOMContentLoaded) {
+        name = 'GSS.Document';
+      } else {
+        name = 'GSS.Solver';
+        method = 'groupCollapsed';
+      }
+      this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
+      this.startTime = this.engine.time();
+    }
+    if (arguments.length > 1) {
+      result = this.pull.apply(this, Array.prototype.slice.call(arguments, 1));
+      if (name) {
+        this.release();
+      }
+      return result;
+    }
+    return !!name;
+  };
+
+  Buffer.prototype.defer = function(reason) {
+    var _this = this;
+    if (this.capture.apply(this, arguments)) {
+      return this.deferred != null ? this.deferred : this.deferred = (window.setImmediate || window.setTimeout)(function() {
+        _this.deferred = void 0;
+        return _this.flush();
+      }, 0);
+    }
+  };
+
+  return Buffer;
+
+})();
+
+module.exports = Buffer;
+
+/* Input: Expressions
+
+Interepretes given expressions lazily top-down, 
+
+If sub-expression returns nodelist,
+it recursively evaluates expression bottom-up 
+for each element in nodelist
+
+Document expressions output expressions for solver.
+Solver expressions output and apply constraints.
+
+* Input: Engine, reads commands
+* Output: Engine, outputs results, leaves out unrecognized commands as is
+*/
+
+var Buffer, Expressions,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Buffer = require('../concepts/Buffer');
+
+Expressions = (function(_super) {
+  __extends(Expressions, _super);
+
   function Expressions(engine, output) {
     this.engine = engine;
     this.output = output;
     this.commands = this.engine && this.engine.commands || this;
+    this.input = 'evaluate';
   }
-
-  Expressions.prototype.pull = function(expression, continuation) {
-    var capture, result;
-    if (expression) {
-      capture = this.capture(expression);
-      result = this.evaluate.apply(this, arguments);
-      if (capture) {
-        this.release();
-      }
-    }
-    return result;
-  };
 
   Expressions.prototype.push = function(args, batch) {
     var buffer;
@@ -65,8 +371,6 @@ Expressions = (function() {
     if (buffer) {
       this.buffer = void 0;
       this.output.pull(buffer);
-    } else if (this.buffer === void 0) {
-      this.engine.push();
     } else {
       this.buffer = void 0;
     }
@@ -105,19 +409,21 @@ Expressions = (function() {
     if (operation.def.noop) {
       result = args;
     } else {
-      result = this.execute(operation, continuation, scope, args);
+      result = this.execute(operation, continuation, scope, meta, args);
       contd = continuation;
-      continuation = this.log(operation, continuation);
+      continuation = this.engine.getOperationPath(operation, continuation);
     }
     return this.ascend(operation, continuation, result, scope, meta, ascender);
   };
 
-  Expressions.prototype.execute = function(operation, continuation, scope, args) {
+  Expressions.prototype.execute = function(operation, continuation, scope, meta, args) {
     var command, context, func, method, node, onAfter, onBefore, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
       node = scope;
       (args || (args = [])).unshift(scope);
+    } else if (operation.def.meta) {
+      (args || (args = [])).push(operation, continuation, scope, meta);
     } else {
       node = this.engine.getContext(args, operation, scope, node);
     }
@@ -255,7 +561,12 @@ Expressions = (function() {
           }
           if (operation.def.noop || (parent.def.noop && !parent.name)) {
             if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
-              return this.push(result.length === 1 ? result[0] : result);
+              if (result.length === 1) {
+                result = result[0];
+              }
+              if (meta !== 'return') {
+                return this.push(result);
+              }
             }
           } else if (parent && ((ascender != null) || (result.nodeType && (!operation.def.hidden || parent.tail === parent)))) {
             this.evaluate(parent, continuation, scope, meta, operation.index, result);
@@ -264,7 +575,7 @@ Expressions = (function() {
             return result;
           }
         }
-      } else {
+      } else if (meta !== 'return') {
         return this.push(result);
       }
     }
@@ -394,152 +705,17 @@ Expressions = (function() {
     return before + prefix + after + suffix;
   };
 
-  Expressions.prototype.log = function(operation, continuation) {
-    if (continuation != null) {
-      if (operation.def.serialized && !operation.def.hidden) {
-        return continuation + (operation.key || operation.path);
-      }
-      return continuation;
-    } else {
-      return operation.path;
-    }
-  };
-
-  Expressions.prototype.release = function() {
-    this.endTime = this.engine.time();
-    this.flush();
-    return this.endTime;
-  };
-
-  Expressions.prototype.capture = function(reason) {
-    var fmt, method, name;
-    if (this.buffer !== void 0) {
-      return;
-    }
-    this.engine.start();
-    fmt = '%c%s%c';
-    if (typeof reason !== 'string') {
-      if (reason != null ? reason.slice : void 0) {
-        reason = this.engine.clone(reason);
-      }
-      fmt += '\t\t%O';
-    } else {
-      fmt += '\t%s';
-    }
-    if (this.engine.onDOMContentLoaded) {
-      name = 'GSS.Document';
-    } else {
-      name = 'GSS.Solver';
-      method = 'groupCollapsed';
-    }
-    this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
-    this.startTime = this.engine.time();
-    this.buffer = null;
-    return true;
-  };
-
   return Expressions;
 
-})();
-
-this.module || (this.module = {});
+})(Buffer);
 
 module.exports = Expressions;
-
-var Conventions;
-
-Conventions = (function() {
-  function Conventions() {}
-
-  Conventions.prototype.getContinuation = function(path, value, suffix) {
-    if (suffix == null) {
-      suffix = '';
-    }
-    if (path) {
-      path = path.replace(/[→↓↑]$/, '');
-    }
-    if (typeof value === 'string') {
-      return value;
-    }
-    return path + (value && this.identify(value) || '') + suffix;
-  };
-
-  Conventions.prototype.getPossibleContinuations = function(path) {
-    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
-  };
-
-  Conventions.prototype.getPath = function(id, property) {
-    if (!property) {
-      property = id;
-      id = void 0;
-    }
-    if (property.indexOf('[') > -1 || !id) {
-      return property;
-    } else {
-      return id + '[' + property + ']';
-    }
-  };
-
-  Conventions.prototype.isCollection = function(object) {
-    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
-      switch (typeof object[0]) {
-        case "object":
-          return object[0].nodeType;
-        case "undefined":
-          return object.length === 0;
-      }
-    }
-  };
-
-  Conventions.prototype.getQueryPath = function(operation, continuation) {
-    if (continuation) {
-      if (continuation.nodeType) {
-        return this.identify(continuation) + ' ' + operation.path;
-      } else {
-        return continuation + operation.key;
-      }
-    } else {
-      return operation.key;
-    }
-  };
-
-  Conventions.prototype.getContext = function(args, operation, scope, node) {
-    var index, _ref;
-    index = args[0].def && 4 || 0;
-    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
-      return args[index];
-    }
-    if (!operation.bound) {
-      return this.scope;
-    }
-    return scope;
-  };
-
-  Conventions.prototype.getIntrinsicProperty = function(path) {
-    var index, property;
-    index = path.indexOf('[intrinsic-');
-    if (index > -1) {
-      return property = path.substring(index + 11, path.length - 1);
-    }
-  };
-
-  Conventions.prototype.UP = '↑';
-
-  Conventions.prototype.RIGHT = '→';
-
-  Conventions.prototype.DOWN = '↓';
-
-  return Conventions;
-
-})();
-
-module.exports = Conventions;
 
 var Command;
 
 Command = function(command, reference) {
   var helper, key, value;
-  if (typeof command === 'object') {
+  if (typeof command === 'object' && !command.exec) {
     helper = this.Helper(command, false, reference);
     for (key in command) {
       value = command[key];
@@ -593,12 +769,13 @@ for (_i = 0, _len = _ref.length; _i < _len; _i++) {
   method = _ref[_i];
   Console.prototype[method] = (function(method) {
     return function() {
+      var _ref1;
       if (method === 'group' || method === 'groupCollapsed') {
         Console.prototype.groups++;
       } else if (method === 'groupEnd') {
         Console.prototype.groups--;
       }
-      if (typeof document !== "undefined" && document !== null) {
+      if ((typeof document !== "undefined" && document !== null) && ((_ref1 = window.location) != null ? _ref1.href.indexOf('log=0') : void 0) === -1) {
         return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
       }
     };
@@ -747,6 +924,26 @@ Property = function(property, reference, properties) {
 
 module.exports = Property;
 
+/* Input: Observed values
+
+Manages solutions and document properties.
+
+Interface:
+
+  - (un)watch() - (un)subscribe expression to property updates
+  - set()       - dispatches updates to subscribed expressions
+  - get()       - retrieve value
+  - clean()     - detach observes by continuation
+
+
+State:
+  - @_watchers[key] - List of oservers of specific properties
+                      as [operation, continuation, scope] triplets
+
+  - @_observers[continuation] - List of observers by continuation
+                                as [operation, key, scope] triplets
+*/
+
 var Values;
 
 Values = (function() {
@@ -857,6 +1054,19 @@ Values = (function() {
     return value;
   };
 
+  Values.prototype.suggest = function(id, property, value) {
+    var capture, _base;
+    if (arguments.length === 2) {
+      value = property;
+      property = void 0;
+    }
+    ((_base = this.engine).measured || (_base.measured = {}))[this.engine.getPath(id, property)] = value;
+    if (capture = this.engine.expressions.capture('suggest ' + (id || '') + '[' + (property || '') + '] ' + value)) {
+      this.engine.flush();
+    }
+    return value;
+  };
+
   Values.prototype.merge = function(object) {
     var capturing, path, value;
     capturing = this.engine.expressions.buffer === void 0;
@@ -890,37 +1100,46 @@ Values = (function() {
 
 module.exports = Values;
 
-var Engine, EventTrigger,
+var Buffer, Engine, EventTrigger, include,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-this.require || (this.require = function(string) {
-  var bits;
-  if (string === 'cassowary') {
-    return c;
+include = function() {
+  var Context, fn, mixin, name, _i, _len, _ref;
+  Context = function(engine) {
+    this.engine = engine;
+  };
+  for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+    mixin = arguments[_i];
+    _ref = mixin.prototype;
+    for (name in _ref) {
+      fn = _ref[name];
+      Context.prototype[name] = fn;
+    }
   }
-  bits = string.replace('.js', '').split('/');
-  return this[bits[bits.length - 1]];
-});
+  return Context;
+};
 
 EventTrigger = require('./concepts/EventTrigger');
+
+Buffer = require('./concepts/Buffer');
 
 Engine = (function(_super) {
   __extends(Engine, _super);
 
-  Engine.prototype.Expressions = require('./input/Expressions.js');
+  Engine.prototype.Expressions = require('./input/Expressions');
 
-  Engine.prototype.Values = require('./input/Values.js');
+  Engine.prototype.Values = require('./input/Values');
 
-  Engine.prototype.Commands = require('./commands/Conventions.js');
+  Engine.prototype.Commands = require('./commands/Conventions');
 
-  Engine.prototype.Property = require('./concepts/Property.js');
+  Engine.prototype.Property = require('./concepts/Property');
 
-  Engine.prototype.Command = require('./concepts/Command.js');
+  Engine.prototype.Command = require('./concepts/Command');
 
-  Engine.prototype.Helper = require('./concepts/Helper.js');
+  Engine.prototype.Helper = require('./concepts/Helper');
 
-  Engine.prototype.Console = require('./concepts/Console.js');
+  Engine.prototype.Console = require('./concepts/Console');
 
   function Engine(scope, url) {
     var Document, engine, id;
@@ -961,8 +1180,10 @@ Engine = (function(_super) {
         this.commands = new this.Commands(this);
       }
       this.expressions = new this.Expressions(this);
-      this.values = new this.Values(this);
+      this.values = this.vars = new this.Values(this);
       this.events = {};
+      this.input = this.expressions;
+      this.engine = this;
       return;
     }
     return new (Engine.Document || Engine)(scope, url);
@@ -983,26 +1204,7 @@ Engine = (function(_super) {
     if (this.scope) {
       this.dispatchEvent(this.scope, 'solved', data);
     }
-    if (this.output) {
-      return this.output.pull.apply(this.output, arguments);
-    }
-  };
-
-  Engine.prototype.run = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.pull = function() {
-    return this.expressions.pull.apply(this.expressions, arguments);
-  };
-
-  Engine.prototype.defer = function() {
-    var _base;
-    if (this.deferred == null) {
-      (_base = this.expressions).buffer || (_base.buffer = null);
-      this.deferred = (window.setImmediate || window.setTimeout)(this.expressions.flush.bind(this.expressions), 0);
-    }
-    return this.run.apply(this, arguments);
+    return Engine.__super__.push.apply(this, arguments);
   };
 
   Engine.prototype.destroy = function() {
@@ -1044,22 +1246,6 @@ Engine = (function(_super) {
   Engine.prototype.elements = {};
 
   Engine.prototype.engines = {};
-
-  Engine.include = function() {
-    var Context, fn, mixin, name, _i, _len, _ref;
-    Context = function(engine) {
-      this.engine = engine;
-    };
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      mixin = arguments[_i];
-      _ref = mixin.prototype;
-      for (name in _ref) {
-        fn = _ref[name];
-        Context.prototype[name] = fn;
-      }
-    }
-    return Context;
-  };
 
   Engine.prototype.start = function() {
     if (this.running) {
@@ -1125,9 +1311,11 @@ Engine = (function(_super) {
     return object;
   };
 
+  Engine.include = include;
+
   return Engine;
 
-})(EventTrigger);
+})(include(EventTrigger, Buffer));
 
 this.GSS = Engine;
 
@@ -1221,8 +1409,11 @@ Constraints = (function() {
     }));
   };
 
-  Constraints.prototype.strength = function(strength) {
-    return c.Strength[strength] || c.Strength.medium;
+  Constraints.prototype.strength = function(strength, deflt) {
+    if (deflt == null) {
+      deflt = 'medium';
+    }
+    return strength && c.Strength[strength] || c.Strength[deflt];
   };
 
   Constraints.prototype.weight = function(weight) {
@@ -1300,6 +1491,17 @@ for (property in _ref) {
 }
 
 module.exports = Constraints;
+
+/* Output: Constraints
+
+Manages constraints, executes solver commands.
+Removes dereferenced variables. Outputs solutions. 
+
+State:
+
+  @_variables: - records variables by name
+                 and constraints by continuation
+*/
 
 var Solutions;
 
@@ -1462,10 +1664,9 @@ Solutions = (function() {
 
   Solutions.prototype.edit = function(variable, strength, weight, continuation) {
     var constraint;
-    strength = this.engine.strength(strength);
+    strength = this.engine.strength(strength, 'strong');
     weight = this.engine.weight(weight);
-    c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
-    constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight);
+    constraint = new c.EditConstraint(variable, strength, weight);
     this.solver.addConstraint(constraint);
     variable.editing = constraint;
     return constraint;
@@ -1513,16 +1714,16 @@ var Engine,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Engine = require('./Engine.js');
+Engine = require('./Engine');
 
 Engine.Solver = (function(_super) {
   __extends(Solver, _super);
 
-  Solver.prototype.Solutions = require('./output/Solutions.js');
+  Solver.prototype.Solutions = require('./output/Solutions');
 
-  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints.js'));
+  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints'));
 
-  Solver.prototype.Properties = require('./properties/Equasions.js');
+  Solver.prototype.Properties = require('./properties/Equasions');
 
   function Solver(input, output, url) {
     var context;

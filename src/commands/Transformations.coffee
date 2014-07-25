@@ -1,7 +1,7 @@
 
 
 class Transformations
-  @Matrix: require('../../vendor/gl-matrix.js')
+  @Matrix: require('../../vendor/gl-matrix')
 
   matrix: ->
 

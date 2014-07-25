@@ -48,9 +48,9 @@ describe 'GSS commands', ->
       """
       window.$engine = engine
       engine.run [
-          ['stay', ['get', ['$class','box']  , 'x'    , '%1']]
-          ['stay', ['get', ['$class','box']  , 'y'    , '%2']]
-          ['stay', ['get', ['$class','block'], 'width', '%3']]
+          ['stay', ['get', ['$class','box']  , 'x'    ]]
+          ['stay', ['get', ['$class','box']  , 'y'    ]]
+          ['stay', ['get', ['$class','block'], 'width']]
         ]
       chai.expect( engine.expressions.lastOutput).to.eql [
           # break up stays to allow multiple plural queries

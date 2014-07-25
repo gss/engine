@@ -1,24 +1,25 @@
-# Interepretes given expressions lazily, functions are defined by @context
-# supports forking for collections 
-# (e.g. to apply something for every element matched by selector)
+### Input: Expressions
 
-# Doesnt send the output until all commands are executed.
+Interepretes given expressions lazily top-down, 
 
-# * Input: Engine, reads commands
-# * Output: Engine, outputs results, leaves out unrecognized commands as is
+If sub-expression returns nodelist,
+it recursively evaluates expression bottom-up 
+for each element in nodelist
 
-class Expressions
+Document expressions output expressions for solver.
+Solver expressions output and apply constraints.
+
+* Input: Engine, reads commands
+* Output: Engine, outputs results, leaves out unrecognized commands as is
+
+###
+
+Buffer = require('../concepts/Buffer')
+
+class Expressions extends Buffer
   constructor: (@engine, @output) ->
     @commands = @engine && @engine.commands || @
-
-  # Hook: Evaluate input and pass produced output
-  pull: (expression, continuation) ->
-    if expression
-      capture = @capture(expression)
-      result = @evaluate.apply(@, arguments)
-      @release() if capture
-       
-    return result
+    @input = 'evaluate'
 
   # Hook: Output commands in batch
   push: (args, batch) ->
@@ -40,8 +41,8 @@ class Expressions
     if buffer
       @buffer = undefined
       @output.pull(buffer)
-    else if @buffer == undefined
-      @engine.push()
+    #else if @buffer == undefined
+    #  @engine.push()
     else
       @buffer = undefined
     @engine.console.groupEnd()
@@ -66,7 +67,7 @@ class Expressions
     if operation.tail
       operation = @skip(operation, ascender)
 
-    # Use computed result by *cough* parsing continuation string
+    # Use computed result by parsing continuation string
     if continuation && operation.path
       if (result = @reuse(operation.path, continuation)) != false
         return result
@@ -83,22 +84,24 @@ class Expressions
     if operation.def.noop
       result = args
     else
-      result = @execute(operation, continuation, scope, args)
+      result = @execute(operation, continuation, scope, meta, args)
       contd = continuation
-      continuation = @log(operation, continuation)
+      continuation = @engine.getOperationPath(operation, continuation)
 
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
 
   # Get result of executing operation with resolved arguments
-  execute: (operation, continuation, scope, args) ->
+  execute: (operation, continuation, scope, meta, args) ->
     scope ||= @engine.scope
     # Command needs current context (e.g. ::this)
     if operation.def.scoped || !args
       node = scope
       (args ||= []).unshift scope
     # Operation has a context 
-    else 
+    else if operation.def.meta
+      (args ||= []).push operation, continuation, scope, meta
+    else
       node = @engine.getContext(args, operation, scope, node)
 
     # Use function, or look up method on the first argument. Falls back to builtin
@@ -222,13 +225,16 @@ class Expressions
             return 
           if operation.def.noop || (parent.def.noop && !parent.name)
             if result && (!parent || (parent.def.noop && (!parent.parent || parent.length == 1) || ascender?))
-              return @push(if result.length == 1 then result[0] else result)
+              if result.length == 1
+                result = result[0]
+              unless meta == 'return'
+                return @push result
           else if parent && (ascender? || (result.nodeType && (!operation.def.hidden || parent.tail == parent)))
             @evaluate parent, continuation, scope, meta, operation.index, result
             return 
           else
             return result
-      else
+      else unless meta == 'return' 
         return @push result
 
     # Ascend without recursion (math, regular functions, constraints)
@@ -342,40 +348,5 @@ class Expressions
 
     return before + prefix + after + suffix
 
-  log: (operation, continuation) ->
-    if continuation?
-      if operation.def.serialized && !operation.def.hidden
-        return continuation + (operation.key || operation.path)
-      return continuation
-    else
-      return operation.path
 
-  release: () ->
-    @endTime = @engine.time()
-    @flush()
-    return @endTime
-
-  capture: (reason) ->
-    return unless @buffer == undefined
-    @engine.start()
-    fmt = '%c%s%c'
-    
-    if typeof reason != 'string'
-      reason = @engine.clone(reason) if reason?.slice
-      fmt += '\t\t%O'
-    else
-      fmt += '\t%s'
-    if @engine.onDOMContentLoaded
-      name = 'GSS.Document'
-    else
-      name = 'GSS.Solver'
-
-      method = 'groupCollapsed'
-    @engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason)
-    @startTime = @engine.time()
-    @buffer = null
-    return true
-
-
-@module ||= {}
 module.exports = Expressions

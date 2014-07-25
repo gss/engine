@@ -1,3 +1,15 @@
+### Output: Constraints
+
+Manages constraints, executes solver commands.
+Removes dereferenced variables. Outputs solutions. 
+
+State:
+
+  @_variables: - records variables by name
+                 and constraints by continuation
+
+###
+
 require('cassowary')
 
 class Solutions
@@ -11,29 +23,39 @@ class Solutions
   pull: (commands)->
     @response = response = {}
     @lastInput = commands
+
+    # Add constraints, execute solver commands (suggest, remove, stay)
     for command in commands
       if command instanceof Array && typeof command[0] == 'object'
         @add(subcommand) for subcommand in command
       else 
         @add(command)
+
+    # Solve constraints if constraints were changed, otherwise resolve
     if @constrained
       @constrained = undefined
       @solver.solve()
     else
       @solver.resolve()
 
+    # Read updated solutions
     for property, value of @solver._changed
       response[property] = value
     @solver._changed = undefined
+
+    # Nullify variables that are not referenced by any constraint
     if @nullified
       for property, value of @nullified
         if !@added || !(@added[property]?)
           @nullify(value)
           response[property] = null
+
+    # Add new properties that equal to zero
     if @added
       for property, value of @added
         if !response[property] && (!@nullified || !@nullified[property])
           response[property] = 0
+
     @added = @nullified = undefined
     @lastOutput = response
 
@@ -77,8 +99,6 @@ class Solutions
     # Explicitly remove variable from cassowary
     @solver._externalParametricVars.delete(variable)
     console.log('nullify', variable.name)
-            
-
 
   add: (command) ->
     if command instanceof c.Constraint
@@ -100,16 +120,14 @@ class Solutions
       @[command[0]].apply(@, Array.prototype.slice.call(command, 1))
 
   edit: (variable, strength, weight, continuation) ->
-    strength = @engine.strength(strength)
+    strength = @engine.strength(strength, 'strong')
     weight = @engine.weight(weight)
-    c.trace && c.fnenterprint("addEditVar: " + constraint + " @ " + strength + " {" + weight + "}");
-    constraint = new c.EditConstraint(variable, strength || c.Strength.strong, weight)
+    constraint = new c.EditConstraint(variable, strength, weight)
     @solver.addConstraint(constraint)
     variable.editing = constraint
     return constraint
 
   suggest: (path, value, strength, weight, continuation) ->
-    #@solver.solve()
     if typeof path == 'string'
       unless variable = @variables[path]
         if continuation
@@ -125,7 +143,6 @@ class Solutions
     unless variable.editing
       @edit(variable, strength, weight, continuation)
     @solver.suggestValue(variable, value)
-    #@solver.resolve()
     return variable
 
   stay: ->

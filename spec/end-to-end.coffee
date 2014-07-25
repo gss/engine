@@ -317,27 +317,164 @@ describe 'End - to - End', ->
 
                       done()
 
-    describe 'auto-intrinsics', ->
-      it 'should use intrinsic value when there is no regular value set', (done) ->                                 
-        container.innerHTML =  """
-            <style type="text/gss"> 
-              #b1[width] == #a1[width];   
-              #a2[width] == #b2[width];  
-            </style>
-            <div class="a" id="a1" style="width: 15px; height: 10px"></div>
-            <div class="a" id="a2" style="width: 20px; height: 25px"></div>
+    describe 'css binding', ->
+      describe 'simple', ->
+        describe 'numerical properties', ->
+          it 'should compute value when there is no regular value set', (done) ->                                 
+            engine.once 'solved', (e) ->
+              expect(stringify engine.values.toObject()).to.eql stringify
+                "$a1[intrinsic-z-index]": 2
+                "$b1[z-index]": 3
+              done()
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    position: relative;
+                    z-index: 2;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  #b1[z-index] == #a1[intrinsic-z-index] + 1;
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
 
-            <div class="b" id="b1"></div>
-            <div class="b" id="b2"></div>
-          """
-        window.$engine = engine
-        engine.once 'solved', (e) ->
-          expect(stringify engine.values.toObject()).to.eql stringify
-            "$a1[width]": 15
-            "$b1[width]": 15
-            "$a2[width]": 20
-            "$b2[width]": 20
-          done()
+          it 'should use inline value', (done) ->                                 
+            engine.once 'solved', (e) ->
+              expect(stringify engine.values.toObject()).to.eql stringify
+                "$a1[intrinsic-z-index]": 2
+                "$b1[z-index]": 3
+              done()
+            container.innerHTML =  """
+                <style type="text/gss"> 
+                  #b1[z-index] == #a1[intrinsic-z-index] + 1;
+                </style>
+                <div class="a" id="a1" style="z-index: 2"></div>
+                <div class="b" id="b1"></div>
+              """
+
+        describe 'length properties', ->
+          it 'should compute linear equasions', (done) ->                                 
+            engine.once 'solved', (e) ->
+              expect(stringify engine.values.toObject()).to.eql stringify
+                "$a1[intrinsic-border-top-width]": 2
+                "$b1[border-left-width]": -2
+              done()
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    border: 2px solid #000;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  #b1[border-left-width] == -1 * #a1[intrinsic-border-top-width];
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+
+          it 'should simplify non-linear equasions to linear', (done) ->                                 
+            count = 0
+            listener = (e) ->
+              if ++count == 1
+                expect(stringify engine.values.toObject()).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 2
+                  "multiplier": 2
+                  "$b1[border-left-width]": 4
+                engine.values.suggest 'multiplier', 3
+              else if count == 2
+                expect(stringify engine.values.toObject()).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 2
+                  "multiplier": 3
+                  "$b1[border-left-width]": 6
+                engine.$id('a1').style.border = '3px solid #000'
+              else if count == 3
+                expect(stringify engine.values.toObject()).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 3
+                  "multiplier": 3
+                  "$b1[border-left-width]": 9
+                engine.removeEventListener('solved', listener)
+                done()
+            engine.addEventListener 'solved', listener
+
+
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    border: 2px solid #000;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  [multiplier] == 2;
+                  #b1[border-left-width] == [multiplier] * #a1[intrinsic-border-top-width];
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+
+          it 'should detect non-linearity deep in expression', (done) ->                                 
+            count = 0
+            listener = (e) ->
+              if ++count == 1
+                expect(stringify engine.values.toObject()).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 2
+                  "multiplier": 2
+                  "$b1[border-left-width]": 6
+                engine.values.suggest 'multiplier', 3
+              else if count == 2
+                expect(stringify engine.values.toObject()).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 2
+                  "multiplier": 3
+                  "$b1[border-left-width]": 9
+                engine.$id('a1').style.border = '3px solid #000'
+              else if count == 3
+                expect(stringify engine.values.toObject()).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 3
+                  "multiplier": 3
+                  "$b1[border-left-width]": 12
+                engine.removeEventListener('solved', listener)
+                done()
+            engine.addEventListener 'solved', listener
+
+
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    border: 2px solid #000;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  [multiplier] == 2;
+                  #b1[border-left-width] == [multiplier] * (1 + #a1[intrinsic-border-top-width]);
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+          
+      describe 'of dimensions', ->
+        describe 'with units other than pixels', ->
+          it 'should use intrinsic value when there is no regular value set', (done) ->                                 
+            container.innerHTML =  """
+                <style type="text/gss"> 
+                  #b1[width] == #a1[width];   
+                  #a2[width] == #b2[width];  
+                </style>
+                <div class="a" id="a1" style="width: 15px; height: 10px"></div>
+                <div class="a" id="a2" style="width: 20px; height: 25px"></div>
+
+                <div class="b" id="b1"></div>
+                <div class="b" id="b2"></div>
+              """
+            window.$engine = engine
+            engine.once 'solved', (e) ->
+              expect(stringify engine.values.toObject()).to.eql stringify
+                "$a1[width]": 15
+                "$b1[width]": 15
+                "$a2[width]": 20
+                "$b2[width]": 20
+              done()
+
 
     describe 'complex plural selectors on the left', -> 
       it 'should compute values', (done) ->                                 

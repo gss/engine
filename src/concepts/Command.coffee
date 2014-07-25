@@ -7,7 +7,7 @@
 # but can be used outside of expressions (e.g. in tests or user scripts)
 
 Command = (command, reference) ->
-  if typeof command == 'object'
+  if typeof command == 'object' && !command.exec
     helper = @Helper(command, false, reference)
     for key, value of command
       helper[key] = value

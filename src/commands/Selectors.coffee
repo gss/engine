@@ -1,4 +1,21 @@
-# Selectors with custom combinators inspired by Slick of mootools fame (shout-out & credits)
+### Selectors with custom combinators 
+inspired by Slick of mootools fame (shout-out & credits)
+
+Combinators/qualifiers are map/reduce of DOM tree.
+Selectors are parsed into individual functional steps.
+Steps are combined when possible into querySelectorAll calls
+
+Map: If step returns collection, the rest of selector 
+is executed for each element in collection 
+
+Filter: If step returns single element, e.g. it matches qualifier,
+or points to a another element, execution is continued (reduce)
+
+Reduce: Otherwise, the selector branch doesnt match, execution stops.
+
+When it hits the end of selector, parent expression is evaluated 
+with found element.
+###
 
 class Selectors
   # Return cached for DOM queries that we updated this tick
@@ -305,7 +322,7 @@ class Selectors
   ':next':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@queries.getOperationPath(continuation))
+      path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
@@ -314,7 +331,7 @@ class Selectors
   ':previous':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@queries.getOperationPath(continuation))
+      path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
       return if index == -1 || !index
@@ -323,7 +340,7 @@ class Selectors
   ':last':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@queries.getOperationPath(continuation))
+      path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
       return node if !index? || index == collection.length - 1
@@ -331,7 +348,7 @@ class Selectors
   ':first':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@queries.getOperationPath(continuation))
+      path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
       return node if index == 0

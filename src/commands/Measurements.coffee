@@ -1,18 +1,12 @@
-# Buffer up measurements
+# Provide some values for solver to crunch
+
+# Measurements happen synchronously,
+# re-measurements are deferred to be done in bulk
+
 class Measurements
-
-  # Add continuation to suggest command, because suggest creates a variable
-  # if its undefined. It will ensure the solver will be able to clean up
-  suggest:
-    command: (operation, continuation, scope, meta, variable, value, strength, weight, contd) ->
-      contd ||= @getContinuation(continuation) if continuation
-      return ['suggest', variable, value, strength ? null, weight ? null, contd ? null]
-
   # Generate command to create a variable
   get:
-    command: (operation, continuation, scope, meta, object, property) ->
-      
-      debugger
+    command: (operation, continuation, scope, meta, object, property, primitive) ->
       if property
         if typeof object == 'string'
           id = object
@@ -30,7 +24,8 @@ class Measurements
         property = object
         object = undefined
 
-      if operation
+      # TODO: Compute statically
+      if operation && !primitive
         parent = child = operation
         while parent = parent.parent
           if child.index
@@ -40,28 +35,34 @@ class Measurements
 
           child = parent
 
-      # Compute custom property, normalize alias
-      if ((property.indexOf('intrinsic-') > -1) ||
-            @properties[id]?[property]? || 
-            @properties[property]?.initial != undefined)
-        
-        path = @measure(id, property, continuation, true, true)
-        if path && (index = path.indexOf('[')) > -1
+      # Compute custom property, canonicalize path
+      if ((property.indexOf('intrinsic-') > -1) || @properties[id]?[property]?)
+        path = @measure(id, property, continuation, true, true, primitive)
+        if typeof path == 'string' && (index = path.indexOf('[')) > -1
           id = path.substring(0, index)
           property = path.substring(index + 1, path.length - 1)
+
+      # Expand properties like [center-y]
       else
-        # Expand properties like [center-y]
-        if id && typeof @properties[property] == 'function'
-          return @properties[property].call(@, id, continuation)
+        if id && (prop = @properties[property])
+          if typeof prop == 'function' && prop.initial == undefined
+            return prop.call(@, id, continuation)
 
-
-      # Resolve conditionals on document side
-      if primitive
+      # Do not create solver variable, return value
+      if primitive# && path != undefined
         return @values.watch(id, property, operation, continuation, scope)
-      
+
       # Return command for solver together with tracking label for removal
       return ['get', id, property, @getContinuation(continuation || '')]
 
+
+  # Special case: Raw suggests as commands
+  # Add continuation to suggest command, because suggest creates a variable
+  # if its undefined. It will ensure the solver will be able to clean up
+  suggest:
+    command: (operation, continuation, scope, meta, variable, value, strength, weight, contd) ->
+      contd ||= @getContinuation(continuation) if continuation
+      return ['suggest', variable, value, strength ? null, weight ? null, contd ? null]
 
   # Combine subsequent remove commands
   onBuffer: (buffer, args, batch) ->
@@ -78,6 +79,8 @@ class Measurements
   onFlush: (buffer) ->
     return @getSuggestions(!buffer)
 
+  # Callback triggered for each element during reflow
+  # Allows intrinsic to be re-measured without causing restyle
   onMeasure: (node, x, y, styles, full) ->
     return unless @intrinsic
     if id = node._gss_id
@@ -86,19 +89,24 @@ class Measurements
           continue if full && (prop == 'width' || prop == 'height')
 
           path = id + "[intrinsic-" + prop + "]"
-          (@measured ||= {})[path] = 
-            switch prop
-              when "x"
-                x + node.offsetLeft
-              when "y"
-                y + node.offsetTop
-              when "width"
-                node.offsetWidth
-              when "height"
-                node.offsetHeight
+        
+          switch prop
+            when "x"
+              (@measured ||= {})[path] = x + node.offsetLeft
+            when "y"
+              (@measured ||= {})[path] = y + node.offsetTop
+            when "width"
+              (@measured ||= {})[path] = node.offsetWidth
+            when "height"
+              (@measured ||= {})[path] = node.offsetHeight
+            else
+              @values.set null, path, @getStyle(node, prop)
     return
 
-  # Decide common parent for all mutated nodes
+  # Triggered on possibly resized element by mutation observer
+  # If an element is known to listen for its intrinsic properties
+  # schedule a reflow on that element. If another element is already
+  # scheduled for reflow, reflow shared parent element of both elements 
   onResize: (node) ->
     return unless intrinsic = @intrinsic
     reflown = undefined
@@ -117,6 +125,7 @@ class Measurements
       node = node.parentNode
     @reflown = reflown
 
+  # Triggered whenever solution or outside value is set in document engine
   # Register intrinsic values assigned to engine
   onChange: (path, value, old) ->
     unless old? == value? 
@@ -129,19 +138,60 @@ class Measurements
           group.splice group.indexOf(path), 1
           delete @intrinsic[id] unless group.length
 
+  # Cache computed styles for given element
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
       computed = (@computed ||= {})
       id = @identify(element)
       old = computed[id]
       if force || !old?
-        return computed[id] = element.getComputedStyle(element)
+        return computed[id] = window.getComputedStyle(element)
     return old
 
+  # Retrieve assigned or computed style for an element
   getStyle: (element, property) ->
-    @getComputedStyle(element)[property]
+    prop = @camelize(property)
+    value = element.style[property]
+    if value == ''
+      value = @getComputedStyle(element)[prop]
+    value = @toPrimitive(value, null, null, null, element, prop)
+    if value.push && typeof value[0] == 'object'
+      return @properties[property].apply(@, value)
+    else
+      return @properties[property].call(@, value)
 
-  simpleValueRegExp: /^[#0-9a-z]*$/,
+  # Substitute variables and simplify expressions
+  toPrimitive: (object, operation, continuation, scope, element, prop) ->
+    if typeof object == 'string' 
+      object = @parse(object)
+    if typeof object == 'object'
+      if object[0] == 'get'
+        value = @get.command.call(this, operation, continuation, scope, 'return', object[1], object[2], true)
+        if value?
+          if typeof (object = value) != 'object'
+            return object
+        else
+          return object
+      if !continuation? && element
+        continuation = @getPath(element, prop)
+
+      return @capture('toPrimitive(' + continuation + ')', object, continuation, scope, 'return')
+    return object
+
+  # Parse value, normalize static units to pixels
+  _staticUnit: /^(-?\d+)(px|pt|cm|mm|in)$/i
+
+  # Parse value
+  parse: (value) ->
+    unless (old = (@parsed ||= {})[value])?
+      if typeof value == 'string'
+        if match = value.match(@_staticUnit)
+          return @parsed[value] = @[match[2]](parseFloat(match[1]))
+        else
+          value = 'a: == ' + value + ';'
+          return @parsed[value] = GSS.Parser.parse(value).commands[0][2]
+      else return value
+    return old
 
   setStyle: (element, property, value) ->
     #if (value.test(@_simpleValueRegExp))
@@ -160,7 +210,7 @@ class Measurements
       return 
 
   # Compute value of a property, reads the styles on elements
-  measure: (node, property, continuation, old, returnPath) ->
+  measure: (node, property, continuation, old, returnPath, primitive) ->
     if node == window
       id = '::window'
     else if node.nodeType
@@ -171,7 +221,6 @@ class Measurements
 
     path = @getPath(id, property)
 
-    debugger
     unless (value = @measured?[path])?
       # property on specific element (e.g. ::window[height])
       if (prop = @properties[id]?[property])? 
@@ -186,11 +235,12 @@ class Measurements
             else
               value = prop
       # dommeasurement
-      else if property.indexOf('intrinsic-') > -1
-
+      else if intrinsic = @getIntrinsicProperty(property)
         if document.body.contains(node)
           if prop ||= @properties[property]
             value = prop.call(@, node, property, continuation)
+          else
+            value = @getStyle(node, intrinsic)
         else
           value = null
       #else if GSS.dummy.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
@@ -201,10 +251,14 @@ class Measurements
       else if @[property]
         value = @[property](node, continuation)
       else return
-    if value != undefined
-      (@measured ||= {})[path] = value
+    if primitive
+      return @values.set(id, property, value)
+    else
+      if value != undefined
+        (@measured ||= {})[path] = value
     return if returnPath then path else value
 
+  # Decide common parent for all mutated nodes
   getCommonParent: (a, b) ->
     aps = []
     bps = []
@@ -220,6 +274,7 @@ class Measurements
       if aps.indexOf(bp) > -1
         return bp
 
+  # Trigger scheduled reflow and suggest updated measurements
   getSuggestions: (reflow) ->
     suggestions = undefined
     if (reflow)

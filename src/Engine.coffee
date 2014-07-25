@@ -4,34 +4,35 @@
 # routes it through submodules to solve equasions and set styles
 # Engine is the GSS global variable
 
-
-# Little shim for require.js so we dont have to carry it around
-this.require ||= (string) ->
-  if string == 'cassowary'
-    return c
-  bits = string.replace('.js', '').split('/')
-  return this[bits[bits.length - 1]]
+# Combine mixins
+include = ->
+  Context = (@engine) ->
+  for mixin in arguments
+    for name, fn of mixin::
+      Context::[name] = fn
+  return Context
 
 EventTrigger = require('./concepts/EventTrigger')
+Buffer       = require('./concepts/Buffer')
 
-class Engine extends EventTrigger
+class Engine extends include(EventTrigger, Buffer)
 
   Expressions:
-    require('./input/Expressions.js')
+    require('./input/Expressions')
   Values:
-    require('./input/Values.js')
+    require('./input/Values')
 
   Commands:
-    require('./commands/Conventions.js')
+    require('./commands/Conventions')
 
   Property:
-    require('./concepts/Property.js')
+    require('./concepts/Property')
   Command:
-    require('./concepts/Command.js')
+    require('./concepts/Command')
   Helper:
-    require('./concepts/Helper.js')
+    require('./concepts/Helper')
   Console:
-    require('./concepts/Console.js')
+    require('./concepts/Console')
 
   constructor: (scope, url) ->
     if scope && scope.nodeType
@@ -62,8 +63,10 @@ class Engine extends EventTrigger
       @properties  = new @Properties(@)  if @Properties
       @commands    = new @Commands(@)    if @Commands
       @expressions = new @Expressions(@)
-      @values      = new @Values(@)
+      @values      = @vars = new @Values(@)
       @events      = {}
+      @input       = @expressions
+      @engine      = @
       return
 
     # GSS.Document() and GSS() create new GSS.Document on root initially
@@ -86,22 +89,7 @@ class Engine extends EventTrigger
     @dispatchEvent(@scope, 'solved', data) if @scope
 
     # Proceed
-    return @output.pull.apply(@output, arguments) if @output
-
-
-  # Delegate: Pass input to interpreter
-  run: ->
-    return @expressions.pull.apply(@expressions, arguments)
-
-  pull: ->
-    return @expressions.pull.apply(@expressions, arguments)
-
-  # Schedule execution of expressions to the next tick, buffer input
-  defer: ->
-    unless @deferred?
-      @expressions.buffer ||= null
-      @deferred = (window.setImmediate || window.setTimeout)(@expressions.flush.bind(@expressions), 0)
-    return @run.apply(@, arguments)
+    return super
 
   # Destroy engine
   destroy: ->
@@ -135,14 +123,6 @@ class Engine extends EventTrigger
   elements: {}
   engines: {}
 
-  # Combine mixins
-  @include = ->
-    Context = (@engine) ->
-    for mixin in arguments
-      for name, fn of mixin::
-        Context::[name] = fn
-    return Context
-
   # Export all commands as underscored functions into engine
   # This ensures commands are called in engine context
   # Doing so on first run allows commands to be set after init
@@ -153,7 +133,7 @@ class Engine extends EventTrigger
       @constructor::running = null
       @constructor::compile()
     @compile()
-    @running = true
+    return @running = true
 
   # Make helpers, styles and properties callable
   compile: ->
@@ -187,6 +167,8 @@ class Engine extends EventTrigger
     if object && object.map
       return object.map @clone, @
     return object
+
+  @include: include
 
 @GSS = Engine
 

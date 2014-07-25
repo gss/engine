@@ -1,11 +1,7 @@
+# Functions are only called for primitive values
+# When it encounters variables, it leaves expression to solver
+
 class Algebra
-  # Functions are only called for primitive values
-  # When it encounters variables, it leaves expression to solver
-  isPrimitive: (object) ->
-    # Objects are allowed only if they define custom valueOf function
-    if typeof object == 'object'
-      return object.valueOf != Object.prototype.valueOf
-    return true
 
   "&&": (a, b) ->
     return a && b
@@ -47,11 +43,23 @@ class Algebra
 for property, fn of Algebra::
   unless property == 'isPrimitive'
     fn = do (property, fn) ->
-      Algebra::[property] = (a, b) ->
-        args = [property]
-        args.push.apply(args, arguments)
-        return args unless @isPrimitive(a) && @isPrimitive(b)
-        return fn.apply(@, arguments)
+      func = Algebra::[property] = (a, b, operation, continuation, scope, meta) ->
+        ap = @isPrimitive(a)
+        bp = @isPrimitive(b)
+        if !ap && !bp
+          if func.linear == false
+            a = @toPrimitive(a, operation[1], continuation)
+            b = @toPrimitive(b, operation[2], continuation)
+            ap = @isPrimitive(a)
+            bp = @isPrimitive(b)
+        if ap && bp
+          return fn.apply(@, arguments)
+        if !ap && !bp && func.linear == false
+          @console.warn(operation, 'is not linear, both operands are unknown')
+        return [property, a, b]
     fn.binary = true
+    fn.meta = true
+Algebra::['*'].linear = false
+Algebra::['/'].linear = false
 
 module.exports = Algebra

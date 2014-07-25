@@ -76,7 +76,13 @@ module.exports = ->
             level: 'ignore'
           'no_backticks':
             level: 'ignore'
-    
+
+    docco:
+      src:
+        src: ['src/**/*.coffee']
+        options:
+          output: 'docs/'
+
     # CoffeeScript compilation
     coffee:
       src:
@@ -102,8 +108,9 @@ module.exports = ->
       worker:
         src: [
           'components/slightlyoff-cassowary.js/bin/c.js', 
-          'lib/input/Expressions.js'
           'lib/commands/Conventions.js',
+          'lib/concepts/Buffer.js',
+          'lib/input/Expressions.js'
           'lib/concepts/Command.js',
           'lib/concepts/Console.js',
           'lib/concepts/EventTrigger.js',
@@ -182,6 +189,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-uglify'
   @loadNpmTasks 'grunt-contrib-clean'
   @loadNpmTasks 'grunt-exec'
+  @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
 
   # Grunt plugins used for testing

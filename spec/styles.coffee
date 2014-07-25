@@ -4,9 +4,11 @@ assert = chai.assert
 
 doc = GSS.Document::
 doc.compile()
-engine = new GSS(document.createElement('div'))
+engine = null
 
 describe 'Styles', ->
+  beforeEach ->
+    engine ||= new GSS(document.createElement('div'))
   describe 'simple properties', ->
 
     it 'numeric property', ->

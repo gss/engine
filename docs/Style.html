@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Style.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Style.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Define a style from a tree definition
+Creates matcher function that match arguments against types
+and returns extendable shorthand class instance with defaults </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+Style = (definition, name, styles,
+         keywords = {}, types = [], keys = [], properties = [], required = {}
+         optional, depth = <span class="hljs-number">0</span>)<span class="hljs-function"> -&gt;</span>
+
+  requirement = <span class="hljs-literal">true</span>
+  pad = initial = previous = <span class="hljs-literal">undefined</span>
+  max = depth</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Group of properties</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-keyword">if</span> definition.length == <span class="hljs-literal">undefined</span>
+    <span class="hljs-keyword">for</span> key, def <span class="hljs-keyword">of</span> definition
+      <span class="hljs-keyword">continue</span> <span class="hljs-keyword">unless</span> <span class="hljs-keyword">typeof</span> def == <span class="hljs-string">'object'</span>
+      property = key.indexOf(<span class="hljs-string">'-'</span>) &gt; -<span class="hljs-number">1</span> &amp;&amp; styles[key] &amp;&amp; key || name + <span class="hljs-string">'-'</span> + key
+      style = <span class="hljs-property">@Style</span>(def, property, styles, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, depth)
+      <span class="hljs-keyword">unless</span> optional == <span class="hljs-literal">true</span>
+        required[property] = optional || requirement
+        requirement = property
+      <span class="hljs-keyword">if</span> style.types
+        <span class="hljs-keyword">for</span> type, index <span class="hljs-keyword">in</span> style.types
+          types.push type
+          prop = style.keys?[index] || property
+          keys.push prop
+          <span class="hljs-keyword">if</span> properties.indexOf(prop) == -<span class="hljs-number">1</span>
+            properties.push prop
+      <span class="hljs-keyword">if</span> style.keywords
+        <span class="hljs-keyword">for</span> prop, value <span class="hljs-keyword">of</span> style.keywords
+          <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> value
+            <span class="hljs-keyword">for</span> p <span class="hljs-keyword">in</span> (item.push &amp;&amp; item || [item])
+              <span class="hljs-keyword">if</span> properties.indexOf(p) == -<span class="hljs-number">1</span>
+                properties.push p
+          (keywords[prop] ||= []).push value
+  <span class="hljs-keyword">else</span>
+    <span class="hljs-keyword">for</span> property, index <span class="hljs-keyword">in</span> definition</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Optional group</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">switch</span> <span class="hljs-keyword">typeof</span> property
+        <span class="hljs-keyword">when</span> <span class="hljs-string">"object"</span>
+          substyle = <span class="hljs-property">@Style</span>(property, name, styles, keywords, types, keys, properties, required, 
+                          (property.push &amp;&amp; (requirement || <span class="hljs-literal">true</span>)) || optional, depth + <span class="hljs-number">1</span>)
+          pad = property.pad || substyle.pad
+          max = Math.max(substyle.depth, max)
+        <span class="hljs-keyword">when</span> <span class="hljs-string">"string"</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Predefined value type</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          Types = <span class="hljs-property">@types</span> || <span class="hljs-property">@Types</span>.prototype
+          <span class="hljs-keyword">if</span> type = Types[property]
+            types.push(type)
+            <span class="hljs-keyword">if</span> initial == <span class="hljs-literal">undefined</span>
+              <span class="hljs-keyword">if</span> type.displayName == <span class="hljs-literal">undefined</span>
+                <span class="hljs-keyword">for</span> key, value <span class="hljs-keyword">of</span> Types
+                  <span class="hljs-keyword">if</span> value == type
+                    type.displayName = key
+                    <span class="hljs-keyword">break</span>
+              <span class="hljs-keyword">if</span> storage = Types[type.displayName + <span class="hljs-string">'s'</span>]
+                <span class="hljs-keyword">for</span> key <span class="hljs-keyword">of</span> storage
+                  <span class="hljs-keyword">if</span> type.call(@, key)
+                    initial = key
+                  <span class="hljs-keyword">break</span>
+              
+              initial ?= <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Keyword</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          <span class="hljs-keyword">else</span>
+            initial ?= property
+            (keywords[property] ||= []).push(name)
+        <span class="hljs-keyword">else</span>
+          initial ?= property  
+
+  <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> initial == <span class="hljs-string">'function'</span>
+    callback = initial
+    initial = <span class="hljs-literal">undefined</span>
+
+  <span class="hljs-keyword">if</span> initial == <span class="hljs-literal">undefined</span>
+    initial = <span class="hljs-keyword">new</span> Shorthand
+    initial.displayName = <span class="hljs-attribute">initial</span>::property = name
+    <span class="hljs-keyword">for</span> property <span class="hljs-keyword">in</span> properties
+      <span class="hljs-attribute">initial</span>::[property] = styles[property].initial
+  <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> keys.length == <span class="hljs-number">0</span>
+    keys = <span class="hljs-literal">undefined</span>
+
+  matcher = <span class="hljs-keyword">new</span> Matcher(name, keywords, types, keys, required, pad, max, initial, callback)
+  <span class="hljs-keyword">if</span> initial?.displayName
+    <span class="hljs-attribute">initial</span>::style = matcher
+    <span class="hljs-attribute">initial</span>::styles = styles
+    <span class="hljs-attribute">initial</span>::properties = properties
+
+  <span class="hljs-keyword">return</span> styles[name] = matcher</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Class that holds matched properties. 
+Its prototype is extended with default values inferred from style definition
+Called every time shorthand is parsed, can be a singleton </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Shorthand</span></span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(callback)</span> -&gt;</span>
+    callback ||= <span class="hljs-function"><span class="hljs-params">(options)</span> -&gt;</span>
+      <span class="hljs-keyword">if</span> options
+        <span class="hljs-keyword">for</span> key, value <span class="hljs-keyword">of</span> options
+          @[key] = value
+      @
+    callback.prototype = @
+    <span class="hljs-keyword">return</span> callback
+
+  <span class="hljs-attribute">toString</span>: <span class="hljs-function"><span class="hljs-params">(styles, number)</span> -&gt;</span>
+    string = <span class="hljs-literal">undefined</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@style</span>.keys
+      <span class="hljs-keyword">while</span> style = @[i = (i ? -<span class="hljs-number">1</span>) + <span class="hljs-number">1</span>]
+        string = (string &amp;&amp; string + <span class="hljs-string">', '</span> || <span class="hljs-string">''</span>) + style.toString(styles, i + <span class="hljs-number">1</span>)
+
+      pad = <span class="hljs-property">@style</span>.pad
+      <span class="hljs-keyword">for</span> key, index <span class="hljs-keyword">in</span> keys = <span class="hljs-property">@properties</span>
+        <span class="hljs-keyword">if</span> index &amp;&amp; pad
+          <span class="hljs-keyword">if</span> index &gt; <span class="hljs-number">2</span>
+            <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@equals</span>(key, keys[<span class="hljs-number">1</span>])
+          <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> index &gt; <span class="hljs-number">1</span>
+            <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@equals</span>(key, keys[<span class="hljs-number">0</span>]) &amp;&amp;
+                       (!<span class="hljs-property">@hasOwnProperty</span>[keys[<span class="hljs-number">3</span>]] || <span class="hljs-property">@equals</span>(keys[<span class="hljs-number">3</span>], keys[<span class="hljs-number">1</span>]))
+          <span class="hljs-keyword">else</span> 
+            <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@equals</span>(key, keys[<span class="hljs-number">0</span>]) &amp;&amp; 
+                        <span class="hljs-property">@equals</span>(keys[<span class="hljs-number">1</span>], keys[<span class="hljs-number">2</span>]) &amp;&amp; 
+                        <span class="hljs-property">@equals</span>(keys[<span class="hljs-number">2</span>], keys[<span class="hljs-number">3</span>])
+        <span class="hljs-keyword">else</span>
+
+          <span class="hljs-keyword">if</span> styles &amp;&amp; number &amp;&amp; (value = styles[key + <span class="hljs-string">'-'</span> + number])?
+            prefix = previous = <span class="hljs-literal">undefined</span>
+            <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> value != <span class="hljs-string">'string'</span>
+              keys = <span class="hljs-property">@style</span>.keys
+              types = <span class="hljs-property">@style</span>.types
+              <span class="hljs-keyword">for</span> index <span class="hljs-keyword">in</span> [keys.indexOf(key) - <span class="hljs-number">1</span> ... <span class="hljs-number">0</span>] <span class="hljs-keyword">by</span> -<span class="hljs-number">1</span>
+                <span class="hljs-keyword">if</span> (k = keys[index]) != previous
+                  <span class="hljs-keyword">break</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@hasOwnProperty</span>(k)
+                  <span class="hljs-keyword">if</span> types[index] == <span class="hljs-property">@styles</span>.engine.Length
+                    expression = <span class="hljs-property">@toExpressionString</span>(k, @[k])
+                    prefix = ((string || prefix) &amp;&amp; <span class="hljs-string">' '</span> || <span class="hljs-string">''</span>) + expression + (prefix &amp;&amp; <span class="hljs-string">' '</span> + prefix || <span class="hljs-string">''</span>)
+                    previous = k
+
+            string += prefix <span class="hljs-keyword">if</span> prefix
+
+
+          <span class="hljs-keyword">else</span>
+            <span class="hljs-keyword">continue</span> <span class="hljs-keyword">unless</span> <span class="hljs-property">@hasOwnProperty</span>(key)
+            value = @[key]
+
+        expression = <span class="hljs-property">@toExpressionString</span>(key, value)
+        string = (string &amp;&amp; string + <span class="hljs-string">' '</span> || <span class="hljs-string">''</span>) + expression
+
+    <span class="hljs-keyword">return</span> string 
+
+  <span class="hljs-attribute">equals</span>: <span class="hljs-function"><span class="hljs-params">(first, second)</span> -&gt;</span>
+    a = @[first]
+    b = @[second]
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> a != <span class="hljs-string">'object'</span>
+      <span class="hljs-keyword">return</span> a == b
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> a[<span class="hljs-number">0</span>] == b[<span class="hljs-number">0</span>] &amp;&amp; a[<span class="hljs-number">1</span>] == b[<span class="hljs-number">1</span>] &amp;&amp; a[<span class="hljs-number">2</span>] == b[<span class="hljs-number">2</span>]
+
+
+  <span class="hljs-attribute">toExpressionString</span>: <span class="hljs-function"><span class="hljs-params">(key, operation, expression)</span> -&gt;</span>
+    <span class="hljs-keyword">switch</span> <span class="hljs-keyword">typeof</span> operation
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'object'</span>
+        name = operation[<span class="hljs-number">0</span>]
+        engine = <span class="hljs-property">@styles</span>.engine
+        units = engine.units || engine.Units.prototype
+        <span class="hljs-keyword">if</span> name == <span class="hljs-string">'%'</span> || units[name] || engine.Times[name]
+          <span class="hljs-keyword">return</span> <span class="hljs-property">@toExpressionString</span>(key, operation[<span class="hljs-number">1</span>], <span class="hljs-literal">true</span>) + name
+        <span class="hljs-keyword">else</span>
+          string = name + <span class="hljs-string">'('</span>
+          <span class="hljs-keyword">for</span> index <span class="hljs-keyword">in</span> [<span class="hljs-number">1</span> .. operation.length - <span class="hljs-number">1</span>]
+            string += <span class="hljs-string">','</span> <span class="hljs-keyword">unless</span> index == <span class="hljs-number">1</span>
+            string += <span class="hljs-property">@toExpressionString</span>(key, operation[index], <span class="hljs-literal">true</span>)
+          <span class="hljs-keyword">return</span> string + <span class="hljs-string">')'</span>
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'number'</span>
+        <span class="hljs-keyword">if</span> !expression
+          types = <span class="hljs-property">@styles</span>[key].types
+          <span class="hljs-keyword">if</span> operation != <span class="hljs-number">0</span> &amp;&amp; types.indexOf(<span class="hljs-string">'number'</span>) == -<span class="hljs-number">1</span> &amp;&amp; types.indexOf(<span class="hljs-string">'float'</span>) == -<span class="hljs-number">1</span>
+            operation += <span class="hljs-string">'px'</span>
+    <span class="hljs-keyword">return</span> operation</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Generate a function that will match set of parsed tokens against style definition</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">Matcher</span> = <span class="hljs-params">(name, keywords, types, keys, required, pad, depth, initial, callback)</span> -&gt;</span>
+  <span class="hljs-function"><span class="hljs-title">matcher</span> = -&gt;</span>
+    result = matched = <span class="hljs-literal">undefined</span>
+
+    <span class="hljs-keyword">if</span> pad &amp;&amp; arguments.length &lt; <span class="hljs-number">4</span>
+      args = [
+        arguments[<span class="hljs-number">0</span>]
+        arguments[<span class="hljs-number">1</span>] ? arguments[<span class="hljs-number">0</span>]
+        arguments[<span class="hljs-number">2</span>] ? arguments[<span class="hljs-number">0</span>]
+        arguments[<span class="hljs-number">3</span>] ? arguments[<span class="hljs-number">1</span>] ? arguments[<span class="hljs-number">0</span>]
+      ]
+
+    <span class="hljs-keyword">for</span> argument, i <span class="hljs-keyword">in</span> (args || arguments)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Match keyword</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">switch</span> <span class="hljs-keyword">typeof</span> argument
+        <span class="hljs-keyword">when</span> <span class="hljs-string">'object'</span>
+          <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> argument[<span class="hljs-number">0</span>] != <span class="hljs-string">'string'</span> || argument.length == <span class="hljs-number">1</span>
+            <span class="hljs-keyword">if</span> matched = matcher.apply(@, argument)
+              (result ||= <span class="hljs-keyword">new</span> initial)[i] = matched
+            <span class="hljs-keyword">else</span> <span class="hljs-keyword">return</span>
+
+        <span class="hljs-keyword">when</span> <span class="hljs-string">'string'</span>
+          <span class="hljs-keyword">if</span> props = keywords[argument]
+            <span class="hljs-keyword">if</span> keys
+              j = pad &amp;&amp; i || <span class="hljs-number">0</span>
+              <span class="hljs-keyword">while</span> (property = props[j++])?
+                <span class="hljs-keyword">if</span> !result || !result.hasOwnProperty(property)
+                  <span class="hljs-keyword">if</span> !required[property] || (result &amp;&amp; result[required[property]] != <span class="hljs-literal">undefined</span>)
+                    matched = (result ||= <span class="hljs-keyword">new</span> initial)[property] = argument
+                    <span class="hljs-keyword">break</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Unique keyword for property resolved as value. Use keyword, re-match value</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> props.length == <span class="hljs-number">1</span> &amp;&amp; argument != result[property]
+                  arg = argument
+                  argument = result[property]
+                  result[property] = arg
+                  <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> argument == <span class="hljs-string">'string'</span> &amp;&amp; (props = keywords[argument])
+                    j = pad &amp;&amp; i || <span class="hljs-number">0</span>
+                    <span class="hljs-keyword">continue</span>
+                  <span class="hljs-keyword">break</span>
+                <span class="hljs-keyword">if</span> pad
+                  <span class="hljs-keyword">break</span>
+            <span class="hljs-keyword">else</span>
+              <span class="hljs-keyword">return</span> argument</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Match argument by type</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> types &amp;&amp; !matched?
+        <span class="hljs-keyword">if</span> keys
+          <span class="hljs-keyword">for</span> property, index <span class="hljs-keyword">in</span> keys
+            <span class="hljs-keyword">if</span> !result || (!result.hasOwnProperty(property) &amp;&amp;
+                          (!(req = required[property]) || result.hasOwnProperty(req)))
+              <span class="hljs-keyword">if</span> (matched = types[index].call(@, argument)) != <span class="hljs-literal">undefined</span>
+                (result ||= <span class="hljs-keyword">new</span> initial)[property] = matched
+                <span class="hljs-keyword">break</span>
+        <span class="hljs-keyword">else</span>
+          <span class="hljs-keyword">for</span> type, index <span class="hljs-keyword">in</span> types
+            <span class="hljs-keyword">if</span> (typed = type.call(@, argument)) != <span class="hljs-literal">undefined</span>
+              <span class="hljs-keyword">return</span> typed
+
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> matched?
+      matched = <span class="hljs-literal">undefined</span>
+
+    <span class="hljs-keyword">if</span> callback &amp;&amp; (returned = callback(result))?
+      <span class="hljs-keyword">return</span> returned
+    <span class="hljs-keyword">return</span> result
+  matcher.displayName = name
+  matcher.keywords    = keywords <span class="hljs-keyword">if</span> keywords?
+  matcher.types       = types    <span class="hljs-keyword">if</span> types?
+  matcher.keys        = keys     <span class="hljs-keyword">if</span> keys?
+  matcher.pad         = pad      <span class="hljs-keyword">if</span> pad?
+  matcher.depth       = depth    <span class="hljs-keyword">if</span> depth?
+  matcher.initial     = initial  <span class="hljs-keyword">if</span> initial?
+  matcher.callback    = callback <span class="hljs-keyword">if</span> callback?
+  <span class="hljs-keyword">return</span> matcher
+
+<span class="hljs-built_in">module</span>.exports = Style</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

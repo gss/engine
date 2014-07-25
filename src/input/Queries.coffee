@@ -1,14 +1,18 @@
-# - Listens for changes in DOM,
-# - Invalidates cached DOM Queries
-#   by bruteforcing combinators on reachable elements
+### Input: DOM Queries
 
-# Input:  MutationEvent, processes observed mutations
-# Output: Expressions, revaluates expressions
+ - Listens for changes in DOM,
+ - Invalidates cached DOM Queries
+   by bruteforcing combinators on reachable elements
 
-# State:  - `@[path]`: elements and collections by selector path
-#         - `@_watchers[id]`: dom queries by element id 
+ Input:  MutationEvent, processes observed mutations
+ Output: Expressions, revaluates expressions
 
-class Queries
+ State:  - `@[path]`: elements and collections by selector path
+         - `@_watchers[id]`: dom queries by element id 
+###
+Buffer = require('../concepts/Buffer')
+
+class Queries extends Buffer
   options:
     subtree: true
     childList: true
@@ -30,12 +34,12 @@ class Queries
   disconnect: ->
     @listener.disconnect()
 
-  capture: (mutations) ->
+  # Buffer DOM queries and expressions output
+  onCapture: () ->
     @buffer = @updated = @lastOutput = null
     @_repairing = null
-    @output.capture(mutations)
 
-  release: ->
+  onRelease: ->
     if @removed
       for id in @removed
         @remove id
@@ -69,16 +73,11 @@ class Queries
 
       @engine.console.row('queries', @updated, evalDiff + 'ms + ' + queryDiff + 'ms')
 
-    if @engine.expressions.buffer
-      @output.release()
-    else
-      @output.flush()
-
     @buffer = @updated = undefined
 
 
   # Re-evaluate updated queries
-  # Watchers are stored in a single array in groups of 3 properties
+  # Watchers are stored in a single array in triplets
   push: (query, continuation, scope) ->
     if @buffer == undefined
       @output.pull query, continuation, scope
@@ -88,7 +87,8 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   pull: (mutations) ->
-    updating = @capture(mutations)
+    updating = @engine.expressions.capture(mutations)
+
     for mutation in mutations
       switch mutation.type
         when "attributes"
@@ -100,7 +100,7 @@ class Queries
 
       @$intrinsics(mutation.target)
 
-    @release() if updating
+    @engine.expressions.release() if updating
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -405,7 +405,7 @@ class Queries
     result = @get(path)
     @engine.values.clean(path, continuation, operation, scope)
     if result && !@engine.isCollection(result)
-      if continuation && continuation != (oppath = @getOperationPath(continuation))
+      if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
         @remove result, oppath
     @unpair path, result if result?.nodeType
     unless plural
@@ -436,14 +436,13 @@ class Queries
 
   # Update bindings of two plural collections
   repair: (path, key, operation, scope, collected) ->
-    debugger
     leftUpdate = @updated?[path]
     leftNew = (if leftUpdate?[0] != undefined then leftUpdate[0] else @get(path)) || []
     if leftNew.old != undefined
       leftOld = leftNew.old || []
     else
       leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = @getScopePath(path) + key
+    rightPath = @engine.getScopePath(path) + key
     rightUpdate = @updated?[rightPath]
 
     rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
@@ -495,8 +494,6 @@ class Queries
   isPariedRegExp: /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i
                   # path1 ^        id ^        ^path2   
 
-  forkMarkRegExp: /\$[^↑]+(?:↑|$)/g
-
   isPaired: (operation, continuation) ->
     if match = continuation.match(@isPariedRegExp)
       if operation && operation.parent.def.serialized
@@ -507,27 +504,13 @@ class Queries
 
 
 
-  # Remove all fork marks from a path
-  getOperationPath: (continuation, compact) ->
-    bits = @engine.getContinuation(continuation).split(@engine.DOWN);
-    last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.split(@engine.RIGHT).pop().replace(@forkMarkRegExp, '')
-    return last if compact
-    return bits.join(@engine.DOWN)
-
-  # Get path of a parent
-  getScopePath: (continuation) ->
-    bits = continuation.split(@engine.DOWN)
-    bits[bits.length - 1] = ""
-    return bits.join(@engine.DOWN)
-
   unpair: (continuation, node) ->
     return unless match = @isPaired(null, continuation)
-    path = @getOperationPath(match[1])
+    path = @engine.getCanonicalPath(match[1])
     collection = @get(path)
     return unless plurals = @_plurals?[path]
 
-    oppath = @getOperationPath(continuation, true)
+    oppath = @engine.getCanonicalPath(continuation, true)
     for plural, index in plurals by 3
       continue unless oppath == plural
       contd = path + '→' + plural
@@ -543,7 +526,7 @@ class Queries
   # Currently bails out and schedules re-pairing 
   pair: (continuation, operation, scope, result) ->
     return unless match = @isPaired(operation, continuation, true)
-    left = @getOperationPath(match[1])
+    left = @engine.getCanonicalPath(match[1])
     plurals = (@_plurals ||= {})[left] ||= []
     if plurals.indexOf(operation.path) == -1
       pushed = plurals.push(operation.path, operation, scope)
@@ -573,7 +556,7 @@ class Queries
 
   # Combine nodes from multiple selector paths
   updateOperationCollection: (operation, path, scope, added, removed) ->
-    oppath = @getOperationPath(path)
+    oppath = @engine.getCanonicalPath(path)
     return if path == oppath
     collection = @get(oppath)
     return if removed && removed == collection
@@ -607,7 +590,7 @@ class Queries
       else
         @set path, group[0]
     else if !old? && (result && result.length == 0) && continuation
-      old = @get(@getOperationPath(path))
+      old = @get(@engine.getCanonicalPath(path))
     if (group ||= @updated?[path])
       if scoped
         added = result
@@ -674,7 +657,7 @@ class Queries
 
     contd = continuation
     if contd && contd.charAt(contd.length - 1) == '→'
-      contd = @engine.expressions.log(operation, contd)
+      contd = @engine.getOperationPath(operation, contd)
     if continuation && (index = @pair(contd, operation, scope, result))?
       if index == -1
         return
@@ -708,11 +691,11 @@ class Queries
     return unless id = node._gss_id
     return unless watchers = @_watchers[id]
     if continuation
-      path = @getOperationPath(continuation)
+      path = @engine.getCanonicalPath(continuation)
     for operation, index in watchers by 3
       if groupped = operation[group]
         contd = watchers[index + 1]
-        continue if path && path != @getOperationPath(contd)
+        continue if path && path != @engine.getCanonicalPath(contd)
         scope = watchers[index + 2]
         # Check qualifier value
         if qualifier

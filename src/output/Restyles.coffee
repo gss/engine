@@ -1,3 +1,11 @@
+### Output: DOM element styles
+  
+Applies style changes in bulk, separates reflows & restyles.
+Revalidates intrinsic measurements, optionally schedules 
+another solver pass
+
+###
+
 class Restyles
   constructor: (@engine) -> 
 
@@ -31,10 +39,9 @@ class Restyles
 
     # Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) 
     @data = data
+
     if suggestions = @engine.getSuggestions()
-      capture = @engine.expressions.capture(suggestions.length + ' intrinsics')
-      @engine.pull(suggestions)
-      @engine.expressions.release() if capture
+      @engine.expressions.capture(suggestions.length + ' intrinsics', suggestions)
     else
       @data = undefined
       @push(data)
@@ -106,12 +113,12 @@ class Restyles
     # Adjust positioning styles to respect element offsets 
     @adjust(node, null, null, positioning, null, !!data)
 
-    #  Set new positions in bulk (Reflow)
+    # Set new positions in bulk (Reflow)
     for id, styles of positioning
       for prop, value of styles
         @set id, prop, value
         
-    queries = @engine.queries.connect()
+    @engine.queries.connect()
     return positioning
 
   # Position things

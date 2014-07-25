@@ -3,41 +3,41 @@
 
 Engine = require('./Engine')
 
-class Engine.Document extends Engine
+class Document extends Engine
   Queries:       
-    require('./input/Queries.js')
+    require('./input/Queries')
 
   Restyles:          
-    require('./output/Restyles.js')
+    require('./output/Restyles')
 
   Solver:
-    require('./Solver.js')
+    require('./Solver')
 
   Style:
-    require('./concepts/Style.js')
+    require('./concepts/Style')
 
   Types:
-    require('./commands/Types.js')
+    require('./commands/Types')
 
   Units:
-    require('./commands/Units.js')
+    require('./commands/Units')
 
   Commands: Engine.include(
     Engine::Commands
     Document::Units
     Document::Types
-    require('./commands/Measurements.js')
-    require('./commands/Selectors.js')
-    require('./commands/Rules.js')
-    require('./commands/Native.js')
-    require('./commands/Algebra.js')
-    require('./commands/Transformations.js')
+    require('./commands/Measurements')
+    require('./commands/Selectors')
+    require('./commands/Rules')
+    require('./commands/Native')
+    require('./commands/Algebra')
+    require('./commands/Transformations')
   )
 
   Properties: Engine.include(
-    require('./properties/Dimensions.js'),
-    require('./properties/Equasions.js')
-    require('./properties/Styles.js')
+    require('./properties/Dimensions'),
+    require('./properties/Equasions')
+    require('./properties/Styles')
   )
 
   constructor: (scope = document, url) ->
@@ -55,6 +55,9 @@ class Engine.Document extends Engine
     @types     = new @Types(@)
     @units     = new @Units(@)
 
+    # Let queries module capture output
+    @expressions.capturer  = @queries
+
     # Expressions generate commands and pass them to solver
     @expressions.output = @solver
     
@@ -63,30 +66,28 @@ class Engine.Document extends Engine
     else
       @start()
 
-      @types       = new @Types(@)       if @Types
     @scope.addEventListener 'scroll', @
     window.addEventListener 'resize', @
 
-  # Delegate: Pass input to interpreter
-  run: ->
-    captured = @queries.capture()
-    result = @expressions.pull.apply(@expressions, arguments)
-    @queries.release() if captured
-    result
+  capture: ->
+    return @expressions.capture.apply(@expressions, arguments)
+  
+  release: ->
+    return @expressions.release.apply(@expressions, arguments)
     
   onresize: (e = '::window') ->
     id = e.target && @identify(e.target) || e
     captured = @expressions.capture(id + ' resized') 
     @measure(id, "width", undefined, false)
     @measure(id, "height", undefined, false)
-    @expressions.release() if captured
+    @release() if captured
     
   onscroll: (e = '::window') ->
     id = e.target && @identify(e.target) || e
     captured = @expressions.capture(id + ' scrolled') 
     @measure(id, "scroll-top", undefined, false)
     @measure(id, "scroll-left", undefined, false)
-    @expressions.release() if captured
+    @release() if captured
 
   destroy: ->
     @scope.removeEventListener 'DOMContentLoaded', @
@@ -100,23 +101,19 @@ class Engine.Document extends Engine
 
   # Observe and parse stylesheets
   start: ->
-    return if @running
-    super
-    capture = @queries.capture('initial')
-    @run [
-      ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
-      ['load',  ['$attribute', ['$tag', 'link'],  '*=', 'type', 'text/gss']]
-    ]
-    @queries.release() if capture
-    return true
+    if super
+      return @capture 'stylesheets', [
+        ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
+        ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
+      ]
     
   
 # Export all DOM commands as helper functions 
-for target in [Engine, Engine.Document::, Engine.Document]
-  for source in [Engine.Document::Commands::]
+for target in [Engine, Document::, Document]
+  for source in [Document::Commands::]
     for property, command of source
       target[property] ||= Engine::Command(command, true, property)
 
   target.engine = Engine
 
-module.exports = Engine.Document    
+module.exports = Engine.Document = Document 

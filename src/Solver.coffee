@@ -1,19 +1,19 @@
 # Solves the constraints, in a worker if desired
 # Document -> (opt: Thread) -> Expressions -> Solutions -> Document
 
-Engine = require('./Engine.js')
+Engine = require('./Engine')
 
 class Engine.Solver extends Engine
   Solutions: 
-    require('./output/Solutions.js')
+    require('./output/Solutions')
 
   Commands:  Engine.include(
     Engine::Commands
-    require('./commands/Constraints.js')
+    require('./commands/Constraints')
   )
 
   Properties:
-    require('./properties/Equasions.js')
+    require('./properties/Equasions')
 
   constructor: (@input, @output, url) -> 
     return context if context = super()

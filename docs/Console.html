@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Console.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Console.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Console shim &amp; wrapper. Used to output collapsible table view.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Console</span></span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@level</span>)</span> -&gt;</span>
+
+  <span class="hljs-attribute">methods</span>: [<span class="hljs-string">'log'</span>, <span class="hljs-string">'warn'</span>, <span class="hljs-string">'info'</span>, <span class="hljs-string">'error'</span>, <span class="hljs-string">'group'</span>, <span class="hljs-string">'groupEnd'</span>, <span class="hljs-string">'groupCollapsed'</span>, <span class="hljs-string">'time'</span>, <span class="hljs-string">'timeEnd'</span>, <span class="hljs-string">'profile'</span>, <span class="hljs-string">'profileEnd'</span>]
+  <span class="hljs-attribute">groups</span>: <span class="hljs-number">0</span>
+
+  <span class="hljs-attribute">row</span>: <span class="hljs-function"><span class="hljs-params">(a, b, c)</span> -&gt;</span>
+    a = a.name || a
+    p1 = Array(<span class="hljs-number">5</span> - Math.floor(a.length / <span class="hljs-number">4</span>) ).join(<span class="hljs-string">'\t'</span>)
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> b == <span class="hljs-string">'object'</span>
+      <span class="hljs-property">@log</span>(<span class="hljs-string">'%c%s%s%O%c\t\t\t%s'</span>, <span class="hljs-string">'color: #666'</span>, a, p1, b, <span class="hljs-string">'color: #999'</span>, c || <span class="hljs-string">""</span>)
+    <span class="hljs-keyword">else</span>
+      p2 = Array(<span class="hljs-number">6</span> - Math.floor(String(b).length / <span class="hljs-number">4</span>) ).join(<span class="hljs-string">'\t'</span>)
+      <span class="hljs-property">@log</span>(<span class="hljs-string">'%c%s%s%s%c%s%s'</span>, <span class="hljs-string">'color: #666'</span>, a, p1, b, <span class="hljs-string">'color: #999'</span>, p2, c || <span class="hljs-string">""</span>)
+
+  <span class="hljs-property">@time</span>: <span class="hljs-function"><span class="hljs-params">(other, time)</span> -&gt;</span>
+    time ||= performance?.now() || Date.now?() || + (<span class="hljs-keyword">new</span> Date)
+    <span class="hljs-keyword">return</span> time <span class="hljs-keyword">if</span> time &amp;&amp; !other
+    <span class="hljs-keyword">return</span> Math.floor((time - other) * <span class="hljs-number">100</span>) / <span class="hljs-number">100</span>
+
+<span class="hljs-keyword">for</span> method <span class="hljs-keyword">in</span> <span class="hljs-attribute">Console</span>::methods 
+  <span class="hljs-attribute">Console</span>::[method] = <span class="hljs-keyword">do</span> <span class="hljs-function"><span class="hljs-params">(method)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span><span class="hljs-function"> -&gt;</span>
+      <span class="hljs-keyword">if</span> method == <span class="hljs-string">'group'</span> || method == <span class="hljs-string">'groupCollapsed'</span>
+        <span class="hljs-attribute">Console</span>::groups++
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> method == <span class="hljs-string">'groupEnd'</span>
+        <span class="hljs-attribute">Console</span>::groups--
+
+      <span class="hljs-keyword">if</span> <span class="hljs-built_in">document</span>? &amp;&amp; <span class="hljs-built_in">window</span>.location?.href.indexOf(<span class="hljs-string">'log=0'</span>) == -<span class="hljs-number">1</span>
+        <span class="hljs-built_in">console</span>?[method]?(arguments...)
+
+<span class="hljs-built_in">module</span>.exports = Console</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
