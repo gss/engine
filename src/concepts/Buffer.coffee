@@ -32,6 +32,8 @@ class Buffer
 
   capture: (reason) ->
     if @buffer == undefined
+      if @ instanceof GSS
+        debugger
       @capturer?.onCapture()
       @buffer = null
       @engine.start()
@@ -60,9 +62,11 @@ class Buffer
   # Schedule execution of expressions to the next tick, buffer input
   defer: (reason) ->
     if @capture.apply(@, arguments)
-      @deferred ?= (window.setImmediate || window.setTimeout)( =>
+      @deferred ?= @setImmediate( =>
         @deferred = undefined
         @flush()
       , 0)
+
+  setImmediate: setImmediate ? setTimeout
 
 module.exports = Buffer

@@ -165,7 +165,7 @@ class Measurements
     if typeof object == 'string' 
       object = @parse(object)
     if typeof object == 'object'
-      if object[0] == 'get'
+      if object[0] == 'get' && @getIntrinsicProperty(object[2])
         value = @get.command.call(this, operation, continuation, scope, 'return', object[1], object[2], true)
         if value?
           if typeof (object = value) != 'object'

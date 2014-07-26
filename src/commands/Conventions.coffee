@@ -1,30 +1,28 @@
-### 
+# Dynamic systems need to be able to clean up side effects.
+# Instead of linking effects explicitly, we generate 
+# unique tracking labels with special delimeters.
+# Together they enable bottom-up evaluation and 
+# stateless continuations.
 
-# # Conventions
-# 
-# Okay what's the deal with those → ↓ ↑ arrows? 
-# Open your mind and think beyond this Unicode madness. 
-# 
-# Dynamic systems need to be able to clean up side effects
-# Instead of linking things together, we are use a tracking system
-# that generates determenistic unique string keys
-# that are used for multiple purposes.
+class Conventions
 
-↑  Caching, e.g. to jump to results of dom query,
-   or to figure out which element in that collection 
-   called this function (↑)
+# ### Delimeters
 
-→  Linking, that allows lazy evaluation, by making arguments
-   depend on previously resolved arguments,
-   e.g. for plural binding or to generate unique argument signature
+# **↑ Referencing**, e.g. to jump to results of dom query,
+# or to figure out which element in that collection 
+# called this function
+  UP:    '↑'
 
-↓  Nesting, as a way for expressions to own side effects,
-   e.g. to remove stylesheet, css rule or conditional branch
+# **→ Linking**, that allows lazy evaluation, by making arguments
+# depend on previously resolved arguments,
+# e.g. for plural binding or to generate unique argument signature
+  RIGHT: '→'
 
-# These arrows are delimeters that combined together 
-# enable bottom-up evaluation and continuations
-# without leaving any state behind. 
-# Continuations without explicit state.
+# **↓ Nesting**, as a way for expressions to own side effects,
+# e.g. to remove stylesheet, css rule or conditional branch
+  DOWN:  '↓'
+
+# ### Example 
 # 
 # It's a lot easier to clean up stateless systems. 
 # Whenever a string key is set to be cleaned up,
@@ -35,12 +33,8 @@
 # 
 # This removal cascade allows components to have strict
 # and arbitarily deep hierarchy, without knowing of it.
-
-    style$my-stylesheet   # my stylesheet
-               ↓ h1$h1    # found heading
-               ↑ !+img    # preceeded by image
-               → #header  # bound to header element
-
+  ### 
+    <!-- Example of document -->
     <style id="my-stylesheet">
       (h1 !+ img)[width] == #header[width]
     </style>
@@ -49,35 +43,27 @@
       <h1 id="h1"></h1>
     </header>
 
-.
+    <!-- Generated constraint key -->
+    style$my-stylesheet   # my stylesheet
+               ↓ h1$h1    # found heading
+               ↑ !+img    # preceeded by image
+               → #header  # bound to header element###
+  # ### Methods
 
-###
-
-
-# Little shim for require.js so we dont have to carry it around
-@require ||= (string) ->
-  if string == 'cassowary'
-    return c
-  bits = string.replace('', '').split('/')
-  return this[bits[bits.length - 1]]
-@module ||= {}
-
-
-class Conventions
   # Return concatenated path for a given object and prefix
   # Removes trailing delimeter.
   getContinuation: (path, value, suffix = '') ->
     if path
       path = path.replace(/[→↓↑]$/, '')
-    #return path unless value?
     return value if typeof value == 'string'
     return path + (value && @identify(value) || '') + suffix
 
   # When cleaning a path, also clean forks, rules and pairs
-  # This is a little bit of necessary evil in 
+  # This is a little bit of necessary evil.
   getPossibleContinuations: (path) ->
     [path, path + @UP, path + @RIGHT, path + @DOWN]
 
+  # Return computed path for id and property e.g. $id[property]
   getPath: (id, property) ->
     unless property
       property = id
@@ -88,8 +74,8 @@ class Conventions
       return id + '[' + property + ']'
 
   # Hook: Should interpreter iterate returned object?
+  # (yes, if it's a collection of objects or empty array)
   isCollection: (object) ->
-    # (yes, if it's a collection of objects or empty array)
     if object && object.length != undefined && !object.substring && !object.nodeType
       switch typeof object[0]
         when "object"
@@ -107,19 +93,18 @@ class Conventions
     else
       return operation.key
 
-
-  forkMarkRegExp: /\$[^↑]+(?:↑|$)/g
-
   # Remove all fork marks from a path. 
   # Allows multiple selector paths have shared destination 
   getCanonicalPath: (continuation, compact) ->
     bits = @getContinuation(continuation).split(@DOWN);
     last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.split(@RIGHT).pop().replace(@forkMarkRegExp, '')
+    last = bits[bits.length - 1] = last.split(@RIGHT).pop().replace(@CanonicalizeRegExp, '')
     return last if compact
     return bits.join(@DOWN)
+  CanonicalizeRegExp: /\$[^↑]+(?:↑|$)/g
 
-  # Get path of a parent
+  # Get path for the scope that triggered the script 
+  # (e.g. el matched by css rule)
   getScopePath: (continuation) ->
     bits = continuation.split(@DOWN)
     bits[bits.length - 1] = ""
@@ -134,7 +119,7 @@ class Conventions
     else
       return operation.path
 
-  # Check if selector is bound to current scope's element
+  # Return element that is used as a context for given DOM operation
   getContext: (args, operation, scope, node) ->
     index = args[0].def && 4 || 0
     if (args.length != index && (args[index]?.nodeType))
@@ -143,6 +128,7 @@ class Conventions
       return @scope
     return scope;
 
+  # Return name of intrinsic property used in property path 
   getIntrinsicProperty: (path) ->
     index = path.indexOf('intrinsic-')
     if index > -1
@@ -150,18 +136,19 @@ class Conventions
         last = undefined
       return property = path.substring(index + 10, last)
 
+  # Is the value numerical? Helps us to deal with detecting non-linear exps
+  # Objects are allowed only if they define custom valueOf function
   isPrimitive: (object) ->
-    # Objects are allowed only if they define custom valueOf function
     if typeof object == 'object'
       return object.valueOf != Object.prototype.valueOf
     return true
-    
 
-  # Execution has forked (found many elements, trying brute force to complete selector)
-  UP:    '↑'
-  # One selector was resolved, expecting another selector to pair up
-  RIGHT: '→'
-  # Execution goes depth first (inside stylesheet or css rule)
-  DOWN:  '↓'
+# Little shim for require.js so we dont have to carry it around
+@require ||= (string) ->
+  if string == 'cassowary'
+    return c
+  bits = string.replace('', '').split('/')
+  return this[bits[bits.length - 1]]
+@module ||= {}
 
 module.exports = Conventions

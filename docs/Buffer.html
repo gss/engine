@@ -5,7 +5,7 @@
   <title>Buffer.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -196,51 +196,7 @@ Allows to reflow synchronously after all side effects are computed</p>
       <span class="hljs-keyword">return</span> output.pull.apply(output, arguments)
 
   <span class="hljs-attribute">pull</span>:<span class="hljs-function"> -&gt;</span>
-    <span class="hljs-keyword">if</span> input = <span class="hljs-property">@input</span>
-      <span class="hljs-keyword">return</span> input.pull.apply(input, arguments)
-
-  <span class="hljs-attribute">flush</span>:<span class="hljs-function"> -&gt;</span>
-    <span class="hljs-keyword">if</span> input = <span class="hljs-property">@input</span>
-      <span class="hljs-keyword">return</span> input.flush.apply(input, arguments)
-
-  <span class="hljs-attribute">run</span>:<span class="hljs-function"> -&gt;</span>
-    <span class="hljs-keyword">return</span> <span class="hljs-property">@pull</span>.apply(<span class="hljs-property">@expressions</span>, arguments)
-
-  <span class="hljs-attribute">release</span>: <span class="hljs-function"><span class="hljs-params">()</span> -&gt;</span>
-    <span class="hljs-keyword">if</span> capturer = <span class="hljs-property">@capturer</span>
-      <span class="hljs-keyword">return</span> capturer.release()
-    <span class="hljs-property">@endTime</span> = <span class="hljs-property">@engine</span>.time()
-    <span class="hljs-property">@flush</span>()
-    <span class="hljs-keyword">return</span> <span class="hljs-property">@endTime</span>
-
-  <span class="hljs-attribute">capture</span>: <span class="hljs-function"><span class="hljs-params">(reason)</span> -&gt;</span>
-    <span class="hljs-keyword">if</span> capturer = <span class="hljs-property">@capturer</span>
-      <span class="hljs-keyword">return</span> capturer.capture.apply(capturer, arguments)
-    <span class="hljs-keyword">if</span> <span class="hljs-property">@buffer</span> == <span class="hljs-literal">undefined</span>
-      <span class="hljs-property">@engine</span>.start()
-      fmt = <span class="hljs-string">'%c%s%c'</span>
-      
-      <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> reason != <span class="hljs-string">'string'</span>
-        reason = <span class="hljs-property">@engine</span>.clone(reason) <span class="hljs-keyword">if</span> reason?.slice
-        fmt += <span class="hljs-string">'\t\t%O'</span>
-      <span class="hljs-keyword">else</span>
-        fmt += <span class="hljs-string">'\t%s'</span>
-      <span class="hljs-keyword">debugger</span>
-      <span class="hljs-keyword">if</span> <span class="hljs-property">@engine</span>.onDOMContentLoaded
-        name = <span class="hljs-string">'GSS.Document'</span>
-      <span class="hljs-keyword">else</span>
-        name = <span class="hljs-string">'GSS.Solver'</span>
-
-        method = <span class="hljs-string">'groupCollapsed'</span>
-      <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>[method || <span class="hljs-string">'group'</span>](fmt, <span class="hljs-string">'font-weight: normal'</span>, name, <span class="hljs-string">'color: #666; font-weight: normal'</span>, reason)
-      <span class="hljs-property">@startTime</span> = <span class="hljs-property">@engine</span>.time()
-      <span class="hljs-property">@buffer</span> = <span class="hljs-literal">null</span>
-    <span class="hljs-keyword">if</span> arguments.length &gt; <span class="hljs-number">1</span>
-      result = <span class="hljs-property">@pull</span>.apply(@, Array.prototype.slice.call(arguments, <span class="hljs-number">1</span>))
-      <span class="hljs-keyword">if</span> name
-        <span class="hljs-property">@release</span>()
-      <span class="hljs-keyword">return</span> result
-    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span></pre></div></div>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@puller</span> || input = <span class="hljs-property">@input</span></pre></div></div>
             
         </li>
         
@@ -251,16 +207,93 @@ Allows to reflow synchronously after all side effects are computed</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
+              <p>captured = @capture arguments[0]</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> input.pull
+        pulled = input.pull.apply(input, arguments)
+      <span class="hljs-keyword">else</span>
+        pulled = @[input].apply(@, arguments)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>@release() if captured</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">return</span> pulled
+
+  <span class="hljs-attribute">flush</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">if</span> input = <span class="hljs-property">@input</span>
+      <span class="hljs-keyword">return</span> input.flush.apply(input, arguments)
+
+  <span class="hljs-attribute">run</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@pull</span>.apply(@, arguments)
+
+  <span class="hljs-attribute">release</span>: <span class="hljs-function"><span class="hljs-params">()</span> -&gt;</span>
+    <span class="hljs-property">@capturer</span>?.onRelease()
+    <span class="hljs-property">@endTime</span> = <span class="hljs-property">@engine</span>.time()
+    <span class="hljs-property">@flush</span>()
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@endTime</span>
+
+  <span class="hljs-attribute">capture</span>: <span class="hljs-function"><span class="hljs-params">(reason)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@buffer</span> == <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">if</span> @ <span class="hljs-keyword">instanceof</span> GSS
+        <span class="hljs-keyword">debugger</span>
+      <span class="hljs-property">@capturer</span>?.onCapture()
+      <span class="hljs-property">@buffer</span> = <span class="hljs-literal">null</span>
+      <span class="hljs-property">@engine</span>.start()
+      fmt = <span class="hljs-string">'%c%s%c'</span>
+      
+      <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> reason != <span class="hljs-string">'string'</span>
+        reason = <span class="hljs-property">@engine</span>.clone(reason) <span class="hljs-keyword">if</span> reason?.slice
+        fmt += <span class="hljs-string">'\t\t%O'</span>
+      <span class="hljs-keyword">else</span>
+        fmt += <span class="hljs-string">'\t%s'</span>
+      <span class="hljs-keyword">if</span> <span class="hljs-property">@engine</span>.onDOMContentLoaded
+        name = <span class="hljs-string">'GSS.Document'</span>
+      <span class="hljs-keyword">else</span>
+        name = <span class="hljs-string">'GSS.Solver'</span>
+
+        method = <span class="hljs-string">'groupCollapsed'</span>
+      <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>[method || <span class="hljs-string">'group'</span>](fmt, <span class="hljs-string">'font-weight: normal'</span>, name, <span class="hljs-string">'color: #666; font-weight: normal'</span>, reason)
+      <span class="hljs-property">@startTime</span> = <span class="hljs-property">@engine</span>.time()
+    <span class="hljs-keyword">if</span> arguments.length &gt; <span class="hljs-number">1</span>
+      result = <span class="hljs-property">@pull</span>.apply(@, Array.prototype.slice.call(arguments, <span class="hljs-number">1</span>))
+      <span class="hljs-keyword">if</span> name
+        <span class="hljs-property">@release</span>()
+      <span class="hljs-keyword">return</span> result
+    <span class="hljs-keyword">return</span> !!name</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
               <p>Schedule execution of expressions to the next tick, buffer input</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">defer</span>: <span class="hljs-function"><span class="hljs-params">(reason)</span> -&gt;</span>
     <span class="hljs-keyword">if</span> <span class="hljs-property">@capture</span>.apply(@, arguments)
-      <span class="hljs-property">@deferred</span> ?= (<span class="hljs-built_in">window</span>.setImmediate || <span class="hljs-built_in">window</span>.setTimeout)(<span class="hljs-function"> =&gt;</span>
+      <span class="hljs-property">@deferred</span> ?= <span class="hljs-property">@setImmediate</span>(<span class="hljs-function"> =&gt;</span>
         <span class="hljs-property">@deferred</span> = <span class="hljs-literal">undefined</span>
         <span class="hljs-property">@flush</span>()
       , <span class="hljs-number">0</span>)
+
+  <span class="hljs-attribute">setImmediate</span>: setImmediate ? setTimeout
 
 <span class="hljs-built_in">module</span>.exports = Buffer</pre></div></div>
             

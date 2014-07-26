@@ -5,7 +5,7 @@
   <title>Solutions.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -234,30 +234,100 @@ Removes dereferenced variables. Outputs solutions.
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">pull</span>: <span class="hljs-function"><span class="hljs-params">(commands)</span>-&gt;</span>
     <span class="hljs-property">@response</span> = response = {}
-    <span class="hljs-property">@lastInput</span> = commands
-    <span class="hljs-keyword">for</span> command <span class="hljs-keyword">in</span> commands
+    <span class="hljs-property">@lastInput</span> = commands</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Add constraints, execute solver commands (suggest, remove, stay)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> command <span class="hljs-keyword">in</span> commands
       <span class="hljs-keyword">if</span> command <span class="hljs-keyword">instanceof</span> Array &amp;&amp; <span class="hljs-keyword">typeof</span> command[<span class="hljs-number">0</span>] == <span class="hljs-string">'object'</span>
         <span class="hljs-property">@add</span>(subcommand) <span class="hljs-keyword">for</span> subcommand <span class="hljs-keyword">in</span> command
       <span class="hljs-keyword">else</span> 
-        <span class="hljs-property">@add</span>(command)
-    <span class="hljs-keyword">if</span> <span class="hljs-property">@constrained</span>
+        <span class="hljs-property">@add</span>(command)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Solve constraints if constraints were changed, otherwise resolve</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-property">@constrained</span>
       <span class="hljs-property">@constrained</span> = <span class="hljs-literal">undefined</span>
       <span class="hljs-property">@solver</span>.solve()
     <span class="hljs-keyword">else</span>
-      <span class="hljs-property">@solver</span>.resolve()
+      <span class="hljs-property">@solver</span>.resolve()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Read updated solutions</p>
 
-    <span class="hljs-keyword">for</span> property, value <span class="hljs-keyword">of</span> <span class="hljs-property">@solver</span>._changed
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> property, value <span class="hljs-keyword">of</span> <span class="hljs-property">@solver</span>._changed
       response[property] = value
-    <span class="hljs-property">@solver</span>._changed = <span class="hljs-literal">undefined</span>
-    <span class="hljs-keyword">if</span> <span class="hljs-property">@nullified</span>
+    <span class="hljs-property">@solver</span>._changed = <span class="hljs-literal">undefined</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Nullify variables that are not referenced by any constraint</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-property">@nullified</span>
       <span class="hljs-keyword">for</span> property, value <span class="hljs-keyword">of</span> <span class="hljs-property">@nullified</span>
         <span class="hljs-keyword">if</span> !<span class="hljs-property">@added</span> || !(<span class="hljs-property">@added</span>[property]?)
           <span class="hljs-property">@nullify</span>(value)
-          response[property] = <span class="hljs-literal">null</span>
-    <span class="hljs-keyword">if</span> <span class="hljs-property">@added</span>
+          response[property] = <span class="hljs-literal">null</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Add new properties that equal to zero</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-property">@added</span>
       <span class="hljs-keyword">for</span> property, value <span class="hljs-keyword">of</span> <span class="hljs-property">@added</span>
         <span class="hljs-keyword">if</span> !response[property] &amp;&amp; (!<span class="hljs-property">@nullified</span> || !<span class="hljs-property">@nullified</span>[property])
           response[property] = <span class="hljs-number">0</span>
+
     <span class="hljs-property">@added</span> = <span class="hljs-property">@nullified</span> = <span class="hljs-literal">undefined</span>
     <span class="hljs-property">@lastOutput</span> = response
 
@@ -302,11 +372,11 @@ Removes dereferenced variables. Outputs solutions.
         </li>
         
         
-        <li id="section-4">
+        <li id="section-9">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
+                <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
               <p>Explicitly remove variable from cassowary</p>
 
@@ -314,8 +384,6 @@ Removes dereferenced variables. Outputs solutions.
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@solver</span>._externalParametricVars.<span class="hljs-keyword">delete</span>(variable)
     <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'nullify'</span>, variable.name)
-            
-
 
   <span class="hljs-attribute">add</span>: <span class="hljs-function"><span class="hljs-params">(command)</span> -&gt;</span>
     <span class="hljs-keyword">if</span> command <span class="hljs-keyword">instanceof</span> c.Constraint

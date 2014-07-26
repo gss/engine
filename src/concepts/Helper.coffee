@@ -2,6 +2,8 @@
 # to be used as helpers in user scripts and specs
 
 Helper = (command, scoped, displayName)  ->
+  if displayName == '_get'
+    debugger
   if typeof command == 'function'
     func = command
   helper = (scope) ->

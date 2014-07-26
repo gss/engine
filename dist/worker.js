@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-25) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-07-26) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -20,49 +20,19 @@ var l=this.rows.get(this._objective);a.trace&&console.log(l);var m=b.strength.sy
       (module.compiled = true && module) : this
 );
 
-/* 
+var Conventions;
 
-# # Conventions
-# 
-# Okay what's the deal with those → ↓ ↑ arrows? 
-# Open your mind and think beyond this Unicode madness. 
-# 
-# Dynamic systems need to be able to clean up side effects
-# Instead of linking things together, we are use a tracking system
-# that generates determenistic unique string keys
-# that are used for multiple purposes.
+Conventions = (function() {
+  function Conventions() {}
 
-↑  Caching, e.g. to jump to results of dom query,
-   or to figure out which element in that collection 
-   called this function (↑)
+  Conventions.prototype.UP = '↑';
 
-→  Linking, that allows lazy evaluation, by making arguments
-   depend on previously resolved arguments,
-   e.g. for plural binding or to generate unique argument signature
+  Conventions.prototype.RIGHT = '→';
 
-↓  Nesting, as a way for expressions to own side effects,
-   e.g. to remove stylesheet, css rule or conditional branch
+  Conventions.prototype.DOWN = '↓';
 
-# These arrows are delimeters that combined together 
-# enable bottom-up evaluation and continuations
-# without leaving any state behind. 
-# Continuations without explicit state.
-# 
-# It's a lot easier to clean up stateless systems. 
-# Whenever a string key is set to be cleaned up,
-# it broadcasts that intent to all subsystems, 
-# like constraint solver, dom observer, etc.
-# So they can clean up things related to that key
-# by triggering more remove commands for known sub-keys.
-# 
-# This removal cascade allows components to have strict
-# and arbitarily deep hierarchy, without knowing of it.
-
-    style$my-stylesheet   # my stylesheet
-               ↓ h1$h1    # found heading
-               ↑ !+img    # preceeded by image
-               → #header  # bound to header element
-
+  /* 
+    <!-- Example of document -->
     <style id="my-stylesheet">
       (h1 !+ img)[width] == #header[width]
     </style>
@@ -70,25 +40,14 @@ var l=this.rows.get(this._objective);a.trace&&console.log(l);var m=b.strength.sy
       <img>
       <h1 id="h1"></h1>
     </header>
+  
+    <!-- Generated constraint key -->
+    style$my-stylesheet   # my stylesheet
+               ↓ h1$h1    # found heading
+               ↑ !+img    # preceeded by image
+               → #header  # bound to header element
+  */
 
-.
-*/
-
-var Conventions;
-
-this.require || (this.require = function(string) {
-  var bits;
-  if (string === 'cassowary') {
-    return c;
-  }
-  bits = string.replace('', '').split('/');
-  return this[bits[bits.length - 1]];
-});
-
-this.module || (this.module = {});
-
-Conventions = (function() {
-  function Conventions() {}
 
   Conventions.prototype.getContinuation = function(path, value, suffix) {
     if (suffix == null) {
@@ -142,18 +101,18 @@ Conventions = (function() {
     }
   };
 
-  Conventions.prototype.forkMarkRegExp = /\$[^↑]+(?:↑|$)/g;
-
   Conventions.prototype.getCanonicalPath = function(continuation, compact) {
     var bits, last;
     bits = this.getContinuation(continuation).split(this.DOWN);
     last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.split(this.RIGHT).pop().replace(this.forkMarkRegExp, '');
+    last = bits[bits.length - 1] = last.split(this.RIGHT).pop().replace(this.CanonicalizeRegExp, '');
     if (compact) {
       return last;
     }
     return bits.join(this.DOWN);
   };
+
+  Conventions.prototype.CanonicalizeRegExp = /\$[^↑]+(?:↑|$)/g;
 
   Conventions.prototype.getScopePath = function(continuation) {
     var bits;
@@ -203,15 +162,20 @@ Conventions = (function() {
     return true;
   };
 
-  Conventions.prototype.UP = '↑';
-
-  Conventions.prototype.RIGHT = '→';
-
-  Conventions.prototype.DOWN = '↓';
-
   return Conventions;
 
 })();
+
+this.require || (this.require = function(string) {
+  var bits;
+  if (string === 'cassowary') {
+    return c;
+  }
+  bits = string.replace('', '').split('/');
+  return this[bits[bits.length - 1]];
+});
+
+this.module || (this.module = {});
 
 module.exports = Conventions;
 
@@ -267,6 +231,9 @@ Buffer = (function() {
   Buffer.prototype.capture = function(reason) {
     var fmt, method, name, result, _ref;
     if (this.buffer === void 0) {
+      if (this instanceof GSS) {
+        debugger;
+      }
       if ((_ref = this.capturer) != null) {
         _ref.onCapture();
       }
@@ -303,33 +270,20 @@ Buffer = (function() {
   Buffer.prototype.defer = function(reason) {
     var _this = this;
     if (this.capture.apply(this, arguments)) {
-      return this.deferred != null ? this.deferred : this.deferred = (window.setImmediate || window.setTimeout)(function() {
+      return this.deferred != null ? this.deferred : this.deferred = this.setImmediate(function() {
         _this.deferred = void 0;
         return _this.flush();
       }, 0);
     }
   };
 
+  Buffer.prototype.setImmediate = typeof setImmediate !== "undefined" && setImmediate !== null ? setImmediate : setTimeout;
+
   return Buffer;
 
 })();
 
 module.exports = Buffer;
-
-/* Input: Expressions
-
-Interepretes given expressions lazily top-down, 
-
-If sub-expression returns nodelist,
-it recursively evaluates expression bottom-up 
-for each element in nodelist
-
-Document expressions output expressions for solver.
-Solver expressions output and apply constraints.
-
-* Input: Engine, reads commands
-* Output: Engine, outputs results, leaves out unrecognized commands as is
-*/
 
 var Buffer, Expressions,
   __hasProp = {}.hasOwnProperty,
@@ -850,6 +804,9 @@ var Helper;
 
 Helper = function(command, scoped, displayName) {
   var func, helper;
+  if (displayName === '_get') {
+    debugger;
+  }
   if (typeof command === 'function') {
     func = command;
   }
@@ -1503,11 +1460,17 @@ State:
                  and constraints by continuation
 */
 
-var Solutions;
+var Solutions, Space,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 require('cassowary');
 
-Solutions = (function() {
+Space = require('../concepts/Space');
+
+Solutions = (function(_super) {
+  __extends(Solutions, _super);
+
   function Solutions(engine, output) {
     this.engine = engine;
     this.output = output;
@@ -1706,7 +1669,7 @@ Solutions = (function() {
 
   return Solutions;
 
-})();
+})(Space);
 
 module.exports = Solutions;
 
@@ -1721,7 +1684,7 @@ Engine.Solver = (function(_super) {
 
   Solver.prototype.Solutions = require('./output/Solutions');
 
-  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints'));
+  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints'), require('./commands/Variables'));
 
   Solver.prototype.Properties = require('./properties/Equasions');
 

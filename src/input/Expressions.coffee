@@ -1,18 +1,17 @@
-### Input: Expressions
+# ### Input: Expressions
 
-Interepretes given expressions lazily top-down, 
+# Interepretes given expressions lazily top-down, 
+# 
+# If sub-expression returns nodelist,
+# it recursively evaluates expression bottom-up 
+# for each element in nodelist
+# 
+# Document expressions output expressions for solver.
+# Solver expressions output and apply constraints.
+# 
+# * **Input**: Engine, reads commands
+# * **Output**: Engine, outputs results, leaves unknown commands
 
-If sub-expression returns nodelist,
-it recursively evaluates expression bottom-up 
-for each element in nodelist
-
-Document expressions output expressions for solver.
-Solver expressions output and apply constraints.
-
-* Input: Engine, reads commands
-* Output: Engine, outputs results, leaves out unrecognized commands as is
-
-###
 
 Buffer = require('../concepts/Buffer')
 

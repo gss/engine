@@ -5,7 +5,7 @@
   <title>Values.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -294,7 +294,7 @@ Manages solutions <span class="hljs-keyword">and</span> <span class="hljs-built_
       value = property
       property = <span class="hljs-literal">undefined</span>
     (<span class="hljs-property">@engine</span>.measured ||= {})[<span class="hljs-property">@engine</span>.getPath(id, property)] = value
-    <span class="hljs-keyword">if</span> capture = <span class="hljs-property">@engine</span>.capture(<span class="hljs-string">'suggest '</span> + (id || <span class="hljs-string">''</span>) + <span class="hljs-string">'['</span> + (property || <span class="hljs-string">''</span>) + <span class="hljs-string">'] '</span> + value)
+    <span class="hljs-keyword">if</span> capture = <span class="hljs-property">@engine</span>.expressions.capture(<span class="hljs-string">'suggest '</span> + (id || <span class="hljs-string">''</span>) + <span class="hljs-string">'['</span> + (property || <span class="hljs-string">''</span>) + <span class="hljs-string">'] '</span> + value)
       <span class="hljs-property">@engine</span>.flush()
     <span class="hljs-keyword">return</span> value
 

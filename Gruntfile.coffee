@@ -82,6 +82,7 @@ module.exports = ->
         src: ['src/**/*.coffee']
         options:
           output: 'docs/'
+          css: 'vendor/docs.css'
 
     # CoffeeScript compilation
     coffee:

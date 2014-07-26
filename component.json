@@ -29,6 +29,7 @@
     "lib/commands/Transformations.js", 
     "lib/commands/Conventions.js", 
 
+    "lib/concepts/Space.js",
     "lib/concepts/Buffer.js",
     "lib/concepts/EventTrigger.js",
     "lib/concepts/Console.js",

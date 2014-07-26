@@ -5,7 +5,6 @@ Revalidates intrinsic measurements, optionally schedules
 another solver pass
 
 ###
-
 class Restyles
   constructor: (@engine) -> 
 

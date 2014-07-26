@@ -5,7 +5,7 @@
   <title>Measurements.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -456,7 +456,6 @@ Allows intrinsic to be re-measured without causing restyle</p>
             <span class="hljs-keyword">when</span> <span class="hljs-string">"height"</span>
               (<span class="hljs-property">@measured</span> ||= {})[path] = node.offsetHeight
             <span class="hljs-keyword">else</span>
-              <span class="hljs-keyword">debugger</span>
               <span class="hljs-property">@values</span>.set <span class="hljs-literal">null</span>, path, <span class="hljs-property">@getStyle</span>(node, prop)
     <span class="hljs-keyword">return</span></pre></div></div>
             
@@ -538,7 +537,6 @@ Register intrinsic values assigned to engine</p>
       id = <span class="hljs-property">@identify</span>(element)
       old = computed[id]
       <span class="hljs-keyword">if</span> force || !old?
-        <span class="hljs-keyword">debugger</span>
         <span class="hljs-keyword">return</span> computed[id] = <span class="hljs-built_in">window</span>.getComputedStyle(element)
     <span class="hljs-keyword">return</span> old</pre></div></div>
             
@@ -583,8 +581,7 @@ Register intrinsic values assigned to engine</p>
     <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> object == <span class="hljs-string">'string'</span> 
       object = <span class="hljs-property">@parse</span>(object)
     <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> object == <span class="hljs-string">'object'</span>
-      <span class="hljs-keyword">if</span> object[<span class="hljs-number">0</span>] == <span class="hljs-string">'get'</span>
-        <span class="hljs-keyword">debugger</span>
+      <span class="hljs-keyword">if</span> object[<span class="hljs-number">0</span>] == <span class="hljs-string">'get'</span> &amp;&amp; <span class="hljs-property">@getIntrinsicProperty</span>(object[<span class="hljs-number">2</span>])
         value = <span class="hljs-property">@get</span>.command.call(<span class="hljs-keyword">this</span>, operation, continuation, scope, <span class="hljs-string">'return'</span>, object[<span class="hljs-number">1</span>], object[<span class="hljs-number">2</span>], <span class="hljs-literal">true</span>)
         <span class="hljs-keyword">if</span> value?
           <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> (object = value) != <span class="hljs-string">'object'</span>

@@ -5,7 +5,7 @@
   <title>Queries.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -248,13 +248,11 @@
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">capture</span>: <span class="hljs-function"><span class="hljs-params">()</span> -&gt;</span>
-    <span class="hljs-keyword">if</span> captured = <span class="hljs-property">@output</span>.capture.apply(<span class="hljs-property">@output</span>, arguments)
-      <span class="hljs-property">@buffer</span> = <span class="hljs-property">@updated</span> = <span class="hljs-property">@lastOutput</span> = <span class="hljs-literal">null</span>
-      <span class="hljs-property">@_repairing</span> = <span class="hljs-literal">null</span>
-      <span class="hljs-keyword">return</span> captured
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">onCapture</span>: <span class="hljs-function"><span class="hljs-params">()</span> -&gt;</span>
+    <span class="hljs-property">@buffer</span> = <span class="hljs-property">@updated</span> = <span class="hljs-property">@lastOutput</span> = <span class="hljs-literal">null</span>
+    <span class="hljs-property">@_repairing</span> = <span class="hljs-literal">null</span>
 
-  <span class="hljs-attribute">release</span>:<span class="hljs-function"> -&gt;</span>
+  <span class="hljs-attribute">onRelease</span>:<span class="hljs-function"> -&gt;</span>
     <span class="hljs-keyword">if</span> <span class="hljs-property">@removed</span>
       <span class="hljs-keyword">for</span> id <span class="hljs-keyword">in</span> <span class="hljs-property">@removed</span>
         <span class="hljs-property">@remove</span> id
@@ -288,11 +286,6 @@
 
       <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>.row(<span class="hljs-string">'queries'</span>, <span class="hljs-property">@updated</span>, evalDiff + <span class="hljs-string">'ms + '</span> + queryDiff + <span class="hljs-string">'ms'</span>)
 
-    <span class="hljs-keyword">if</span> <span class="hljs-property">@engine</span>.expressions.buffer
-      <span class="hljs-property">@output</span>.release()
-    <span class="hljs-keyword">else</span>
-      <span class="hljs-property">@output</span>.flush()
-
     <span class="hljs-property">@buffer</span> = <span class="hljs-property">@updated</span> = <span class="hljs-literal">undefined</span></pre></div></div>
             
         </li>
@@ -305,7 +298,7 @@
                 <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <p>Re-evaluate updated queries
-Watchers are stored in a single array in groups of 3 properties</p>
+Watchers are stored in a single array in triplets</p>
 
             </div>
             
@@ -330,7 +323,8 @@ Watchers are stored in a single array in groups of 3 properties</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">pull</span>: <span class="hljs-function"><span class="hljs-params">(mutations)</span> -&gt;</span>
-    updating = <span class="hljs-property">@capture</span>(mutations)
+    updating = <span class="hljs-property">@engine</span>.expressions.capture(mutations)
+
     <span class="hljs-keyword">for</span> mutation <span class="hljs-keyword">in</span> mutations
       <span class="hljs-keyword">switch</span> mutation.type
         <span class="hljs-keyword">when</span> <span class="hljs-string">"attributes"</span>
@@ -342,7 +336,7 @@ Watchers are stored in a single array in groups of 3 properties</p>
 
       <span class="hljs-property">@$intrinsics</span>(mutation.target)
 
-    <span class="hljs-property">@release</span>() <span class="hljs-keyword">if</span> updating
+    <span class="hljs-property">@engine</span>.expressions.release() <span class="hljs-keyword">if</span> updating
 
   <span class="hljs-attribute">$attribute</span>: <span class="hljs-function"><span class="hljs-params">(target, name, changed)</span> -&gt;</span></pre></div></div>
             
@@ -868,7 +862,7 @@ Also stores path which can be used to remove elements</p>
     result = <span class="hljs-property">@get</span>(path)
     <span class="hljs-property">@engine</span>.values.clean(path, continuation, operation, scope)
     <span class="hljs-keyword">if</span> result &amp;&amp; !<span class="hljs-property">@engine</span>.isCollection(result)
-      <span class="hljs-keyword">if</span> continuation &amp;&amp; continuation != (oppath = <span class="hljs-property">@getOperationPath</span>(continuation))
+      <span class="hljs-keyword">if</span> continuation &amp;&amp; continuation != (oppath = <span class="hljs-property">@engine</span>.getCanonicalPath(continuation))
         <span class="hljs-property">@remove</span> result, oppath
     <span class="hljs-property">@unpair</span> path, result <span class="hljs-keyword">if</span> result?.nodeType
     <span class="hljs-keyword">unless</span> plural
@@ -923,14 +917,13 @@ Also stores path which can be used to remove elements</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">repair</span>: <span class="hljs-function"><span class="hljs-params">(path, key, operation, scope, collected)</span> -&gt;</span>
-    <span class="hljs-keyword">debugger</span>
     leftUpdate = <span class="hljs-property">@updated</span>?[path]
     leftNew = (<span class="hljs-keyword">if</span> leftUpdate?[<span class="hljs-number">0</span>] != <span class="hljs-literal">undefined</span> <span class="hljs-keyword">then</span> leftUpdate[<span class="hljs-number">0</span>] <span class="hljs-keyword">else</span> <span class="hljs-property">@get</span>(path)) || []
     <span class="hljs-keyword">if</span> leftNew.old != <span class="hljs-literal">undefined</span>
       leftOld = leftNew.old || []
     <span class="hljs-keyword">else</span>
       leftOld = (<span class="hljs-keyword">if</span> leftUpdate <span class="hljs-keyword">then</span> leftUpdate[<span class="hljs-number">1</span>] <span class="hljs-keyword">else</span> <span class="hljs-property">@get</span>(path)) || []
-    rightPath = <span class="hljs-property">@getScopePath</span>(path) + key
+    rightPath = <span class="hljs-property">@engine</span>.getScopePath(path) + key
     rightUpdate = <span class="hljs-property">@updated</span>?[rightPath]
 
     rightNew = (   rightUpdate &amp;&amp;   rightUpdate[<span class="hljs-number">0</span>] ||   <span class="hljs-property">@get</span>(rightPath))
@@ -1008,15 +1001,27 @@ Also stores path which can be used to remove elements</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>
-  <span class="hljs-attribute">forkMarkRegExp</span>: <span class="hljs-regexp">/\$[^↑]+(?:↑|$)/g</span>
-
   <span class="hljs-attribute">isPaired</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation)</span> -&gt;</span>
     <span class="hljs-keyword">if</span> match = continuation.match(<span class="hljs-property">@isPariedRegExp</span>)
       <span class="hljs-keyword">if</span> operation &amp;&amp; operation.parent.def.serialized
         <span class="hljs-keyword">return</span>
       <span class="hljs-keyword">if</span> !<span class="hljs-property">@engine</span>.isCollection(@[continuation]) &amp;&amp; match[<span class="hljs-number">3</span>].indexOf(<span class="hljs-string">'$'</span>) == -<span class="hljs-number">1</span>
         <span class="hljs-keyword">return</span>
-      <span class="hljs-keyword">return</span> match</pre></div></div>
+      <span class="hljs-keyword">return</span> match
+
+
+
+  <span class="hljs-attribute">unpair</span>: <span class="hljs-function"><span class="hljs-params">(continuation, node)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> match = <span class="hljs-property">@isPaired</span>(<span class="hljs-literal">null</span>, continuation)
+    path = <span class="hljs-property">@engine</span>.getCanonicalPath(match[<span class="hljs-number">1</span>])
+    collection = <span class="hljs-property">@get</span>(path)
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> plurals = <span class="hljs-property">@_plurals</span>?[path]
+
+    oppath = <span class="hljs-property">@engine</span>.getCanonicalPath(continuation, <span class="hljs-literal">true</span>)
+    <span class="hljs-keyword">for</span> plural, index <span class="hljs-keyword">in</span> plurals <span class="hljs-keyword">by</span> <span class="hljs-number">3</span>
+      <span class="hljs-keyword">continue</span> <span class="hljs-keyword">unless</span> oppath == plural
+      contd = path + <span class="hljs-string">'→'</span> + plural
+      <span class="hljs-property">@remove</span>(node, contd, plurals[index + <span class="hljs-number">1</span>], plurals[index + <span class="hljs-number">2</span>], continuation)</pre></div></div>
             
         </li>
         
@@ -1026,56 +1031,6 @@ Also stores path which can be used to remove elements</p>
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-28">&#182;</a>
-              </div>
-              <p>Remove all fork marks from a path</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getOperationPath</span>: <span class="hljs-function"><span class="hljs-params">(continuation, compact)</span> -&gt;</span>
-    bits = <span class="hljs-property">@engine</span>.getContinuation(continuation).split(<span class="hljs-property">@engine</span>.DOWN);
-    last = bits[bits.length - <span class="hljs-number">1</span>]
-    last = bits[bits.length - <span class="hljs-number">1</span>] = last.split(<span class="hljs-property">@engine</span>.RIGHT).pop().replace(<span class="hljs-property">@forkMarkRegExp</span>, <span class="hljs-string">''</span>)
-    <span class="hljs-keyword">return</span> last <span class="hljs-keyword">if</span> compact
-    <span class="hljs-keyword">return</span> bits.join(<span class="hljs-property">@engine</span>.DOWN)</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-29">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-29">&#182;</a>
-              </div>
-              <p>Get path of a parent</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getScopePath</span>: <span class="hljs-function"><span class="hljs-params">(continuation)</span> -&gt;</span>
-    bits = continuation.split(<span class="hljs-property">@engine</span>.DOWN)
-    bits[bits.length - <span class="hljs-number">1</span>] = <span class="hljs-string">""</span>
-    <span class="hljs-keyword">return</span> bits.join(<span class="hljs-property">@engine</span>.DOWN)
-
-  <span class="hljs-attribute">unpair</span>: <span class="hljs-function"><span class="hljs-params">(continuation, node)</span> -&gt;</span>
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> match = <span class="hljs-property">@isPaired</span>(<span class="hljs-literal">null</span>, continuation)
-    path = <span class="hljs-property">@getOperationPath</span>(match[<span class="hljs-number">1</span>])
-    collection = <span class="hljs-property">@get</span>(path)
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> plurals = <span class="hljs-property">@_plurals</span>?[path]
-
-    oppath = <span class="hljs-property">@getOperationPath</span>(continuation, <span class="hljs-literal">true</span>)
-    <span class="hljs-keyword">for</span> plural, index <span class="hljs-keyword">in</span> plurals <span class="hljs-keyword">by</span> <span class="hljs-number">3</span>
-      <span class="hljs-keyword">continue</span> <span class="hljs-keyword">unless</span> oppath == plural
-      contd = path + <span class="hljs-string">'→'</span> + plural
-      <span class="hljs-property">@remove</span>(node, contd, plurals[index + <span class="hljs-number">1</span>], plurals[index + <span class="hljs-number">2</span>], continuation)</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-30">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
               <p>@clean(path + match[2] + ‘→’ + plural)</p>
 
@@ -1089,11 +1044,11 @@ Also stores path which can be used to remove elements</p>
         </li>
         
         
-        <li id="section-31">
+        <li id="section-29">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-31">&#182;</a>
+                <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
               <p>Check if operation is plurally bound with another selector
 Choose a good match for element from the first collection
@@ -1103,7 +1058,7 @@ Currently bails out and schedules re-pairing </p>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">pair</span>: <span class="hljs-function"><span class="hljs-params">(continuation, operation, scope, result)</span> -&gt;</span>
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> match = <span class="hljs-property">@isPaired</span>(operation, continuation, <span class="hljs-literal">true</span>)
-    left = <span class="hljs-property">@getOperationPath</span>(match[<span class="hljs-number">1</span>])
+    left = <span class="hljs-property">@engine</span>.getCanonicalPath(match[<span class="hljs-number">1</span>])
     plurals = (<span class="hljs-property">@_plurals</span> ||= {})[left] ||= []
     <span class="hljs-keyword">if</span> plurals.indexOf(operation.path) == -<span class="hljs-number">1</span>
       pushed = plurals.push(operation.path, operation, scope)
@@ -1118,11 +1073,11 @@ Currently bails out and schedules re-pairing </p>
         </li>
         
         
-        <li id="section-32">
+        <li id="section-30">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-32">&#182;</a>
+                <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
               <p>If a query selects element from some other node than current scope
 Maybe somebody else calculated it already</p>
@@ -1146,18 +1101,18 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-33">
+        <li id="section-31">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-33">&#182;</a>
+                <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
               <p>Combine nodes from multiple selector paths</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">updateOperationCollection</span>: <span class="hljs-function"><span class="hljs-params">(operation, path, scope, added, removed)</span> -&gt;</span>
-    oppath = <span class="hljs-property">@getOperationPath</span>(path)
+    oppath = <span class="hljs-property">@engine</span>.getCanonicalPath(path)
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> path == oppath
     collection = <span class="hljs-property">@get</span>(oppath)
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> removed &amp;&amp; removed == collection
@@ -1169,11 +1124,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-34">
+        <li id="section-32">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-34">&#182;</a>
+                <a class="pilcrow" href="#section-32">&#182;</a>
               </div>
               <p>Perform method over each node in nodelist, or against given node</p>
 
@@ -1190,11 +1145,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-35">
+        <li id="section-33">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-35">&#182;</a>
+                <a class="pilcrow" href="#section-33">&#182;</a>
               </div>
               <p>Filter out known nodes from DOM collections</p>
 
@@ -1208,11 +1163,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-36">
+        <li id="section-34">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-36">&#182;</a>
+                <a class="pilcrow" href="#section-34">&#182;</a>
               </div>
               <p>Normalize query to reuse results</p>
 
@@ -1227,7 +1182,7 @@ Maybe somebody else calculated it already</p>
       <span class="hljs-keyword">else</span>
         <span class="hljs-property">@set</span> path, group[<span class="hljs-number">0</span>]
     <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> !old? &amp;&amp; (result &amp;&amp; result.length == <span class="hljs-number">0</span>) &amp;&amp; continuation
-      old = <span class="hljs-property">@get</span>(<span class="hljs-property">@getOperationPath</span>(path))
+      old = <span class="hljs-property">@get</span>(<span class="hljs-property">@engine</span>.getCanonicalPath(path))
     <span class="hljs-keyword">if</span> (group ||= <span class="hljs-property">@updated</span>?[path])
       <span class="hljs-keyword">if</span> scoped
         added = result
@@ -1244,11 +1199,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-37">
+        <li id="section-35">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-37">&#182;</a>
+                <a class="pilcrow" href="#section-35">&#182;</a>
               </div>
               <p>Clean refs of nodes that dont match anymore</p>
 
@@ -1269,11 +1224,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-38">
+        <li id="section-36">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-38">&#182;</a>
+                <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
               <p>Register newly found nodes</p>
 
@@ -1288,11 +1243,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-39">
+        <li id="section-37">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-39">&#182;</a>
+                <a class="pilcrow" href="#section-37">&#182;</a>
               </div>
               <p>Snapshot live node list for future reference</p>
 
@@ -1309,11 +1264,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-40">
+        <li id="section-38">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-40">&#182;</a>
+                <a class="pilcrow" href="#section-38">&#182;</a>
               </div>
               <p>Subscribe node to the query</p>
 
@@ -1342,7 +1297,7 @@ Maybe somebody else calculated it already</p>
 
     contd = continuation
     <span class="hljs-keyword">if</span> contd &amp;&amp; contd.charAt(contd.length - <span class="hljs-number">1</span>) == <span class="hljs-string">'→'</span>
-      contd = <span class="hljs-property">@engine</span>.expressions.log(operation, contd)
+      contd = <span class="hljs-property">@engine</span>.getOperationPath(operation, contd)
     <span class="hljs-keyword">if</span> continuation &amp;&amp; (index = <span class="hljs-property">@pair</span>(contd, operation, scope, result))?
       <span class="hljs-keyword">if</span> index == -<span class="hljs-number">1</span>
         <span class="hljs-keyword">return</span>
@@ -1374,11 +1329,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-41">
+        <li id="section-39">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-41">&#182;</a>
+                <a class="pilcrow" href="#section-39">&#182;</a>
               </div>
               <p>Check if a node observes this qualifier or combinator</p>
 
@@ -1388,21 +1343,21 @@ Maybe somebody else calculated it already</p>
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> id = node._gss_id
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> watchers = <span class="hljs-property">@_watchers</span>[id]
     <span class="hljs-keyword">if</span> continuation
-      path = <span class="hljs-property">@getOperationPath</span>(continuation)
+      path = <span class="hljs-property">@engine</span>.getCanonicalPath(continuation)
     <span class="hljs-keyword">for</span> operation, index <span class="hljs-keyword">in</span> watchers <span class="hljs-keyword">by</span> <span class="hljs-number">3</span>
       <span class="hljs-keyword">if</span> groupped = operation[group]
         contd = watchers[index + <span class="hljs-number">1</span>]
-        <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> path &amp;&amp; path != <span class="hljs-property">@getOperationPath</span>(contd)
+        <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> path &amp;&amp; path != <span class="hljs-property">@engine</span>.getCanonicalPath(contd)
         scope = watchers[index + <span class="hljs-number">2</span>]</pre></div></div>
             
         </li>
         
         
-        <li id="section-42">
+        <li id="section-40">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-42">&#182;</a>
+                <a class="pilcrow" href="#section-40">&#182;</a>
               </div>
               <p>Check qualifier value</p>
 
@@ -1414,11 +1369,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-43">
+        <li id="section-41">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-43">&#182;</a>
+                <a class="pilcrow" href="#section-41">&#182;</a>
               </div>
               <p>Check combinator and tag name of a given element</p>
 
@@ -1430,11 +1385,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-44">
+        <li id="section-42">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-44">&#182;</a>
+                <a class="pilcrow" href="#section-42">&#182;</a>
               </div>
               <p>Check combinator and given tag name</p>
 
@@ -1446,11 +1401,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-45">
+        <li id="section-43">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-45">&#182;</a>
+                <a class="pilcrow" href="#section-43">&#182;</a>
               </div>
               <p>Ditto in bulk: Qualify combinator with nodelist or array of tag names</p>
 
@@ -1466,11 +1421,11 @@ Maybe somebody else calculated it already</p>
         </li>
         
         
-        <li id="section-46">
+        <li id="section-44">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-46">&#182;</a>
+                <a class="pilcrow" href="#section-44">&#182;</a>
               </div>
               <p>Check if query observes qualifier by combinator </p>
 

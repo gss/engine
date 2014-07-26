@@ -5,7 +5,7 @@
   <title>Restyles.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -258,12 +258,13 @@ another solver pass</pre></div></div>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
-              <p>Re-measure elements
-if intrinsic
- for path, value of intrinsic
-   data[path] = @set(path, undefined, value, positioning, true)</p>
+              <p>Re-measure elements</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> intrinsic
+      <span class="hljs-keyword">for</span> path, value <span class="hljs-keyword">of</span> intrinsic
+        data[path] = <span class="hljs-property">@set</span>(path, <span class="hljs-literal">undefined</span>, value, positioning, <span class="hljs-literal">true</span>)</pre></div></div>
             
         </li>
         
@@ -298,8 +299,9 @@ if intrinsic
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@data</span> = data
+
     <span class="hljs-keyword">if</span> suggestions = <span class="hljs-property">@engine</span>.getSuggestions()
-      <span class="hljs-property">@engine</span>.capture(suggestions.length + <span class="hljs-string">' intrinsics'</span>, suggestions)
+      <span class="hljs-property">@engine</span>.expressions.capture(suggestions.length + <span class="hljs-string">' intrinsics'</span>, suggestions)
     <span class="hljs-keyword">else</span>
       <span class="hljs-property">@data</span> = <span class="hljs-literal">undefined</span>
       <span class="hljs-property">@push</span>(data)

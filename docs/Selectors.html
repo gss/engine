@@ -5,7 +5,7 @@
   <title>Selectors.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -856,7 +856,7 @@ So we fall back to querySelect </p>
   <span class="hljs-string">':next'</span>:
     <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
     <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
-      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@queries</span>.getOperationPath(continuation))
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
       collection = <span class="hljs-property">@queries</span>.get path
       index = collection?.indexOf(node)
       <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> !index? || index == -<span class="hljs-number">1</span> || index == collection.length - <span class="hljs-number">1</span>
@@ -865,7 +865,7 @@ So we fall back to querySelect </p>
   <span class="hljs-string">':previous'</span>:
     <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
     <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
-      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@queries</span>.getOperationPath(continuation))
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
       collection = <span class="hljs-property">@queries</span>.get path
       index = collection?.indexOf(node)
       <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> index == -<span class="hljs-number">1</span> || !index
@@ -874,7 +874,7 @@ So we fall back to querySelect </p>
   <span class="hljs-string">':last'</span>:
     <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
     <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
-      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@queries</span>.getOperationPath(continuation))
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
       collection = <span class="hljs-property">@queries</span>.get path
       index = collection?.indexOf(node)
       <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> !index? || index == collection.length - <span class="hljs-number">1</span>
@@ -882,7 +882,7 @@ So we fall back to querySelect </p>
   <span class="hljs-string">':first'</span>:
     <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
     <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
-      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@queries</span>.getOperationPath(continuation))
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
       collection = <span class="hljs-property">@queries</span>.get path
       index = collection?.indexOf(node)
       <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> index == <span class="hljs-number">0</span></pre></div></div>

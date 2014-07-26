@@ -2,8 +2,9 @@
 # Mutations -> Solver -> Styles
 
 Engine = require('./Engine')
+Space  = require('./concepts/Space')
 
-class Document extends Engine
+class Document extends Class.include(Engine, Space)
   Queries:       
     require('./input/Queries')
 

@@ -5,7 +5,7 @@
   <title>Rules.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -268,7 +268,7 @@
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta)</span> -&gt;</span>
-      contd = <span class="hljs-property">@queries</span>.getScopePath(continuation) + operation.path
+      contd = <span class="hljs-property">@getScopePath</span>(continuation) + operation.path
       <span class="hljs-keyword">return</span> <span class="hljs-property">@queries</span>.get(contd)</pre></div></div>
             
         </li>
@@ -287,7 +287,7 @@ Duplicates are stored separately, they dont trigger callbacks</p>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-attribute">capture</span>: <span class="hljs-function"><span class="hljs-params">(result, operation, continuation, scope, meta)</span> -&gt;</span> 
       
-      contd = <span class="hljs-property">@queries</span>.getScopePath(continuation) + operation.parent.path
+      contd = <span class="hljs-property">@getScopePath</span>(continuation) + operation.parent.path
       <span class="hljs-property">@queries</span>.add(result, contd, operation.parent, scope, <span class="hljs-literal">true</span>)
       <span class="hljs-keyword">return</span> contd + <span class="hljs-property">@identify</span>(result) <span class="hljs-keyword">if</span> meta == <span class="hljs-property">@UP</span>
       <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span></pre></div></div>
@@ -307,7 +307,7 @@ Doesnt trigger callbacks if it was also found by other selector</p>
             </div>
             
             <div class="content"><div class='highlight'><pre>    <span class="hljs-attribute">release</span>: <span class="hljs-function"><span class="hljs-params">(result, operation, continuation, scope)</span> -&gt;</span>
-      contd = <span class="hljs-property">@queries</span>.getScopePath(continuation) + operation.parent.path
+      contd = <span class="hljs-property">@getScopePath</span>(continuation) + operation.parent.path
       <span class="hljs-property">@queries</span>.remove(result, contd, operation.parent, scope, <span class="hljs-literal">true</span>)
       <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span></pre></div></div>
             

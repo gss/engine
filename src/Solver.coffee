@@ -10,6 +10,7 @@ class Engine.Solver extends Engine
   Commands:  Engine.include(
     Engine::Commands
     require('./commands/Constraints')
+    require('./commands/Variables')
   )
 
   Properties:

@@ -5,7 +5,7 @@
   <title>Expressions.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -183,22 +183,9 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              <h2 id="input-expressions">Input: Expressions</h2>
+              <h3 id="input-expressions">Input: Expressions</h3>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre>
-Interepretes given expressions lazily top-down, 
-
-If sub-expression returns nodelist,
-it recursively evaluates expression bottom-up 
-<span class="hljs-keyword">for</span> each element <span class="hljs-keyword">in</span> nodelist
-
-Document expressions output expressions <span class="hljs-keyword">for</span> solver.
-Solver expressions output <span class="hljs-keyword">and</span> apply constraints.
-
-* <span class="hljs-attribute">Input</span>: Engine, reads commands
-* <span class="hljs-attribute">Output</span>: Engine, outputs results, leaves out unrecognized commands as <span class="hljs-keyword">is</span></pre></div></div>
             
         </li>
         
@@ -209,16 +196,27 @@ Solver expressions output <span class="hljs-keyword">and</span> apply constraint
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
-              <h1 id="-">#</h1>
+              <p>Interepretes given expressions lazily top-down, </p>
+<p>If sub-expression returns nodelist,
+it recursively evaluates expression bottom-up 
+for each element in nodelist</p>
+<p>Document expressions output expressions for solver.
+Solver expressions output and apply constraints.</p>
+<ul>
+<li><strong>Input</strong>: Engine, reads commands</li>
+<li><strong>Output</strong>: Engine, outputs results, leaves unknown commands</li>
+</ul>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>
+
 Buffer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../concepts/Buffer'</span>)
 
 <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Expressions</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Buffer</span></span>
   <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@engine</span>, <span class="hljs-property">@output</span>)</span> -&gt;</span>
-    <span class="hljs-property">@commands</span> = <span class="hljs-property">@engine</span> &amp;&amp; <span class="hljs-property">@engine</span>.commands || @</pre></div></div>
+    <span class="hljs-property">@commands</span> = <span class="hljs-property">@engine</span> &amp;&amp; <span class="hljs-property">@engine</span>.commands || @
+    <span class="hljs-property">@input</span> = <span class="hljs-string">'evaluate'</span></pre></div></div>
             
         </li>
         
@@ -228,27 +226,6 @@ Buffer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
-              </div>
-              <p>Hook: Evaluate input and pass produced output</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">pull</span>: <span class="hljs-function"><span class="hljs-params">(expression, continuation)</span> -&gt;</span>
-    <span class="hljs-keyword">if</span> expression
-      capture = <span class="hljs-property">@capture</span>(expression)
-      result = <span class="hljs-property">@evaluate</span>.apply(@, arguments)
-      <span class="hljs-property">@release</span>() <span class="hljs-keyword">if</span> capture
-       
-    <span class="hljs-keyword">return</span> result</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-4">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <p>Hook: Output commands in batch</p>
 
@@ -266,11 +243,11 @@ Buffer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
         </li>
         
         
-        <li id="section-5">
+        <li id="section-4">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-5">&#182;</a>
+                <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <p>Output buffered commands</p>
 
@@ -284,10 +261,23 @@ Buffer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
 
     <span class="hljs-keyword">if</span> buffer
       <span class="hljs-property">@buffer</span> = <span class="hljs-literal">undefined</span>
-      <span class="hljs-property">@output</span>.pull(buffer)
-    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@buffer</span> == <span class="hljs-literal">undefined</span>
-      <span class="hljs-property">@engine</span>.push()
-    <span class="hljs-keyword">else</span>
+      <span class="hljs-property">@output</span>.pull(buffer)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>else if @buffer == undefined
+ @engine.push()</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">else</span>
       <span class="hljs-property">@buffer</span> = <span class="hljs-literal">undefined</span>
     <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>.groupEnd()</pre></div></div>
             
@@ -412,7 +402,7 @@ Buffer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
     <span class="hljs-keyword">else</span>
       result = <span class="hljs-property">@execute</span>(operation, continuation, scope, meta, args)
       contd = continuation
-      continuation = <span class="hljs-property">@log</span>(operation, continuation)</pre></div></div>
+      continuation = <span class="hljs-property">@engine</span>.getOperationPath(operation, continuation)</pre></div></div>
             
         </li>
         
@@ -1007,16 +997,7 @@ TODO: Refactor this mess of nested conditions</p>
 
     <span class="hljs-keyword">return</span> before + prefix + after + suffix
 
-  <span class="hljs-attribute">log</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation)</span> -&gt;</span>
-    <span class="hljs-keyword">if</span> continuation?
-      <span class="hljs-keyword">if</span> operation.def.serialized &amp;&amp; !operation.def.hidden
-        <span class="hljs-keyword">return</span> continuation + (operation.key || operation.path)
-      <span class="hljs-keyword">return</span> continuation
-    <span class="hljs-keyword">else</span>
-      <span class="hljs-keyword">return</span> operation.path
 
-
-<span class="hljs-property">@module</span> ||= {}
 <span class="hljs-built_in">module</span>.exports = Expressions</pre></div></div>
             
         </li>

@@ -5,7 +5,7 @@
   <title>Document.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -292,7 +292,7 @@ Engine = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@capturer</span>  = <span class="hljs-property">@queries</span></pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@expressions</span>.capturer  = <span class="hljs-property">@queries</span></pre></div></div>
             
         </li>
         
@@ -314,20 +314,25 @@ Engine = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
     <span class="hljs-keyword">else</span>
       <span class="hljs-property">@start</span>()
 
-      <span class="hljs-property">@types</span>       = <span class="hljs-keyword">new</span> <span class="hljs-property">@Types</span>(@)       <span class="hljs-keyword">if</span> <span class="hljs-property">@Types</span>
     <span class="hljs-property">@scope</span>.addEventListener <span class="hljs-string">'scroll'</span>, @
     <span class="hljs-built_in">window</span>.addEventListener <span class="hljs-string">'resize'</span>, @
+
+  <span class="hljs-attribute">capture</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@expressions</span>.capture.apply(<span class="hljs-property">@expressions</span>, arguments)
+  
+  <span class="hljs-attribute">release</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@expressions</span>.release.apply(<span class="hljs-property">@expressions</span>, arguments)
     
   <span class="hljs-attribute">onresize</span>: <span class="hljs-function"><span class="hljs-params">(e = <span class="hljs-string">'::window'</span>)</span> -&gt;</span>
     id = e.target &amp;&amp; <span class="hljs-property">@identify</span>(e.target) || e
-    captured = <span class="hljs-property">@capture</span>(id + <span class="hljs-string">' resized'</span>) 
+    captured = <span class="hljs-property">@expressions</span>.capture(id + <span class="hljs-string">' resized'</span>) 
     <span class="hljs-property">@measure</span>(id, <span class="hljs-string">"width"</span>, <span class="hljs-literal">undefined</span>, <span class="hljs-literal">false</span>)
     <span class="hljs-property">@measure</span>(id, <span class="hljs-string">"height"</span>, <span class="hljs-literal">undefined</span>, <span class="hljs-literal">false</span>)
     <span class="hljs-property">@release</span>() <span class="hljs-keyword">if</span> captured
     
   <span class="hljs-attribute">onscroll</span>: <span class="hljs-function"><span class="hljs-params">(e = <span class="hljs-string">'::window'</span>)</span> -&gt;</span>
     id = e.target &amp;&amp; <span class="hljs-property">@identify</span>(e.target) || e
-    captured = <span class="hljs-property">@capture</span>(id + <span class="hljs-string">' scrolled'</span>) 
+    captured = <span class="hljs-property">@expressions</span>.capture(id + <span class="hljs-string">' scrolled'</span>) 
     <span class="hljs-property">@measure</span>(id, <span class="hljs-string">"scroll-top"</span>, <span class="hljs-literal">undefined</span>, <span class="hljs-literal">false</span>)
     <span class="hljs-property">@measure</span>(id, <span class="hljs-string">"scroll-left"</span>, <span class="hljs-literal">undefined</span>, <span class="hljs-literal">false</span>)
     <span class="hljs-property">@release</span>() <span class="hljs-keyword">if</span> captured
@@ -371,7 +376,7 @@ Engine = <span class="hljs-built_in">require</span>(<span class="hljs-string">'.
     <span class="hljs-keyword">if</span> <span class="hljs-keyword">super</span>
       <span class="hljs-keyword">return</span> <span class="hljs-property">@capture</span> <span class="hljs-string">'stylesheets'</span>, [
         [<span class="hljs-string">'eval'</span>,  [<span class="hljs-string">'$attribute'</span>, [<span class="hljs-string">'$tag'</span>, <span class="hljs-string">'style'</span>], <span class="hljs-string">'*='</span>, <span class="hljs-string">'type'</span>, <span class="hljs-string">'text/gss'</span>]]
-        [<span class="hljs-string">'load'</span>,  [<span class="hljs-string">'$attribute'</span>, [<span class="hljs-string">'$tag'</span>, <span class="hljs-string">'link'</span>],  <span class="hljs-string">'*='</span>, <span class="hljs-string">'type'</span>, <span class="hljs-string">'text/gss'</span>]]
+        [<span class="hljs-string">'load'</span>,  [<span class="hljs-string">'$attribute'</span>, [<span class="hljs-string">'$tag'</span>, <span class="hljs-string">'link'</span> ], <span class="hljs-string">'*='</span>, <span class="hljs-string">'type'</span>, <span class="hljs-string">'text/gss'</span>]]
       ]</pre></div></div>
             
         </li>

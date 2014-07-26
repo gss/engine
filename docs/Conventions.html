@@ -5,7 +5,7 @@
   <title>Conventions.coffee</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
-  <link rel="stylesheet" media="all" href="docco.css" />
+  <link rel="stylesheet" media="all" href="docs.css" />
 </head>
 <body>
   <div id="container">
@@ -183,9 +183,16 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              <h2 id="-"> </h2>
+              <p>Dynamic systems need to be able to clean up side effects.
+Instead of linking effects explicitly, we generate 
+unique tracking labels with special delimeters.
+Together they enable bottom-up evaluation and 
+stateless continuations.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Conventions</span></span></pre></div></div>
             
         </li>
         
@@ -196,27 +203,9 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
-              <h1 id="conventions">Conventions</h1>
-<p>Okay what’s the deal with those → ↓ ↑ arrows? 
-Open your mind and think beyond this Unicode madness. </p>
-<p>Dynamic systems need to be able to clean up side effects
-Instead of linking things together, we are use a tracking system
-that generates determenistic unique string keys
-that are used for multiple purposes.</p>
+              <h3 id="delimeters">Delimeters</h3>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre>
-↑  Caching, e.g. to jump to results <span class="hljs-keyword">of</span> dom query,
-   <span class="hljs-keyword">or</span> to figure out which element <span class="hljs-keyword">in</span> that collection 
-   called <span class="hljs-keyword">this</span> <span class="hljs-reserved">function</span> (↑)
-
-→  Linking, that allows lazy evaluation, <span class="hljs-keyword">by</span> making arguments
-   depend <span class="hljs-literal">on</span> previously resolved arguments,
-   e.g. <span class="hljs-keyword">for</span> plural binding <span class="hljs-keyword">or</span> to generate unique argument signature
-
-↓  Nesting, as a way <span class="hljs-keyword">for</span> expressions to own side effects,
-   e.g. to remove stylesheet, css rule <span class="hljs-keyword">or</span> conditional branch</pre></div></div>
             
         </li>
         
@@ -227,36 +216,13 @@ that are used for multiple purposes.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <p>These arrows are delimeters that combined together 
-enable bottom-up evaluation and continuations
-without leaving any state behind. 
-Continuations without explicit state.</p>
-<p>It’s a lot easier to clean up stateless systems. 
-Whenever a string key is set to be cleaned up,
-it broadcasts that intent to all subsystems, 
-like constraint solver, dom observer, etc.
-So they can clean up things related to that key
-by triggering more remove commands for known sub-keys.</p>
-<p>This removal cascade allows components to have strict
-and arbitarily deep hierarchy, without knowing of it.</p>
+              <p><strong>↑ Referencing</strong>, e.g. to jump to results of dom query,
+or to figure out which element in that collection 
+called this function</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>
-    style$my-stylesheet   <span class="hljs-comment"># my stylesheet</span>
-               ↓ h1$h1    <span class="hljs-comment"># found heading</span>
-               ↑ !+img    <span class="hljs-comment"># preceeded by image</span>
-               → <span class="hljs-comment">#header  # bound to header element</span>
-
-    &lt;style id=<span class="hljs-string">"my-stylesheet"</span>&gt;
-      (h1 !+ img)[width] == <span class="hljs-comment">#header[width]</span>
-    &lt;/style&gt;
-    &lt;header id=<span class="hljs-string">"header"</span>&gt;
-      &lt;img&gt;
-      &lt;h1 id=<span class="hljs-string">"h1"</span>&gt;&lt;/h1&gt;
-    &lt;/header&gt;
-
-.</pre></div></div>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">UP</span>:    <span class="hljs-string">'↑'</span></pre></div></div>
             
         </li>
         
@@ -267,12 +233,13 @@ and arbitarily deep hierarchy, without knowing of it.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
-              <h1 id="-">#</h1>
+              <p><strong>→ Linking</strong>, that allows lazy evaluation, by making arguments
+depend on previously resolved arguments,
+e.g. for plural binding or to generate unique argument signature</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>
-<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Conventions</span></span></pre></div></div>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">RIGHT</span>: <span class="hljs-string">'→'</span></pre></div></div>
             
         </li>
         
@@ -283,14 +250,12 @@ and arbitarily deep hierarchy, without knowing of it.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
-              <p>Return concatenated path for a given object and prefix
-Removes trailing delimeter.</p>
+              <p><strong>↓ Nesting</strong>, as a way for expressions to own side effects,
+e.g. to remove stylesheet, css rule or conditional branch</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getContinuation</span>: <span class="hljs-function"><span class="hljs-params">(path, value, suffix = <span class="hljs-string">''</span>)</span> -&gt;</span>
-    <span class="hljs-keyword">if</span> path
-      path = path.replace(<span class="hljs-regexp">/[→↓↑]$/</span>, <span class="hljs-string">''</span>)</pre></div></div>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">DOWN</span>:  <span class="hljs-string">'↓'</span></pre></div></div>
             
         </li>
         
@@ -301,12 +266,33 @@ Removes trailing delimeter.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
-              <p>return path unless value?</p>
+              <h3 id="example">Example</h3>
+<p>It’s a lot easier to clean up stateless systems. 
+Whenever a string key is set to be cleaned up,
+it broadcasts that intent to all subsystems, 
+like constraint solver, dom observer, etc.
+So they can clean up things related to that key
+by triggering more remove commands for known sub-keys.</p>
+<p>This removal cascade allows components to have strict
+and arbitarily deep hierarchy, without knowing of it.</p>
+<h2 id="-"> </h2>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> value <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> value == <span class="hljs-string">'string'</span>
-    <span class="hljs-keyword">return</span> path + (value &amp;&amp; <span class="hljs-property">@identify</span>(value) || <span class="hljs-string">''</span>) + suffix</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    &lt;!-- Example <span class="hljs-keyword">of</span> <span class="hljs-built_in">document</span> -<span class="hljs-function">-&gt;</span>
+    &lt;style id=<span class="hljs-string">"my-stylesheet"</span>&gt;
+      (h1 !+ img)[width] == <span class="hljs-comment">#header[width]</span>
+    &lt;/style&gt;
+    &lt;header id=<span class="hljs-string">"header"</span>&gt;
+      &lt;img&gt;
+      &lt;h1 id=<span class="hljs-string">"h1"</span>&gt;&lt;/h1&gt;
+    &lt;/header&gt;
+
+    &lt;!-- Generated constraint key -<span class="hljs-function">-&gt;</span>
+    style$my-stylesheet   <span class="hljs-comment"># my stylesheet</span>
+               ↓ h1$h1    <span class="hljs-comment"># found heading</span>
+               ↑ !+img    <span class="hljs-comment"># preceeded by image</span>
+               → <span class="hljs-comment">#header  # bound to header element###</span></pre></div></div>
             
         </li>
         
@@ -317,15 +303,61 @@ Removes trailing delimeter.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
+              <h3 id="methods">Methods</h3>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Return concatenated path for a given object and prefix
+Removes trailing delimeter.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getContinuation</span>: <span class="hljs-function"><span class="hljs-params">(path, value, suffix = <span class="hljs-string">''</span>)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> path
+      path = path.replace(<span class="hljs-regexp">/[→↓↑]$/</span>, <span class="hljs-string">''</span>)
+    <span class="hljs-keyword">return</span> value <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> value == <span class="hljs-string">'string'</span>
+    <span class="hljs-keyword">return</span> path + (value &amp;&amp; <span class="hljs-property">@identify</span>(value) || <span class="hljs-string">''</span>) + suffix</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
               <p>When cleaning a path, also clean forks, rules and pairs
-This is a little bit of necessary evil in </p>
+This is a little bit of necessary evil.</p>
 
             </div>
             
             <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getPossibleContinuations</span>: <span class="hljs-function"><span class="hljs-params">(path)</span> -&gt;</span>
-    [path, path + <span class="hljs-property">@UP</span>, path + <span class="hljs-property">@RIGHT</span>, path + <span class="hljs-property">@DOWN</span>]
+    [path, path + <span class="hljs-property">@UP</span>, path + <span class="hljs-property">@RIGHT</span>, path + <span class="hljs-property">@DOWN</span>]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Return computed path for id and property e.g. $id[property]</p>
 
-  <span class="hljs-attribute">getPath</span>: <span class="hljs-function"><span class="hljs-params">(id, property)</span> -&gt;</span>
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getPath</span>: <span class="hljs-function"><span class="hljs-params">(id, property)</span> -&gt;</span>
     <span class="hljs-keyword">unless</span> property
       property = id
       id = <span class="hljs-literal">undefined</span>
@@ -337,32 +369,19 @@ This is a little bit of necessary evil in </p>
         </li>
         
         
-        <li id="section-8">
+        <li id="section-11">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
-              <p>Hook: Should interpreter iterate returned object?</p>
+              <p>Hook: Should interpreter iterate returned object?
+(yes, if it’s a collection of objects or empty array)</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">isCollection</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span></pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-9">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-9">&#182;</a>
-              </div>
-              <p>(yes, if it’s a collection of objects or empty array)</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> object &amp;&amp; object.length != <span class="hljs-literal">undefined</span> &amp;&amp; !object.substring &amp;&amp; !object.nodeType
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">isCollection</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> object &amp;&amp; object.length != <span class="hljs-literal">undefined</span> &amp;&amp; !object.substring &amp;&amp; !object.nodeType
       <span class="hljs-keyword">switch</span> <span class="hljs-keyword">typeof</span> object[<span class="hljs-number">0</span>]
         <span class="hljs-keyword">when</span> <span class="hljs-string">"object"</span>
           <span class="hljs-keyword">return</span> object[<span class="hljs-number">0</span>].nodeType
@@ -372,11 +391,11 @@ This is a little bit of necessary evil in </p>
         </li>
         
         
-        <li id="section-10">
+        <li id="section-12">
             <div class="annotation">
               
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-10">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <p>Return shared absolute path of a dom query ($id selector) </p>
 
@@ -394,64 +413,24 @@ This is a little bit of necessary evil in </p>
         </li>
         
         
-        <li id="section-11">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-11">&#182;</a>
-              </div>
-              <p>Check if selector is bound to current scope’s element</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getContext</span>: <span class="hljs-function"><span class="hljs-params">(args, operation, scope, node)</span> -&gt;</span>
-    index = args[<span class="hljs-number">0</span>].def &amp;&amp; <span class="hljs-number">4</span> || <span class="hljs-number">0</span>
-    <span class="hljs-keyword">if</span> (args.length != index &amp;&amp; (args[index]?.nodeType))
-      <span class="hljs-keyword">return</span> args[index]
-    <span class="hljs-keyword">if</span> !operation.bound
-      <span class="hljs-keyword">return</span> <span class="hljs-property">@scope</span>
-    <span class="hljs-keyword">return</span> scope;
-
-  <span class="hljs-attribute">getIntrinsicProperty</span>: <span class="hljs-function"><span class="hljs-params">(path)</span> -&gt;</span>
-    index = path.indexOf(<span class="hljs-string">'intrinsic-'</span>)
-    <span class="hljs-keyword">if</span> index &gt; -<span class="hljs-number">1</span>
-      <span class="hljs-keyword">if</span> (last = path.indexOf(<span class="hljs-string">']'</span>, index)) == -<span class="hljs-number">1</span>
-        last = <span class="hljs-literal">undefined</span>
-      <span class="hljs-keyword">return</span> property = path.substring(index + <span class="hljs-number">10</span>, last)
-
-  <span class="hljs-attribute">isPrimitive</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span></pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-12">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
-              </div>
-              <p>Objects are allowed only if they define custom valueOf function</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> object == <span class="hljs-string">'object'</span>
-      <span class="hljs-keyword">return</span> object.valueOf != Object.prototype.valueOf
-    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span></pre></div></div>
-            
-        </li>
-        
-        
         <li id="section-13">
             <div class="annotation">
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
-              <p>Execution has forked (found many elements, trying brute force to complete selector)</p>
+              <p>Remove all fork marks from a path. 
+Allows multiple selector paths have shared destination </p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">UP</span>:    <span class="hljs-string">'↑'</span></pre></div></div>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getCanonicalPath</span>: <span class="hljs-function"><span class="hljs-params">(continuation, compact)</span> -&gt;</span>
+    bits = <span class="hljs-property">@getContinuation</span>(continuation).split(<span class="hljs-property">@DOWN</span>);
+    last = bits[bits.length - <span class="hljs-number">1</span>]
+    last = bits[bits.length - <span class="hljs-number">1</span>] = last.split(<span class="hljs-property">@RIGHT</span>).pop().replace(<span class="hljs-property">@CanonicalizeRegExp</span>, <span class="hljs-string">''</span>)
+    <span class="hljs-keyword">return</span> last <span class="hljs-keyword">if</span> compact
+    <span class="hljs-keyword">return</span> bits.join(<span class="hljs-property">@DOWN</span>)
+  <span class="hljs-attribute">CanonicalizeRegExp</span>: <span class="hljs-regexp">/\$[^↑]+(?:↑|$)/g</span></pre></div></div>
             
         </li>
         
@@ -462,11 +441,15 @@ This is a little bit of necessary evil in </p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
-              <p>One selector was resolved, expecting another selector to pair up</p>
+              <p>Get path for the scope that triggered the script 
+(e.g. el matched by css rule)</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">RIGHT</span>: <span class="hljs-string">'→'</span></pre></div></div>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getScopePath</span>: <span class="hljs-function"><span class="hljs-params">(continuation)</span> -&gt;</span>
+    bits = continuation.split(<span class="hljs-property">@DOWN</span>)
+    bits[bits.length - <span class="hljs-number">1</span>] = <span class="hljs-string">""</span>
+    <span class="hljs-keyword">return</span> bits.join(<span class="hljs-property">@DOWN</span>)</pre></div></div>
             
         </li>
         
@@ -477,11 +460,97 @@ This is a little bit of necessary evil in </p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
-              <p>Execution goes depth first (inside stylesheet or css rule)</p>
+              <p>Return path for given operation</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">DOWN</span>:  <span class="hljs-string">'↓'</span>
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getOperationPath</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> continuation?
+      <span class="hljs-keyword">if</span> operation.def.serialized &amp;&amp; !operation.def.hidden
+        <span class="hljs-keyword">return</span> continuation + (operation.key || operation.path)
+      <span class="hljs-keyword">return</span> continuation
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> operation.path</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Return element that is used as a context for given DOM operation</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getContext</span>: <span class="hljs-function"><span class="hljs-params">(args, operation, scope, node)</span> -&gt;</span>
+    index = args[<span class="hljs-number">0</span>].def &amp;&amp; <span class="hljs-number">4</span> || <span class="hljs-number">0</span>
+    <span class="hljs-keyword">if</span> (args.length != index &amp;&amp; (args[index]?.nodeType))
+      <span class="hljs-keyword">return</span> args[index]
+    <span class="hljs-keyword">if</span> !operation.bound
+      <span class="hljs-keyword">return</span> <span class="hljs-property">@scope</span>
+    <span class="hljs-keyword">return</span> scope;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Return name of intrinsic property used in property path </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">getIntrinsicProperty</span>: <span class="hljs-function"><span class="hljs-params">(path)</span> -&gt;</span>
+    index = path.indexOf(<span class="hljs-string">'intrinsic-'</span>)
+    <span class="hljs-keyword">if</span> index &gt; -<span class="hljs-number">1</span>
+      <span class="hljs-keyword">if</span> (last = path.indexOf(<span class="hljs-string">']'</span>, index)) == -<span class="hljs-number">1</span>
+        last = <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">return</span> property = path.substring(index + <span class="hljs-number">10</span>, last)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Is the value numerical? Helps us to deal with detecting non-linear exps
+Objects are allowed only if they define custom valueOf function</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">isPrimitive</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> object == <span class="hljs-string">'object'</span>
+      <span class="hljs-keyword">return</span> object.valueOf != Object.prototype.valueOf
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Little shim for require.js so we dont have to carry it around</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-property">@require</span> ||= <span class="hljs-function"><span class="hljs-params">(string)</span> -&gt;</span>
+  <span class="hljs-keyword">if</span> string == <span class="hljs-string">'cassowary'</span>
+    <span class="hljs-keyword">return</span> c
+  bits = string.replace(<span class="hljs-string">''</span>, <span class="hljs-string">''</span>).split(<span class="hljs-string">'/'</span>)
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>[bits[bits.length - <span class="hljs-number">1</span>]]
+<span class="hljs-property">@module</span> ||= {}
 
 <span class="hljs-built_in">module</span>.exports = Conventions</pre></div></div>
             

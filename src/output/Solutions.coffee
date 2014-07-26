@@ -11,8 +11,9 @@ State:
 ###
 
 require('cassowary')
+Space = require('../concepts/Space')
 
-class Solutions
+class Solutions extends Space
   constructor: (@engine, @output) ->
     @solver = new c.SimplexSolver()
     @solver.autoSolve = false
