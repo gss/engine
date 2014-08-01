@@ -2,8 +2,8 @@
 expect = chai.expect
 assert = chai.assert
 
-doc = GSS.Document::
-doc.compile()
+doc = GSS::
+#doc.compile()
 engine = null
 
 describe 'Styles', ->

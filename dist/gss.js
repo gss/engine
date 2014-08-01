@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-07-26) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-01) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19058,396 +19058,240 @@ c._api = function() {
 
 });
 require.register("gss/lib/Engine.js", function(exports, require, module){
-var Buffer, Engine, EventTrigger, include,
+/* Base class: Engine
+
+Engine is a base class for scripting environments.
+It initializes and orchestrates all moving parts.
+
+It includes interpreter that operates in defined constraint domains.
+Each domain has its own command set, that extends engine defaults.
+*/
+
+var Domain, Engine, Events, Native,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-include = function() {
-  var Context, fn, mixin, name, _i, _len, _ref;
-  Context = function(engine) {
-    this.engine = engine;
-  };
-  for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-    mixin = arguments[_i];
-    _ref = mixin.prototype;
-    for (name in _ref) {
-      fn = _ref[name];
-      Context.prototype[name] = fn;
-    }
-  }
-  return Context;
-};
+Events = require('./concepts/Events');
 
-EventTrigger = require('./concepts/EventTrigger');
+Domain = require('./concepts/Domain');
 
-Buffer = require('./concepts/Buffer');
+Native = require('./methods/Native');
+
+Domain.Events || (Domain.Events = Native.prototype.mixin(Domain, Events));
 
 Engine = (function(_super) {
   __extends(Engine, _super);
 
-  Engine.prototype.Expressions = require('./input/Expressions');
+  Engine.prototype.Identity = require('./modules/Identity');
 
-  Engine.prototype.Values = require('./input/Values');
+  Engine.prototype.Expressions = require('./modules/Expressions');
 
-  Engine.prototype.Commands = require('./commands/Conventions');
+  Engine.prototype.Method = require('./concepts/Method');
 
   Engine.prototype.Property = require('./concepts/Property');
 
-  Engine.prototype.Command = require('./concepts/Command');
-
-  Engine.prototype.Helper = require('./concepts/Helper');
-
   Engine.prototype.Console = require('./concepts/Console');
 
-  function Engine(scope, url) {
-    var Document, engine, id;
-    if (scope && scope.nodeType) {
-      if (this.Expressions) {
-        if (Document = Engine.Document) {
-          if (!(this instanceof Document)) {
-            return new Document(scope, url);
-          }
-        }
-        Engine[Engine.identify(scope)] = this;
-        this.scope = scope;
-        this.all = scope.getElementsByTagName('*');
-      } else {
-        while (scope) {
-          if (id = Engine.recognize(scope)) {
-            if (engine = Engine[id]) {
-              return engine;
-            }
-          }
-          if (!scope.parentNode) {
-            break;
-          }
-          scope = scope.parentNode;
-        }
-      }
-    }
-    if (!scope || typeof scope === 'string') {
-      if (Engine.Solver && !(this instanceof Engine.Solver)) {
-        return new Engine.Solver(void 0, void 0, scope);
-      }
-    }
-    if (this.Expressions) {
-      if (this.Properties) {
-        this.properties = new this.Properties(this);
-      }
-      if (this.Commands) {
-        this.commands = new this.Commands(this);
-      }
-      this.expressions = new this.Expressions(this);
-      this.values = this.vars = new this.Values(this);
-      this.events = {};
-      this.input = this.expressions;
-      this.engine = this;
-      return;
-    }
-    return new (Engine.Document || Engine)(scope, url);
-  }
+  Engine.prototype.Properties = require('./properties/Axioms');
 
-  Engine.prototype.push = function(data) {
-    var id, _i, _len, _ref;
-    if (this.removed) {
-      _ref = this.removed;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        id = _ref[_i];
-        delete this.engine.elements[id];
-      }
-      this.removed = void 0;
-    }
-    this.values.merge(data);
-    this.triggerEvent('solved', data);
-    if (this.scope) {
-      this.dispatchEvent(this.scope, 'solved', data);
-    }
-    return Engine.__super__.push.apply(this, arguments);
+  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Algebra'));
+
+  Engine.prototype.Domains = {
+    Intrinsic: require('./domains/Intrinsic'),
+    Numeric: require('./domains/Numeric'),
+    Linear: require('./domains/Linear'),
+    Finite: require('./domains/Finite')
   };
 
-  Engine.prototype.destroy = function() {
-    if (this.scope) {
+  function Engine(scope, url) {
+    var argument, assumed, engine, id, index, _i, _len;
+    for (index = _i = 0, _len = arguments.length; _i < _len; index = ++_i) {
+      argument = arguments[index];
+      if (!argument) {
+        continue;
+      }
+      switch (typeof argument) {
+        case 'object':
+          if (argument.nodeType) {
+            if (this.Expressions) {
+              Engine[Engine.identity.provide(scope)] = this;
+              this.scope = scope;
+              this.all = scope.getElementsByTagName('*');
+            } else {
+              while (scope) {
+                if (id = Engine.identity.solve(scope)) {
+                  if (engine = Engine[id]) {
+                    return engine;
+                  }
+                }
+                if (!scope.parentNode) {
+                  break;
+                }
+                scope = scope.parentNode;
+              }
+            }
+          } else {
+            assumed = argument;
+          }
+          break;
+        case 'string':
+          if (this.Expressions) {
+            this.url = url;
+          } else {
+            url = url;
+          }
+      }
+    }
+    if (!this.Expressions) {
+      return new Engine(scope, url);
+    }
+    Engine.__super__.constructor.call(this);
+    this.engine = this;
+    this.domain = this;
+    this.properties = new this.Properties(this);
+    this.methods = new this.Methods(this);
+    this.precompile();
+    this.expressions = new this.Expressions(this);
+    this.assumed = new this.Domain(this, assumed, 'Assumed');
+    this.solved = new this.Numeric(this);
+    return this;
+  }
+
+  Engine.prototype.events = {
+    message: function(e) {
+      return this.provide(e.data);
+    },
+    error: function(e) {
+      throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
+    },
+    destroy: function(e) {
       return Engine[this.scope._gss_id] = void 0;
     }
   };
 
-  Engine.identify = function(object, generate) {
-    var id;
-    if (!(id = object._gss_id)) {
-      if (object === document) {
-        id = "::document";
-      } else if (object === window) {
-        id = "::window";
+  Engine.prototype.strategy = 'expressions';
+
+  Engine.prototype.solve = function() {
+    var args, index, provided, reason, solution, source, _ref, _ref1;
+    if (typeof arguments[0] === 'string') {
+      if (typeof arguments[1] === 'string') {
+        source = arguments[0];
+        reason = arguments[1];
+        index = 2;
+      } else {
+        reason = arguments[0];
+        index = 1;
       }
-      if (generate !== false) {
-        object._gss_id = id || (id = "$" + (object.id || ++Engine.uid));
-      }
-      Engine.prototype.elements[id] = object;
     }
-    return id;
-  };
-
-  Engine.recognize = function(object) {
-    return Engine.identify(object, false);
-  };
-
-  Engine.prototype.identify = function(object) {
-    return Engine.identify(object);
-  };
-
-  Engine.prototype.recognize = function(object) {
-    return Engine.identify(object, false);
-  };
-
-  Engine.uid = 0;
-
-  Engine.prototype.elements = {};
-
-  Engine.prototype.engines = {};
-
-  Engine.prototype.start = function() {
-    if (this.running) {
-      return;
+    args = Array.prototype.slice.call(arguments, index || 0);
+    if (!this.running) {
+      this.compile(true);
     }
-    if (this.constructor.prototype.running === void 0) {
-      this.constructor.prototype.running = null;
-      this.constructor.prototype.compile();
+    if ((_ref = args[0]) != null ? _ref.push : void 0) {
+      this.console.start(reason || args[0], source || this.displayName || 'Intrinsic');
     }
-    this.compile();
-    return this.running = true;
-  };
-
-  Engine.prototype.compile = function() {
-    var command, commands, key, prop, properties, property, subkey, _name, _name1;
-    commands = this.commands || this.Commands.prototype;
-    commands.engine || (commands.engine = this);
-    for (key in commands) {
-      command = commands[key];
-      if (command === this || !commands.hasOwnProperty(key)) {
-        continue;
-      }
-      if (key.charAt(0) !== '_') {
-        subkey = '_' + key;
-        command = this.Command(command, subkey);
-        if (this[subkey] == null) {
-          this[subkey] = command;
+    if (typeof args[0] === 'function') {
+      solution = args.shift().apply(this, args);
+    } else {
+      this.providing = null;
+      if (!(solution = Domain.prototype.solve.apply(this, args))) {
+        if (provided = this.providing) {
+          this.providing = void 0;
+          solution = this.provide(provided);
         }
       }
-      if (this[key] == null) {
-        this[key] = command;
+      this.providing = void 0;
+    }
+    if ((_ref1 = args[0]) != null ? _ref1.push : void 0) {
+      this.console.end(reason);
+    }
+    if (!solution) {
+      return;
+    }
+    if (this.applier && !this.applier.solve(solution)) {
+      return;
+    }
+    this.console.info('Solution\t   ', solution);
+    this.triggerEvent('solve', solution);
+    if (this.scope) {
+      this.dispatchEvent(this.scope, 'solve', solution);
+    }
+    return solution;
+  };
+
+  Engine.prototype.provide = function(solution, recursive) {
+    var arg, d, domain, domains, host, index, merged, provided, result, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m;
+    if (this.providing !== void 0) {
+      (this.providing || (this.providing = [])).push(solution);
+      return;
+    }
+    domains = void 0;
+    switch (typeof solution) {
+      case 'object':
+        if (solution.push) {
+          for (_i = 0, _len = solution.length; _i < _len; _i++) {
+            arg = solution[_i];
+            if (arg != null ? arg.push : void 0) {
+              provided = this.engine.provide(arg, true);
+              if (domains) {
+                for (_j = 0, _len1 = provided.length; _j < _len1; _j++) {
+                  domain = provided[_j];
+                  if (domain !== this && domains.indexOf(domain) === -1) {
+                    merged = void 0;
+                    if (isFinite(domain.priority)) {
+                      for (_k = 0, _len2 = domains.length; _k < _len2; _k++) {
+                        d = domains[_k];
+                        if (merged = d.merge(domain)) {
+                          domain = merged;
+                          break;
+                        }
+                      }
+                    }
+                    if (!merged) {
+                      domains.unshift(domain);
+                    }
+                  }
+                }
+              } else {
+                domains = provided;
+              }
+            }
+          }
+          host = solution[0] === 'get' && this.Domain(solution) || solution.domain;
+          if (host && host !== this && (!domains || domains.indexOf(host) === -1)) {
+            domains || (domains = []);
+            for (index = _l = 0, _len3 = domains.length; _l < _len3; index = ++_l) {
+              domain = domains[index];
+              if (domain.priority <= host.priority) {
+                break;
+              }
+            }
+            domains.splice(index, 0, host);
+          }
+        }
+    }
+    if (domains) {
+      if (!recursive) {
+        console.error(domains);
+        result = solution;
+        for (_m = 0, _len4 = domains.length; _m < _len4; _m++) {
+          domain = domains[_m];
+          this.console.start(result, domain.displayName);
+          this.providing = null;
+          result = domain.solve(result) || this.providing;
+          this.providing = void 0;
+          this.console.end();
+        }
+        return result;
       }
+      return domains;
+    } else if (recursive) {
+      return [this.intrinsic];
     }
-    properties = this.properties || this.Properties.prototype;
-    properties.engine || (properties.engine = this);
-    for (key in properties) {
-      property = properties[key];
-      if (property === this || !properties.hasOwnProperty(key)) {
-        continue;
-      }
-      prop = this.Property(property, key, properties);
-      if (this[_name = '_' + key] == null) {
-        this[_name] = prop;
-      }
-    }
-    for (key in properties) {
-      property = properties[key];
-      if (this[_name1 = '_' + key] == null) {
-        this[_name1] = property;
-      }
-    }
-    return this;
+    return solution;
   };
 
-  Engine.prototype.console = Engine.console = new Engine.prototype.Console;
-
-  Engine.prototype.time = Engine.time = Engine.prototype.Console.time;
-
-  Engine.prototype.clone = Engine.clone = function(object) {
-    if (object && object.map) {
-      return object.map(this.clone, this);
-    }
-    return object;
-  };
-
-  Engine.include = include;
-
-  return Engine;
-
-})(include(EventTrigger, Buffer));
-
-this.GSS = Engine;
-
-module.exports = Engine;
-
-});
-require.register("gss/lib/Document.js", function(exports, require, module){
-var Document, Engine, Space, command, property, source, target, _i, _j, _len, _len1, _ref, _ref1,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Engine = require('./Engine');
-
-Space = require('./concepts/Space');
-
-Document = (function(_super) {
-  __extends(Document, _super);
-
-  Document.prototype.Queries = require('./input/Queries');
-
-  Document.prototype.Restyles = require('./output/Restyles');
-
-  Document.prototype.Solver = require('./Solver');
-
-  Document.prototype.Style = require('./concepts/Style');
-
-  Document.prototype.Types = require('./commands/Types');
-
-  Document.prototype.Units = require('./commands/Units');
-
-  Document.prototype.Commands = Engine.include(Engine.prototype.Commands, Document.prototype.Units, Document.prototype.Types, require('./commands/Measurements'), require('./commands/Selectors'), require('./commands/Rules'), require('./commands/Native'), require('./commands/Algebra'), require('./commands/Transformations'));
-
-  Document.prototype.Properties = Engine.include(require('./properties/Dimensions'), require('./properties/Equasions'), require('./properties/Styles'));
-
-  function Document(scope, url) {
-    var context;
-    if (scope == null) {
-      scope = document;
-    }
-    if (context = Document.__super__.constructor.call(this, scope, url)) {
-      return context;
-    }
-    this.restyles = new this.Restyles(this);
-    this.solver = new this.Solver(this, this.restyles, url);
-    this.queries = new this.Queries(this, this.expressions);
-    this.types = new this.Types(this);
-    this.units = new this.Units(this);
-    this.expressions.capturer = this.queries;
-    this.expressions.output = this.solver;
-    if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
-      this.scope.addEventListener('DOMContentLoaded', this);
-    } else {
-      this.start();
-    }
-    this.scope.addEventListener('scroll', this);
-    window.addEventListener('resize', this);
-  }
-
-  Document.prototype.capture = function() {
-    return this.expressions.capture.apply(this.expressions, arguments);
-  };
-
-  Document.prototype.release = function() {
-    return this.expressions.release.apply(this.expressions, arguments);
-  };
-
-  Document.prototype.onresize = function(e) {
-    var captured, id;
-    if (e == null) {
-      e = '::window';
-    }
-    id = e.target && this.identify(e.target) || e;
-    captured = this.expressions.capture(id + ' resized');
-    this.measure(id, "width", void 0, false);
-    this.measure(id, "height", void 0, false);
-    if (captured) {
-      return this.release();
-    }
-  };
-
-  Document.prototype.onscroll = function(e) {
-    var captured, id;
-    if (e == null) {
-      e = '::window';
-    }
-    id = e.target && this.identify(e.target) || e;
-    captured = this.expressions.capture(id + ' scrolled');
-    this.measure(id, "scroll-top", void 0, false);
-    this.measure(id, "scroll-left", void 0, false);
-    if (captured) {
-      return this.release();
-    }
-  };
-
-  Document.prototype.destroy = function() {
-    this.scope.removeEventListener('DOMContentLoaded', this);
-    this.scope.removeEventListener('scroll', this);
-    return window.removeEventListener('resize', this);
-  };
-
-  Document.prototype.onDOMContentLoaded = function() {
-    this.scope.removeEventListener('DOMContentLoaded', this);
-    return this.start();
-  };
-
-  Document.prototype.start = function() {
-    if (Document.__super__.start.apply(this, arguments)) {
-      return this.capture('stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
-    }
-  };
-
-  return Document;
-
-})(Class.include(Engine, Space));
-
-_ref = [Engine, Document.prototype, Document];
-for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-  target = _ref[_i];
-  _ref1 = [Document.prototype.Commands.prototype];
-  for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-    source = _ref1[_j];
-    for (property in source) {
-      command = source[property];
-      target[property] || (target[property] = Engine.prototype.Command(command, true, property));
-    }
-  }
-  target.engine = Engine;
-}
-
-module.exports = Engine.Document = Document;
-
-});
-require.register("gss/lib/Solver.js", function(exports, require, module){
-var Engine,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Engine = require('./Engine');
-
-Engine.Solver = (function(_super) {
-  __extends(Solver, _super);
-
-  Solver.prototype.Solutions = require('./output/Solutions');
-
-  Solver.prototype.Commands = Engine.include(Engine.prototype.Commands, require('./commands/Constraints'), require('./commands/Variables'));
-
-  Solver.prototype.Properties = require('./properties/Equasions');
-
-  function Solver(input, output, url) {
-    var context;
-    this.input = input;
-    this.output = output;
-    if (context = Solver.__super__.constructor.call(this)) {
-      return context;
-    }
-    if (!this.useWorker(url)) {
-      this.solutions = new this.Solutions(this, this.output);
-      this.expressions.output = this.solutions;
-    }
-  }
-
-  Solver.prototype.remove = function(id) {
-    return this.solutions.remove(id);
-  };
-
-  Solver.prototype.onmessage = function(e) {
-    return this.push(e.data);
-  };
-
-  Solver.prototype.onerror = function(e) {
-    throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
-  };
-
-  Solver.prototype.useWorker = function(url) {
+  Engine.prototype.useWorker = function(url) {
     var _this = this;
     if (!(typeof url === 'string' && self.onmessage !== void 0)) {
       return;
@@ -19455,472 +19299,473 @@ Engine.Solver = (function(_super) {
     this.worker = new this.getWorker(url);
     this.worker.addEventListener('message', this.onmessage.bind(this));
     this.worker.addEventListener('error', this.onerror.bind(this));
-    this.pull = this.run = function() {
+    this.solve = function() {
       return _this.worker.postMessage.apply(_this.worker, arguments);
     };
     return this.worker;
   };
 
-  Solver.prototype.getWorker = function(url) {
-    return new Worker(url);
+  Engine.prototype.getWorker = function(url) {
+    var _base;
+    return (_base = (Engine.workers || (Engine.workers = {})))[url] || (_base[url] = new Worker(url));
   };
 
-  Solver.prototype.getPath = function(scope, property) {
-    if (!(scope && property)) {
-      return scope || property;
+  Engine.prototype.precompile = function() {
+    var method, property, _base, _base1, _ref;
+    if (this.constructor.prototype.running === void 0) {
+      _ref = this.Methods.prototype;
+      for (property in _ref) {
+        method = _ref[property];
+        (_base = this.constructor.prototype)[property] || (_base[property] = (_base1 = this.constructor)[property] || (_base1[property] = Engine.prototype.Method(method, true, property)));
+      }
+      this.constructor.prototype.compile();
     }
-    return (scope || '') + '[' + (property || '') + ']';
+    return this.Domain.compile(this.Domains, this);
   };
 
-  return Solver;
-
-})(Engine);
-
-Engine.Thread = (function(_super) {
-  __extends(Thread, _super);
-
-  function Thread() {
-    var context;
-    if ((context = Thread.__super__.constructor.call(this)) && context !== this) {
-      return context;
+  Engine.prototype.compile = function(state) {
+    var methods, properties;
+    methods = this.methods || this.Methods.prototype;
+    properties = this.properties || this.Properties.prototype;
+    this.Method.compile(methods, this);
+    this.Property.compile(properties, this);
+    if (this.running) {
+      this.Domain.compile(this.Domains, this);
     }
-    this.solutions.push = function(data) {
-      return self.postMessage(data);
-    };
-  }
-
-  Thread.handleEvent = function(e) {
-    this.instance || (this.instance = new Engine.Thread);
-    return this.instance.pull(e.data);
+    this.running = state != null ? state : null;
+    return this.triggerEvent('compile', this);
   };
 
-  return Thread;
+  return Engine;
 
-})(Engine.Solver);
+})(Domain.Events);
+
+Engine.identity = Engine.prototype.identity = new Engine.prototype.Identity;
+
+Engine.console = Engine.prototype.console = new Engine.prototype.Console;
+
+Engine.Engine = Engine;
+
+Engine.Domain = Engine.prototype.Domain = Domain;
+
+Engine.mixin = Engine.prototype.mixin = Native.prototype.mixin;
+
+Engine.time = Engine.prototype.time = Native.prototype.time;
+
+Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    return Engine.Thread.handleEvent(e);
+    return Engine().solve(e.data);
   });
 }
 
-module.exports = Engine.Solver;
+module.exports = this.GSS = Engine;
 
 });
-require.register("gss/lib/properties/Dimensions.js", function(exports, require, module){
-var Dimensions;
+require.register("gss/lib/methods/Algebra.js", function(exports, require, module){
+var Algebra, fn, property, _ref;
 
-Dimensions = (function() {
-  function Dimensions() {}
+Algebra = (function() {
+  function Algebra() {}
 
-  Dimensions.prototype['::window'] = {
-    width: function() {
-      return window.innerWidth;
-    },
-    height: function() {
-      return window.innerHeight;
-    },
-    scroll: {
-      left: function() {
-        return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
-      },
-      top: function() {
-        return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+  Algebra.prototype["&&"] = function(a, b) {
+    return a && b;
+  };
+
+  Algebra.prototype["||"] = function(a, b) {
+    return a || b;
+  };
+
+  Algebra.prototype["!="] = function(a, b) {
+    return a === b;
+  };
+
+  Algebra.prototype["=="] = function(a, b) {
+    return a === b;
+  };
+
+  Algebra.prototype["<="] = function(a, b) {
+    return a <= b;
+  };
+
+  Algebra.prototype[">="] = function(a, b) {
+    return a >= b;
+  };
+
+  Algebra.prototype["<"] = function(a, b) {
+    return a < b;
+  };
+
+  Algebra.prototype[">"] = function(a, b) {
+    return a > b;
+  };
+
+  Algebra.prototype["+"] = function(a, b) {
+    return a + b;
+  };
+
+  Algebra.prototype["-"] = function(a, b) {
+    return a - b;
+  };
+
+  Algebra.prototype["*"] = function(a, b) {
+    return a * b;
+  };
+
+  Algebra.prototype["/"] = function(a, b) {
+    return a / b;
+  };
+
+  Algebra.prototype['Math'] = Math;
+
+  Algebra.prototype['Infinity'] = Infinity;
+
+  Algebra.prototype['NaN'] = NaN;
+
+  Algebra.prototype.get = {
+    command: function(operation, continuation, scope, meta, object, property) {
+      var id;
+      if (typeof object === 'string') {
+        id = object;
+      } else if (object.absolute === 'window' || object === document) {
+        id = '::window';
+      } else if (object.nodeType) {
+        id = this.identity.provide(object);
       }
-    },
-    x: 0,
-    y: 0
-  };
-
-  Dimensions.prototype['::document'] = {
-    scroll: {
-      left: '::window[scroll-left]',
-      top: '::window[scroll-top]'
-    },
-    x: '::window[x]',
-    y: '::window[y]'
-  };
-
-  Dimensions.prototype.intrinsic = {
-    height: function(element) {
-      return element.offsetHeight;
-    },
-    width: function(element) {
-      return element.offsetWidth;
-    },
-    y: function(element) {
-      var y;
-      y = 0;
-      while (element) {
-        y += element.offsetTop;
-        element = element.offsetParent;
-        if (element === this.scope || !element) {
-          break;
-        }
-        if (element === this.scope.offsetParent) {
-          y -= this.scope.offsetTop;
-        }
+      if (!property) {
+        id = '';
+        property = object;
+        object = void 0;
       }
-      return y;
-    },
-    x: function(element) {
-      var x;
-      x = 0;
-      while (element) {
-        x += element.offsetLeft;
-        element = element.offsetParent;
-        if (element === this.scope || !element) {
-          break;
-        }
-        if (element === this.scope.offsetParent) {
-          x -= this.scope.offsetLeft;
-        }
-      }
-      return x;
+      return ['get', id, property, this.getContinuation(continuation || '')];
     }
   };
 
-  Dimensions.prototype.scroll = {
-    left: function(element) {
-      return element.scrollLeft;
-    },
-    top: function(element) {
-      return element.scrollTop;
-    },
-    height: function(element) {
-      return element.scrollHeight;
-    },
-    width: function(element) {
-      return element.scrollWidth;
+  Algebra.prototype.set = {
+    command: function() {
+      var object;
+      object = this.intrinsic || this.assumed;
+      return object.set.apply(object, arguments);
     }
   };
 
-  Dimensions.prototype.client = {
-    left: function(element) {
-      return element.clientLeft;
-    },
-    top: function(element) {
-      return element.clientTop;
-    },
-    height: function(element) {
-      return element.clientHeight;
-    },
-    width: function(element) {
-      return element.clientWidth;
+  Algebra.prototype.suggest = {
+    command: function() {
+      return this.assumed.set.apply(this.assumed, arguments);
     }
   };
 
-  Dimensions.prototype.offset = {
-    left: function(element) {
-      return element.offsetLeft;
-    },
-    top: function(element) {
-      return element.offsetTop;
-    },
-    height: function(element) {
-      return element.offsetHeight;
-    },
-    width: function(element) {
-      return element.offsetWidth;
-    }
+  Algebra.prototype.vary = function(value) {
+    return value;
   };
 
-  return Dimensions;
+  return Algebra;
 
 })();
 
-module.exports = Dimensions;
+Algebra.prototype['*'].linear = false;
 
-});
-require.register("gss/lib/properties/Equasions.js", function(exports, require, module){
-var Equasions;
+Algebra.prototype['/'].linear = false;
 
-Equasions = (function() {
-  function Equasions() {}
+Algebra.prototype.vary.hidden = true;
 
-  Equasions.prototype.right = function(scope, path) {
-    return this['+'](this.get(scope, "x", path), this.get(scope, "width", path));
-  };
-
-  Equasions.prototype.bottom = function(scope, path) {
-    return this['+'](this.get(scope, "y", path), this.get(scope, "height", path));
-  };
-
-  Equasions.prototype.center = {
-    x: function(scope, path) {
-      return this['+'](this.get(scope, "x", path), this['/'](this.get(scope, "width", path), 2));
-    },
-    y: function(scope, path) {
-      return this['+'](this.get(scope, "y", path), this['/'](this.get(scope, "height", path), 2));
-    }
-  };
-
-  return Equasions;
-
-})();
-
-module.exports = Equasions;
-
-});
-require.register("gss/lib/properties/Styles.js", function(exports, require, module){
-var Styles;
-
-Styles = (function() {
-  var i, index, side, sides, type, _base, _base1, _base2, _base3, _base4, _base5, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
-
-  function Styles() {}
-
-  Styles.prototype.transform = [
-    [
-      function() {
-        return mat4.create();
-      }, 'matrix'
-    ]
-  ];
-
-  Styles.prototype.animation = [
-    [
-      [
-        {
-          name: ['none', 'String'],
-          duration: ['time'],
-          delay: ['time'],
-          direction: ['normal', 'reverse', 'alternate'],
-          'timing-function': ['timing'],
-          'iteration-count': [1, 'infinite', 'Number'],
-          'fill-mode': ['none', 'both', 'forwards', 'backwards'],
-          'play-state': ['running', 'paused']
+_ref = Algebra.prototype;
+for (property in _ref) {
+  fn = _ref[property];
+  if (typeof fn === 'function') {
+    fn = (function(property, fn) {
+      var func;
+      return func = Algebra.prototype[property] = function(a, b) {
+        var ap, bp;
+        ap = this.isPrimitive(a);
+        bp = this.isPrimitive(b);
+        if (ap && bp) {
+          return fn.apply(this, arguments);
         }
-      ]
-    ]
-  ];
-
-  Styles.prototype.transition = [
-    [
-      [
-        {
-          property: ['all', 'property', 'none'],
-          duration: ['time'],
-          delay: ['time'],
-          direction: ['reverse', 'normal'],
-          'timing-function': ['timing']
-        }
-      ]
-    ]
-  ];
-
-  Styles.prototype.background = [
-    [
-      [
-        {
-          image: ['Image', 'Gradient', 'none'],
-          position: {
-            x: ['Length', 'Percentage', 'center', 'left', 'right'],
-            y: ['Length', 'Percentage', 'center', 'top', 'bottom']
-          },
-          size: {
-            x: ['Length', 'Percentage', 'cover', 'contain'],
-            y: ['Length', 'Percentage']
-          },
-          repeat: ['repeat', 'no-repeat', 'repeat-x', 'repeat-y', 'space', 'round'],
-          attachment: ['fixed', 'scroll', 'local'],
-          origin: ['padding-box', 'border-box', 'content-box'],
-          clip: ['border-box', 'content-box', 'padding-box']
-        }
-      ]
-    ], [
-      {
-        color: ['Color', 'transparent']
-      }
-    ]
-  ];
-
-  Styles.prototype.text = {
-    shadow: [
-      [
-        [
-          {
-            offset: {
-              x: ['Length'],
-              y: ['Length']
-            },
-            blur: ['Length'],
-            color: ['Color']
-          }
-        ]
-      ]
-    ],
-    decoration: ['none', 'capitalize', 'uppercase', 'lowercase'],
-    align: ['left', 'right', 'center', 'justify'],
-    ident: ['Length', 'Percentage']
-  };
-
-  Styles.prototype.box = {
-    shadow: [
-      [
-        [
-          {
-            inset: ['inset']
-          }
-        ], {
-          offset: {
-            x: ['Length'],
-            y: ['Length']
-          }
-        }, [
-          {
-            blur: ['Length'],
-            spread: ['Length']
-          }
-        ], {
-          color: ['Color']
-        }
-      ]
-    ],
-    sizing: ['padding-box', 'border-box', 'content-box']
-  };
-
-  Styles.prototype.outline = [
-    {
-      width: ['medium', 'Length'],
-      style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'],
-      color: ['invert', 'Color']
-    }
-  ];
-
-  Styles.prototype['line-height'] = ['normal', 'Number', 'Length', 'Percentage'];
-
-  Styles.prototype.font = [
-    [
-      {
-        style: ['normal', 'italic', 'oblique'],
-        variant: ['normal', 'small-caps'],
-        weight: ['normal', 'Number', 'bold']
-      }
-    ], {
-      size: ['Size', 'Length', 'Percentage']
-    }, [
-      {
-        'line-height': ['normal', 'Number', 'Length', 'Percentage']
-      }
-    ], {
-      family: ['inherit', 'strings']
-    }
-  ];
-
-  Styles.prototype['font-stretch'] = ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded'];
-
-  Styles.prototype['font-size-adjust'] = ['Float'];
-
-  Styles.prototype['letter-spacing'] = ['normal', 'Length'];
-
-  Styles.prototype.list = {
-    style: [
-      {
-        type: ['disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-roman', 'upper-roman', 'lower-greek', 'lower-latin', 'upper-latin', 'armenian', 'georgian', 'lower-alpha', 'none', 'upper-alpha'],
-        image: ['none', 'URL'],
-        position: ['outside', 'inside', 'none']
-      }
-    ]
-  };
-
-  Styles.prototype.height = ['Length', 'auto'];
-
-  Styles.prototype.min = {
-    width: ['Length', 'auto'],
-    height: ['Length', 'auto']
-  };
-
-  Styles.prototype.max = {
-    width: ['Length', 'auto'],
-    height: ['Length', 'auto']
-  };
-
-  Styles.prototype.display = ['inline', 'inline-block', 'block', 'list-item', 'run-in', 'table', 'inline-table', 'none', 'table-row-group', 'table-header-group', 'table-footer-group', 'table-row', 'table-column-group', 'table-column', 'table-cell', 'table-caption'];
-
-  Styles.prototype.visibility = ['visible', 'hidden'];
-
-  Styles.prototype.float = ['none', 'left', 'right'];
-
-  Styles.prototype.clear = ['none', 'left', 'right', 'both'];
-
-  Styles.prototype.overflow = ['visible', 'hidden', 'scroll', 'auto'];
-
-  Styles.prototype.position = ['static', 'relative', 'absolute', 'fixed', 'sticky'];
-
-  Styles.prototype.top = ['Length', 'Percentage', 'auto'];
-
-  Styles.prototype.left = ['Length', 'Percentage', 'auto'];
-
-  Styles.prototype.right = ['Length', 'Percentage', 'auto'];
-
-  Styles.prototype.bottom = ['Length', 'Percentage', 'auto'];
-
-  Styles.prototype['z-index'] = ['Integer'];
-
-  Styles.prototype.cursor = ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize', 'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help'];
-
-  Styles.prototype.color = ['color'];
-
-  _ref = sides = ['top', 'right', 'bottom', 'left'];
-  for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
-    side = _ref[index];
-    ((_base = Styles.prototype).margin || (_base.margin = [
-      {
-        'pad': 'pad'
-      }
-    ]))[0][side] = ['Length', 'Percentage', 'auto'];
-    ((_base1 = Styles.prototype).padding || (_base1.padding = [
-      {
-        'pad': 'pad'
-      }
-    ]))[0][side] = ['Length', 'Percentage', 'auto'];
-    ((_base2 = Styles.prototype).border || (_base2.border = [
-      {
-        'pad': 'pad'
-      }
-    ]))[0][side] = [
-      [
-        {
-          width: ['Length', 'thin', 'thick', 'medium'],
-          style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'],
-          color: ['Color']
-        }
-      ]
-    ];
-    _ref1 = ['width', 'color', 'style'];
-    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      type = _ref1[_j];
-      ((_base3 = Styles.prototype)[_name = 'border-' + type] || (_base3[_name] = [
-        [
-          {
-            'pad': 'pad'
-          }
-        ]
-      ]))[0][+0]['border-' + side + '-' + type] = Styles.prototype.border[0][side][0][0][type];
-    }
-    if (index % 2) {
-      for (i = _k = 1; _k < 3; i = _k += 2) {
-        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = {
-          'pad': 'pad'
-        })))[side] || (_base4[side] = {
-          'pad': 'pad'
-        }))[sides[i + 1]] = ['Length', 'none'];
-      }
-    }
+        return [property, a, b];
+      };
+    })(property, fn);
+    fn.binary = true;
   }
+}
 
-  return Styles;
+module.exports = Algebra;
+
+});
+require.register("gss/lib/methods/Conventions.js", function(exports, require, module){
+var Conventions;
+
+Conventions = (function() {
+  function Conventions() {}
+
+  Conventions.prototype.UP = '↑';
+
+  Conventions.prototype.RIGHT = '→';
+
+  Conventions.prototype.DOWN = '↓';
+
+  /* 
+    <!-- Example of document -->
+    <style id="my-stylesheet">
+      (h1 !+ img)[width] == #header[width]
+    </style>
+    <header id="header">
+      <img>
+      <h1 id="h1"></h1>
+    </header>
+  
+    <!-- Generated constraint key -->
+    style$my-stylesheet   # my stylesheet
+               ↓ h1$h1    # found heading
+               ↑ !+img    # preceeded by image
+               → #header  # bound to header element
+  */
+
+
+  Conventions.prototype.getContinuation = function(path, value, suffix) {
+    if (suffix == null) {
+      suffix = '';
+    }
+    if (path) {
+      path = path.replace(/[→↓↑]$/, '');
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    return path + (value && this.identity.provide(value) || '') + suffix;
+  };
+
+  Conventions.prototype.getPossibleContinuations = function(path) {
+    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
+  };
+
+  Conventions.prototype.getPath = function(id, property) {
+    if (!property) {
+      property = id;
+      id = void 0;
+    }
+    if (property.indexOf('[') > -1 || !id) {
+      return property;
+    } else {
+      return id + '[' + property + ']';
+    }
+  };
+
+  Conventions.prototype.isCollection = function(object) {
+    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      switch (typeof object[0]) {
+        case "object":
+          return object[0].nodeType;
+        case "undefined":
+          return object.length === 0;
+      }
+    }
+  };
+
+  Conventions.prototype.getQueryPath = function(operation, continuation) {
+    if (continuation) {
+      if (continuation.nodeType) {
+        return this.identity.provide(continuation) + ' ' + operation.path;
+      } else {
+        return continuation + operation.key;
+      }
+    } else {
+      return operation.key;
+    }
+  };
+
+  Conventions.prototype.getCanonicalPath = function(continuation, compact) {
+    var bits, last;
+    bits = this.getContinuation(continuation).split(this.DOWN);
+    last = bits[bits.length - 1];
+    last = bits[bits.length - 1] = last.split(this.RIGHT).pop().replace(this.CanonicalizeRegExp, '');
+    if (compact) {
+      return last;
+    }
+    return bits.join(this.DOWN);
+  };
+
+  Conventions.prototype.CanonicalizeRegExp = /\$[^↑]+(?:↑|$)/g;
+
+  Conventions.prototype.getScopePath = function(continuation) {
+    var bits;
+    bits = continuation.split(this.DOWN);
+    bits[bits.length - 1] = "";
+    return bits.join(this.DOWN);
+  };
+
+  Conventions.prototype.getOperationPath = function(operation, continuation) {
+    if (continuation != null) {
+      if (operation.def.serialized && !operation.def.hidden) {
+        return continuation + (operation.key || operation.path);
+      }
+      return continuation;
+    } else {
+      return operation.path;
+    }
+  };
+
+  Conventions.prototype.getContext = function(args, operation, scope, node) {
+    var index, _ref;
+    index = args[0].def && 4 || 0;
+    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
+      return args[index];
+    }
+    if (!operation.bound) {
+      return this.scope;
+    }
+    return scope;
+  };
+
+  Conventions.prototype.getIntrinsicProperty = function(path) {
+    var index, last, property;
+    index = path.indexOf('intrinsic-');
+    if (index > -1) {
+      if ((last = path.indexOf(']', index)) === -1) {
+        last = void 0;
+      }
+      return property = path.substring(index + 10, last);
+    }
+  };
+
+  Conventions.prototype.isPrimitive = function(object) {
+    if (typeof object === 'object') {
+      return object.valueOf !== Object.prototype.valueOf;
+    }
+    return true;
+  };
+
+  return Conventions;
 
 })();
 
-module.exports = Styles;
+this.require || (this.require = function(string) {
+  var bits;
+  if (string === 'cassowary') {
+    return c;
+  }
+  bits = string.replace('', '').split('/');
+  return this[bits[bits.length - 1]];
+});
+
+this.module || (this.module = {});
+
+module.exports = Conventions;
 
 });
-require.register("gss/lib/commands/Rules.js", function(exports, require, module){
-var Rules, fn, property, _ref;
+require.register("gss/lib/methods/Native.js", function(exports, require, module){
+var Native,
+  __hasProp = {}.hasOwnProperty;
 
-GSS.Parser = require('ccss-compiler');
+Native = (function() {
+  function Native() {}
+
+  Native.prototype.camelize = function(string) {
+    return string.toLowerCase().replace(/-([a-z])/gi, function(match) {
+      return match[1].toUpperCase();
+    });
+  };
+
+  Native.prototype.dasherize = function(string) {
+    return string.replace(/[A-Z]/g, function(match) {
+      return '-' + match[0].toLowerCase();
+    });
+  };
+
+  Native.prototype.indexOfTriplet = function(array, a, b, c) {
+    var index, op, _i, _len;
+    if (array) {
+      for (index = _i = 0, _len = array.length; _i < _len; index = _i += 3) {
+        op = array[index];
+        if (op === a && array[index + 1] === b && array[index + 2] === c) {
+          return index;
+        }
+      }
+    }
+    return -1;
+  };
+
+  Native.prototype.setImmediate = typeof setImmediate !== "undefined" && setImmediate !== null ? setImmediate : setTimeout;
+
+  Native.prototype.mixin = function(proto) {
+    var Context, Mixin, constructor, fn, index, mixin, name, _i, _len, _ref;
+    Context = function() {};
+    if (proto.prototype) {
+      Context.prototype = new proto;
+      constructor = proto;
+    } else {
+      Context.prototype = proto;
+    }
+    Mixin = function() {
+      var ctor, _i, _len;
+      if (constructor) {
+        if (constructor.push) {
+          for (_i = 0, _len = constructor.length; _i < _len; _i++) {
+            ctor = constructor[_i];
+            ctor.apply(this, arguments);
+          }
+        } else {
+          return constructor.apply(this, arguments);
+        }
+      }
+    };
+    Mixin.prototype = new Context;
+    for (index = _i = 0, _len = arguments.length; _i < _len; index = ++_i) {
+      mixin = arguments[index];
+      if (!mixin || index === 0) {
+        continue;
+      }
+      if ((fn = mixin.prototype.constructor) !== Function) {
+        if (constructor) {
+          if (constructor.push) {
+            constructor.push(fn);
+          } else {
+            constructor = [constructor, fn];
+          }
+        } else {
+          constructor = fn;
+        }
+      }
+      _ref = mixin.prototype;
+      for (name in _ref) {
+        if (!__hasProp.call(_ref, name)) continue;
+        fn = _ref[name];
+        Mixin.prototype[name] = fn;
+      }
+    }
+    if (constructor && constructor.push) {
+      Mixin.prototype.constructor = Mixin;
+    }
+    return Mixin;
+  };
+
+  Native.prototype.time = function(other, time) {
+    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
+    if (time && !other) {
+      return time;
+    }
+    return Math.floor((time - other) * 100) / 100;
+  };
+
+  Native.prototype.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
+  };
+
+  return Native;
+
+})();
+
+module.exports = Native;
+
+});
+require.register("gss/lib/methods/Rules.js", function(exports, require, module){
+var Parser, Rules, fn, property, _ref;
+
+Parser = require('../concepts/Parser');
 
 Rules = (function() {
   function Rules() {}
@@ -19940,7 +19785,7 @@ Rules = (function() {
       contd = this.getScopePath(continuation) + operation.parent.path;
       this.queries.add(result, contd, operation.parent, scope, true);
       if (meta === this.UP) {
-        return contd + this.identify(result);
+        return contd + this.identity.provide(result);
       }
       return true;
     },
@@ -19954,9 +19799,9 @@ Rules = (function() {
 
   Rules.prototype["rule"] = {
     bound: 1,
-    evaluate: function(operation, continuation, scope, meta, ascender, ascending) {
+    solve: function(operation, continuation, scope, meta, ascender, ascending) {
       if (operation.index === 2 && !ascender) {
-        this.expressions.evaluate(operation, continuation, ascending, operation);
+        this.expressions.solve(operation, continuation, ascending, operation);
         return false;
       }
     },
@@ -19989,7 +19834,7 @@ Rules = (function() {
       }
       id = scope._gss_id;
       watchers = (_base = this.queries._watchers)[id] || (_base[id] = []);
-      if (!watchers.length || this.values.indexOf(watchers, operation, continuation, scope) === -1) {
+      if (!watchers.length || this.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
         return watchers.push(operation, continuation, scope);
       }
     },
@@ -20018,7 +19863,7 @@ Rules = (function() {
           this.queries.clean(path, continuation, operation.parent, scope);
         }
         if (branch = operation.parent[index]) {
-          this.expressions.evaluate(branch, path, scope, meta);
+          this.expressions.solve(branch, path, scope, meta);
         }
         this.console.groupEnd(path);
         return this.queries[path] = condition != null ? condition : null;
@@ -20032,8 +19877,31 @@ Rules = (function() {
 
   Rules.prototype["text/gss"] = function(source) {
     var _ref;
-    return (_ref = GSS.Parser.parse(source)) != null ? _ref.commands : void 0;
+    return (_ref = Parser.parse(source)) != null ? _ref.commands : void 0;
   };
+
+  Rules.prototype["text/gss-value"] = function() {
+    return source({
+      parse: function(value) {
+        var match, old;
+        if ((old = (this.parsed || (this.parsed = {}))[value]) == null) {
+          if (typeof value === 'string') {
+            if (match = value.match(StaticUnitRegExp)) {
+              return this.parsed[value] = this[match[2]](parseFloat(match[1]));
+            } else {
+              value = 'a: == ' + value + ';';
+              return this.parsed[value] = Parser.parse(value).commands[0][2];
+            }
+          } else {
+            return value;
+          }
+        }
+        return old;
+      }
+    });
+  };
+
+  Rules.prototype.StaticUnitRegExp = /^(-?\d+)(px|pt|cm|mm|in)$/i;
 
   Rules.prototype["eval"] = {
     command: function(operation, continuation, scope, meta, node, type, source, label) {
@@ -20062,7 +19930,7 @@ Rules = (function() {
         }
       }
       rules = this['_' + type](source);
-      this.capture(label, this.clone(rules), continuation, scope, this.engine.DOWN);
+      this.expressions.solve(label, this.clone(rules), continuation, scope, this.engine.DOWN);
     }
   };
 
@@ -20101,7 +19969,7 @@ for (property in _ref) {
 module.exports = Rules;
 
 });
-require.register("gss/lib/commands/Selectors.js", function(exports, require, module){
+require.register("gss/lib/methods/Selectors.js", function(exports, require, module){
 /* Selectors with custom combinators 
 inspired by Slick of mootools fame (shout-out & credits)
 
@@ -20284,7 +20152,7 @@ Selectors = (function() {
     scoped: true,
     serialized: false,
     1: function(node, value) {
-      return this.identify(node) + '"' + value + '"';
+      return this.identity.provide(node) + '"' + value + '"';
     }
   };
 
@@ -20692,628 +20560,131 @@ if (!dummy.hasOwnProperty("nextElementSibling")) {
 module.exports = Selectors;
 
 });
-require.register("gss/lib/commands/Constraints.js", function(exports, require, module){
-var Constraints, method, property, _ref;
+require.register("gss/lib/methods/Transformations.js", function(exports, require, module){
+var Transformations, property, value;
 
-Constraints = (function() {
-  function Constraints() {}
+Transformations = (function() {
+  function Transformations() {}
 
-  Constraints.prototype.onConstraint = function(node, args, result, operation, continuation, scope) {
-    var arg, _i, _len;
-    if (result instanceof c.Constraint || result instanceof c.Expression) {
-      result = [result];
-      for (_i = 0, _len = args.length; _i < _len; _i++) {
-        arg = args[_i];
-        if (arg instanceof c.Variable) {
-          result.push(arg);
-        }
-        if (arg.paths) {
-          result.push.apply(result, arg.paths);
-          arg.paths = void 0;
-        }
-      }
-    }
-    if (result.length > 0) {
-      if (result.length > 1) {
-        result[0].paths = result.splice(1);
-      }
-      return result[0];
-    }
-    return result;
-  };
+  Transformations.Matrix = require('../../vendor/gl-matrix');
 
-  Constraints.prototype.get = function(scope, property, path) {
-    var variable;
-    if (typeof this.properties[property] === 'function' && scope) {
-      return this.properties[property].call(this, scope, path);
+  Transformations.prototype.matrix = function() {};
+
+  Transformations.prototype.matrix3d = function() {};
+
+  Transformations.prototype._transform = function(matrix, method, a, b, c) {
+    if (matrix.length === 9) {
+      return mat3[method](matrix, matrix, a, b, c);
     } else {
-      variable = this["var"](this.getPath(scope, property));
+      return mat4[method](matrix, matrix, a, b, c);
     }
-    return [variable, path || (property && scope) || ''];
   };
 
-  Constraints.prototype.remove = function() {
-    var constrain, constraints, path, _i, _j, _len;
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      path = arguments[_i];
-      if (constraints = this.solutions.variables[path]) {
-        for (_j = constraints.length - 1; _j >= 0; _j += -1) {
-          constrain = constraints[_j];
-          this.solutions.remove(constrain, path);
+  Transformations.prototype._transform3d = function(matrix, method, a, b, c) {
+    if (matrix.length === 9) {
+      matrix = mat4.fromMat3(matrix);
+    }
+    return mat4[method](matrix, matrix, a, b, c);
+  };
+
+  Transformations.prototype.translate = [
+    function(matrix, x, y) {
+      if (y == null) {
+        y = x;
+      }
+      return this._transform(matrix, 'translate', [x, y]);
+    }, {
+      "3d": function(matrix, x, y, z) {
+        if (y == null) {
+          y = x;
         }
+        if (z == null) {
+          z = 0;
+        }
+        if (z === 0) {
+          return this._transform(matrix, 'translate', [x, y]);
+        } else {
+          return this._transform3d(matrix, 'translate', [x, y, z]);
+        }
+      },
+      x: function(matrix, x) {
+        return this._transform(matrix, 'translate', [x, 1, 1]);
+      },
+      y: function(matrix, y) {
+        return this._transform(matrix, 'translate', [1, y, 1]);
+      },
+      z: function(matrix, z) {
+        return this._transform3d(matrix, 'translate', [1, 1, z]);
       }
     }
-    return this;
-  };
+  ];
 
-  Constraints.prototype["var"] = function(name) {
-    var _base;
-    return (_base = this.solutions.variables)[name] || (_base[name] = new c.Variable({
-      name: name
-    }));
-  };
-
-  Constraints.prototype.strength = function(strength, deflt) {
-    if (deflt == null) {
-      deflt = 'medium';
+  Transformations.prototype.rotate = [
+    function(matrix, x, y, angle) {
+      return this._transform(matrix, 'rotate', [x, y], angle);
+    }, {
+      "3d": function(matrix, x, y, z, angle) {
+        return this._transform3d(matrix, 'rotate', [x, y, z], angle);
+      },
+      x: function(matrix, x) {
+        return this._transform(matrix, 'rotateX', x);
+      },
+      y: function(matrix, y) {
+        return this._transform(matrix, 'rotateY', y);
+      },
+      z: function(matrix, z) {
+        return this._transform3d(matrix, 'rotateZ', z);
+      }
     }
-    return strength && c.Strength[strength] || c.Strength[deflt];
-  };
+  ];
 
-  Constraints.prototype.weight = function(weight) {
-    return weight;
-  };
+  Transformations.prototype.scale = [
+    function(matrix, x, y, z) {
+      if (y == null) {
+        y = x;
+      }
+      if (z == null) {
+        z = 1;
+      }
+      if (z === 1) {
+        return this._transform(matrix, 'scale', [x, y]);
+      } else {
+        return this._transform3d(matrix, 'scale', [x, y, z]);
+      }
+    }, {
+      x: function(matrix, x) {
+        return this._transform(matrix, 'scale', [x, 1, 1]);
+      },
+      y: function(matrix, y) {
+        return this._transform(matrix, 'scale', [1, y, 1]);
+      },
+      z: function(matrix, z) {
+        return this._transform3d(matrix, 'scale', [1, 1, z]);
+      }
+    }
+  ];
 
-  Constraints.prototype.varexp = function(name) {
-    return new c.Expression({
-      name: name
-    });
-  };
-
-  Constraints.prototype['=='] = function(left, right, strength, weight) {
-    return new c.Equation(left, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype['<='] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype['>='] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype['<'] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype['>'] = function(left, right, strength, weight) {
-    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
-  };
-
-  Constraints.prototype['+'] = function(left, right, strength, weight) {
-    return c.plus(left, right);
-  };
-
-  Constraints.prototype['-'] = function(left, right, strength, weight) {
-    return c.minus(left, right);
-  };
-
-  Constraints.prototype['*'] = function(left, right, strength, weight) {
-    return c.times(left, right);
-  };
-
-  Constraints.prototype['/'] = function(left, right, strength, weight) {
-    return c.divide(left, right);
-  };
-
-  return Constraints;
+  return Transformations;
 
 })();
 
-_ref = Constraints.prototype;
-for (property in _ref) {
-  method = _ref[property];
-  if (method.length > 3 && property !== 'onConstraint') {
-    (function(property, method) {
-      return Constraints.prototype[property] = function(left, right, strength, weight) {
-        var overloaded, value;
-        if (left.push) {
-          overloaded = left = this.onConstraint(null, null, left);
-        }
-        if (right.push) {
-          overloaded = right = this.onConstraint(null, null, right);
-        }
-        value = method.call(this, left, right, strength, weight);
-        if (overloaded) {
-          return this.onConstraint(null, [left, right], value);
-        }
-        return value;
-      };
-    })(property, method);
-  }
-  Constraints.prototype[property].after = 'onConstraint';
+/*
+  skew: [
+    x:
+    y:
+  ]
+*/
+
+
+for (property in Transformations) {
+  value = Transformations[property];
+  value.invoker = 'transform';
 }
 
-module.exports = Constraints;
+module.exports = Transformations;
 
 });
-require.register("gss/lib/commands/Measurements.js", function(exports, require, module){
-var Measurements;
-
-Measurements = (function() {
-  function Measurements() {}
-
-  Measurements.prototype.get = {
-    command: function(operation, continuation, scope, meta, object, property, primitive) {
-      var child, id, index, parent, path, prop, _ref;
-      if (property) {
-        if (typeof object === 'string') {
-          id = object;
-        } else if (object.absolute === 'window' || object === document) {
-          id = '::window';
-        } else if (object.nodeType) {
-          id = this.identify(object);
-        }
-      } else {
-        id = '';
-        property = object;
-        object = void 0;
-      }
-      if (operation && !primitive) {
-        parent = child = operation;
-        while (parent = parent.parent) {
-          if (child.index) {
-            if (parent.def.primitive === child.index) {
-              primitive = true;
-              break;
-            }
-          }
-          child = parent;
-        }
-      }
-      if ((property.indexOf('intrinsic-') > -1) || (((_ref = this.properties[id]) != null ? _ref[property] : void 0) != null)) {
-        path = this.measure(id, property, continuation, true, true, primitive);
-        if (typeof path === 'string' && (index = path.indexOf('[')) > -1) {
-          id = path.substring(0, index);
-          property = path.substring(index + 1, path.length - 1);
-        }
-      } else {
-        if (id && (prop = this.properties[property])) {
-          if (typeof prop === 'function' && prop.initial === void 0) {
-            return prop.call(this, id, continuation);
-          }
-        }
-      }
-      if (primitive) {
-        return this.values.watch(id, property, operation, continuation, scope);
-      }
-      return ['get', id, property, this.getContinuation(continuation || '')];
-    }
-  };
-
-  Measurements.prototype.suggest = {
-    command: function(operation, continuation, scope, meta, variable, value, strength, weight, contd) {
-      if (continuation) {
-        contd || (contd = this.getContinuation(continuation));
-      }
-      return ['suggest', variable, value, strength != null ? strength : null, weight != null ? weight : null, contd != null ? contd : null];
-    }
-  };
-
-  Measurements.prototype.onBuffer = function(buffer, args, batch) {
-    var last;
-    if (!(buffer && batch)) {
-      return;
-    }
-    if (last = buffer[buffer.length - 1]) {
-      if (last[0] === args[0]) {
-        if (last.indexOf(args[1]) === -1) {
-          last.push.apply(last, args.slice(1));
-        }
-        return false;
-      }
-    }
-  };
-
-  Measurements.prototype.onFlush = function(buffer) {
-    return this.getSuggestions(!buffer);
-  };
-
-  Measurements.prototype.onMeasure = function(node, x, y, styles, full) {
-    var id, path, prop, properties, _i, _len;
-    if (!this.intrinsic) {
-      return;
-    }
-    if (id = node._gss_id) {
-      if (properties = this.intrinsic[id]) {
-        for (_i = 0, _len = properties.length; _i < _len; _i++) {
-          prop = properties[_i];
-          if (full && (prop === 'width' || prop === 'height')) {
-            continue;
-          }
-          path = id + "[intrinsic-" + prop + "]";
-          switch (prop) {
-            case "x":
-              (this.measured || (this.measured = {}))[path] = x + node.offsetLeft;
-              break;
-            case "y":
-              (this.measured || (this.measured = {}))[path] = y + node.offsetTop;
-              break;
-            case "width":
-              (this.measured || (this.measured = {}))[path] = node.offsetWidth;
-              break;
-            case "height":
-              (this.measured || (this.measured = {}))[path] = node.offsetHeight;
-              break;
-            default:
-              this.values.set(null, path, this.getStyle(node, prop));
-          }
-        }
-      }
-    }
-  };
-
-  Measurements.prototype.onResize = function(node) {
-    var id, intrinsic, properties, reflown;
-    if (!(intrinsic = this.intrinsic)) {
-      return;
-    }
-    reflown = void 0;
-    while (node) {
-      if (node === this.scope) {
-        if (this.reflown) {
-          reflown = this.getCommonParent(reflown, this.reflown);
-        } else {
-          reflown = this.scope;
-        }
-        break;
-      }
-      if (node === this.reflown) {
-        break;
-      }
-      if (id = node._gss_id) {
-        if (properties = intrinsic[id]) {
-          reflown = node;
-        }
-      }
-      node = node.parentNode;
-    }
-    return this.reflown = reflown;
-  };
-
-  Measurements.prototype.onChange = function(path, value, old) {
-    var group, id, prop, _base;
-    if ((old != null) !== (value != null)) {
-      if (prop = this.getIntrinsicProperty(path)) {
-        id = path.substring(0, path.length - prop.length - 10 - 2);
-        if (value != null) {
-          return ((_base = (this.intrinsic || (this.intrinsic = {})))[id] || (_base[id] = [])).push(prop);
-        } else {
-          group = this.intrinsic[id];
-          group.splice(group.indexOf(path), 1);
-          if (!group.length) {
-            return delete this.intrinsic[id];
-          }
-        }
-      }
-    }
-  };
-
-  Measurements.prototype.getComputedStyle = function(element, force) {
-    var computed, id, old;
-    if ((old = element.currentStyle) == null) {
-      computed = (this.computed || (this.computed = {}));
-      id = this.identify(element);
-      old = computed[id];
-      if (force || (old == null)) {
-        return computed[id] = window.getComputedStyle(element);
-      }
-    }
-    return old;
-  };
-
-  Measurements.prototype.getStyle = function(element, property) {
-    var prop, value;
-    prop = this.camelize(property);
-    value = element.style[property];
-    if (value === '') {
-      value = this.getComputedStyle(element)[prop];
-    }
-    value = this.toPrimitive(value, null, null, null, element, prop);
-    if (value.push && typeof value[0] === 'object') {
-      return this.properties[property].apply(this, value);
-    } else {
-      return this.properties[property].call(this, value);
-    }
-  };
-
-  Measurements.prototype.toPrimitive = function(object, operation, continuation, scope, element, prop) {
-    var value;
-    if (typeof object === 'string') {
-      object = this.parse(object);
-    }
-    if (typeof object === 'object') {
-      if (object[0] === 'get' && this.getIntrinsicProperty(object[2])) {
-        value = this.get.command.call(this, operation, continuation, scope, 'return', object[1], object[2], true);
-        if (value != null) {
-          if (typeof (object = value) !== 'object') {
-            return object;
-          }
-        } else {
-          return object;
-        }
-      }
-      if ((continuation == null) && element) {
-        continuation = this.getPath(element, prop);
-      }
-      return this.capture('toPrimitive(' + continuation + ')', object, continuation, scope, 'return');
-    }
-    return object;
-  };
-
-  Measurements.prototype._staticUnit = /^(-?\d+)(px|pt|cm|mm|in)$/i;
-
-  Measurements.prototype.parse = function(value) {
-    var match, old;
-    if ((old = (this.parsed || (this.parsed = {}))[value]) == null) {
-      if (typeof value === 'string') {
-        if (match = value.match(this._staticUnit)) {
-          return this.parsed[value] = this[match[2]](parseFloat(match[1]));
-        } else {
-          value = 'a: == ' + value + ';';
-          return this.parsed[value] = GSS.Parser.parse(value).commands[0][2];
-        }
-      } else {
-        return value;
-      }
-    }
-    return old;
-  };
-
-  Measurements.prototype.setStyle = function(element, property, value) {
-    return element.style[property] = value;
-  };
-
-  Measurements.prototype.set = {
-    command: function(operation, continuation, scope, meta, property, value) {
-      var prop;
-      prop = this.camelize(property);
-      if (scope && scope.style[prop] !== void 0) {
-        this.setStyle(scope, prop, value);
-      }
-    }
-  };
-
-  Measurements.prototype.measure = function(node, property, continuation, old, returnPath, primitive) {
-    var current, id, intrinsic, path, prop, value, _ref, _ref1;
-    if (node === window) {
-      id = '::window';
-    } else if (node.nodeType) {
-      id = this.identify(node);
-    } else {
-      id = node;
-      node = this.elements[id];
-    }
-    path = this.getPath(id, property);
-    if ((value = (_ref = this.measured) != null ? _ref[path] : void 0) == null) {
-      if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
-        current = this.values[path];
-        if (current === void 0 || old === false) {
-          switch (typeof prop) {
-            case 'function':
-              value = prop.call(this, node, continuation);
-              break;
-            case 'string':
-              path = prop;
-              value = this.properties[prop].call(this, node, continuation);
-              break;
-            default:
-              value = prop;
-          }
-        }
-      } else if (intrinsic = this.getIntrinsicProperty(property)) {
-        if (document.body.contains(node)) {
-          if (prop || (prop = this.properties[property])) {
-            value = prop.call(this, node, property, continuation);
-          } else {
-            value = this.getStyle(node, intrinsic);
-          }
-        } else {
-          value = null;
-        }
-      } else if (this[property]) {
-        value = this[property](node, continuation);
-      } else {
-        return;
-      }
-    }
-    if (primitive) {
-      return this.values.set(id, property, value);
-    } else {
-      if (value !== void 0) {
-        (this.measured || (this.measured = {}))[path] = value;
-      }
-    }
-    if (returnPath) {
-      return path;
-    } else {
-      return value;
-    }
-  };
-
-  Measurements.prototype.getCommonParent = function(a, b) {
-    var ap, aps, bp, bps;
-    aps = [];
-    bps = [];
-    ap = a;
-    bp = b;
-    while (ap && bp) {
-      aps.push(ap);
-      bps.push(bp);
-      ap = ap.parentNode;
-      bp = bp.parentNode;
-      if (bps.indexOf(ap) > -1) {
-        return ap;
-      }
-      if (aps.indexOf(bp) > -1) {
-        return bp;
-      }
-    }
-  };
-
-  Measurements.prototype.getSuggestions = function(reflow) {
-    var property, suggestions, value, _ref;
-    suggestions = void 0;
-    if (reflow) {
-      this.restyles.render(null, this.reflown);
-    }
-    this.reflown = void 0;
-    if (this.measured) {
-      _ref = this.measured;
-      for (property in _ref) {
-        value = _ref[property];
-        if ((value != null) && value !== this.values[property]) {
-          (suggestions || (suggestions = [])).push(['suggest', property, value, 'required']);
-        }
-      }
-      this.values.merge(this.measured);
-      this.measured = void 0;
-    }
-    return suggestions;
-  };
-
-  return Measurements;
-
-})();
-
-module.exports = Measurements;
-
-});
-require.register("gss/lib/commands/Native.js", function(exports, require, module){
-var Native;
-
-Native = (function() {
-  function Native() {}
-
-  Native.prototype.camelize = function(string) {
-    return string.toLowerCase().replace(/-([a-z])/gi, function(match) {
-      return match[1].toUpperCase();
-    });
-  };
-
-  Native.prototype.dasherize = function(string) {
-    return string.replace(/[A-Z]/g, function(match) {
-      return '-' + match[0].toLowerCase();
-    });
-  };
-
-  return Native;
-
-})();
-
-module.exports = Native;
-
-});
-require.register("gss/lib/commands/Algebra.js", function(exports, require, module){
-var Algebra, fn, property, _ref;
-
-Algebra = (function() {
-  function Algebra() {}
-
-  Algebra.prototype["&&"] = function(a, b) {
-    return a && b;
-  };
-
-  Algebra.prototype["||"] = function(a, b) {
-    return a || b;
-  };
-
-  Algebra.prototype["=="] = function(a, b) {
-    return a === b;
-  };
-
-  Algebra.prototype["<="] = function(a, b) {
-    return a <= b;
-  };
-
-  Algebra.prototype[">="] = function(a, b) {
-    return a >= b;
-  };
-
-  Algebra.prototype["<"] = function(a, b) {
-    return a < b;
-  };
-
-  Algebra.prototype[">"] = function(a, b) {
-    return a > b;
-  };
-
-  Algebra.prototype["+"] = function(a, b) {
-    return a + b;
-  };
-
-  Algebra.prototype["-"] = function(a, b) {
-    return a - b;
-  };
-
-  Algebra.prototype["*"] = function(a, b) {
-    return a * b;
-  };
-
-  Algebra.prototype["/"] = function(a, b) {
-    return a / b;
-  };
-
-  Algebra.prototype['Math'] = Math;
-
-  Algebra.prototype['Infinity'] = Infinity;
-
-  Algebra.prototype['NaN'] = NaN;
-
-  return Algebra;
-
-})();
-
-_ref = Algebra.prototype;
-for (property in _ref) {
-  fn = _ref[property];
-  if (property !== 'isPrimitive') {
-    fn = (function(property, fn) {
-      var func;
-      return func = Algebra.prototype[property] = function(a, b, operation, continuation, scope, meta) {
-        var ap, bp;
-        ap = this.isPrimitive(a);
-        bp = this.isPrimitive(b);
-        if (!ap && !bp) {
-          if (func.linear === false) {
-            a = this.toPrimitive(a, operation[1], continuation);
-            b = this.toPrimitive(b, operation[2], continuation);
-            ap = this.isPrimitive(a);
-            bp = this.isPrimitive(b);
-          }
-        }
-        if (ap && bp) {
-          return fn.apply(this, arguments);
-        }
-        if (!ap && !bp && func.linear === false) {
-          this.console.warn(operation, 'is not linear, both operands are unknown');
-        }
-        return [property, a, b];
-      };
-    })(property, fn);
-    fn.binary = true;
-    fn.meta = true;
-  }
-}
-
-Algebra.prototype['*'].linear = false;
-
-Algebra.prototype['/'].linear = false;
-
-module.exports = Algebra;
-
-});
-require.register("gss/lib/commands/Types.js", function(exports, require, module){
+require.register("gss/lib/methods/Types.js", function(exports, require, module){
 var Types;
 
 Types = (function() {
@@ -21500,7 +20871,7 @@ Types = (function() {
 module.exports = Types;
 
 });
-require.register("gss/lib/commands/Units.js", function(exports, require, module){
+require.register("gss/lib/methods/Units.js", function(exports, require, module){
 var Units;
 
 Units = (function() {
@@ -21585,429 +20956,644 @@ Units = (function() {
 module.exports = Units;
 
 });
-require.register("gss/lib/commands/Transformations.js", function(exports, require, module){
-var Transformations, property, value;
+require.register("gss/lib/concepts/Console.js", function(exports, require, module){
+var Console, Native, method, _i, _len, _ref;
 
-Transformations = (function() {
-  function Transformations() {}
+Native = require('../methods/Native');
 
-  Transformations.Matrix = require('../../vendor/gl-matrix');
+Console = (function() {
+  function Console(level) {
+    var _ref, _ref1;
+    this.level = level;
+    if (this.level == null) {
+      this.level = parseFloat(((_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0) || 1);
+    }
+  }
 
-  Transformations.prototype.matrix = function() {};
+  Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
 
-  Transformations.prototype.matrix3d = function() {};
+  Console.prototype.groups = 0;
 
-  Transformations.prototype._transform = function(matrix, method, a, b, c) {
-    if (matrix.length === 9) {
-      return mat3[method](matrix, matrix, a, b, c);
+  Console.prototype.row = function(a, b, c) {
+    var p1, p2;
+    if (!this.level) {
+      return;
+    }
+    a = a.name || a;
+    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
+    if (typeof b === 'object') {
+      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
     } else {
-      return mat4[method](matrix, matrix, a, b, c);
+      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
+      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
     }
   };
 
-  Transformations.prototype._transform3d = function(matrix, method, a, b, c) {
-    if (matrix.length === 9) {
-      matrix = mat4.fromMat3(matrix);
+  Console.prototype.start = function(reason, name) {
+    var fmt, method, started;
+    this.startTime = Native.prototype.time();
+    this.started || (this.started = []);
+    if (this.started.indexOf(name) > -1) {
+      started = true;
     }
-    return mat4[method](matrix, matrix, a, b, c);
+    this.started.push(name);
+    if (started) {
+      return;
+    }
+    fmt = '%c%s';
+    fmt += Array(5 - Math.floor(String(name).length / 4)).join('\t');
+    fmt += "%c";
+    if (typeof reason !== 'string') {
+      if (reason != null ? reason.slice : void 0) {
+        reason = Native.prototype.clone(reason);
+      }
+      fmt += '%O';
+    } else {
+      fmt += '%s';
+      method = 'groupCollapsed';
+    }
+    this[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
+    return true;
   };
 
-  Transformations.prototype.translate = [
-    function(matrix, x, y) {
-      if (y == null) {
-        y = x;
-      }
-      return this._transform(matrix, 'translate', [x, y]);
-    }, {
-      "3d": function(matrix, x, y, z) {
-        if (y == null) {
-          y = x;
-        }
-        if (z == null) {
-          z = 0;
-        }
-        if (z === 0) {
-          return this._transform(matrix, 'translate', [x, y]);
-        } else {
-          return this._transform3d(matrix, 'translate', [x, y, z]);
-        }
-      },
-      x: function(matrix, x) {
-        return this._transform(matrix, 'translate', [x, 1, 1]);
-      },
-      y: function(matrix, y) {
-        return this._transform(matrix, 'translate', [1, y, 1]);
-      },
-      z: function(matrix, z) {
-        return this._transform3d(matrix, 'translate', [1, 1, z]);
-      }
+  Console.prototype.end = function(reason) {
+    var popped, _ref;
+    popped = (_ref = this.started) != null ? _ref.pop() : void 0;
+    if (!popped || this.started.indexOf(popped) > -1) {
+      return;
     }
-  ];
+    this.groupEnd();
+    return this.endTime = Native.prototype.time();
+  };
 
-  Transformations.prototype.rotate = [
-    function(matrix, x, y, angle) {
-      return this._transform(matrix, 'rotate', [x, y], angle);
-    }, {
-      "3d": function(matrix, x, y, z, angle) {
-        return this._transform3d(matrix, 'rotate', [x, y, z], angle);
-      },
-      x: function(matrix, x) {
-        return this._transform(matrix, 'rotateX', x);
-      },
-      y: function(matrix, y) {
-        return this._transform(matrix, 'rotateY', y);
-      },
-      z: function(matrix, z) {
-        return this._transform3d(matrix, 'rotateZ', z);
-      }
-    }
-  ];
-
-  Transformations.prototype.scale = [
-    function(matrix, x, y, z) {
-      if (y == null) {
-        y = x;
-      }
-      if (z == null) {
-        z = 1;
-      }
-      if (z === 1) {
-        return this._transform(matrix, 'scale', [x, y]);
-      } else {
-        return this._transform3d(matrix, 'scale', [x, y, z]);
-      }
-    }, {
-      x: function(matrix, x) {
-        return this._transform(matrix, 'scale', [x, 1, 1]);
-      },
-      y: function(matrix, y) {
-        return this._transform(matrix, 'scale', [1, y, 1]);
-      },
-      z: function(matrix, z) {
-        return this._transform3d(matrix, 'scale', [1, 1, z]);
-      }
-    }
-  ];
-
-  return Transformations;
+  return Console;
 
 })();
 
-/*
-  skew: [
-    x:
-    y:
-  ]
-*/
-
-
-for (property in Transformations) {
-  value = Transformations[property];
-  value.invoker = 'transform';
+_ref = Console.prototype.methods;
+for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+  method = _ref[_i];
+  Console.prototype[method] = (function(method) {
+    return function() {
+      if (method === 'group' || method === 'groupCollapsed') {
+        Console.prototype.groups++;
+      } else if (method === 'groupEnd') {
+        Console.prototype.groups--;
+      }
+      if ((typeof document !== "undefined" && document !== null) && this.level) {
+        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
+      }
+    };
+  })(method);
 }
 
+module.exports = Console;
+
 });
-require.register("gss/lib/commands/Conventions.js", function(exports, require, module){
-var Conventions;
+require.register("gss/lib/concepts/Wrapper.js", function(exports, require, module){
+var Wrapper;
 
-Conventions = (function() {
-  function Conventions() {}
-
-  Conventions.prototype.UP = '↑';
-
-  Conventions.prototype.RIGHT = '→';
-
-  Conventions.prototype.DOWN = '↓';
-
-  /* 
-    <!-- Example of document -->
-    <style id="my-stylesheet">
-      (h1 !+ img)[width] == #header[width]
-    </style>
-    <header id="header">
-      <img>
-      <h1 id="h1"></h1>
-    </header>
-  
-    <!-- Generated constraint key -->
-    style$my-stylesheet   # my stylesheet
-               ↓ h1$h1    # found heading
-               ↑ !+img    # preceeded by image
-               → #header  # bound to header element
-  */
-
-
-  Conventions.prototype.getContinuation = function(path, value, suffix) {
-    if (suffix == null) {
-      suffix = '';
-    }
-    if (path) {
-      path = path.replace(/[→↓↑]$/, '');
-    }
-    if (typeof value === 'string') {
-      return value;
-    }
-    return path + (value && this.identify(value) || '') + suffix;
-  };
-
-  Conventions.prototype.getPossibleContinuations = function(path) {
-    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
-  };
-
-  Conventions.prototype.getPath = function(id, property) {
-    if (!property) {
-      property = id;
-      id = void 0;
-    }
-    if (property.indexOf('[') > -1 || !id) {
-      return property;
-    } else {
-      return id + '[' + property + ']';
-    }
-  };
-
-  Conventions.prototype.isCollection = function(object) {
-    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
-      switch (typeof object[0]) {
-        case "object":
-          return object[0].nodeType;
-        case "undefined":
-          return object.length === 0;
+Wrapper = function(node, args, result, operation, continuation, scope) {
+  var arg, _i, _len;
+  if (result instanceof c.Constraint || result instanceof c.Expression) {
+    result = [result];
+    for (_i = 0, _len = args.length; _i < _len; _i++) {
+      arg = args[_i];
+      if (arg instanceof c.Variable) {
+        result.push(arg);
+      }
+      if (arg.paths) {
+        result.push.apply(result, arg.paths);
+        arg.paths = void 0;
       }
     }
-  };
+  }
+  if (result.length > 0) {
+    if (result.length > 1) {
+      result[0].paths = result.splice(1);
+    }
+    return result[0];
+  }
+  return result;
+};
 
-  Conventions.prototype.getQueryPath = function(operation, continuation) {
-    if (continuation) {
-      if (continuation.nodeType) {
-        return this.identify(continuation) + ' ' + operation.path;
+Wrapper.compile = function(constraints, engine, methods) {
+  var method, property, _results;
+  _results = [];
+  for (property in constraints) {
+    method = constraints[property];
+    if (method.length > 3) {
+      (function(property, method) {
+        return constraints[property] = function(left, right, strength, weight) {
+          var overloaded, value;
+          if (left.push) {
+            overloaded = left = Wrapper(null, null, left);
+          }
+          if (right.push) {
+            overloaded = right = Wrapper(null, null, right);
+          }
+          value = method.call(this, left, right, strength, weight);
+          if (overloaded) {
+            return Wrapper(null, [left, right], value);
+          }
+          return value;
+        };
+      })(property, method);
+    } else {
+      (methods || (methods = {}))[property] = method;
+    }
+    _results.push(constraints[property].after = 'Wrapper');
+  }
+  return _results;
+};
+
+module.exports = Wrapper;
+
+});
+require.register("gss/lib/concepts/Domain.js", function(exports, require, module){
+/* Domain: Observed values
+Acts as input values for equations.
+
+Interface:
+
+  - (un)watch() - (un)subscribe expression to property updates
+  - set()       - dispatches updates to subscribed expressions
+  - get()       - retrieve value
+  - clean()     - detach observes by continuation
+
+
+State:
+  - @watchers[key] - List of oservers of specific properties
+                      as [operation, continuation, scope] triplets
+
+  - @observers[continuation] - List of observers by continuation
+                                as [operation, key, scope] triplets
+*/
+
+var Domain, Native,
+  __hasProp = {}.hasOwnProperty;
+
+Native = require('../methods/Native');
+
+Domain = (function() {
+  Domain.prototype.priority = -Infinity;
+
+  function Domain(engine, values, name) {
+    var cmd, declaration, domain, index, path, prefix, property, scope, variable, _ref;
+    if (!engine || engine instanceof Domain) {
+      this.variables = this.engine && new (Native.prototype.mixin(this.engine.variables)) || {};
+      this.watchers = this.engine && new (Native.prototype.mixin(this.engine.watchers)) || {};
+      this.observers = this.engine && new (Native.prototype.mixin(this.engine.observers)) || {};
+      if (engine) {
+        this.engine = engine;
+      }
+      if (name) {
+        this.displayName = name;
+      }
+      if (values) {
+        this.merge(values);
+      }
+      return this;
+    } else {
+      if (engine.push) {
+        if (engine.domain) {
+          return engine.domain;
+        }
+        _ref = variable = engine, cmd = _ref[0], scope = _ref[1], property = _ref[2];
       } else {
-        return continuation + operation.key;
+        scope = arguments[0], property = arguments[1];
       }
+      path = this.getPath(scope, property);
+      if (declaration = this.variables[path]) {
+        domain = declaration.domain;
+      } else {
+        if ((index = property.indexOf('-')) > -1) {
+          prefix = property.substring(0, index);
+          if ((domain = this[prefix])) {
+            if (!(domain instanceof Domain)) {
+              domain = void 0;
+            }
+          }
+        }
+        if (!domain) {
+          if (this.assumed.hasOwnProperty(path)) {
+            domain = this.assumed;
+          } else {
+            domain = this.linear;
+          }
+        }
+      }
+      if (variable) {
+        variable.domain = domain;
+      }
+      return domain;
+    }
+  }
+
+  Domain.prototype.strategy = 'substitute';
+
+  Domain.prototype.solve = function(args) {
+    var object, result, strategy;
+    if (!args) {
+      return;
+    }
+    if (typeof args === 'object' && !args.push) {
+      if (this.domain === this.engine) {
+        return this.assumed.merge(args);
+      } else {
+        return this.merge(args);
+      }
+    } else if (strategy = this.strategy) {
+      if ((object = this[strategy]).solve) {
+        result = object.solve.apply(object, arguments);
+      } else {
+        result = this[strategy].apply(this, arguments);
+      }
+      return result;
+    }
+  };
+
+  Domain.prototype.substitute = function(expression, parent) {
+    var exp, index, path, replaced, substituted, _i, _len;
+    substituted = expression;
+    for (index = _i = 0, _len = expression.length; _i < _len; index = ++_i) {
+      exp = expression[index];
+      if (exp.push) {
+        replaced = this.substitute(exp, parent);
+        if (replaced !== exp) {
+          if (substituted === expression) {
+            substituted = expression.slice(0);
+            if (expression.domain) {
+              substituted.domain = expression.domain;
+            }
+          }
+          substituted[index] = replaced;
+        }
+      }
+    }
+    if (substituted[0] === 'get' && substituted.domain === this) {
+      path = this.engine.getPath(substituted[1], substituted[2]);
+      this.engine.console.row('vary', path, this[path]);
+      substituted = ['vary', this[path]];
+      substituted.domain = expression.domain;
+      substituted.domain.watch(null, path, substituted);
+    }
+    return substituted;
+  };
+
+  Domain.prototype.provide = function(solution, value) {
+    if (solution instanceof Domain) {
+      return this.merge(solution);
     } else {
-      return operation.key;
-    }
-  };
-
-  Conventions.prototype.getCanonicalPath = function(continuation, compact) {
-    var bits, last;
-    bits = this.getContinuation(continuation).split(this.DOWN);
-    last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.split(this.RIGHT).pop().replace(this.CanonicalizeRegExp, '');
-    if (compact) {
-      return last;
-    }
-    return bits.join(this.DOWN);
-  };
-
-  Conventions.prototype.CanonicalizeRegExp = /\$[^↑]+(?:↑|$)/g;
-
-  Conventions.prototype.getScopePath = function(continuation) {
-    var bits;
-    bits = continuation.split(this.DOWN);
-    bits[bits.length - 1] = "";
-    return bits.join(this.DOWN);
-  };
-
-  Conventions.prototype.getOperationPath = function(operation, continuation) {
-    if (continuation != null) {
-      if (operation.def.serialized && !operation.def.hidden) {
-        return continuation + (operation.key || operation.path);
+      if (this.domain) {
+        return this.engine.provide.call(this, solution);
+      } else {
+        return this.engine.provide(solution);
       }
-      return continuation;
-    } else {
-      return operation.path;
-    }
-  };
-
-  Conventions.prototype.getContext = function(args, operation, scope, node) {
-    var index, _ref;
-    index = args[0].def && 4 || 0;
-    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
-      return args[index];
-    }
-    if (!operation.bound) {
-      return this.scope;
-    }
-    return scope;
-  };
-
-  Conventions.prototype.getIntrinsicProperty = function(path) {
-    var index, last, property;
-    index = path.indexOf('intrinsic-');
-    if (index > -1) {
-      if ((last = path.indexOf(']', index)) === -1) {
-        last = void 0;
-      }
-      return property = path.substring(index + 10, last);
-    }
-  };
-
-  Conventions.prototype.isPrimitive = function(object) {
-    if (typeof object === 'object') {
-      return object.valueOf !== Object.prototype.valueOf;
     }
     return true;
   };
 
-  return Conventions;
+  Domain.prototype.verify = function(scope, property, value) {
+    property = this.engine.getPath(scope, property);
+    scope = null;
+    return this.invalidate(scope, property, value) || this.merge(scope, property, value) || this["import"](scope, property, value);
+  };
 
-})();
+  Domain.prototype.watch = function(object, property, operation, continuation, scope) {
+    var observers, path, watchers, _base, _base1;
+    path = this.engine.getPath(object, property);
+    if (this.engine.indexOfTriplet(this.watchers[path], operation, continuation, scope) === -1) {
+      observers = (_base = this.observers)[continuation] || (_base[continuation] = []);
+      observers.push(operation, path, scope);
+      watchers = (_base1 = this.watchers)[path] || (_base1[path] = []);
+      watchers.push(operation, continuation, scope);
+    }
+    return this.get(path);
+  };
 
-this.require || (this.require = function(string) {
-  var bits;
-  if (string === 'cassowary') {
-    return c;
-  }
-  bits = string.replace('', '').split('/');
-  return this[bits[bits.length - 1]];
-});
-
-this.module || (this.module = {});
-
-module.exports = Conventions;
-
-});
-require.register("gss/lib/concepts/Space.js", function(exports, require, module){
-
-
-});
-require.register("gss/lib/concepts/Buffer.js", function(exports, require, module){
-var Buffer;
-
-Buffer = (function() {
-  function Buffer() {}
-
-  Buffer.prototype.push = function() {
-    var output;
-    if (output = this.output) {
-      return output.pull.apply(output, arguments);
+  Domain.prototype.unwatch = function(object, property, operation, continuation, scope) {
+    var index, observers, path, watchers;
+    path = this.engine.getPath(object, property);
+    observers = this.observers[continuation];
+    index = this.engine.indexOfTriplet(observers, operation, path, scope);
+    observers.splice(index, 3);
+    if (!observers.length) {
+      delete this.observers[continuation];
+    }
+    watchers = this.watchers[path];
+    index = this.engine.indexOfTriplet(watchers, operation, continuation, scope);
+    watchers.splice(index, 3);
+    if (!watchers.length) {
+      return delete this.watchers[path];
     }
   };
 
-  Buffer.prototype.pull = function() {
-    var captured, input, pulled;
-    if (this.puller || (input = this.input)) {
-      captured = this.capture(arguments[0]);
-      if (input.pull) {
-        pulled = input.pull.apply(input, arguments);
-      } else {
-        pulled = this[input].apply(this, arguments);
-      }
-      if (captured) {
-        this.release();
-      }
-      return pulled;
-    }
+  Domain.prototype.get = function(object, property) {
+    return this[this.engine.getPath(object, property)];
   };
 
-  Buffer.prototype.flush = function() {
-    var input;
-    if (input = this.input) {
-      return input.flush.apply(input, arguments);
-    }
-  };
-
-  Buffer.prototype.run = function() {
-    return this.pull.apply(this, arguments);
-  };
-
-  Buffer.prototype.release = function() {
-    var _ref;
-    if ((_ref = this.capturer) != null) {
-      _ref.onRelease();
-    }
-    this.endTime = this.engine.time();
-    this.flush();
-    return this.endTime;
-  };
-
-  Buffer.prototype.capture = function(reason) {
-    var fmt, method, name, result, _ref;
-    if (this.buffer === void 0) {
-      if (this instanceof GSS) {
-        debugger;
+  Domain.prototype.merge = function(object) {
+    if (object && !object.push) {
+      if (object instanceof Domain) {
+        return object;
       }
-      if ((_ref = this.capturer) != null) {
-        _ref.onCapture();
-      }
-      this.buffer = null;
-      this.engine.start();
-      fmt = '%c%s%c';
-      if (typeof reason !== 'string') {
-        if (reason != null ? reason.slice : void 0) {
-          reason = this.engine.clone(reason);
+      this.engine.solve(this.displayName, function(domain) {
+        var path, value, _results;
+        _results = [];
+        for (path in object) {
+          value = object[path];
+          _results.push(domain.set(void 0, path, value));
         }
-        fmt += '\t\t%O';
-      } else {
-        fmt += '\t%s';
-      }
-      if (this.engine.onDOMContentLoaded) {
-        name = 'GSS.Document';
-      } else {
-        name = 'GSS.Solver';
-        method = 'groupCollapsed';
-      }
-      this.engine.console[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
-      this.startTime = this.engine.time();
+        return _results;
+      }, this);
     }
-    if (arguments.length > 1) {
-      result = this.pull.apply(this, Array.prototype.slice.call(arguments, 1));
-      if (name) {
-        this.release();
-      }
-      return result;
-    }
-    return !!name;
   };
 
-  Buffer.prototype.defer = function(reason) {
+  Domain.prototype.set = function(object, property, value, meta) {
+    var old, path, watchers, _ref;
+    path = this.engine.getPath(object, property);
+    old = this[path];
+    if (old === value) {
+      return;
+    }
+    if (value != null) {
+      this[path] = value;
+    } else {
+      delete this[path];
+    }
+    if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
+      this.engine.solve(this.displayName, path, function() {
+        var index, watcher, _i, _len, _results;
+        _results = [];
+        for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
+          watcher = watchers[index];
+          if (!watcher) {
+            break;
+          }
+          _results.push(this.provide(watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value));
+        }
+        return _results;
+      });
+    }
+    return value;
+  };
+
+  Domain.prototype.toObject = function() {
+    var object, property, value;
+    object = {};
+    for (property in this) {
+      if (!__hasProp.call(this, property)) continue;
+      value = this[property];
+      if (property !== 'engine' && property !== 'observers' && property !== 'watchers') {
+        object[property] = value;
+      }
+    }
+    return object;
+  };
+
+  Domain.prototype.invalidate = function(scope, property, value) {
+    var path;
+    path = this.engine.getPath(scope, property);
+    if (!this.variables[path]) {
+      return;
+    }
+    if ((this.invalid || (this.invalid = [])).indexOf(path) === -1) {
+      return this.invalid.push(path);
+    }
+  };
+
+  Domain.prototype["import"] = function(scope, property, value) {
+    var domain, path, _i, _len, _ref;
+    if (!target) {
+      _ref = this.domains;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        domain = _ref[_i];
+        if (this.domain["import"](scope, property, target)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    path = this.engine.getPath(scope, property);
+    if (this.variables[path]) {
+      return false;
+    }
+  };
+
+  Domain.prototype.constrain = function(constraint) {
+    var name, path, _base, _i, _len, _ref, _ref1;
+    if (constraint.paths) {
+      _ref = constraint.paths;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        path = _ref[_i];
+        if (typeof path === 'string') {
+          ((_base = this.variables)[path] || (_base[path] = [])).push(constraint);
+        } else {
+          path.counter = (path.counter || 0) + 1;
+          if (path.counter === 1) {
+            if (this.nullified && this.nullified[path.name]) {
+              delete this.nullified[path.name];
+            } else {
+              (this.added || (this.added = {}))[path.name] = 0;
+            }
+          }
+        }
+      }
+    }
+    if (typeof (name = constraint[0]) === 'string') {
+      if ((_ref1 = this[constraint[0]]) != null) {
+        _ref1.apply(this, Array.prototype.slice.call(constraint, 1));
+      }
+      return true;
+    }
+  };
+
+  Domain.prototype.unconstrain = function(constraint, continuation) {
+    var group, index, path, _i, _len, _ref, _results;
+    _ref = constraint.paths;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      path = _ref[_i];
+      if (typeof path === 'string') {
+        if (group = this.variables[path]) {
+          if ((index = group.indexOf(constraint)) > -1) {
+            group.splice(index, 1);
+          }
+          if (!group.length) {
+            _results.push(delete this.variables[path]);
+          } else {
+            _results.push(void 0);
+          }
+        } else {
+          _results.push(void 0);
+        }
+      } else {
+        if (!--path.counter) {
+          _results.push(this.undeclare(path));
+        } else {
+          _results.push(void 0);
+        }
+      }
+    }
+    return _results;
+  };
+
+  Domain.prototype.declare = function(name, value) {
+    var _base;
+    return (_base = this.variables)[name] || (_base[name] = value != null ? value : this.variable(name));
+  };
+
+  Domain.prototype.undeclare = function(variable) {
+    return delete this.variables[variable.name];
+  };
+
+  Domain.prototype.remove = function() {
+    var constrain, constraints, contd, observers, path, _i, _j, _k, _len, _len1, _ref;
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      path = arguments[_i];
+      _ref = this.getPossibleContinuations(continuation);
+      for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+        contd = _ref[_j];
+        if (observers = this.observers[contd]) {
+          while (observers[0]) {
+            this.unwatch(observers[1], void 0, observers[0], contd, observers[2]);
+          }
+        }
+      }
+      if (constraints = this.variables[path]) {
+        for (_k = constraints.length - 1; _k >= 0; _k += -1) {
+          constrain = constraints[_k];
+          if (this.isConstraint(constraint)) {
+            this.unconstraint(constraint, path);
+          } else if (this.isVariable(constraint)) {
+            this.undeclare(constraint);
+          }
+        }
+      }
+    }
+  };
+
+  Domain.prototype.defer = function(reason) {
     var _this = this;
-    if (this.capture.apply(this, arguments)) {
-      return this.deferred != null ? this.deferred : this.deferred = this.setImmediate(function() {
+    if (this.solve.apply(this, arguments)) {
+      return this.deferred != null ? this.deferred : this.deferred = Native.prototype.setImmediate(function() {
         _this.deferred = void 0;
         return _this.flush();
       }, 0);
     }
   };
 
-  Buffer.prototype.setImmediate = typeof setImmediate !== "undefined" && setImmediate !== null ? setImmediate : setTimeout;
+  Domain.compile = function(domains, engine) {
+    var EngineDomain, EngineDomainWrapper, domain, name;
+    for (name in domains) {
+      if (!__hasProp.call(domains, name)) continue;
+      domain = domains[name];
+      EngineDomain = engine[name] = function() {
+        var Methods, Properties;
+        this.domain = this;
+        if (this.events !== engine.events) {
+          this.addListeners(this.events);
+          this.events = new (Native.prototype.mixin(this.engine.events));
+        }
+        if (this.Methods !== engine.Methods) {
+          if (this.Wrapper) {
+            this.Wrapper.compile(this.Methods.prototype, this);
+          }
+          this.Method.compile(this.Methods.prototype, this);
+          Methods = this.Methods;
+        }
+        this.methods = new (Native.prototype.mixin(this.engine.methods, Methods));
+        if (this.Properties !== engine.Properties) {
+          this.Property.compile(this.Properties.prototype, this);
+          Properties = this.Properties;
+        }
+        this.properties = new (Native.prototype.mixin(this.engine.properties, Properties));
+        this.expressions = new this.Expressions(this);
+        return Domain.prototype.constructor.call(this, engine);
+      };
+      EngineDomainWrapper = engine.mixin(engine, domain);
+      EngineDomain.prototype = new EngineDomainWrapper(engine);
+      EngineDomain.displayName = name;
+      EngineDomain.prototype.displayName = name;
+      if (!engine.prototype) {
+        engine[name.toLowerCase()] = new engine[name];
+      }
+    }
+    return this;
+  };
 
-  return Buffer;
+  return Domain;
 
 })();
 
-module.exports = Buffer;
+module.exports = Domain;
 
 });
-require.register("gss/lib/concepts/EventTrigger.js", function(exports, require, module){
-var EventTrigger;
+require.register("gss/lib/concepts/Events.js", function(exports, require, module){
+var Events;
 
-EventTrigger = (function() {
-  function EventTrigger() {}
+Events = (function() {
+  function Events() {
+    this.listeners = {};
+    this.eventHandler = this.handleEvent.bind(this);
+    if (this.events) {
+      this.addListeners(this.events);
+    }
+  }
 
-  EventTrigger.prototype.once = function(type, fn) {
+  Events.prototype.destroy = function() {
+    this.triggerEvent('destroy');
+    if (this.scope) {
+      this.dispatchEvent(this.scope, 'destroy');
+    }
+    if (this.events) {
+      return this.removeListeners(this.events);
+    }
+  };
+
+  Events.prototype.addListeners = function(listeners) {
+    var callback, name, _results;
+    _results = [];
+    for (name in listeners) {
+      callback = listeners[name];
+      _results.push(this.addEventListener(name, callback));
+    }
+    return _results;
+  };
+
+  Events.prototype.removeListeners = function(listeners) {
+    var callback, name, _results;
+    _results = [];
+    for (name in listeners) {
+      callback = listeners[name];
+      _results.push(this.removeEventListener(name, callback));
+    }
+    return _results;
+  };
+
+  Events.prototype.once = function(type, fn) {
     fn.once = true;
     return this.addEventListener(type, fn);
   };
 
-  EventTrigger.prototype.addEventListener = function(type, fn) {
+  Events.prototype.addEventListener = function(type, fn) {
     var _base;
-    return ((_base = this.events)[type] || (_base[type] = [])).push(fn);
+    return ((_base = this.listeners)[type] || (_base[type] = [])).push(fn);
   };
 
-  EventTrigger.prototype.removeEventListener = function(type, fn) {
+  Events.prototype.removeEventListener = function(type, fn) {
     var group, index;
-    if (group = this.events[type]) {
+    if (group = this.listeners[type]) {
       if ((index = group.indexOf(fn)) > -1) {
         return group.splice(index, 1);
       }
     }
   };
 
-  EventTrigger.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method, _i;
-    if (group = this.events[type]) {
+  Events.prototype.triggerEvent = function(type, a, b, c) {
+    var fn, group, index, method, _i, _ref;
+    if (group = (_ref = this.listeners) != null ? _ref[type] : void 0) {
       for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
         fn = group[index];
         if (fn.once) {
@@ -22021,7 +21607,7 @@ EventTrigger = (function() {
     }
   };
 
-  EventTrigger.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
+  Events.prototype.dispatchEvent = function(element, type, detail, bubbles, cancelable) {
     if (!this.scope) {
       return;
     }
@@ -22033,112 +21619,70 @@ EventTrigger = (function() {
     }));
   };
 
-  EventTrigger.prototype.handleEvent = function(e) {
+  Events.prototype.handleEvent = function(e) {
     return this.triggerEvent(e.type, e);
   };
 
-  return EventTrigger;
+  return Events;
 
 })();
 
-module.exports = EventTrigger;
+module.exports = Events;
 
 });
-require.register("gss/lib/concepts/Console.js", function(exports, require, module){
-var Console, method, _i, _len, _ref;
+require.register("gss/lib/concepts/Method.js", function(exports, require, module){
+var Method,
+  __hasProp = {}.hasOwnProperty;
 
-Console = (function() {
-  function Console(level) {
-    this.level = level;
+Method = function(method, reference) {
+  var helper, key, value;
+  if (!method) {
+    return;
   }
-
-  Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
-
-  Console.prototype.groups = 0;
-
-  Console.prototype.row = function(a, b, c) {
-    var p1, p2;
-    a = a.name || a;
-    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
-    if (typeof b === 'object') {
-      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
-    } else {
-      p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
-      return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
+  if (typeof method === 'object' && !method.exec) {
+    helper = Method.Helper(method, false, reference);
+    for (key in method) {
+      value = method[key];
+      helper[key] = value;
     }
-  };
+    return helper;
+  }
+  method.displayName = reference;
+  return method;
+};
 
-  Console.time = function(other, time) {
-    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
-    if (time && !other) {
-      return time;
-    }
-    return Math.floor((time - other) * 100) / 100;
-  };
-
-  return Console;
-
-})();
-
-_ref = Console.prototype.methods;
-for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-  method = _ref[_i];
-  Console.prototype[method] = (function(method) {
-    return function() {
-      var _ref1;
-      if (method === 'group' || method === 'groupCollapsed') {
-        Console.prototype.groups++;
-      } else if (method === 'groupEnd') {
-        Console.prototype.groups--;
-      }
-      if ((typeof document !== "undefined" && document !== null) && ((_ref1 = window.location) != null ? _ref1.href.indexOf('log=0') : void 0) === -1) {
-        return typeof console !== "undefined" && console !== null ? typeof console[method] === "function" ? console[method].apply(console, arguments) : void 0 : void 0;
-      }
-    };
-  })(method);
-}
-
-module.exports = Console;
-
-});
-require.register("gss/lib/concepts/Helper.js", function(exports, require, module){
-var Helper;
-
-Helper = function(command, scoped, displayName) {
+Method.Helper = function(method, scoped, displayName) {
   var func, helper;
-  if (displayName === '_get') {
-    debugger;
-  }
-  if (typeof command === 'function') {
-    func = command;
+  if (typeof method === 'function') {
+    func = method;
   }
   helper = function(scope) {
-    var args, context, fn, length, method;
+    var args, context, fn, length;
     args = Array.prototype.slice.call(arguments, 0);
     length = arguments.length;
-    if (scoped || command.serialized) {
+    if (scoped || method.serialized) {
       if (!(scope && scope.nodeType)) {
         scope = this.scope || document;
-        if (typeof command[args.length] === 'string') {
+        if (typeof method[args.length] === 'string') {
           context = scope;
         } else {
           args.unshift(scope);
         }
       } else {
-        if (typeof command[args.length - 1] === 'string') {
+        if (typeof method[args.length - 1] === 'string') {
           context = scope = args.shift();
         }
       }
     }
     if (!(fn = func)) {
-      if (typeof (method = command[args.length]) === 'function') {
-        fn = method;
+      if (typeof (func = method[args.length]) === 'function') {
+        fn = func;
       } else {
-        if (!(method && (fn = scope[method]))) {
-          if (fn = this.commands[method]) {
+        if (!(func && (fn = scope[func]))) {
+          if (fn = this.methods[func]) {
             context = this;
           } else {
-            fn = command.command;
+            fn = method.command;
             args = [null, args[2], null, null, args[0], args[1]];
           }
         }
@@ -22152,31 +21696,39 @@ Helper = function(command, scoped, displayName) {
   return helper;
 };
 
-module.exports = Helper;
-
-});
-require.register("gss/lib/concepts/Command.js", function(exports, require, module){
-var Command;
-
-Command = function(command, reference) {
-  var helper, key, value;
-  if (typeof command === 'object' && !command.exec) {
-    helper = this.Helper(command, false, reference);
-    for (key in command) {
-      value = command[key];
-      helper[key] = value;
+Method.compile = function(methods, engine) {
+  var key, method, subkey;
+  methods.engine || (methods.engine = engine);
+  for (key in methods) {
+    if (!__hasProp.call(methods, key)) continue;
+    method = methods[key];
+    if (method === engine) {
+      continue;
     }
-    return helper;
+    if (key.charAt(0) !== '_') {
+      subkey = '_' + key;
+      method = this(method, subkey);
+      if (engine[subkey] == null) {
+        engine[subkey] = method;
+      }
+    }
+    if (engine[key] == null) {
+      engine[key] = method;
+    }
   }
-  command.displayName = reference;
-  return command;
+  return methods;
 };
 
-module.exports = Command;
+module.exports = Method;
+
+});
+require.register("gss/lib/concepts/Parser.js", function(exports, require, module){
+module.exports = require('ccss-compiler');
 
 });
 require.register("gss/lib/concepts/Property.js", function(exports, require, module){
-var Property;
+var Property,
+  __hasProp = {}.hasOwnProperty;
 
 Property = function(property, reference, properties) {
   var index, key, left, path, right, value, _base;
@@ -22201,6 +21753,29 @@ Property = function(property, reference, properties) {
     }
   }
   return property;
+};
+
+Property.compile = function(properties, engine) {
+  var key, prop, property, _name, _name1;
+  properties.engine || (properties.engine = engine);
+  for (key in properties) {
+    if (!__hasProp.call(properties, key)) continue;
+    property = properties[key];
+    if (key === 'engine') {
+      continue;
+    }
+    prop = this.call(engine, property, key, properties);
+    if (engine[_name = '_' + key] == null) {
+      engine[_name] = prop;
+    }
+  }
+  for (key in properties) {
+    property = properties[key];
+    if (engine[_name1 = '_' + key] == null) {
+      engine[_name1] = property;
+    }
+  }
+  return properties;
 };
 
 module.exports = Property;
@@ -22577,65 +22152,680 @@ Matcher = function(name, keywords, types, keys, required, pad, depth, initial, c
 module.exports = Style;
 
 });
-require.register("gss/lib/input/Expressions.js", function(exports, require, module){
-var Buffer, Expressions,
+require.register("gss/lib/domains/Linear.js", function(exports, require, module){
+/* Output: Constraints
+
+Manages constraints, executes solver commands.
+Removes dereferenced variables. Outputs solutions. 
+
+State:
+
+  @_variables: - records variables by name
+                 and constraints by continuation
+*/
+
+var Domain, Linear,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Buffer = require('../concepts/Buffer');
+Domain = require('../concepts/Domain');
+
+Linear = (function(_super) {
+  __extends(Linear, _super);
+
+  Linear.prototype.priority = 10;
+
+  Linear.prototype.Solver = require('cassowary');
+
+  Linear.prototype.Wrapper = require('../concepts/Wrapper');
+
+  Linear.prototype.Methods = (function() {
+    function Methods() {}
+
+    Methods.prototype.get = function(scope, property, path) {
+      var variable;
+      if (typeof this.properties[property] === 'function' && scope) {
+        return this.properties[property].call(this, scope, path);
+      } else {
+        variable = this.declare(this.getPath(scope, property));
+      }
+      return [variable, path || (property && scope) || ''];
+    };
+
+    Methods.prototype.strength = function(strength, deflt) {
+      if (deflt == null) {
+        deflt = 'medium';
+      }
+      return strength && c.Strength[strength] || c.Strength[deflt];
+    };
+
+    Methods.prototype.weight = function(weight) {
+      return weight;
+    };
+
+    Methods.prototype.varexp = function(name) {
+      return new c.Expression({
+        name: name
+      });
+    };
+
+    Methods.prototype['=='] = function(left, right, strength, weight) {
+      return new c.Equation(left, right, this.strength(strength), this.weight(weight));
+    };
+
+    Methods.prototype['<='] = function(left, right, strength, weight) {
+      return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+    };
+
+    Methods.prototype['>='] = function(left, right, strength, weight) {
+      return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+    };
+
+    Methods.prototype['<'] = function(left, right, strength, weight) {
+      return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+    };
+
+    Methods.prototype['>'] = function(left, right, strength, weight) {
+      return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+    };
+
+    Methods.prototype['+'] = function(left, right, strength, weight) {
+      return c.plus(left, right);
+    };
+
+    Methods.prototype['-'] = function(left, right, strength, weight) {
+      return c.minus(left, right);
+    };
+
+    Methods.prototype['*'] = function(left, right, strength, weight) {
+      return c.times(left, right);
+    };
+
+    Methods.prototype['/'] = function(left, right, strength, weight) {
+      return c.divide(left, right);
+    };
+
+    return Methods;
+
+  })();
+
+  Linear.prototype.isVariable = function(object) {
+    return object instanceof c.Variable;
+  };
+
+  Linear.prototype.isConstraint = function(object) {
+    return object instanceof c.Constraint;
+  };
+
+  function Linear() {
+    this.solver = new c.SimplexSolver();
+    this.solver.autoSolve = false;
+    c.debug = true;
+    Linear.__super__.constructor.apply(this, arguments);
+  }
+
+  Linear.prototype.provide = function(result) {
+    this.constrain(result);
+  };
+
+  Linear.prototype.solve = function() {
+    Domain.prototype.solve.apply(this, arguments);
+    if (this.constrained) {
+      this.constrained = void 0;
+      this.solver.solve();
+    } else {
+      this.solver.resolve();
+    }
+    return this.solver._changed;
+  };
+
+  Linear.prototype.constrain = function(constraint) {
+    if (!Linear.__super__.constrain.apply(this, arguments)) {
+      return this.solver.addConstraint(constraint);
+    }
+  };
+
+  Linear.prototype.unconstrain = function(constraint) {
+    if (!Linear.__super__.unconstrain.apply(this, arguments)) {
+      return this.solver.removeConstraint(constraint);
+    }
+  };
+
+  Linear.prototype.undeclare = function(variable) {
+    var cei;
+    if (!Linear.__super__.undeclare.apply(this, arguments)) {
+      if (variable.editing) {
+        if (cei = this.solver._editVarMap.get(variable)) {
+          this.solver.removeColumn(cei.editMinus);
+          this.solver._editVarMap["delete"](variable);
+        }
+      }
+      return this.solver._externalParametricVars["delete"](variable);
+    }
+  };
+
+  Linear.prototype.edit = function(variable, strength, weight, continuation) {
+    var constraint;
+    constraint = new c.EditConstraint(variable, this.strength(strength, 'strong'), this.weight(weight));
+    this.constrain(constraint);
+    variable.editing = constraint;
+    return constraint;
+  };
+
+  Linear.prototype.suggest = function(path, value, strength, weight, continuation) {
+    var variable, variables, _base;
+    if (typeof path === 'string') {
+      if (!(variable = this.variables[path])) {
+        if (continuation) {
+          variable = this.declare(path);
+          variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
+          variables.push(variable);
+        } else {
+          return this.verify(path, value);
+        }
+      }
+    } else {
+      variable = path;
+    }
+    if (!variable.editing) {
+      this.edit(variable, strength, weight, continuation);
+    }
+    this.solver.suggestValue(variable, value);
+    return variable;
+  };
+
+  Linear.prototype.variable = function(name) {
+    return new c.Variable({
+      name: name
+    });
+  };
+
+  Linear.prototype.stay = function() {
+    var arg, _i, _len;
+    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+      arg = arguments[_i];
+      this.solver.addStay(arg);
+    }
+  };
+
+  return Linear;
+
+})(Domain);
+
+module.exports = Linear;
+
+});
+require.register("gss/lib/domains/Intrinsic.js", function(exports, require, module){
+var Domain, Intrinsic, Native,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Domain = require('../concepts/Domain');
+
+Native = require('../methods/Native');
+
+Intrinsic = (function(_super) {
+  __extends(Intrinsic, _super);
+
+  Intrinsic.prototype.Queries = require('../modules/Queries');
+
+  Intrinsic.prototype.Positions = require('../modules/Positions');
+
+  Intrinsic.prototype.Types = require('../methods/Types');
+
+  Intrinsic.prototype.Units = require('../methods/Units');
+
+  Intrinsic.prototype.Style = require('../concepts/Style');
+
+  Intrinsic.prototype.Methods = Native.prototype.mixin({}, require('../methods/Types'), require('../methods/Units'), require('../methods/Selectors'), require('../methods/Rules'), require('../methods/Native'), require('../methods/Transformations'));
+
+  Intrinsic.prototype.Properties = Native.prototype.mixin({}, require('../properties/Dimensions'), require('../properties/Styles'));
+
+  function Intrinsic() {
+    var _base, _base1;
+    (_base = this.engine).queries || (_base.queries = new this.Queries(this));
+    (_base1 = this.engine).positions || (_base1.positions = new this.Positions(this));
+    this.types = new this.Types(this);
+    this.units = new this.Units(this);
+    if (!this.scope) {
+      this.scope = document;
+    }
+    if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
+      this.scope.addEventListener('DOMContentLoaded', this);
+    } else if (this.running) {
+      this.compile();
+    }
+    this.scope.addEventListener('scroll', this);
+    window.addEventListener('resize', this);
+    Intrinsic.__super__.constructor.apply(this, arguments);
+  }
+
+  Intrinsic.prototype.events = {
+    resize: function(e) {
+      var id;
+      if (e == null) {
+        e = '::window';
+      }
+      id = e.target && this.identity.provide(e.target) || e;
+      return this.solve(id + ' resized', function() {
+        this.intrinsic.verify(id, "width", void 0, false);
+        return this.intrinsic.verify(id, "height", void 0, false);
+      });
+    },
+    scroll: function(e) {
+      var id;
+      if (e == null) {
+        e = '::window';
+      }
+      id = e.target && this.identity.provide(e.target) || e;
+      return this.solve(id + ' scrolled', function() {
+        this.intrinsic.verify(id, "scroll-top", void 0, false);
+        return this.intrinsic.verify(id, "scroll-left", void 0, false);
+      });
+    },
+    solve: function() {
+      var id, _i, _len, _ref;
+      if (this.removed) {
+        _ref = this.removed;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          id = _ref[_i];
+          this.identity.unset(id);
+        }
+        return this.removed = void 0;
+      }
+    },
+    DOMContentLoaded: function() {
+      this.scope.removeEventListener('DOMContentLoaded', this);
+      return this.start();
+    },
+    compile: function() {
+      this.intrinsic.queries.connect();
+      return this.engine.solve('Intrinsic', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+    },
+    destroy: function() {
+      this.scope.removeEventListener('DOMContentLoaded', this);
+      this.scope.removeEventListener('scroll', this);
+      window.removeEventListener('resize', this);
+      return this.engine.events.destroy.apply(this, arguments);
+    }
+  };
+
+  Intrinsic.prototype.flush = function(reflow) {
+    var property, suggestions, value, _ref;
+    suggestions = void 0;
+    if (reflow) {
+      this.positions.render(null, this.reflown);
+    }
+    this.reflown = void 0;
+    if (this.buffer) {
+      _ref = this.buffer;
+      for (property in _ref) {
+        value = _ref[property];
+        if ((value != null) && value !== this.values[property]) {
+          (suggestions || (suggestions = [])).push(['suggest', property, value, 'required']);
+        }
+      }
+      this.values.merge(this.buffer);
+      return this.buffer = void 0;
+    }
+  };
+
+  Intrinsic.prototype.getComputedStyle = function(element, force) {
+    var computed, id, old;
+    if ((old = element.currentStyle) == null) {
+      computed = (this.computed || (this.computed = {}));
+      id = this.identity.provide(element);
+      old = computed[id];
+      if (force || (old == null)) {
+        return computed[id] = window.getComputedStyle(element);
+      }
+    }
+    return old;
+  };
+
+  Intrinsic.prototype.set = function(element, property) {
+    return element.style[property] = value;
+  };
+
+  Intrinsic.prototype.get = function() {
+    var prop, value;
+    prop = this.camelize(property);
+    value = element.style[property];
+    if (value === '') {
+      value = this.getComputedStyle(element)[prop];
+    }
+    value = this.toPrimitive(value, null, null, null, element, prop);
+    if (value.push && typeof value[0] === 'object') {
+      return this.properties[property].apply(this, value);
+    } else {
+      return this.properties[property].call(this, value);
+    }
+  };
+
+  Intrinsic.prototype.validate = function(node) {
+    var id, properties, reflown, subscribers;
+    if (!(subscribers = this._subscribers)) {
+      return;
+    }
+    reflown = void 0;
+    while (node) {
+      if (node === this.scope) {
+        if (this.reflown) {
+          reflown = this.getCommonParent(reflown, this.reflown);
+        } else {
+          reflown = this.scope;
+        }
+        break;
+      }
+      if (node === this.reflown) {
+        break;
+      }
+      if (id = node._gss_id) {
+        if (properties = subscribers[id]) {
+          reflown = node;
+        }
+      }
+      node = node.parentNode;
+    }
+    return this.reflown = reflown;
+  };
+
+  Intrinsic.prototype.verify = function(node, property, continuation, old, returnPath, primitive) {
+    var current, id, intrinsic, path, prop, value, _ref, _ref1;
+    if (node === window) {
+      id = '::window';
+    } else if (node.nodeType) {
+      id = this.identity.provide(node);
+    } else {
+      id = node;
+      node = this.ids[id];
+    }
+    path = this.getPath(id, property);
+    if ((value = (_ref = this.buffer) != null ? _ref[path] : void 0) == null) {
+      if ((prop = (_ref1 = this.properties[id]) != null ? _ref1[property] : void 0) != null) {
+        current = this.values[path];
+        if (current === void 0 || old === false) {
+          switch (typeof prop) {
+            case 'function':
+              value = prop.call(this, node, continuation);
+              break;
+            case 'string':
+              path = prop;
+              value = this.properties[prop].call(this, node, continuation);
+              break;
+            default:
+              value = prop;
+          }
+        }
+      } else if (intrinsic = this.getIntrinsicProperty(property)) {
+        if (document.body.contains(node)) {
+          if (prop || (prop = this.properties[property])) {
+            value = prop.call(this, node, property, continuation);
+          } else {
+            value = this.getStyle(node, intrinsic);
+          }
+        } else {
+          value = null;
+        }
+      } else if (this[property]) {
+        value = this[property](node, continuation);
+      } else {
+        return;
+      }
+    }
+    if (primitive) {
+      return this.values.set(id, property, value);
+    } else {
+      if (value !== void 0) {
+        (this.buffer || (this.buffer = {}))[path] = value;
+      }
+    }
+    if (returnPath) {
+      return path;
+    } else {
+      return value;
+    }
+  };
+
+  Intrinsic.prototype.getCommonParent = function(a, b) {
+    var ap, aps, bp, bps;
+    aps = [];
+    bps = [];
+    ap = a;
+    bp = b;
+    while (ap && bp) {
+      aps.push(ap);
+      bps.push(bp);
+      ap = ap.parentNode;
+      bp = bp.parentNode;
+      if (bps.indexOf(ap) > -1) {
+        return ap;
+      }
+      if (aps.indexOf(bp) > -1) {
+        return bp;
+      }
+    }
+    return suggestions;
+  };
+
+  Intrinsic.prototype.update = function(node, x, y, styles, full) {
+    var id, path, prop, properties, _i, _len, _results;
+    if (!this._subscribers) {
+      return;
+    }
+    if (id = node._gss_id) {
+      if (properties = this._subscribers[id]) {
+        _results = [];
+        for (_i = 0, _len = properties.length; _i < _len; _i++) {
+          prop = properties[_i];
+          if (full && (prop === 'width' || prop === 'height')) {
+            continue;
+          }
+          path = id + "[intrinsic-" + prop + "]";
+          switch (prop) {
+            case "x":
+              _results.push((this.buffer || (this.buffer = {}))[path] = x + node.offsetLeft);
+              break;
+            case "y":
+              _results.push((this.buffer || (this.buffer = {}))[path] = y + node.offsetTop);
+              break;
+            case "width":
+              _results.push((this.buffer || (this.buffer = {}))[path] = node.offsetWidth);
+              break;
+            case "height":
+              _results.push((this.buffer || (this.buffer = {}))[path] = node.offsetHeight);
+              break;
+            default:
+              _results.push(this.values.set(null, path, this.getStyle(node, prop)));
+          }
+        }
+        return _results;
+      }
+    }
+  };
+
+  Intrinsic.prototype.url = null;
+
+  return Intrinsic;
+
+})(Domain);
+
+module.exports = Intrinsic;
+
+});
+require.register("gss/lib/domains/Finite.js", function(exports, require, module){
+var Domain, Finite,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Domain = require('../concepts/Domain');
+
+Finite = (function(_super) {
+  __extends(Finite, _super);
+
+  Finite.prototype.priority = 100;
+
+  Finite.prototype.Wrapper = require('../concepts/Wrapper');
+
+  function Finite() {
+    Finite.__super__.constructor.apply(this, arguments);
+  }
+
+  Finite.prototype.Methods = (function() {
+    function Methods() {}
+
+    Methods.prototype.variable = function(name) {
+      return this.solver.decl(name);
+    };
+
+    Methods.prototype['=='] = function(left, right) {
+      return this.solver.eq(left, right);
+    };
+
+    Methods.prototype['!='] = function(left, right) {
+      return this.solver.neq(left, right);
+    };
+
+    Methods.prototype['distinct'] = function() {
+      return this.solver.distinct.apply(this.solver, arguments);
+    };
+
+    Methods.prototype['<='] = function(left, right) {
+      return this.solver.lte(left, right);
+    };
+
+    Methods.prototype['>='] = function(left, right) {
+      return this.solver.gte(left, right);
+    };
+
+    Methods.prototype['<'] = function(left, right) {
+      return this.solver.lt(left, right);
+    };
+
+    Methods.prototype['>'] = function(left, right) {
+      return this.solver.gt(left, right);
+    };
+
+    Methods.prototype['+'] = function(left, right) {
+      return this.solver.plus(left, right);
+    };
+
+    Methods.prototype['-'] = function(left, right) {
+      return this.solver.minus(left, right);
+    };
+
+    Methods.prototype['*'] = function(left, right) {
+      return this.solver.times(left, right);
+    };
+
+    Methods.prototype['/'] = function(left, right) {
+      return this.solver.divide(left, right);
+    };
+
+    return Methods;
+
+  })();
+
+  return Finite;
+
+})(Domain);
+
+module.exports = Finite;
+
+});
+require.register("gss/lib/domains/Numeric.js", function(exports, require, module){
+/* Domain: Solved values
+
+Merges values from all other domains, 
+enables anonymous constraints on immutable values
+*/
+
+var Domain, Numeric, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Domain = require('../concepts/Domain');
+
+Numeric = (function(_super) {
+  __extends(Numeric, _super);
+
+  function Numeric() {
+    _ref = Numeric.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Numeric.prototype.priority = Infinity;
+
+  Numeric.prototype.Methods = (function() {
+    function Methods() {}
+
+    Methods.prototype["=="] = function(a, b) {
+      return b;
+    };
+
+    Methods.prototype["<="] = function(a, b) {
+      return Math.min(a, b);
+    };
+
+    Methods.prototype[">="] = function(a, b) {
+      return Math.max(a, b);
+    };
+
+    Methods.prototype["<"] = function(a, b) {
+      return Math.min(a, b - 1);
+    };
+
+    Methods.prototype[">"] = function(a, b) {
+      return Math.max(a, b + 1);
+    };
+
+    Methods.prototype.isVariable = function(object) {
+      return object[0] === 'get';
+    };
+
+    Methods.prototype.isConstraint = function(object) {
+      return this.constraints[object[0]];
+    };
+
+    return Methods;
+
+  })();
+
+  return Numeric;
+
+})(Domain);
+
+module.exports = Numeric;
+
+});
+require.register("gss/lib/modules/Expressions.js", function(exports, require, module){
+var Domain, Expressions,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Domain = require('../concepts/Domain');
 
 Expressions = (function(_super) {
   __extends(Expressions, _super);
 
-  function Expressions(engine, output) {
+  Expressions.prototype.displayName = 'Expressions';
+
+  function Expressions(engine) {
     this.engine = engine;
-    this.output = output;
-    this.commands = this.engine && this.engine.commands || this;
-    this.input = 'evaluate';
   }
 
-  Expressions.prototype.push = function(args, batch) {
-    var buffer;
-    if (args == null) {
-      return;
-    }
-    if ((buffer = this.buffer) !== void 0) {
-      if (!(this.engine.onBuffer && this.engine.onBuffer(buffer, args, batch) === false)) {
-        (buffer || (this.buffer = [])).push(args);
-      }
-    } else {
-      return this.output.pull.apply(this.output, args);
-    }
-  };
-
-  Expressions.prototype.flush = function() {
-    var added, buffer;
-    if (this.engine.onFlush) {
-      added = this.engine.onFlush(this.buffer);
-    }
-    buffer = this.buffer && added && added.concat(this.buffer) || this.buffer || added;
-    this.lastOutput = this.engine.clone(buffer);
-    if (buffer) {
-      this.buffer = void 0;
-      this.output.pull(buffer);
-    } else {
-      this.buffer = void 0;
-    }
-    return this.engine.console.groupEnd();
-  };
-
-  Expressions.prototype.evaluate = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, contd, evaluate, evaluated, result, _ref;
+  Expressions.prototype.solve = function(operation, continuation, scope, meta, ascender, ascending) {
+    var args, contd, result, solve, solved, _ref;
     if (!operation.def) {
       this.analyze(operation);
     }
-    if (meta !== operation && (evaluate = (_ref = operation.parent) != null ? _ref.def.evaluate : void 0)) {
-      evaluated = evaluate.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
-      if (evaluated === false) {
+    if (meta !== operation && (solve = (_ref = operation.parent) != null ? _ref.def.solve : void 0)) {
+      solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
+      if (solved === false) {
         return;
       }
-      if (typeof evaluated === 'string') {
-        continuation = evaluated;
+      if (typeof solved === 'string') {
+        continuation = solved;
       }
     }
     if (operation.tail) {
@@ -22646,31 +22836,29 @@ Expressions = (function(_super) {
         return result;
       }
     }
-    args = this.resolve(operation, continuation, scope, meta, ascender, ascending);
+    args = this.descend(operation, continuation, scope, meta, ascender, ascending);
     if (args === false) {
       return;
     }
-    if (operation.name) {
+    if (operation.name && !operation.def.hidden) {
       this.engine.console.row(operation, args, continuation || "");
     }
     if (operation.def.noop) {
       result = args;
     } else {
-      result = this.execute(operation, continuation, scope, meta, args);
+      result = this.execute(operation, continuation, scope, args);
       contd = continuation;
       continuation = this.engine.getOperationPath(operation, continuation);
     }
     return this.ascend(operation, continuation, result, scope, meta, ascender);
   };
 
-  Expressions.prototype.execute = function(operation, continuation, scope, meta, args) {
+  Expressions.prototype.execute = function(operation, continuation, scope, args) {
     var command, context, func, method, node, onAfter, onBefore, result;
     scope || (scope = this.engine.scope);
     if (operation.def.scoped || !args) {
       node = scope;
       (args || (args = [])).unshift(scope);
-    } else if (operation.def.meta) {
-      (args || (args = [])).push(operation, continuation, scope, meta);
     } else {
       node = this.engine.getContext(args, operation, scope, node);
     }
@@ -22685,7 +22873,7 @@ Expressions = (function(_super) {
         if (!func) {
           if (!context && (func = scope[method])) {
             context = scope;
-          } else if (command = this.commands[method]) {
+          } else if (command = this.engine.methods[method]) {
             func = this.engine[command.displayName];
           }
         }
@@ -22731,7 +22919,7 @@ Expressions = (function(_super) {
     return false;
   };
 
-  Expressions.prototype.resolve = function(operation, continuation, scope, meta, ascender, ascending) {
+  Expressions.prototype.descend = function(operation, continuation, scope, meta, ascender, ascending) {
     var args, argument, contd, index, mark, offset, prev, shift, skip, stopping, _i, _len;
     args = prev = void 0;
     skip = operation.skip;
@@ -22760,7 +22948,7 @@ Expressions = (function(_super) {
             contd = continuation;
           }
         }
-        argument = this.evaluate(argument, contd || continuation, scope, meta, void 0, prev);
+        argument = this.solve(argument, contd || continuation, scope, meta, void 0, prev);
       }
       if (argument === void 0) {
         if (!operation.def.eager || (ascender != null)) {
@@ -22787,7 +22975,7 @@ Expressions = (function(_super) {
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             breadcrumbs = this.engine.getContinuation(continuation, item, this.engine.UP);
-            this.evaluate(operation.parent, breadcrumbs, scope, meta, operation.index, item);
+            this.solve(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
           this.engine.console.groupEnd();
           return;
@@ -22808,22 +22996,17 @@ Expressions = (function(_super) {
           }
           if (operation.def.noop || (parent.def.noop && !parent.name)) {
             if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
-              if (result.length === 1) {
-                result = result[0];
-              }
-              if (meta !== 'return') {
-                return this.push(result);
-              }
+              return this.provide(result.length === 1 ? result[0] : result);
             }
           } else if (parent && ((ascender != null) || (result.nodeType && (!operation.def.hidden || parent.tail === parent)))) {
-            this.evaluate(parent, continuation, scope, meta, operation.index, result);
+            this.solve(parent, continuation, scope, meta, operation.index, result);
             return;
           } else {
             return result;
           }
         }
-      } else if (meta !== 'return') {
-        return this.push(result);
+      } else {
+        return this.provide(result);
       }
     }
     return result;
@@ -22832,7 +23015,7 @@ Expressions = (function(_super) {
   Expressions.prototype.skip = function(operation, ascender) {
     var _base;
     if (operation.tail.path === operation.tail.key || (ascender != null)) {
-      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.commands[operation.def.group].perform.call(this.engine, operation));
+      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.methods[operation.def.group].perform.call(this.engine, operation));
     } else {
       return operation.tail[1];
     }
@@ -22843,7 +23026,7 @@ Expressions = (function(_super) {
     if (typeof operation[0] === 'string') {
       operation.name = operation[0];
     }
-    def = this.commands[operation.name];
+    def = this.engine.methods[operation.name];
     if (parent) {
       operation.parent = parent;
       operation.index = parent.indexOf(operation);
@@ -22866,15 +23049,16 @@ Expressions = (function(_super) {
           def = def.lookup.call(this, operation);
           break;
         case 'string':
-          def = this.commands[def.lookup + operation.name];
+          def = this.engine.methods[def.lookup + operation.name];
           break;
         default:
-          def = this.commands[operation.name];
+          def = this.engine.methods[operation.name];
       }
     }
     operation.def = def || (def = {
       noop: true
     });
+    operation.domain = this.engine;
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       child = operation[index];
       if (child instanceof Array) {
@@ -22927,7 +23111,7 @@ Expressions = (function(_super) {
         if (typeof op !== 'object') {
           after += op;
         } else if (op.key && group !== false) {
-          if (group && (groupper = this.commands[group])) {
+          if (group && (groupper = this.engine.methods[group])) {
             if (op.def.group === group) {
               if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
                 operation.groupped = groupper.promise(op, operation);
@@ -22954,12 +23138,290 @@ Expressions = (function(_super) {
 
   return Expressions;
 
-})(Buffer);
+})(Domain);
+
+this.module || (this.module = {});
 
 module.exports = Expressions;
 
 });
-require.register("gss/lib/input/Queries.js", function(exports, require, module){
+require.register("gss/lib/modules/Identity.js", function(exports, require, module){
+var Identity;
+
+Identity = (function() {
+  function Identity() {}
+
+  Identity.uid = 0;
+
+  Identity.prototype.provide = function(object, generate) {
+    var id;
+    if (!(id = object._gss_id)) {
+      if (object === document) {
+        id = "::document";
+      } else if (object === window) {
+        id = "::window";
+      }
+      if (generate !== false) {
+        object._gss_id = id || (id = "$" + (object.id || (this.uid || (this.uid = (this.uid || 0) + 1))));
+      }
+      this[id] = object;
+    }
+    return id;
+  };
+
+  Identity.prototype.get = function(id) {
+    return this[id];
+  };
+
+  Identity.prototype.solve = function(id) {
+    return this[id];
+  };
+
+  Identity.prototype.unset = function(object) {
+    return delete this[id];
+  };
+
+  Identity.prototype.find = function(object) {
+    return this.constructor.identity.provide(object, false);
+  };
+
+  return Identity;
+
+})();
+
+module.exports = Identity;
+
+});
+require.register("gss/lib/modules/Matches.js", function(exports, require, module){
+
+
+});
+require.register("gss/lib/modules/Positions.js", function(exports, require, module){
+/* Output: DOM element styles
+  
+Applies style changes in bulk, separates reflows & positions.
+Revalidates intrinsic measurements, optionally schedules 
+another solver pass
+*/
+
+var Domain, Positions,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Domain = require('../concepts/Domain');
+
+Positions = (function(_super) {
+  __extends(Positions, _super);
+
+  function Positions(engine) {
+    this.engine = engine;
+  }
+
+  Positions.prototype.solve = function(data) {
+    var intrinsic, path, positioning, property, value, _ref;
+    this.lastInput = JSON.parse(JSON.stringify(data));
+    intrinsic = null;
+    for (path in data) {
+      value = data[path];
+      if (property = this.engine.getIntrinsicProperty(path)) {
+        data[path] = void 0;
+        if (property !== 'intrinsic-x' && property !== 'intrinsic-y') {
+          (intrinsic || (intrinsic = {}))[path] = value;
+        }
+      }
+    }
+    positioning = this.render(data);
+    if (intrinsic) {
+      for (path in intrinsic) {
+        value = intrinsic[path];
+        data[path] = this.intrinsic.solve(path, void 0, value, positioning, true);
+      }
+    }
+    if (this.data) {
+      _ref = this.data;
+      for (path in _ref) {
+        value = _ref[path];
+        if (data[path] === void 0 && value !== void 0) {
+          data[path] = value;
+        }
+      }
+      this.data = void 0;
+    }
+    return this.data = data;
+  };
+
+  Positions.prototype.remove = function(id) {
+    return delete this[id];
+  };
+
+  Positions.prototype.provide = function(id, property, value, positioning, intrinsic) {
+    var camel, element, last, path, pixels, positioned, positioner, style, _base;
+    if (property === void 0) {
+      path = id;
+      last = id.lastIndexOf('[');
+      property = path.substring(last + 1, id.length - 1);
+      id = id.substring(0, last);
+    }
+    if (id.charAt(0) === ':') {
+      return;
+    }
+    if (!(element = this.engine.ids[id])) {
+      if (!(element = this.engine.getElementById(this.engine.scope, id.substring(1)))) {
+        return;
+      }
+    }
+    positioner = this.positioners[property];
+    if (positioning && positioner) {
+      (positioning[id] || (positioning[id] = {}))[property] = value;
+    } else {
+      if (intrinsic) {
+        return this.engine.measurements.get(element, property, void 0, value);
+      }
+      if (positioner) {
+        positioned = positioner(element);
+        if (typeof positioned === 'string') {
+          property = positioned;
+        }
+      }
+      camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
+      style = element.style;
+      if (style[camel] !== void 0) {
+        if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
+          pixels = Math.round(value) + 'px';
+        }
+        if (positioner) {
+          if (!style[camel]) {
+            if ((style.positioning = (style.positioning || 0) + 1) === 1) {
+              style.position = 'absolute';
+            }
+          } else if (value == null) {
+            if (!--style.positioning) {
+              style.position = '';
+            }
+          }
+        }
+        style[camel] = pixels != null ? pixels : value;
+      }
+    }
+    return value;
+  };
+
+  Positions.prototype.render = function(data, node) {
+    var id, path, positioning, prop, styles, value;
+    this.engine.queries.disconnect();
+    positioning = {};
+    if (data) {
+      for (path in data) {
+        value = data[path];
+        if (value !== void 0) {
+          this.provide(path, void 0, value, positioning);
+        }
+      }
+    }
+    this.adjust(node, null, null, positioning, null, !!data);
+    for (id in positioning) {
+      styles = positioning[id];
+      for (prop in styles) {
+        value = styles[prop];
+        this.provide(id, prop, value);
+      }
+    }
+    this.engine.queries.connect();
+    return positioning;
+  };
+
+  Positions.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
+    var child, children, offsets, scope, _i, _len;
+    if (x == null) {
+      x = 0;
+    }
+    if (y == null) {
+      y = 0;
+    }
+    scope = this.engine.scope;
+    parent || (parent = scope);
+    if (offsets = this.placehold(positioning, parent, x, y, full)) {
+      x += offsets.x || 0;
+      y += offsets.y || 0;
+    }
+    if (parent === document) {
+      parent = document.body;
+    }
+    children = this.engine.commands['$>'][1](parent);
+    if (parent.offsetParent === scope) {
+      x -= scope.offsetLeft;
+      y -= scope.offsetTop;
+    } else if (parent !== scope) {
+      if (!offsets && (children != null ? children.length : void 0) && children[0].offsetParent === parent) {
+        x += parent.offsetLeft + parent.clientLeft;
+        y += parent.offsetTop + parent.clientTop;
+        offsetParent = parent;
+      }
+    }
+    if (children) {
+      for (_i = 0, _len = children.length; _i < _len; _i++) {
+        child = children[_i];
+        this.adjust(child, x, y, positioning, offsetParent, full);
+      }
+    }
+    return positioning;
+  };
+
+  Positions.prototype.placehold = function(positioning, element, x, y, full) {
+    var left, offsets, property, styles, top, uid, value, values;
+    offsets = void 0;
+    if (uid = element._gss_id) {
+      styles = positioning != null ? positioning[uid] : void 0;
+      if (values = this.engine.values) {
+        if ((styles != null ? styles.x : void 0) === void 0) {
+          if ((left = values[uid + '[x]']) != null) {
+            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).x = left;
+          }
+        }
+        if ((styles != null ? styles.y : void 0) === void 0) {
+          if ((top = values[uid + '[y]']) != null) {
+            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).y = top;
+          }
+        }
+      }
+      if (styles) {
+        for (property in styles) {
+          value = styles[property];
+          if (value !== null) {
+            switch (property) {
+              case "x":
+                styles.x = value - x;
+                (offsets || (offsets = {})).x = value - x;
+                break;
+              case "y":
+                styles.y = value - y;
+                (offsets || (offsets = {})).y = value - y;
+            }
+          }
+        }
+      }
+      this.engine.measurements.update(element, x, y, styles, full);
+    }
+    return offsets;
+  };
+
+  Positions.prototype.positioners = {
+    x: function() {
+      return 'left';
+    },
+    y: function() {
+      return 'top';
+    }
+  };
+
+  return Positions;
+
+})(Domain);
+
+module.exports = Positions;
+
+});
+require.register("gss/lib/modules/Queries.js", function(exports, require, module){
 /* Input: DOM Queries
 
  - Listens for changes in DOM,
@@ -22970,14 +23432,14 @@ require.register("gss/lib/input/Queries.js", function(exports, require, module){
  Output: Expressions, revaluates expressions
 
  State:  - `@[path]`: elements and collections by selector path
-         - `@_watchers[id]`: dom queries by element id
+         - `@watchers[id]`: dom queries by element id
 */
 
-var Buffer, Queries,
+var Domain, Queries,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Buffer = require('../concepts/Buffer');
+Domain = require('../concepts/Domain');
 
 Queries = (function(_super) {
   __extends(Queries, _super);
@@ -22992,12 +23454,10 @@ Queries = (function(_super) {
 
   Queries.prototype.Observer = window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver;
 
-  function Queries(engine, output) {
+  function Queries(engine) {
     this.engine = engine;
-    this.output = output;
-    this._watchers = {};
-    this.listener = new this.Observer(this.pull.bind(this));
-    this.connect();
+    this.watchers = {};
+    this.listener = new this.Observer(this.solve.bind(this));
   }
 
   Queries.prototype.connect = function() {
@@ -23014,7 +23474,7 @@ Queries = (function(_super) {
   };
 
   Queries.prototype.onRelease = function() {
-    var continuation, evalDiff, id, index, node, plural, plurals, property, queries, query, queryDiff, queryTime, repairing, scope, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1;
+    var evalDiff, id, index, node, plural, plurals, property, queryDiff, repairing, value, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
     if (this.removed) {
       _ref = this.removed;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -23023,20 +23483,6 @@ Queries = (function(_super) {
       }
       this.removed = void 0;
     }
-    queryTime = this.engine.time();
-    while (queries = this.buffer) {
-      this.buffer = null;
-      this.lastOutput = this.lastOutput && this.lastOutput.concat(queries) || queries;
-      for (index = _j = 0, _len1 = queries.length; _j < _len1; index = _j += 3) {
-        query = queries[index];
-        if (!query) {
-          break;
-        }
-        continuation = queries[index + 1];
-        scope = queries[index + 2];
-        this.output.pull(query, continuation, scope, this.engine.UP, void 0, void 0);
-      }
-    }
     this.buffer = void 0;
     repairing = this._repairing;
     this._repairing = void 0;
@@ -23044,7 +23490,7 @@ Queries = (function(_super) {
       for (property in repairing) {
         value = repairing[property];
         if (plurals = this._plurals[property]) {
-          for (index = _k = 0, _len2 = plurals.length; _k < _len2; index = _k += 3) {
+          for (index = _j = 0, _len1 = plurals.length; _j < _len1; index = _j += 3) {
             plural = plurals[index];
             this.repair(property, plural, plurals[index + 1], plurals[index + 2], plurals[index + 3]);
           }
@@ -23053,8 +23499,8 @@ Queries = (function(_super) {
     }
     if (this.removing) {
       _ref1 = this.removing;
-      for (_l = 0, _len3 = _ref1.length; _l < _len3; _l++) {
-        node = _ref1[_l];
+      for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
+        node = _ref1[_k];
         delete node._gss_id;
       }
     }
@@ -23066,34 +23512,24 @@ Queries = (function(_super) {
     return this.buffer = this.updated = void 0;
   };
 
-  Queries.prototype.push = function(query, continuation, scope) {
-    if (this.buffer === void 0) {
-      this.output.pull(query, continuation, scope);
-    } else if (!this.buffer || this.engine.values.indexOf(this.buffer, query, continuation, scope) === -1) {
-      (this.buffer || (this.buffer = [])).push(query, continuation, scope);
-    }
-  };
-
-  Queries.prototype.pull = function(mutations) {
-    var mutation, updating, _i, _len;
-    updating = this.engine.expressions.capture(mutations);
-    for (_i = 0, _len = mutations.length; _i < _len; _i++) {
-      mutation = mutations[_i];
-      switch (mutation.type) {
-        case "attributes":
-          this.$attribute(mutation.target, mutation.attributeName, mutation.oldValue);
-          break;
-        case "childList":
-          this.$children(mutation.target, mutation);
-          break;
-        case "characterData":
-          this.$characterData(mutation.target, mutation);
+  Queries.prototype.solve = function(mutations) {
+    return this.engine.solve('mutations', mutations, function() {
+      var mutation, _i, _len;
+      for (_i = 0, _len = mutations.length; _i < _len; _i++) {
+        mutation = mutations[_i];
+        switch (mutation.type) {
+          case "attributes":
+            this.queries.$attribute(mutation.target, mutation.attributeName, mutation.oldValue);
+            break;
+          case "childList":
+            this.queries.$children(mutation.target, mutation);
+            break;
+          case "characterData":
+            this.queries.$characterData(mutation.target, mutation);
+        }
+        this.intrinsic.validate(mutation.target);
       }
-      this.$intrinsics(mutation.target);
-    }
-    if (updating) {
-      return this.engine.expressions.release();
-    }
+    });
   };
 
   Queries.prototype.$attribute = function(target, name, changed) {
@@ -23285,7 +23721,7 @@ Queries = (function(_super) {
     }
     for (_s = 0, _len10 = allRemoved.length; _s < _len10; _s++) {
       removed = allRemoved[_s];
-      if (id = this.engine.recognize(removed)) {
+      if (id = this.engine.identity.find(removed)) {
         (this.removed || (this.removed = [])).push(id);
       }
     }
@@ -23295,20 +23731,13 @@ Queries = (function(_super) {
   Queries.prototype.$characterData = function(target) {
     var id, parent, _ref;
     parent = target.parentNode;
-    if (id = this.engine.recognize(parent)) {
+    if (id = this.engine.identity.find(parent)) {
       if (parent.tagName === 'STYLE') {
         if (((_ref = parent.getAttribute('type')) != null ? _ref.indexOf('text/gss') : void 0) > -1) {
           return this.engine["eval"](parent);
         }
       }
     }
-  };
-
-  Queries.prototype.$intrinsics = function(node) {
-    if (!document.body.contains(node)) {
-      return;
-    }
-    return this.engine.onResize(node);
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
@@ -23379,11 +23808,11 @@ Queries = (function(_super) {
     if (continuation !== true) {
       refs = this.engine.getPossibleContinuations(continuation);
       if (typeof id !== 'object') {
-        this.unpair(continuation, this.engine.elements[id]);
+        this.unpair(continuation, this.engine.ids[id]);
       }
     }
     index = 0;
-    if (!(watchers = typeof id === 'object' && id || this._watchers[id])) {
+    if (!(watchers = typeof id === 'object' && id || this.watchers[id])) {
       return;
     }
     while (watcher = watchers[index]) {
@@ -23399,7 +23828,7 @@ Queries = (function(_super) {
       }
     }
     if (!watchers.length) {
-      return delete this._watchers[id];
+      return delete this.watchers[id];
     }
   };
 
@@ -23486,12 +23915,12 @@ Queries = (function(_super) {
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural) {
     var collection, node;
-    this.engine.console.row('remove', id.nodeType && this.engine.identify(id) || id, continuation);
+    this.engine.console.row('remove', id.nodeType && this.engine.identity.provide(id) || id, continuation);
     if (typeof id === 'object') {
       node = id;
-      id = this.engine.identify(id);
+      id = this.engine.identity.provide(id);
     } else {
-      node = this.engine.elements[id];
+      node = this.engine.ids[id];
     }
     if (continuation) {
       collection = this.get(continuation);
@@ -23535,7 +23964,7 @@ Queries = (function(_super) {
           this.each('remove', result, path, operation);
         }
         if (scope && operation.def.cleaning) {
-          this.remove(this.engine.recognize(scope), path, operation);
+          this.remove(this.engine.identity.find(scope), path, operation);
         }
       }
     }
@@ -23548,7 +23977,7 @@ Queries = (function(_super) {
     }
     this.unwatch(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
-      this.engine.expressions.push(['remove', this.engine.getContinuation(path)], true);
+      this.provide(['remove', this.engine.getContinuation(path)]);
     }
     return true;
   };
@@ -23566,7 +23995,7 @@ Queries = (function(_super) {
     rightUpdate = (_ref1 = this.updated) != null ? _ref1[rightPath] : void 0;
     rightNew = rightUpdate && rightUpdate[0] || this.get(rightPath);
     if (!rightNew && collected) {
-      rightNew = this.get(path + this.engine.identify(leftNew[0] || leftOld[0]) + '→' + key);
+      rightNew = this.get(path + this.engine.identity.provide(leftNew[0] || leftOld[0]) + '→' + key);
     }
     rightNew || (rightNew = []);
     if (rightNew.old !== void 0) {
@@ -23611,9 +24040,9 @@ Queries = (function(_super) {
       prefix = this.engine.getContinuation(path, pair[0], '→');
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length);
       if (operation.path !== operation.key) {
-        this.engine.expressions.pull(operation.parent, prefix + operation.path, scope, this.engine.UP, operation.index, pair[1]);
+        this.provide(operation.parent, prefix + operation.path, scope, this.engine.UP, operation.index, pair[1]);
       } else {
-        this.engine.expressions.pull(operation, contd, scope, this.engine.UP, true, true);
+        this.provide(operation, contd, scope, this.engine.UP, true, true);
       }
     }
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path);
@@ -23670,7 +24099,7 @@ Queries = (function(_super) {
       pushed = plurals.push(operation.path, operation, scope);
     }
     collection = this.get(left);
-    element = match[2] ? this.engine.elements[match[2]] : this.get(match[1]);
+    element = match[2] ? this.engine.ids[match[2]] : this.get(match[1]);
     if (this._repairing !== void 0) {
       schedule = (this._repairing || (this._repairing = {}))[left] = true;
       return -1;
@@ -23797,9 +24226,9 @@ Queries = (function(_super) {
         this.updateOperationCollection(operation, path, scope, added, removed);
       }
     }
-    if (id = this.engine.identify(node)) {
-      watchers = (_base = this._watchers)[id] || (_base[id] = []);
-      if (this.engine.values.indexOf(watchers, operation, continuation, scope) === -1) {
+    if (id = this.engine.identity.provide(node)) {
+      watchers = (_base = this.watchers)[id] || (_base[id] = []);
+      if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
         watchers.push(operation, continuation, scope);
       }
     }
@@ -23870,7 +24299,7 @@ Queries = (function(_super) {
     if (!(id = node._gss_id)) {
       return;
     }
-    if (!(watchers = this._watchers[id])) {
+    if (!(watchers = this.watchers[id])) {
       return;
     }
     if (continuation) {
@@ -23908,7 +24337,7 @@ Queries = (function(_super) {
   Queries.prototype.qualify = function(operation, continuation, scope, groupped, qualifier, fallback) {
     var indexed;
     if ((indexed = groupped[qualifier]) || (fallback && groupped[fallback])) {
-      this.push(operation, continuation, scope);
+      this.provide(operation, continuation, scope);
     }
     return this;
   };
@@ -23920,1121 +24349,674 @@ Queries = (function(_super) {
 
   return Queries;
 
-})(Buffer);
+})(Domain);
 
 module.exports = Queries;
 
 });
-require.register("gss/lib/input/Values.js", function(exports, require, module){
-/* Input: Observed values
+require.register("gss/lib/properties/Axioms.js", function(exports, require, module){
+var Axioms;
 
-Manages solutions and document properties.
+Axioms = (function() {
+  function Axioms() {}
 
-Interface:
+  Axioms.prototype.right = function(scope, path) {
+    return this['+'](this.get(scope, "x", path), this.get(scope, "width", path));
+  };
 
-  - (un)watch() - (un)subscribe expression to property updates
-  - set()       - dispatches updates to subscribed expressions
-  - get()       - retrieve value
-  - clean()     - detach observes by continuation
+  Axioms.prototype.bottom = function(scope, path) {
+    return this['+'](this.get(scope, "y", path), this.get(scope, "height", path));
+  };
 
+  Axioms.prototype.center = {
+    x: function(scope, path) {
+      return this['+'](this.get(scope, "x", path), this['/'](this.get(scope, "width", path), 2));
+    },
+    y: function(scope, path) {
+      return this['+'](this.get(scope, "y", path), this['/'](this.get(scope, "height", path), 2));
+    }
+  };
 
-State:
-  - @_watchers[key] - List of oservers of specific properties
-                      as [operation, continuation, scope] triplets
+  return Axioms;
 
-  - @_observers[continuation] - List of observers by continuation
-                                as [operation, key, scope] triplets
-*/
+})();
 
-var Values;
+module.exports = Axioms;
 
-Values = (function() {
-  function Values(engine) {
-    this.engine = engine;
-    this._observers = {};
-    this._watchers = {};
-  }
+});
+require.register("gss/lib/properties/Dimensions.js", function(exports, require, module){
+var Dimensions;
 
-  Values.prototype.indexOf = function(array, a, b, c) {
-    var index, op, _i, _len;
-    if (array) {
-      for (index = _i = 0, _len = array.length; _i < _len; index = _i += 3) {
-        op = array[index];
-        if (op === a && array[index + 1] === b && array[index + 2] === c) {
-          return index;
-        }
+Dimensions = (function() {
+  function Dimensions() {}
+
+  Dimensions.prototype['::window'] = {
+    width: function() {
+      return window.innerWidth;
+    },
+    height: function() {
+      return window.innerHeight;
+    },
+    scroll: {
+      left: function() {
+        return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
+      },
+      top: function() {
+        return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
       }
-    }
-    return -1;
+    },
+    x: 0,
+    y: 0
   };
 
-  Values.prototype.watch = function(id, property, operation, continuation, scope) {
-    var observers, path, watchers, _base, _base1;
-    path = this.engine.getPath(id, property);
-    if (this.indexOf(this._watchers[path], operation, continuation, scope) === -1) {
-      observers = (_base = this._observers)[continuation] || (_base[continuation] = []);
-      observers.push(operation, path, scope);
-      watchers = (_base1 = this._watchers)[path] || (_base1[path] = []);
-      watchers.push(operation, continuation, scope);
-    }
-    return this.get(path);
+  Dimensions.prototype['::document'] = {
+    scroll: {
+      left: '::window[scroll-left]',
+      top: '::window[scroll-top]'
+    },
+    x: '::window[x]',
+    y: '::window[y]'
   };
 
-  Values.prototype.unwatch = function(id, property, operation, continuation, scope) {
-    var index, observers, path, watchers;
-    path = this.engine.getPath(id, property);
-    observers = this._observers[continuation];
-    index = this.indexOf(observers, operation, path, scope);
-    observers.splice(index, 3);
-    if (!observers.length) {
-      delete this._observers[continuation];
-    }
-    watchers = this._watchers[path];
-    index = this.indexOf(watchers, operation, continuation, scope);
-    watchers.splice(index, 3);
-    if (!watchers.length) {
-      return delete this._watchers[path];
-    }
-  };
-
-  Values.prototype.clean = function(continuation) {
-    var observers, path, _i, _len, _ref;
-    _ref = this.engine.getPossibleContinuations(continuation);
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      path = _ref[_i];
-      if (observers = this._observers[path]) {
-        while (observers[0]) {
-          this.unwatch(observers[1], void 0, observers[0], path, observers[2]);
-        }
-      }
-    }
-    return this;
-  };
-
-  Values.prototype.pull = function(object) {
-    return this.merge(object);
-  };
-
-  Values.prototype.get = function(id, property) {
-    return this[this.engine.getPath(id, property)];
-  };
-
-  Values.prototype.set = function(id, property, value, buffered, meta) {
-    var capture, index, old, path, watcher, watchers, _i, _len, _ref;
-    if (arguments.length === 2) {
-      value = property;
-      property = void 0;
-    }
-    path = this.engine.getPath(id, property);
-    old = this[path];
-    if (old === value) {
-      return;
-    }
-    if (value != null) {
-      this[path] = value;
-    } else {
-      delete this[path];
-    }
-    if (this.engine.onChange) {
-      this.engine.onChange(path, value, old);
-    }
-    if (watchers = (_ref = this._watchers) != null ? _ref[path] : void 0) {
-      for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
-        watcher = watchers[index];
-        if (!watcher) {
+  Dimensions.prototype.intrinsic = {
+    height: function(element) {
+      return element.offsetHeight;
+    },
+    width: function(element) {
+      return element.offsetWidth;
+    },
+    y: function(element) {
+      var y;
+      y = 0;
+      while (element) {
+        y += element.offsetTop;
+        element = element.offsetParent;
+        if (element === this.scope || !element) {
           break;
         }
-        if (typeof capture === "undefined" || capture === null) {
-          capture = this.engine.expressions.capture(path) || false;
-        }
-        this.engine.expressions.evaluate(watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value);
-      }
-      if (capture && !buffered) {
-        this.engine.expressions.release();
-      }
-    }
-    return value;
-  };
-
-  Values.prototype.suggest = function(id, property, value) {
-    var capture, _base;
-    if (arguments.length === 2) {
-      value = property;
-      property = void 0;
-    }
-    ((_base = this.engine).measured || (_base.measured = {}))[this.engine.getPath(id, property)] = value;
-    if (capture = this.engine.expressions.capture('suggest ' + (id || '') + '[' + (property || '') + '] ' + value)) {
-      this.engine.flush();
-    }
-    return value;
-  };
-
-  Values.prototype.merge = function(object) {
-    var capturing, path, value;
-    capturing = this.engine.expressions.buffer === void 0;
-    for (path in object) {
-      value = object[path];
-      this.set(path, void 0, value, capturing);
-    }
-    if (capturing && this.engine.expressions.buffer !== void 0) {
-      this.engine.expressions.release();
-    }
-    return this;
-  };
-
-  Values.prototype.toObject = function() {
-    var object, property, value;
-    object = {};
-    for (property in this) {
-      value = this[property];
-      if (this.hasOwnProperty(property)) {
-        if (property !== 'engine' && property !== '_observers' && property !== '_watchers') {
-          object[property] = value;
+        if (element === this.scope.offsetParent) {
+          y -= this.scope.offsetTop;
         }
       }
-    }
-    return object;
-  };
-
-  return Values;
-
-})();
-
-module.exports = Values;
-
-});
-require.register("gss/lib/output/Solutions.js", function(exports, require, module){
-/* Output: Constraints
-
-Manages constraints, executes solver commands.
-Removes dereferenced variables. Outputs solutions. 
-
-State:
-
-  @_variables: - records variables by name
-                 and constraints by continuation
-*/
-
-var Solutions, Space,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-require('cassowary');
-
-Space = require('../concepts/Space');
-
-Solutions = (function(_super) {
-  __extends(Solutions, _super);
-
-  function Solutions(engine, output) {
-    this.engine = engine;
-    this.output = output;
-    this.solver = new c.SimplexSolver();
-    this.solver.autoSolve = false;
-    c.debug = true;
-    this.variables = {};
-  }
-
-  Solutions.prototype.pull = function(commands) {
-    var command, property, response, startTime, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-    this.response = response = {};
-    this.lastInput = commands;
-    for (_i = 0, _len = commands.length; _i < _len; _i++) {
-      command = commands[_i];
-      if (command instanceof Array && typeof command[0] === 'object') {
-        for (_j = 0, _len1 = command.length; _j < _len1; _j++) {
-          subcommand = command[_j];
-          this.add(subcommand);
-        }
-      } else {
-        this.add(command);
-      }
-    }
-    if (this.constrained) {
-      this.constrained = void 0;
-      this.solver.solve();
-    } else {
-      this.solver.resolve();
-    }
-    _ref = this.solver._changed;
-    for (property in _ref) {
-      value = _ref[property];
-      response[property] = value;
-    }
-    this.solver._changed = void 0;
-    if (this.nullified) {
-      _ref1 = this.nullified;
-      for (property in _ref1) {
-        value = _ref1[property];
-        if (!this.added || !(this.added[property] != null)) {
-          this.nullify(value);
-          response[property] = null;
-        }
-      }
-    }
-    if (this.added) {
-      _ref2 = this.added;
-      for (property in _ref2) {
-        value = _ref2[property];
-        if (!response[property] && (!this.nullified || !this.nullified[property])) {
-          response[property] = 0;
-        }
-      }
-    }
-    this.added = this.nullified = void 0;
-    this.lastOutput = response;
-    if (startTime = this.engine.expressions.startTime) {
-      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(startTime) + 'ms');
-    }
-    this.push(response);
-  };
-
-  Solutions.prototype.push = function(results) {
-    if (this.output) {
-      return this.output.pull(results);
-    } else {
-      this.engine.values.merge(results);
-      return this.engine.push(results);
-    }
-  };
-
-  Solutions.prototype.remove = function(constrain, path) {
-    var group, index, _i, _len, _ref, _results;
-    if (constrain instanceof c.Constraint) {
-      this.solver.removeConstraint(constrain);
-      _ref = constrain.paths;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        path = _ref[_i];
-        if (typeof path === 'string') {
-          if (group = this.variables[path]) {
-            if ((index = group.indexOf(constrain)) > -1) {
-              group.splice(index, 1);
-            }
-            if (!group.length) {
-              _results.push(delete this.variables[path]);
-            } else {
-              _results.push(void 0);
-            }
-          } else {
-            _results.push(void 0);
-          }
-        } else {
-          if (!--path.counter) {
-            _results.push((this.nullified || (this.nullified = {}))[path.name] = path);
-          } else {
-            _results.push(void 0);
-          }
-        }
-      }
-      return _results;
-    } else if (constrain instanceof c.Variable) {
-      if (constrain.editing) {
-        return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
-      }
-    }
-  };
-
-  Solutions.prototype.nullify = function(variable) {
-    var cei;
-    if (variable.editing) {
-      if (cei = this.solver._editVarMap.get(variable)) {
-        this.solver.removeColumn(cei.editMinus);
-        this.solver._editVarMap["delete"](variable);
-      }
-    }
-    delete this.variables[variable.name];
-    this.solver._externalParametricVars["delete"](variable);
-    return console.log('nullify', variable.name);
-  };
-
-  Solutions.prototype.add = function(command) {
-    var path, _base, _i, _len, _ref, _results;
-    if (command instanceof c.Constraint) {
-      this.constrained = true;
-      this.solver.addConstraint(command);
-      if (command.paths) {
-        _ref = command.paths;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          path = _ref[_i];
-          if (typeof path === 'string') {
-            _results.push(((_base = this.variables)[path] || (_base[path] = [])).push(command));
-          } else {
-            path.counter = (path.counter || 0) + 1;
-            if (path.counter === 1) {
-              if (this.nullified && this.nullified[path.name]) {
-                _results.push(delete this.nullified[path.name]);
-              } else {
-                _results.push((this.added || (this.added = {}))[path.name] = 0);
-              }
-            } else {
-              _results.push(void 0);
-            }
-          }
-        }
-        return _results;
-      }
-    } else if (this[command[0]]) {
-      return this[command[0]].apply(this, Array.prototype.slice.call(command, 1));
-    }
-  };
-
-  Solutions.prototype.edit = function(variable, strength, weight, continuation) {
-    var constraint;
-    strength = this.engine.strength(strength, 'strong');
-    weight = this.engine.weight(weight);
-    constraint = new c.EditConstraint(variable, strength, weight);
-    this.solver.addConstraint(constraint);
-    variable.editing = constraint;
-    return constraint;
-  };
-
-  Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
-    var variable, variables, _base;
-    if (typeof path === 'string') {
-      if (!(variable = this.variables[path])) {
-        if (continuation) {
-          variable = this.engine["var"](path);
-          variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
-          if (variables.indexOf(variable) === -1) {
-            variables.push(variable);
-          }
-        } else {
-          return this.response[path] = value;
-        }
-      }
-    } else {
-      variable = path;
-    }
-    if (!variable.editing) {
-      this.edit(variable, strength, weight, continuation);
-    }
-    this.solver.suggestValue(variable, value);
-    return variable;
-  };
-
-  Solutions.prototype.stay = function() {
-    var arg, _i, _len;
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      arg = arguments[_i];
-      this.solver.addStay(arg);
-    }
-  };
-
-  return Solutions;
-
-})(Space);
-
-module.exports = Solutions;
-
-});
-require.register("gss/lib/output/Restyles.js", function(exports, require, module){
-/* Output: DOM element styles
-  
-Applies style changes in bulk, separates reflows & restyles.
-Revalidates intrinsic measurements, optionally schedules 
-another solver pass
-*/
-
-var Restyles;
-
-Restyles = (function() {
-  function Restyles(engine) {
-    this.engine = engine;
-  }
-
-  Restyles.prototype.pull = function(data) {
-    var intrinsic, path, positioning, property, suggestions, value, _ref;
-    this.lastInput = JSON.parse(JSON.stringify(data));
-    intrinsic = null;
-    for (path in data) {
-      value = data[path];
-      if (property = this.engine.getIntrinsicProperty(path)) {
-        data[path] = void 0;
-        if (property !== 'intrinsic-x' && property !== 'intrinsic-y') {
-          (intrinsic || (intrinsic = {}))[path] = value;
-        }
-      }
-    }
-    positioning = this.render(data);
-    if (intrinsic) {
-      for (path in intrinsic) {
-        value = intrinsic[path];
-        data[path] = this.set(path, void 0, value, positioning, true);
-      }
-    }
-    if (this.data) {
-      _ref = this.data;
-      for (path in _ref) {
-        value = _ref[path];
-        if (data[path] === void 0 && value !== void 0) {
-          data[path] = value;
-        }
-      }
-      this.data = void 0;
-    }
-    this.data = data;
-    if (suggestions = this.engine.getSuggestions()) {
-      return this.engine.expressions.capture(suggestions.length + ' intrinsics', suggestions);
-    } else {
-      this.data = void 0;
-      return this.push(data);
-    }
-  };
-
-  Restyles.prototype.push = function(data) {
-    return this.engine.push(data);
-  };
-
-  Restyles.prototype.remove = function(id) {
-    return delete this[id];
-  };
-
-  Restyles.prototype.get = function(path, property, value) {
-    var camel, element, style, _base;
-    element = this.engine[path];
-    camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
-    style = element.style;
-    value = style[camel];
-    if (value !== void 0) {
-      return value;
-    }
-    return this;
-  };
-
-  Restyles.prototype.set = function(id, property, value, positioning, intrinsic) {
-    var camel, element, last, path, pixels, positioned, positioner, style, _base;
-    if (property === void 0) {
-      path = id;
-      last = id.lastIndexOf('[');
-      property = path.substring(last + 1, id.length - 1);
-      id = id.substring(0, last);
-    }
-    if (id.charAt(0) === ':') {
-      return;
-    }
-    if (!(element = this.engine.elements[id])) {
-      if (!(element = this.engine.getElementById(this.engine.scope, id.substring(1)))) {
-        return;
-      }
-    }
-    positioner = this.positioners[property];
-    if (positioning && positioner) {
-      (positioning[id] || (positioning[id] = {}))[property] = value;
-    } else {
-      if (intrinsic) {
-        return this.engine.measure(element, property, void 0, value);
-      }
-      if (positioner) {
-        positioned = positioner(element);
-        if (typeof positioned === 'string') {
-          property = positioned;
-        }
-      }
-      camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
-      style = element.style;
-      if (style[camel] !== void 0) {
-        if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
-          pixels = Math.round(value) + 'px';
-        }
-        if (positioner) {
-          if (!style[camel]) {
-            if ((style.positioning = (style.positioning || 0) + 1) === 1) {
-              style.position = 'absolute';
-            }
-          } else if (value == null) {
-            if (!--style.positioning) {
-              style.position = '';
-            }
-          }
-        }
-        style[camel] = pixels != null ? pixels : value;
-      }
-    }
-    return value;
-  };
-
-  Restyles.prototype.render = function(data, node) {
-    var id, path, positioning, prop, styles, value;
-    this.engine.queries.disconnect();
-    positioning = {};
-    if (data) {
-      for (path in data) {
-        value = data[path];
-        if (value !== void 0) {
-          this.set(path, void 0, value, positioning);
-        }
-      }
-    }
-    this.adjust(node, null, null, positioning, null, !!data);
-    for (id in positioning) {
-      styles = positioning[id];
-      for (prop in styles) {
-        value = styles[prop];
-        this.set(id, prop, value);
-      }
-    }
-    this.engine.queries.connect();
-    return positioning;
-  };
-
-  Restyles.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
-    var child, children, offsets, scope, _i, _len;
-    if (x == null) {
-      x = 0;
-    }
-    if (y == null) {
-      y = 0;
-    }
-    scope = this.engine.scope;
-    parent || (parent = scope);
-    if (offsets = this.placehold(positioning, parent, x, y, full)) {
-      x += offsets.x || 0;
-      y += offsets.y || 0;
-    }
-    if (parent === document) {
-      parent = document.body;
-    }
-    children = this.engine.commands['$>'][1](parent);
-    if (parent.offsetParent === scope) {
-      x -= scope.offsetLeft;
-      y -= scope.offsetTop;
-    } else if (parent !== scope) {
-      if (!offsets && (children != null ? children.length : void 0) && children[0].offsetParent === parent) {
-        x += parent.offsetLeft + parent.clientLeft;
-        y += parent.offsetTop + parent.clientTop;
-        offsetParent = parent;
-      }
-    }
-    if (children) {
-      for (_i = 0, _len = children.length; _i < _len; _i++) {
-        child = children[_i];
-        this.adjust(child, x, y, positioning, offsetParent, full);
-      }
-    }
-    return positioning;
-  };
-
-  Restyles.prototype.placehold = function(positioning, element, x, y, full) {
-    var left, offsets, property, styles, top, uid, value, values;
-    offsets = void 0;
-    if (uid = element._gss_id) {
-      styles = positioning != null ? positioning[uid] : void 0;
-      if (values = this.engine.values) {
-        if ((styles != null ? styles.x : void 0) === void 0) {
-          if ((left = values[uid + '[x]']) != null) {
-            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).x = left;
-          }
-        }
-        if ((styles != null ? styles.y : void 0) === void 0) {
-          if ((top = values[uid + '[y]']) != null) {
-            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).y = top;
-          }
-        }
-      }
-      if (styles) {
-        for (property in styles) {
-          value = styles[property];
-          if (value !== null) {
-            switch (property) {
-              case "x":
-                styles.x = value - x;
-                (offsets || (offsets = {})).x = value - x;
-                break;
-              case "y":
-                styles.y = value - y;
-                (offsets || (offsets = {})).y = value - y;
-            }
-          }
-        }
-      }
-      this.engine.onMeasure(element, x, y, styles, full);
-    }
-    return offsets;
-  };
-
-  Restyles.prototype.positioners = {
-    x: function() {
-      return 'left';
+      return y;
     },
-    y: function() {
-      return 'top';
-    }
-  };
-
-  return Restyles;
-
-})();
-
-module.exports = Restyles;
-
-});
-require.register("gss/lib/output/Solutions.js", function(exports, require, module){
-/* Output: Constraints
-
-Manages constraints, executes solver commands.
-Removes dereferenced variables. Outputs solutions. 
-
-State:
-
-  @_variables: - records variables by name
-                 and constraints by continuation
-*/
-
-var Solutions, Space,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-require('cassowary');
-
-Space = require('../concepts/Space');
-
-Solutions = (function(_super) {
-  __extends(Solutions, _super);
-
-  function Solutions(engine, output) {
-    this.engine = engine;
-    this.output = output;
-    this.solver = new c.SimplexSolver();
-    this.solver.autoSolve = false;
-    c.debug = true;
-    this.variables = {};
-  }
-
-  Solutions.prototype.pull = function(commands) {
-    var command, property, response, startTime, subcommand, value, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-    this.response = response = {};
-    this.lastInput = commands;
-    for (_i = 0, _len = commands.length; _i < _len; _i++) {
-      command = commands[_i];
-      if (command instanceof Array && typeof command[0] === 'object') {
-        for (_j = 0, _len1 = command.length; _j < _len1; _j++) {
-          subcommand = command[_j];
-          this.add(subcommand);
-        }
-      } else {
-        this.add(command);
-      }
-    }
-    if (this.constrained) {
-      this.constrained = void 0;
-      this.solver.solve();
-    } else {
-      this.solver.resolve();
-    }
-    _ref = this.solver._changed;
-    for (property in _ref) {
-      value = _ref[property];
-      response[property] = value;
-    }
-    this.solver._changed = void 0;
-    if (this.nullified) {
-      _ref1 = this.nullified;
-      for (property in _ref1) {
-        value = _ref1[property];
-        if (!this.added || !(this.added[property] != null)) {
-          this.nullify(value);
-          response[property] = null;
-        }
-      }
-    }
-    if (this.added) {
-      _ref2 = this.added;
-      for (property in _ref2) {
-        value = _ref2[property];
-        if (!response[property] && (!this.nullified || !this.nullified[property])) {
-          response[property] = 0;
-        }
-      }
-    }
-    this.added = this.nullified = void 0;
-    this.lastOutput = response;
-    if (startTime = this.engine.expressions.startTime) {
-      this.engine.console.row('Result', JSON.parse(JSON.stringify(response)), GSS.time(startTime) + 'ms');
-    }
-    this.push(response);
-  };
-
-  Solutions.prototype.push = function(results) {
-    if (this.output) {
-      return this.output.pull(results);
-    } else {
-      this.engine.values.merge(results);
-      return this.engine.push(results);
-    }
-  };
-
-  Solutions.prototype.remove = function(constrain, path) {
-    var group, index, _i, _len, _ref, _results;
-    if (constrain instanceof c.Constraint) {
-      this.solver.removeConstraint(constrain);
-      _ref = constrain.paths;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        path = _ref[_i];
-        if (typeof path === 'string') {
-          if (group = this.variables[path]) {
-            if ((index = group.indexOf(constrain)) > -1) {
-              group.splice(index, 1);
-            }
-            if (!group.length) {
-              _results.push(delete this.variables[path]);
-            } else {
-              _results.push(void 0);
-            }
-          } else {
-            _results.push(void 0);
-          }
-        } else {
-          if (!--path.counter) {
-            _results.push((this.nullified || (this.nullified = {}))[path.name] = path);
-          } else {
-            _results.push(void 0);
-          }
-        }
-      }
-      return _results;
-    } else if (constrain instanceof c.Variable) {
-      if (constrain.editing) {
-        return (this.nullified || (this.nullified = {}))[constrain.name] = constrain;
-      }
-    }
-  };
-
-  Solutions.prototype.nullify = function(variable) {
-    var cei;
-    if (variable.editing) {
-      if (cei = this.solver._editVarMap.get(variable)) {
-        this.solver.removeColumn(cei.editMinus);
-        this.solver._editVarMap["delete"](variable);
-      }
-    }
-    delete this.variables[variable.name];
-    this.solver._externalParametricVars["delete"](variable);
-    return console.log('nullify', variable.name);
-  };
-
-  Solutions.prototype.add = function(command) {
-    var path, _base, _i, _len, _ref, _results;
-    if (command instanceof c.Constraint) {
-      this.constrained = true;
-      this.solver.addConstraint(command);
-      if (command.paths) {
-        _ref = command.paths;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          path = _ref[_i];
-          if (typeof path === 'string') {
-            _results.push(((_base = this.variables)[path] || (_base[path] = [])).push(command));
-          } else {
-            path.counter = (path.counter || 0) + 1;
-            if (path.counter === 1) {
-              if (this.nullified && this.nullified[path.name]) {
-                _results.push(delete this.nullified[path.name]);
-              } else {
-                _results.push((this.added || (this.added = {}))[path.name] = 0);
-              }
-            } else {
-              _results.push(void 0);
-            }
-          }
-        }
-        return _results;
-      }
-    } else if (this[command[0]]) {
-      return this[command[0]].apply(this, Array.prototype.slice.call(command, 1));
-    }
-  };
-
-  Solutions.prototype.edit = function(variable, strength, weight, continuation) {
-    var constraint;
-    strength = this.engine.strength(strength, 'strong');
-    weight = this.engine.weight(weight);
-    constraint = new c.EditConstraint(variable, strength, weight);
-    this.solver.addConstraint(constraint);
-    variable.editing = constraint;
-    return constraint;
-  };
-
-  Solutions.prototype.suggest = function(path, value, strength, weight, continuation) {
-    var variable, variables, _base;
-    if (typeof path === 'string') {
-      if (!(variable = this.variables[path])) {
-        if (continuation) {
-          variable = this.engine["var"](path);
-          variables = ((_base = this.variables)[continuation] || (_base[continuation] = []));
-          if (variables.indexOf(variable) === -1) {
-            variables.push(variable);
-          }
-        } else {
-          return this.response[path] = value;
-        }
-      }
-    } else {
-      variable = path;
-    }
-    if (!variable.editing) {
-      this.edit(variable, strength, weight, continuation);
-    }
-    this.solver.suggestValue(variable, value);
-    return variable;
-  };
-
-  Solutions.prototype.stay = function() {
-    var arg, _i, _len;
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      arg = arguments[_i];
-      this.solver.addStay(arg);
-    }
-  };
-
-  return Solutions;
-
-})(Space);
-
-module.exports = Solutions;
-
-});
-require.register("gss/lib/output/Restyles.js", function(exports, require, module){
-/* Output: DOM element styles
-  
-Applies style changes in bulk, separates reflows & restyles.
-Revalidates intrinsic measurements, optionally schedules 
-another solver pass
-*/
-
-var Restyles;
-
-Restyles = (function() {
-  function Restyles(engine) {
-    this.engine = engine;
-  }
-
-  Restyles.prototype.pull = function(data) {
-    var intrinsic, path, positioning, property, suggestions, value, _ref;
-    this.lastInput = JSON.parse(JSON.stringify(data));
-    intrinsic = null;
-    for (path in data) {
-      value = data[path];
-      if (property = this.engine.getIntrinsicProperty(path)) {
-        data[path] = void 0;
-        if (property !== 'intrinsic-x' && property !== 'intrinsic-y') {
-          (intrinsic || (intrinsic = {}))[path] = value;
-        }
-      }
-    }
-    positioning = this.render(data);
-    if (intrinsic) {
-      for (path in intrinsic) {
-        value = intrinsic[path];
-        data[path] = this.set(path, void 0, value, positioning, true);
-      }
-    }
-    if (this.data) {
-      _ref = this.data;
-      for (path in _ref) {
-        value = _ref[path];
-        if (data[path] === void 0 && value !== void 0) {
-          data[path] = value;
-        }
-      }
-      this.data = void 0;
-    }
-    this.data = data;
-    if (suggestions = this.engine.getSuggestions()) {
-      return this.engine.expressions.capture(suggestions.length + ' intrinsics', suggestions);
-    } else {
-      this.data = void 0;
-      return this.push(data);
-    }
-  };
-
-  Restyles.prototype.push = function(data) {
-    return this.engine.push(data);
-  };
-
-  Restyles.prototype.remove = function(id) {
-    return delete this[id];
-  };
-
-  Restyles.prototype.get = function(path, property, value) {
-    var camel, element, style, _base;
-    element = this.engine[path];
-    camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
-    style = element.style;
-    value = style[camel];
-    if (value !== void 0) {
-      return value;
-    }
-    return this;
-  };
-
-  Restyles.prototype.set = function(id, property, value, positioning, intrinsic) {
-    var camel, element, last, path, pixels, positioned, positioner, style, _base;
-    if (property === void 0) {
-      path = id;
-      last = id.lastIndexOf('[');
-      property = path.substring(last + 1, id.length - 1);
-      id = id.substring(0, last);
-    }
-    if (id.charAt(0) === ':') {
-      return;
-    }
-    if (!(element = this.engine.elements[id])) {
-      if (!(element = this.engine.getElementById(this.engine.scope, id.substring(1)))) {
-        return;
-      }
-    }
-    positioner = this.positioners[property];
-    if (positioning && positioner) {
-      (positioning[id] || (positioning[id] = {}))[property] = value;
-    } else {
-      if (intrinsic) {
-        return this.engine.measure(element, property, void 0, value);
-      }
-      if (positioner) {
-        positioned = positioner(element);
-        if (typeof positioned === 'string') {
-          property = positioned;
-        }
-      }
-      camel = (_base = (this.camelized || (this.camelized = {})))[property] || (_base[property] = this.engine.camelize(property));
-      style = element.style;
-      if (style[camel] !== void 0) {
-        if (typeof value === 'number' && (camel !== 'zIndex' && camel !== 'opacity')) {
-          pixels = Math.round(value) + 'px';
-        }
-        if (positioner) {
-          if (!style[camel]) {
-            if ((style.positioning = (style.positioning || 0) + 1) === 1) {
-              style.position = 'absolute';
-            }
-          } else if (value == null) {
-            if (!--style.positioning) {
-              style.position = '';
-            }
-          }
-        }
-        style[camel] = pixels != null ? pixels : value;
-      }
-    }
-    return value;
-  };
-
-  Restyles.prototype.render = function(data, node) {
-    var id, path, positioning, prop, styles, value;
-    this.engine.queries.disconnect();
-    positioning = {};
-    if (data) {
-      for (path in data) {
-        value = data[path];
-        if (value !== void 0) {
-          this.set(path, void 0, value, positioning);
-        }
-      }
-    }
-    this.adjust(node, null, null, positioning, null, !!data);
-    for (id in positioning) {
-      styles = positioning[id];
-      for (prop in styles) {
-        value = styles[prop];
-        this.set(id, prop, value);
-      }
-    }
-    this.engine.queries.connect();
-    return positioning;
-  };
-
-  Restyles.prototype.adjust = function(parent, x, y, positioning, offsetParent, full) {
-    var child, children, offsets, scope, _i, _len;
-    if (x == null) {
+    x: function(element) {
+      var x;
       x = 0;
-    }
-    if (y == null) {
-      y = 0;
-    }
-    scope = this.engine.scope;
-    parent || (parent = scope);
-    if (offsets = this.placehold(positioning, parent, x, y, full)) {
-      x += offsets.x || 0;
-      y += offsets.y || 0;
-    }
-    if (parent === document) {
-      parent = document.body;
-    }
-    children = this.engine.commands['$>'][1](parent);
-    if (parent.offsetParent === scope) {
-      x -= scope.offsetLeft;
-      y -= scope.offsetTop;
-    } else if (parent !== scope) {
-      if (!offsets && (children != null ? children.length : void 0) && children[0].offsetParent === parent) {
-        x += parent.offsetLeft + parent.clientLeft;
-        y += parent.offsetTop + parent.clientTop;
-        offsetParent = parent;
+      while (element) {
+        x += element.offsetLeft;
+        element = element.offsetParent;
+        if (element === this.scope || !element) {
+          break;
+        }
+        if (element === this.scope.offsetParent) {
+          x -= this.scope.offsetLeft;
+        }
       }
+      return x;
     }
-    if (children) {
-      for (_i = 0, _len = children.length; _i < _len; _i++) {
-        child = children[_i];
-        this.adjust(child, x, y, positioning, offsetParent, full);
-      }
-    }
-    return positioning;
   };
 
-  Restyles.prototype.placehold = function(positioning, element, x, y, full) {
-    var left, offsets, property, styles, top, uid, value, values;
-    offsets = void 0;
-    if (uid = element._gss_id) {
-      styles = positioning != null ? positioning[uid] : void 0;
-      if (values = this.engine.values) {
-        if ((styles != null ? styles.x : void 0) === void 0) {
-          if ((left = values[uid + '[x]']) != null) {
-            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).x = left;
-          }
-        }
-        if ((styles != null ? styles.y : void 0) === void 0) {
-          if ((top = values[uid + '[y]']) != null) {
-            (styles || (styles = (positioning[uid] || (positioning[uid] = {})))).y = top;
-          }
-        }
-      }
-      if (styles) {
-        for (property in styles) {
-          value = styles[property];
-          if (value !== null) {
-            switch (property) {
-              case "x":
-                styles.x = value - x;
-                (offsets || (offsets = {})).x = value - x;
-                break;
-              case "y":
-                styles.y = value - y;
-                (offsets || (offsets = {})).y = value - y;
-            }
-          }
-        }
-      }
-      this.engine.onMeasure(element, x, y, styles, full);
-    }
-    return offsets;
-  };
-
-  Restyles.prototype.positioners = {
-    x: function() {
-      return 'left';
+  Dimensions.prototype.scroll = {
+    left: function(element) {
+      return element.scrollLeft;
     },
-    y: function() {
-      return 'top';
+    top: function(element) {
+      return element.scrollTop;
+    },
+    height: function(element) {
+      return element.scrollHeight;
+    },
+    width: function(element) {
+      return element.scrollWidth;
     }
   };
 
-  return Restyles;
+  Dimensions.prototype.client = {
+    left: function(element) {
+      return element.clientLeft;
+    },
+    top: function(element) {
+      return element.clientTop;
+    },
+    height: function(element) {
+      return element.clientHeight;
+    },
+    width: function(element) {
+      return element.clientWidth;
+    }
+  };
+
+  Dimensions.prototype.offset = {
+    left: function(element) {
+      return element.offsetLeft;
+    },
+    top: function(element) {
+      return element.offsetTop;
+    },
+    height: function(element) {
+      return element.offsetHeight;
+    },
+    width: function(element) {
+      return element.offsetWidth;
+    }
+  };
+
+  return Dimensions;
 
 })();
 
-module.exports = Restyles;
+module.exports = Dimensions;
+
+});
+require.register("gss/lib/properties/Properties.js", function(exports, require, module){
+var Styles;
+
+Styles = (function() {
+  var i, index, side, sides, type, _base, _base1, _base2, _base3, _base4, _base5, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
+
+  function Styles() {}
+
+  Styles.prototype.transform = [
+    [
+      function() {
+        return mat4.create();
+      }, 'matrix'
+    ]
+  ];
+
+  Styles.prototype.animation = [
+    [
+      [
+        {
+          name: ['none', 'String'],
+          duration: ['time'],
+          delay: ['time'],
+          direction: ['normal', 'reverse', 'alternate'],
+          'timing-function': ['timing'],
+          'iteration-count': [1, 'infinite', 'Number'],
+          'fill-mode': ['none', 'both', 'forwards', 'backwards'],
+          'play-state': ['running', 'paused']
+        }
+      ]
+    ]
+  ];
+
+  Styles.prototype.transition = [
+    [
+      [
+        {
+          property: ['all', 'property', 'none'],
+          duration: ['time'],
+          delay: ['time'],
+          direction: ['reverse', 'normal'],
+          'timing-function': ['timing']
+        }
+      ]
+    ]
+  ];
+
+  Styles.prototype.background = [
+    [
+      [
+        {
+          image: ['Image', 'Gradient', 'none'],
+          position: {
+            x: ['Length', 'Percentage', 'center', 'left', 'right'],
+            y: ['Length', 'Percentage', 'center', 'top', 'bottom']
+          },
+          size: {
+            x: ['Length', 'Percentage', 'cover', 'contain'],
+            y: ['Length', 'Percentage']
+          },
+          repeat: ['repeat', 'no-repeat', 'repeat-x', 'repeat-y', 'space', 'round'],
+          attachment: ['fixed', 'scroll', 'local'],
+          origin: ['padding-box', 'border-box', 'content-box'],
+          clip: ['border-box', 'content-box', 'padding-box']
+        }
+      ]
+    ], [
+      {
+        color: ['Color', 'transparent']
+      }
+    ]
+  ];
+
+  Styles.prototype.text = {
+    shadow: [
+      [
+        [
+          {
+            offset: {
+              x: ['Length'],
+              y: ['Length']
+            },
+            blur: ['Length'],
+            color: ['Color']
+          }
+        ]
+      ]
+    ],
+    decoration: ['none', 'capitalize', 'uppercase', 'lowercase'],
+    align: ['left', 'right', 'center', 'justify'],
+    ident: ['Length', 'Percentage']
+  };
+
+  Styles.prototype.box = {
+    shadow: [
+      [
+        [
+          {
+            inset: ['inset']
+          }
+        ], {
+          offset: {
+            x: ['Length'],
+            y: ['Length']
+          }
+        }, [
+          {
+            blur: ['Length'],
+            spread: ['Length']
+          }
+        ], {
+          color: ['Color']
+        }
+      ]
+    ],
+    sizing: ['padding-box', 'border-box', 'content-box']
+  };
+
+  Styles.prototype.outline = [
+    {
+      width: ['medium', 'Length'],
+      style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'],
+      color: ['invert', 'Color']
+    }
+  ];
+
+  Styles.prototype['line-height'] = ['normal', 'Number', 'Length', 'Percentage'];
+
+  Styles.prototype.font = [
+    [
+      {
+        style: ['normal', 'italic', 'oblique'],
+        variant: ['normal', 'small-caps'],
+        weight: ['normal', 'Number', 'bold']
+      }
+    ], {
+      size: ['Size', 'Length', 'Percentage']
+    }, [
+      {
+        'line-height': ['normal', 'Number', 'Length', 'Percentage']
+      }
+    ], {
+      family: ['inherit', 'strings']
+    }
+  ];
+
+  Styles.prototype['font-stretch'] = ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded'];
+
+  Styles.prototype['font-size-adjust'] = ['Float'];
+
+  Styles.prototype['letter-spacing'] = ['normal', 'Length'];
+
+  Styles.prototype.list = {
+    style: [
+      {
+        type: ['disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-roman', 'upper-roman', 'lower-greek', 'lower-latin', 'upper-latin', 'armenian', 'georgian', 'lower-alpha', 'none', 'upper-alpha'],
+        image: ['none', 'URL'],
+        position: ['outside', 'inside', 'none']
+      }
+    ]
+  };
+
+  Styles.prototype.height = ['Length', 'auto'];
+
+  Styles.prototype.min = {
+    width: ['Length', 'auto'],
+    height: ['Length', 'auto']
+  };
+
+  Styles.prototype.max = {
+    width: ['Length', 'auto'],
+    height: ['Length', 'auto']
+  };
+
+  Styles.prototype.display = ['inline', 'inline-block', 'block', 'list-item', 'run-in', 'table', 'inline-table', 'none', 'table-row-group', 'table-header-group', 'table-footer-group', 'table-row', 'table-column-group', 'table-column', 'table-cell', 'table-caption'];
+
+  Styles.prototype.visibility = ['visible', 'hidden'];
+
+  Styles.prototype.float = ['none', 'left', 'right'];
+
+  Styles.prototype.clear = ['none', 'left', 'right', 'both'];
+
+  Styles.prototype.overflow = ['visible', 'hidden', 'scroll', 'auto'];
+
+  Styles.prototype.position = ['static', 'relative', 'absolute', 'fixed', 'sticky'];
+
+  Styles.prototype.top = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.left = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.right = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.bottom = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype['z-index'] = ['Integer'];
+
+  Styles.prototype.cursor = ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize', 'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help'];
+
+  Styles.prototype.color = ['color'];
+
+  _ref = sides = ['top', 'right', 'bottom', 'left'];
+  for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+    side = _ref[index];
+    ((_base = Styles.prototype).margin || (_base.margin = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = ['Length', 'Percentage', 'auto'];
+    ((_base1 = Styles.prototype).padding || (_base1.padding = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = ['Length', 'Percentage', 'auto'];
+    ((_base2 = Styles.prototype).border || (_base2.border = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = [
+      [
+        {
+          width: ['Length', 'thin', 'thick', 'medium'],
+          style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'],
+          color: ['Color']
+        }
+      ]
+    ];
+    _ref1 = ['width', 'color', 'style'];
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      type = _ref1[_j];
+      ((_base3 = Styles.prototype)[_name = 'border-' + type] || (_base3[_name] = [
+        [
+          {
+            'pad': 'pad'
+          }
+        ]
+      ]))[0][+0]['border-' + side + '-' + type] = Styles.prototype.border[0][side][0][0][type];
+    }
+    if (index % 2) {
+      for (i = _k = 1; _k < 3; i = _k += 2) {
+        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = {
+          'pad': 'pad'
+        })))[side] || (_base4[side] = {
+          'pad': 'pad'
+        }))[sides[i + 1]] = ['Length', 'none'];
+      }
+    }
+  }
+
+  return Styles;
+
+})();
+
+module.exports = Styles;
+
+});
+require.register("gss/lib/properties/Styles.js", function(exports, require, module){
+var Styles;
+
+Styles = (function() {
+  var i, index, side, sides, type, _base, _base1, _base2, _base3, _base4, _base5, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
+
+  function Styles() {}
+
+  Styles.prototype.transform = [
+    [
+      function() {
+        return mat4.create();
+      }, 'matrix'
+    ]
+  ];
+
+  Styles.prototype.animation = [
+    [
+      [
+        {
+          name: ['none', 'String'],
+          duration: ['time'],
+          delay: ['time'],
+          direction: ['normal', 'reverse', 'alternate'],
+          'timing-function': ['timing'],
+          'iteration-count': [1, 'infinite', 'Number'],
+          'fill-mode': ['none', 'both', 'forwards', 'backwards'],
+          'play-state': ['running', 'paused']
+        }
+      ]
+    ]
+  ];
+
+  Styles.prototype.transition = [
+    [
+      [
+        {
+          property: ['all', 'property', 'none'],
+          duration: ['time'],
+          delay: ['time'],
+          direction: ['reverse', 'normal'],
+          'timing-function': ['timing']
+        }
+      ]
+    ]
+  ];
+
+  Styles.prototype.background = [
+    [
+      [
+        {
+          image: ['Image', 'Gradient', 'none'],
+          position: {
+            x: ['Length', 'Percentage', 'center', 'left', 'right'],
+            y: ['Length', 'Percentage', 'center', 'top', 'bottom']
+          },
+          size: {
+            x: ['Length', 'Percentage', 'cover', 'contain'],
+            y: ['Length', 'Percentage']
+          },
+          repeat: ['repeat', 'no-repeat', 'repeat-x', 'repeat-y', 'space', 'round'],
+          attachment: ['fixed', 'scroll', 'local'],
+          origin: ['padding-box', 'border-box', 'content-box'],
+          clip: ['border-box', 'content-box', 'padding-box']
+        }
+      ]
+    ], [
+      {
+        color: ['Color', 'transparent']
+      }
+    ]
+  ];
+
+  Styles.prototype.text = {
+    shadow: [
+      [
+        [
+          {
+            offset: {
+              x: ['Length'],
+              y: ['Length']
+            },
+            blur: ['Length'],
+            color: ['Color']
+          }
+        ]
+      ]
+    ],
+    decoration: ['none', 'capitalize', 'uppercase', 'lowercase'],
+    align: ['left', 'right', 'center', 'justify'],
+    ident: ['Length', 'Percentage']
+  };
+
+  Styles.prototype.box = {
+    shadow: [
+      [
+        [
+          {
+            inset: ['inset']
+          }
+        ], {
+          offset: {
+            x: ['Length'],
+            y: ['Length']
+          }
+        }, [
+          {
+            blur: ['Length'],
+            spread: ['Length']
+          }
+        ], {
+          color: ['Color']
+        }
+      ]
+    ],
+    sizing: ['padding-box', 'border-box', 'content-box']
+  };
+
+  Styles.prototype.outline = [
+    {
+      width: ['medium', 'Length'],
+      style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'],
+      color: ['invert', 'Color']
+    }
+  ];
+
+  Styles.prototype['line-height'] = ['normal', 'Number', 'Length', 'Percentage'];
+
+  Styles.prototype.font = [
+    [
+      {
+        style: ['normal', 'italic', 'oblique'],
+        variant: ['normal', 'small-caps'],
+        weight: ['normal', 'Number', 'bold']
+      }
+    ], {
+      size: ['Size', 'Length', 'Percentage']
+    }, [
+      {
+        'line-height': ['normal', 'Number', 'Length', 'Percentage']
+      }
+    ], {
+      family: ['inherit', 'strings']
+    }
+  ];
+
+  Styles.prototype['font-stretch'] = ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded'];
+
+  Styles.prototype['font-size-adjust'] = ['Float'];
+
+  Styles.prototype['letter-spacing'] = ['normal', 'Length'];
+
+  Styles.prototype.list = {
+    style: [
+      {
+        type: ['disc', 'circle', 'square', 'decimal', 'decimal-leading-zero', 'lower-roman', 'upper-roman', 'lower-greek', 'lower-latin', 'upper-latin', 'armenian', 'georgian', 'lower-alpha', 'none', 'upper-alpha'],
+        image: ['none', 'URL'],
+        position: ['outside', 'inside', 'none']
+      }
+    ]
+  };
+
+  Styles.prototype.height = ['Length', 'auto'];
+
+  Styles.prototype.min = {
+    width: ['Length', 'auto'],
+    height: ['Length', 'auto']
+  };
+
+  Styles.prototype.max = {
+    width: ['Length', 'auto'],
+    height: ['Length', 'auto']
+  };
+
+  Styles.prototype.display = ['inline', 'inline-block', 'block', 'list-item', 'run-in', 'table', 'inline-table', 'none', 'table-row-group', 'table-header-group', 'table-footer-group', 'table-row', 'table-column-group', 'table-column', 'table-cell', 'table-caption'];
+
+  Styles.prototype.visibility = ['visible', 'hidden'];
+
+  Styles.prototype.float = ['none', 'left', 'right'];
+
+  Styles.prototype.clear = ['none', 'left', 'right', 'both'];
+
+  Styles.prototype.overflow = ['visible', 'hidden', 'scroll', 'auto'];
+
+  Styles.prototype.position = ['static', 'relative', 'absolute', 'fixed', 'sticky'];
+
+  Styles.prototype.top = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.left = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.right = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype.bottom = ['Length', 'Percentage', 'auto'];
+
+  Styles.prototype['z-index'] = ['Integer'];
+
+  Styles.prototype.cursor = ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize', 'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help'];
+
+  Styles.prototype.color = ['color'];
+
+  _ref = sides = ['top', 'right', 'bottom', 'left'];
+  for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+    side = _ref[index];
+    ((_base = Styles.prototype).margin || (_base.margin = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = ['Length', 'Percentage', 'auto'];
+    ((_base1 = Styles.prototype).padding || (_base1.padding = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = ['Length', 'Percentage', 'auto'];
+    ((_base2 = Styles.prototype).border || (_base2.border = [
+      {
+        'pad': 'pad'
+      }
+    ]))[0][side] = [
+      [
+        {
+          width: ['Length', 'thin', 'thick', 'medium'],
+          style: ['none', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'],
+          color: ['Color']
+        }
+      ]
+    ];
+    _ref1 = ['width', 'color', 'style'];
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      type = _ref1[_j];
+      ((_base3 = Styles.prototype)[_name = 'border-' + type] || (_base3[_name] = [
+        [
+          {
+            'pad': 'pad'
+          }
+        ]
+      ]))[0][+0]['border-' + side + '-' + type] = Styles.prototype.border[0][side][0][0][type];
+    }
+    if (index % 2) {
+      for (i = _k = 1; _k < 3; i = _k += 2) {
+        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = {
+          'pad': 'pad'
+        })))[side] || (_base4[side] = {
+          'pad': 'pad'
+        }))[sides[i + 1]] = ['Length', 'none'];
+      }
+    }
+  }
+
+  return Styles;
+
+})();
+
+module.exports = Styles;
 
 });
 require.register("gss/vendor/gl-matrix.js", function(exports, require, module){
@@ -30028,42 +30010,40 @@ module.exports = {
   
   "scripts": [
     "lib/Engine.js",
-    "lib/Document.js",
-    "lib/Solver.js",
 
-    "lib/properties/Dimensions.js", 
-    "lib/properties/Equasions.js",
-    "lib/properties/Styles.js",
+    "lib/methods/Algebra.js", 
+    "lib/methods/Conventions.js", 
+    "lib/methods/Native.js", 
+    "lib/methods/Rules.js", 
+    "lib/methods/Selectors.js", 
+    "lib/methods/Transformations.js", 
+    "lib/methods/Types.js", 
+    "lib/methods/Units.js", 
 
-    "lib/commands/Rules.js", 
-    "lib/commands/Selectors.js", 
-    "lib/commands/Constraints.js",
-    "lib/commands/Measurements.js", 
-    "lib/commands/Native.js", 
-    "lib/commands/Algebra.js", 
-    "lib/commands/Types.js", 
-    "lib/commands/Units.js", 
-    "lib/commands/Transformations.js", 
-    "lib/commands/Conventions.js", 
-
-    "lib/concepts/Space.js",
-    "lib/concepts/Buffer.js",
-    "lib/concepts/EventTrigger.js",
     "lib/concepts/Console.js",
-    "lib/concepts/Helper.js",
-    "lib/concepts/Command.js",
+    "lib/concepts/Wrapper.js",
+    "lib/concepts/Domain.js",
+    "lib/concepts/Events.js",
+    "lib/concepts/Method.js",
+    "lib/concepts/Parser.js",
     "lib/concepts/Property.js",
     "lib/concepts/Style.js",
 
-    "lib/input/Expressions.js", 
-    "lib/input/Queries.js", 
-    "lib/input/Values.js", 
+    "lib/domains/Linear.js", 
+    "lib/domains/Intrinsic.js",
+    "lib/domains/Finite.js", 
+    "lib/domains/Numeric.js",
 
-    "lib/output/Solutions.js", 
-    "lib/output/Restyles.js",
+    "lib/modules/Expressions.js", 
+    "lib/modules/Identity.js", 
+    "lib/modules/Matches.js",
+    "lib/modules/Positions.js", 
+    "lib/modules/Queries.js", 
 
-    "lib/output/Solutions.js", 
-    "lib/output/Restyles.js",
+    "lib/properties/Axioms.js",
+    "lib/properties/Dimensions.js", 
+    "lib/properties/Properties.js",
+    "lib/properties/Styles.js",
 
     "vendor/gl-matrix.js",
     "vendor/MutationObserver.js",
@@ -30081,7 +30061,7 @@ module.exports = {
   ],
   "paths": ["/Users/invizko/Sites/the-gss"],
   "locals": ["the-compiler", "ccss-compiler"],
-  "main": "lib/Document.js"
+  "main": "lib/Engine.js"
 }
 
 });
@@ -30130,7 +30110,7 @@ require.alias("slightlyoff-cassowary.js/src/parser/parser.js", "gss/deps/cassowa
 require.alias("slightlyoff-cassowary.js/src/parser/api.js", "gss/deps/cassowary/src/parser/api.js");
 require.alias("slightlyoff-cassowary.js/index.js", "cassowary/index.js");
 
-require.alias("gss/lib/Document.js", "gss/index.js");if (typeof exports == "object") {
+require.alias("gss/lib/Engine.js", "gss/index.js");if (typeof exports == "object") {
   module.exports = require("gss");
 } else if (typeof define == "function" && define.amd) {
   define([], function(){ return require("gss"); });

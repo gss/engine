@@ -18,16 +18,14 @@ class Dimensions
       top: ->
         return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop 
 
-
     x: 0
-
     y: 0
 
   '::document':
 
     scroll:
       left: '::window[scroll-left]'
-      top: '::window[scroll-top]'
+      top:  '::window[scroll-top]'
       
     x: '::window[x]'
     y: '::window[y]'

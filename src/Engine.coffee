@@ -1,175 +1,243 @@
-# Engine is a base class for scripting environments.
-# It includes interpreter that can be used with provided functions
-# Acts as a faux-pipe that evaluates Expressions
-# routes it through submodules to solve equasions and set styles
-# Engine is the GSS global variable
+### Base class: Engine
 
-# Combine mixins
-include = ->
-  Context = (@engine) ->
-  for mixin in arguments
-    for name, fn of mixin::
-      Context::[name] = fn
-  return Context
+Engine is a base class for scripting environments.
+It initializes and orchestrates all moving parts.
 
-EventTrigger = require('./concepts/EventTrigger')
-Buffer       = require('./concepts/Buffer')
+It includes interpreter that operates in defined constraint domains.
+Each domain has its own command set, that extends engine defaults. ###
 
-class Engine extends include(EventTrigger, Buffer)
+Events          = require('./concepts/Events')
+Domain          = require('./concepts/Domain')
+Native          = require('./methods/Native')
+Domain.Events ||= Native::mixin(Domain, Events)
 
-  Expressions:
-    require('./input/Expressions')
-  Values:
-    require('./input/Values')
+class Engine extends Domain.Events
 
-  Commands:
-    require('./commands/Conventions')
+  Identity:    require('./modules/Identity')
+  Expressions: require('./modules/Expressions')
 
-  Property:
-    require('./concepts/Property')
-  Command:
-    require('./concepts/Command')
-  Helper:
-    require('./concepts/Helper')
-  Console:
-    require('./concepts/Console')
+  Method:      require('./concepts/Method')
+  Property:    require('./concepts/Property')
+  Console:     require('./concepts/Console')
+  
+  Properties:  require('./properties/Axioms')
+
+  Methods:     Native::mixin new Native,
+               require('./methods/Conventions')
+               require('./methods/Algebra')
+  Domains: 
+    Intrinsic: require('./domains/Intrinsic')
+    Numeric:   require('./domains/Numeric')
+    Linear:    require('./domains/Linear')
+    Finite:    require('./domains/Finite')
 
   constructor: (scope, url) ->
-    if scope && scope.nodeType
-      # new GSS(node) assigns a new Engine.Document to node if it doesnt have one
-      if @Expressions
-        if Document = Engine.Document
-          unless this instanceof Document
-            return new Document(scope, url)
+    for argument, index in arguments
+      continue unless argument
+      switch typeof argument
+        when 'object'
+          if argument.nodeType
+            if @Expressions
+              Engine[Engine.identity.provide(scope)] = @
+              @scope = scope
+              @all = scope.getElementsByTagName('*')
+            else
+              while scope
+                if id = Engine.identity.solve(scope)
+                  if engine = Engine[id]
+                    return engine
+                break unless scope.parentNode
+                scope = scope.parentNode
+          else
+            assumed = argument
+        when 'string'
+          if @Expressions
+            @url = url
+          else
+            url = url
 
-        Engine[Engine.identify(scope)] = @
-        @scope = scope
-        @all = scope.getElementsByTagName('*')
-      # GSS(node) finds nearest parent engine or makes one at root
-      else
-        while scope
-          if id = Engine.recognize(scope)
-            if engine = Engine[id]
-              return engine
-          break unless scope.parentNode
-          scope = scope.parentNode
+    # **GSS()** creates new Engine at the root, 
+    # if there is no engine assigned to it yet
+    unless @Expressions
+      return new Engine(scope, url)
 
-    # new GSS() creates a new Engine.Solver
-    if !scope || typeof scope == 'string'
-      if Engine.Solver && !(this instanceof Engine.Solver)
-        return new Engine.Solver(undefined, undefined, scope)
+    # Create instance own objects and context objects.
+    # Context objects are contain non-callable 
+    # definitions of commands and properties.
+    # Definitions are compiled into functions 
+    # once engine is started
+    super()
+    @engine      = @
+    @domain      = @
+    @properties  = new @Properties(@)
+    @methods     = new @Methods(@)
 
-    if @Expressions
-      @properties  = new @Properties(@)  if @Properties
-      @commands    = new @Commands(@)    if @Commands
-      @expressions = new @Expressions(@)
-      @values      = @vars = new @Values(@)
-      @events      = {}
-      @input       = @expressions
-      @engine      = @
-      return
+    @precompile()
 
-    # GSS.Document() and GSS() create new GSS.Document on root initially
-    return new (Engine.Document || Engine)(scope, url)
+    @expressions = new @Expressions(@)
+    @assumed     = new @Domain(@, assumed, 'Assumed')
+    @solved      = new @Numeric(@)
 
-  # Hook: Pass output to a subscriber
-  push: (data) ->
+    return @
 
-    # Unreference removed elements
-    if @removed
-      for id in @removed
-        delete @engine.elements[id]
-      @removed = undefined
+  events:
+    # Receieve message from worker
+    message: (e) ->
+      @provide e.data
 
-    # Store solutions
-    @values.merge data
+    # Handle error from worker
+    error: (e) ->
+      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
 
-    # Trigger events on engine and scope node
-    @triggerEvent('solved', data)
-    @dispatchEvent(@scope, 'solved', data) if @scope
-
-    # Proceed
-    return super
-
-  # Destroy engine
-  destroy: ->
-    if @scope
+    destroy: (e) ->
       Engine[@scope._gss_id] = undefined
 
-  # Get or generate uid for a given object.
-  @identify: (object, generate) ->
-    unless id = object._gss_id
-      if object == document
-        id = "::document"
-      else if object == window
-        id = "::window"
+  strategy: 'expressions'
 
-      unless generate == false
-        object._gss_id = id ||= "$" + (object.id || ++Engine.uid)
-      Engine::elements[id] = object
-    return id
+  solve: () ->
+    if typeof arguments[0] == 'string'
+      if typeof arguments[1] == 'string'
+        source = arguments[0]
+        reason = arguments[1]
+        index = 2
+      else
+        reason = arguments[0]
+        index = 1
 
-  # Get id if given object has one
-  @recognize: (object) ->
-    return Engine.identify(object, false)
+    args = Array.prototype.slice.call(arguments, index || 0)
 
-  identify: (object) ->
-    return Engine.identify(object)
+    unless @running
+      @compile(true)
 
-  recognize: (object) ->
-    return Engine.identify(object, false)
+    if args[0]?.push
+      @console.start(reason || args[0], source || @displayName || 'Intrinsic')
 
-  @uid: 0
-  elements: {}
-  engines: {}
+    if typeof args[0] == 'function'
+      solution = args.shift().apply(@, args)
+    else
+      @providing = null
+      unless solution = Domain::solve.apply(@, args)
+        if provided = @providing
+          @providing = undefined
+          solution = @provide provided
+      @providing = undefined
 
-  # Export all commands as underscored functions into engine
-  # This ensures commands are called in engine context
-  # Doing so on first run allows commands to be set after init
-  # Built in commands are compiled on the prototype
-  start: ->
-    return if @running
+    if args[0]?.push
+      @console.end(reason)
+
+    unless solution
+      return
+
+    if @applier && !@applier.solve(solution)
+      return
+
+    @console.info('Solution\t   ', solution)
+
+    # Trigger events on engine and scope node
+    @triggerEvent('solve', solution)
+    if @scope
+      @dispatchEvent(@scope, 'solve', solution)
+
+    return solution
+
+  # Verify solutions
+  # Finds final domain of given expression
+  provide: (solution, recursive) ->
+    if @providing != undefined
+      (@providing ||= []).push(solution)
+      return
+
+    domains = undefined
+    switch typeof solution
+      when 'object'
+        if solution.push
+          for arg in solution
+            if arg?.push
+              provided = @engine.provide arg, true
+              if domains
+                for domain in provided
+                  if domain != @ && domains.indexOf(domain) == -1
+                    merged = undefined
+                    if isFinite(domain.priority)
+                      for d in domains
+                        if merged = d.merge(domain)
+                          domain = merged
+                          break
+                    domains.unshift(domain) unless merged
+              else
+                domains = provided
+          host = solution[0] == 'get' && @Domain(solution) || solution.domain
+          if host && host != @ && (!domains || domains.indexOf(host) == -1)
+            domains ||= []
+            for domain, index in domains
+              if domain.priority <= host.priority
+                break
+            domains.splice(index, 0, host)
+    if domains
+      if !recursive
+        console.error(domains)
+        result = solution
+        for domain in domains
+          @console.start(result, domain.displayName)
+          @providing = null
+          result = domain.solve(result) || @providing
+          @providing = undefined
+          @console.end()
+        return result
+
+      return domains
+    else if recursive
+      return [@intrinsic]
+
+    return solution
+
+  # Initialize new worker and subscribe engine to its events
+  useWorker: (url) ->
+    return unless typeof url == 'string' && self.onmessage != undefined
+    @worker = new @getWorker(url)
+    @worker.addEventListener 'message', @onmessage.bind(this)
+    @worker.addEventListener 'error',   @onerror  .bind(this)
+    @solve = =>
+      return @worker.postMessage.apply(@worker, arguments)
+    return @worker
+
+  getWorker: (url) ->
+    return (Engine.workers ||= {})[url] ||= new Worker url
+
+  # Compile initial domains and shared engine features 
+  precompile: ->
     if @constructor::running == undefined
-      @constructor::running = null
+      for property, method of @Methods::
+        @constructor::[property] ||= 
+        @constructor[property] ||= Engine::Method(method, true, property)
       @constructor::compile()
-    @compile()
-    return @running = true
+    @Domain.compile(@Domains,   @)
 
-  # Make helpers, styles and properties callable
-  compile: ->
-    commands = (@commands || @Commands::)
-    commands.engine ||= @
-    for key, command of commands
-      continue if command == @ || !commands.hasOwnProperty(key)
-      if key.charAt(0) != '_'
-        subkey = '_' + key
-        command = @Command(command, subkey)
-        @[subkey] ?= command
+  # Comile user provided features specific to this engine
+  compile: (state) ->
+    methods    = @methods    || @Methods  ::
+    properties = @properties || @Properties::
+    @Method  .compile(methods,    @)
+    @Property.compile(properties, @)
+    @Domain  .compile(@Domains,   @) if @running
 
-      @[key] ?= command
+    @running = state ? null
+    
+    @triggerEvent('compile', @)
 
-    properties = (@properties || @Properties::)
-    properties.engine ||= @
-    for key, property of properties
-      continue if property == @ || !properties.hasOwnProperty(key)
-      prop = @Property(property, key, properties)
-      @['_' + key] ?= prop
+# Identity and console modules are shared between engines
+Engine.identity = Engine::identity = new Engine::Identity
+Engine.console  = Engine::console  = new Engine::Console
 
-    for key, property of properties
-      @['_' + key] ?= property
-    @
+Engine.Engine   = Engine
+Engine.Domain   = Engine::Domain   = Domain
+Engine.mixin    = Engine::mixin    = Native::mixin
+Engine.time     = Engine::time     = Native::time
+Engine.clone    = Engine::clone    = Native::clone
 
-  console: @console = new Engine::Console
-  time:    @time    = Engine::Console.time
+# Listen for message in worker to initialize engine on demand
+if !self.window && self.onmessage != undefined
+  self.addEventListener 'message', (e) ->
+    Engine().solve(e.data)
 
-  # Recursively slice arrays
-  clone:   @clone   = (object) -> 
-    if object && object.map
-      return object.map @clone, @
-    return object
-
-  @include: include
-
-@GSS = Engine
-
-module.exports = Engine
+module.exports = @GSS = Engine
