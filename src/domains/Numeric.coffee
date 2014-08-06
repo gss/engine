@@ -34,7 +34,7 @@ class Numeric extends Domain
 
     get: 
       command: (operation, continuation, scope, meta, object, path) ->
-        return @watch(object, path, operation, continuation, scope)
+        return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
 
 
 module.exports = Numeric

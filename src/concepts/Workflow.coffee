@@ -29,11 +29,22 @@ Workflow = (problem, recursive) ->
         # We've got sub-exp in domain
         if (j = problem.indexOf(exp)) > -1
           # Replace last variable with parent expression (bubble up)
-          k = j
+          k = l = j
           while (next = problem[++k]) != undefined
             if next && next.push
               break
           continue if next
+          while (previous = problem[--l]) != undefined
+            if previous && previous.push && exps.indexOf(previous) == -1
+              for d, n in workload.domains
+                if d != domain
+                  if (j = workload.problems[n].indexOf(previous)) > -1
+                    if d.priority > domain.priority
+                      i = j + 1
+                      exps = workload.problems[n]
+                      domain = d
+                    break
+              break
 
           #console.log('grouping', problem, exp, problem == exp)
           if !updated
@@ -41,6 +52,8 @@ Workflow = (problem, recursive) ->
             updated = domain
           else
             exps.splice(--i, 1)
+          if d == domain
+            break
 
 
       if workflow && workflow != workload
@@ -59,8 +72,6 @@ Workflow = (problem, recursive) ->
 
 Workflow.prototype =
   provide: (solution) ->
-    console.error(123, solution)
-    debugger
     operation = solution.domain.getRootOperation(solution.operation.parent)
     domain = operation.domain
     index = @domains.indexOf(domain)

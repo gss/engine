@@ -117,8 +117,6 @@ class Expressions extends Domain
 
   # Evaluate operation arguments in order, break on undefined
   descend: (operation, continuation, scope, meta, ascender, ascending) ->
-    if operation[0] == '*'
-      debugger
     args = prev = undefined
     skip = operation.skip
     shift = 0

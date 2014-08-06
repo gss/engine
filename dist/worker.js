@@ -1296,7 +1296,6 @@ Engine = (function(_super) {
     }
     if (typeof args[0] === 'function') {
       solution = args.shift().apply(this, args);
-      debugger;
     } else {
       this.providing = null;
       if (!(solution = Domain.prototype.solve.apply(this, args))) {
@@ -1369,6 +1368,7 @@ Engine = (function(_super) {
       problems = problem;
     }
     this.console.start(problems, domain.displayName);
+    debugger;
     this.providing = null;
     result = domain.solve(problems) || this.providing;
     this.providing = void 0;

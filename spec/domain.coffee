@@ -23,7 +23,6 @@ describe 'Domain', ->
 				a: 666
 			})
 
-			debugger
 			expect(engine.solve [
 				['==',
 					['get', 'result']
@@ -63,3 +62,41 @@ describe 'Domain', ->
 				a: -555
 			).to.eql
 				result: -1100
+
+
+		it 'should simplify multiple variables partially', ->
+			window.engine = new GSS({
+				a: 555,
+				A: 2
+			})
+			expect(engine.solve [
+				['=='
+					['get', 'b'],
+					10
+				],
+				['==',
+					['get', 'result']
+					['+',
+						['*'
+							['get', 'A'],
+							['get', 'a']]
+						['get', 'b']
+					]
+				]
+			]).to.eql 
+				result: 555 * 2 + 10
+				b: 10
+
+			console.info('a=-555, was 555')
+			
+			expect(engine.solve
+				a: -555
+			).to.eql
+				result: -1100
+
+			console.info('A=1, was 2')
+
+			expect(engine.solve
+				A: 1
+			).to.eql
+				result: -545

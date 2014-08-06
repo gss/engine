@@ -19198,7 +19198,6 @@ Engine = (function(_super) {
     }
     if (typeof args[0] === 'function') {
       solution = args.shift().apply(this, args);
-      debugger;
     } else {
       this.providing = null;
       if (!(solution = Domain.prototype.solve.apply(this, args))) {
@@ -19271,6 +19270,7 @@ Engine = (function(_super) {
       problems = problem;
     }
     this.console.start(problems, domain.displayName);
+    debugger;
     this.providing = null;
     result = domain.solve(problems) || this.providing;
     this.providing = void 0;
@@ -19487,6 +19487,9 @@ Conventions = (function() {
     if (path) {
       path = path.replace(/[→↓↑]$/, '');
     }
+    if (!path && !value) {
+      return '';
+    }
     if (typeof value === 'string') {
       return value;
     }
@@ -19635,7 +19638,6 @@ Conventions = (function() {
     while (parent.parent && parent.parent.def && !parent.parent.def.noop && parent.domain === operation.domain) {
       parent = parent.parent;
     }
-    console.error(operation, parent);
     return parent;
   };
 
@@ -21289,22 +21291,25 @@ Domain = (function() {
     return this[this.engine.getPath(object, property)];
   };
 
-  Domain.prototype.merge = function(object) {
+  Domain.prototype.merge = function(object, meta) {
     if (object && !object.push) {
       if (object instanceof Domain) {
         return;
       }
       return this.engine.solve(this.displayName, function(domain) {
-        var path, value;
+        var path, value, watchers, _ref;
         for (path in object) {
           value = object[path];
-          domain.set(void 0, path, value);
+          domain.set(void 0, path, value, meta, true);
+          if (watchers = (_ref = domain.watchers) != null ? _ref[path] : void 0) {
+            this.callback(domain, watchers, value, meta);
+          }
         }
       }, this);
     }
   };
 
-  Domain.prototype.set = function(object, property, value, meta) {
+  Domain.prototype.set = function(object, property, value, meta, silent) {
     var old, path, watchers, _ref;
     path = this.engine.getPath(object, property);
     old = this[path];
@@ -21316,20 +21321,24 @@ Domain = (function() {
     } else {
       delete this[path];
     }
-    if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
-      this.engine.solve(this.displayName, path, function() {
-        var index, watcher, _i, _len;
-        for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
-          watcher = watchers[index];
-          if (!watcher) {
-            break;
-          }
-          this.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || null, meta || null, watcher.index || null, value);
-        }
-        return this;
-      });
+    if (!silent) {
+      if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
+        this.engine.solve(this.displayName, path, this.callback, this, watchers, value, meta);
+      }
     }
     return value;
+  };
+
+  Domain.prototype.callback = function(domain, watchers, value, meta) {
+    var index, watcher, _i, _len;
+    for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
+      watcher = watchers[index];
+      if (!watcher) {
+        break;
+      }
+      domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
+    }
+    return this;
   };
 
   Domain.prototype.toObject = function() {
@@ -21374,18 +21383,6 @@ Domain = (function() {
     }
   };
 
-  Domain.prototype.getRootOperation = function(operation) {
-    var parent;
-    parent = operation;
-    while (parent.parent && parent.parent.def && !parent.parent.def.noop) {
-      parent = parent.parent;
-      if (parent.domain !== operation.domain) {
-        break;
-      }
-    }
-    return parent;
-  };
-
   Domain.prototype.compare = function(a, b) {
     var index, value, _i, _len;
     if (typeof a === 'object') {
@@ -21418,7 +21415,7 @@ Domain = (function() {
   };
 
   Domain.prototype.constrain = function(constraint) {
-    var name, other, p, path, root, sub, subop, subsolutions, _base, _base1, _i, _j, _k, _l, _len, _len1, _len2, _len3, _name, _ref, _ref1, _ref2, _ref3;
+    var name, other, p, path, root, sub, subop, subsolutions, _base, _base1, _base2, _i, _j, _k, _l, _len, _len1, _len2, _len3, _name, _name1, _ref, _ref1, _ref2, _ref3;
     if (constraint.paths) {
       root = other = void 0;
       _ref = constraint.paths;
@@ -21426,7 +21423,6 @@ Domain = (function() {
         path = _ref[_i];
         if (path[0] === 'value') {
           subsolutions = (_base = this.subsolutions)[_name = path[3]] || (_base[_name] = []);
-          debugger;
           for (_j = 0, _len1 = subsolutions.length; _j < _len1; _j++) {
             sub = subsolutions[_j];
             subop = void 0;
@@ -21444,13 +21440,13 @@ Domain = (function() {
               }
               other = this.getRootOperation(subop);
               if (this.compare(root, other)) {
-                console.info('updating constraint', subop, '->', path);
-                debugger;
+                console.info('updating constraint', subop.slice(0, 2), '->', path.slice(0, 2));
                 this.unconstrain(sub);
                 break;
               }
             }
           }
+          subsolutions = (_base1 = this.subsolutions)[_name1 = path[3]] || (_base1[_name1] = []);
           subsolutions.push(constraint);
         }
       }
@@ -21458,7 +21454,7 @@ Domain = (function() {
       for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
         path = _ref2[_l];
         if (typeof path === 'string') {
-          ((_base1 = this.variables)[path] || (_base1[path] = [])).push(constraint);
+          ((_base2 = this.variables)[path] || (_base2[path] = [])).push(constraint);
         } else if (path.name) {
           path.counter = (path.counter || 0) + 1;
           if (path.counter === 1) {
@@ -22256,7 +22252,7 @@ require.register("gss/lib/concepts/Workflow.js", function(exports, require, modu
 var Workflow;
 
 Workflow = function(problem, recursive) {
-  var arg, domain, exp, exps, i, index, j, k, next, offset, old, subtree, updated, workflow, workload, _i, _j, _len, _len1, _ref;
+  var arg, d, domain, exp, exps, i, index, j, k, l, n, next, offset, old, previous, subtree, updated, workflow, workload, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
   if (this instanceof Workflow) {
     this.domains = problem || [];
     this.problems = recursive || [];
@@ -22289,7 +22285,7 @@ Workflow = function(problem, recursive) {
       i = 0;
       while (exp = exps[i++]) {
         if ((j = problem.indexOf(exp)) > -1) {
-          k = j;
+          k = l = j;
           while ((next = problem[++k]) !== void 0) {
             if (next && next.push) {
               break;
@@ -22298,11 +22294,33 @@ Workflow = function(problem, recursive) {
           if (next) {
             continue;
           }
+          while ((previous = problem[--l]) !== void 0) {
+            if (previous && previous.push && exps.indexOf(previous) === -1) {
+              _ref1 = workload.domains;
+              for (n = _k = 0, _len2 = _ref1.length; _k < _len2; n = ++_k) {
+                d = _ref1[n];
+                if (d !== domain) {
+                  if ((j = workload.problems[n].indexOf(previous)) > -1) {
+                    if (d.priority > domain.priority) {
+                      i = j + 1;
+                      exps = workload.problems[n];
+                      domain = d;
+                    }
+                    break;
+                  }
+                }
+              }
+              break;
+            }
+          }
           if (!updated) {
             exps[i - 1] = problem;
             updated = domain;
           } else {
             exps.splice(--i, 1);
+          }
+          if (d === domain) {
+            break;
           }
         }
       }
@@ -22328,8 +22346,6 @@ Workflow = function(problem, recursive) {
 Workflow.prototype = {
   provide: function(solution) {
     var domain, index, operation, problems;
-    console.error(123, solution);
-    debugger;
     operation = solution.domain.getRootOperation(solution.operation.parent);
     domain = operation.domain;
     index = this.domains.indexOf(domain);
@@ -23044,7 +23060,7 @@ Numeric = (function(_super) {
 
     Methods.prototype.get = {
       command: function(operation, continuation, scope, meta, object, path) {
-        return this.watch(object, path, operation, continuation, scope);
+        return this.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
       }
     };
 
@@ -23182,9 +23198,6 @@ Expressions = (function(_super) {
 
   Expressions.prototype.descend = function(operation, continuation, scope, meta, ascender, ascending) {
     var args, argument, contd, index, mark, offset, prev, shift, skip, stopping, _i, _len;
-    if (operation[0] === '*') {
-      debugger;
-    }
     args = prev = void 0;
     skip = operation.skip;
     shift = 0;

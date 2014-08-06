@@ -118,7 +118,6 @@ class Engine extends Domain.Events
 
     if typeof args[0] == 'function'
       solution = args.shift().apply(@, args) 
-      debugger
     else
       @providing = null
       unless solution = Domain::solve.apply(@, args)
@@ -178,6 +177,7 @@ class Engine extends Domain.Events
       problems = problem
 
     @console.start(problems, domain.displayName)
+    debugger
     @providing = null
     result = domain.solve(problems) || @providing
     @providing = undefined

@@ -55,6 +55,7 @@ class Conventions
   getContinuation: (path, value, suffix = '') ->
     if path
       path = path.replace(/[→↓↑]$/, '')
+    return '' if !path && !value
     return value if typeof value == 'string'
     return path + (value && @identity.provide(value) || '') + suffix
 
@@ -177,7 +178,6 @@ class Conventions
           !parent.parent.def.noop && 
           parent.domain == operation.domain
       parent = parent.parent
-    console.error(operation, parent)
     return parent
 
 # Little shim for require.js so we dont have to carry it around

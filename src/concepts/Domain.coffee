@@ -101,7 +101,7 @@ class Domain
   get: (object, property) ->
     return @[@engine.getPath(object, property)]
 
-  merge: (object) ->
+  merge: (object, meta) ->
     # merge objects/domains
     if object && !object.push
       if object instanceof Domain
@@ -109,13 +109,15 @@ class Domain
 
       @engine.solve @displayName, (domain) ->
         for path, value of object
-          domain.set undefined, path, value
+          domain.set undefined, path, value, meta, true
+          if watchers = domain.watchers?[path]
+            @callback(domain, watchers, value, meta)
         return
       , @
 
 
   # Set key-value pair or merge object
-  set: (object, property, value, meta) ->
+  set: (object, property, value, meta, silent) ->
     path = @engine.getPath(object, property)
     old = @[path]
     return if old == value
@@ -124,15 +126,17 @@ class Domain
       @[path] = value
     else
       delete @[path]
-
     # notify subscribers
-    if watchers = @watchers?[path]
-      @engine.solve @displayName, path, ->
-        for watcher, index in watchers by 3
-          break unless watcher
-          @solve watcher.parent, watchers[index + 1], watchers[index + 2] || null, meta || null, watcher.index || null, value
-        @
+    unless silent
+      if watchers = @watchers?[path]
+        @engine.solve @displayName, path, @callback, @, watchers, value, meta
     return value
+
+  callback: (domain, watchers, value, meta) ->
+    for watcher, index in watchers by 3
+      break unless watcher
+      domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+    @
 
   # Export values in a plain object. Use for tests only
   toObject: ->
@@ -159,13 +163,6 @@ class Domain
     if @variables[path]
       return false
 
-  getRootOperation: (operation) ->
-    parent = operation
-    while parent.parent && parent.parent.def && !parent.parent.def.noop
-      parent = parent.parent
-      break unless parent.domain == operation.domain
-    return parent
-
   compare: (a, b) ->
     if typeof a == 'object'
       return unless typeof b == 'object'
@@ -185,7 +182,6 @@ class Domain
       for path in constraint.paths
         if path[0] == 'value'
           subsolutions = @subsolutions[path[3]] ||= []
-          debugger
           for sub in subsolutions
             subop = undefined
             for p in sub.paths
@@ -196,10 +192,10 @@ class Domain
               root ?= @getRootOperation(path)
               other = @getRootOperation(subop)
               if @compare(root, other)
-                console.info('updating constraint', subop, '->', path)
-                debugger
+                console.info('updating constraint', subop.slice(0, 2), '->', path.slice(0, 2))
                 @unconstrain(sub)
                 break
+          subsolutions = @subsolutions[path[3]] ||= []
           subsolutions.push(constraint)
 
 
