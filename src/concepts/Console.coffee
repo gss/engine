@@ -31,14 +31,13 @@ class Console
 
     fmt += "%c"
     if typeof reason != 'string'
-      reason = Native::clone(reason) if reason?.slice
+      #reason = Native::clone(reason) if reason?.slice
       fmt += '%O'
     else
       fmt += '%s'
 
       method = 'groupCollapsed'
     @[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason)
-    
     return true
   
   end: (reason) ->

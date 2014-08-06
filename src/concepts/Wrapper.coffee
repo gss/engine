@@ -1,12 +1,14 @@
 # Wrapper around foreign api functions
 # to build up object trees native to api
-# while keeping meta data around
+# while keeping meta data around.
 
 Wrapper = (node, args, result, operation, continuation, scope) ->
   # variable[paths] -> constrain[paths]
   if result instanceof c.Constraint || result instanceof c.Expression
     result = [result]
-    for arg in args
+    for arg, index in args
+      if operation[index]?[0] == 'value'
+        result.push(operation[index])
       if arg instanceof c.Variable
         result.push(arg)
       if arg.paths
@@ -19,6 +21,7 @@ Wrapper = (node, args, result, operation, continuation, scope) ->
     return result[0]
   return result
 
+# Wrap constraint helpers to be used as helpers in code
 Wrapper.compile = (constraints, engine, methods) ->
   for property, method of constraints
     # Overload constraint definitions so they 

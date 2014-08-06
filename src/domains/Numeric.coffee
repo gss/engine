@@ -5,12 +5,12 @@ enables anonymous constraints on immutable values
 
 ###
 
-Domain = require('../concepts/Domain')
+Domain  = require('../concepts/Domain')
 
 class Numeric extends Domain
-  priority: Infinity
+  priority: 0
 
-  class Numeric::Methods 
+  class Numeric::Methods
     "==": (a, b) ->
       return b
 
@@ -31,6 +31,10 @@ class Numeric extends Domain
 
     isConstraint: (object) ->
       return @constraints[object[0]]
+
+    get: 
+      command: (operation, continuation, scope, meta, object, path) ->
+        return @watch(object, path, operation, continuation, scope)
 
 
 module.exports = Numeric

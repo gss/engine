@@ -19,12 +19,14 @@ class Engine extends Domain.Events
   Method:      require('./concepts/Method')
   Property:    require('./concepts/Property')
   Console:     require('./concepts/Console')
+  Workflow:    require('./concepts/Workflow')
   
   Properties:  require('./properties/Axioms')
 
   Methods:     Native::mixin new Native,
                require('./methods/Conventions')
                require('./methods/Algebra')
+               require('./methods/Variables')
   Domains: 
     Intrinsic: require('./domains/Intrinsic')
     Numeric:   require('./domains/Numeric')
@@ -71,12 +73,11 @@ class Engine extends Domain.Events
     @domain      = @
     @properties  = new @Properties(@)
     @methods     = new @Methods(@)
+    @expressions = new @Expressions(@)
 
     @precompile()
 
-    @expressions = new @Expressions(@)
-    @assumed     = new @Domain(@, assumed, 'Assumed')
-    @solved      = new @Numeric(@)
+    @assumed     = new @Numeric(assumed)
 
     return @
 
@@ -92,7 +93,7 @@ class Engine extends Domain.Events
     destroy: (e) ->
       Engine[@scope._gss_id] = undefined
 
-  strategy: 'expressions'
+  strategy: 'intrinsic'
 
   solve: () ->
     if typeof arguments[0] == 'string'
@@ -109,24 +110,41 @@ class Engine extends Domain.Events
     unless @running
       @compile(true)
 
-    if args[0]?.push
-      @console.start(reason || args[0], source || @displayName || 'Intrinsic')
+    if typeof args[0] == 'object'
+      if name = source || @displayName
+        @console.start(reason || args[0], name)
+    unless old = @workflow
+      @engine.workflow = new @Workflow
 
     if typeof args[0] == 'function'
-      solution = args.shift().apply(@, args)
+      solution = args.shift().apply(@, args) 
+      debugger
     else
       @providing = null
       unless solution = Domain::solve.apply(@, args)
-        if provided = @providing
-          @providing = undefined
-          solution = @provide provided
+        while provided = @providing
+          i = 0
+          @providing = null
+          provided.index ?= args[0].index
+          provided.parent ?= args[0].parent
+          solution = @Workflow(provided)
       @providing = undefined
 
-    if args[0]?.push
+    if name
       @console.end(reason)
 
-    unless solution
-      return
+
+    workflow = @workflow
+    if workflow.domains.length
+      if old
+        if old != workflow
+          old.merge(workflow)
+      else
+        solution = workflow.each @resolve, @
+    @engine.workflow = old
+
+    if !solution || @engine != @
+      return solution
 
     if @applier && !@applier.solve(solution)
       return
@@ -140,56 +158,33 @@ class Engine extends Domain.Events
 
     return solution
 
-  # Verify solutions
-  # Finds final domain of given expression
-  provide: (solution, recursive) ->
+  # Accept solution from a solver and resolve it to verify
+  provide: (solution) ->
+    if solution.operation
+      return @engine.workflow.provide solution
     if @providing != undefined
-      (@providing ||= []).push(solution)
+      unless @hasOwnProperty('providing')
+        @engine.providing ||= []
+      (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
+    else
+      return @Workflow.apply(@, arguments)
 
-    domains = undefined
-    switch typeof solution
-      when 'object'
-        if solution.push
-          for arg in solution
-            if arg?.push
-              provided = @engine.provide arg, true
-              if domains
-                for domain in provided
-                  if domain != @ && domains.indexOf(domain) == -1
-                    merged = undefined
-                    if isFinite(domain.priority)
-                      for d in domains
-                        if merged = d.merge(domain)
-                          domain = merged
-                          break
-                    domains.unshift(domain) unless merged
-              else
-                domains = provided
-          host = solution[0] == 'get' && @Domain(solution) || solution.domain
-          if host && host != @ && (!domains || domains.indexOf(host) == -1)
-            domains ||= []
-            for domain, index in domains
-              if domain.priority <= host.priority
-                break
-            domains.splice(index, 0, host)
-    if domains
-      if !recursive
-        console.error(domains)
-        result = solution
-        for domain in domains
-          @console.start(result, domain.displayName)
-          @providing = null
-          result = domain.solve(result) || @providing
-          @providing = undefined
-          @console.end()
-        return result
+  resolve: (domain, problems, index) ->
+    for problem, index in problems
+      if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
+        problem = problems[index] = problem[0]
+    if problems instanceof Array && problems.length == 1 && problems[0] instanceof Array
+      problems = problem
 
-      return domains
-    else if recursive
-      return [@intrinsic]
-
-    return solution
+    @console.start(problems, domain.displayName)
+    @providing = null
+    result = domain.solve(problems) || @providing
+    @providing = undefined
+    @console.end()
+    if result?.length == 1
+      result = result[0]
+    return result
 
   # Initialize new worker and subscribe engine to its events
   useWorker: (url) ->

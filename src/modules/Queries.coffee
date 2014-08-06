@@ -66,7 +66,7 @@ class Queries extends Domain
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
-    @engine.solve 'mutations', mutations, ->
+    @engine.engine.solve 'mutations', ->
       for mutation in mutations
         switch mutation.type
           when "attributes"

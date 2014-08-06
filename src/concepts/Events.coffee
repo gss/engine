@@ -41,9 +41,11 @@ class Events
     if @[method = 'on' + type]
       return @[method](a, b, c)
 
-  dispatchEvent: (element, type, detail, bubbles, cancelable) ->
+  dispatchEvent: (element, type, data, bubbles, cancelable) ->
     return unless @scope
-    (detail ||= {}).engine = @
+    detail = {engine: @}
+    for prop, value of data
+      detail[prop] = value
     element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
 
   # Catch-all event listener 

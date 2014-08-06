@@ -27,7 +27,7 @@ Property.compile = (properties, engine) ->
     prop = @call(engine, property, key, properties)
     engine['_' + key] ?= prop
 
-  for key, property of properties
+  for own key, property of properties
     engine['_' + key] ?= property
   return properties
 

@@ -16,13 +16,12 @@ class Expressions extends Domain
 
   # Evaluate operation depth first
   solve: (operation, continuation, scope, meta, ascender, ascending) ->
-
     # Analyze operation once
     unless operation.def
       @analyze(operation)
     
     # Use custom argument evaluator of parent operation if it has one
-    if meta != operation && (solve = operation.parent?.def.solve)
+    if meta != operation && (solve = operation.parent?.def?.solve)
       solved = solve.call(@engine, operation, continuation, scope, meta, ascender, ascending)
       return if solved == false
       if typeof solved == 'string'
@@ -118,6 +117,8 @@ class Expressions extends Domain
 
   # Evaluate operation arguments in order, break on undefined
   descend: (operation, continuation, scope, meta, ascender, ascending) ->
+    if operation[0] == '*'
+      debugger
     args = prev = undefined
     skip = operation.skip
     shift = 0
@@ -162,7 +163,7 @@ class Expressions extends Domain
   # When recursion unrolls all caller ops are discarded
   ascend: (operation, continuation, result, scope, meta, ascender) ->
     if result?
-      if (parent = operation.parent) || operation.def.noop
+      if (((parent = operation.parent) && parent.def) || operation.def.noop) && parent.domain == operation.domain
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection?(result)
           @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
@@ -192,9 +193,16 @@ class Expressions extends Domain
               return @provide(if result.length == 1 then result[0] else result)
           else if parent && (ascender? || (result.nodeType && (!operation.def.hidden || parent.tail == parent)))
             @solve parent, continuation, scope, meta, operation.index, result
-            return 
           else
             return result
+      else if parent?.domain != operation.domain
+        solution = ['value', result, continuation || '', operation.toString()]
+        solution.operation = operation
+        solution.parent    = operation.parent
+        solution.domain    = operation.domain
+        solution.index     = operation.index
+        parent[operation.index] = solution
+        return @provide solution
       else
         return @provide result
 

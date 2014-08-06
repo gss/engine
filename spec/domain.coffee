@@ -23,6 +23,7 @@ describe 'Domain', ->
 				a: 666
 			})
 
+			debugger
 			expect(engine.solve [
 				['==',
 					['get', 'result']
@@ -48,16 +49,17 @@ describe 'Domain', ->
 				['==',
 					['get', 'result']
 					['+',
-						['get', 'a']
+						['*'
+							2,
+							['get', 'a']]
 						['get', 'b']
 					]
 				]
 			]).to.eql 
-				result: 565
+				result: 555 * 2 + 10
 				b: 10
 
 			expect(engine.solve
 				a: -555
 			).to.eql
-				result: 545
-				b: 10
+				result: -1100

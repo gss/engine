@@ -7,10 +7,12 @@
 # Measurements happen synchronously,
 # re-measurements are deferred to be done in bulk
 
-Domain = require('../concepts/Domain')
-Native = require('../methods/Native')
+Numeric = require('../domains/Numeric')
+Native  = require('../methods/Native')
 
-class Intrinsic extends Domain
+class Intrinsic extends Numeric
+  priority: -Infinity
+  
   Queries:     require('../modules/Queries')
   Positions:   require('../modules/Positions')
   Types:       require('../methods/Types')

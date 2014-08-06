@@ -82,7 +82,6 @@ class Linear extends Domain
   # Read commands
   solve: ()->
     Domain::solve.apply(@, arguments)
-
     if @constrained
       @constrained = undefined
       @solver.solve()

@@ -20,6 +20,7 @@
     "lib/methods/Transformations.js", 
     "lib/methods/Types.js", 
     "lib/methods/Units.js", 
+    "lib/methods/Variables.js", 
 
     "lib/concepts/Console.js",
     "lib/concepts/Wrapper.js",
@@ -29,6 +30,7 @@
     "lib/concepts/Parser.js",
     "lib/concepts/Property.js",
     "lib/concepts/Style.js",
+    "lib/concepts/Workflow.js",
 
     "lib/domains/Linear.js", 
     "lib/domains/Intrinsic.js",

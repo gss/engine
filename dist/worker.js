@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-01) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-06) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -771,9 +771,6 @@ Console = (function() {
     fmt += Array(5 - Math.floor(String(name).length / 4)).join('\t');
     fmt += "%c";
     if (typeof reason !== 'string') {
-      if (reason != null ? reason.slice : void 0) {
-        reason = Native.prototype.clone(reason);
-      }
       fmt += '%O';
     } else {
       fmt += '%s';
@@ -972,6 +969,7 @@ Property.compile = function(properties, engine) {
     }
   }
   for (key in properties) {
+    if (!__hasProp.call(properties, key)) continue;
     property = properties[key];
     if (engine[_name1 = '_' + key] == null) {
       engine[_name1] = property;
@@ -1192,9 +1190,11 @@ Engine = (function(_super) {
 
   Engine.prototype.Console = require('./concepts/Console');
 
+  Engine.prototype.Workflow = require('./concepts/Workflow');
+
   Engine.prototype.Properties = require('./properties/Axioms');
 
-  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Algebra'));
+  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Algebra'), require('./methods/Variables'));
 
   Engine.prototype.Domains = {
     Intrinsic: require('./domains/Intrinsic'),
@@ -1250,10 +1250,9 @@ Engine = (function(_super) {
     this.domain = this;
     this.properties = new this.Properties(this);
     this.methods = new this.Methods(this);
-    this.precompile();
     this.expressions = new this.Expressions(this);
-    this.assumed = new this.Domain(this, assumed, 'Assumed');
-    this.solved = new this.Numeric(this);
+    this.precompile();
+    this.assumed = new this.Numeric(assumed);
     return this;
   }
 
@@ -1269,10 +1268,10 @@ Engine = (function(_super) {
     }
   };
 
-  Engine.prototype.strategy = 'expressions';
+  Engine.prototype.strategy = 'intrinsic';
 
   Engine.prototype.solve = function() {
-    var args, index, provided, reason, solution, source, _ref, _ref1;
+    var args, i, index, name, old, provided, reason, solution, source, workflow;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -1287,26 +1286,50 @@ Engine = (function(_super) {
     if (!this.running) {
       this.compile(true);
     }
-    if ((_ref = args[0]) != null ? _ref.push : void 0) {
-      this.console.start(reason || args[0], source || this.displayName || 'Intrinsic');
+    if (typeof args[0] === 'object') {
+      if (name = source || this.displayName) {
+        this.console.start(reason || args[0], name);
+      }
+    }
+    if (!(old = this.workflow)) {
+      this.engine.workflow = new this.Workflow;
     }
     if (typeof args[0] === 'function') {
       solution = args.shift().apply(this, args);
+      debugger;
     } else {
       this.providing = null;
       if (!(solution = Domain.prototype.solve.apply(this, args))) {
-        if (provided = this.providing) {
-          this.providing = void 0;
-          solution = this.provide(provided);
+        while (provided = this.providing) {
+          i = 0;
+          this.providing = null;
+          if (provided.index == null) {
+            provided.index = args[0].index;
+          }
+          if (provided.parent == null) {
+            provided.parent = args[0].parent;
+          }
+          solution = this.Workflow(provided);
         }
       }
       this.providing = void 0;
     }
-    if ((_ref1 = args[0]) != null ? _ref1.push : void 0) {
+    if (name) {
       this.console.end(reason);
     }
-    if (!solution) {
-      return;
+    workflow = this.workflow;
+    if (workflow.domains.length) {
+      if (old) {
+        if (old !== workflow) {
+          old.merge(workflow);
+        }
+      } else {
+        solution = workflow.each(this.resolve, this);
+      }
+    }
+    this.engine.workflow = old;
+    if (!solution || this.engine !== this) {
+      return solution;
     }
     if (this.applier && !this.applier.solve(solution)) {
       return;
@@ -1319,76 +1342,41 @@ Engine = (function(_super) {
     return solution;
   };
 
-  Engine.prototype.provide = function(solution, recursive) {
-    var arg, d, domain, domains, host, index, merged, provided, result, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m;
+  Engine.prototype.provide = function(solution) {
+    var _base;
+    if (solution.operation) {
+      return this.engine.workflow.provide(solution);
+    }
     if (this.providing !== void 0) {
-      (this.providing || (this.providing = [])).push(solution);
-      return;
-    }
-    domains = void 0;
-    switch (typeof solution) {
-      case 'object':
-        if (solution.push) {
-          for (_i = 0, _len = solution.length; _i < _len; _i++) {
-            arg = solution[_i];
-            if (arg != null ? arg.push : void 0) {
-              provided = this.engine.provide(arg, true);
-              if (domains) {
-                for (_j = 0, _len1 = provided.length; _j < _len1; _j++) {
-                  domain = provided[_j];
-                  if (domain !== this && domains.indexOf(domain) === -1) {
-                    merged = void 0;
-                    if (isFinite(domain.priority)) {
-                      for (_k = 0, _len2 = domains.length; _k < _len2; _k++) {
-                        d = domains[_k];
-                        if (merged = d.merge(domain)) {
-                          domain = merged;
-                          break;
-                        }
-                      }
-                    }
-                    if (!merged) {
-                      domains.unshift(domain);
-                    }
-                  }
-                }
-              } else {
-                domains = provided;
-              }
-            }
-          }
-          host = solution[0] === 'get' && this.Domain(solution) || solution.domain;
-          if (host && host !== this && (!domains || domains.indexOf(host) === -1)) {
-            domains || (domains = []);
-            for (index = _l = 0, _len3 = domains.length; _l < _len3; index = ++_l) {
-              domain = domains[index];
-              if (domain.priority <= host.priority) {
-                break;
-              }
-            }
-            domains.splice(index, 0, host);
-          }
-        }
-    }
-    if (domains) {
-      if (!recursive) {
-        console.error(domains);
-        result = solution;
-        for (_m = 0, _len4 = domains.length; _m < _len4; _m++) {
-          domain = domains[_m];
-          this.console.start(result, domain.displayName);
-          this.providing = null;
-          result = domain.solve(result) || this.providing;
-          this.providing = void 0;
-          this.console.end();
-        }
-        return result;
+      if (!this.hasOwnProperty('providing')) {
+        (_base = this.engine).providing || (_base.providing = []);
       }
-      return domains;
-    } else if (recursive) {
-      return [this.intrinsic];
+      (this.providing || (this.providing = [])).push(Array.prototype.slice.call(arguments, 0));
+    } else {
+      return this.Workflow.apply(this, arguments);
     }
-    return solution;
+  };
+
+  Engine.prototype.resolve = function(domain, problems, index) {
+    var problem, result, _i, _len;
+    for (index = _i = 0, _len = problems.length; _i < _len; index = ++_i) {
+      problem = problems[index];
+      if (problem instanceof Array && problem.length === 1 && problem[0] instanceof Array) {
+        problem = problems[index] = problem[0];
+      }
+    }
+    if (problems instanceof Array && problems.length === 1 && problems[0] instanceof Array) {
+      problems = problem;
+    }
+    this.console.start(problems, domain.displayName);
+    this.providing = null;
+    result = domain.solve(problems) || this.providing;
+    this.providing = void 0;
+    this.console.end();
+    if ((result != null ? result.length : void 0) === 1) {
+      result = result[0];
+    }
+    return result;
   };
 
   Engine.prototype.useWorker = function(url) {

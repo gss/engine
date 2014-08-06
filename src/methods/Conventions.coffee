@@ -143,6 +143,43 @@ class Conventions
       return object.valueOf != Object.prototype.valueOf
     return true
 
+  # Return domain that should be used to evaluate given variable
+  getDomain: (exp) ->
+    if exp.push
+      if exp.domain
+        return exp.domain
+      [cmd, scope, property] = variable = exp
+    else
+      [scope, property] = arguments
+
+    path = @getPath(scope, property)
+    if declaration = @variables[path]
+      domain = declaration.domain
+    else 
+      if (index = property.indexOf('-')) > -1
+        prefix = property.substring(0, index)
+        if (domain = @[prefix])
+          unless domain instanceof Domain
+            domain = undefined
+      unless domain
+        if @assumed.hasOwnProperty path
+          domain = @assumed
+        else
+          domain = @linear
+    if variable
+      variable.domain = domain
+    return domain
+
+  getRootOperation: (operation) ->
+    parent = operation
+    while parent.parent && 
+          parent.parent.def && 
+          !parent.parent.def.noop && 
+          parent.domain == operation.domain
+      parent = parent.parent
+    console.error(operation, parent)
+    return parent
+
 # Little shim for require.js so we dont have to carry it around
 @require ||= (string) ->
   if string == 'cassowary'

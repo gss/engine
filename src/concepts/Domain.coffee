@@ -21,45 +21,21 @@ State:
 Native = require('../methods/Native')
 
 class Domain
-  priority: -Infinity
+  priority: 0
 
   constructor: (engine, values, name) ->
     if !engine || engine instanceof Domain
-      @variables   = @engine && new (Native::mixin(@engine.variables)) || {}
-      @watchers    = @engine && new (Native::mixin(@engine.watchers )) || {}
-      @observers   = @engine && new (Native::mixin(@engine.observers)) || {}
-      @engine      = engine  if engine
-      @displayName = name    if name
-      @merge(values)         if values
+      @variables    = @engine && new (Native::mixin(@engine.variables)) || {}
+      @watchers     = @engine && new (Native::mixin(@engine.watchers )) || {}
+      @observers    = @engine && new (Native::mixin(@engine.observers)) || {}
+      @subsolutions = {}
+      @engine       = engine  if engine
+      @displayName  = name    if name
+      @merge(values)          if values
 
       return @
     else
-      if engine.push
-        if engine.domain
-          return engine.domain
-        [cmd, scope, property] = variable = engine
-      else
-        [scope, property] = arguments
-
-      path = @getPath(scope, property)
-      if declaration = @variables[path]
-        domain = declaration.domain
-      else 
-        if (index = property.indexOf('-')) > -1
-          prefix = property.substring(0, index)
-          if (domain = @[prefix])
-            unless domain instanceof Domain
-              domain = undefined
-        unless domain
-          if @assumed.hasOwnProperty path
-            domain = @assumed
-          else
-            domain = @linear
-      if variable
-        variable.domain = domain
-      return domain
-
-  strategy: 'substitute'
+      return @find.apply(@, arguments)
 
   solve: (args) ->
     return unless args
@@ -78,35 +54,13 @@ class Domain
       #  @provide result
       return result
 
-  substitute: (expression, parent) ->
-    substituted = expression
-    for exp, index in expression
-      if exp.push
-        replaced = @substitute(exp, parent)
-        unless replaced == exp
-          if substituted == expression
-            substituted = expression.slice(0)
-            if expression.domain
-              substituted.domain = expression.domain
-          substituted[index] = replaced
-
-    if substituted[0] == 'get' && substituted.domain == @
-      path = @engine.getPath(substituted[1], substituted[2])
-      @engine.console.row('vary', path, @[path])
-      substituted = ['vary', @[path]]
-      substituted.domain = expression.domain
-      substituted.domain.watch null, path,  substituted
-
-    return substituted
-
   provide: (solution, value) ->
     if solution instanceof Domain
       return @merge solution
+    else if @domain
+      return @engine.engine.provide solution
     else
-      if @domain
-        return @engine.provide.call @, solution
-      else
-        return @engine.provide(solution)
+      return @engine.provide solution
     # for property, value of solution
     #   @verify(null, property, value)
     return true
@@ -151,14 +105,14 @@ class Domain
     # merge objects/domains
     if object && !object.push
       if object instanceof Domain
-        return object
+        return# object
 
       @engine.solve @displayName, (domain) ->
         for path, value of object
           domain.set undefined, path, value
+        return
       , @
 
-    return
 
   # Set key-value pair or merge object
   set: (object, property, value, meta) ->
@@ -176,7 +130,8 @@ class Domain
       @engine.solve @displayName, path, ->
         for watcher, index in watchers by 3
           break unless watcher
-          @provide watcher.parent, watchers[index + 1], watchers[index + 2], meta, watcher.index, value
+          @solve watcher.parent, watchers[index + 1], watchers[index + 2] || null, meta || null, watcher.index || null, value
+        @
     return value
 
   # Export values in a plain object. Use for tests only
@@ -204,12 +159,54 @@ class Domain
     if @variables[path]
       return false
 
+  getRootOperation: (operation) ->
+    parent = operation
+    while parent.parent && parent.parent.def && !parent.parent.def.noop
+      parent = parent.parent
+      break unless parent.domain == operation.domain
+    return parent
+
+  compare: (a, b) ->
+    if typeof a == 'object'
+      return unless typeof b == 'object'
+      if a[0] == 'value' && b[0] == 'value'
+        return unless a[3] == b[3]
+      for value, index in a
+        return unless @compare(b[index], value)
+      return unless b[a.length] == a[a.length]
+    else
+      return if typeof b == 'object'
+      return unless a == b
+    return true
+
   constrain: (constraint) ->
     if constraint.paths
+      root = other = undefined
+      for path in constraint.paths
+        if path[0] == 'value'
+          subsolutions = @subsolutions[path[3]] ||= []
+          debugger
+          for sub in subsolutions
+            subop = undefined
+            for p in sub.paths
+              if p[0] == 'value'
+                subop = p
+                break
+            if subop
+              root ?= @getRootOperation(path)
+              other = @getRootOperation(subop)
+              if @compare(root, other)
+                console.info('updating constraint', subop, '->', path)
+                debugger
+                @unconstrain(sub)
+                break
+          subsolutions.push(constraint)
+
+
       for path in constraint.paths
         if typeof path == 'string'
           (@variables[path] ||= []).push(constraint)
-        else
+        else if path.name
           path.counter = (path.counter || 0) + 1
           if path.counter == 1
             if @nullified && @nullified[path.name]
@@ -221,6 +218,9 @@ class Domain
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
 
+    @constrained = true
+    return
+
   unconstrain: (constraint, continuation) ->
     for path in constraint.paths
       if typeof path == 'string'
@@ -229,6 +229,11 @@ class Domain
             group.splice(index, 1)
           unless group.length
             delete @variables[path]
+      else if path[0] == 'value'
+        if subsolutions = @subsolutions[path[3]]
+          subsolutions.splice(subsolutions.indexOf(constraint), 1)
+          unless subsolutions.length
+            delete @subsolutions[path[3]]
       else
         unless --path.counter
           @undeclare(path)
@@ -266,7 +271,10 @@ class Domain
   # Overloads parts of the world (methods, variables, observers)
   @compile = (domains, engine) ->
     for own name, domain of domains
-      EngineDomain = engine[name] = () ->
+      EngineDomain = engine[name] = (object) ->
+        if object
+          for property, value of object
+            @[property] = value
         @domain      = @
         #@variables   = Native::mixin(@engine.variables)
         #@observers   = Native::mixin(@engine.observers)
@@ -292,9 +300,11 @@ class Domain
         return Domain::constructor.call(@, engine)
 
       EngineDomainWrapper       = engine.mixin(engine, domain)
-      EngineDomain.prototype    = new EngineDomainWrapper(engine)
-      EngineDomain.displayName  = name
+      EngineDomain.prototype    = new EngineDomainWrapper
+      EngineDomain::solve       ||= Domain::solve unless domain::solve
+      EngineDomain::strategy    = 'expressions'
       EngineDomain::displayName = name
+      EngineDomain.displayName  = name
       unless engine.prototype
         engine[name.toLowerCase()] = new engine[name]
     @
