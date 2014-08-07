@@ -13,31 +13,31 @@ class Numeric extends Domain
   # Numeric domains usually dont use worker
   url: null
 
-  class Numeric::Methods
-    "==": (a, b) ->
-      return b
+class Numeric::Methods
+  "==": (a, b) ->
+    return b
 
-    "<=": (a, b) ->
-      return Math.min(a, b)
+  "<=": (a, b) ->
+    return Math.min(a, b)
 
-    ">=": (a, b) ->
-      return Math.max(a, b)
+  ">=": (a, b) ->
+    return Math.max(a, b)
 
-    "<": (a, b) ->
-      return Math.min(a, b - 1)
+  "<": (a, b) ->
+    return Math.min(a, b - 1)
 
-    ">": (a, b) ->
-      return Math.max(a, b + 1)
+  ">": (a, b) ->
+    return Math.max(a, b + 1)
 
-    isVariable: (object) ->
-      return object[0] == 'get'
+  isVariable: (object) ->
+    return object[0] == 'get'
 
-    isConstraint: (object) ->
-      return @constraints[object[0]]
+  isConstraint: (object) ->
+    return @constraints[object[0]]
 
-    get: 
-      command: (operation, continuation, scope, meta, object, path) ->
-        return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
+  get: 
+    command: (operation, continuation, scope, meta, object, path) ->
+      return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
 
 
 module.exports = Numeric

@@ -19071,11 +19071,11 @@ var Domain, Engine, Events, Native,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
+Native = require('./methods/Native');
+
 Events = require('./concepts/Events');
 
 Domain = require('./concepts/Domain');
-
-Native = require('./methods/Native');
 
 Domain.Events || (Domain.Events = Native.prototype.mixin(Domain, Events));
 
@@ -19099,6 +19099,7 @@ Engine = (function(_super) {
   Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Algebra'), require('./methods/Variables'));
 
   Engine.prototype.Domains = {
+    Document: require('./domains/Document'),
     Intrinsic: require('./domains/Intrinsic'),
     Numeric: require('./domains/Numeric'),
     Linear: require('./domains/Linear'),
@@ -19151,6 +19152,7 @@ Engine = (function(_super) {
     this.expressions = new this.Expressions(this);
     this.precompile();
     this.assumed = new this.Numeric(assumed);
+    this.strategy = (typeof window !== "undefined" && window !== null) && 'document' || 'linear';
     return this;
   }
 
@@ -19165,8 +19167,6 @@ Engine = (function(_super) {
       return Engine[this.scope._gss_id] = void 0;
     }
   };
-
-  Engine.prototype.strategy = 'intrinsic';
 
   Engine.prototype.solve = function() {
     var args, i, index, name, old, provided, reason, solution, source, workflow;
@@ -19244,6 +19244,9 @@ Engine = (function(_super) {
     if (solution.operation) {
       return this.engine.workflow.provide(solution);
     }
+    if (!solution.push) {
+      return this.merge(solution);
+    }
     if (this.providing !== void 0) {
       if (!this.hasOwnProperty('providing')) {
         (_base = this.engine).providing || (_base.providing = []);
@@ -19267,7 +19270,7 @@ Engine = (function(_super) {
     }
     this.console.start(problems, domain.displayName);
     this.providing = null;
-    result = domain.solve(problems) || this.providing;
+    result = domain.solve(problems) || this.providing || void 0;
     this.providing = void 0;
     this.console.end();
     if ((result != null ? result.length : void 0) === 1) {
@@ -19284,10 +19287,9 @@ Engine = (function(_super) {
     this.worker = new this.getWorker(url);
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
-    this.solve = function() {
-      return _this.worker.postMessage.apply(_this.worker, arguments);
+    return this.solve = function(commands) {
+      _this.worker.postMessage(_this.clone(commands));
     };
-    return this.worker;
   };
 
   Engine.prototype.getWorker = function(url) {
@@ -19341,7 +19343,7 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    return (self.engine || (self.engine = Engine())).solve(e.data);
+    return postMessage((self.engine || (self.engine = Engine())).solve(e.data));
   });
 }
 
@@ -22495,76 +22497,6 @@ Linear = (function(_super) {
 
   Linear.prototype.Wrapper = require('../concepts/Wrapper');
 
-  Linear.prototype.Methods = (function() {
-    function Methods() {}
-
-    Methods.prototype.get = function(scope, property, path) {
-      var variable;
-      if (typeof this.properties[property] === 'function' && scope) {
-        return this.properties[property].call(this, scope, path);
-      } else {
-        variable = this.declare(this.getPath(scope, property));
-      }
-      return [variable, path || (property && scope) || ''];
-    };
-
-    Methods.prototype.strength = function(strength, deflt) {
-      if (deflt == null) {
-        deflt = 'medium';
-      }
-      return strength && c.Strength[strength] || c.Strength[deflt];
-    };
-
-    Methods.prototype.weight = function(weight) {
-      return weight;
-    };
-
-    Methods.prototype.varexp = function(name) {
-      return new c.Expression({
-        name: name
-      });
-    };
-
-    Methods.prototype['=='] = function(left, right, strength, weight) {
-      return new c.Equation(left, right, this.strength(strength), this.weight(weight));
-    };
-
-    Methods.prototype['<='] = function(left, right, strength, weight) {
-      return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
-    };
-
-    Methods.prototype['>='] = function(left, right, strength, weight) {
-      return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
-    };
-
-    Methods.prototype['<'] = function(left, right, strength, weight) {
-      return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
-    };
-
-    Methods.prototype['>'] = function(left, right, strength, weight) {
-      return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
-    };
-
-    Methods.prototype['+'] = function(left, right, strength, weight) {
-      return c.plus(left, right);
-    };
-
-    Methods.prototype['-'] = function(left, right, strength, weight) {
-      return c.minus(left, right);
-    };
-
-    Methods.prototype['*'] = function(left, right, strength, weight) {
-      return c.times(left, right);
-    };
-
-    Methods.prototype['/'] = function(left, right, strength, weight) {
-      return c.divide(left, right);
-    };
-
-    return Methods;
-
-  })();
-
   Linear.prototype.isVariable = function(object) {
     return object instanceof c.Variable;
   };
@@ -22672,6 +22604,76 @@ Linear = (function(_super) {
 
 })(Domain);
 
+Linear.prototype.Methods = (function() {
+  function Methods() {}
+
+  Methods.prototype.get = function(scope, property, path) {
+    var variable;
+    if (typeof this.properties[property] === 'function' && scope) {
+      return this.properties[property].call(this, scope, path);
+    } else {
+      variable = this.declare(this.getPath(scope, property));
+    }
+    return [variable, path || (property && scope) || ''];
+  };
+
+  Methods.prototype.strength = function(strength, deflt) {
+    if (deflt == null) {
+      deflt = 'medium';
+    }
+    return strength && c.Strength[strength] || c.Strength[deflt];
+  };
+
+  Methods.prototype.weight = function(weight) {
+    return weight;
+  };
+
+  Methods.prototype.varexp = function(name) {
+    return new c.Expression({
+      name: name
+    });
+  };
+
+  Methods.prototype['=='] = function(left, right, strength, weight) {
+    return new c.Equation(left, right, this.strength(strength), this.weight(weight));
+  };
+
+  Methods.prototype['<='] = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+  };
+
+  Methods.prototype['>='] = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+  };
+
+  Methods.prototype['<'] = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.LEQ, right, this.strength(strength), this.weight(weight));
+  };
+
+  Methods.prototype['>'] = function(left, right, strength, weight) {
+    return new c.Inequality(left, c.GEQ, right, this.strength(strength), this.weight(weight));
+  };
+
+  Methods.prototype['+'] = function(left, right, strength, weight) {
+    return c.plus(left, right);
+  };
+
+  Methods.prototype['-'] = function(left, right, strength, weight) {
+    return c.minus(left, right);
+  };
+
+  Methods.prototype['*'] = function(left, right, strength, weight) {
+    return c.times(left, right);
+  };
+
+  Methods.prototype['/'] = function(left, right, strength, weight) {
+    return c.divide(left, right);
+  };
+
+  return Methods;
+
+})();
+
 module.exports = Linear;
 
 });
@@ -22689,114 +22691,20 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.priority = -Infinity;
 
-  Intrinsic.condition = function() {
-    return typeof window !== "undefined" && window !== null;
-  };
-
-  Intrinsic.prototype.Queries = require('../modules/Queries');
-
-  Intrinsic.prototype.Positions = require('../modules/Positions');
-
   Intrinsic.prototype.Types = require('../methods/Types');
 
   Intrinsic.prototype.Units = require('../methods/Units');
 
   Intrinsic.prototype.Style = require('../concepts/Style');
 
-  Intrinsic.prototype.Methods = Native.prototype.mixin({}, require('../methods/Types'), require('../methods/Units'), require('../methods/Selectors'), require('../methods/Rules'), require('../methods/Native'), require('../methods/Transformations'));
+  Intrinsic.prototype.Methods = Native.prototype.mixin({}, require('../methods/Types'), require('../methods/Units'), require('../methods/Transformations'));
 
   Intrinsic.prototype.Properties = Native.prototype.mixin({}, require('../properties/Dimensions'), require('../properties/Styles'));
 
   function Intrinsic() {
-    var _base, _base1;
-    (_base = this.engine).queries || (_base.queries = new this.Queries(this));
-    (_base1 = this.engine).positions || (_base1.positions = new this.Positions(this));
     this.types = new this.Types(this);
     this.units = new this.Units(this);
-    if (!this.scope) {
-      this.scope = document;
-    }
-    if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
-      this.scope.addEventListener('DOMContentLoaded', this);
-    } else if (this.running) {
-      this.compile();
-    }
-    this.scope.addEventListener('scroll', this);
-    if (typeof window !== "undefined" && window !== null) {
-      window.addEventListener('resize', this);
-    }
-    Intrinsic.__super__.constructor.apply(this, arguments);
   }
-
-  Intrinsic.prototype.events = {
-    resize: function(e) {
-      var id;
-      if (e == null) {
-        e = '::window';
-      }
-      id = e.target && this.identity.provide(e.target) || e;
-      return this.solve(id + ' resized', function() {
-        this.intrinsic.verify(id, "width", void 0, false);
-        return this.intrinsic.verify(id, "height", void 0, false);
-      });
-    },
-    scroll: function(e) {
-      var id;
-      if (e == null) {
-        e = '::window';
-      }
-      id = e.target && this.identity.provide(e.target) || e;
-      return this.solve(id + ' scrolled', function() {
-        this.intrinsic.verify(id, "scroll-top", void 0, false);
-        return this.intrinsic.verify(id, "scroll-left", void 0, false);
-      });
-    },
-    solve: function() {
-      var id, _i, _len, _ref;
-      if (this.removed) {
-        _ref = this.removed;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          id = _ref[_i];
-          this.identity.unset(id);
-        }
-        return this.removed = void 0;
-      }
-    },
-    DOMContentLoaded: function() {
-      this.scope.removeEventListener('DOMContentLoaded', this);
-      return this.start();
-    },
-    compile: function() {
-      this.intrinsic.queries.connect();
-      return this.engine.solve('Intrinsic', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
-    },
-    destroy: function() {
-      this.scope.removeEventListener('DOMContentLoaded', this);
-      this.scope.removeEventListener('scroll', this);
-      window.removeEventListener('resize', this);
-      return this.engine.events.destroy.apply(this, arguments);
-    }
-  };
-
-  Intrinsic.prototype.flush = function(reflow) {
-    var property, suggestions, value, _ref;
-    suggestions = void 0;
-    if (reflow) {
-      this.positions.render(null, this.reflown);
-    }
-    this.reflown = void 0;
-    if (this.buffer) {
-      _ref = this.buffer;
-      for (property in _ref) {
-        value = _ref[property];
-        if ((value != null) && value !== this.values[property]) {
-          (suggestions || (suggestions = [])).push(['suggest', property, value, 'required']);
-        }
-      }
-      this.values.merge(this.buffer);
-      return this.buffer = void 0;
-    }
-  };
 
   Intrinsic.prototype.getComputedStyle = function(element, force) {
     var computed, id, old;
@@ -22972,6 +22880,12 @@ Intrinsic = (function(_super) {
     }
   };
 
+  Intrinsic.condition = function() {
+    return typeof window !== "undefined" && window !== null;
+  };
+
+  Intrinsic.prototype.url = null;
+
   return Intrinsic;
 
 })(Numeric);
@@ -22997,66 +22911,236 @@ Finite = (function(_super) {
     Finite.__super__.constructor.apply(this, arguments);
   }
 
-  Finite.prototype.Methods = (function() {
-    function Methods() {}
-
-    Methods.prototype.variable = function(name) {
-      return this.solver.decl(name);
-    };
-
-    Methods.prototype['=='] = function(left, right) {
-      return this.solver.eq(left, right);
-    };
-
-    Methods.prototype['!='] = function(left, right) {
-      return this.solver.neq(left, right);
-    };
-
-    Methods.prototype['distinct'] = function() {
-      return this.solver.distinct.apply(this.solver, arguments);
-    };
-
-    Methods.prototype['<='] = function(left, right) {
-      return this.solver.lte(left, right);
-    };
-
-    Methods.prototype['>='] = function(left, right) {
-      return this.solver.gte(left, right);
-    };
-
-    Methods.prototype['<'] = function(left, right) {
-      return this.solver.lt(left, right);
-    };
-
-    Methods.prototype['>'] = function(left, right) {
-      return this.solver.gt(left, right);
-    };
-
-    Methods.prototype['+'] = function(left, right) {
-      return this.solver.plus(left, right);
-    };
-
-    Methods.prototype['-'] = function(left, right) {
-      return this.solver.minus(left, right);
-    };
-
-    Methods.prototype['*'] = function(left, right) {
-      return this.solver.times(left, right);
-    };
-
-    Methods.prototype['/'] = function(left, right) {
-      return this.solver.divide(left, right);
-    };
-
-    return Methods;
-
-  })();
-
   return Finite;
 
 })(Domain);
 
+Finite.prototype.Methods = (function() {
+  function Methods() {}
+
+  Methods.prototype.variable = function(name) {
+    return this.solver.decl(name);
+  };
+
+  Methods.prototype['=='] = function(left, right) {
+    return this.solver.eq(left, right);
+  };
+
+  Methods.prototype['!='] = function(left, right) {
+    return this.solver.neq(left, right);
+  };
+
+  Methods.prototype['distinct'] = function() {
+    return this.solver.distinct.apply(this.solver, arguments);
+  };
+
+  Methods.prototype['<='] = function(left, right) {
+    return this.solver.lte(left, right);
+  };
+
+  Methods.prototype['>='] = function(left, right) {
+    return this.solver.gte(left, right);
+  };
+
+  Methods.prototype['<'] = function(left, right) {
+    return this.solver.lt(left, right);
+  };
+
+  Methods.prototype['>'] = function(left, right) {
+    return this.solver.gt(left, right);
+  };
+
+  Methods.prototype['+'] = function(left, right) {
+    return this.solver.plus(left, right);
+  };
+
+  Methods.prototype['-'] = function(left, right) {
+    return this.solver.minus(left, right);
+  };
+
+  Methods.prototype['*'] = function(left, right) {
+    return this.solver.times(left, right);
+  };
+
+  Methods.prototype['/'] = function(left, right) {
+    return this.solver.divide(left, right);
+  };
+
+  return Methods;
+
+})();
+
 module.exports = Finite;
+
+});
+require.register("gss/lib/domains/Document.js", function(exports, require, module){
+var Document, Domain, Native,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Native = require('../methods/Native');
+
+Domain = require('../concepts/Domain');
+
+Document = (function(_super) {
+  __extends(Document, _super);
+
+  Document.prototype.priority = -Infinity;
+
+  Document.prototype.Methods = Native.prototype.mixin({}, require('../methods/Selectors'), require('../methods/Rules'));
+
+  Document.prototype.Queries = require('../modules/Queries');
+
+  Document.prototype.Positions = require('../modules/Positions');
+
+  Document.prototype.events = {
+    resize: function(e) {
+      var id;
+      if (e == null) {
+        e = '::window';
+      }
+      id = e.target && this.identity.provide(e.target) || e;
+      return this.solve(id + ' resized', function() {
+        this.intrinsic.verify(id, "width", void 0, false);
+        return this.intrinsic.verify(id, "height", void 0, false);
+      });
+    },
+    scroll: function(e) {
+      var id;
+      if (e == null) {
+        e = '::window';
+      }
+      id = e.target && this.identity.provide(e.target) || e;
+      return this.solve(id + ' scrolled', function() {
+        this.intrinsic.verify(id, "scroll-top", void 0, false);
+        return this.intrinsic.verify(id, "scroll-left", void 0, false);
+      });
+    },
+    solve: function() {
+      var id, _i, _len, _ref;
+      if (this.removed) {
+        _ref = this.removed;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          id = _ref[_i];
+          this.identity.unset(id);
+        }
+        return this.removed = void 0;
+      }
+    },
+    DOMContentLoaded: function() {
+      this.scope.removeEventListener('DOMContentLoaded', this);
+      return this.start();
+    },
+    compile: function() {
+      this.intrinsic.queries.connect();
+      return this.engine.solve('Intrinsic', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+    },
+    destroy: function() {
+      this.scope.removeEventListener('DOMContentLoaded', this);
+      this.scope.removeEventListener('scroll', this);
+      window.removeEventListener('resize', this);
+      return this.engine.events.destroy.apply(this, arguments);
+    }
+  };
+
+  function Document() {
+    var _base, _base1, _base2;
+    (_base = this.engine).queries || (_base.queries = new this.Queries(this));
+    (_base1 = this.engine).positions || (_base1.positions = new this.Positions(this));
+    (_base2 = this.engine).scope || (_base2.scope = document);
+    if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
+      this.scope.addEventListener('DOMContentLoaded', this);
+    } else if (this.running) {
+      this.compile();
+    }
+    this.scope.addEventListener('scroll', this);
+    if (typeof window !== "undefined" && window !== null) {
+      window.addEventListener('resize', this);
+    }
+    Document.__super__.constructor.apply(this, arguments);
+  }
+
+  Document.prototype.flush = function(reflow) {
+    var property, suggestions, value, _ref;
+    suggestions = void 0;
+    if (reflow) {
+      this.positions.render(null, this.reflown);
+    }
+    this.reflown = void 0;
+    if (this.buffer) {
+      _ref = this.buffer;
+      for (property in _ref) {
+        value = _ref[property];
+        if ((value != null) && value !== this.values[property]) {
+          (suggestions || (suggestions = [])).push(['suggest', property, value, 'required']);
+        }
+      }
+      this.values.merge(this.buffer);
+      return this.buffer = void 0;
+    }
+  };
+
+  Document.prototype.events = {
+    resize: function(e) {
+      var id;
+      if (e == null) {
+        e = '::window';
+      }
+      id = e.target && this.identity.provide(e.target) || e;
+      return this.solve(id + ' resized', function() {
+        this.intrinsic.verify(id, "width", void 0, false);
+        return this.intrinsic.verify(id, "height", void 0, false);
+      });
+    },
+    scroll: function(e) {
+      var id;
+      if (e == null) {
+        e = '::window';
+      }
+      id = e.target && this.identity.provide(e.target) || e;
+      return this.solve(id + ' scrolled', function() {
+        this.intrinsic.verify(id, "scroll-top", void 0, false);
+        return this.intrinsic.verify(id, "scroll-left", void 0, false);
+      });
+    },
+    solve: function() {
+      var id, _i, _len, _ref;
+      if (this.removed) {
+        _ref = this.removed;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          id = _ref[_i];
+          this.identity.unset(id);
+        }
+        return this.removed = void 0;
+      }
+    },
+    DOMContentLoaded: function() {
+      this.scope.removeEventListener('DOMContentLoaded', this);
+      return this.start();
+    },
+    compile: function() {
+      this.intrinsic.queries.connect();
+      return this.engine.solve('Intrinsic', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+    },
+    destroy: function() {
+      this.scope.removeEventListener('DOMContentLoaded', this);
+      this.scope.removeEventListener('scroll', this);
+      window.removeEventListener('resize', this);
+      return this.engine.events.destroy.apply(this, arguments);
+    }
+  };
+
+  Document.condition = function() {
+    return typeof window !== "undefined" && window !== null;
+  };
+
+  Document.prototype.url = null;
+
+  return Document;
+
+})(Domain);
+
+module.exports = Document;
 
 });
 require.register("gss/lib/domains/Numeric.js", function(exports, require, module){
@@ -23084,52 +23168,118 @@ Numeric = (function(_super) {
 
   Numeric.prototype.url = null;
 
-  Numeric.prototype.Methods = (function() {
-    function Methods() {}
-
-    Methods.prototype["=="] = function(a, b) {
-      return b;
-    };
-
-    Methods.prototype["<="] = function(a, b) {
-      return Math.min(a, b);
-    };
-
-    Methods.prototype[">="] = function(a, b) {
-      return Math.max(a, b);
-    };
-
-    Methods.prototype["<"] = function(a, b) {
-      return Math.min(a, b - 1);
-    };
-
-    Methods.prototype[">"] = function(a, b) {
-      return Math.max(a, b + 1);
-    };
-
-    Methods.prototype.isVariable = function(object) {
-      return object[0] === 'get';
-    };
-
-    Methods.prototype.isConstraint = function(object) {
-      return this.constraints[object[0]];
-    };
-
-    Methods.prototype.get = {
-      command: function(operation, continuation, scope, meta, object, path) {
-        return this.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
-      }
-    };
-
-    return Methods;
-
-  })();
-
   return Numeric;
 
 })(Domain);
 
+Numeric.prototype.Methods = (function() {
+  function Methods() {}
+
+  Methods.prototype["=="] = function(a, b) {
+    return b;
+  };
+
+  Methods.prototype["<="] = function(a, b) {
+    return Math.min(a, b);
+  };
+
+  Methods.prototype[">="] = function(a, b) {
+    return Math.max(a, b);
+  };
+
+  Methods.prototype["<"] = function(a, b) {
+    return Math.min(a, b - 1);
+  };
+
+  Methods.prototype[">"] = function(a, b) {
+    return Math.max(a, b + 1);
+  };
+
+  Methods.prototype.isVariable = function(object) {
+    return object[0] === 'get';
+  };
+
+  Methods.prototype.isConstraint = function(object) {
+    return this.constraints[object[0]];
+  };
+
+  Methods.prototype.get = {
+    command: function(operation, continuation, scope, meta, object, path) {
+      return this.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
+    }
+  };
+
+  return Methods;
+
+})();
+
 module.exports = Numeric;
+
+});
+require.register("gss/lib/domains/Abstract.js", function(exports, require, module){
+var Abstract, Domain, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Domain = require('./concepts/Domain');
+
+Abstract = (function(_super) {
+  __extends(Abstract, _super);
+
+  function Abstract() {
+    _ref = Abstract.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  return Abstract;
+
+})(Domain);
+
+Abstract.prototype.Methods = (function() {
+  function Methods() {}
+
+  Methods.prototype.get = {
+    command: function(operation, continuation, scope, meta, object, property) {
+      var id;
+      if (typeof object === 'string') {
+        id = object;
+      } else if (object.absolute === 'window' || object === document) {
+        id = '::window';
+      } else if (object.nodeType) {
+        id = this.identity.provide(object);
+      }
+      if (!property) {
+        id = '';
+        property = object;
+        object = void 0;
+      }
+      return ['get', id, property, this.getContinuation(continuation || '')];
+    }
+  };
+
+  Methods.prototype.set = {
+    command: function() {
+      var object;
+      object = this.intrinsic || this.assumed;
+      return object.set.apply(object, arguments);
+    }
+  };
+
+  Methods.prototype.suggest = {
+    command: function() {
+      return this.assumed.set.apply(this.assumed, arguments);
+    }
+  };
+
+  Methods.prototype.value = function(value) {
+    return value;
+  };
+
+  return Methods;
+
+})();
+
+module.exports = Abstract;
 
 });
 require.register("gss/lib/modules/Expressions.js", function(exports, require, module){
@@ -30376,7 +30526,9 @@ module.exports = {
     "lib/domains/Linear.js", 
     "lib/domains/Intrinsic.js",
     "lib/domains/Finite.js", 
+    "lib/domains/Document.js",
     "lib/domains/Numeric.js",
+    "lib/domains/Abstract.js",
 
     "lib/modules/Expressions.js", 
     "lib/modules/Identity.js", 

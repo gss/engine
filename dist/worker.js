@@ -1169,11 +1169,11 @@ var Domain, Engine, Events, Native,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
+Native = require('./methods/Native');
+
 Events = require('./concepts/Events');
 
 Domain = require('./concepts/Domain');
-
-Native = require('./methods/Native');
 
 Domain.Events || (Domain.Events = Native.prototype.mixin(Domain, Events));
 
@@ -1197,6 +1197,7 @@ Engine = (function(_super) {
   Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Algebra'), require('./methods/Variables'));
 
   Engine.prototype.Domains = {
+    Document: require('./domains/Document'),
     Intrinsic: require('./domains/Intrinsic'),
     Numeric: require('./domains/Numeric'),
     Linear: require('./domains/Linear'),
@@ -1249,6 +1250,7 @@ Engine = (function(_super) {
     this.expressions = new this.Expressions(this);
     this.precompile();
     this.assumed = new this.Numeric(assumed);
+    this.strategy = (typeof window !== "undefined" && window !== null) && 'document' || 'linear';
     return this;
   }
 
@@ -1263,8 +1265,6 @@ Engine = (function(_super) {
       return Engine[this.scope._gss_id] = void 0;
     }
   };
-
-  Engine.prototype.strategy = 'intrinsic';
 
   Engine.prototype.solve = function() {
     var args, i, index, name, old, provided, reason, solution, source, workflow;
@@ -1342,6 +1342,9 @@ Engine = (function(_super) {
     if (solution.operation) {
       return this.engine.workflow.provide(solution);
     }
+    if (!solution.push) {
+      return this.merge(solution);
+    }
     if (this.providing !== void 0) {
       if (!this.hasOwnProperty('providing')) {
         (_base = this.engine).providing || (_base.providing = []);
@@ -1365,7 +1368,7 @@ Engine = (function(_super) {
     }
     this.console.start(problems, domain.displayName);
     this.providing = null;
-    result = domain.solve(problems) || this.providing;
+    result = domain.solve(problems) || this.providing || void 0;
     this.providing = void 0;
     this.console.end();
     if ((result != null ? result.length : void 0) === 1) {
@@ -1382,10 +1385,9 @@ Engine = (function(_super) {
     this.worker = new this.getWorker(url);
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
-    this.solve = function() {
-      return _this.worker.postMessage.apply(_this.worker, arguments);
+    return this.solve = function(commands) {
+      _this.worker.postMessage(_this.clone(commands));
     };
-    return this.worker;
   };
 
   Engine.prototype.getWorker = function(url) {
@@ -1439,7 +1441,7 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    return (self.engine || (self.engine = Engine())).solve(e.data);
+    return postMessage((self.engine || (self.engine = Engine())).solve(e.data));
   });
 }
 

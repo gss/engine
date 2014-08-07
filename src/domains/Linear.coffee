@@ -7,50 +7,6 @@ class Linear extends Domain
   Solver:  require('cassowary')
   Wrapper: require('../concepts/Wrapper')
 
-  class Linear::Methods
-    get: (scope, property, path) ->
-      if typeof @properties[property] == 'function' && scope
-        return @properties[property].call(@, scope, path)
-      else
-        variable = @declare(@getPath(scope, property))
-      return [variable, path || (property && scope) || '']
-
-    strength: (strength, deflt = 'medium') ->
-      return strength && c.Strength[strength] || c.Strength[deflt]
-
-    weight: (weight) ->
-      return weight
-
-    varexp: (name) ->
-      return new c.Expression name: name
-
-    '==': (left, right, strength, weight) ->
-      return new c.Equation(left, right, @strength(strength), @weight(weight))
-
-    '<=': (left, right, strength, weight) ->
-      return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
-
-    '>=': (left, right, strength, weight) ->
-      return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
-
-    '<': (left, right, strength, weight) ->
-      return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
-
-    '>': (left, right, strength, weight) ->
-      return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
-
-    '+': (left, right, strength, weight) ->
-      return c.plus(left, right)
-
-    '-': (left, right, strength, weight) ->
-      return c.minus(left, right)
-
-    '*': (left, right, strength, weight) ->
-      return c.times(left, right)
-
-    '/': (left, right, strength, weight) ->
-      return c.divide(left, right)
-
   # Convert expressions into cassowary objects
 
   isVariable: (object) ->
@@ -129,4 +85,48 @@ class Linear extends Domain
       @solver.addStay(arg)
     return
 
+
+class Linear::Methods
+  get: (scope, property, path) ->
+    if typeof @properties[property] == 'function' && scope
+      return @properties[property].call(@, scope, path)
+    else
+      variable = @declare(@getPath(scope, property))
+    return [variable, path || (property && scope) || '']
+
+  strength: (strength, deflt = 'medium') ->
+    return strength && c.Strength[strength] || c.Strength[deflt]
+
+  weight: (weight) ->
+    return weight
+
+  varexp: (name) ->
+    return new c.Expression name: name
+
+  '==': (left, right, strength, weight) ->
+    return new c.Equation(left, right, @strength(strength), @weight(weight))
+
+  '<=': (left, right, strength, weight) ->
+    return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
+
+  '>=': (left, right, strength, weight) ->
+    return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
+
+  '<': (left, right, strength, weight) ->
+    return new c.Inequality(left, c.LEQ, right, @strength(strength), @weight(weight))
+
+  '>': (left, right, strength, weight) ->
+    return new c.Inequality(left, c.GEQ, right, @strength(strength), @weight(weight))
+
+  '+': (left, right, strength, weight) ->
+    return c.plus(left, right)
+
+  '-': (left, right, strength, weight) ->
+    return c.minus(left, right)
+
+  '*': (left, right, strength, weight) ->
+    return c.times(left, right)
+
+  '/': (left, right, strength, weight) ->
+    return c.divide(left, right)
 module.exports = Linear

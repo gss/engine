@@ -6,9 +6,9 @@ It initializes and orchestrates all moving parts.
 It includes interpreter that operates in defined constraint domains.
 Each domain has its own command set, that extends engine defaults. ###
 
+Native          = require('./methods/Native')
 Events          = require('./concepts/Events')
 Domain          = require('./concepts/Domain')
-Native          = require('./methods/Native')
 Domain.Events ||= Native::mixin(Domain, Events)
 
 class Engine extends Domain.Events
@@ -28,6 +28,7 @@ class Engine extends Domain.Events
                require('./methods/Algebra')
                require('./methods/Variables')
   Domains: 
+    Document:  require('./domains/Document')
     Intrinsic: require('./domains/Intrinsic')
     Numeric:   require('./domains/Numeric')
     Linear:    require('./domains/Linear')
@@ -74,6 +75,7 @@ class Engine extends Domain.Events
     @precompile()
 
     @assumed     = new @Numeric(assumed)
+    @strategy  =  window? && 'document' || 'linear'
 
     return @
 
@@ -88,8 +90,6 @@ class Engine extends Domain.Events
 
     destroy: (e) ->
       Engine[@scope._gss_id] = undefined
-
-  strategy: 'intrinsic'
 
   solve: () ->
     if typeof arguments[0] == 'string'
@@ -157,6 +157,8 @@ class Engine extends Domain.Events
   provide: (solution) ->
     if solution.operation
       return @engine.workflow.provide solution
+    if !solution.push
+      return @merge(solution)
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
@@ -174,7 +176,7 @@ class Engine extends Domain.Events
 
     @console.start(problems, domain.displayName)
     @providing = null
-    result = domain.solve(problems) || @providing
+    result = domain.solve(problems) || @providing || undefined
     @providing = undefined
     @console.end()
     if result?.length == 1
@@ -187,9 +189,10 @@ class Engine extends Domain.Events
     @worker = new @getWorker(url)
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
-    @solve = =>
-      return @worker.postMessage.apply(@worker, arguments)
-    return @worker
+    @solve = (commands) =>
+      @worker.postMessage(@clone(commands))
+
+      return
 
   getWorker: (url) ->
     return (Engine.workers ||= {})[url] ||= new Worker url
@@ -228,6 +231,6 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
-    (self.engine ||= Engine()).solve(e.data)
+    postMessage (self.engine ||= Engine()).solve(e.data)
 
 module.exports = @GSS = Engine
