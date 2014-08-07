@@ -362,64 +362,64 @@ for property, command of Selectors::
     command.init = '_onSelector'
     command.serialized = true
 
+if document?
+  # Add shims for IE<=8 that dont support some DOM properties
+  dummy = (@GSS || @Engine || Selectors).dummy = document.createElement('_')
 
-# Add shims for IE<=8 that dont support some DOM properties
-dummy = (@GSS || @Engine || Selectors).dummy = document.createElement('_')
-
-unless dummy.hasOwnProperty("parentElement") 
-  Selectors::['$!>'][1] = Selectors::['::parent'][1] = (node) ->
-    if parent = node.parentNode
-      return parent if parent.nodeType == 1
-unless dummy.hasOwnProperty("nextElementSibling")
-  Selectors::['$+'][1] = (node) ->
-    while node = node.nextSibling
-      return node if node.nodeType == 1
-  Selectors::['$!+'][1] = ->
-    while node = node.previousSibling
-      return node if node.nodeType == 1
-  Selectors::['$++'][1] = (node) ->
-    nodes = undefined
-    while prev = node.previousSibling
-      if prev.nodeType == 1
-        (nodes ||= []).push(prev)
-        break
-    while next = node.nextSibling
-      if next.nodeType == 1
-        (nodes ||= []).push(next)
-        break
-    return nodes;
-  Selectors::['$~'][1] = (node) ->
-    nodes = undefined
-    while node = node.nextSibling
-      (nodes ||= []).push(node) if node.nodeType == 1
-    return nodes
-  Selectors::['$!~'][1] = (node) ->
-    nodes = undefined
-    prev = node.parentNode.firstChild
-    while prev != node
-      (nodes ||= []).push(prev) if pref.nodeType == 1
-      node = node.nextSibling
-    return nodes
-  Selectors::['$~~'][1] = (node) ->
-    nodes = undefined
-    prev = node.parentNode.firstChild
-    while prev
-      if prev != node && prev.nodeType == 1
-        (nodes ||= []).push(prev) 
-      prev = prev.nextSibling
-    return nodes
-  Selectors::[':first-child'][1] = (node) ->
-    if parent = node.parentNode
-      child = parent.firstChild
-      while child && child.nodeType != 1
-        child = child.nextSibling
-      return node if child == node
-  Selectors::[':last-child'][1] = (node) ->
-    if parent = node.parentNode
-      child = parent.lastChild
-      while child && child.nodeType != 1
-        child = child.previousSibling
-      return child == node
+  unless dummy.hasOwnProperty("parentElement") 
+    Selectors::['$!>'][1] = Selectors::['::parent'][1] = (node) ->
+      if parent = node.parentNode
+        return parent if parent.nodeType == 1
+  unless dummy.hasOwnProperty("nextElementSibling")
+    Selectors::['$+'][1] = (node) ->
+      while node = node.nextSibling
+        return node if node.nodeType == 1
+    Selectors::['$!+'][1] = ->
+      while node = node.previousSibling
+        return node if node.nodeType == 1
+    Selectors::['$++'][1] = (node) ->
+      nodes = undefined
+      while prev = node.previousSibling
+        if prev.nodeType == 1
+          (nodes ||= []).push(prev)
+          break
+      while next = node.nextSibling
+        if next.nodeType == 1
+          (nodes ||= []).push(next)
+          break
+      return nodes;
+    Selectors::['$~'][1] = (node) ->
+      nodes = undefined
+      while node = node.nextSibling
+        (nodes ||= []).push(node) if node.nodeType == 1
+      return nodes
+    Selectors::['$!~'][1] = (node) ->
+      nodes = undefined
+      prev = node.parentNode.firstChild
+      while prev != node
+        (nodes ||= []).push(prev) if pref.nodeType == 1
+        node = node.nextSibling
+      return nodes
+    Selectors::['$~~'][1] = (node) ->
+      nodes = undefined
+      prev = node.parentNode.firstChild
+      while prev
+        if prev != node && prev.nodeType == 1
+          (nodes ||= []).push(prev) 
+        prev = prev.nextSibling
+      return nodes
+    Selectors::[':first-child'][1] = (node) ->
+      if parent = node.parentNode
+        child = parent.firstChild
+        while child && child.nodeType != 1
+          child = child.nextSibling
+        return node if child == node
+    Selectors::[':last-child'][1] = (node) ->
+      if parent = node.parentNode
+        child = parent.lastChild
+        while child && child.nodeType != 1
+          child = child.previousSibling
+        return child == node
 
 
 module.exports = Selectors

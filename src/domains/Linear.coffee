@@ -1,14 +1,4 @@
-### Output: Constraints
 
-Manages constraints, executes solver commands.
-Removes dereferenced variables. Outputs solutions. 
-
-State:
-
-  @_variables: - records variables by name
-                 and constraints by continuation
-
-###
 Domain  = require('../concepts/Domain')
 
 class Linear extends Domain
@@ -69,6 +59,9 @@ class Linear extends Domain
   isConstraint: (object) ->
     return object instanceof c.Constraint
 
+  isExpression: (object) ->
+    return object instanceof c.Expression
+
   constructor: () ->
     @solver = new c.SimplexSolver()
     @solver.autoSolve = false
@@ -92,8 +85,6 @@ class Linear extends Domain
   constrain: (constraint) ->
     unless super
       @solver.addConstraint(constraint)
-
-    
 
   unconstrain: (constraint) ->
     unless super

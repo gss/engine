@@ -52,11 +52,8 @@ class Engine extends Domain.Events
                 scope = scope.parentNode
           else
             assumed = argument
-        when 'string'
-          if @Expressions
-            @url = url
-          else
-            url = url
+        when 'string', 'boolean'
+          url = argument
 
     # **GSS()** creates new Engine at the root, 
     # if there is no engine assigned to it yet
@@ -68,8 +65,7 @@ class Engine extends Domain.Events
     # definitions of commands and properties.
     # Definitions are compiled into functions 
     # once engine is started
-    super()
-    @engine      = @
+    super(@, url)
     @domain      = @
     @properties  = new @Properties(@)
     @methods     = new @Methods(@)
@@ -177,7 +173,6 @@ class Engine extends Domain.Events
       problems = problem
 
     @console.start(problems, domain.displayName)
-    debugger
     @providing = null
     result = domain.solve(problems) || @providing
     @providing = undefined
@@ -190,8 +185,8 @@ class Engine extends Domain.Events
   useWorker: (url) ->
     return unless typeof url == 'string' && self.onmessage != undefined
     @worker = new @getWorker(url)
-    @worker.addEventListener 'message', @onmessage.bind(this)
-    @worker.addEventListener 'error',   @onerror  .bind(this)
+    @worker.addEventListener 'message', @eventHandler
+    @worker.addEventListener 'error', @eventHandler
     @solve = =>
       return @worker.postMessage.apply(@worker, arguments)
     return @worker
@@ -233,6 +228,6 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
-    Engine().solve(e.data)
+    (self.engine ||= Engine()).solve(e.data)
 
 module.exports = @GSS = Engine

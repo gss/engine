@@ -12,6 +12,9 @@ Native  = require('../methods/Native')
 
 class Intrinsic extends Numeric
   priority: -Infinity
+
+  @condition: ->
+    window?  
   
   Queries:     require('../modules/Queries')
   Positions:   require('../modules/Positions')
@@ -45,7 +48,8 @@ class Intrinsic extends Numeric
       @compile()
 
     @scope.addEventListener 'scroll', @
-    window.addEventListener 'resize', @
+    if window?
+      window.addEventListener 'resize', @
 
     super
 
@@ -235,8 +239,5 @@ class Intrinsic extends Numeric
               (@buffer ||= {})[path] = node.offsetHeight
             else
               @values.set null, path, @getStyle(node, prop)
-
-  # Intrinsics cant run in worker
-  url: null
 
 module.exports = Intrinsic

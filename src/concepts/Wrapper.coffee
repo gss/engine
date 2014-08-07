@@ -4,12 +4,13 @@
 
 Wrapper = (node, args, result, operation, continuation, scope) ->
   # variable[paths] -> constrain[paths]
-  if result instanceof c.Constraint || result instanceof c.Expression
+  if @isConstraint(result) || @isExpression(result) || @isVariable(result)
     result = [result]
+    offset = +(typeof operation[0] == 'string')
     for arg, index in args
-      if operation[index]?[0] == 'value'
-        result.push(operation[index])
-      if arg instanceof c.Variable
+      if operation[index + offset]?[0] == 'value'
+        result.push(operation[index + offset])
+      if @isVariable(arg)
         result.push(arg)
       if arg.paths
         result.push.apply(result, arg.paths)
@@ -18,6 +19,7 @@ Wrapper = (node, args, result, operation, continuation, scope) ->
   if result.length > 0
     if result.length > 1
       result[0].paths = result.splice(1)
+    result[0].operation = @clone operation
     return result[0]
   return result
 
@@ -31,9 +33,9 @@ Wrapper.compile = (constraints, engine, methods) ->
       do (property, method) ->
         constraints[property] = (left, right, strength, weight) ->
           if left.push
-            overloaded = left = Wrapper(null, null, left)
+            overloaded = left = @Wrapper(null, null, left)
           if right.push
-            overloaded = right = Wrapper(null, null, right)
+            overloaded = right = @Wrapper(null, null, right)
           value = method.call(@, left, right, strength, weight)
           if overloaded
             return Wrapper(null, [left, right], value)

@@ -21,17 +21,25 @@ State:
 Native = require('../methods/Native')
 
 class Domain
-  priority: 0
+  priority: 0  
 
-  constructor: (engine, values, name) ->
+  constructor: (engine, url, values, name) ->
     if !engine || engine instanceof Domain
-      @variables    = @engine && new (Native::mixin(@engine.variables)) || {}
-      @watchers     = @engine && new (Native::mixin(@engine.watchers )) || {}
-      @observers    = @engine && new (Native::mixin(@engine.observers)) || {}
-      @subsolutions = {}
-      @engine       = engine  if engine
-      @displayName  = name    if name
-      @merge(values)          if values
+      @variables    = {} unless @hasOwnProperty('variables')
+      @watchers     = {} unless @hasOwnProperty('watchers')
+      @observers    = {} unless @hasOwnProperty('observers')
+      @paths        = {} unless @hasOwnProperty('paths')
+      @values       = {} unless @hasOwnProperty('values')
+      @substituted  = []
+      @constraints  = []
+      @engine       = engine if engine
+      @displayName  = name   if name
+      @url          = url    if url
+      @merge(values)         if values
+
+      if @url && @getWorkerURL
+        if @url = @getWorkerURL(@url)
+          @useWorker(@url)
 
       return @
     else
@@ -99,7 +107,7 @@ class Domain
     delete @watchers[path] unless watchers.length
 
   get: (object, property) ->
-    return @[@engine.getPath(object, property)]
+    return @values[@engine.getPath(object, property)]
 
   merge: (object, meta) ->
     # merge objects/domains
@@ -119,30 +127,49 @@ class Domain
   # Set key-value pair or merge object
   set: (object, property, value, meta, silent) ->
     path = @engine.getPath(object, property)
-    old = @[path]
+    old = @values[path]
     return if old == value
 
     if value?
-      @[path] = value
+      @values[path] = value
     else
-      delete @[path]
+      delete @values[path]
     # notify subscribers
     unless silent
       if watchers = @watchers?[path]
-        @engine.solve @displayName, path, @callback, @, watchers, value, meta
+        @engine.solve @displayName, (domain) ->
+          @callback(domain, watchers, value, meta)
+        , @
     return value
+
+  sanitize: (exps, parent = exps.parent, index = exps.index) ->
+    if exps[0] == 'value' && exps.operation
+      return parent[index] = @sanitize exps.operation, parent, index
+    for own prop, value of exps
+      unless isFinite(parseInt(prop))
+        delete exps[prop]
+    for exp, i in exps
+      if exp.push
+        @sanitize exp, exps, i
+    exps.parent = parent
+    exps.index  = index
+    exps
 
   callback: (domain, watchers, value, meta) ->
     for watcher, index in watchers by 3
       break unless watcher
-      domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+      if watcher.domain != domain || !value?
+        # Re-evaluate expression
+        @Workflow(@sanitize(@getRootOperation(watcher)))
+      else
+        domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
     @
 
   # Export values in a plain object. Use for tests only
   toObject: ->
     object = {}
     for own property, value of @
-      if property != 'engine' && property != 'observers' && property != 'watchers'
+      if property != 'engine' && property != 'observers' && property != 'watchers' && property != 'values'
         object[property] = value
     return object
 
@@ -168,6 +195,10 @@ class Domain
       return unless typeof b == 'object'
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
+      if a[0] == 'value'
+        return a[3] == b.toString()
+      if b[0] == 'value'
+        return b[3] == a.toString()
       for value, index in a
         return unless @compare(b[index], value)
       return unless b[a.length] == a[a.length]
@@ -178,33 +209,29 @@ class Domain
 
   constrain: (constraint) ->
     if constraint.paths
-      root = other = undefined
+      matched = undefined
       for path in constraint.paths
-        if path[0] == 'value'
-          subsolutions = @subsolutions[path[3]] ||= []
-          for sub in subsolutions
-            subop = undefined
-            for p in sub.paths
-              if p[0] == 'value'
-                subop = p
-                break
-            if subop
-              root ?= @getRootOperation(path)
-              other = @getRootOperation(subop)
-              if @compare(root, other)
-                console.info('updating constraint', subop.slice(0, 2), '->', path.slice(0, 2))
-                @unconstrain(sub)
-                break
-          subsolutions = @subsolutions[path[3]] ||= []
-          subsolutions.push(constraint)
-
+        if path[0] == 'value' && !matched
+          matched = true
+          for other in @constraints
+            if @compare(other.operation, constraint.operation)
+              console.info('updating constraint', other.operation, '->', constraint.operation)
+                
+              @unconstrain(other)
+      matched = undefined
+      for other in @substituted by -1
+        if @compare(other.operation, constraint.operation)
+          console.info('updating constraint', other.operation, '->', constraint.operation)
+          @unconstrain(other)
 
       for path in constraint.paths
         if typeof path == 'string'
-          (@variables[path] ||= []).push(constraint)
+          (@paths[path] ||= []).push(constraint)
+        else if path[0] == 'value'
+          @substituted.push(constraint)
         else if path.name
-          path.counter = (path.counter || 0) + 1
-          if path.counter == 1
+          length = (path.constraints ||= []).push(constraint)
+          if length == 1
             if @nullified && @nullified[path.name]
               delete @nullified[path.name]
             else
@@ -214,25 +241,28 @@ class Domain
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
 
+    @constraints.push(constraint)
     @constrained = true
     return
 
   unconstrain: (constraint, continuation) ->
     for path in constraint.paths
       if typeof path == 'string'
-        if group = @variables[path]
+        if group = @paths[path]
           if (index = group.indexOf(constraint)) > -1
             group.splice(index, 1)
           unless group.length
-            delete @variables[path]
+            delete @paths[path]
       else if path[0] == 'value'
-        if subsolutions = @subsolutions[path[3]]
-          subsolutions.splice(subsolutions.indexOf(constraint), 1)
-          unless subsolutions.length
-            delete @subsolutions[path[3]]
+        @substituted.splice(@substituted.indexOf(constraint))
       else
-        unless --path.counter
-          @undeclare(path)
+        index = path.constraints.indexOf(constraint)
+        if index > -1
+          path.constraints.splice(index, 1)
+          unless path.constraints.length
+            @undeclare(path)
+
+    @constraints.splice(@constraints.indexOf(constraint), 1)
 
   declare: (name, value) ->
     return @variables[name] ||= value ? @variable(name)
@@ -267,14 +297,14 @@ class Domain
   # Overloads parts of the world (methods, variables, observers)
   @compile = (domains, engine) ->
     for own name, domain of domains
+      continue if domain.condition?() == false
       EngineDomain = engine[name] = (object) ->
         if object
           for property, value of object
-            @[property] = value
+            @values = [] unless @hasOwnProperty 'values'
+            @values[property] = value
         @domain      = @
-        #@variables   = Native::mixin(@engine.variables)
-        #@observers   = Native::mixin(@engine.observers)
-        #@watchers    = Native::mixin(@engine.watchers) 
+        @variables   = new (Native::mixin(@engine.variables))
 
         unless @events == engine.events
           @addListeners(@events)

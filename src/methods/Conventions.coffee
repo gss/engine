@@ -145,13 +145,10 @@ class Conventions
     return true
 
   # Return domain that should be used to evaluate given variable
-  getDomain: (exp) ->
-    if exp.push
-      if exp.domain
-        return exp.domain
-      [cmd, scope, property] = variable = exp
-    else
-      [scope, property] = arguments
+  getDomain: (operation) ->
+    if operation.domain
+      return operation.domain
+    [cmd, scope, property] = variable = operation
 
     path = @getPath(scope, property)
     if declaration = @variables[path]
@@ -163,13 +160,20 @@ class Conventions
           unless domain instanceof Domain
             domain = undefined
       unless domain
-        if @assumed.hasOwnProperty path
+        if @assumed.values.hasOwnProperty path
           domain = @assumed
         else
           domain = @linear
     if variable
       variable.domain = domain
     return domain
+
+  getWorkerURL: do ->
+    if document?
+      scripts = document.getElementsByTagName('script')
+      src = scripts[scripts.length - 1].src
+    return (url) ->
+      return typeof url == 'string' && url || src
 
   getRootOperation: (operation) ->
     parent = operation

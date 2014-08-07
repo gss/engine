@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-06) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-07) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19137,18 +19137,14 @@ Engine = (function(_super) {
           }
           break;
         case 'string':
-          if (this.Expressions) {
-            this.url = url;
-          } else {
-            url = url;
-          }
+        case 'boolean':
+          url = argument;
       }
     }
     if (!this.Expressions) {
       return new Engine(scope, url);
     }
-    Engine.__super__.constructor.call(this);
-    this.engine = this;
+    Engine.__super__.constructor.call(this, this, url);
     this.domain = this;
     this.properties = new this.Properties(this);
     this.methods = new this.Methods(this);
@@ -19270,7 +19266,6 @@ Engine = (function(_super) {
       problems = problem;
     }
     this.console.start(problems, domain.displayName);
-    debugger;
     this.providing = null;
     result = domain.solve(problems) || this.providing;
     this.providing = void 0;
@@ -19287,8 +19282,8 @@ Engine = (function(_super) {
       return;
     }
     this.worker = new this.getWorker(url);
-    this.worker.addEventListener('message', this.onmessage.bind(this));
-    this.worker.addEventListener('error', this.onerror.bind(this));
+    this.worker.addEventListener('message', this.eventHandler);
+    this.worker.addEventListener('error', this.eventHandler);
     this.solve = function() {
       return _this.worker.postMessage.apply(_this.worker, arguments);
     };
@@ -19346,7 +19341,7 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    return Engine().solve(e.data);
+    return (self.engine || (self.engine = Engine())).solve(e.data);
   });
 }
 
@@ -19596,16 +19591,12 @@ Conventions = (function() {
     return true;
   };
 
-  Conventions.prototype.getDomain = function(exp) {
+  Conventions.prototype.getDomain = function(operation) {
     var cmd, declaration, domain, index, path, prefix, property, scope, variable, _ref;
-    if (exp.push) {
-      if (exp.domain) {
-        return exp.domain;
-      }
-      _ref = variable = exp, cmd = _ref[0], scope = _ref[1], property = _ref[2];
-    } else {
-      scope = arguments[0], property = arguments[1];
+    if (operation.domain) {
+      return operation.domain;
     }
+    _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
     path = this.getPath(scope, property);
     if (declaration = this.variables[path]) {
       domain = declaration.domain;
@@ -19619,7 +19610,7 @@ Conventions = (function() {
         }
       }
       if (!domain) {
-        if (this.assumed.hasOwnProperty(path)) {
+        if (this.assumed.values.hasOwnProperty(path)) {
           domain = this.assumed;
         } else {
           domain = this.linear;
@@ -19631,6 +19622,17 @@ Conventions = (function() {
     }
     return domain;
   };
+
+  Conventions.prototype.getWorkerURL = (function() {
+    var scripts, src;
+    if (typeof document !== "undefined" && document !== null) {
+      scripts = document.getElementsByTagName('script');
+      src = scripts[scripts.length - 1].src;
+    }
+    return function(url) {
+      return typeof url === 'string' && url || src;
+    };
+  })();
 
   Conventions.prototype.getRootOperation = function(operation) {
     var parent;
@@ -20458,108 +20460,108 @@ for (property in _ref) {
   }
 }
 
-dummy = (this.GSS || this.Engine || Selectors).dummy = document.createElement('_');
-
-if (!dummy.hasOwnProperty("parentElement")) {
-  Selectors.prototype['$!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
-    var parent;
-    if (parent = node.parentNode) {
-      if (parent.nodeType === 1) {
-        return parent;
+if (typeof document !== "undefined" && document !== null) {
+  dummy = (this.GSS || this.Engine || Selectors).dummy = document.createElement('_');
+  if (!dummy.hasOwnProperty("parentElement")) {
+    Selectors.prototype['$!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
+      var parent;
+      if (parent = node.parentNode) {
+        if (parent.nodeType === 1) {
+          return parent;
+        }
       }
-    }
-  };
-}
-
-if (!dummy.hasOwnProperty("nextElementSibling")) {
-  Selectors.prototype['$+'][1] = function(node) {
-    while (node = node.nextSibling) {
-      if (node.nodeType === 1) {
-        return node;
+    };
+  }
+  if (!dummy.hasOwnProperty("nextElementSibling")) {
+    Selectors.prototype['$+'][1] = function(node) {
+      while (node = node.nextSibling) {
+        if (node.nodeType === 1) {
+          return node;
+        }
       }
-    }
-  };
-  Selectors.prototype['$!+'][1] = function() {
-    var node;
-    while (node = node.previousSibling) {
-      if (node.nodeType === 1) {
-        return node;
+    };
+    Selectors.prototype['$!+'][1] = function() {
+      var node;
+      while (node = node.previousSibling) {
+        if (node.nodeType === 1) {
+          return node;
+        }
       }
-    }
-  };
-  Selectors.prototype['$++'][1] = function(node) {
-    var next, nodes, prev;
-    nodes = void 0;
-    while (prev = node.previousSibling) {
-      if (prev.nodeType === 1) {
-        (nodes || (nodes = [])).push(prev);
-        break;
+    };
+    Selectors.prototype['$++'][1] = function(node) {
+      var next, nodes, prev;
+      nodes = void 0;
+      while (prev = node.previousSibling) {
+        if (prev.nodeType === 1) {
+          (nodes || (nodes = [])).push(prev);
+          break;
+        }
       }
-    }
-    while (next = node.nextSibling) {
-      if (next.nodeType === 1) {
-        (nodes || (nodes = [])).push(next);
-        break;
+      while (next = node.nextSibling) {
+        if (next.nodeType === 1) {
+          (nodes || (nodes = [])).push(next);
+          break;
+        }
       }
-    }
-    return nodes;
-  };
-  Selectors.prototype['$~'][1] = function(node) {
-    var nodes;
-    nodes = void 0;
-    while (node = node.nextSibling) {
-      if (node.nodeType === 1) {
-        (nodes || (nodes = [])).push(node);
+      return nodes;
+    };
+    Selectors.prototype['$~'][1] = function(node) {
+      var nodes;
+      nodes = void 0;
+      while (node = node.nextSibling) {
+        if (node.nodeType === 1) {
+          (nodes || (nodes = [])).push(node);
+        }
       }
-    }
-    return nodes;
-  };
-  Selectors.prototype['$!~'][1] = function(node) {
-    var nodes, prev;
-    nodes = void 0;
-    prev = node.parentNode.firstChild;
-    while (prev !== node) {
-      if (pref.nodeType === 1) {
-        (nodes || (nodes = [])).push(prev);
+      return nodes;
+    };
+    Selectors.prototype['$!~'][1] = function(node) {
+      var nodes, prev;
+      nodes = void 0;
+      prev = node.parentNode.firstChild;
+      while (prev !== node) {
+        if (pref.nodeType === 1) {
+          (nodes || (nodes = [])).push(prev);
+        }
+        node = node.nextSibling;
       }
-      node = node.nextSibling;
-    }
-    return nodes;
-  };
-  Selectors.prototype['$~~'][1] = function(node) {
-    var nodes, prev;
-    nodes = void 0;
-    prev = node.parentNode.firstChild;
-    while (prev) {
-      if (prev !== node && prev.nodeType === 1) {
-        (nodes || (nodes = [])).push(prev);
+      return nodes;
+    };
+    Selectors.prototype['$~~'][1] = function(node) {
+      var nodes, prev;
+      nodes = void 0;
+      prev = node.parentNode.firstChild;
+      while (prev) {
+        if (prev !== node && prev.nodeType === 1) {
+          (nodes || (nodes = [])).push(prev);
+        }
+        prev = prev.nextSibling;
       }
-      prev = prev.nextSibling;
-    }
-    return nodes;
-  };
-  Selectors.prototype[':first-child'][1] = function(node) {
-    var child, parent;
-    if (parent = node.parentNode) {
-      child = parent.firstChild;
-      while (child && child.nodeType !== 1) {
-        child = child.nextSibling;
+      return nodes;
+    };
+    Selectors.prototype[':first-child'][1] = function(node) {
+      var child, parent;
+      if (parent = node.parentNode) {
+        child = parent.firstChild;
+        while (child && child.nodeType !== 1) {
+          child = child.nextSibling;
+        }
+        if (child === node) {
+          return node;
+        }
       }
-      if (child === node) {
-        return node;
+    };
+    Selectors.prototype[':last-child'][1] = function(node) {
+      var child, parent;
+      if (parent = node.parentNode) {
+        child = parent.lastChild;
+        while (child && child.nodeType !== 1) {
+          child = child.previousSibling;
+        }
+        return child === node;
       }
-    }
-  };
-  Selectors.prototype[':last-child'][1] = function(node) {
-    var child, parent;
-    if (parent = node.parentNode) {
-      child = parent.lastChild;
-      while (child && child.nodeType !== 1) {
-        child = child.previousSibling;
-      }
-      return child === node;
-    }
-  };
+    };
+  }
 }
 
 module.exports = Selectors;
@@ -21027,7 +21029,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = parseFloat(((_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0) || 1);
+      this.level = parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
     }
   }
 
@@ -21112,15 +21114,16 @@ require.register("gss/lib/concepts/Wrapper.js", function(exports, require, modul
 var Wrapper;
 
 Wrapper = function(node, args, result, operation, continuation, scope) {
-  var arg, index, _i, _len, _ref;
-  if (result instanceof c.Constraint || result instanceof c.Expression) {
+  var arg, index, offset, _i, _len, _ref;
+  if (this.isConstraint(result) || this.isExpression(result) || this.isVariable(result)) {
     result = [result];
+    offset = +(typeof operation[0] === 'string');
     for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
       arg = args[index];
-      if (((_ref = operation[index]) != null ? _ref[0] : void 0) === 'value') {
-        result.push(operation[index]);
+      if (((_ref = operation[index + offset]) != null ? _ref[0] : void 0) === 'value') {
+        result.push(operation[index + offset]);
       }
-      if (arg instanceof c.Variable) {
+      if (this.isVariable(arg)) {
         result.push(arg);
       }
       if (arg.paths) {
@@ -21133,6 +21136,7 @@ Wrapper = function(node, args, result, operation, continuation, scope) {
     if (result.length > 1) {
       result[0].paths = result.splice(1);
     }
+    result[0].operation = this.clone(operation);
     return result[0];
   }
   return result;
@@ -21148,10 +21152,10 @@ Wrapper.compile = function(constraints, engine, methods) {
         return constraints[property] = function(left, right, strength, weight) {
           var overloaded, value;
           if (left.push) {
-            overloaded = left = Wrapper(null, null, left);
+            overloaded = left = this.Wrapper(null, null, left);
           }
           if (right.push) {
-            overloaded = right = Wrapper(null, null, right);
+            overloaded = right = this.Wrapper(null, null, right);
           }
           value = method.call(this, left, right, strength, weight);
           if (overloaded) {
@@ -21199,20 +21203,41 @@ Native = require('../methods/Native');
 Domain = (function() {
   Domain.prototype.priority = 0;
 
-  function Domain(engine, values, name) {
+  function Domain(engine, url, values, name) {
     if (!engine || engine instanceof Domain) {
-      this.variables = this.engine && new (Native.prototype.mixin(this.engine.variables)) || {};
-      this.watchers = this.engine && new (Native.prototype.mixin(this.engine.watchers)) || {};
-      this.observers = this.engine && new (Native.prototype.mixin(this.engine.observers)) || {};
-      this.subsolutions = {};
+      if (!this.hasOwnProperty('variables')) {
+        this.variables = {};
+      }
+      if (!this.hasOwnProperty('watchers')) {
+        this.watchers = {};
+      }
+      if (!this.hasOwnProperty('observers')) {
+        this.observers = {};
+      }
+      if (!this.hasOwnProperty('paths')) {
+        this.paths = {};
+      }
+      if (!this.hasOwnProperty('values')) {
+        this.values = {};
+      }
+      this.substituted = [];
+      this.constraints = [];
       if (engine) {
         this.engine = engine;
       }
       if (name) {
         this.displayName = name;
       }
+      if (url) {
+        this.url = url;
+      }
       if (values) {
         this.merge(values);
+      }
+      if (this.url && this.getWorkerURL) {
+        if (this.url = this.getWorkerURL(this.url)) {
+          this.useWorker(this.url);
+        }
       }
       return this;
     } else {
@@ -21288,7 +21313,7 @@ Domain = (function() {
   };
 
   Domain.prototype.get = function(object, property) {
-    return this[this.engine.getPath(object, property)];
+    return this.values[this.engine.getPath(object, property)];
   };
 
   Domain.prototype.merge = function(object, meta) {
@@ -21312,21 +21337,52 @@ Domain = (function() {
   Domain.prototype.set = function(object, property, value, meta, silent) {
     var old, path, watchers, _ref;
     path = this.engine.getPath(object, property);
-    old = this[path];
+    old = this.values[path];
     if (old === value) {
       return;
     }
     if (value != null) {
-      this[path] = value;
+      this.values[path] = value;
     } else {
-      delete this[path];
+      delete this.values[path];
     }
     if (!silent) {
       if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
-        this.engine.solve(this.displayName, path, this.callback, this, watchers, value, meta);
+        this.engine.solve(this.displayName, function(domain) {
+          return this.callback(domain, watchers, value, meta);
+        }, this);
       }
     }
     return value;
+  };
+
+  Domain.prototype.sanitize = function(exps, parent, index) {
+    var exp, i, prop, value, _i, _len;
+    if (parent == null) {
+      parent = exps.parent;
+    }
+    if (index == null) {
+      index = exps.index;
+    }
+    if (exps[0] === 'value' && exps.operation) {
+      return parent[index] = this.sanitize(exps.operation, parent, index);
+    }
+    for (prop in exps) {
+      if (!__hasProp.call(exps, prop)) continue;
+      value = exps[prop];
+      if (!isFinite(parseInt(prop))) {
+        delete exps[prop];
+      }
+    }
+    for (i = _i = 0, _len = exps.length; _i < _len; i = ++_i) {
+      exp = exps[i];
+      if (exp.push) {
+        this.sanitize(exp, exps, i);
+      }
+    }
+    exps.parent = parent;
+    exps.index = index;
+    return exps;
   };
 
   Domain.prototype.callback = function(domain, watchers, value, meta) {
@@ -21336,7 +21392,11 @@ Domain = (function() {
       if (!watcher) {
         break;
       }
-      domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
+      if (watcher.domain !== domain || (value == null)) {
+        this.Workflow(this.sanitize(this.getRootOperation(watcher)));
+      } else {
+        domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
+      }
     }
     return this;
   };
@@ -21347,7 +21407,7 @@ Domain = (function() {
     for (property in this) {
       if (!__hasProp.call(this, property)) continue;
       value = this[property];
-      if (property !== 'engine' && property !== 'observers' && property !== 'watchers') {
+      if (property !== 'engine' && property !== 'observers' && property !== 'watchers' && property !== 'values') {
         object[property] = value;
       }
     }
@@ -21394,6 +21454,12 @@ Domain = (function() {
           return;
         }
       }
+      if (a[0] === 'value') {
+        return a[3] === b.toString();
+      }
+      if (b[0] === 'value') {
+        return b[3] === a.toString();
+      }
       for (index = _i = 0, _len = a.length; _i < _len; index = ++_i) {
         value = a[index];
         if (!this.compare(b[index], value)) {
@@ -21415,49 +21481,43 @@ Domain = (function() {
   };
 
   Domain.prototype.constrain = function(constraint) {
-    var name, other, p, path, root, sub, subop, subsolutions, _base, _base1, _base2, _i, _j, _k, _l, _len, _len1, _len2, _len3, _name, _name1, _ref, _ref1, _ref2, _ref3;
+    var length, matched, name, other, path, _base, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
     if (constraint.paths) {
-      root = other = void 0;
+      matched = void 0;
       _ref = constraint.paths;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         path = _ref[_i];
-        if (path[0] === 'value') {
-          subsolutions = (_base = this.subsolutions)[_name = path[3]] || (_base[_name] = []);
-          for (_j = 0, _len1 = subsolutions.length; _j < _len1; _j++) {
-            sub = subsolutions[_j];
-            subop = void 0;
-            _ref1 = sub.paths;
-            for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-              p = _ref1[_k];
-              if (p[0] === 'value') {
-                subop = p;
-                break;
-              }
-            }
-            if (subop) {
-              if (root == null) {
-                root = this.getRootOperation(path);
-              }
-              other = this.getRootOperation(subop);
-              if (this.compare(root, other)) {
-                console.info('updating constraint', subop.slice(0, 2), '->', path.slice(0, 2));
-                this.unconstrain(sub);
-                break;
-              }
+        if (path[0] === 'value' && !matched) {
+          matched = true;
+          _ref1 = this.constraints;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            other = _ref1[_j];
+            if (this.compare(other.operation, constraint.operation)) {
+              console.info('updating constraint', other.operation, '->', constraint.operation);
+              this.unconstrain(other);
             }
           }
-          subsolutions = (_base1 = this.subsolutions)[_name1 = path[3]] || (_base1[_name1] = []);
-          subsolutions.push(constraint);
         }
       }
-      _ref2 = constraint.paths;
-      for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
-        path = _ref2[_l];
+      matched = void 0;
+      _ref2 = this.substituted;
+      for (_k = _ref2.length - 1; _k >= 0; _k += -1) {
+        other = _ref2[_k];
+        if (this.compare(other.operation, constraint.operation)) {
+          console.info('updating constraint', other.operation, '->', constraint.operation);
+          this.unconstrain(other);
+        }
+      }
+      _ref3 = constraint.paths;
+      for (_l = 0, _len2 = _ref3.length; _l < _len2; _l++) {
+        path = _ref3[_l];
         if (typeof path === 'string') {
-          ((_base2 = this.variables)[path] || (_base2[path] = [])).push(constraint);
+          ((_base = this.paths)[path] || (_base[path] = [])).push(constraint);
+        } else if (path[0] === 'value') {
+          this.substituted.push(constraint);
         } else if (path.name) {
-          path.counter = (path.counter || 0) + 1;
-          if (path.counter === 1) {
+          length = (path.constraints || (path.constraints = [])).push(constraint);
+          if (length === 1) {
             if (this.nullified && this.nullified[path.name]) {
               delete this.nullified[path.name];
             } else {
@@ -21468,53 +21528,42 @@ Domain = (function() {
       }
     }
     if (typeof (name = constraint[0]) === 'string') {
-      if ((_ref3 = this[constraint[0]]) != null) {
-        _ref3.apply(this, Array.prototype.slice.call(constraint, 1));
+      if ((_ref4 = this[constraint[0]]) != null) {
+        _ref4.apply(this, Array.prototype.slice.call(constraint, 1));
       }
       return true;
     }
+    this.constraints.push(constraint);
     this.constrained = true;
   };
 
   Domain.prototype.unconstrain = function(constraint, continuation) {
-    var group, index, path, subsolutions, _i, _len, _ref, _results;
+    var group, index, path, _i, _len, _ref;
     _ref = constraint.paths;
-    _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
       if (typeof path === 'string') {
-        if (group = this.variables[path]) {
+        if (group = this.paths[path]) {
           if ((index = group.indexOf(constraint)) > -1) {
             group.splice(index, 1);
           }
           if (!group.length) {
-            _results.push(delete this.variables[path]);
-          } else {
-            _results.push(void 0);
+            delete this.paths[path];
           }
-        } else {
-          _results.push(void 0);
         }
       } else if (path[0] === 'value') {
-        if (subsolutions = this.subsolutions[path[3]]) {
-          subsolutions.splice(subsolutions.indexOf(constraint), 1);
-          if (!subsolutions.length) {
-            _results.push(delete this.subsolutions[path[3]]);
-          } else {
-            _results.push(void 0);
-          }
-        } else {
-          _results.push(void 0);
-        }
+        this.substituted.splice(this.substituted.indexOf(constraint));
       } else {
-        if (!--path.counter) {
-          _results.push(this.undeclare(path));
-        } else {
-          _results.push(void 0);
+        index = path.constraints.indexOf(constraint);
+        if (index > -1) {
+          path.constraints.splice(index, 1);
+          if (!path.constraints.length) {
+            this.undeclare(path);
+          }
         }
       }
     }
-    return _results;
+    return this.constraints.splice(this.constraints.indexOf(constraint), 1);
   };
 
   Domain.prototype.declare = function(name, value) {
@@ -21567,15 +21616,22 @@ Domain = (function() {
     for (name in domains) {
       if (!__hasProp.call(domains, name)) continue;
       domain = domains[name];
+      if ((typeof domain.condition === "function" ? domain.condition() : void 0) === false) {
+        continue;
+      }
       EngineDomain = engine[name] = function(object) {
         var Methods, Properties, property, value;
         if (object) {
           for (property in object) {
             value = object[property];
-            this[property] = value;
+            if (!this.hasOwnProperty('values')) {
+              this.values = [];
+            }
+            this.values[property] = value;
           }
         }
         this.domain = this;
+        this.variables = new (Native.prototype.mixin(this.engine.variables));
         if (this.events !== engine.events) {
           this.addListeners(this.events);
           this.events = new (Native.prototype.mixin(this.engine.events));
@@ -22273,6 +22329,8 @@ Workflow = function(problem, recursive) {
     offset = 0;
     if (arg[0] === 'get') {
       subtree = [arg];
+      domain = this.getDomain(arg);
+      this.assumed.watch(arg[1], arg[2], arg, arg[3]);
       workload = new Workflow([this.getDomain(arg)], [[arg]]);
     } else {
       workload = this.Workflow(arg, true);
@@ -22422,17 +22480,6 @@ module.exports = Workflow;
 
 });
 require.register("gss/lib/domains/Linear.js", function(exports, require, module){
-/* Output: Constraints
-
-Manages constraints, executes solver commands.
-Removes dereferenced variables. Outputs solutions. 
-
-State:
-
-  @_variables: - records variables by name
-                 and constraints by continuation
-*/
-
 var Domain, Linear,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -22524,6 +22571,10 @@ Linear = (function(_super) {
 
   Linear.prototype.isConstraint = function(object) {
     return object instanceof c.Constraint;
+  };
+
+  Linear.prototype.isExpression = function(object) {
+    return object instanceof c.Expression;
   };
 
   function Linear() {
@@ -22638,6 +22689,10 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.priority = -Infinity;
 
+  Intrinsic.condition = function() {
+    return typeof window !== "undefined" && window !== null;
+  };
+
   Intrinsic.prototype.Queries = require('../modules/Queries');
 
   Intrinsic.prototype.Positions = require('../modules/Positions');
@@ -22667,7 +22722,9 @@ Intrinsic = (function(_super) {
       this.compile();
     }
     this.scope.addEventListener('scroll', this);
-    window.addEventListener('resize', this);
+    if (typeof window !== "undefined" && window !== null) {
+      window.addEventListener('resize', this);
+    }
     Intrinsic.__super__.constructor.apply(this, arguments);
   }
 
@@ -22915,8 +22972,6 @@ Intrinsic = (function(_super) {
     }
   };
 
-  Intrinsic.prototype.url = null;
-
   return Intrinsic;
 
 })(Numeric);
@@ -23026,6 +23081,8 @@ Numeric = (function(_super) {
   }
 
   Numeric.prototype.priority = 0;
+
+  Numeric.prototype.url = null;
 
   Numeric.prototype.Methods = (function() {
     function Methods() {}
@@ -23246,7 +23303,7 @@ Expressions = (function(_super) {
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
     var breadcrumbs, captured, item, parent, solution, _base, _i, _len, _ref;
     if (result != null) {
-      if ((((parent = operation.parent) && parent.def) || operation.def.noop) && parent.domain === operation.domain) {
+      if ((((parent = operation.parent) && parent.def) || operation.def.noop) && (!parent.domain || parent.domain === operation.domain)) {
         if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
           this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
@@ -23282,6 +23339,7 @@ Expressions = (function(_super) {
           }
         }
       } else if ((parent != null ? parent.domain : void 0) !== operation.domain) {
+        debugger;
         solution = ['value', result, continuation || '', operation.toString()];
         solution.operation = operation;
         solution.parent = operation.parent;
@@ -23736,7 +23794,7 @@ Queries = (function(_super) {
     attributeOldValue: true
   };
 
-  Queries.prototype.Observer = window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver;
+  Queries.prototype.Observer = (typeof window !== "undefined" && window !== null) && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver);
 
   function Queries(engine) {
     this.engine = engine;

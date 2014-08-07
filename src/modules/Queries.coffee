@@ -21,7 +21,7 @@ class Queries extends Domain
     attributeOldValue: true
 
   Observer: 
-    window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver
+    window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
 
   constructor: (@engine) ->
     @watchers = {}

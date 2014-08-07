@@ -10,6 +10,9 @@ Domain  = require('../concepts/Domain')
 class Numeric extends Domain
   priority: 0
 
+  # Numeric domains usually dont use worker
+  url: null
+
   class Numeric::Methods
     "==": (a, b) ->
       return b

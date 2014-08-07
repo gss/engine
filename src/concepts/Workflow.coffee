@@ -15,6 +15,8 @@ Workflow = (problem, recursive) ->
     offset = 0
     if arg[0] == 'get'
       subtree = [arg]
+      domain = @getDomain(arg)
+      @assumed.watch(arg[1], arg[2], arg, arg[3])
       workload = new Workflow [@getDomain(arg)], [[arg]]
     else
       workload = @Workflow arg, true
@@ -28,7 +30,8 @@ Workflow = (problem, recursive) ->
       while exp = exps[i++]
         # We've got sub-exp in domain
         if (j = problem.indexOf(exp)) > -1
-          # Replace last variable with parent expression (bubble up)
+          # Replace last expression of the strongest domain 
+          # with its parent expression (bubble up workflow)
           k = l = j
           while (next = problem[++k]) != undefined
             if next && next.push

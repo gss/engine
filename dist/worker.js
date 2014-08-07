@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-06) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-07) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -733,7 +733,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = parseFloat(((_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0) || 1);
+      this.level = parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
     }
   }
 
@@ -1235,18 +1235,14 @@ Engine = (function(_super) {
           }
           break;
         case 'string':
-          if (this.Expressions) {
-            this.url = url;
-          } else {
-            url = url;
-          }
+        case 'boolean':
+          url = argument;
       }
     }
     if (!this.Expressions) {
       return new Engine(scope, url);
     }
-    Engine.__super__.constructor.call(this);
-    this.engine = this;
+    Engine.__super__.constructor.call(this, this, url);
     this.domain = this;
     this.properties = new this.Properties(this);
     this.methods = new this.Methods(this);
@@ -1368,7 +1364,6 @@ Engine = (function(_super) {
       problems = problem;
     }
     this.console.start(problems, domain.displayName);
-    debugger;
     this.providing = null;
     result = domain.solve(problems) || this.providing;
     this.providing = void 0;
@@ -1385,8 +1380,8 @@ Engine = (function(_super) {
       return;
     }
     this.worker = new this.getWorker(url);
-    this.worker.addEventListener('message', this.onmessage.bind(this));
-    this.worker.addEventListener('error', this.onerror.bind(this));
+    this.worker.addEventListener('message', this.eventHandler);
+    this.worker.addEventListener('error', this.eventHandler);
     this.solve = function() {
       return _this.worker.postMessage.apply(_this.worker, arguments);
     };
@@ -1444,7 +1439,7 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    return Engine().solve(e.data);
+    return (self.engine || (self.engine = Engine())).solve(e.data);
   });
 }
 
