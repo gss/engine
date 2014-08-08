@@ -5,6 +5,7 @@ describe 'Domain', ->
 	describe 'single solving domain', ->
 		it 'should find solutions', ->
 			engine = new GSS.Engine()
+			debugger
 			expect(engine.solve [
 				['==',
 					['get', 'result']
@@ -128,6 +129,28 @@ describe 'Domain', ->
 				a: -1
 				result: 0
 
+		it 'should use intrinsic values as known values', ->
+			el = document.createElement('div')
+			el.innerHTML = """
+				<div id="box0" style="width: 50px"></div>
+				<div id="box1" style="width: 50px"></div>
+			"""
+			window.engine = new GSS(el)
+			engine.solve [
+				['==',
+					['get', 'a']
+					['+',
+						['get', ['$id', 'box0'], 'width']
+						['get', ['$id', 'box1'], 'intrinsic-width']
+					]
+				]
+			], (solution) ->
+				expect(solution).to.eql
+					"$a": "50"
+					"$box0[width]": 0
+					"$box1[width]": 50
+
+
 		it 'should handle asynchronous solvers', (done) ->
 			engine = new GSS true
 			problem = [
@@ -138,7 +161,7 @@ describe 'Domain', ->
 						1]
 				]
 			]
-			debugger
+
 			solved = 
 				engine.solve problem, (solution) ->
 					expect(solution).to.eql 

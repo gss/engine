@@ -3,7 +3,7 @@ Abstract = require('./Abstract')
 Native   = require('../methods/Native')
 
 class Document extends Abstract
-  priority: -Infinity
+  priority: Infinity
 
   Methods:     Native::mixin {},
                require('../methods/Selectors'),
@@ -124,7 +124,7 @@ class Document extends Abstract
 
   solve: ->
     return Abstract::solve.apply(@, arguments)
-    
+
   @condition: ->
     window?  
   url: null

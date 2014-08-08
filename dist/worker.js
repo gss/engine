@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-08-09) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -1193,7 +1194,7 @@ Engine = (function(_super) {
 
   Engine.prototype.Properties = require('./properties/Axioms');
 
-  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Algebra'), require('./methods/Variables'));
+  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Variables'));
 
   Engine.prototype.Domains = {
     Document: require('./domains/Document'),
@@ -1249,6 +1250,7 @@ Engine = (function(_super) {
     this.expressions = new this.Expressions(this);
     this.precompile();
     this.assumed = new this.Numeric(assumed);
+    this.assumed.displayName = 'Assumed';
     this.strategy = (typeof window !== "undefined" && window !== null) && 'document' || 'linear';
     return this;
   }

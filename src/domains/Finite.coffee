@@ -1,7 +1,7 @@
 Domain = require('../concepts/Domain')
 
 class Finite extends Domain
-  priority: 100
+  priority: -10
 
   #Solver: require('FD')
   Wrapper: require('../concepts/Wrapper')
@@ -42,7 +42,7 @@ class Finite::Methods
     return @solver.minus left, right
 
   '*': (left, right) ->
-    return @solver.times left, right
+    return @solver.product left, right
 
   '/': (left, right) ->
     return @solver.divide left, right

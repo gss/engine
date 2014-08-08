@@ -1,10 +1,15 @@
 # Queue and group expressions by domain
 
-Workflow = (problem, recursive) ->
+Workflow = (domain, problem) ->
   if @ instanceof Workflow
-    @domains = problem || []
-    @problems = recursive || []
+    @domains  = domain  && (domain.push && domain  || [domain] ) || []
+    @problems = problem && (domain.push && problem || [problem]) || []
     return
+  if arguments.length == 1
+    problem = domain
+    domain = undefined
+  if domain && domain != true
+    domain = true
 
 
   workflow = old = @workflow
@@ -14,62 +19,24 @@ Workflow = (problem, recursive) ->
     arg.index  ?= index
     offset = 0
     if arg[0] == 'get'
-      subtree = [arg]
-      domain = @getDomain(arg)
       @assumed.watch(arg[1], arg[2], arg, arg[3])
-      workload = new Workflow [@getDomain(arg)], [[arg]]
+      workload = new Workflow @getVariableDomain(arg), [arg]
     else
-      workload = @Workflow arg, true
+      for a in arg
+        if a.push
+          workload = @Workflow true, arg 
+          break
 
-    for domain, index in workload.domains
-      updated = undefined
+  workload.bubble(problem, @)
 
-      # Group expressions
-      exps = workload.problems[index]
-      i = 0
-      while exp = exps[i++]
-        # We've got sub-exp in domain
-        if (j = problem.indexOf(exp)) > -1
-          # Replace last expression of the strongest domain 
-          # with its parent expression (bubble up workflow)
-          k = l = j
-          while (next = problem[++k]) != undefined
-            if next && next.push
-              break
-          continue if next
-          while (previous = problem[--l]) != undefined
-            if previous && previous.push && exps.indexOf(previous) == -1
-              for d, n in workload.domains
-                if d != domain
-                  if (j = workload.problems[n].indexOf(previous)) > -1
-                    if d.priority > domain.priority
-                      i = j + 1
-                      exps = workload.problems[n]
-                      domain = d
-                    break
-              break
+  if workflow && workflow != workload
+    workflow.merge(workload)
+  else
+    @workflow = workflow = workload
 
-          #console.log('grouping', problem, exp, problem == exp)
-          if !updated
-            exps[i - 1] = problem
-            updated = domain
-          else
-            exps.splice(--i, 1)
-          if d == domain
-            break
-
-
-      if workflow && workflow != workload
-        workflow.merge(workload, domain, index, updated)
-      else
-        workflow = workload
-
-  if !workflow && recursive
-    return new Workflow [@engine.intrinsic], [problem]
-
-  if !old && !recursive
+  if !old && !domain
     return workflow.each @resolve, @engine
-  if !recursive
+  if !domain
     console.log('Workflow', workflow)
   return workflow
 
@@ -86,6 +53,76 @@ Workflow.prototype =
     else
       @problems[index] = [operation]
     return
+
+
+  # Group expressions
+  bubble: (problem, engine) -> 
+    for other, index in @domains
+      updated = undefined
+      exps = @problems[index]
+      i = 0
+      while exp = exps[i++]
+        # If this domain contains argument of given expression
+        continue unless  (j = problem.indexOf(exp)) > -1
+        # Replace last argument of the strongest domain 
+        # with the given expression (bubbles up domain info)
+        k = l = j
+        while (next = problem[++k]) != undefined
+          if next && next.push
+            break
+        continue if next
+        while (previous = problem[--l]) != undefined
+          if previous && previous.push && exps.indexOf(previous) == -1
+            for domain, n in @domains
+              if domain != other
+                if (j = @problems[n].indexOf(previous)) > -1
+                  if domain.priority < 0 && domain.priority > other.priority
+                    i = j + 1
+                    exps = @problems[n]
+                    other = domain
+                  break
+            break
+
+        if !updated
+
+          #console.log('grouping', problem, exp, problem == exp)
+          opdomain = engine.getOperationDomain(problem, other)
+          if opdomain && opdomain != other
+            if (index = @domains.indexOf(opdomain)) == -1
+              index = @domains.push(opdomain) - 1
+              @problems[index] = [problem]
+            else
+              @problems[index].push problem
+            strong = undefined
+            for arg in exp
+              if arg.domain && !arg.domain.MAYBE
+                strong = true
+            unless strong
+              exps.splice(--i, 1)
+            console.error(opdomain, '->', other, problem)
+          else
+            exps[i - 1] = problem
+
+
+          updated = other
+        else
+          exps.splice(--i, 1)
+
+    return updated
+
+  optimize: ->
+    for domain, index in @domains by -1
+      problems = @problems[index]
+      if problems.length == 0
+        @problems.splice(index, 1)
+        @domains.splice(index, 1)
+      if domain.MAYBE
+        if (j = @domains.indexOf(domain.MAYBE)) > -1
+          @problems[j].push.apply(@problems[j], @problems[index])
+          @problems.splice(index, 1)
+          @domains.splice(index, 1)
+
+
 
   # Merge source workflow into target workflow
   merge: (workload, domain, index, updated) ->
@@ -105,7 +142,7 @@ Workflow.prototype =
         merged = true
         break
       else 
-        if other.priority >= domain.priority
+        if other.priority <= domain.priority
           priority = position
 
         if isFinite(other.priority) && isFinite(domain.priority)
@@ -122,6 +159,7 @@ Workflow.prototype =
     return @
 
   each: (callback, bind) ->
+    @optimize()
     for domain, index in @domains
       result = callback.call(bind || @, domain, @problems[index], index)
     return result

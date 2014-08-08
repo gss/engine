@@ -25,7 +25,6 @@ class Engine extends Domain.Events
 
   Methods:     Native::mixin new Native,
                require('./methods/Conventions')
-               require('./methods/Algebra')
                require('./methods/Variables')
   Domains: 
     Document:  require('./domains/Document')
@@ -74,8 +73,9 @@ class Engine extends Domain.Events
 
     @precompile()
 
-    @assumed     = new @Numeric(assumed)
-    @strategy  =  window? && 'document' || 'linear'
+    @assumed = new @Numeric(assumed)
+    @assumed.displayName = 'Assumed'
+    @strategy =  window? && 'document' || 'linear'
 
     return @
 

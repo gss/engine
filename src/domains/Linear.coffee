@@ -2,7 +2,7 @@
 Domain  = require('../concepts/Domain')
 
 class Linear extends Domain
-  priority: 10
+  priority: -100
 
   Solver:  require('cassowary')
   Wrapper: require('../concepts/Wrapper')

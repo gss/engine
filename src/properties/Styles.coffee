@@ -107,6 +107,7 @@ class Styles
       position:        ['outside', 'inside', 'none']
     ]
 
+  width:               ['Length', 'auto']
   height:              ['Length', 'auto']
   min:
     width:             ['Length', 'auto']

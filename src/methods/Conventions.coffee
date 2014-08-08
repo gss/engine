@@ -1,8 +1,11 @@
+# Objects dont need to reference to other objects physically
+# because the link can be inferred from conventions and structure.
+
 # Dynamic systems need to be able to clean up side effects.
-# Instead of linking effects explicitly, we generate 
+# Instead of remembering effects explicitly, we generate 
 # unique tracking labels with special delimeters.
-# Together they enable bottom-up evaluation and 
-# stateless continuations.
+# Uniquely structured cache key enables bottom-up evaluation 
+# and stateless continuations. 
 
 class Conventions
 
@@ -144,8 +147,17 @@ class Conventions
       return object.valueOf != Object.prototype.valueOf
     return true
 
+  getOperationDomain: (operation, domain) ->
+    if typeof operation[0] == 'string'
+      if !domain.methods[operation[0]]
+        return @linear
+      for arg in operation
+        if arg.domain && arg.domain.priority > domain.priority
+          return arg.domain
+
   # Return domain that should be used to evaluate given variable
-  getDomain: (operation) ->
+  getVariableDomain: (operation) ->
+    console.log(operation, operation.domain)
     if operation.domain
       return operation.domain
     [cmd, scope, property] = variable = operation
@@ -157,17 +169,21 @@ class Conventions
       if (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
         if (domain = @[prefix])
-          unless domain instanceof Domain
+          unless domain instanceof @Domain
             domain = undefined
+
       unless domain
-        if @assumed.values.hasOwnProperty path
+        if @intrinsic.properties[property]
+          domain = @intrinsic.maybe
+        else if @assumed.values.hasOwnProperty path
           domain = @assumed
         else
-          domain = @linear
+          domain = @linear.maybe
     if variable
       variable.domain = domain
     return domain
 
+  # auto-worker url, only works with sync scripts!
   getWorkerURL: do ->
     if document?
       scripts = document.getElementsByTagName('script')
@@ -175,6 +191,7 @@ class Conventions
     return (url) ->
       return typeof url == 'string' && url || src
 
+  # get topmost meaniningful function call with matching domain
   getRootOperation: (operation) ->
     parent = operation
     while parent.parent && 

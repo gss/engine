@@ -307,6 +307,10 @@ class Domain
           for property, value of object
             @values = [] unless @hasOwnProperty 'values'
             @values[property] = value
+
+        @maybe = new (Native::mixin(@))
+        @maybe.MAYBE = @
+
         @domain      = @
         @variables   = new (Native::mixin(@engine.variables))
 

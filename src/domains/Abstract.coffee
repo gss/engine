@@ -39,4 +39,22 @@ class Abstract::Methods
   value: (value) ->
     return value
 
+  "<": (a, b) ->
+    return a < b
+
+  ">": (a, b) ->
+    return a > b
+
+  "+": (a, b) ->
+    return a + b
+
+  "-": (a, b) ->
+    return a - b
+
+  "*": (a, b) ->
+    return a * b
+
+  "/": (a, b) ->
+    return a / b
+
 module.exports = Abstract

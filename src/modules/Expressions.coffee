@@ -182,19 +182,28 @@ class Expressions extends Domain
                 operation = operation.parent
                 parent = parent.parent
 
-          # Topmost operations produce output
-          # TODO: Refactor this mess of nested conditions
+          # Topmost unknown commands are returned as results
           if operation.def.noop && operation.name && result.length == 1
             return 
-          if operation.def.noop || (parent.def.noop && !parent.name)
-            if result && (!parent || (parent.def.noop && (!parent.parent || parent.length == 1) || ascender?))
-              return @provide(if result.length == 1 then result[0] else result)
-          else if parent && (ascender? || (result.nodeType && (!operation.def.hidden || parent.tail == parent)))
+          if !parent.name
+
+            if result && (!parent ||            # if current command is root
+              (parent.def.noop &&               # or parent is unknown command
+                (!parent.parent ||              # and parent is a root
+                parent.length == 1) ||           # or a branch with a single item
+                (ascender?)))                    # or if value bubbles up
+
+              if result.length == 1
+                result = result[0] 
+              return @provide result
+          else if parent && (ascender? || 
+              (result.nodeType && 
+              (!operation.def.hidden || parent.tail == parent)))
             @solve parent, continuation, scope, meta, operation.index, result
+            return
           else
             return result
       else if parent?.domain != operation.domain
-        debugger
         solution = ['value', result, continuation || '', operation.toString()]
         solution.operation = operation
         solution.parent    = operation.parent
