@@ -12,46 +12,6 @@ class Document extends Abstract
   Queries:     require('../modules/Queries')
   Positions:   require('../modules/Positions')
 
-  events:
-    resize: (e = '::window') ->
-      id = e.target && @identity.provide(e.target) || e
-      @solve id + ' resized', ->
-        @intrinsic.verify(id, "width", undefined, false)
-        @intrinsic.verify(id, "height", undefined, false)
-      
-    scroll: (e = '::window') ->
-      id = e.target && @identity.provide(e.target) || e
-      @solve id + ' scrolled', ->
-        @intrinsic.verify(id, "scroll-top", undefined, false)
-        @intrinsic.verify(id, "scroll-left", undefined, false)
-
-    solve: ->
-      # Unreference removed elements
-      if @removed
-        for id in @removed
-          @identity.unset(id)
-        @removed = undefined
-
-    # Observe stylesheets in dom
-    DOMContentLoaded: ->
-      @scope.removeEventListener 'DOMContentLoaded', @
-      @start()
-
-    # Observe and parse stylesheets
-    compile: ->
-      @intrinsic.queries.connect()
-      @engine.solve 'Intrinsic', 'stylesheets', [
-        ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
-        ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
-      ]
-
-    destroy: ->
-      @scope.removeEventListener 'DOMContentLoaded', @
-      @scope.removeEventListener 'scroll', @
-      window.removeEventListener 'resize', @
-      @engine.events.destroy.apply(@, arguments)
-    
-
   constructor: () ->
     @engine.queries   ||= new @Queries(@)
     @engine.positions ||= new @Positions(@)
@@ -111,7 +71,7 @@ class Document extends Abstract
     # Observe and parse stylesheets
     compile: ->
       @intrinsic.queries.connect()
-      @engine.solve 'Intrinsic', 'stylesheets', [
+      @engine.solve 'Document', 'stylesheets', [
         ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
         ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
       ]
