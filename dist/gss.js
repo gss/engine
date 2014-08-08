@@ -22277,7 +22277,7 @@ require.register("gss/lib/concepts/Workflow.js", function(exports, require, modu
 var Workflow;
 
 Workflow = function(domain, problem) {
-  var a, arg, index, offset, old, workflow, workload, _i, _j, _len, _len1;
+  var a, arg, index, offset, start, workflow, workload, _i, _j, _len, _len1;
   if (this instanceof Workflow) {
     this.domains = domain && (domain.push && domain || [domain]) || [];
     this.problems = problem && (domain.push && problem || [problem]) || [];
@@ -22286,11 +22286,11 @@ Workflow = function(domain, problem) {
   if (arguments.length === 1) {
     problem = domain;
     domain = void 0;
+    start = true;
   }
   if (domain && domain !== true) {
     domain = true;
   }
-  workflow = old = this.workflow;
   for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
     arg = problem[index];
     if (!(arg != null ? arg.push : void 0)) {
@@ -22315,15 +22315,19 @@ Workflow = function(domain, problem) {
         }
       }
     }
+    if (workflow && workflow !== workload) {
+      workflow.merge(workload);
+    } else {
+      workflow = workload;
+    }
   }
-  workload.bubble(problem, this);
-  if (workflow && workflow !== workload) {
-    workflow.merge(workload);
-  } else {
-    this.workflow = workflow = workload;
-  }
-  if (!old && !domain) {
-    return workflow.each(this.resolve, this.engine);
+  workflow.bubble(problem, this);
+  if (start && !domain) {
+    if (this.workflow) {
+      return this.workflow.merge(workflow);
+    } else {
+      return workflow.each(this.resolve, this.engine);
+    }
   }
   if (!domain) {
     console.log('Workflow', workflow);
@@ -22349,7 +22353,8 @@ Workflow.prototype = {
     }
   },
   bubble: function(problem, engine) {
-    var arg, domain, exp, exps, i, index, j, k, l, n, next, opdomain, other, previous, strong, updated, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
+    debugger;
+    var arg, counter, domain, exp, exps, i, index, j, k, l, n, next, opdomain, other, previous, problems, strong, updated, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2;
     _ref = this.domains;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       other = _ref[index];
@@ -22388,36 +22393,45 @@ Workflow.prototype = {
             break;
           }
         }
-        if (!updated) {
-          opdomain = engine.getOperationDomain(problem, other);
-          if (opdomain && opdomain !== other) {
-            if ((index = this.domains.indexOf(opdomain)) === -1) {
-              index = this.domains.push(opdomain) - 1;
-              this.problems[index] = [problem];
-            } else {
-              this.problems[index].push(problem);
+        opdomain = engine.getOperationDomain(problem, other);
+        if (opdomain && opdomain !== other) {
+          if ((index = this.domains.indexOf(opdomain)) === -1) {
+            index = this.domains.push(opdomain) - 1;
+            this.problems[index] = [problem];
+          } else {
+            this.problems[index].push(problem);
+          }
+          strong = void 0;
+          for (_k = 0, _len2 = exp.length; _k < _len2; _k++) {
+            arg = exp[_k];
+            if (arg.domain && !arg.domain.MAYBE) {
+              strong = true;
             }
-            strong = void 0;
-            for (_k = 0, _len2 = exp.length; _k < _len2; _k++) {
-              arg = exp[_k];
-              if (arg.domain && !arg.domain.MAYBE) {
-                strong = true;
+          }
+          if (!strong) {
+            exps.splice(--i, 1);
+          }
+          other = opdomain;
+          console.error(opdomain, '->', other, problem);
+        } else {
+          exps[i - 1] = problem;
+        }
+        _ref2 = this.domains;
+        for (counter = _l = 0, _len3 = _ref2.length; _l < _len3; counter = ++_l) {
+          domain = _ref2[counter];
+          if (domain.displayName === other.displayName) {
+            problems = this.problems[counter];
+            for (_m = 0, _len4 = problem.length; _m < _len4; _m++) {
+              arg = problem[_m];
+              if ((j = problems.indexOf(arg)) > -1) {
+                problems.splice(j, 1);
               }
             }
-            if (!strong) {
-              exps.splice(--i, 1);
-            }
-            console.error(opdomain, '->', other, problem);
-          } else {
-            exps[i - 1] = problem;
           }
-          updated = other;
-        } else {
-          exps.splice(--i, 1);
         }
+        return true;
       }
     }
-    return updated;
   },
   optimize: function() {
     var domain, index, j, problems, _i, _ref, _results;
@@ -23018,56 +23032,6 @@ Document = (function(_super) {
 
   Document.prototype.Positions = require('../modules/Positions');
 
-  Document.prototype.events = {
-    resize: function(e) {
-      var id;
-      if (e == null) {
-        e = '::window';
-      }
-      id = e.target && this.identity.provide(e.target) || e;
-      return this.solve(id + ' resized', function() {
-        this.intrinsic.verify(id, "width", void 0, false);
-        return this.intrinsic.verify(id, "height", void 0, false);
-      });
-    },
-    scroll: function(e) {
-      var id;
-      if (e == null) {
-        e = '::window';
-      }
-      id = e.target && this.identity.provide(e.target) || e;
-      return this.solve(id + ' scrolled', function() {
-        this.intrinsic.verify(id, "scroll-top", void 0, false);
-        return this.intrinsic.verify(id, "scroll-left", void 0, false);
-      });
-    },
-    solve: function() {
-      var id, _i, _len, _ref;
-      if (this.removed) {
-        _ref = this.removed;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          id = _ref[_i];
-          this.identity.unset(id);
-        }
-        return this.removed = void 0;
-      }
-    },
-    DOMContentLoaded: function() {
-      this.scope.removeEventListener('DOMContentLoaded', this);
-      return this.start();
-    },
-    compile: function() {
-      this.intrinsic.queries.connect();
-      return this.engine.solve('Intrinsic', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
-    },
-    destroy: function() {
-      this.scope.removeEventListener('DOMContentLoaded', this);
-      this.scope.removeEventListener('scroll', this);
-      window.removeEventListener('resize', this);
-      return this.engine.events.destroy.apply(this, arguments);
-    }
-  };
-
   function Document() {
     var _base, _base1, _base2;
     (_base = this.engine).queries || (_base.queries = new this.Queries(this));
@@ -23145,7 +23109,7 @@ Document = (function(_super) {
     },
     compile: function() {
       this.intrinsic.queries.connect();
-      return this.engine.solve('Intrinsic', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+      return this.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -23153,10 +23117,6 @@ Document = (function(_super) {
       window.removeEventListener('resize', this);
       return this.engine.events.destroy.apply(this, arguments);
     }
-  };
-
-  Document.prototype.solve = function() {
-    return Abstract.prototype.solve.apply(this, arguments);
   };
 
   Document.condition = function() {

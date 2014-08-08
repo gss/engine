@@ -82,9 +82,6 @@ class Document extends Abstract
       window.removeEventListener 'resize', @
       @engine.events.destroy.apply(@, arguments)
 
-  solve: ->
-    return Abstract::solve.apply(@, arguments)
-
   @condition: ->
     window?  
   url: null

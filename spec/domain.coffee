@@ -140,14 +140,14 @@ describe 'Domain', ->
 				['==',
 					['get', 'a']
 					['+',
-						['get', ['$id', 'box0'], 'width']
+						['get', ['$id', 'box0'], 'z']
 						['get', ['$id', 'box1'], 'intrinsic-width']
 					]
 				]
 			], (solution) ->
 				expect(solution).to.eql
 					"$a": "50"
-					"$box0[width]": 0
+					"$box0[z]": 0
 					"$box1[width]": 50
 
 

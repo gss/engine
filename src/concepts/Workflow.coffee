@@ -8,11 +8,10 @@ Workflow = (domain, problem) ->
   if arguments.length == 1
     problem = domain
     domain = undefined
+    start = true
   if domain && domain != true
     domain = true
 
-
-  workflow = old = @workflow
   for arg, index in problem
     continue unless arg?.push
     arg.parent ?= problem
@@ -27,15 +26,19 @@ Workflow = (domain, problem) ->
           workload = @Workflow true, arg 
           break
 
-  workload.bubble(problem, @)
+    if workflow && workflow != workload
+      workflow.merge(workload)
+    else
+      workflow = workload
 
-  if workflow && workflow != workload
-    workflow.merge(workload)
-  else
-    @workflow = workflow = workload
+  workflow.bubble(problem, @)
 
-  if !old && !domain
-    return workflow.each @resolve, @engine
+  if start && !domain
+    if @workflow
+      return @workflow.merge(workflow)
+    else
+      return workflow.each @resolve, @engine
+
   if !domain
     console.log('Workflow', workflow)
   return workflow
@@ -57,6 +60,7 @@ Workflow.prototype =
 
   # Group expressions
   bubble: (problem, engine) -> 
+    debugger
     for other, index in @domains
       updated = undefined
       exps = @problems[index]
@@ -83,32 +87,32 @@ Workflow.prototype =
                   break
             break
 
-        if !updated
-
-          #console.log('grouping', problem, exp, problem == exp)
-          opdomain = engine.getOperationDomain(problem, other)
-          if opdomain && opdomain != other
-            if (index = @domains.indexOf(opdomain)) == -1
-              index = @domains.push(opdomain) - 1
-              @problems[index] = [problem]
-            else
-              @problems[index].push problem
-            strong = undefined
-            for arg in exp
-              if arg.domain && !arg.domain.MAYBE
-                strong = true
-            unless strong
-              exps.splice(--i, 1)
-            console.error(opdomain, '->', other, problem)
+        #console.log('grouping', problem, exp, problem == exp)
+        opdomain = engine.getOperationDomain(problem, other)
+        if opdomain && opdomain != other
+          if (index = @domains.indexOf(opdomain)) == -1
+            index = @domains.push(opdomain) - 1
+            @problems[index] = [problem]
           else
-            exps[i - 1] = problem
-
-
-          updated = other
+            @problems[index].push problem
+          strong = undefined
+          for arg in exp
+            if arg.domain && !arg.domain.MAYBE
+              strong = true
+          unless strong
+            exps.splice(--i, 1)
+          other = opdomain
+          console.error(opdomain, '->', other, problem)
         else
-          exps.splice(--i, 1)
+          exps[i - 1] = problem
+        for domain, counter in @domains
+          if domain.displayName == other.displayName
+            problems = @problems[counter]
+            for arg in problem
+              if (j = problems.indexOf(arg)) > -1
+                problems.splice(j, 1)
 
-    return updated
+        return true
 
   optimize: ->
     for domain, index in @domains by -1
