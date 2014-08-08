@@ -1,8 +1,8 @@
 
-Native = require('../methods/Native')
-Domain = require('../concepts/Domain')
+Abstract = require('./Abstract')
+Native   = require('../methods/Native')
 
-class Document extends Domain
+class Document extends Abstract
   priority: -Infinity
 
   Methods:     Native::mixin {},
@@ -122,6 +122,9 @@ class Document extends Domain
       window.removeEventListener 'resize', @
       @engine.events.destroy.apply(@, arguments)
 
+  solve: ->
+    return Abstract::solve.apply(@, arguments)
+    
   @condition: ->
     window?  
   url: null

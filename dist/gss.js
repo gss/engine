@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-08-07) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19169,7 +19168,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var args, i, index, name, old, provided, reason, solution, source, workflow;
+    var arg, args, i, index, name, old, problematic, provided, reason, solution, source, workflow, _i, _len;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19183,6 +19182,21 @@ Engine = (function(_super) {
     args = Array.prototype.slice.call(arguments, index || 0);
     if (!this.running) {
       this.compile(true);
+    }
+    problematic = void 0;
+    for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
+      arg = args[index];
+      if (arg && typeof arg !== 'string') {
+        if (problematic) {
+          if (typeof arg === 'function') {
+            this.then(arg);
+            args.splice(index, 1);
+            break;
+          }
+        } else {
+          problematic = arg;
+        }
+      }
     }
     if (typeof args[0] === 'object') {
       if (name = source || this.displayName) {
@@ -19231,6 +19245,13 @@ Engine = (function(_super) {
     if (this.applier && !this.applier.solve(solution)) {
       return;
     }
+    return this.solved(solution);
+  };
+
+  Engine.prototype.solved = function(solution) {
+    if (typeof solution !== 'object') {
+      return solution;
+    }
     this.console.info('Solution\t   ', solution);
     this.triggerEvent('solve', solution);
     if (this.scope) {
@@ -19245,7 +19266,9 @@ Engine = (function(_super) {
       return this.engine.workflow.provide(solution);
     }
     if (!solution.push) {
-      return this.merge(solution);
+      if (this.merge('result', solution)) {
+        return this.solved(solution);
+      }
     }
     if (this.providing !== void 0) {
       if (!this.hasOwnProperty('providing')) {
@@ -21238,7 +21261,9 @@ Domain = (function() {
       }
       if (this.url && this.getWorkerURL) {
         if (this.url = this.getWorkerURL(this.url)) {
-          this.useWorker(this.url);
+          if (engine !== this) {
+            this.useWorker(this.url);
+          }
         }
       }
       return this;
@@ -21323,21 +21348,27 @@ Domain = (function() {
       if (object instanceof Domain) {
         return;
       }
-      return this.engine.solve(this.displayName, function(domain) {
-        var path, value, watchers, _ref;
+      return this.engine.solve(this.displayName || 'GSS', function(domain) {
+        var async, path, value, watchers, _ref;
+        async = false;
         for (path in object) {
           value = object[path];
           domain.set(void 0, path, value, meta, true);
           if (watchers = (_ref = domain.watchers) != null ? _ref[path] : void 0) {
-            this.callback(domain, watchers, value, meta);
+            if (this.callback(domain, watchers, value, meta) == null) {
+              async = true;
+            }
           }
+        }
+        if (!async) {
+          return true;
         }
       }, this);
     }
   };
 
   Domain.prototype.set = function(object, property, value, meta, silent) {
-    var old, path, watchers, _ref;
+    var async, old, path, watchers, _ref;
     path = this.engine.getPath(object, property);
     old = this.values[path];
     if (old === value) {
@@ -21349,8 +21380,9 @@ Domain = (function() {
       delete this.values[path];
     }
     if (!silent) {
+      async = false;
       if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
-        this.engine.solve(this.displayName, function(domain) {
+        this.engine.solve(this.displayName || 'GSS', function(domain) {
           return this.callback(domain, watchers, value, meta);
         }, this);
       }
@@ -21669,6 +21701,8 @@ Domain = (function() {
     return this;
   };
 
+  Domain.prototype.DONE = 'solve';
+
   return Domain;
 
 })();
@@ -21774,6 +21808,10 @@ Events = (function() {
 
   Events.prototype.handleEvent = function(e) {
     return this.triggerEvent(e.type, e);
+  };
+
+  Events.prototype.then = function(callback) {
+    return this.once(this.DONE, callback);
   };
 
   return Events;
@@ -22974,13 +23012,13 @@ module.exports = Finite;
 
 });
 require.register("gss/lib/domains/Document.js", function(exports, require, module){
-var Document, Domain, Native,
+var Abstract, Document, Native,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Native = require('../methods/Native');
+Abstract = require('./Abstract');
 
-Domain = require('../concepts/Domain');
+Native = require('../methods/Native');
 
 Document = (function(_super) {
   __extends(Document, _super);
@@ -23130,6 +23168,10 @@ Document = (function(_super) {
     }
   };
 
+  Document.prototype.solve = function() {
+    return Abstract.prototype.solve.apply(this, arguments);
+  };
+
   Document.condition = function() {
     return typeof window !== "undefined" && window !== null;
   };
@@ -23138,7 +23180,7 @@ Document = (function(_super) {
 
   return Document;
 
-})(Domain);
+})(Abstract);
 
 module.exports = Document;
 
@@ -23221,7 +23263,7 @@ var Abstract, Domain, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Domain = require('./concepts/Domain');
+Domain = require('../concepts/Domain');
 
 Abstract = (function(_super) {
   __extends(Abstract, _super);

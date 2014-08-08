@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-08-07) - http://gridstylesheets.org */
 /**
  * Parts Copyright (C) 2011-2012, Alex Russell (slightlyoff@chromium.org)
  * Parts Copyright (C) Copyright (C) 1998-2000 Greg J. Badros
@@ -1267,7 +1266,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var args, i, index, name, old, provided, reason, solution, source, workflow;
+    var arg, args, i, index, name, old, problematic, provided, reason, solution, source, workflow, _i, _len;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -1281,6 +1280,21 @@ Engine = (function(_super) {
     args = Array.prototype.slice.call(arguments, index || 0);
     if (!this.running) {
       this.compile(true);
+    }
+    problematic = void 0;
+    for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
+      arg = args[index];
+      if (arg && typeof arg !== 'string') {
+        if (problematic) {
+          if (typeof arg === 'function') {
+            this.then(arg);
+            args.splice(index, 1);
+            break;
+          }
+        } else {
+          problematic = arg;
+        }
+      }
     }
     if (typeof args[0] === 'object') {
       if (name = source || this.displayName) {
@@ -1329,6 +1343,13 @@ Engine = (function(_super) {
     if (this.applier && !this.applier.solve(solution)) {
       return;
     }
+    return this.solved(solution);
+  };
+
+  Engine.prototype.solved = function(solution) {
+    if (typeof solution !== 'object') {
+      return solution;
+    }
     this.console.info('Solution\t   ', solution);
     this.triggerEvent('solve', solution);
     if (this.scope) {
@@ -1343,7 +1364,9 @@ Engine = (function(_super) {
       return this.engine.workflow.provide(solution);
     }
     if (!solution.push) {
-      return this.merge(solution);
+      if (this.merge('result', solution)) {
+        return this.solved(solution);
+      }
     }
     if (this.providing !== void 0) {
       if (!this.hasOwnProperty('providing')) {

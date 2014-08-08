@@ -4,7 +4,7 @@ expect = chai.expect
 describe 'Domain', ->
 	describe 'single solving domain', ->
 		it 'should find solutions', ->
-			window.engine = new GSS.Engine()
+			engine = new GSS.Engine()
 			expect(engine.solve [
 				['==',
 					['get', 'result']
@@ -19,7 +19,7 @@ describe 'Domain', ->
 
 	describe 'solving and assumed domains together', ->
 		it 'should calculate simplified expression', ->
-			window.engine = new GSS({
+			engine = new GSS({
 				a: 666
 			})
 
@@ -36,7 +36,7 @@ describe 'Domain', ->
 
 
 		it 'should simplify partially', ->
-			window.engine = new GSS({
+			engine = new GSS({
 				a: 555
 			})
 
@@ -65,7 +65,7 @@ describe 'Domain', ->
 
 
 		it 'should simplify multiple variables partially', ->
-			window.engine = new GSS({
+			engine = new GSS({
 				a: 555,
 				A: 2
 			})
@@ -102,7 +102,7 @@ describe 'Domain', ->
 				result: -545
 
 		it 'should change variable domain after the fact', ->
-			window.engine = new GSS
+			engine = new GSS
 			expect(engine.solve [
 				['=='
 					['get', 'result']
@@ -115,33 +115,38 @@ describe 'Domain', ->
 				a: -1
 
 			console.error('A=666')
-			expect(window.engine.solve
+			expect(engine.solve
 				a: 666
 			).to.eql
 				a: 666
 				result: 667
 
 			console.error('A=null')
-			expect(window.engine.solve
+			expect(engine.solve
 				a: null
 			).to.eql
 				a: -1
 				result: 0
 
 		it 'should handle asynchronous solvers', (done) ->
-			window.engine = new GSS true
-			engine.once 'solved', (solution) ->
-				expect(solution).to.eql 
-					a: -1
-					result: 0
-				done()
-			expect(engine.solve [
+			engine = new GSS true
+			problem = [
 				['=='
 					['get', 'result']
 					['+',
 						['get', 'a'],
 						1]
 				]
-			]).to.eql undefined
+			]
+			debugger
+			solved = 
+				engine.solve problem, (solution) ->
+					expect(solution).to.eql 
+						a: -1
+						result: 0
+					done()
+
+
+			expect(solved).to.eql undefined
 
 

@@ -52,4 +52,7 @@ class Events
   handleEvent: (e) ->
     @triggerEvent(e.type, e)
 
+  then: (callback) ->
+    @once @DONE, callback
+
 module.exports = Events

@@ -1,6 +1,6 @@
 # Transforms variables into tracked variables
 
-Domain = require('./concepts/Domain')
+Domain = require('../concepts/Domain')
 
 class Abstract extends Domain
 

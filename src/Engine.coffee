@@ -103,8 +103,21 @@ class Engine extends Domain.Events
 
     args = Array.prototype.slice.call(arguments, index || 0)
 
+
     unless @running
       @compile(true)
+
+    problematic = undefined
+    for arg, index in args
+      if arg && typeof arg != 'string'
+        if problematic
+          if typeof arg == 'function'
+            @then arg
+            args.splice index, 1
+            break
+        else
+          problematic = arg
+
 
     if typeof args[0] == 'object'
       if name = source || @displayName
@@ -144,6 +157,10 @@ class Engine extends Domain.Events
     if @applier && !@applier.solve(solution)
       return
 
+    return @solved(solution)
+
+  solved: (solution) ->
+    return solution unless typeof solution == 'object'
     @console.info('Solution\t   ', solution)
 
     # Trigger events on engine and scope node
@@ -158,7 +175,8 @@ class Engine extends Domain.Events
     if solution.operation
       return @engine.workflow.provide solution
     if !solution.push
-      return @merge(solution)
+      if @merge('result', solution)
+        return @solved(solution)
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []

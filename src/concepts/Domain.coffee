@@ -39,7 +39,8 @@ class Domain
 
       if @url && @getWorkerURL
         if @url = @getWorkerURL(@url)
-          @useWorker(@url)
+          if engine != @
+            @useWorker(@url)
 
       return @
     else
@@ -114,13 +115,14 @@ class Domain
     if object && !object.push
       if object instanceof Domain
         return# object
-
-      @engine.solve @displayName, (domain) ->
+      return @engine.solve @displayName || 'GSS', (domain) ->
+        async = false
         for path, value of object
           domain.set undefined, path, value, meta, true
           if watchers = domain.watchers?[path]
-            @callback(domain, watchers, value, meta)
-        return
+            if !@callback(domain, watchers, value, meta)?
+              async = true
+        return true unless async
       , @
 
 
@@ -136,10 +138,12 @@ class Domain
       delete @values[path]
     # notify subscribers
     unless silent
+      async = false
       if watchers = @watchers?[path]
-        @engine.solve @displayName, (domain) ->
-          @callback(domain, watchers, value, meta)
+        @engine.solve @displayName || 'GSS', (domain) ->
+          return @callback(domain, watchers, value, meta)
         , @
+
     return value
 
   sanitize: (exps, parent = exps.parent, index = exps.index) ->
@@ -334,6 +338,8 @@ class Domain
       unless engine.prototype
         engine[name.toLowerCase()] = new engine[name]
     @
+
+  DONE: 'solve'
 
 module.exports = Domain
 
