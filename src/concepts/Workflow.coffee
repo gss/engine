@@ -81,7 +81,7 @@ Workflow.prototype =
             for domain, n in @domains
               if domain != other
                 if (j = @problems[n].indexOf(previous)) > -1
-                  if domain.priority < 0 && domain.priority > other.priority
+                  if domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)
                     i = j + 1
                     exps = @problems[n]
                     other = domain
@@ -102,6 +102,7 @@ Workflow.prototype =
               strong = true
           unless strong
             exps.splice(--i, 1)
+
           other = opdomain
           console.error(opdomain, '->', other, problem)
         else
@@ -126,6 +127,7 @@ Workflow.prototype =
           @problems[j].push.apply(@problems[j], @problems[index])
           @problems.splice(index, 1)
           @domains.splice(index, 1)
+    @
 
 
 

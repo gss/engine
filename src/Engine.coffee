@@ -25,7 +25,6 @@ class Engine extends Domain.Events
 
   Methods:     Native::mixin new Native,
                require('./methods/Conventions')
-               require('./methods/Variables')
   Domains: 
     Document:  require('./domains/Document')
     Intrinsic: require('./domains/Intrinsic')

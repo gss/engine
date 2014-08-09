@@ -103,6 +103,9 @@ class Linear::Methods
   varexp: (name) ->
     return new c.Expression name: name
 
+  value: (value) ->
+    return value
+
   '==': (left, right, strength, weight) ->
     return new c.Equation(left, right, @strength(strength), @weight(weight))
 

@@ -46,6 +46,7 @@ class Numeric::Methods
 
   get: 
     command: (operation, continuation, scope, meta, object, path) ->
+      debugger
       return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
 
 

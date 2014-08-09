@@ -152,12 +152,11 @@ class Conventions
       if !domain.methods[operation[0]]
         return @linear
       for arg in operation
-        if arg.domain && arg.domain.priority > domain.priority
+        if arg.domain && arg.domain.priority > domain.priority && arg.domain < 0
           return arg.domain
 
   # Return domain that should be used to evaluate given variable
   getVariableDomain: (operation) ->
-    console.log(operation, operation.domain)
     if operation.domain
       return operation.domain
     [cmd, scope, property] = variable = operation
@@ -166,14 +165,14 @@ class Conventions
     if declaration = @variables[path]
       domain = declaration.domain
     else 
-      if (index = property.indexOf('-')) > -1
+      if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
         if (domain = @[prefix])
           unless domain instanceof @Domain
             domain = undefined
 
       unless domain
-        if @intrinsic.properties[property]
+        if property && @intrinsic.properties[property]
           domain = @intrinsic.maybe()
         else if @assumed.values.hasOwnProperty path
           domain = @assumed
@@ -195,9 +194,9 @@ class Conventions
   getRootOperation: (operation) ->
     parent = operation
     while parent.parent && 
-          parent.parent.def && 
-          !parent.parent.def.noop && 
-          parent.domain == operation.domain
+          !parent.parent.def || 
+                    (!parent.parent.def.noop && 
+                    parent.domain == operation.domain)
       parent = parent.parent
     return parent
 

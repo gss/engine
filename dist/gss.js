@@ -19096,7 +19096,7 @@ Engine = (function(_super) {
 
   Engine.prototype.Properties = require('./properties/Axioms');
 
-  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'), require('./methods/Variables'));
+  Engine.prototype.Methods = Native.prototype.mixin(new Native, require('./methods/Conventions'));
 
   Engine.prototype.Domains = {
     Document: require('./domains/Document'),
@@ -19533,7 +19533,7 @@ Conventions = (function() {
       }
       for (_i = 0, _len = operation.length; _i < _len; _i++) {
         arg = operation[_i];
-        if (arg.domain && arg.domain.priority > domain.priority) {
+        if (arg.domain && arg.domain.priority > domain.priority && arg.domain < 0) {
           return arg.domain;
         }
       }
@@ -19542,7 +19542,6 @@ Conventions = (function() {
 
   Conventions.prototype.getVariableDomain = function(operation) {
     var cmd, declaration, domain, index, path, prefix, property, scope, variable, _ref;
-    console.log(operation, operation.domain);
     if (operation.domain) {
       return operation.domain;
     }
@@ -19551,7 +19550,7 @@ Conventions = (function() {
     if (declaration = this.variables[path]) {
       domain = declaration.domain;
     } else {
-      if ((index = property.indexOf('-')) > -1) {
+      if (property && (index = property.indexOf('-')) > -1) {
         prefix = property.substring(0, index);
         if ((domain = this[prefix])) {
           if (!(domain instanceof this.Domain)) {
@@ -19560,7 +19559,7 @@ Conventions = (function() {
         }
       }
       if (!domain) {
-        if (this.intrinsic.properties[property]) {
+        if (property && this.intrinsic.properties[property]) {
           domain = this.intrinsic.maybe();
         } else if (this.assumed.values.hasOwnProperty(path)) {
           domain = this.assumed;
@@ -19589,7 +19588,7 @@ Conventions = (function() {
   Conventions.prototype.getRootOperation = function(operation) {
     var parent;
     parent = operation;
-    while (parent.parent && parent.parent.def && !parent.parent.def.noop && parent.domain === operation.domain) {
+    while (parent.parent && !parent.parent.def || (!parent.parent.def.noop && parent.domain === operation.domain)) {
       parent = parent.parent;
     }
     return parent;
@@ -20991,15 +20990,38 @@ Console = (function() {
 
   Console.prototype.groups = 0;
 
+  Console.prototype.stringify = function(obj) {
+    if (!obj) {
+      return '';
+    }
+    if (obj.push) {
+      return obj.map(this.stringify, this);
+    } else if (obj.nodeType) {
+      return obj._gss_id;
+    } else if (obj.toString !== Object.prototype.toString) {
+      return obj.toString();
+    } else {
+      return JSON.stringify(obj);
+    }
+  };
+
+  Console.prototype.breakpoint = decodeURIComponent(((typeof document !== "undefined" && document !== null ? document.location.toString().match(/breakpoint=([^&]+)/, '') : void 0) || ['', ''])[1]);
+
   Console.prototype.row = function(a, b, c) {
-    var p1, p2;
+    var breakpoint, p1, p2;
     if (!this.level) {
       return;
     }
     a = a.name || a;
     p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
+    if (typeof document !== "undefined" && document !== null) {
+      breakpoint = String(this.stringify([a, b, c]));
+      if (this.breakpoint === breakpoint) {
+        debugger;
+      }
+    }
     if (typeof b === 'object') {
-      return this.log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "");
+      return this.log('%c%s%s%O%c\t\t\t%s.%c%s', 'color: #666', a, p1, b, 'color: #999', c || "", 'font-size: 0;line-height:0;direction: rtl', breakpoint);
     } else {
       p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
       return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
@@ -22389,7 +22411,7 @@ Workflow.prototype = {
               domain = _ref1[n];
               if (domain !== other) {
                 if ((j = this.problems[n].indexOf(previous)) > -1) {
-                  if (domain.priority < 0 && domain.priority > other.priority) {
+                  if (domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)) {
                     i = j + 1;
                     exps = this.problems[n];
                     other = domain;
@@ -22442,9 +22464,8 @@ Workflow.prototype = {
     }
   },
   optimize: function() {
-    var domain, index, j, problems, _i, _ref, _results;
+    var domain, index, j, problems, _i, _ref;
     _ref = this.domains;
-    _results = [];
     for (index = _i = _ref.length - 1; _i >= 0; index = _i += -1) {
       domain = _ref[index];
       problems = this.problems[index];
@@ -22456,15 +22477,11 @@ Workflow.prototype = {
         if ((j = this.domains.indexOf(domain.MAYBE)) > -1) {
           this.problems[j].push.apply(this.problems[j], this.problems[index]);
           this.problems.splice(index, 1);
-          _results.push(this.domains.splice(index, 1));
-        } else {
-          _results.push(void 0);
+          this.domains.splice(index, 1);
         }
-      } else {
-        _results.push(void 0);
       }
     }
-    return _results;
+    return this;
   },
   merge: function(workload, domain, index, updated) {
     var cmds, merged, other, position, priority, _i, _j, _len, _len1, _ref, _ref1;
@@ -22681,6 +22698,10 @@ Linear.prototype.Methods = (function() {
     });
   };
 
+  Methods.prototype.value = function(value) {
+    return value;
+  };
+
   Methods.prototype['=='] = function(left, right, strength, weight) {
     return new c.Equation(left, right, this.strength(strength), this.weight(weight));
   };
@@ -22725,11 +22746,11 @@ module.exports = Linear;
 
 });
 require.register("gss/lib/domains/Intrinsic.js", function(exports, require, module){
-var Domain, Intrinsic, Native,
+var Intrinsic, Native, Numeric,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Domain = require('../concepts/Domain');
+Numeric = require('./Numeric');
 
 Native = require('../methods/Native');
 
@@ -22935,7 +22956,7 @@ Intrinsic = (function(_super) {
 
   return Intrinsic;
 
-})(Domain);
+})(Numeric);
 
 module.exports = Intrinsic;
 
@@ -22964,6 +22985,10 @@ Finite = (function(_super) {
 
 Finite.prototype.Methods = (function() {
   function Methods() {}
+
+  Methods.prototype.value = function(value) {
+    return value;
+  };
 
   Methods.prototype.variable = function(name) {
     return this.solver.decl(name);
@@ -23034,7 +23059,7 @@ Document = (function(_super) {
 
   Document.prototype.priority = Infinity;
 
-  Document.prototype.Methods = Native.prototype.mixin({}, require('../methods/Selectors'), require('../methods/Rules'));
+  Document.prototype.Methods = Native.prototype.mixin(Abstract.prototype.Methods.prototype, require('../methods/Selectors'), require('../methods/Rules'));
 
   Document.prototype.Queries = require('../modules/Queries');
 
@@ -23212,6 +23237,7 @@ Numeric.prototype.Methods = (function() {
 
   Methods.prototype.get = {
     command: function(operation, continuation, scope, meta, object, path) {
+      debugger;
       return this.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
     }
   };
@@ -23506,9 +23532,10 @@ Expressions = (function(_super) {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var breadcrumbs, captured, item, parent, solution, _base, _i, _len, _ref;
+    var breadcrumbs, captured, item, parent, pdef, solution, _base, _i, _len, _ref;
     if (result != null) {
-      if ((((parent = operation.parent) && parent.def) || operation.def.noop) && (!parent.domain || parent.domain === operation.domain)) {
+      pdef = (parent = operation.parent).def;
+      if ((pdef || operation.def.noop) && (!parent.domain || parent.domain === operation.domain)) {
         if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
           this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
@@ -23519,7 +23546,7 @@ Expressions = (function(_super) {
           this.engine.console.groupEnd();
           return;
         } else {
-          captured = parent != null ? (_ref = parent.def.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta) : void 0 : void 0;
+          captured = pdef != null ? (_ref = pdef.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta) : void 0 : void 0;
           switch (captured) {
             case true:
               return;
@@ -23534,7 +23561,7 @@ Expressions = (function(_super) {
             return;
           }
           if (!parent.name) {
-            if (result && (!parent || (parent.def.noop && (!parent.parent || parent.length === 1) || (ascender != null)))) {
+            if (result && (!parent || ((!pdef || pdef.noop) && (!parent.parent || parent.length === 1) || (ascender != null)))) {
               if (result.length === 1) {
                 result = result[0];
               }

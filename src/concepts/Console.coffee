@@ -9,15 +9,33 @@ class Console
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0
 
+  stringify: (obj) ->
+    return '' unless obj
+    if obj.push
+      obj.map @stringify, @
+    else if obj.nodeType
+      obj._gss_id
+    else if obj.toString != Object.prototype.toString
+      obj.toString()
+    else
+      JSON.stringify(obj)
+
+  breakpoint: decodeURIComponent (document?.location.toString().match(/breakpoint=([^&]+)/, '') || ['',''])[1]
+
   row: (a, b, c) ->
     return unless @level
     a = a.name || a
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
+    if document?
+      breakpoint = String @stringify([a,b,c])
+      if @breakpoint == breakpoint
+        debugger
     if typeof b == 'object'
-      @log('%c%s%s%O%c\t\t\t%s', 'color: #666', a, p1, b, 'color: #999', c || "")
+      @log('%c%s%s%O%c\t\t\t%s.%c%s', 'color: #666', a, p1, b, 'color: #999', c || "", 'font-size: 0;line-height:0;direction: rtl',  breakpoint )
     else
       p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
       @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
+
 
   start: (reason, name) ->
     @startTime = Native::time()

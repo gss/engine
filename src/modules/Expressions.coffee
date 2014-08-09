@@ -161,7 +161,8 @@ class Expressions extends Domain
   # When recursion unrolls all caller ops are discarded
   ascend: (operation, continuation, result, scope, meta, ascender) ->
     if result?
-      if (((parent = operation.parent) && parent.def) || operation.def.noop) && (!parent.domain || parent.domain == operation.domain)
+      pdef = (parent = operation.parent).def
+      if (pdef || operation.def.noop) && (!parent.domain || parent.domain == operation.domain)
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection?(result)
           @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
@@ -173,7 +174,7 @@ class Expressions extends Domain
           return
         else 
           # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-          captured = parent?.def.capture?.call(@engine, result, operation, continuation, scope, meta)
+          captured = pdef?.capture?.call(@engine, result, operation, continuation, scope, meta)
           switch captured
             when true then return
             else 
@@ -188,7 +189,7 @@ class Expressions extends Domain
           if !parent.name
 
             if result && (!parent ||            # if current command is root
-              (parent.def.noop &&               # or parent is unknown command
+              ((!pdef || pdef.noop) &&               # or parent is unknown command
                 (!parent.parent ||              # and parent is a root
                 parent.length == 1) ||           # or a branch with a single item
                 (ascender?)))                    # or if value bubbles up
