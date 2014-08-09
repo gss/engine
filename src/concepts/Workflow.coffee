@@ -33,6 +33,7 @@ Workflow = (domain, problem) ->
 
   workflow.bubble(problem, @)
 
+  console.log(start, workflow)
   if start && !domain
     if @workflow
       return @workflow.merge(workflow)

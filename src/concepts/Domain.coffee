@@ -297,6 +297,10 @@ class Domain
         @flush()
       , 0)
 
+  maybe: () ->
+    @Maybe ||= Native::mixin(@, MAYBE: @)
+    return new @Maybe
+
   # Make Domain class inherit given engine instance. Crazy huh
   # Overloads parts of the world (methods, variables, observers)
   @compile = (domains, engine) ->
@@ -307,9 +311,6 @@ class Domain
           for property, value of object
             @values = [] unless @hasOwnProperty 'values'
             @values[property] = value
-
-        @maybe = new (Native::mixin(@))
-        @maybe.MAYBE = @
 
         @domain      = @
         @variables   = new (Native::mixin(@engine.variables))

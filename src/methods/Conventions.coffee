@@ -174,11 +174,11 @@ class Conventions
 
       unless domain
         if @intrinsic.properties[property]
-          domain = @intrinsic.maybe
+          domain = @intrinsic.maybe()
         else if @assumed.values.hasOwnProperty path
           domain = @assumed
         else
-          domain = @linear.maybe
+          domain = @linear.maybe()
     if variable
       variable.domain = domain
     return domain

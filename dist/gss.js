@@ -19561,11 +19561,11 @@ Conventions = (function() {
       }
       if (!domain) {
         if (this.intrinsic.properties[property]) {
-          domain = this.intrinsic.maybe;
+          domain = this.intrinsic.maybe();
         } else if (this.assumed.values.hasOwnProperty(path)) {
           domain = this.assumed;
         } else {
-          domain = this.linear.maybe;
+          domain = this.linear.maybe();
         }
       }
     }
@@ -19648,7 +19648,7 @@ Native = (function() {
   Native.prototype.setImmediate = typeof setImmediate !== "undefined" && setImmediate !== null ? setImmediate : setTimeout;
 
   Native.prototype.mixin = function(proto) {
-    var Context, Mixin, constructor, fn, index, mixin, name, _i, _len, _ref;
+    var Context, Mixin, constructor, fn, index, mixin, name, prototype, _i, _len, _ref;
     Context = function() {};
     if (proto.prototype) {
       Context.prototype = new proto;
@@ -19675,18 +19675,20 @@ Native = (function() {
       if (!mixin || index === 0) {
         continue;
       }
-      if ((fn = mixin.prototype.constructor) !== Function) {
-        if (constructor) {
-          if (constructor.push) {
-            constructor.push(fn);
+      if (prototype = mixin.prototype) {
+        if ((fn = mixin.prototype.constructor) !== Function) {
+          if (constructor) {
+            if (constructor.push) {
+              constructor.push(fn);
+            } else {
+              constructor = [constructor, fn];
+            }
           } else {
-            constructor = [constructor, fn];
+            constructor = fn;
           }
-        } else {
-          constructor = fn;
         }
       }
-      _ref = mixin.prototype;
+      _ref = prototype || mixin;
       for (name in _ref) {
         if (!__hasProp.call(_ref, name)) continue;
         fn = _ref[name];
@@ -21572,6 +21574,13 @@ Domain = (function() {
     }
   };
 
+  Domain.prototype.maybe = function() {
+    this.Maybe || (this.Maybe = Native.prototype.mixin(this, {
+      MAYBE: this
+    }));
+    return new this.Maybe;
+  };
+
   Domain.compile = function(domains, engine) {
     var EngineDomain, EngineDomainWrapper, domain, name, _base;
     for (name in domains) {
@@ -21591,8 +21600,6 @@ Domain = (function() {
             this.values[property] = value;
           }
         }
-        this.maybe = new (Native.prototype.mixin(this));
-        this.maybe.MAYBE = this;
         this.domain = this;
         this.variables = new (Native.prototype.mixin(this.engine.variables));
         if (this.events !== engine.events) {
@@ -22322,6 +22329,7 @@ Workflow = function(domain, problem) {
     }
   }
   workflow.bubble(problem, this);
+  console.log(start, workflow);
   if (start && !domain) {
     if (this.workflow) {
       return this.workflow.merge(workflow);

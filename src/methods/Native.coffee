@@ -37,15 +37,16 @@ class Native
 
     for mixin, index in arguments
       continue if !mixin || index == 0
-      if (fn = mixin::constructor) != Function
-        if constructor
-          if constructor.push
-            constructor.push fn
+      if prototype = mixin::
+        if (fn = mixin::constructor) != Function
+          if constructor
+            if constructor.push
+              constructor.push fn
+            else
+              constructor = [constructor, fn]
           else
-            constructor = [constructor, fn]
-        else
-          constructor = fn
-      for own name, fn of mixin::
+            constructor = fn
+      for own name, fn of (prototype || mixin)
         Mixin::[name] = fn
 
     if constructor && constructor.push
