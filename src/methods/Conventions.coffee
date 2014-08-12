@@ -150,7 +150,7 @@ class Conventions
   getOperationDomain: (operation, domain) ->
     if typeof operation[0] == 'string'
       if !domain.methods[operation[0]]
-        return @linear
+        return @linear.maybe()
       for arg in operation
         if arg.domain && arg.domain.priority > domain.priority && arg.domain < 0
           return arg.domain
@@ -161,10 +161,13 @@ class Conventions
       return operation.domain
     [cmd, scope, property] = variable = operation
 
+
     path = @getPath(scope, property)
-    if declaration = @variables[path]
-      domain = declaration.domain
-    else 
+    for d in @domains
+      if d.values.hasOwnProperty(path)
+        domain = d
+        break
+    unless domain
       if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
         if (domain = @[prefix])
@@ -174,8 +177,6 @@ class Conventions
       unless domain
         if property && @intrinsic.properties[property]
           domain = @intrinsic.maybe()
-        else if @assumed.values.hasOwnProperty path
-          domain = @assumed
         else
           domain = @linear.maybe()
     if variable
@@ -188,15 +189,16 @@ class Conventions
       scripts = document.getElementsByTagName('script')
       src = scripts[scripts.length - 1].src
     return (url) ->
+      console.log(url)
       return typeof url == 'string' && url || src
 
   # get topmost meaniningful function call with matching domain
   getRootOperation: (operation) ->
     parent = operation
-    while parent.parent && 
-          !parent.parent.def || 
-                    (!parent.parent.def.noop && 
-                    parent.domain == operation.domain)
+    while parent.parent &&  parent.parent.name && 
+          (!parent.parent.def || 
+                              (!parent.parent.def.noop && 
+                              parent.domain == operation.domain))
       parent = parent.parent
     return parent
 

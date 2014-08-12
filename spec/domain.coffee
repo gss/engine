@@ -151,6 +151,7 @@ describe 'Domain', ->
 					"$box1[width]": 50
 
 
+
 		it 'should handle asynchronous solvers', (done) ->
 			engine = new GSS true
 			problem = [
@@ -171,5 +172,108 @@ describe 'Domain', ->
 
 
 			expect(solved).to.eql undefined
+
+	describe 'variable graphs', ->
+		it 'should unmerge multiple domains', ->
+			window.engine = new GSS
+			problem = [
+				['==',
+					['get', 'a']
+					1
+				]
+				['==',
+					['get', 'b']
+					['get', 'c']
+				]
+			]
+			expect(engine.solve(problem)).to.eql
+				a: 1
+				b: 0
+				c: 0
+
+			expect(engine.solve [
+				['==', 
+					['get', 'c'],
+					['*', 
+						2
+						['get', 'a', null, 'my_tracker_path']
+					]
+				]
+			]).to.eql
+				b: 2
+				c: 2
+
+			expect(engine.solve [
+				['remove', 'my_tracker_path']
+			])
+
+
+		it 'should merge multiple domains', ->
+			window.engine = new GSS
+			# Makes two separate graphs
+			problem = [
+				['=='
+					['get', 'result']
+					['+',
+						['get', 'a'],
+						1]
+				]
+				['<='
+					['get', 'b'],
+					4
+				],
+				['>='
+					['get', 'b'],
+					2
+				],
+			]
+			expect(engine.solve(problem)).to.eql
+				result: 0
+				a: -1
+				b: 4
+			
+			# Add to 1st graph
+			expect(engine.solve [
+				['>='
+					['get', 'a']
+					5
+				]
+			]).to.eql
+				result: 6
+				a: 5
+
+			# Add to 2nd graph
+			expect(engine.solve [
+				['>='
+					['get', 'c']
+					['+'
+						['get', 'b']
+						6
+					]
+				]
+			]).to.eql
+				c: 10
+
+			# Add to 2nd graph again
+			expect(engine.solve [
+				['=='
+					['get', 'b']
+					3
+				]
+			]).to.eql
+				c: 9
+				b: 3
+
+			# merge two graphs
+			expect(engine.solve [
+				['<=', 
+					['get', 'c'],
+					['get', 'result']
+				]
+			]).to.eql
+				a: 8
+				c: 9
+				result: 9
+				b: 3
 
 

@@ -272,7 +272,7 @@ class Queries extends Domain
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
       if typeof id != 'object'
-        @unpair continuation, @engine.ids[id]
+        @unpair continuation, @engine.identity[id]
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
@@ -357,7 +357,7 @@ class Queries extends Domain
       node = id
       id = @engine.identity.provide(id)
     else
-      node = @engine.ids[id]
+      node = @engine.identity[id]
 
     if continuation
       collection = @get(continuation)
@@ -504,7 +504,7 @@ class Queries extends Domain
     if plurals.indexOf(operation.path) == -1
       pushed = plurals.push(operation.path, operation, scope)
     collection = @get(left)
-    element =  if match[2] then @engine.ids[match[2]] else @get(match[1])
+    element =  if match[2] then @engine.identity[match[2]] else @get(match[1])
 
     if @_repairing != undefined
       schedule = (@_repairing ||= {})[left] = true

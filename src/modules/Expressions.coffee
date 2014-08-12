@@ -160,9 +160,10 @@ class Expressions extends Domain
   # If child op returns DOM collection or node, evaluator recurses to do so.
   # When recursion unrolls all caller ops are discarded
   ascend: (operation, continuation, result, scope, meta, ascender) ->
-    if result?
-      pdef = (parent = operation.parent).def
-      if (pdef || operation.def.noop) && (!parent.domain || parent.domain == operation.domain)
+    if result? 
+      if parent = operation.parent
+        pdef = parent.def
+      if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain)
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection?(result)
           @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
@@ -204,7 +205,7 @@ class Expressions extends Domain
             return
           else
             return result
-      else if parent?.domain != operation.domain
+      else if parent && (typeof parent[0] == 'string' && (parent.domain != operation.domain))
         solution = ['value', result, continuation || '', operation.toString()]
         solution.operation = operation
         solution.parent    = operation.parent

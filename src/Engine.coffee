@@ -74,6 +74,8 @@ class Engine extends Domain.Events
 
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
+    @assumed.setup()
+    
     @strategy =  window? && 'document' || 'linear'
 
     return @
@@ -248,6 +250,11 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
-    postMessage (self.engine ||= Engine()).solve(e.data)
+    engine = Engine.messenger ||= Engine()
+    debugger
+    solution = engine.solve(e.data)
+    console.error(JSON.stringify(e.data))
+    console.error(JSON.stringify(solution))
+    postMessage(solution)
 
 module.exports = @GSS = Engine

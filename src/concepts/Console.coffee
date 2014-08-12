@@ -30,8 +30,10 @@ class Console
       breakpoint = String @stringify([a,b,c])
       if @breakpoint == breakpoint
         debugger
+    else 
+      breakpoint = ''
     if typeof b == 'object'
-      @log('%c%s%s%O%c\t\t\t%s.%c%s', 'color: #666', a, p1, b, 'color: #999', c || "", 'font-size: 0;line-height:0;direction: rtl',  breakpoint )
+      @log('%c%s%c%s%c%s%O%c\t\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint.substring(a.length), '', p1, b, 'color: #999', c || "")
     else
       p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
       @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")

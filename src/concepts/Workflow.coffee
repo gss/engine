@@ -18,7 +18,7 @@ Workflow = (domain, problem) ->
     arg.index  ?= index
     offset = 0
     if arg[0] == 'get'
-      @assumed.watch(arg[1], arg[2], arg, arg[3])
+      @assumed.watch(arg[1], arg[2], arg, arg[3] || '')
       workload = new Workflow @getVariableDomain(arg), [arg]
     else
       for a in arg
@@ -30,22 +30,24 @@ Workflow = (domain, problem) ->
       workflow.merge(workload)
     else
       workflow = workload
-
-  workflow.bubble(problem, @)
-
-  console.log(start, workflow)
+  if problem[0] == '=='
+    debugger
+  if typeof problem[0] == 'string'
+    workflow.bubble(problem, @)
   if start && !domain
+
+    if arguments.length == 1
+      console.log('Workflow', workflow)
     if @workflow
       return @workflow.merge(workflow)
     else
       return workflow.each @resolve, @engine
 
-  if !domain
-    console.log('Workflow', workflow)
   return workflow
 
 Workflow.prototype =
   provide: (solution) ->
+    debugger
     operation = solution.domain.getRootOperation(solution.operation.parent)
     domain = operation.domain
     index = @domains.indexOf(domain)
@@ -58,17 +60,16 @@ Workflow.prototype =
       @problems[index] = [operation]
     return
 
-
   # Group expressions
   bubble: (problem, engine) -> 
-    debugger
-    for other, index in @domains
-      updated = undefined
+    bubbled = undefined
+    for other, index in @domains by -1
       exps = @problems[index]
       i = 0
       while exp = exps[i++]
         # If this domain contains argument of given expression
         continue unless  (j = problem.indexOf(exp)) > -1
+
         # Replace last argument of the strongest domain 
         # with the given expression (bubbles up domain info)
         k = l = j
@@ -78,14 +79,38 @@ Workflow.prototype =
         continue if next
         while (previous = problem[--l]) != undefined
           if previous && previous.push && exps.indexOf(previous) == -1
-            for domain, n in @domains
-              if domain != other
-                if (j = @problems[n].indexOf(previous)) > -1
-                  if domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)
-                    i = j + 1
-                    exps = @problems[n]
-                    other = domain
-                  break
+            for domain, n in @domains by -1
+              continue if n == index 
+              probs = @problems[n]
+              if (j = probs.indexOf(previous)) > -1
+                if domain != other && domain.priority < 0 && other.priority < 0
+                  debugger
+                  if !domain.MAYBE
+                    if !other.MAYBE
+                      if index < n
+                        exps.push.apply(exps, domain.export())
+                        exps.push.apply(exps, probs)
+                        @domains.splice(n, 1)
+                        @problems.splice(n, 1)
+                        engine.domains.splice engine.domains.indexOf(domain), 1
+                      else
+                        probs.push.apply(probs, other.export())
+                        probs.push.apply(probs, exps)
+                        @domains.splice(index, 1)
+                        @problems.splice(index, 1)
+                        engine.domains.splice engine.domains.indexOf(other), 1
+                        other = domain
+                    break
+                  else if !other.MAYBE
+                    @problems[i].push.apply(@problems[i], @problems[n])
+                    @domains.splice(n, 1)
+                    @problems.splice(n, 1)
+                    continue
+                if domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)
+                  i = j + 1
+                  exps = @problems[n]
+                  other = domain
+                break
             break
 
         #console.log('grouping', problem, exp, problem == exp)
@@ -105,7 +130,8 @@ Workflow.prototype =
 
           other = opdomain
           console.error(opdomain, '->', other, problem)
-        else
+        else unless bubbled
+          bubbled = true
           exps[i - 1] = problem
         for domain, counter in @domains
           if domain.displayName == other.displayName
@@ -114,25 +140,56 @@ Workflow.prototype =
               if (j = problems.indexOf(arg)) > -1
                 problems.splice(j, 1)
 
+        @setVariables(problem, engine)
         return true
 
+  setVariables: (problem, engine, target = problem) ->
+    for arg in problem
+      if arg[0] == 'get'
+        (target.variables ||= []).push(engine.getPath(arg[1], arg[2]))
+      else if arg.variables
+        (target.variables ||= []).push.apply(target.variables, arg.variables)
+
+
   optimize: ->
-    for domain, index in @domains by -1
-      problems = @problems[index]
-      if problems.length == 0
-        @problems.splice(index, 1)
-        @domains.splice(index, 1)
-      if domain.MAYBE
-        if (j = @domains.indexOf(domain.MAYBE)) > -1
-          @problems[j].push.apply(@problems[j], @problems[index])
-          @problems.splice(index, 1)
-          @domains.splice(index, 1)
+    for problems, i in @problems by -1
+      unless problems.length
+        @problems.splice i, 1
+        @domains.splice i, 1
+      for problem in problems
+        problem.domain = @domains[i]
+
+    for domain, i in @domains by -1
+      problems = @problems[i]
+      @setVariables(problems)
+      if vars = problems.variables
+        for other, j in @domains by -1
+          break if j == i
+          console.log(vars, @problems[j].variables)
+          if (variables = @problems[j].variables) && domain.displayName == @domains[j].displayName
+            for variable in variables
+              if vars.indexOf(variable) > -1
+                problems.push.apply(problems, @problems[j])
+                @setVariables(@problems[j], null, problems)
+                @problems.splice(j, 1)
+                @domains.splice(j, 1)
+                debugger
+                break
+
+
+
+
+      #if domain.MAYBE
+      #  if (j = @domains.indexOf(domain.MAYBE)) > -1
+      #    @problems[j].push.apply(@problems[j], @problems[index])
+      #    @problems.splice(index, 1)
+      #    @domains.splice(index, 1)
     @
 
 
 
   # Merge source workflow into target workflow
-  merge: (workload, domain, index, updated) ->
+  merge: (workload, domain, index) ->
     if !domain
       for domain, index in workload.domains
         @merge workload, domain, index
@@ -141,24 +198,13 @@ Workflow.prototype =
     priority = @domains.length
     for other, position in @domains
       if other == domain
-        if updated
-          @problems[position] = workload.problems[index]
-        else
-          cmds = @problems[position]
-          cmds.push.apply(cmds, workload.problems[index])
+        cmds = @problems[position]
+        cmds.push.apply(cmds, workload.problems[index])
         merged = true
         break
       else 
         if other.priority <= domain.priority
           priority = position
-
-        if isFinite(other.priority) && isFinite(domain.priority)
-          if other.priority >= domain.priority
-            if merged = domain.merge other
-              @problems[index].push.apply(@problems[index], workload.problems[position])
-          else
-            if merged = other.merge domain
-              @problems[position].push.apply(@problems[position], workload.problems[index])
     if !merged
       @domains.splice(priority, 0, domain)
       @problems.splice(priority, 0, workload.problems[index])
@@ -167,8 +213,16 @@ Workflow.prototype =
 
   each: (callback, bind) ->
     @optimize()
+    console.log("optimized", @)
+    solution = undefined
+    console.error(@problems[0].slice(), @problems[1]?.slice())
     for domain, index in @domains
-      result = callback.call(bind || @, domain, @problems[index], index)
-    return result
+      result = (@solutions ||= [])[index] = 
+        callback.call(bind || @, domain, @problems[index], index)
+      if result && !result.push
+        for own prop, value of result
+          (solution ||= {})[prop] = value
+
+    return solution || result
 
 module.exports = Workflow

@@ -36,8 +36,7 @@ class Linear extends Domain
       @solver.solve()
     else
       @solver.resolve()
-    return @solver._changed
-
+    return @apply(@solver._changed)
   constrain: (constraint) ->
     unless super
       @solver.addConstraint(constraint)

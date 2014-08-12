@@ -25,13 +25,6 @@ class Domain
 
   constructor: (engine, url, values, name) ->
     if !engine || engine instanceof Domain
-      @variables    = {} unless @hasOwnProperty('variables')
-      @watchers     = {} unless @hasOwnProperty('watchers')
-      @observers    = {} unless @hasOwnProperty('observers')
-      @paths        = {} unless @hasOwnProperty('paths')
-      @values       = {} unless @hasOwnProperty('values')
-      @substituted  = []
-      @constraints  = []
       @engine       = engine if engine
       @displayName  = name   if name
       @url          = url    if url
@@ -46,8 +39,25 @@ class Domain
     else
       return @find.apply(@, arguments)
 
+  setup: ->
+    unless @hasOwnProperty('variables')
+      @expressions = new @Expressions(@) 
+      @variables   = {}
+      @watchers    = {}
+      @observers   = {}
+      @paths       = {}
+      @values      = {} unless @hasOwnProperty('values')
+      @substituted = []
+      @constraints = []
+      @domains.push(@)
+      @MAYBE       = undefined
+
+
+
   solve: (args) ->
     return unless args
+
+    @setup()
 
     if typeof args == 'object' && !args.push
       if @domain == @engine
@@ -244,7 +254,6 @@ class Domain
     if typeof (name = constraint[0]) == 'string'
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
-
     @constraints.push(constraint)
     @constrained = true
     return
@@ -274,6 +283,26 @@ class Domain
   undeclare: (variable) ->
     delete @variables[variable.name]
 
+  apply: (solution) ->
+    result = {}
+    for path, value of solution
+      unless @nullified?[path]
+        result[path] = value
+        @values[path] = value
+    if @nullified
+      for path of @nullified
+        result[path] = null
+        if @values.hasOwnProperty(path)
+          delete @values[path]
+      @nullified = undefined
+    if @added
+      for path of @added
+        result[path] ?= 0
+        @values[path] ?= 0
+      @added = undefined
+    return result
+
+
   remove: ->
     for path in arguments
       for contd in @getPossibleContinuations(continuation)
@@ -297,6 +326,13 @@ class Domain
         @flush()
       , 0)
 
+
+  export: ->
+    for constraint in @constraints
+      constraint.operation
+
+
+
   maybe: () ->
     @Maybe ||= Native::mixin(@, MAYBE: @)
     return new @Maybe
@@ -309,11 +345,10 @@ class Domain
       EngineDomain = engine[name] = (object) ->
         if object
           for property, value of object
-            @values = [] unless @hasOwnProperty 'values'
+            @values = {} unless @hasOwnProperty 'values'
             @values[property] = value
 
         @domain      = @
-        @variables   = new (Native::mixin(@engine.variables))
 
         unless @events == engine.events
           @addListeners(@events)
@@ -330,8 +365,6 @@ class Domain
           Properties = @Properties
         @properties  = new (Native::mixin(@engine.properties, Properties))
 
-        @expressions = new @Expressions(@) 
-
         return Domain::constructor.call(@, engine)
 
       EngineDomainWrapper       = engine.mixin(engine, domain)
@@ -342,6 +375,7 @@ class Domain
       EngineDomain.displayName  = name
       unless engine.prototype
         engine[name.toLowerCase()] = new engine[name]
+    engine.domains = []
     @
 
   DONE: 'solve'
