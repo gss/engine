@@ -45,7 +45,7 @@ describe "Polymer: poly-test", ->
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-      engine.run ast
+      engine.solve ast
   
   describe 'Constraining Element & its LightDOM ', ->
     
@@ -111,4 +111,4 @@ describe "Polymer: poly-test", ->
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-      engine.run ast
+      engine.solve ast

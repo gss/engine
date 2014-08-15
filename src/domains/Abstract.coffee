@@ -4,7 +4,7 @@ Domain = require('../concepts/Domain')
 
 class Abstract extends Domain
 
-class Abstract::Methods extends Domain::Methods
+class Abstract::Methods
 
   get:
     command: (operation, continuation, scope, meta, object, property, contd) ->

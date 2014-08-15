@@ -33,12 +33,12 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.run [
+      engine.solve [
           ['stay', ['get', ['$class','box'], 'x']]
         ]
-      chai.expect(engine.expressions.lastOutput).to.eql [
-          ['stay', ['get', '$12322', 'x', '.box$12322']]
-          ['stay', ['get', '$34222', 'x', '.box$34222']]
+      chai.expect(engine.workflown.getProblems()).to.eql [
+          [['stay', ['get', '$12322', 'x', '.box$12322']]]
+          [['stay', ['get', '$34222', 'x', '.box$34222']]]
         ]
     
     it 'multiple stays', ->
@@ -47,19 +47,19 @@ describe 'GSS commands', ->
         <div class="box block" id="34222">One</div>
       """
       window.$engine = engine
-      engine.run [
+      engine.solve [
           ['stay', ['get', ['$class','box']  , 'x'    ]]
           ['stay', ['get', ['$class','box']  , 'y'    ]]
           ['stay', ['get', ['$class','block'], 'width']]
         ]
-      chai.expect( engine.expressions.lastOutput).to.eql [
+      chai.expect(engine.workflown.getProblems()).to.eql [
           # break up stays to allow multiple plural queries
-          ['stay', ['get', '$12322','x'    ,'.box$12322'  ]]
-          ['stay', ['get', '$34222','x'    ,'.box$34222'  ]] 
-          ['stay', ['get', '$12322','y'    ,'.box$12322'  ]]          
-          ['stay', ['get', '$34222','y'    ,'.box$34222'  ]]
-          ['stay', ['get', '$12322','width','.block$12322']]          
-          ['stay', ['get', '$34222','width','.block$34222']]
+          [['stay', ['get', '$12322','x'    ,'.box$12322'  ]]]
+          [['stay', ['get', '$34222','x'    ,'.box$34222'  ]]] 
+          [['stay', ['get', '$12322','y'    ,'.box$12322'  ]]]          
+          [['stay', ['get', '$34222','y'    ,'.box$34222'  ]]]
+          [['stay', ['get', '$12322','width','.block$12322']]]          
+          [['stay', ['get', '$34222','width','.block$34222']]]
         ]
     
     it 'eq with class and tracker', ->
@@ -67,15 +67,15 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.run [
+      engine.solve [
         ['==', ['get', ['$class','box'], 'width'],['get','grid-col']]
         ['==', 100,['get','grid-col']]
       ], '%'
-      chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+      chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [[
         ['==', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322"]]
         ['==', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222"]]
         ['==', 100, ['get', "", 'grid-col',"%"]]
-      ]
+      ]]
         
     
     it 'eq with class', ->
@@ -83,15 +83,15 @@ describe 'GSS commands', ->
         <div class="box" id="12322">One</div>
         <div class="box" id="34222">One</div>
       """
-      engine.run [
+      engine.solve [
         ['==', ['get',['$class','box'],'width'],['get','grid-col']]
         ['==', 100, ['get','grid-col']]
       ]
-      expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+      expect(engine.workflown.getProblems()).to.eql [[
         ['==', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322"]]
         ['==', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222"]]
         ['==', 100,['get', '', 'grid-col', ""]]
-      ]
+      ]]
 
     it 'lte for class & id selectos', ->
       scope.innerHTML = """
@@ -99,37 +99,62 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
         <div class="box" id="35346">One</div>
       """
-      engine.run [
+      engine.solve [
         ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
       ]
-      expect(stringify engine.expressions.lastOutput).to.eql stringify [
+      expect(engine.workflown.getProblems()).to.eql [[
         ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
         ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
         ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
-      ]
+      ]]
 
     it 'intrinsic-width with class', (done) ->
 
-      engine.once 'solved', ->
-        chai.expect(stringify engine.expressions.lastOutput).to.eql stringify  [
-          ['suggest', '$12322[intrinsic-width]', 111, 'required']
-          ['suggest', '$34222[intrinsic-width]', 222, 'required']
-          ['suggest', '$35346[intrinsic-width]', 333, 'required']
-          ['==', ['get','$12322','width','.box$12322'],['get','$12322','intrinsic-width','.box$12322']]
-          ['==', ['get','$34222','width','.box$34222'],['get','$34222','intrinsic-width','.box$34222']]
-          ['==', ['get','$35346','width','.box$35346'],['get','$35346','intrinsic-width','.box$35346']]
+      engine.once 'solve', (solution) ->
+
+
+      engine.solve [
+        ['==', 
+          ['get', ['$class','box'], 'width'],
+          ['get', ['$class','box'], 'intrinsic-width']]
+      ], (solution) ->
+        chai.expect(stringify engine.workflown.getProblems()).to.eql stringify  [
+          [
+            ['get','$12322','intrinsic-width','.box$12322']
+            ['get','$34222','intrinsic-width','.box$34222']
+            ['get','$35346','intrinsic-width','.box$35346']
+          ], [
+            ['==', 
+              ['get','$12322','width','.box$12322'],
+              ["value",111,"","get,$12322,intrinsic-width,.box$12322"]]
+          ], [
+            ['==', 
+              ['get','$34222','width','.box$34222'],
+              ["value",222,"","get,$34222,intrinsic-width,.box$34222"]]
+          ], [
+            ['==', 
+              ['get','$35346','width','.box$35346'],
+              ["value",333,"","get,$35346,intrinsic-width,.box$35346"]]
+          ]
         ]
-        engine.once 'solved', ->
-          chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
+        expect(solution).to.eql
+          "$12322[width]": 111
+          "$12322[width]": 111
+          "$34222[width]": 222
+          "$34222[width]": 222
+          "$35346[width]": 333
+          "$35346[width]": 333
+
+
+        engine.once 'solve', ->
+          chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
+            [["remove",".box$12322"]],
             ["remove",".box$12322"]
           ]
           done()
+
         box0 = scope.getElementsByClassName('box')[0]
         box0.parentNode.removeChild(box0)
-
-      engine.run [
-        ['==', ['get', ['$class','box'], 'width'],['get', ['$class','box'], 'intrinsic-width']]
-      ]
 
       scope.innerHTML = """
         <div style="width:111px;" class="box" id="12322">One</div>
@@ -138,45 +163,61 @@ describe 'GSS commands', ->
       """
 
 
-    it '.box[width] == ::window[width]', ->
+    it '.box[width] == ::window[width]', (done) ->
+      engine.solve [
+        ['==', ['get', ['$class','box'], 'width'],['get', ['$reserved','window'], 'width']]
+      ]
+      engine.then ->
+        chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
+          [
+            ['get','::window', 'width',".box$12322"]
+          ],
+          [
+            ['==', 
+              ['get', '$12322','width','.box$12322'],
+              ['value', window.innerWidth, "", 'get,::window,width,.box$12322']
+            ]
+          ]
+        ]
+        done()
       scope.innerHTML = """
         <div style="width:111px;" class="box" id="12322">One</div>
       """
-      engine.run [
-        ['==', ['get', ['$class','box'], 'width'],['get', ['$reserved','window'], 'width']]
-      ]
-      chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        ['suggest', '::window[width]', window.innerWidth, 'required']
-        ['==', ['get', '$12322','width','.box$12322'],['get','::window', 'width',".box$12322"]]
-      ]
 
 
     it '::window props', ->
       scope.innerHTML = """
         
       """
-      engine.run [
+      engine.solve [
         ['==',  ['get', 'xxx'], ['get', ['$reserved','window'], 'x'     ]]
-        ['<=',['get', 'yyy'], ['get', ['$reserved','window'], 'y'     ]]
-        ['<=',['get', 'yay'], ['get', ['$reserved','window'], 'y'     ]]
+        ['<=',  ['get', 'yyy'], ['get', ['$reserved','window'], 'y'     ]]
+        ['<=',  ['get', 'yay'], ['get', ['$reserved','window'], 'y'     ]]
         ['>=',  ['get', 'hhh'], ['get', ['$reserved','window'], 'height']]
         ['>=',  ['get', 'hah'], ['get', ['$reserved','window'], 'height']]
-        ['<=',['get', 'www'], ['get', ['$reserved','window'], 'width' ]]
+        ['<=',  ['get', 'www'], ['get', ['$reserved','window'], 'width' ]]
       ]
-      chai.expect(stringify(engine.expressions.lastOutput)).to.eql stringify [
-        
-        ['suggest', '::window[x]',      0,                  'required']
-        ['suggest', '::window[y]',      0,                  'required']
-        ['suggest', '::window[height]', window.innerHeight, 'required']
-        ['suggest', '::window[width]',  window.innerWidth,  'required']
-
-        ['==',  ['get','', 'xxx', ''], ['get','::window', 'x', '']]
-        ['<=',['get','', 'yyy', ''], ['get','::window', 'y', '']]                
-        ['<=',['get','', 'yay', ''], ['get','::window', 'y', '']]  
-        
-        ['>=',      ['get','', 'hhh', ''],    ['get','::window', 'height', '']]
-        ['>=',      ['get','', 'hah', ''],    ['get','::window', 'height', '']]
-        ['<=',    ['get','', 'www', ''],    ['get','::window', 'width', '']]        
+      chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
+        [
+          ["get",   "::window",   "x",   ""]
+          ["get",   "::window",   "y",   ""]
+          ["get",   "::window",   "y",   ""]
+          ["get",   "::window",   "height",   ""]
+          ["get",   "::window",   "height",   ""]
+          ["get",   "::window",   "width",   ""]
+        ],
+        [['==',  ['get','', 'xxx', ''], 
+                ['value', 0, '', 'get,::window,x,']]],
+        [['<=',  ['get','', 'yyy', ''], 
+                ['value', 0, '', 'get,::window,y,']]],        
+        [['<=',  ['get','', 'yay', ''], 
+                ['value', 0, '', 'get,::window,y,']]],
+        [['>=',  ['get','', 'hhh', ''], 
+                ['value', window.innerHeight, '', 'get,::window,height,']]],
+        [['>=',  ['get','', 'hah', ''], 
+                ['value', window.innerHeight, '', 'get,::window,height,']]],
+        [['<=',  ['get','', 'www', ''], 
+                ['value', window.innerWidth, '', 'get,::window,width,']]]        
         
       ]
 
@@ -207,7 +248,7 @@ describe 'GSS commands', ->
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
             ['==', ['get',['$class','box'],'x'], 100]
           ]
 
@@ -233,7 +274,7 @@ describe 'GSS commands', ->
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
             ['==', ['get',['$class','box'],'x'], 100]
           ]
 
@@ -256,7 +297,7 @@ describe 'GSS commands', ->
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
             ['==', ['get',['$class','box'],'x'], 100]
           ]
         scope.innerHTML = """
@@ -289,7 +330,7 @@ describe 'GSS commands', ->
             done()
 
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
           ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
@@ -310,7 +351,7 @@ describe 'GSS commands', ->
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
           ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
@@ -338,7 +379,7 @@ describe 'GSS commands', ->
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
           ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
@@ -366,7 +407,7 @@ describe 'GSS commands', ->
             engine.removeEventListener 'solved', listener
             done()
         engine.addEventListener 'solved', listener
-        engine.run [
+        engine.solve [
           ['==', ['get',['$id','p-text'],'width'],  100]
           ['==', ['get',['$id','p-text'],'x-height'], ['get',['$id','p-text'],'intrinsic-height']]
         ]
@@ -380,7 +421,7 @@ describe 'GSS commands', ->
       it '@chain .box width(+[hgap]*2)', (done) ->
         el = null
 
-        engine.run [  
+        engine.solve [  
           ['==', ['get','hgap'], 20]
           ['==', ['get',['$id','thing1'],'width'], 100]
           [
@@ -419,7 +460,7 @@ describe 'GSS commands', ->
           chai.expect(engine.values["$thing1[width]"]).to.eql 100
           done()
     
-        engine.run [
+        engine.solve [
           ['==', ['get',['$id','thing1'],'x'], 10]
           ['==', ['get',['$id','thing2'],'x'], 110]
           ['rule'

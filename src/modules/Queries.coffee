@@ -35,7 +35,7 @@ class Queries extends Domain
 
   # Buffer DOM queries and expressions output
   onCapture: () ->
-    @buffer = @updated = @lastOutput = null
+    @buffer = @engine.workflow.queries = @lastOutput = null
     @_repairing = null
 
   onRelease: ->
@@ -56,13 +56,13 @@ class Queries extends Domain
       for node in @removing
         delete node._gss_id
 
-    if @updated
+    if @engine.workflow.queries
       evalDiff = @engine.time(@engine.expressions.startTime)
       queryDiff = @engine.time(queryTime)
 
-      @engine.console.row('queries', @updated, evalDiff + 'ms + ' + queryDiff + 'ms')
+      @engine.console.row('queries', @engine.workflow.queries, evalDiff + 'ms + ' + queryDiff + 'ms')
 
-    @buffer = @updated = undefined
+    @buffer = @engine.workflow.queries = undefined
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
@@ -208,13 +208,13 @@ class Queries extends Domain
 
     # Clean removed elements by id
     for removed in allRemoved
-      if id = @engine.identity.find(removed)
+      if id = @engine.identity.solve(removed)
         (@removed ||= []).push(id)
     @
 
   $characterData: (target) ->
     parent = target.parentNode
-    if id = @engine.identity.find(parent)
+    if id = @engine.identity.solve(parent)
       if parent.tagName == 'STYLE' 
         if parent.getAttribute('type')?.indexOf('text/gss') > -1
           @engine.eval(parent)
@@ -223,7 +223,7 @@ class Queries extends Domain
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
-    update = (@updated ||= {})[continuation] ||= []
+    update = (@engine.workflow.queries ||= {})[continuation] ||= []
     if update[1] == undefined 
       update[1] = (copy = collection?.slice?()) || null
 
@@ -250,7 +250,7 @@ class Queries extends Domain
     if typeof operation == 'string'
       result = @[operation]
       # Return stuff that was removed this tick when cleaning up
-      if old && (updated = @updated?[operation]?[3])
+      if old && (updated = @engine.workflow.queries?[operation]?[3])
         if updated.length != undefined
           if result
             if result.length == undefined
@@ -332,7 +332,7 @@ class Queries extends Domain
 
     if operation && length && manual
       if copy = collection.slice()
-        ((@updated ||= {})[continuation] ||= [])[1] ||= copy
+        ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= copy
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
@@ -376,7 +376,7 @@ class Queries extends Domain
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
-    @engine.values.clean(path, continuation, operation, scope)
+    #@engine.values.clean(path, continuation, operation, scope)
     if result && !@engine.isCollection(result)
       if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
         @remove result, oppath
@@ -390,7 +390,7 @@ class Queries extends Domain
           @each 'remove', result, path, operation
 
         if scope && operation.def.cleaning
-          @remove @engine.identity.find(scope), path, operation
+          @remove @engine.identity.solve(scope), path, operation
 
     @set path, undefined
 
@@ -409,14 +409,14 @@ class Queries extends Domain
 
   # Update bindings of two plural collections
   repair: (path, key, operation, scope, collected) ->
-    leftUpdate = @updated?[path]
+    leftUpdate = @engine.workflow.queries?[path]
     leftNew = (if leftUpdate?[0] != undefined then leftUpdate[0] else @get(path)) || []
     if leftNew.old != undefined
       leftOld = leftNew.old || []
     else
       leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
     rightPath = @engine.getScopePath(path) + key
-    rightUpdate = @updated?[rightPath]
+    rightUpdate = @engine.workflow.queries?[rightPath]
 
     rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
     if !rightNew && collected
@@ -489,7 +489,7 @@ class Queries extends Domain
       contd = path + '→' + plural
       @remove(node, contd, plurals[index + 1], plurals[index + 2], continuation)
       #@clean(path + match[2] + '→' + plural)
-      ((@updated ||= {})[contd] ||= [])[0] = @get(contd)
+      ((@engine.workflow.queries ||= {})[contd] ||= [])[0] = @get(contd)
       if @_repairing != undefined
         schedule = (@_repairing ||= {})[path] = true
     return
@@ -515,9 +515,9 @@ class Queries extends Domain
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    if @updated# && node != scope
+    if @engine.workflow.queries# && node != scope
       query = @engine.getQueryPath(operation, node)
-      return @updated[query]
+      return @engine.workflow.queries[query]
 
   chain: (left, right, collection, continuation) ->
     if left
@@ -555,7 +555,7 @@ class Queries extends Domain
 
     # Normalize query to reuse results
     query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
-    if group = (query && @updated?[query])
+    if group = (query && @engine.workflow.queries?[query])
       result = group[0]
       unless old?
         old = group[1]
@@ -564,7 +564,7 @@ class Queries extends Domain
         @set path, group[0]
     else if !old? && (result && result.length == 0) && continuation
       old = @get(@engine.getCanonicalPath(path))
-    if (group ||= @updated?[path])
+    if (group ||= @engine.workflow.queries?[path])
       if scoped
         added = result
       else
@@ -619,14 +619,15 @@ class Queries extends Domain
     if plurals = @_plurals?[path]
       (@_repairing ||= {})[path] = true
 
-    unless @updated == undefined 
-      @updated ||= {}
-      group = @updated[query] ||= [] if query
-      @updated[path] ||= group ||= []
-      group[0] ||= result
-      group[1] ||= old?.slice?() unless old == result
-      group[2] ||= added
-      group[3] ||= removed
+    @engine.workflow.queries ||= {}
+    #unless @engine.workflow.queries == undefined 
+      
+    group = @engine.workflow.queries[query] ||= [] if query
+    @engine.workflow.queries[path] ||= group ||= []
+    group[0] ||= result
+    group[1] ||= old?.slice?() unless old == result
+    group[2] ||= added
+    group[3] ||= removed
 
     contd = continuation
     if contd && contd.charAt(contd.length - 1) == '→'
@@ -651,7 +652,7 @@ class Queries extends Domain
     else
       delete @[path]
 
-    if removed = @updated?[path]?[3]
+    if removed = @engine.workflow.queries?[path]?[3]
       for item in removed
         @match(item, '$pseudo', 'next', undefined, path)
         @match(item, '$pseudo', 'first', undefined, path)
@@ -690,7 +691,7 @@ class Queries extends Domain
   # Check if query observes qualifier by combinator 
   qualify: (operation, continuation, scope, groupped, qualifier, fallback) ->
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
-      @provide(operation, continuation, scope)
+      @engine.document.expressions.solve(operation, continuation, scope)
     @
 
   comparePosition: (a, b) ->

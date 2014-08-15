@@ -132,7 +132,7 @@ describe 'Styles', ->
   describe 'transformations', ->
     it 'should generate matrix', ->
       debugger
-      engine.run [
+      engine.solve [
         ['rotateX', ['deg', 10]]
         ['scaleZ', 2]
         ['translateY', -2]

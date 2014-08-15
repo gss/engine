@@ -59,7 +59,7 @@ describe 'Nested Rules', ->
             ]
           done()
         
-        engine.run(rules)
+        engine.solve(rules)
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
@@ -112,7 +112,7 @@ describe 'Nested Rules', ->
             ]
           done()
 
-        engine.run(rules)
+        engine.solve(rules)
 
     describe 'reversed sibling combinators', ->
       it 'should support mixed selectors', (done) ->
@@ -176,7 +176,7 @@ describe 'Nested Rules', ->
             expect(all.box0.style.width).to.eql ''
 
             done()
-        engine.run(rules)
+        engine.solve(rules)
 
     describe '1 level w/ ::', ->
     
@@ -213,7 +213,7 @@ describe 'Nested Rules', ->
             ]
           done()
         
-        engine.run rules
+        engine.solve rules
 
     describe 'subqueries', ->
       it 'should observe selector on ::', (done) ->
@@ -371,7 +371,7 @@ describe 'Nested Rules', ->
                   expect(box1.style.left).to.eql('100px')
                   expect(box2.style.left).to.eql('100px')
                   done()
-        engine.run(rules)
+        engine.solve(rules)
 
     describe '1 level w/ multiple selectors and ::this', ->
       it 'should combine comma separated native selectors', (done) ->
@@ -436,7 +436,7 @@ describe 'Nested Rules', ->
               expect(box1.style.top).to.eql('100px')
               expect(box3.style.top).to.eql('100px')
               done()
-        engine.run(rules)
+        engine.solve(rules)
 
     describe '1 level w/ mixed multiple selectors and ::this', ->
       it 'should implement comma for non-native selectors', (done) ->
@@ -575,7 +575,7 @@ describe 'Nested Rules', ->
                           ">$group1"]
                       ])
                       done()
-        engine.run(rules)
+        engine.solve(rules)
 
     describe '1 level w/ ::scope', ->
       it 'Runs commands from sourceNode', (done) ->
@@ -610,7 +610,7 @@ describe 'Nested Rules', ->
             ]
           done()
         
-        engine.run rules
+        engine.solve rules
 
     describe '1 level w/ ::scope and selector', ->
 
@@ -730,7 +730,7 @@ describe 'Nested Rules', ->
                           ]
                         container.innerHTML = ""
                         done()
-        engine.run(rules)
+        engine.solve(rules)
       
     describe '1 level w/ ::parent', ->
       it 'should resolve selector on ::parent', (done) ->
@@ -846,7 +846,7 @@ describe 'Nested Rules', ->
                         container.innerHTML = ""
                         done()
 
-        engine.run(rules)
+        engine.solve(rules)
     
       it 'should handle mix of global and local selector', (done) ->
         rules = [
@@ -913,7 +913,7 @@ describe 'Nested Rules', ->
                 ]
                 done()
 
-        engine.run rules
+        engine.solve rules
 
       it 'Runs commands from sourceNode', (done) ->
         rules = [
@@ -951,7 +951,7 @@ describe 'Nested Rules', ->
               ["get","$vessel1","width",".vessel .box$box2↓::parent"]]]
           done()
 
-        engine.run rules
+        engine.solve rules
     describe '2 level', ->
     
       it 'Runs commands from sourceNode', (done) ->
@@ -1027,7 +1027,7 @@ describe 'Nested Rules', ->
                         ]
                         engine.scope.innerHTML = ""
                         done()
-        engine.run rules
+        engine.solve rules
 
     describe '2 level /w multiple selectors in parent', (e) ->
       it 'Runs commands from sourceNode', (done) ->
@@ -1114,7 +1114,7 @@ describe 'Nested Rules', ->
                           ".vessel,#group1$group1"
                         ]]
                         done()
-        engine.run rules
+        engine.solve rules
 
   describe '@if @else', ->
     
@@ -1251,7 +1251,7 @@ describe 'Nested Rules', ->
         container.addEventListener 'solved', listener
         
         engine = new GSS(container)
-        engine.run rules
+        engine.solve rules
         container.innerHTML =  """
           <div id="container" >
             <div class="vessel">

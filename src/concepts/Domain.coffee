@@ -334,7 +334,7 @@ class Domain
         result[path] ?= 0
         @values[path] ?= 0
       @added = undefined
-    if separated.length
+    if separated?.length
       @engine.provide separated
     return result
 

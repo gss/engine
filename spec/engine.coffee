@@ -111,7 +111,7 @@ describe 'GSS engine', ->
             engine.removeEventListener 'solved', onSolved
             done()
           engine.addEventListener 'solved', onSolved
-          engine.run ast
+          engine.solve ast
           
     test(true)
     test(false)
@@ -166,7 +166,7 @@ describe 'GSS engine', ->
             container.removeEventListener 'solved', onSolved
             done()
           container.addEventListener 'solved', onSolved
-          engine.run ast
+          engine.solve ast
           
     test(true)              
   
@@ -195,7 +195,7 @@ describe 'GSS engine', ->
     ]
     
     it 'before solving buttons dont exist', ->
-      engine.run ast
+      engine.solve ast
       button1 = engine.$id 'button1'
       button2 = engine.$id 'button2'
       assert !button1, "button1 doesn't exist"
@@ -271,7 +271,7 @@ describe 'GSS engine', ->
       </div>
       """
       container.addEventListener 'solved', onSolved
-      engine.run ast      
+      engine.solve ast      
   
   describe 'Math', ->
     before ->
@@ -292,7 +292,7 @@ describe 'GSS engine', ->
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-      engine.run [
+      engine.solve [
         ['==', ['get', 'y'], 10]
         ['==', ['get', 'x'], ['*',['get','y'],['/',1,2]] ]
       ]
@@ -320,7 +320,7 @@ describe 'GSS engine', ->
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-      engine.run [
+      engine.solve [
           ['==', ['get', 'col-width'], 100]
           ['==', ['get', 'row-height'], 50]
         ]
@@ -334,7 +334,7 @@ describe 'GSS engine', ->
           rowheight = engine.values['row-height']
           assert colwidth is 10, "fist step [col-width] == #{colwidth}"
           assert rowheight , "fist step [row-height] == #{rowheight}"
-          engine.run [
+          engine.solve [
               ['suggest', 'col-width', 1]
               ['suggest', 'row-height', .5]
             ]
@@ -342,7 +342,7 @@ describe 'GSS engine', ->
           expect(engine.values.toObject()).to.eql 
             'col-width': 1
             'row-height': .5
-          engine.run [
+          engine.solve [
               ['suggest', 'col-width', 333]
               ['suggest', 'row-height', 222]
             ]
@@ -353,7 +353,7 @@ describe 'GSS engine', ->
           container.removeEventListener 'solved', onSolved
           done()
       container.addEventListener 'solved', onSolved
-      engine.run [
+      engine.solve [
           ['suggest', 'col-width', 10, 'strong']
           ['suggest', 'row-height', 5]
           # YF: FIXME Why did this work? Why this has stopped working?

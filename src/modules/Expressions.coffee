@@ -110,7 +110,7 @@ class Expressions extends Domain
         bit = bit.substring(index + 1)
       if bit == path || bit.substring(0, path.length) == path
         if length < bit.length && bit.charAt(length) == '$'
-          return @engine.elements[bit.substring(length)]
+          return @engine.identity.solve(bit.substring(length))
         else
           return @engine.queries[key]
     return false

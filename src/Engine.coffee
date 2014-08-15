@@ -162,17 +162,21 @@ class Engine extends Domain.Events
     unless old = @workflow
       @engine.workflow = new @Workflow
 
+    if @providing == undefined
+      @providing = null
+      providing = true
     if typeof args[0] == 'function'
       solution = args.shift().apply(@, args) 
     else
-      @providing = null
-      unless solution = Domain::solve.apply(@, args)
-        while provided = @providing
-          i = 0
-          @providing = null
+      solution = Domain::solve.apply(@, args)
+    if !solution? && providing
+      while provided = @providing
+        @providing = null
+        if args[0]?.index
           provided.index ?= args[0].index
           provided.parent ?= args[0].parent
-          solution = @Workflow(provided)
+        solution = @Workflow(provided)
+    if providing
       @providing = undefined
 
     if name
@@ -185,6 +189,7 @@ class Engine extends Domain.Events
         if old != workflow
           old.merge(workflow)
       else
+        @workflown = workflow
         solution = workflow.each @resolve, @
     @engine.workflow = old
 
@@ -243,6 +248,8 @@ class Engine extends Domain.Events
       @console.end()
       if result?.length == 1
         result = result[0]
+
+    # Dispatch operations without specific domain (e.g. remove)
     else
       others = []
       removes = []
@@ -259,15 +266,16 @@ class Engine extends Domain.Events
         for remove in removes
           for path, index in remove
             continue if index == 0
+            console.log(domain.paths, path, domain.paths[path])
             if domain.paths[path]
               locals.push(path)
         if locals.length
           locals.unshift 'remove'
-          others.push locals
+          workflow.merge(locals, domain)
         if others.length
           workflow.merge(others, domain)
       for url, worker of @workers
-        workflow.merge others, worker
+        workflow.merge problems, worker
 
     return result
 
@@ -293,6 +301,7 @@ class Engine extends Domain.Events
         @constructor[property] ||= Engine::Method(method, true, property)
       @constructor::compile()
     @Domain.compile(@Domains,   @)
+    @Workflow = Engine::Workflow.compile(@)
 
   # Comile user provided features specific to this engine
   compile: (state) ->

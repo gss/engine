@@ -44,14 +44,24 @@ class Intrinsic extends Numeric
 
   get: (element, property) ->
     if !property
-      bits = element.split('[')
-      element = bits[0]
-      property = bits[1].substring(0, bits[1].length - 1)
+      path = element
+      element = undefined
+    else
+      path = @getPath(element, property)
+    bits = path.split('[')
+    element ||= bits[0]
+    property = bits[1].substring(0, bits[1].length - 1)
+
+
+    if element && property && (prop = @properties[path])?
+      if typeof prop == 'function'
+        return prop.call(@, element)
+      else
+        return prop
     if !element.nodeType
       element = @identity.solve(element)
     if (index = property.indexOf('intrinsic-')) > -1
       if @properties[property]
-        debugger
         return @properties[property].call(@, element)
       property = property.substring(index + 10)
     prop = @camelize(property)

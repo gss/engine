@@ -56,7 +56,7 @@ describe "GSS.View", ->
         container.removeEventListener 'solved', onSolved
         done()
       container.addEventListener 'solved', onSolved
-      engine.run ast
+      engine.solve ast
   
   describe 'Display passes down translated offsets', ->    
     
@@ -84,7 +84,7 @@ describe "GSS.View", ->
         assert target2.offsetTop == 0
         done()
       engine.once 'solved', onSolved
-      engine.run ast
+      engine.solve ast
   
   describe 'Elements can be positioned relative to', ->
     it 'after solving', (done) ->
@@ -109,7 +109,7 @@ describe "GSS.View", ->
         engine.once 'solved', ->  
           expect(engine.values['$floater[y]']).to.eql 31        
           done()
-      engine.run ast
+      engine.solve ast
       container.innerHTML = """
         <div id="pusher" style="height: 17px"></div>
         <div id="anchor" style="height: 10px"></div>
@@ -148,7 +148,7 @@ describe "GSS.View", ->
         done()
         
       engine.once 'solved', onSolved
-      engine.run ast
+      engine.solve ast
       
   xdescribe 'printCss', ->
     it 'prints css', (done) ->

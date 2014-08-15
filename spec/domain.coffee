@@ -176,18 +176,23 @@ describe 'Domain', ->
 					result: 42
 					x: 2
 				document.body.removeChild(root)
+
 				engine.solve
 					"x": 3
 				, (solution) ->
 					expect(solution).to.eql 
 						result: 63
 						x: 3
+
 					engine.solve
 						"x": null
 					, (solution) ->
 						expect(solution).to.eql 
 							result: 0
 							x: 0
+							
+
+
 						done()
 
 

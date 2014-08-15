@@ -154,6 +154,7 @@ class Conventions
       for arg in operation
         if arg.domain && arg.domain.priority > domain.priority && arg.domain < 0
           return arg.domain
+    return domain
 
   # Return domain that should be used to evaluate given variable
   getVariableDomain: (operation) ->
@@ -163,10 +164,14 @@ class Conventions
 
 
     path = @getPath(scope, property)
-    for d in @domains
-      if d.values.hasOwnProperty(path)
-        domain = d
-        break
+    if scope && property && @intrinsic.properties[path]?
+      domain = @intrinsic
+      debugger
+    else
+      for d in @domains
+        if d.values.hasOwnProperty(path)
+          domain = d
+          break
     unless domain
       if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
