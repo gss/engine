@@ -40,9 +40,9 @@ class Domain
       return @find.apply(@, arguments)
 
   setup: ->
-    unless @hasOwnProperty('variables')
+    @variables   ||= {}
+    unless @hasOwnProperty('watchers')
       @expressions = new @Expressions(@) 
-      @variables   = {}
       @watchers    = {}
       @observers   = {}
       @paths       = {}
@@ -69,8 +69,6 @@ class Domain
         result = object.solve.apply(object, arguments)
       else
         result = @[strategy].apply(@, arguments)
-      #if result?
-      #  @provide result
       return result
 
   provide: (solution, value) ->
@@ -80,20 +78,8 @@ class Domain
       return @engine.engine.provide solution
     else
       return @engine.provide solution
-    # for property, value of solution
-    #   @verify(null, property, value)
     return true
 
-  verify: (scope, property, value) ->
-    property = @engine.getPath(scope, property)
-    scope = null
-    return  @invalidate(scope, property, value) || 
-                 @merge(scope, property, value) ||
-                @import(scope, property, value)
-
-# Domain::verify  = Invalidate / Merge / Subscribe,   Solver
-# Domain::provide = Return     / Set   / Suggest
-# Domain::solve   = Compute 
 
   watch: (object, property, operation, continuation, scope) ->
     path = @engine.getPath(object, property)
@@ -118,6 +104,7 @@ class Domain
     delete @watchers[path] unless watchers.length
 
   get: (object, property) ->
+    debugger
     return @values[@engine.getPath(object, property)]
 
   merge: (object, meta) ->
@@ -129,9 +116,8 @@ class Domain
         async = false
         for path, value of object
           domain.set undefined, path, value, meta, true
-          if watchers = domain.watchers?[path]
-            if !@callback(domain, watchers, value, meta)?
-              async = true
+          if !@callback(domain, path, value, meta)?
+            async = true
         return true unless async
       , @
 
@@ -149,10 +135,9 @@ class Domain
     # notify subscribers
     unless silent
       async = false
-      if watchers = @watchers?[path]
-        @engine.solve @displayName || 'GSS', (domain) ->
-          return @callback(domain, watchers, value, meta)
-        , @
+      @engine.solve @displayName || 'GSS', (domain) ->
+        return @callback(domain, path, value, meta)
+      , @
 
     return value
 
@@ -169,14 +154,30 @@ class Domain
     exps.index  = index
     exps
 
-  callback: (domain, watchers, value, meta) ->
-    for watcher, index in watchers by 3
-      break unless watcher
-      if watcher.domain != domain || !value?
-        # Re-evaluate expression
-        @Workflow(@sanitize(@getRootOperation(watcher)))
-      else
-        domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+  callback: (domain, path, value, meta) ->
+    if watchers = domain.watchers?[path]
+      for watcher, index in watchers by 3
+        break unless watcher
+        if watcher.domain != domain || !value?
+          # Re-evaluate expression
+          @Workflow(@sanitize(@getRootOperation(watcher)))
+        else
+          domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+    if @workers
+      for url, worker of @workers
+        if values = worker.values
+          if values.hasOwnProperty(path)
+            debugger
+            @Workflow(worker, [['value', value, path]])
+            console.error(path, @workflow)
+    if variable = @variables[path]
+      for op in variable.operations
+        if !watchers || watchers.indexOf(op) == -1
+          if value == null
+            while op.domain == @
+              op = op.parent
+          @Workflow(@sanitize(@getRootOperation(op)))
+
     @
 
   # Export values in a plain object. Use for tests only
@@ -187,41 +188,26 @@ class Domain
         object[property] = value
     return object
 
-  invalidate: (scope, property, value) ->
-    path = @engine.getPath(scope, property)
-    return unless @variables[path]
-    if (@invalid ||= []).indexOf(path) == -1
-      @invalid.push path
-
-
-  import: (scope, property, value) ->
-    unless target
-      for domain in @domains
-        if @domain.import(scope, property, target)
-          return true
-      return false
-    path = @engine.getPath(scope, property)
-    if @variables[path]
-      return false
-
   compare: (a, b) ->
     if typeof a == 'object'
       return unless typeof b == 'object'
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
-      if a[0] == 'value'
+      else if a[0] == 'value'
         return a[3] == b.toString()
-      if b[0] == 'value'
+      else if b[0] == 'value'
         return b[3] == a.toString()
-      for value, index in a
-        return unless @compare(b[index], value)
-      return unless b[a.length] == a[a.length]
+      else 
+        for value, index in a
+          return unless @compare(b[index], value)
+        return unless b[a.length] == a[a.length]
     else
       return if typeof b == 'object'
       return unless a == b
     return true
 
   constrain: (constraint) ->
+    console.info(JSON.stringify(constraint.operation),)
     if constraint.paths
       matched = undefined
       for path in constraint.paths
@@ -252,6 +238,7 @@ class Domain
               (@added ||= {})[path.name] = 0
 
     if typeof (name = constraint[0]) == 'string'
+      debugger
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
     @constraints.push(constraint)
@@ -275,23 +262,70 @@ class Domain
           unless path.constraints.length
             @undeclare(path)
 
+    @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
+    return
 
-  declare: (name, value) ->
-    return @variables[name] ||= value ? @variable(name)
+  declare: (name, operation) ->
+    variable = @variables[name] ||= value ? @variable(name)
+    if operation
+      ops = variable.operations ||= []
+      if ops.indexOf(operation)
+        ops.push(operation)
+    return variable
 
   undeclare: (variable) ->
     delete @variables[variable.name]
+    (@nullified ||= {})[variable.name] = true
+    return
+
+  reach: (constraints, groups) ->
+    groups ||= []
+    for constraint in constraints
+      groupped = undefined
+      if constraint.paths
+        for group in groups by -1
+          for other in group
+            for variable in other.paths
+              if typeof variable != 'string'
+                if constraint.paths.indexOf(variable) > -1
+                  if groupped
+                    groupped.push.apply(groupped, group)
+                    groups.splice(group.indexOf(group), 1)
+                  else
+                    groupped = group
+                  break
+            if groups.indexOf(group) == -1
+              break
+      unless groupped
+        groups.push(groupped = [])
+      groupped.push(constraint)
+    return groups
+
 
   apply: (solution) ->
+    if @constrained
+      groups = @reach(@constraints).sort (a, b) ->
+        return a.length - b.length
+      separated = groups.splice(1)
+      if separated.length
+        for group in separated
+          for constraint, index in group
+            @unconstrain constraint
+            group[index] = constraint.operation
+
+
+    @constrained = undefined
+
     result = {}
     for path, value of solution
       unless @nullified?[path]
         result[path] = value
         @values[path] = value
     if @nullified
+      debugger
       for path of @nullified
-        result[path] = null
+        result[path] = @assumed.values[path] ? @intrinsic.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]
       @nullified = undefined
@@ -300,20 +334,22 @@ class Domain
         result[path] ?= 0
         @values[path] ?= 0
       @added = undefined
+    if separated.length
+      @engine.provide separated
     return result
 
 
   remove: ->
     for path in arguments
-      for contd in @getPossibleContinuations(continuation)
+      for contd in @getPossibleContinuations(path)
         if observers = @observers[contd]
           while observers[0]
             @unwatch(observers[1], undefined, observers[0], contd, observers[2])
       
-      if constraints = @variables[path]
-        for constrain in constraints by -1
+      if constraints = @paths[path]
+        for constraint in constraints by -1
           if @isConstraint(constraint)
-            @unconstraint(constraint, path)
+            @unconstrain(constraint, path)
           else if @isVariable(constraint)
             @undeclare(constraint)
     return
@@ -380,5 +416,13 @@ class Domain
 
   DONE: 'solve'
 
+class Domain::Methods
+  value: (value) ->
+    return value
+
+  framed: (value) ->
+    return value
+
+  
 module.exports = Domain
 

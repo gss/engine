@@ -4,10 +4,10 @@ Domain = require('../concepts/Domain')
 
 class Abstract extends Domain
 
-class Abstract::Methods
+class Abstract::Methods extends Domain::Methods
 
   get:
-    command: (operation, continuation, scope, meta, object, property) ->
+    command: (operation, continuation, scope, meta, object, property, contd) ->
       if typeof object == 'string'
         id = object
 
@@ -25,7 +25,7 @@ class Abstract::Methods
         property = object
         object = undefined
 
-      return ['get', id, property, @getContinuation(continuation || '')]
+      return ['get', id, property, @getContinuation(continuation || contd || '')]
 
   set:
     command: ->
@@ -36,25 +36,14 @@ class Abstract::Methods
     command: ->
       @assumed.set.apply(@assumed, arguments)
 
-  value: (value) ->
+  value: (value, continuation, string, exported) ->
+    console.info(Array.prototype.slice.call(arguments))
+    if exported
+      op = string.split(',')
+      scope = op[1]
+      property = op[2]
+      @engine.values[@engine.getPath(scope, property)] = value
     return value
 
-  "<": (a, b) ->
-    return a < b
-
-  ">": (a, b) ->
-    return a > b
-
-  "+": (a, b) ->
-    return a + b
-
-  "-": (a, b) ->
-    return a - b
-
-  "*": (a, b) ->
-    return a * b
-
-  "/": (a, b) ->
-    return a / b
 
 module.exports = Abstract

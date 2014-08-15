@@ -1,4 +1,3 @@
-
 Domain  = require('../concepts/Domain')
 
 class Linear extends Domain
@@ -32,7 +31,6 @@ class Linear extends Domain
   solve: ()->
     Domain::solve.apply(@, arguments)
     if @constrained
-      @constrained = undefined
       @solver.solve()
     else
       @solver.resolve()
@@ -85,13 +83,14 @@ class Linear extends Domain
     return
 
 
-class Linear::Methods
-  get: (scope, property, path) ->
-    if typeof @properties[property] == 'function' && scope
-      return @properties[property].call(@, scope, path)
-    else
-      variable = @declare(@getPath(scope, property))
-    return [variable, path || (property && scope) || '']
+class Linear::Methods extends Domain::Methods
+  get: 
+    command: (operation, continuation, scope, meta, object, property, path) ->
+      if typeof @properties[property] == 'function' && scope
+        return @properties[property].call(@, object, object)
+      else
+        variable = @declare(@getPath(object, property), operation)
+      return [variable, path || (property && object) || '']
 
   strength: (strength, deflt = 'medium') ->
     return strength && c.Strength[strength] || c.Strength[deflt]
@@ -101,9 +100,6 @@ class Linear::Methods
 
   varexp: (name) ->
     return new c.Expression name: name
-
-  value: (value) ->
-    return value
 
   '==': (left, right, strength, weight) ->
     return new c.Equation(left, right, @strength(strength), @weight(weight))
@@ -131,4 +127,5 @@ class Linear::Methods
 
   '/': (left, right, strength, weight) ->
     return c.divide(left, right)
+    
 module.exports = Linear

@@ -22,6 +22,7 @@ class Numeric::Methods
     return a || b
 
   "+": (a, b) ->
+    debugger
     return a + b
 
   "-": (a, b) ->
@@ -46,8 +47,9 @@ class Numeric::Methods
 
   get: 
     command: (operation, continuation, scope, meta, object, path) ->
-      debugger
-      return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
+      method = operation.exported && 'get' || 'watch'
+      console.error(method, object, path, @di)
+      return @[method](object, path, operation, @getContinuation(continuation || ""), scope)
 
 
 

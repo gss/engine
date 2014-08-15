@@ -207,6 +207,8 @@ class Expressions extends Domain
             return result
       else if parent && (typeof parent[0] == 'string' && (parent.domain != operation.domain))
         solution = ['value', result, continuation || '', operation.toString()]
+        console.error('shashsks', solution)
+        solution.push true if operation.exported
         solution.operation = operation
         solution.parent    = operation.parent
         solution.domain    = operation.domain
@@ -234,8 +236,8 @@ class Expressions extends Domain
     def = @engine.methods[operation.name]
         
     if parent
-      operation.parent = parent
-      operation.index = parent.indexOf(operation)
+      operation.parent ?= parent
+      operation.index ?= parent.indexOf(operation)
       if parent.bound || parent.def?.bound == operation.index
         operation.bound = true
 

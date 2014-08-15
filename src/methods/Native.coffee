@@ -46,7 +46,7 @@ class Native
               constructor = [constructor, fn]
           else
             constructor = fn
-      for own name, fn of (prototype || mixin)
+      for name, fn of (prototype || mixin)
         Mixin::[name] = fn
 
     if constructor && constructor.push

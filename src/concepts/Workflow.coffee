@@ -1,44 +1,53 @@
 # Queue and group expressions by domain
 
-Workflow = (domain, problem) ->
+Workflow = (domain, problem, frame) ->
   if @ instanceof Workflow
     @domains  = domain  && (domain.push && domain  || [domain] ) || []
     @problems = problem && (domain.push && problem || [problem]) || []
+    @frame    = frame
     return
   if arguments.length == 1
     problem = domain
     domain = undefined
     start = true
-  if domain && domain != true
-    domain = true
-
   for arg, index in problem
     continue unless arg?.push
     arg.parent ?= problem
     arg.index  ?= index
     offset = 0
     if arg[0] == 'get'
-      @assumed.watch(arg[1], arg[2], arg, arg[3] || '')
-      workload = new Workflow @getVariableDomain(arg), [arg]
+      vardomain = @getVariableDomain(arg)
+      if vardomain.MAYBE && domain && domain != true
+        vardomain.frame = domain
+      workload = new Workflow vardomain, [arg]
     else
       for a in arg
-        if a.push
-          workload = @Workflow true, arg 
+        if a?.push
+          if arg[0] == 'framed'
+            if typeof arg[1] == 'string'
+              d = arg[1]
+            else
+              d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
+          else
+            d = domain || true
+          workload = @Workflow(d, arg)
           break
 
     if workflow && workflow != workload
       workflow.merge(workload)
     else
       workflow = workload
-  if problem[0] == '=='
-    debugger
+  if !workflow
+    if typeof arg[0] == 'string'
+      arg = [arg]
+    foreign = true
+    d = 
+    workflow = new @Workflow [domain != true && domain || null], [arg]
   if typeof problem[0] == 'string'
-    workflow.bubble(problem, @)
-  if start && !domain
-
-    if arguments.length == 1
-      console.log('Workflow', workflow)
+    workflow.wrap(problem, @)
+  if start || foreign
     if @workflow
+      console.info(JSON.stringify(problem))
       return @workflow.merge(workflow)
     else
       return workflow.each @resolve, @engine
@@ -47,7 +56,7 @@ Workflow = (domain, problem) ->
 
 Workflow.prototype =
   provide: (solution) ->
-    debugger
+    return if solution.operation.exported
     operation = solution.domain.getRootOperation(solution.operation.parent)
     domain = operation.domain
     index = @domains.indexOf(domain)
@@ -61,7 +70,7 @@ Workflow.prototype =
     return
 
   # Group expressions
-  bubble: (problem, engine) -> 
+  wrap: (problem, engine) -> 
     bubbled = undefined
     for other, index in @domains by -1
       exps = @problems[index]
@@ -84,9 +93,9 @@ Workflow.prototype =
               probs = @problems[n]
               if (j = probs.indexOf(previous)) > -1
                 if domain != other && domain.priority < 0 && other.priority < 0
-                  debugger
                   if !domain.MAYBE
                     if !other.MAYBE
+                      debugger
                       if index < n
                         exps.push.apply(exps, domain.export())
                         exps.push.apply(exps, probs)
@@ -143,6 +152,18 @@ Workflow.prototype =
         @setVariables(problem, engine)
         return true
 
+  # Simplify groupped multi-domain expression down to variables
+  unwrap: (problems, domain, result = []) ->
+    if problems[0] == 'get'
+      problems.exported = true
+      result.push(problems)
+    else
+      problems.domain = domain
+      for problem in problems
+        if problem.push
+          @unwrap(problem, domain, result)
+    return result
+
   setVariables: (problem, engine, target = problem) ->
     for arg in problem
       if arg[0] == 'get'
@@ -150,8 +171,10 @@ Workflow.prototype =
       else if arg.variables
         (target.variables ||= []).push.apply(target.variables, arg.variables)
 
-
+  # Last minute changes to workflow before execution
   optimize: ->
+    console.log(JSON.stringify(@problems))
+    # Remove empty domains
     for problems, i in @problems by -1
       unless problems.length
         @problems.splice i, 1
@@ -159,69 +182,88 @@ Workflow.prototype =
       for problem in problems
         problem.domain = @domains[i]
 
+    # Merge connected graphs 
     for domain, i in @domains by -1
       problems = @problems[i]
       @setVariables(problems)
       if vars = problems.variables
         for other, j in @domains by -1
           break if j == i
-          console.log(vars, @problems[j].variables)
           if (variables = @problems[j].variables) && domain.displayName == @domains[j].displayName
-            for variable in variables
-              if vars.indexOf(variable) > -1
-                problems.push.apply(problems, @problems[j])
-                @setVariables(@problems[j], null, problems)
-                @problems.splice(j, 1)
-                @domains.splice(j, 1)
-                debugger
+            if domain.frame == other.frame
+              for variable in variables
+                if vars.indexOf(variable) > -1
+                  problems.push.apply(problems, @problems[j])
+                  @setVariables(@problems[j], null, problems)
+                  @problems.splice(j, 1)
+                  @domains.splice(j, 1)
+                  break
+
+    # Defer substitutions to thread
+    for domain, i in @domains by -1
+      for j in [i + 1 ... @domains.length]
+        if (url = @domains[j]?.url) && document?
+          for prob, p in @problems[i] by -1
+            while prob
+              problem = @problems[j]
+              if problem.indexOf(prob) > -1
+
+                @problems[i][p] = @unwrap @problems[i][p], @domains[j], [], @problems[j]
                 break
+              prob = prob.parent
+
+    # Remove empty domains
+    for problems, i in @problems by -1
+      unless problems.length
+        @problems.splice i, 1
+        @domains.splice i, 1
+      for problem in problems by -1
+        domain = @domains[i]
+        problem.domain = domain
 
 
 
-
-      #if domain.MAYBE
-      #  if (j = @domains.indexOf(domain.MAYBE)) > -1
-      #    @problems[j].push.apply(@problems[j], @problems[index])
-      #    @problems.splice(index, 1)
-      #    @domains.splice(index, 1)
     @
 
 
 
   # Merge source workflow into target workflow
-  merge: (workload, domain, index) ->
-    if !domain
-      for domain, index in workload.domains
-        @merge workload, domain, index
+  merge: (problems, domain) ->
+    if domain == undefined
+      for domain, index in problems.domains
+        @merge problems.problems[index], domain
       return @
     merged = undefined
     priority = @domains.length
-    for other, position in @domains
-      if other == domain
-        cmds = @problems[position]
-        cmds.push.apply(cmds, workload.problems[index])
-        merged = true
-        break
-      else 
-        if other.priority <= domain.priority
-          priority = position
+    position = (@index || -1) + 1
+    while (other = @domains[position]) != undefined
+      if other
+        if other == domain
+          cmds = @problems[position]
+          cmds.push.apply(cmds, problems)
+          merged = true
+          break
+        else 
+          if other.priority <= domain.priority && (!other.frame || other.frame == domain.frame)
+            priority = position
+      position++
     if !merged
       @domains.splice(priority, 0, domain)
-      @problems.splice(priority, 0, workload.problems[index])
+      @problems.splice(priority, 0, problems)
 
     return @
 
   each: (callback, bind) ->
     @optimize()
-    console.log("optimized", @)
     solution = undefined
-    console.error(@problems[0].slice(), @problems[1]?.slice())
-    for domain, index in @domains
-      result = (@solutions ||= [])[index] = 
-        callback.call(bind || @, domain, @problems[index], index)
+    @index ?= 0
+    while (domain = @domains[@index]) != undefined
+      result = (@solutions ||= [])[@index] = 
+        callback.call(bind || @, domain, @problems[@index], @index, @)
       if result && !result.push
         for own prop, value of result
           (solution ||= {})[prop] = value
+      @index++
 
     return solution || result
 

@@ -10,11 +10,11 @@ class Finite extends Domain
   	super
   	#@solver = new FD.Space
   	
-class Finite::Methods
+class Finite::Methods extends Domain::Methods
 
   value: (value) ->
     return value
-    
+
   variable: (name) ->
     return @solver.decl name
 

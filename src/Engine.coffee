@@ -63,7 +63,7 @@ class Engine extends Domain.Events
     # Context objects are contain non-callable 
     # definitions of commands and properties.
     # Definitions are compiled into functions 
-    # once engine is started
+    # right before first commands are executed
     super(@, url)
     @domain      = @
     @properties  = new @Properties(@)
@@ -75,14 +75,20 @@ class Engine extends Domain.Events
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
     @assumed.setup()
-    
-    @strategy =  window? && 'document' || 'linear'
+
+    unless window?
+      @strategy = 'substitute'
+    else
+      @strategy =  'document'
 
     return @
 
   events:
     # Receieve message from worker
     message: (e) ->
+      values = e.target.values ||= {}
+      for property, value of e.data
+        values[property] = value
       @provide e.data
 
     # Handle error from worker
@@ -91,6 +97,36 @@ class Engine extends Domain.Events
 
     destroy: (e) ->
       Engine[@scope._gss_id] = undefined
+
+  # Import exported variables to thread
+  substitute: (expressions, result, parent, index) ->
+    if result == undefined
+      start = true
+      result = null
+    for expression, i in expressions by -1
+      if expression?.push
+        result = @substitute(expression, result, expressions, i)
+    if expressions[0] == 'value'
+      # Substituted part of expression
+      if expressions[4]
+        exp = parent[index] = expressions[3].split(',')
+        path = @getPath(exp[1], exp[2])
+      # Updates for substituted variables
+      else if !expressions[3]
+        path = expressions[2]
+        parent.splice(index, 1)
+      if path && @assumed[path] != expressions[1]
+        (result ||= {})[path] = expressions[1]
+    unless start
+      if !expressions.length
+        parent.splice(index, 1)
+      return result
+    if result
+      @assumed.merge result
+    @inputs = result
+    console.log('inputs', result)
+    if expressions.length
+      @provide expressions
 
   solve: () ->
     if typeof arguments[0] == 'string'
@@ -186,20 +222,53 @@ class Engine extends Domain.Events
     else
       return @Workflow.apply(@, arguments)
 
-  resolve: (domain, problems, index) ->
+  resolve: (domain, problems, index, workflow) ->
+    if domain && !domain.solve && domain.postMessage
+      return domain.postMessage(@clone problems)
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
-    if problems instanceof Array && problems.length == 1 && problems[0] instanceof Array
+    if problems instanceof Array && problems.length == 1 && problem instanceof Array
       problems = problem
 
-    @console.start(problems, domain.displayName)
-    @providing = null
-    result = domain.solve(problems) || @providing || undefined
-    @providing = undefined
-    @console.end()
-    if result?.length == 1
-      result = result[0]
+    if domain
+      @console.start(problems, domain.displayName)
+      @providing = null
+      result = domain.solve(problems) || @providing || undefined
+      if @providing && @providing != result
+        workflow.merge(@Workflow(@frame || true, @providing))
+        workflow.optimize()
+
+      @providing = undefined
+      @console.end()
+      if result?.length == 1
+        result = result[0]
+    else
+      others = []
+      removes = []
+      if problems[0] == 'remove'
+        removes.push problems
+      else
+        for problem in problems
+          if problem[0] == 'remove'
+            removes.push(problem)
+          else
+            others.push(problem)
+      for domain in @domains
+        locals = []
+        for remove in removes
+          for path, index in remove
+            continue if index == 0
+            if domain.paths[path]
+              locals.push(path)
+        if locals.length
+          locals.unshift 'remove'
+          others.push locals
+        if others.length
+          workflow.merge(others, domain)
+      for url, worker of @workers
+        workflow.merge others, worker
+
     return result
 
   # Initialize new worker and subscribe engine to its events
@@ -214,7 +283,7 @@ class Engine extends Domain.Events
       return
 
   getWorker: (url) ->
-    return (Engine.workers ||= {})[url] ||= new Worker url
+    return (Engine::workers ||= {})[url] ||= new Worker(url)
 
   # Compile initial domains and shared engine features 
   precompile: ->
@@ -251,10 +320,12 @@ Engine.clone    = Engine::clone    = Native::clone
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     engine = Engine.messenger ||= Engine()
-    debugger
+    assumed = engine.assumed.toObject()
     solution = engine.solve(e.data)
-    console.error(JSON.stringify(e.data))
-    console.error(JSON.stringify(solution))
+    for property, value of engine.inputs
+      solution[property] ?= value
+    console.error(engine.domains.map (d) ->
+      [d.constraints?.length, d.substituted?.length])
     postMessage(solution)
 
 module.exports = @GSS = Engine

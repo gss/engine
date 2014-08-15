@@ -5,9 +5,9 @@ Native   = require('../methods/Native')
 class Document extends Abstract
   priority: Infinity
 
-  Methods:     Native::mixin Abstract::Methods::,
+  Methods:     Native::mixin new Abstract::Methods,
                require('../methods/Selectors'),
-               require('../methods/Rules'),
+               require('../methods/Rules')
 
   Queries:     require('../modules/Queries')
   Positions:   require('../modules/Positions')

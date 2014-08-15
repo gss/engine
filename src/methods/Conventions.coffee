@@ -171,11 +171,12 @@ class Conventions
       if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
         if (domain = @[prefix])
+          debugger
           unless domain instanceof @Domain
             domain = undefined
 
       unless domain
-        if property && @intrinsic.properties[property]
+        if property && @intrinsic?.properties[property]
           domain = @intrinsic.maybe()
         else
           domain = @linear.maybe()

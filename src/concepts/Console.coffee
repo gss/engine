@@ -20,24 +20,31 @@ class Console
     else
       JSON.stringify(obj)
 
-  breakpoint: decodeURIComponent (document?.location.toString().match(/breakpoint=([^&]+)/, '') || ['',''])[1]
+  debug: (exp) ->
+    document.location = document.location.toString().replace(/[&?]breakpoint=[^&]+|$/, 
+      ((document.location.search.indexOf('?') > -1) && '&' || '?') + 
+      'breakpoint=' + exp.trim())
+
+  breakpoint: decodeURIComponent (document?.location.search.match(/breakpoint=([^&]+)/, '') || ['',''])[1]
 
   row: (a, b, c) ->
     return unless @level
     a = a.name || a
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
     if document?
-      breakpoint = String @stringify([a,b,c])
-      if @breakpoint == breakpoint
+      breakpoint = String @stringify([b,c])
+      if @breakpoint == a + breakpoint
         debugger
     else 
       breakpoint = ''
-    if typeof b == 'object'
-      @log('%c%s%c%s%c%s%O%c\t\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint.substring(a.length), '', p1, b, 'color: #999', c || "")
+    if document?
+      if typeof b == 'object'
+        @log('%c%s%c%s%c%s%O%c\t\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint, '', p1, b, 'color: #999', c || "")
+      else
+        p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
+        @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
     else
-      p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
-      @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
-
+      @log a, b, c
 
   start: (reason, name) ->
     @startTime = Native::time()
@@ -74,7 +81,7 @@ for method in Console::methods
       else if method == 'groupEnd'
         Console::groups--
 
-      if document? && @level
+      if @level
         console?[method]?(arguments...)
 
 module.exports = Console

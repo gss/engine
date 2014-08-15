@@ -32,12 +32,13 @@
     "lib/concepts/Style.js",
     "lib/concepts/Workflow.js",
 
+    "lib/domains/Numeric.js",
+    "lib/domains/Abstract.js",
+    
     "lib/domains/Linear.js", 
     "lib/domains/Intrinsic.js",
     "lib/domains/Finite.js", 
     "lib/domains/Document.js",
-    "lib/domains/Numeric.js",
-    "lib/domains/Abstract.js",
 
     "lib/modules/Expressions.js", 
     "lib/modules/Identity.js", 

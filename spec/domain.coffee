@@ -103,7 +103,7 @@ describe 'Domain', ->
 				result: -545
 
 		it 'should change variable domain after the fact', ->
-			engine = new GSS
+			window.engine = new GSS
 			expect(engine.solve [
 				['=='
 					['get', 'result']
@@ -151,8 +151,47 @@ describe 'Domain', ->
 					"$box1[width]": 50
 
 
+	describe 'solvers in worker', ->
+		it 'should receieve measurements from document to make substitutions', (done) ->
+			root = document.createElement('div')
+			root.innerHTML = """
+				<div id="box0" style="width: 20px"></div>
+			"""
+			document.body.appendChild(root)
+			window.engine = new GSS(root, true)
+			problem = [
+				['=='
+					['get', 'result', null, 'my_funny_tracker_path']
+					['*',
+						['+'
+							['get', ['$id', 'box0'], 'intrinsic-width'],
+							1]
+						['get', 'x']]
+				]
+			]
+			engine.assumed.set null, 'x', 2
+			engine.solve problem, (solution) ->
+				expect(solution).to.eql 
+					"$box0[intrinsic-width]": 20
+					result: 42
+					x: 2
+				document.body.removeChild(root)
+				engine.solve
+					"x": 3
+				, (solution) ->
+					expect(solution).to.eql 
+						result: 63
+						x: 3
+					engine.solve
+						"x": null
+					, (solution) ->
+						expect(solution).to.eql 
+							result: 0
+							x: 0
+						done()
 
-		it 'should handle asynchronous solvers', (done) ->
+
+		it 'should receive commands from document', (done) ->
 			engine = new GSS true
 			problem = [
 				['=='
@@ -172,6 +211,32 @@ describe 'Domain', ->
 
 
 			expect(solved).to.eql undefined
+
+	describe 'framed domains', ->
+		it 'should not merge expressions of a framed domain', ->
+			window.engine = new GSS
+			problem = [
+				['framed', 
+					['>=',
+							['get', 'a']
+							1
+						]
+				]
+
+				['==',
+					['get', 'b']
+					2
+				]
+
+				['==',
+					['get', 'b']
+					['get', 'a']
+					'strong'
+				]
+			]
+			expect(engine.solve(problem)).to.eql
+				a: 1
+				b: 1
 
 	describe 'variable graphs', ->
 		it 'should unmerge multiple domains', ->
@@ -205,7 +270,9 @@ describe 'Domain', ->
 
 			expect(engine.solve [
 				['remove', 'my_tracker_path']
-			])
+			]).to.eql
+				b: 0
+				c: 0
 
 
 		it 'should merge multiple domains', ->
@@ -272,8 +339,6 @@ describe 'Domain', ->
 				]
 			]).to.eql
 				a: 8
-				c: 9
 				result: 9
-				b: 3
 
 

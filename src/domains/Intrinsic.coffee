@@ -9,7 +9,7 @@
 
 Numeric = require('./Numeric')
 Native = require('../methods/Native')
-
+debugger
 class Intrinsic extends Numeric
   priority: 100
   
@@ -17,10 +17,10 @@ class Intrinsic extends Numeric
   Units:       require('../methods/Units')
   Style:       require('../concepts/Style')
 
-  Methods:     Native::mixin {},
+  Methods:     Native::mixin((new Numeric::Methods),
                require('../methods/Types'),
                require('../methods/Units'),
-               require('../methods/Transformations')
+               require('../methods/Transformations'))
 
   Properties:  Native::mixin {},
                require('../properties/Dimensions'),
@@ -42,16 +42,28 @@ class Intrinsic extends Numeric
   set: (element, property) -> 
     element.style[property] = value
 
-  get: ->
+  get: (element, property) ->
+    if !property
+      bits = element.split('[')
+      element = bits[0]
+      property = bits[1].substring(0, bits[1].length - 1)
+    if !element.nodeType
+      element = @identity.solve(element)
+    if (index = property.indexOf('intrinsic-')) > -1
+      if @properties[property]
+        debugger
+        return @properties[property].call(@, element)
+      property = property.substring(index + 10)
     prop = @camelize(property)
     value = element.style[property]
     if value == ''
       value = @getComputedStyle(element)[prop]
-    value = @toPrimitive(value, null, null, null, element, prop)
-    if value.push && typeof value[0] == 'object'
-      return @properties[property].apply(@, value)
-    else
-      return @properties[property].call(@, value)
+    return value
+    #value = @toPrimitive(value, null, null, null, element, prop)
+    #if value.push && typeof value[0] == 'object'
+    #  return @properties[property].apply(@, value)
+    #else
+    #  return @properties[property].call(@, value)
 
   # Triggered on possibly resized element by mutation observer
   # If an element is known to listen for its intrinsic properties

@@ -48,9 +48,9 @@ class Selectors
     (((parent || operation)[group] ||= {})[index] ||= []).push operation
 
   # Remove element by id globally or optionallly from collection
-  remove: (id, continuation, operation, scope) ->
-    @queries.remove(id, continuation, operation, scope)
-    return
+  # remove: (id, continuation, operation, scope) ->
+  #   @queries.remove(id, continuation, operation, scope)
+  #   return
 
   # Selector commands
 

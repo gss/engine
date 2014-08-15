@@ -19,13 +19,13 @@ Wrapper = (node, args, result, operation, continuation, scope) ->
   if result.length > 0
     if result.length > 1
       result[0].paths = result.splice(1)
-    result[0].operation = @clone operation
+    result[0].operation = operation
     return result[0]
   return result
 
 # Wrap constraint helpers to be used as helpers in code
 Wrapper.compile = (constraints, engine, methods) ->
-  for property, method of constraints
+  for own property, method of constraints
     # Overload constraint definitions so they 
     # can use [variable, ...paths] 
     # in place of regular variables
@@ -38,7 +38,7 @@ Wrapper.compile = (constraints, engine, methods) ->
             overloaded = right = @Wrapper(null, null, right)
           value = method.call(@, left, right, strength, weight)
           if overloaded
-            return Wrapper(null, [left, right], value)
+            return @Wrapper(null, [left, right], value)
           return value
     else 
       (methods ||= {})[property] = method
