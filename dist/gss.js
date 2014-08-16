@@ -21568,7 +21568,9 @@ Domain = (function() {
         if (watcher.domain !== domain || (value == null)) {
           this.Workflow(this.sanitize(this.getRootOperation(watcher)));
         } else {
-          domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
+          if (!watcher.parent.domain || watcher.parent.domain === domain) {
+            domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
+          }
         }
       }
     }
@@ -23524,6 +23526,7 @@ Intrinsic = (function(_super) {
     if (typeof value !== 'number' && this.properties.intrinsic[property]) {
       value = this.properties.intrinsic[property].call(this, element);
     }
+    debugger;
     this.set(null, path, value, void 0, false);
     return value;
   };

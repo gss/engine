@@ -177,7 +177,8 @@ class Domain
           # Re-evaluate expression
           @Workflow(@sanitize(@getRootOperation(watcher)))
         else
-          domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+          if !watcher.parent.domain || watcher.parent.domain == domain
+            domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
     if @workers
       for url, worker of @workers
         if values = worker.values

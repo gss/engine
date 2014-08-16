@@ -78,6 +78,7 @@ class Intrinsic extends Numeric
         value = undefined
     if typeof value != 'number' && @properties.intrinsic[property]
       value = @properties.intrinsic[property].call(@, element)
+    debugger
     @set null, path, value, undefined, false
 
     return value
