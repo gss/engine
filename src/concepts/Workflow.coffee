@@ -116,6 +116,8 @@ Workflow.prototype =
                         @problems.splice(index, 1)
                         @engine.domains.splice @engine.domains.indexOf(other), 1
                         other = domain
+                        i = j + 1
+                        exps = @problems[n]
                     break
                   else if !other.MAYBE
                     @problems[i].push.apply(@problems[i], @problems[n])
@@ -129,7 +131,7 @@ Workflow.prototype =
                 break
             break
 
-        #console.log('grouping', problem, exp, problem == exp)
+        # Force operation domain
         opdomain = @engine.getOperationDomain(problem, other)
         if opdomain && opdomain.displayName != other.displayName
           if (index = @domains.indexOf(opdomain)) == -1
@@ -149,13 +151,15 @@ Workflow.prototype =
         else unless bubbled
           bubbled = true
           exps[i - 1] = problem
+
+
         for domain, counter in @domains
-          continue if domain == other
-          if (other.MAYBE && domain.MAYBE) || domain.displayName == other.displayName
-            problems = @problems[counter]
-            for arg in problem
-              if (j = problems.indexOf(arg)) > -1
-                problems.splice(j, 1)
+          if domain != other || bubbled
+            if (other.MAYBE && domain.MAYBE) || domain.displayName == other.displayName
+              problems = @problems[counter]
+              for arg in problem
+                if (j = problems.indexOf(arg)) > -1
+                  problems.splice(j, 1)
 
         @setVariables(problem, null, opdomain || other)
         return true
@@ -173,18 +177,21 @@ Workflow.prototype =
     return result
 
   setVariables: (problem, target = problem, domain) ->
+    variables = undefined
     for arg in problem
       if arg[0] == 'get'
         if !arg.domain || arg.domain.MAYBE || arg.domain.displayName == domain.displayName
-          (target.variables ||= []).push(@engine.getPath(arg[1], arg[2]))
+          (variables ||= []).push(@engine.getPath(arg[1], arg[2]))
       else if arg.variables
-        (target.variables ||= []).push.apply(target.variables, arg.variables)
+        (variables ||= []).push.apply(variables, arg.variables)
+    target.variables = variables
 
   # Last minute changes to workflow before execution
   optimize: ->
     console.log(JSON.stringify(@problems))
     # Remove empty domains
     for problems, i in @problems by -1
+      break if i == @index
       unless problems.length
         @problems.splice i, 1
         @domains.splice i, 1
@@ -250,7 +257,7 @@ Workflow.prototype =
       return @
     merged = undefined
     priority = @domains.length
-    position = (@index || -1) + 1
+    position = @index + 1
     while (other = @domains[position]) != undefined
       if other
         if other == domain
@@ -272,17 +279,19 @@ Workflow.prototype =
     @optimize()
     console.log("Workflow", @)
     solution = undefined
-    @index ?= 0
-    while (domain = @domains[@index]) != undefined
+    while (domain = @domains[++@index]) != undefined
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
       if result && !result.push
         for own prop, value of result
           (solution ||= {})[prop] = value
-      @index++
 
     return solution || result
 
   getProblems: (callback, bind) ->
     return GSS.clone @problems
+
+  index: -1
+
+
 module.exports = Workflow

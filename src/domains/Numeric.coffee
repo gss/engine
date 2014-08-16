@@ -48,7 +48,7 @@ class Numeric::Methods
   get: 
     command: (operation, continuation, scope, meta, object, path) ->
       method = operation.exported && 'get' || 'watch'
-      console.error(method, object, path, @di)
+      console.error('!!!', method)
       return @[method](object, path, operation, @getContinuation(continuation || ""), scope)
 
 

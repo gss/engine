@@ -47,9 +47,11 @@ class Domain
       @observers   = {}
       @paths       = {}
       @values      = {} unless @hasOwnProperty('values')
+      @objects     = {} if @structured
       @substituted = []
       @constraints = []
-      @domains.push(@)
+      unless @domain == @engine
+        @domains.push(@)
       @MAYBE       = undefined
 
 
@@ -104,7 +106,6 @@ class Domain
     delete @watchers[path] unless watchers.length
 
   get: (object, property) ->
-    debugger
     return @values[@engine.getPath(object, property)]
 
   merge: (object, meta) ->
@@ -112,31 +113,45 @@ class Domain
     if object && !object.push
       if object instanceof Domain
         return# object
-      return @engine.solve @displayName || 'GSS', (domain) ->
-        async = false
-        for path, value of object
-          domain.set undefined, path, value, meta, true
-          if !@callback(domain, path, value, meta)?
-            async = true
-        return true unless async
-      , @
+      if @workflow
+        return @merger(object, meta)
+      else
+        return @engine.solve @displayName || 'GSS', @merger, object, meta, @
 
+  merger: (object, meta, domain = @) ->
+    async = false
+    for path, value of object
+      domain.set undefined, path, value, meta
 
   # Set key-value pair or merge object
-  set: (object, property, value, meta, silent) ->
+  set: (object, property, value, meta) ->
     path = @engine.getPath(object, property)
     old = @values[path]
     return if old == value
+
+    # Register props by id
+    if @structured
+      if (j = path.indexOf('[')) > -1
+        id = path.substring(0, j)
+        obj = @objects[id] ||= {}
+        prop = path.substring(j + 1, path.length - 1)
+        if value?
+          obj[prop] = value
+        else
+          delete obj[prop]
+          if !Object.keys(obj).length
+            delete @objects[id]
 
     if value?
       @values[path] = value
     else
       delete @values[path]
     # notify subscribers
-    unless silent
-      async = false
+    if @workflow
+      @engine.callback(@, path, value, meta)
+    else
       @engine.solve @displayName || 'GSS', (domain) ->
-        return @callback(domain, path, value, meta)
+        @callback(domain, path, value, meta)
       , @
 
     return value
@@ -178,7 +193,7 @@ class Domain
               op = op.parent
           @Workflow(@sanitize(@getRootOperation(op)))
 
-    @
+    return
 
   # Export values in a plain object. Use for tests only
   toObject: ->
@@ -189,36 +204,33 @@ class Domain
     return object
 
   compare: (a, b) ->
-    if typeof a == 'object'
-      return unless typeof b == 'object'
-      if a[0] == 'value' && b[0] == 'value'
-        return unless a[3] == b[3]
-      else if a[0] == 'value'
-        return a[3] == b.toString()
-      else if b[0] == 'value'
-        return b[3] == a.toString()
-      else 
-        for value, index in a
-          return unless @compare(b[index], value)
-        return unless b[a.length] == a[a.length]
-    else
-      return if typeof b == 'object'
-      return unless a == b
+    if a != b
+      if typeof a == 'object'
+        return unless typeof b == 'object'
+        if a[0] == 'value' && b[0] == 'value'
+          return unless a[3] == b[3]
+        else if a[0] == 'value'
+          return a[3] == b.toString()
+        else if b[0] == 'value'
+          return b[3] == a.toString()
+        else 
+          for value, index in a
+            return unless @compare(b[index], value)
+          return unless b[a.length] == a[a.length]
+      else
+        return if typeof b == 'object'
     return true
 
   constrain: (constraint) ->
-    console.info(JSON.stringify(constraint.operation),)
+    console.info(JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
     if constraint.paths
-      matched = undefined
       for path in constraint.paths
-        if path[0] == 'value' && !matched
-          matched = true
+        if path[0] == 'value'
           for other in @constraints
             if @compare(other.operation, constraint.operation)
               console.info('updating constraint', other.operation, '->', constraint.operation)
-                
               @unconstrain(other)
-      matched = undefined
+
       for other in @substituted by -1
         if @compare(other.operation, constraint.operation)
           console.info('updating constraint', other.operation, '->', constraint.operation)
@@ -228,6 +240,10 @@ class Domain
         if typeof path == 'string'
           (@paths[path] ||= []).push(constraint)
         else if path[0] == 'value'
+          if path[3]
+            bits = path[3].split(',')
+            if bits[0] == 'get'
+              (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
         else if path.name
           length = (path.constraints ||= []).push(constraint)
@@ -238,7 +254,6 @@ class Domain
               (@added ||= {})[path.name] = 0
 
     if typeof (name = constraint[0]) == 'string'
-      debugger
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
     @constraints.push(constraint)

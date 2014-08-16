@@ -228,75 +228,77 @@ describe 'GSS commands', ->
     
     describe 'adds & removes -', ->
       it 'add to class', (done) ->
-        scope.innerHTML = """
-          <div class="box" id="12322">One</div>
-          <div class="box" id="34222">One</div>
-        """
         count = 0
         listener = (e) ->
           count++
           if count is 1
-            expect(engine.expressions.lastOutput).to.eql [
-                ['==', ['get','$12322','x','.box$12322'], 100]
-                ['==', ['get','$34222','x','.box$34222'], 100]
+            expect(engine.workflown.getProblems()).to.eql [
+                [['==', ['get','$12322','x','.box$12322'], 100]]
+                [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
             scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')            
           else if count is 2
-            expect(engine.expressions.lastOutput).to.eql [
-                ['==', ['get','$35346','x','.box$35346'], 100]
+            expect(engine.workflown.getProblems()).to.eql [
+                [['==', ['get','$35346','x','.box$35346'], 100]]
               ]
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
             ['==', ['get',['$class','box'],'x'], 100]
           ]
-
-      it 'removed from dom', (done) ->
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
           <div class="box" id="34222">One</div>
         """
+
+      it 'removed from dom', (done) ->
         count = 0
         listener = (e) ->
           count++
           if count is 1
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['==', ['get','$12322','x','.box$12322'], 100]
-                ['==', ['get','$34222','x','.box$34222'], 100]
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [['==', ['get','$12322','x','.box$12322'], 100]]
+                [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
             res = engine.$id('34222')
             res.parentNode.removeChild res
           else if count is 2
-            chai.expect(engine.expressions.lastOutput).to.eql [
-              ['remove', '.box$34222'] # this should be the only command
+            chai.expect(engine.workflown.getProblems()).to.eql [
+              [['remove', '.box$34222']]
+              ['remove', '.box$34222']
             ]
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
             ['==', ['get',['$class','box'],'x'], 100]
           ]
+        scope.innerHTML = """
+          <div class="box" id="12322">One</div>
+          <div class="box" id="34222">One</div>
+        """
 
       it 'removed from selector', (done) ->
         count = 0
         listener = (e) ->
           count++
           if count is 1
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['==', ['get','$12322','x','.box$12322'], 100]
-                ['==', ['get','$34222','x','.box$34222'], 100]
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [['==', ['get','$12322','x','.box$12322'], 100]]
+                [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
             el = engine.$id('34222')
             el.classList.remove('box')
 
           else if count is 2
-            chai.expect(engine.expressions.lastOutput).to.eql [
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [['remove', '.box$34222']]
                 ['remove', '.box$34222']
               ]
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
             ['==', ['get',['$class','box'],'x'], 100]
           ]
@@ -317,19 +319,34 @@ describe 'GSS commands', ->
           count++
           if count is 1
             el = engine.$id('box1')
-            GSS.setStyle el, "width", "1110px"
-            console.log('solved', el, el.style.width)
+            engine.intrinsic.restyle el, "width", "1110px"
+            console.log('solve', el, el.style.width)
             
           else if count is 2     
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]' ,1110, 'required']
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [
+                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                ],
+                [
+                  ["==",
+                    ["get", "$box1", "height",          ".box$box1→#box1"]
+                    ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                  ]
+                ],
+                [
+                  ["==",
+                    ["get", "$box2", "height",          ".box$box2→#box1"]
+                    ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                  ]
+                ]
               ]
             chai.expect(engine.values['$box1[intrinsic-width]']).to.equal 1110
             chai.expect(engine.values['$box2[height]']).to.equal 1110
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
 
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
           ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
@@ -348,9 +365,9 @@ describe 'GSS commands', ->
             chai.expect(engine.expressions.lastOutput).to.eql [
                 ['suggest', '$box1[intrinsic-width]', 111, 'required']
               ]
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
           ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
@@ -376,9 +393,9 @@ describe 'GSS commands', ->
             chai.expect(engine.expressions.lastOutput).to.eql [
                 ['suggest', '$box1[intrinsic-width]', 0, 'required']
               ]
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
           ['==', ['get',['$class','box'],'height'],['get',['$id','box1'],'intrinsic-width']]
         ]
@@ -404,9 +421,9 @@ describe 'GSS commands', ->
             expect(engine.values["$p-text[width]"]).to.eql 100
             expect(engine.values["$p-text[intrinsic-height]"]).to.eql(16)
             expect(engine.values["$p-text[x-height]"]).to.eql(16)
-            engine.removeEventListener 'solved', listener
+            engine.removeEventListener 'solve', listener
             done()
-        engine.addEventListener 'solved', listener
+        engine.addEventListener 'solve', listener
         engine.solve [
           ['==', ['get',['$id','p-text'],'width'],  100]
           ['==', ['get',['$id','p-text'],'x-height'], ['get',['$id','p-text'],'intrinsic-height']]
@@ -443,7 +460,7 @@ describe 'GSS commands', ->
             ]
           ]
         ]
-        engine.once 'solved', ->
+        engine.once 'solve', ->
           chai.expect(engine.values["$thing1[width]"]).to.eql 100
           chai.expect(engine.values["$thing2[width]"]).to.eql 140
           chai.expect(engine.values["$thing3[width]"]).to.eql 180
@@ -456,7 +473,7 @@ describe 'GSS commands', ->
         """
       
       it '@chain .thing right()left', (done) ->
-        engine.once 'solved', ->
+        engine.once 'solve', ->
           chai.expect(engine.values["$thing1[width]"]).to.eql 100
           done()
     

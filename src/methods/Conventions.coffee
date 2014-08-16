@@ -164,7 +164,7 @@ class Conventions
 
 
     path = @getPath(scope, property)
-    if scope && property && @intrinsic.properties[path]?
+    if scope && property && @intrinsic?.properties[path]?
       domain = @intrinsic
       debugger
     else
@@ -172,6 +172,11 @@ class Conventions
         if d.values.hasOwnProperty(path)
           domain = d
           break
+        if d.substituted
+          for constraint in d.substituted
+            if constraint.substitutions?[path]
+              domain = d
+              break
     unless domain
       if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)

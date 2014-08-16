@@ -124,7 +124,8 @@ class Engine extends Domain.Events
     if result
       @assumed.merge result
     @inputs = result
-    console.log('inputs', result)
+    console.log('inputs')
+    console.info(result)
     if expressions.length
       @provide expressions
 
@@ -203,6 +204,10 @@ class Engine extends Domain.Events
 
   solved: (solution) ->
     return solution unless typeof solution == 'object'
+
+    #@merge solution
+    debugger
+
     @console.info('Solution\t   ', solution)
 
     # Trigger events on engine and scope node
@@ -217,8 +222,7 @@ class Engine extends Domain.Events
     if solution.operation
       return @engine.workflow.provide solution
     if !solution.push
-      if @merge('result', solution)
-        return @solved(solution)
+      return @solved(solution)
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
@@ -296,11 +300,17 @@ class Engine extends Domain.Events
   # Compile initial domains and shared engine features 
   precompile: ->
     if @constructor::running == undefined
+      console.error(@constructor::helps)
       for property, method of @Methods::
         @constructor::[property] ||= 
-        @constructor[property] ||= Engine::Method(method, true, property)
+        @constructor[property] ||= Engine::Method(method, property)
       @constructor::compile()
     @Domain.compile(@Domains,   @)
+    for name, domain of @Domains
+      if domain::helps
+        for property, method of domain::Methods::
+          @constructor::[property] ||= 
+          @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @Workflow = Engine::Workflow.compile(@)
 
   # Comile user provided features specific to this engine

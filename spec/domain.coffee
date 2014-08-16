@@ -35,9 +35,28 @@ describe 'Domain', ->
 			]).to.eql 
 				result: 667
 
+		it 'should calculate simplified variable', ->
+			window.engine = new GSS({
+				a: 666
+			})
+
+			expect(engine.solve [
+				['==',
+					['get', 'result']
+					['get', 'a']
+				]
+			]).to.eql 
+				result: 666
+
+			expect(
+				engine.solve a: null
+			).to.eql 
+				a: 0
+				result: 0
+
 
 		it 'should simplify partially', ->
-			engine = new GSS({
+			window.$engine = engine = new GSS({
 				a: 555
 			})
 
@@ -190,7 +209,7 @@ describe 'Domain', ->
 						expect(solution).to.eql 
 							result: 0
 							x: 0
-							
+
 
 
 						done()
@@ -303,7 +322,7 @@ describe 'Domain', ->
 				result: 0
 				a: -1
 				b: 4
-			
+
 			# Add to 1st graph
 			expect(engine.solve [
 				['>='
@@ -335,7 +354,7 @@ describe 'Domain', ->
 			]).to.eql
 				c: 9
 				b: 3
-
+			debugger
 			# merge two graphs
 			expect(engine.solve [
 				['<=', 

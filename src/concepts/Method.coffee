@@ -6,10 +6,10 @@
 # functions that retain all definition properties, 
 # but can be used outside of expressions (e.g. in tests or user scripts)
 
-Method = (method, reference) ->
+Method = (method, reference, bind) ->
   return unless method
   if typeof method == 'object' && !method.exec
-    helper = Method.Helper(method, false, reference)
+    helper = Method.Helper(method, false, reference, bind)
     for key, value of method
       helper[key] = value
     return helper
@@ -19,15 +19,16 @@ Method = (method, reference) ->
 # Exports given methods as self-contained functions 
 # to be used as helpers in user scripts and specs
 
-Method.Helper = (method, scoped, displayName)  ->
-  if typeof method == 'function'
-    func = method
+Method.Helper = (method, scoped, displayName, bound)  ->
   helper = (scope) ->
     args = Array.prototype.slice.call(arguments, 0)
     length = arguments.length
+    that = (bound || @)
+    if typeof that == 'string'
+      that = @[that]
     if scoped || method.serialized
       unless scope && scope.nodeType
-        scope = @scope || document
+        scope = that.scope || document
         if typeof method[args.length] == 'string'
           context = scope
         else
@@ -36,18 +37,20 @@ Method.Helper = (method, scoped, displayName)  ->
         if typeof method[args.length - 1] == 'string'
           context = scope = args.shift()
 
+    if typeof method == 'function'
+      func = method
     unless fn = func
       if typeof (func = method[args.length]) == 'function'
         fn = func
       else
         unless func && (fn = scope[func])
-          if fn = @methods[func]
-            context = @
+          if fn = that.methods[func]
+            context = that
           else
             fn = method.command
             args = [null, args[2], null, null, args[0], args[1]]
 
-    return fn.apply(context || @, args)
+    return fn.apply(context || that, args)
   if displayName
     helper.displayName = displayName 
   return helper

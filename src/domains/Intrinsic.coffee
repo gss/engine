@@ -12,6 +12,7 @@ Native = require('../methods/Native')
 debugger
 class Intrinsic extends Numeric
   priority: 100
+  structured: true
   
   Types:       require('../methods/Types')
   Units:       require('../methods/Units')
@@ -39,7 +40,7 @@ class Intrinsic extends Numeric
         return computed[id] = window.getComputedStyle(element)
     return old
 
-  set: (element, property) -> 
+  restyle: (element, property, value = '') -> 
     element.style[property] = value
 
   get: (element, property) ->
@@ -48,10 +49,11 @@ class Intrinsic extends Numeric
       element = undefined
     else
       path = @getPath(element, property)
-    bits = path.split('[')
-    element ||= bits[0]
-    property = bits[1].substring(0, bits[1].length - 1)
-
+    if (j = path.indexOf('[')) > -1
+      element ||= path.substring(0, j)
+      property = path.substring(j + 1)
+    else
+      property = path
 
     if element && property && (prop = @properties[path])?
       if typeof prop == 'function'
@@ -62,12 +64,22 @@ class Intrinsic extends Numeric
       element = @identity.solve(element)
     if (index = property.indexOf('intrinsic-')) > -1
       if @properties[property]
-        return @properties[property].call(@, element)
-      property = property.substring(index + 10)
+        value = @properties[property].call(@, element)
+      property = property.substring(index + 10, property.length - 1)
+
     prop = @camelize(property)
     value = element.style[property]
     if value == ''
       value = @getComputedStyle(element)[prop]
+    if typeof value == 'string'
+      if value.indexOf('px') > -1
+        value = parseInt(value)
+      else
+        value = undefined
+    if typeof value != 'number' && @properties.intrinsic[property]
+      value = @properties.intrinsic[property].call(@, element)
+    @set null, path, value, undefined, false
+
     return value
     #value = @toPrimitive(value, null, null, null, element, prop)
     #if value.push && typeof value[0] == 'object'

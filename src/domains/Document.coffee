@@ -12,6 +12,8 @@ class Document extends Abstract
   Queries:     require('../modules/Queries')
   Positions:   require('../modules/Positions')
 
+  helps: true
+
   constructor: () ->
     @engine.queries   ||= new @Queries(@)
     @engine.positions ||= new @Positions(@)
