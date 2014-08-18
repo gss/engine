@@ -28,8 +28,8 @@ class Intrinsic extends Numeric
                require('../properties/Styles')
 
   constructor: ->
-    @types              = new @Types(@)
-    @units              = new @Units(@)
+    @types = new @Types(@)
+    @units = new @Units(@)
 
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
@@ -93,22 +93,22 @@ class Intrinsic extends Numeric
   # schedule a reflow on that element. If another element is already
   # scheduled for reflow, reflow shared parent element of both elements 
   validate: (node) ->
-    return unless subscribers = @_subscribers
+    return unless subscribers = @objects
     reflown = undefined
     while node
       if node == @scope
-        if @reflown
-          reflown = @getCommonParent(reflown, @reflown)
+        if @engine.workflow.reflown
+          reflown = @getCommonParent(reflown, @engine.workflow)
         else
           reflown = @scope
         break
-      if node == @reflown
+      if node == @engine.workflow.reflown
         break 
       if id = node._gss_id
         if properties = subscribers[id]
           reflown = node
       node = node.parentNode
-    @reflown = reflown
+    @engine.workflow.reflown = reflown
 
   # Compute value of a property, reads the styles on elements
   verify: (node, property, continuation, old, returnPath, primitive) ->
@@ -177,26 +177,59 @@ class Intrinsic extends Numeric
 
     return suggestions
 
-  update: (node, x, y, styles, full) ->
-    return unless @_subscribers
-    if id = node._gss_id
-      if properties = @_subscribers[id]
-        for prop in properties
-          continue if full && (prop == 'width' || prop == 'height')
 
-          path = id + "[intrinsic-" + prop + "]"
+  # Iterate elements and measure intrinsic offsets
+  each: (parent, callback, x,y, offsetParent, a,r,g,s) ->
+    scope = @engine.scope
+    parent ||= scope
+
+    # Calculate new offsets for given element and styles
+    if offsets = callback.call(@, parent, x, y, a,r,g,s)
+      x += offsets.x || 0
+      y += offsets.y || 0
+
+    if parent.offsetParent == scope
+      x -= scope.offsetLeft
+      y -= scope.offsetTop
+    else if parent != scope
+      if !offsets 
+        measure = true
+
+    # Recurse to children
+    if parent == document
+      parent = document.body
+    child = parent.firstChild
+    index = 0
+    while child
+      if child.nodeType = 1
+        if measure && index == 0 && child.offsetParent == parent
+          x += parent.offsetLeft + parent.clientLeft
+          y += parent.offsetTop + parent.clientTop
+          offsetParent = parent
+        @each(child, callback, x, y, offsetParent, a,r,g,s)
+        index++
+
+      child = child.nextSibling
+    return a
+
+  update: (node, x, y, full) ->
+    return unless @objects
+    if id = node._gss_id
+      if properties = @objects[id]
+        for prop of properties
+          continue if full && (prop == 'width' || prop == 'height')
         
           switch prop
-            when "x"
-              (@buffer ||= {})[path] = x + node.offsetLeft
-            when "y"
-              (@buffer ||= {})[path] = y + node.offsetTop
-            when "width"
-              (@buffer ||= {})[path] = node.offsetWidth
-            when "height"
-              (@buffer ||= {})[path] = node.offsetHeight
+            when "x", "intrinsic-x"
+              @set id, prop, x + node.offsetLeft
+            when "y", "intrinsic-y"
+              @set id, prop, y + node.offsetTop
+            when "width", "intrinsic-width"
+              @set id, prop, node.offsetWidth
+            when "height", "intrinsic-height"
+              @set id, prop, node.offsetHeight
             else
-              @values.set null, path, @getStyle(node, prop)
+              @set id, prop, @getStyle(node, @engine.getIntrinsicProperty(prop))
 
 
   @condition: ->

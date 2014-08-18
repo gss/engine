@@ -5,84 +5,29 @@ Revalidates intrinsic measurements, optionally schedules
 another solver pass
 
 ###
-Domain = require '../concepts/Domain'
-
-class Positions extends Domain
+class Positions
   constructor: (@engine) -> 
 
-  # Receive solved styles
-  solve: (data) ->
-    @lastInput = JSON.parse JSON.stringify data
-
-    intrinsic = null
-
-    # Filter out measurements 
-    for path, value of data
-      if property = @engine.getIntrinsicProperty(path)
-        data[path] = undefined
-        if property != 'intrinsic-x' && property != 'intrinsic-y'
-          (intrinsic ||= {})[path] = value
-
-
-    positioning = @render(data)
-    
-    # Re-measure elements
-    if intrinsic
-      for path, value of intrinsic
-        data[path] = @intrinsic.solve(path, undefined, value, positioning, true)
-
-    # Merge data from previous pass
-    if @data
-      for path, value of @data
-        if data[path] == undefined && value != undefined
-          data[path] = value
-      @data = undefined
-
-    return @data = data
-
-
-  remove: (id) ->
-    delete @[id]
-
-  provide: (id, property, value, positioning, intrinsic) ->
+  provide: (id, property, value, positioning) ->
     # parse $id[property] as [id, property]
-    if property == undefined
-      path = id
-      last = id.lastIndexOf('[')
-      property = path.substring(last + 1, id.length - 1)
-      id = id.substring(0, last)
+    unless id?
+      path = property
+      last = path.lastIndexOf('[')
+      return if last == -1
+      property = path.substring(last + 1, path.length - 1)
+      id = path.substring(0, last)
 
     return unless id.charAt(0) != ':'
-    unless element = @engine.ids[id]
+    unless element = @engine.identity[id]
       return unless element = @engine.getElementById(@engine.scope, id.substring(1))
-    positioner = this.positioners[property]
-    if positioning && positioner
+    
+    if positioning && (property == 'x' || property == 'y')
       (positioning[id] ||= {})[property] = value
     else
-      # Re-measure and re-suggest intrinsics if necessary
-      if intrinsic
-        return @engine.measurements.get(element,  property, undefined, value)
-        
-      if positioner
-        positioned = positioner(element)
-        if typeof positioned == 'string'
-          property = positioned
-      camel = (@camelized ||= {})[property] ||= @engine.camelize(property)
-      style = element.style
-      if style[camel] != undefined
-        if typeof value == 'number' && (camel != 'zIndex' && camel != 'opacity')
-          pixels = Math.round(value) + 'px'
-        if (positioner)
-          if !style[camel]
-            if (style.positioning = (style.positioning || 0) + 1) == 1
-              style.position = 'absolute'
-          else unless value?
-            unless --style.positioning 
-              style.position = ''
-        style[camel] = pixels ? value
-    value
+      @engine.intrinsic.restyle(element, property, value)
 
-  render: (data, node) ->
+  solve: (data, node) ->
+    node ||= @reflown || @engine.scope
     @engine.queries.disconnect()
 
     # Apply changed styles in batch, 
@@ -91,10 +36,10 @@ class Positions extends Domain
     if data
       for path, value of data
         unless value == undefined
-          @provide path, undefined, value, positioning
+          @provide null, path, value, positioning
 
     # Adjust positioning styles to respect element offsets 
-    @adjust(node, null, null, positioning, null, !!data)
+    @engine.intrinsic.each(node, @placehold, null, null, null, positioning, !!data)
 
     # Set new positions in bulk (Reflow)
     for id, styles of positioning
@@ -102,40 +47,10 @@ class Positions extends Domain
         @provide id, prop, value
         
     @engine.queries.connect()
-    return positioning
-
-  # Position things
-  adjust: (parent, x = 0, y = 0, positioning, offsetParent, full) ->
-    scope = @engine.scope
-    parent ||= scope
-    # Calculate new offsets for given element and styles
-    if offsets = @placehold(positioning, parent, x, y, full)
-      x += offsets.x || 0
-      y += offsets.y || 0
-
-    # Select all children
-    if parent == document
-      parent = document.body
-    children = @engine.commands['$>'][1](parent);
-
-    if parent.offsetParent == scope
-      x -= scope.offsetLeft
-      y -= scope.offsetTop
-    else if parent != scope
-      # When rendering a positioned element, measure its offsets
-      if !offsets && children?.length && children[0].offsetParent == parent
-        x += parent.offsetLeft + parent.clientLeft
-        y += parent.offsetTop + parent.clientTop
-        offsetParent = parent
-
-    # Position children
-    if children
-      for child in children
-        @adjust(child, x, y, positioning, offsetParent, full)
-    return positioning
+    return data
 
   # Calculate offsets according to new values (but dont set anything)
-  placehold: (positioning, element, x, y, full) ->
+  placehold: (element, x, y, positioning, full) ->
     offsets = undefined
     if uid = element._gss_id
       # Adjust newly set positions to respect parent offsets
@@ -160,13 +75,9 @@ class Positions extends Domain
                 (offsets ||= {}).y = value - y
 
       # Let other measurements hook up into this batch
-      @engine.measurements.update(element, x, y, styles, full)
+      @engine.intrinsic.update(element, x, y, full)
 
 
     return offsets
-    
-  positioners:
-    x: -> 'left'
-    y: -> 'top'
-    
+
 module.exports = Positions

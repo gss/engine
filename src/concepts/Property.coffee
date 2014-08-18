@@ -22,6 +22,7 @@ Property = (property, reference, properties) ->
 
 Property.compile = (properties, engine) ->
   properties.engine ||= engine
+  console.log(properties, 444444)
   for own key, property of properties
     continue if key == 'engine'
     prop = @call(engine, property, key, properties)

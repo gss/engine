@@ -192,19 +192,25 @@ class Engine extends Domain.Events
       else
         @workflown = workflow
         solution = workflow.each @resolve, @
+
+    return solution unless @engine == @
+
+    # Apply styles
+    if solution
+      @applier?.solve(solution)
+
+    # Remeasure intrinsics
+    if solution || @workflow.reflown
+      @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
+
+    solution = workflow.each @resolve, @, solution
+
     @engine.workflow = old
-
-    if !solution || @engine != @
-      return solution
-
-    if @applier && !@applier.solve(solution)
-      return
 
     return @solved(solution)
 
   solved: (solution) ->
     return solution unless typeof solution == 'object'
-
     #@merge solution
     debugger
 

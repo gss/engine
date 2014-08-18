@@ -31,8 +31,8 @@ Workflower = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            console.log('phramed', d, arg)
             workload = @Workflow(d, arg)
+            console.log('phramed', d, arg, workload)
             break
 
       if workflow && workflow != workload
@@ -189,16 +189,36 @@ Workflow.prototype =
   # Last minute changes to workflow before execution
   optimize: ->
     console.log(JSON.stringify(@problems))
-    # Remove empty domains
-    for problems, i in @problems by -1
-      break if i == @index
-      unless problems.length
-        @problems.splice i, 1
-        @domains.splice i, 1
-      for problem in problems
-        problem.domain = @domains[i]
+    @compact()
 
-    # Merge connected graphs 
+    if @connect()
+      @compact()
+
+    @defer()
+
+    console.log(JSON.stringify(@problems))
+
+    @
+
+  # Defer substitutions to thread
+  defer: ->
+    for domain, i in @domains by -1
+      for j in [i + 1 ... @domains.length]
+        if (url = @domains[j]?.url) && document?
+          for prob, p in @problems[i] by -1
+            while prob
+              problem = @problems[j]
+              if problem.indexOf(prob) > -1
+
+                @problems[i][p] = @unwrap @problems[i][p], @domains[j], [], @problems[j]
+                break
+              prob = prob.parent
+    return
+
+
+  # Merge connected graphs 
+  connect: ->
+    connected = undefined
     for domain, i in @domains by -1
       problems = @problems[i]
       @setVariables(problems, null, domain)
@@ -213,27 +233,15 @@ Workflow.prototype =
                   @setVariables(@problems[j], null, domain)
                   @problems.splice(j, 1)
                   @domains.splice(j, 1)
+                  connected = true
                   break
                 else
                   framed = domain.frame && domain || other
                   console.log(variable, 'framed')
+    return connected
 
-
-
-    # Defer substitutions to thread
-    for domain, i in @domains by -1
-      for j in [i + 1 ... @domains.length]
-        if (url = @domains[j]?.url) && document?
-          for prob, p in @problems[i] by -1
-            while prob
-              problem = @problems[j]
-              if problem.indexOf(prob) > -1
-
-                @problems[i][p] = @unwrap @problems[i][p], @domains[j], [], @problems[j]
-                break
-              prob = prob.parent
-
-    # Remove empty domains
+  # Remove empty domains again
+  compact: ->
     for problems, i in @problems by -1
       unless problems.length
         @problems.splice i, 1
@@ -241,11 +249,7 @@ Workflow.prototype =
       for problem in problems by -1
         domain = @domains[i]
         problem.domain = domain
-
-
-    console.log(JSON.stringify(@problems))
-
-    @
+    return
 
 
 
@@ -275,10 +279,10 @@ Workflow.prototype =
 
     return @
 
-  each: (callback, bind) ->
+  each: (callback, bind, solution = @solution) ->
+    return solution unless @problems[@index + 1]
     @optimize()
     console.log("Workflow", @)
-    solution = undefined
     while (domain = @domains[++@index]) != undefined
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
@@ -286,7 +290,7 @@ Workflow.prototype =
         for own prop, value of result
           (solution ||= {})[prop] = value
 
-    return solution || result
+    return (solution || result)
 
   getProblems: (callback, bind) ->
     return GSS.clone @problems

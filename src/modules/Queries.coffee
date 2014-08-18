@@ -10,9 +10,8 @@
  State:  - `@[path]`: elements and collections by selector path
          - `@watchers[id]`: dom queries by element id 
 ###
-Domain = require('../concepts/Domain')
 
-class Queries extends Domain
+class Queries
   options:
     subtree: true
     childList: true
@@ -404,7 +403,7 @@ class Queries extends Domain
     @unwatch(@engine.scope._gss_id, path)
 
     if !result || result.length == undefined
-      @provide(['remove', @engine.getContinuation(path)])
+      @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 
   # Update bindings of two plural collections
@@ -458,9 +457,9 @@ class Queries extends Domain
       # not too good
       contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
       if operation.path != operation.key
-        @provide operation.parent, prefix + operation.path, scope, @engine.UP, operation.index, pair[1]
+        @engine.provide operation.parent, prefix + operation.path, scope, @engine.UP, operation.index, pair[1]
       else
-        @provide operation, contd, scope, @engine.UP, true, true
+        @engine.provide operation, contd, scope, @engine.UP, true, true
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path)
 

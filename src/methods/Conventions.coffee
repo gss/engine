@@ -162,11 +162,9 @@ class Conventions
       return operation.domain
     [cmd, scope, property] = variable = operation
 
-
     path = @getPath(scope, property)
     if scope && property && @intrinsic?.properties[path]?
       domain = @intrinsic
-      debugger
     else
       for d in @domains
         if d.values.hasOwnProperty(path)
@@ -181,7 +179,6 @@ class Conventions
       if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
         if (domain = @[prefix])
-          debugger
           unless domain instanceof @Domain
             domain = undefined
 

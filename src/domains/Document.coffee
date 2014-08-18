@@ -17,6 +17,7 @@ class Document extends Abstract
   constructor: () ->
     @engine.queries   ||= new @Queries(@)
     @engine.positions ||= new @Positions(@)
+    @engine.applier   ||= @engine.positions
     @engine.scope     ||= document
     
     if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1

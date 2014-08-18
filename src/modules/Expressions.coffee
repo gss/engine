@@ -7,9 +7,7 @@
 # * Input: Engine, reads commands
 # * Output: Engine, outputs results, leaves out unrecognized commands as is
 
-Domain = require '../concepts/Domain'
-
-class Expressions extends Domain
+class Expressions
   displayName: 'Expressions'
 
   constructor: (@engine) ->
@@ -197,7 +195,7 @@ class Expressions extends Domain
 
               if result.length == 1
                 result = result[0] 
-              return @provide result
+              return @engine.provide result
           else if parent && (ascender? || 
               (result.nodeType && 
               (!operation.def.hidden || parent.tail == parent)))
@@ -215,9 +213,9 @@ class Expressions extends Domain
         solution.domain    = operation.domain
         solution.index     = operation.index
         parent[operation.index] = solution
-        return @provide solution
+        return @engine.provide solution
       else
-        return @provide result
+        return @engine.provide result
 
     # Ascend without recursion (math, regular functions, constraints)
     return result
