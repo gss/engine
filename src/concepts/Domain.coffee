@@ -169,6 +169,14 @@ class Domain
     exps.index  = index
     exps
 
+  orphanize: (operation) ->
+    if operation.domain
+      delete operation.domain
+    for arg in operation
+      if arg.push
+        @orphanize arg
+    operation
+
   callback: (domain, path, value, meta) ->
     if watchers = domain.watchers?[path]
       for watcher, index in watchers by 3
@@ -180,13 +188,12 @@ class Domain
           if watcher.parent.domain == domain
             domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
           else
-            @expressions.ascend watcher, watcher[index + 1], value, watchers[index + 2], meta
+            @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
           
     if @workers
       for url, worker of @workers
         if values = worker.values
           if values.hasOwnProperty(path)
-            debugger
             @Workflow(worker, [['value', value, path]])
             console.error(path, @workflow)
     if variable = @variables[path]
@@ -308,7 +315,7 @@ class Domain
             for variable in other.paths
               if typeof variable != 'string'
                 if constraint.paths.indexOf(variable) > -1
-                  if groupped
+                  if groupped && groupped != group
                     groupped.push.apply(groupped, group)
                     groups.splice(group.indexOf(group), 1)
                   else
@@ -342,7 +349,6 @@ class Domain
         result[path] = value
         @values[path] = value
     if @nullified
-      debugger
       for path of @nullified
         result[path] = @assumed.values[path] ? @intrinsic.values[path] ? null
         if @values.hasOwnProperty(path)
@@ -354,7 +360,10 @@ class Domain
         @values[path] ?= 0
       @added = undefined
     if separated?.length
-      @engine.provide separated
+      if separated.length == 1
+        separated = separated[0]
+      @engine.provide @orphanize separated
+    console.log 'provide', result
     return result
 
 

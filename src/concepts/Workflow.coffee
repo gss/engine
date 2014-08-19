@@ -63,18 +63,41 @@ Workflower = (engine) ->
 Workflow = Workflower()
 Workflow.compile = Workflower
 Workflow.prototype =
+  substitute: (parent, operation, solution) ->
+    if parent == operation
+      return solution
+    for child, index in parent
+      if child.push
+        if child == operation 
+          parent[index] = solution
+        else
+          @substitute(child, operation, solution)
+
+    return parent
+
+
+
   provide: (solution) ->
-    return if solution.operation.exported
-    operation = solution.domain.getRootOperation(solution.operation.parent)
-    domain = operation.domain
-    index = @domains.indexOf(domain)
-    if index == -1
-      index += @domains.push(domain)
-    if problems = @problems[index]
-      if problems.indexOf(operation) == -1
-        problems.push operation
+    return if (operation = solution.operation).exported
+    parent = operation.parent
+    # Provide solution for constraint that was set before
+    if domain = parent.domain
+      root = solution.domain.getRootOperation(parent)
+      index = @domains.indexOf(domain, @index + 1)
+      if index == -1
+        index += @domains.push(domain)
+      if problems = @problems[index]
+        if problems.indexOf(root) == -1
+          problems.push root
+      else
+        @problems[index] = [root]
+    # Update queued constraint that was not evaluated yet
     else
-      @problems[index] = [operation]
+      for problems, index in @problems
+        while parent
+          if (i = problems.indexOf(parent)) > -1
+            @substitute(problems[i], operation, solution)
+          parent = parent.parent
     return
 
   # Group expressions
@@ -135,7 +158,6 @@ Workflow.prototype =
         opdomain = @engine.getOperationDomain(problem, other)
         if opdomain && opdomain.displayName != other.displayName
           if (index = @domains.indexOf(opdomain)) == -1
-            debugger
             index = @domains.push(opdomain) - 1
             @problems[index] = [problem]
           else
@@ -203,6 +225,7 @@ Workflow.prototype =
   # Defer substitutions to thread
   defer: ->
     for domain, i in @domains by -1
+      break if i == @index
       for j in [i + 1 ... @domains.length]
         if (url = @domains[j]?.url) && document?
           for prob, p in @problems[i] by -1
@@ -220,6 +243,9 @@ Workflow.prototype =
   connect: ->
     connected = undefined
     for domain, i in @domains by -1
+      if i == @index
+        debugger
+      break if i == @index
       problems = @problems[i]
       @setVariables(problems, null, domain)
       if vars = problems.variables
@@ -233,6 +259,8 @@ Workflow.prototype =
                   @setVariables(@problems[j], null, domain)
                   @problems.splice(j, 1)
                   @domains.splice(j, 1)
+                  if @index >= j
+                    --@index
                   connected = true
                   break
                 else
@@ -243,11 +271,15 @@ Workflow.prototype =
   # Remove empty domains again
   compact: ->
     for problems, i in @problems by -1
+      break if i == @index
       unless problems.length
         @problems.splice i, 1
         @domains.splice i, 1
+        if @index >= i
+          --@index
       for problem in problems by -1
         domain = @domains[i]
+        debugger unless domain
         problem.domain = domain
     return
 
@@ -289,6 +321,7 @@ Workflow.prototype =
       if result && !result.push
         for own prop, value of result
           (solution ||= {})[prop] = value
+    @index--
 
     return (solution || result)
 

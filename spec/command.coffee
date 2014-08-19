@@ -149,7 +149,7 @@ describe 'GSS commands', ->
 
         box0 = scope.getElementsByClassName('box')[0]
         box0.parentNode.removeChild(box0)
-        
+
         engine.once 'solve', ->
           chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
             [["remove",".box$12322"]],
@@ -315,7 +315,6 @@ describe 'GSS commands', ->
       it 'element resized by style change', (done) ->
         count = 0
         el = null
-        window.$engine = engine
         listener = (e) ->
           count++
           if count is 1
@@ -362,8 +361,23 @@ describe 'GSS commands', ->
           if count is 1           
             engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]', 111, 'required']
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [
+                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                ],
+                [
+                  ["==",
+                    ["get", "$box1", "height",          ".box$box1→#box1"]
+                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                  ]
+                ],
+                [
+                  ["==",
+                    ["get", "$box2", "height",          ".box$box2→#box1"]
+                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                  ]
+                ]
               ]
             engine.removeEventListener 'solve', listener
             done()
@@ -385,13 +399,43 @@ describe 'GSS commands', ->
             el = engine.$id('box1')            
             el.innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2            
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]', 111, 'required']
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [
+                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                ],
+                [
+                  ["==",
+                    ["get", "$box1", "height",          ".box$box1→#box1"]
+                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                  ]
+                ],
+                [
+                  ["==",
+                    ["get", "$box2", "height",          ".box$box2→#box1"]
+                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                  ]
+                ]
               ]
             el.innerHTML = ""            
           else if count is 3
-            chai.expect(engine.expressions.lastOutput).to.eql [
-                ['suggest', '$box1[intrinsic-width]', 0, 'required']
+            chai.expect(engine.workflown.getProblems()).to.eql [
+                [
+                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                ],
+                [
+                  ["==",
+                    ["get", "$box1", "height",          ".box$box1→#box1"]
+                    ["value", 0, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                  ]
+                ],
+                [
+                  ["==",
+                    ["get", "$box2", "height",          ".box$box2→#box1"]
+                    ["value", 0, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                  ]
+                ]
               ]
             engine.removeEventListener 'solve', listener
             done()
@@ -413,13 +457,13 @@ describe 'GSS commands', ->
             # don't set height b/c intrinsic-height was used
             expect(engine.$id("p-text").style.height).to.eql ""            
             expect(engine.values["$p-text[width]"]).to.eql 100
-            expect(engine.values["$p-text[intrinsic-height]"] > 400).to.eql true
-            expect(engine.values["$p-text[intrinsic-height]"] % 16).to.eql 0
+            expect(engine.values["$p-text[x-height]"] > 400).to.eql true
+            expect(engine.values["$p-text[x-height]"] % 16).to.eql 0
             expect(engine.values["$p-text[x-height]"] % 16).to.eql 0
             engine.$id("p-text").innerHTML = "Booyaka"
           else if count is 2
             expect(engine.values["$p-text[width]"]).to.eql 100
-            expect(engine.values["$p-text[intrinsic-height]"]).to.eql(16)
+            expect(engine.values["$p-text[x-height]"]).to.eql(16)
             expect(engine.values["$p-text[x-height]"]).to.eql(16)
             engine.removeEventListener 'solve', listener
             done()
@@ -431,6 +475,7 @@ describe 'GSS commands', ->
         scope.innerHTML = """
           <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
         """
+        console.log(scope, 6)
     
     
     describe "Chain", ->

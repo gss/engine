@@ -84,6 +84,10 @@ Style = (definition, name, styles,
     initial::styles = styles
     initial::properties = properties
 
+
+  matcher.toString    = (value) ->
+    return Shorthand::toExpressionString(name, value, false, styles)
+
   return styles[name] = matcher
 
 # Class that holds matched properties. 
@@ -153,7 +157,7 @@ class Shorthand
       return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]
 
 
-  toExpressionString: (key, operation, expression) ->
+  toExpressionString: (key, operation, expression, styles = @styles) ->
     switch typeof operation
       when 'object'
         name = operation[0]
@@ -169,7 +173,7 @@ class Shorthand
           return string + ')'
       when 'number'
         if !expression
-          types = @styles[key].types
+          types = styles[key].types
           if operation != 0 && types.indexOf('number') == -1 && types.indexOf('float') == -1
             operation += 'px'
     return operation

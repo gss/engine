@@ -165,9 +165,8 @@ describe 'Domain', ->
 				]
 			], (solution) ->
 				expect(solution).to.eql
-					"$a": "50"
-					"$box0[z]": 0
-					"$box1[width]": 50
+					"a": 0
+					"$box0[z]": -50
 
 
 	describe 'solvers in worker', ->

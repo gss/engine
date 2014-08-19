@@ -205,7 +205,6 @@ class Expressions
             return result
       else if parent && (typeof parent[0] == 'string' && (parent.domain != operation.domain))
         solution = ['value', result, continuation || '', operation.toString()]
-        debugger
         console.error('shashsks', solution)
         solution.push true if operation.exported
         solution.operation = operation

@@ -9,7 +9,6 @@
 
 Numeric = require('./Numeric')
 Native = require('../methods/Native')
-debugger
 class Intrinsic extends Numeric
   priority: 100
   structured: true
@@ -41,6 +40,9 @@ class Intrinsic extends Numeric
     return old
 
   restyle: (element, property, value = '') -> 
+    return unless prop = @properties[property]
+    if typeof value != 'string'
+      value = prop.toString(value)
     element.style[property] = value
 
   get: (element, property) ->
@@ -78,7 +80,6 @@ class Intrinsic extends Numeric
         value = undefined
     if typeof value != 'number' && @properties.intrinsic[property]
       value = @properties.intrinsic[property].call(@, element)
-    debugger
     @set null, path, value, undefined, false
 
     return value
@@ -227,6 +228,7 @@ class Intrinsic extends Numeric
             when "width", "intrinsic-width"
               @set id, prop, node.offsetWidth
             when "height", "intrinsic-height"
+              debugger
               @set id, prop, node.offsetHeight
             else
               @set id, prop, @getStyle(node, @engine.getIntrinsicProperty(prop))

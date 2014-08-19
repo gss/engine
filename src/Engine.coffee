@@ -195,12 +195,11 @@ class Engine extends Domain.Events
 
     return solution unless @engine == @
 
+
     # Apply styles
     if solution
       @applier?.solve(solution)
-
-    # Remeasure intrinsics
-    if solution || @workflow.reflown
+    else if @workflow.reflown
       @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
 
     solution = workflow.each @resolve, @, solution
@@ -211,8 +210,9 @@ class Engine extends Domain.Events
 
   solved: (solution) ->
     return solution unless typeof solution == 'object'
+    for property, value of solution
+      @values[property] = value
     #@merge solution
-    debugger
 
     @console.info('Solution\t   ', solution)
 
@@ -259,7 +259,7 @@ class Engine extends Domain.Events
       if result?.length == 1
         result = result[0]
 
-    # Dispatch operations without specific domain (e.g. remove)
+    # Broadcast operations without specific domain (e.g. remove)
     else
       others = []
       removes = []

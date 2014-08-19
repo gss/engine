@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-18) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-19) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19308,8 +19308,7 @@ Engine = (function(_super) {
       if ((_ref1 = this.applier) != null) {
         _ref1.solve(solution);
       }
-    }
-    if (solution || this.workflow.reflown) {
+    } else if (this.workflow.reflown) {
       if ((_ref2 = this.intrinsic) != null) {
         _ref2.each(this.workflow.reflown || this.scope, this.intrinsic.update);
       }
@@ -19320,10 +19319,14 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solved = function(solution) {
+    var property, value;
     if (typeof solution !== 'object') {
       return solution;
     }
-    debugger;
+    for (property in solution) {
+      value = solution[property];
+      this.values[property] = value;
+    }
     this.console.info('Solution\t   ', solution);
     this.triggerEvent('solve', solution);
     if (this.scope) {
@@ -21563,6 +21566,20 @@ Domain = (function() {
     return exps;
   };
 
+  Domain.prototype.orphanize = function(operation) {
+    var arg, _i, _len;
+    if (operation.domain) {
+      delete operation.domain;
+    }
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      arg = operation[_i];
+      if (arg.push) {
+        this.orphanize(arg);
+      }
+    }
+    return operation;
+  };
+
   Domain.prototype.callback = function(domain, path, value, meta) {
     var index, op, url, values, variable, watcher, watchers, worker, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     if (watchers = (_ref = domain.watchers) != null ? _ref[path] : void 0) {
@@ -21577,7 +21594,7 @@ Domain = (function() {
           if (watcher.parent.domain === domain) {
             domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
           } else {
-            this.expressions.ascend(watcher, watcher[index + 1], value, watchers[index + 2], meta);
+            this.expressions.ascend(watcher, watchers[index + 1], value, watchers[index + 2], meta);
           }
         }
       }
@@ -21588,7 +21605,6 @@ Domain = (function() {
         worker = _ref1[url];
         if (values = worker.values) {
           if (values.hasOwnProperty(path)) {
-            debugger;
             this.Workflow(worker, [['value', value, path]]);
             console.error(path, this.workflow);
           }
@@ -21783,7 +21799,7 @@ Domain = (function() {
               variable = _ref[_l];
               if (typeof variable !== 'string') {
                 if (constraint.paths.indexOf(variable) > -1) {
-                  if (groupped) {
+                  if (groupped && groupped !== group) {
                     groupped.push.apply(groupped, group);
                     groups.splice(group.indexOf(group), 1);
                   } else {
@@ -21835,7 +21851,6 @@ Domain = (function() {
       }
     }
     if (this.nullified) {
-      debugger;
       for (path in this.nullified) {
         result[path] = (_ref1 = (_ref2 = this.assumed.values[path]) != null ? _ref2 : this.intrinsic.values[path]) != null ? _ref1 : null;
         if (this.values.hasOwnProperty(path)) {
@@ -21856,8 +21871,12 @@ Domain = (function() {
       this.added = void 0;
     }
     if (separated != null ? separated.length : void 0) {
-      this.engine.provide(separated);
+      if (separated.length === 1) {
+        separated = separated[0];
+      }
+      this.engine.provide(this.orphanize(separated));
     }
+    console.log('provide', result);
     return result;
   };
 
@@ -22399,6 +22418,9 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
     initial.prototype.styles = styles;
     initial.prototype.properties = properties;
   }
+  matcher.toString = function(value) {
+    return Shorthand.prototype.toExpressionString(name, value, false, styles);
+  };
   return styles[name] = matcher;
 };
 
@@ -22490,8 +22512,11 @@ Shorthand = (function() {
     }
   };
 
-  Shorthand.prototype.toExpressionString = function(key, operation, expression) {
+  Shorthand.prototype.toExpressionString = function(key, operation, expression, styles) {
     var engine, index, name, string, types, units, _i, _ref;
+    if (styles == null) {
+      styles = this.styles;
+    }
     switch (typeof operation) {
       case 'object':
         name = operation[0];
@@ -22512,7 +22537,7 @@ Shorthand = (function() {
         break;
       case 'number':
         if (!expression) {
-          types = this.styles[key].types;
+          types = styles[key].types;
           if (operation !== 0 && types.indexOf('number') === -1 && types.indexOf('float') === -1) {
             operation += 'px';
           }
@@ -22734,23 +22759,53 @@ Workflow = Workflower();
 Workflow.compile = Workflower;
 
 Workflow.prototype = {
+  substitute: function(parent, operation, solution) {
+    var child, index, _i, _len;
+    if (parent === operation) {
+      return solution;
+    }
+    for (index = _i = 0, _len = parent.length; _i < _len; index = ++_i) {
+      child = parent[index];
+      if (child.push) {
+        if (child === operation) {
+          parent[index] = solution;
+        } else {
+          this.substitute(child, operation, solution);
+        }
+      }
+    }
+    return parent;
+  },
   provide: function(solution) {
-    var domain, index, operation, problems;
-    if (solution.operation.exported) {
+    var domain, i, index, operation, parent, problems, root, _i, _len, _ref;
+    if ((operation = solution.operation).exported) {
       return;
     }
-    operation = solution.domain.getRootOperation(solution.operation.parent);
-    domain = operation.domain;
-    index = this.domains.indexOf(domain);
-    if (index === -1) {
-      index += this.domains.push(domain);
-    }
-    if (problems = this.problems[index]) {
-      if (problems.indexOf(operation) === -1) {
-        problems.push(operation);
+    parent = operation.parent;
+    if (domain = parent.domain) {
+      root = solution.domain.getRootOperation(parent);
+      index = this.domains.indexOf(domain, this.index + 1);
+      if (index === -1) {
+        index += this.domains.push(domain);
+      }
+      if (problems = this.problems[index]) {
+        if (problems.indexOf(root) === -1) {
+          problems.push(root);
+        }
+      } else {
+        this.problems[index] = [root];
       }
     } else {
-      this.problems[index] = [operation];
+      _ref = this.problems;
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        problems = _ref[index];
+        while (parent) {
+          if ((i = problems.indexOf(parent)) > -1) {
+            this.substitute(problems[i], operation, solution);
+          }
+          parent = parent.parent;
+        }
+      }
     }
   },
   wrap: function(problem) {
@@ -22826,7 +22881,6 @@ Workflow.prototype = {
         opdomain = this.engine.getOperationDomain(problem, other);
         if (opdomain && opdomain.displayName !== other.displayName) {
           if ((index = this.domains.indexOf(opdomain)) === -1) {
-            debugger;
             index = this.domains.push(opdomain) - 1;
             this.problems[index] = [problem];
           } else {
@@ -22919,6 +22973,9 @@ Workflow.prototype = {
     _ref = this.domains;
     for (i = _i = _ref.length - 1; _i >= 0; i = _i += -1) {
       domain = _ref[i];
+      if (i === this.index) {
+        break;
+      }
       for (j = _j = _ref1 = i + 1, _ref2 = this.domains.length; _ref1 <= _ref2 ? _j < _ref2 : _j > _ref2; j = _ref1 <= _ref2 ? ++_j : --_j) {
         if ((url = (_ref3 = this.domains[j]) != null ? _ref3.url : void 0) && (typeof document !== "undefined" && document !== null)) {
           _ref4 = this.problems[i];
@@ -22943,6 +23000,12 @@ Workflow.prototype = {
     _ref = this.domains;
     for (i = _i = _ref.length - 1; _i >= 0; i = _i += -1) {
       domain = _ref[i];
+      if (i === this.index) {
+        debugger;
+      }
+      if (i === this.index) {
+        break;
+      }
       problems = this.problems[i];
       this.setVariables(problems, null, domain);
       if (vars = problems.variables) {
@@ -22961,6 +23024,9 @@ Workflow.prototype = {
                   this.setVariables(this.problems[j], null, domain);
                   this.problems.splice(j, 1);
                   this.domains.splice(j, 1);
+                  if (this.index >= j) {
+                    --this.index;
+                  }
                   connected = true;
                   break;
                 } else {
@@ -22980,13 +23046,22 @@ Workflow.prototype = {
     _ref = this.problems;
     for (i = _i = _ref.length - 1; _i >= 0; i = _i += -1) {
       problems = _ref[i];
+      if (i === this.index) {
+        break;
+      }
       if (!problems.length) {
         this.problems.splice(i, 1);
         this.domains.splice(i, 1);
+        if (this.index >= i) {
+          --this.index;
+        }
       }
       for (_j = problems.length - 1; _j >= 0; _j += -1) {
         problem = problems[_j];
         domain = this.domains[i];
+        if (!domain) {
+          debugger;
+        }
         problem.domain = domain;
       }
     }
@@ -23045,6 +23120,7 @@ Workflow.prototype = {
         }
       }
     }
+    this.index--;
     return solution || result;
   },
   getProblems: function(callback, bind) {
@@ -23452,8 +23528,6 @@ Numeric = require('./Numeric');
 
 Native = require('../methods/Native');
 
-debugger;
-
 Intrinsic = (function(_super) {
   __extends(Intrinsic, _super);
 
@@ -23490,8 +23564,15 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value) {
+    var prop;
     if (value == null) {
       value = '';
+    }
+    if (!(prop = this.properties[property])) {
+      return;
+    }
+    if (typeof value !== 'string') {
+      value = prop.toString(value);
     }
     return element.style[property] = value;
   };
@@ -23541,7 +23622,6 @@ Intrinsic = (function(_super) {
     if (typeof value !== 'number' && this.properties.intrinsic[property]) {
       value = this.properties.intrinsic[property].call(this, element);
     }
-    debugger;
     this.set(null, path, value, void 0, false);
     return value;
   };
@@ -23715,6 +23795,7 @@ Intrinsic = (function(_super) {
               break;
             case "height":
             case "intrinsic-height":
+              debugger;
               _results.push(this.set(id, prop, node.offsetHeight));
               break;
             default:
@@ -24160,7 +24241,6 @@ Expressions = (function() {
         }
       } else if (parent && (typeof parent[0] === 'string' && (parent.domain !== operation.domain))) {
         solution = ['value', result, continuation || '', operation.toString()];
-        debugger;
         console.error('shashsks', solution);
         if (operation.exported) {
           solution.push(true);
@@ -24391,6 +24471,8 @@ Positions = (function() {
       }
       property = path.substring(last + 1, path.length - 1);
       id = path.substring(0, last);
+    } else {
+      path = this.engine.getPath(id, property);
     }
     if (id.charAt(0) === ':') {
       return;
@@ -24563,8 +24645,11 @@ Queries = (function() {
   };
 
   Queries.prototype.solve = function(mutations) {
+    debugger;
     return this.engine.engine.solve('mutations', function() {
       var mutation, _i, _len;
+      this.engine.workflow.queries = void 0;
+      this.engine.workflow.reflown = void 0;
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         switch (mutation.type) {
