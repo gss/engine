@@ -94,10 +94,11 @@ Workflow.prototype =
     # Update queued constraint that was not evaluated yet
     else
       for problems, index in @problems
-        while parent
-          if (i = problems.indexOf(parent)) > -1
+        p = parent
+        while p
+          if (i = problems.indexOf(p)) > -1
             @substitute(problems[i], operation, solution)
-          parent = parent.parent
+          p = p.parent
     return
 
   # Group expressions
@@ -188,9 +189,13 @@ Workflow.prototype =
 
   # Simplify groupped multi-domain expression down to variables
   unwrap: (problems, domain, result = []) ->
+    console.log('unwrapping', problems, domain)
     if problems[0] == 'get'
       problems.exported = true
+      problems.parent = undefined
       result.push(problems)
+      exports = (@exports ||= {})[@engine.getPath(problems[1], problems[2])] ||= []
+      exports.push domain
     else
       problems.domain = domain
       for problem in problems
@@ -232,8 +237,10 @@ Workflow.prototype =
             while prob
               problem = @problems[j]
               if problem.indexOf(prob) > -1
-
-                @problems[i][p] = @unwrap @problems[i][p], @domains[j], [], @problems[j]
+                probs = @problems[i][p]
+                @problems[i].splice(p, 1)
+                console.error('!!!!!!!!!!!!!!!!', probs)
+                @engine.Workflow(@unwrap(probs, @domains[j], [], @problems[j]))
                 break
               prob = prob.parent
     return
@@ -279,7 +286,6 @@ Workflow.prototype =
           --@index
       for problem in problems by -1
         domain = @domains[i]
-        debugger unless domain
         problem.domain = domain
     return
 
@@ -298,7 +304,15 @@ Workflow.prototype =
       if other
         if other == domain
           cmds = @problems[position]
-          cmds.push.apply(cmds, problems)
+          for problem in problems
+            exported = undefined
+            if problem.exported
+              for cmd in cmds
+                if cmd.exported && cmd.parent.domain == problem.parent.domain
+                  exported = true
+                  break
+            unless exported
+              cmds.push problem
           merged = true
           break
         else 
@@ -323,7 +337,7 @@ Workflow.prototype =
           (solution ||= {})[prop] = value
     @index--
 
-    return (solution || result)
+    return @solution = (solution || result)
 
   getProblems: (callback, bind) ->
     return GSS.clone @problems

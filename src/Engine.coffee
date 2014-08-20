@@ -41,7 +41,6 @@ class Engine extends Domain.Events
             if @Expressions
               Engine[Engine.identity.provide(scope)] = @
               @scope = scope
-              @all = scope.getElementsByTagName('*')
             else
               while scope
                 if id = Engine.identity.solve(scope)
@@ -125,7 +124,7 @@ class Engine extends Domain.Events
       @assumed.merge result
     @inputs = result
     console.log('inputs')
-    console.info(result)
+    console.info(JSON.stringify(result))
     if expressions.length
       @provide expressions
 
@@ -249,6 +248,7 @@ class Engine extends Domain.Events
     if domain
       @console.start(problems, domain.displayName)
       @providing = null
+      debugger
       result = domain.solve(problems) || @providing || undefined
       if @providing && @providing != result
         workflow.merge(@Workflow(@frame || true, @providing))
@@ -276,7 +276,6 @@ class Engine extends Domain.Events
         for remove in removes
           for path, index in remove
             continue if index == 0
-            console.log(domain.paths, path, domain.paths[path])
             if domain.paths[path]
               locals.push(path)
         if locals.length
@@ -286,6 +285,8 @@ class Engine extends Domain.Events
           workflow.merge(others, domain)
       for url, worker of @workers
         workflow.merge problems, worker
+
+    console.error(result, 1222)
 
     return result
 
@@ -348,7 +349,8 @@ if !self.window && self.onmessage != undefined
     assumed = engine.assumed.toObject()
     solution = engine.solve(e.data)
     for property, value of engine.inputs
-      solution[property] ?= value
+      if value? || !solution[property]?
+        solution[property] = value
     console.error(engine.domains.map (d) ->
       [d.constraints?.length, d.substituted?.length])
     postMessage(solution)

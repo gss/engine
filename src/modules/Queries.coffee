@@ -31,11 +31,7 @@ class Queries
 
   disconnect: ->
     @listener.disconnect()
-
-  # Buffer DOM queries and expressions output
-  onCapture: () ->
-    @buffer = @engine.workflow.queries = @lastOutput = null
-    @_repairing = null
+    
 
   onRelease: ->
     if @removed
@@ -270,7 +266,7 @@ class Queries
       return result
 
   # Remove observers from element
-  unwatch: (id, continuation, plural, quick) ->
+  unobserve: (id, continuation, plural, quick) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
       if typeof id != 'object'
@@ -300,7 +296,7 @@ class Queries
        
     # Remove all watchers that match continuation path
     ref = continuation + (collection && collection.length != undefined && id || '')
-    @unwatch(id, ref, plural)
+    @unobserve(id, ref, plural)
 
     return unless (result = @engine.queries.get(continuation))?
 
@@ -371,7 +367,7 @@ class Queries
 
     else if node
       # Detach queries attached to an element when removing element by id
-      @unwatch(id, true)
+      @unobserve(id, true)
 
   clean: (path, continuation, operation, scope, bind, plural) ->
     if path.def
@@ -401,11 +397,12 @@ class Queries
 
     # Remove queries in queue and global watchers that match the path 
     if @lastOutput
-      @unwatch(@lastOutput, path, null, true)
+      @unobserve(@lastOutput, path, null, true)
 
-    @unwatch(@engine.scope._gss_id, path)
+    @unobserve(@engine.scope._gss_id, path)
 
     if !result || result.length == undefined
+      console.log('remove ma breda clean', path)
       @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 

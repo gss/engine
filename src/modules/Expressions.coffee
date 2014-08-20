@@ -206,13 +206,15 @@ class Expressions
       else if parent && (typeof parent[0] == 'string' && (parent.domain != operation.domain))
         solution = ['value', result, continuation || '', operation.toString()]
         console.error('shashsks', solution)
+        debugger
         solution.push true if operation.exported
         solution.operation = operation
         solution.parent    = operation.parent
         solution.domain    = operation.domain
         solution.index     = operation.index
         parent[operation.index] = solution
-        return @engine.provide solution
+        @engine.provide solution
+        return 
       else
         return @engine.provide result
 

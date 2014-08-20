@@ -244,6 +244,7 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
     if callback && (returned = callback(result))?
       return returned
     return result
+  matcher.matcher     = true
   matcher.displayName = name
   matcher.keywords    = keywords if keywords?
   matcher.types       = types    if types?

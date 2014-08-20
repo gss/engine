@@ -6,7 +6,7 @@ Interface:
   - (un)watch() - (un)subscribe expression to property updates
   - set()       - dispatches updates to subscribed expressions
   - get()       - retrieve value
-  - clean()     - detach observes by continuation
+  - remove()    - detach observes by continuation
 
 
 State:
@@ -28,6 +28,7 @@ class Domain
       @engine       = engine if engine
       @displayName  = name   if name
       @url          = url    if url
+      @values       = {} unless @hasOwnProperty('values')
       @merge(values)         if values
 
       if @url && @getWorkerURL
@@ -46,10 +47,10 @@ class Domain
       @watchers    = {}
       @observers   = {}
       @paths       = {}
-      @values      = {} unless @hasOwnProperty('values')
       @objects     = {} if @structured
       @substituted = []
       @constraints = []
+      @values       = {} unless @hasOwnProperty('values')
       unless @domain == @engine
         @domains.push(@)
       @MAYBE       = undefined
@@ -91,6 +92,14 @@ class Domain
 
       watchers = @watchers[path] ||= []
       watchers.push(operation, continuation, scope)
+
+      # Register props by id for quick lookup
+      if @structured && watchers.length == 3
+        if (j = path.indexOf('[')) > -1
+          id = path.substring(0, j)
+          obj = @objects[id] ||= {}
+          prop = path.substring(j + 1, path.length - 1)
+          obj[prop] = true
     return @get(path)
 
   unwatch: (object, property, operation, continuation, scope) ->
@@ -103,7 +112,14 @@ class Domain
     watchers = @watchers[path]
     index = @engine.indexOfTriplet watchers, operation, continuation, scope
     watchers.splice index, 3
-    delete @watchers[path] unless watchers.length
+    unless watchers.length
+      delete @watchers[path]
+      if @structured
+        if (j = path.indexOf('[')) > -1
+          id = path.substring(0, j)
+          obj = @objects[id] ||= {}
+          prop = path.substring(j + 1, path.length - 1)
+          delete obj[prop]
 
   get: (object, property) ->
     return @values[@engine.getPath(object, property)]
@@ -128,19 +144,6 @@ class Domain
     path = @engine.getPath(object, property)
     old = @values[path]
     return if old == value
-
-    # Register props by id
-    if @structured
-      if (j = path.indexOf('[')) > -1
-        id = path.substring(0, j)
-        obj = @objects[id] ||= {}
-        prop = path.substring(j + 1, path.length - 1)
-        if value?
-          obj[prop] = value
-        else
-          delete obj[prop]
-          if !Object.keys(obj).length
-            delete @objects[id]
 
     if value?
       @values[path] = value
@@ -196,6 +199,9 @@ class Domain
           if values.hasOwnProperty(path)
             @Workflow(worker, [['value', value, path]])
             console.error(path, @workflow)
+    if exports = @workflow?.exports?[path]
+      for domain in exports
+        @Workflow(domain, [['value', value, path]])
     if variable = @variables[path]
       for op in variable.operations
         if !watchers || watchers.indexOf(op) == -1
@@ -233,11 +239,12 @@ class Domain
     return true
 
   constrain: (constraint) ->
-    console.info(JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
+    debugger
+    console.info(constraint, JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
     if constraint.paths
       for path in constraint.paths
         if path[0] == 'value'
-          for other in @constraints
+          for other in @constraints by -1
             if @compare(other.operation, constraint.operation)
               console.info('updating constraint', other.operation, '->', constraint.operation)
               @unconstrain(other)
@@ -350,7 +357,7 @@ class Domain
         @values[path] = value
     if @nullified
       for path of @nullified
-        result[path] = @assumed.values[path] ? @intrinsic.values[path] ? null
+        result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]
       @nullified = undefined

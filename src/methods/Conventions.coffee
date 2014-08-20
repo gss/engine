@@ -183,7 +183,7 @@ class Conventions
             domain = undefined
 
       unless domain
-        if property && @intrinsic?.properties[property]
+        if scope && property && @intrinsic?.properties[property]
           domain = @intrinsic.maybe()
         else
           domain = @linear.maybe()
@@ -197,13 +197,12 @@ class Conventions
       scripts = document.getElementsByTagName('script')
       src = scripts[scripts.length - 1].src
     return (url) ->
-      console.log(url)
       return typeof url == 'string' && url || src
 
   # get topmost meaniningful function call with matching domain
   getRootOperation: (operation) ->
     parent = operation
-    while parent.parent &&  parent.parent.name && 
+    while parent.parent &&  typeof parent.parent[0] == 'string' && 
           (!parent.parent.def || 
                               (!parent.parent.def.noop && 
                               parent.domain == operation.domain))

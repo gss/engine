@@ -5,7 +5,8 @@ Native   = require('../methods/Native')
 class Document extends Abstract
   priority: Infinity
 
-  Methods:     Native::mixin new Abstract::Methods,
+  Methods:     Native::mixin {},
+               Abstract::Methods,
                require('../methods/Selectors'),
                require('../methods/Rules')
 
@@ -15,10 +16,12 @@ class Document extends Abstract
   helps: true
 
   constructor: () ->
-    @engine.queries   ||= new @Queries(@)
-    @engine.positions ||= new @Positions(@)
-    @engine.applier   ||= @engine.positions
-    @engine.scope     ||= document
+    if document?
+      @engine.queries   ||= new @Queries(@)
+      @engine.positions ||= new @Positions(@) 
+      @engine.applier   ||= @engine.positions
+      @engine.scope     ||= document
+      @engine.all         = @engine.scope.getElementsByTagName('*')
     
     if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
       @scope.addEventListener 'DOMContentLoaded', @

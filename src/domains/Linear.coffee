@@ -101,6 +101,11 @@ class Linear::Methods extends Domain::Methods
   varexp: (name) ->
     return new c.Expression name: name
 
+  suggest: ->
+    debugger
+    return @suggest.apply(@, arguments)
+
+
   '==': (left, right, strength, weight) ->
     return new c.Equation(left, right, @strength(strength), @weight(weight))
 

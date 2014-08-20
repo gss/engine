@@ -154,6 +154,7 @@ describe 'Domain', ->
 				<div id="box0" style="width: 50px"></div>
 				<div id="box1" style="width: 50px"></div>
 			"""
+			document.body.appendChild(el)
 			window.engine = new GSS(el)
 			engine.solve [
 				['==',
@@ -167,6 +168,7 @@ describe 'Domain', ->
 				expect(solution).to.eql
 					"a": 0
 					"$box0[z]": -50
+				document.body.removeChild(el)
 
 
 	describe 'solvers in worker', ->
@@ -187,31 +189,44 @@ describe 'Domain', ->
 						['get', 'x']]
 				]
 			]
-			engine.assumed.set null, 'x', 2
 			engine.solve problem, (solution) ->
 				expect(solution).to.eql 
 					"$box0[intrinsic-width]": 20
-					result: 42
-					x: 2
-				document.body.removeChild(root)
+					result: 0
+					x: 0
 
 				engine.solve
-					"x": 3
+					x: 2
 				, (solution) ->
 					expect(solution).to.eql 
-						result: 63
-						x: 3
+						result: 42
+						x: 2
 
 					engine.solve
-						"x": null
+						"x": 3
 					, (solution) ->
 						expect(solution).to.eql 
-							result: 0
-							x: 0
+							result: 63
+							x: 3
+						engine.solve
+							"x": null
+						, (solution) ->
+							console.info(solution)
+							expect(solution).to.eql 
+								result: 0
+								x: 0
+							root.removeChild(engine.$id('box0'))
+							engine.then (solution) ->
+								console.info(solution)
+								expect(solution).to.eql 
+									#"$box0[intrinsic-width]": null
+									"x": null
+									"result": null
 
 
 
-						done()
+								document.body.removeChild(root)
+								done()
 
 
 		it 'should receive commands from document', (done) ->

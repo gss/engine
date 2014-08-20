@@ -25,6 +25,11 @@ class Abstract::Methods
         property = object
         object = undefined
 
+      if object
+        if prop = @properties[property]
+          unless prop.matcher
+            return prop.call(@, object, contd)
+
       return ['get', id, property, @getContinuation(continuation || contd || '')]
 
   set:
@@ -45,5 +50,10 @@ class Abstract::Methods
       @engine.values[@engine.getPath(scope, property)] = value
     return value
 
+# Proxy math for axioms
+for op in ['+', '-', '*', '/']
+  do (op) ->
+    Abstract::Methods::[op] = (a, b) ->
+      return [op, a, b]
 
 module.exports = Abstract

@@ -45,49 +45,27 @@ class Intrinsic extends Numeric
       value = prop.toString(value)
     element.style[property] = value
 
-  get: (element, property) ->
-    if !property
-      path = element
-      element = undefined
-    else
-      path = @getPath(element, property)
-    if (j = path.indexOf('[')) > -1
-      element ||= path.substring(0, j)
-      property = path.substring(j + 1)
-    else
-      property = path
+  solve: ->
+    Numeric::solve.apply(@, arguments)
+    @each @scope, @update
 
-    if element && property && (prop = @properties[path])?
+  get: (object, property, continuation) ->
+    path = @getPath(object, property)
+    if (prop = @properties[path])?
       if typeof prop == 'function'
-        return prop.call(@, element)
+        return prop.call(@, object, continuation)
       else
         return prop
-    if !element.nodeType
-      element = @identity.solve(element)
-    if (index = property.indexOf('intrinsic-')) > -1
-      if @properties[property]
-        value = @properties[property].call(@, element)
-      property = property.substring(index + 10, property.length - 1)
+    else 
+      if (j = path.indexOf('[')) > -1
+        id = path.substring(0, j)
+        prop = path.substring(j + 1, path.length - 1)
+        if (prop = @properties[property]).axiom
+          return prop.call(@, object, continuation)
+        else if prop && typeof prop != 'function'
+          return prop
+    return Numeric::get.apply(@, arguments)
 
-    prop = @camelize(property)
-    value = element.style[property]
-    if value == ''
-      value = @getComputedStyle(element)[prop]
-    if typeof value == 'string'
-      if value.indexOf('px') > -1
-        value = parseInt(value)
-      else
-        value = undefined
-    if typeof value != 'number' && @properties.intrinsic[property]
-      value = @properties.intrinsic[property].call(@, element)
-    @set null, path, value, undefined, false
-
-    return value
-    #value = @toPrimitive(value, null, null, null, element, prop)
-    #if value.push && typeof value[0] == 'object'
-    #  return @properties[property].apply(@, value)
-    #else
-    #  return @properties[property].call(@, value)
 
   # Triggered on possibly resized element by mutation observer
   # If an element is known to listen for its intrinsic properties
