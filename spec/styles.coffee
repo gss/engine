@@ -2,13 +2,14 @@
 expect = chai.expect
 assert = chai.assert
 
-doc = GSS::
-#doc.compile()
-engine = null
 
 describe 'Styles', ->
+  doc = engine = null
   beforeEach ->
     engine ||= new GSS(document.createElement('div'))
+    engine.compile()
+    doc = engine.intrinsic
+
   describe 'simple properties', ->
 
     it 'numeric property', ->

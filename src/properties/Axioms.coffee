@@ -16,6 +16,3 @@ class Axioms
       return @['+'](@_get(scope, "y", path), @['/'](@_get(scope, "height", path), 2))
       
 module.exports = Axioms
-
-for property, value of Axioms::
-  value.axiom = true

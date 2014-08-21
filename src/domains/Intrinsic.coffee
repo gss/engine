@@ -45,11 +45,13 @@ class Intrinsic extends Numeric
         property = "left"
       when "y"
         property = "top"
+
     return unless prop = @properties[property]
-        
+
     if typeof value != 'string'
       value = prop.toString(value)
-    element.style[property] = value
+    console.log('restyle', element, property, value)
+    element.style[@camelize property] = value
 
   solve: ->
     Numeric::solve.apply(@, arguments)
@@ -196,6 +198,15 @@ class Intrinsic extends Numeric
 
       child = child.nextSibling
     return a
+
+  getStyle: (node, property) ->
+    value = node.style[property] || @getComputedStyle(node)[property]
+    if value
+      num = parseFloat(value)
+      console.log(num, value, 5)
+      if `num == value` || (num + 'px') == value
+        return num
+    return value
 
   update: (node, x, y, full) ->
     return unless @objects

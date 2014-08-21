@@ -174,7 +174,10 @@ class Shorthand
       when 'number'
         if !expression
           types = styles[key].types
-          if operation != 0 && types.indexOf('number') == -1 && types.indexOf('float') == -1
+          for type in types
+            if type.displayName == '_Integer' || type.displayName == '_Float'
+              return operation
+          if operation != 0
             operation += 'px'
     return operation
 

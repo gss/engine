@@ -27,7 +27,6 @@ class Positions
       (positioning[id] ||= {})[property] = value
     else
       @engine.intrinsic.restyle(element, property, value)
-      #@engine.values[path] = value
 
   solve: (data, node) ->
     node ||= @reflown || @engine.scope

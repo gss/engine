@@ -75,6 +75,7 @@ class Engine extends Domain.Events
     @assumed.displayName = 'Assumed'
     @assumed.setup()
 
+
     unless window?
       @strategy = 'substitute'
     else
@@ -253,6 +254,7 @@ class Engine extends Domain.Events
     if problems instanceof Array && problems.length == 1 && problem instanceof Array
       problems = problem
 
+    console.log(problems.slice(), problems, 555530)
     if domain
       @providing = null
       result = domain.solve(problems) || @providing || undefined
@@ -323,6 +325,7 @@ class Engine extends Domain.Events
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @Workflow = Engine::Workflow.compile(@)
+    @intrinsic.queries.connect()
 
   # Comile user provided features specific to this engine
   compile: (state) ->

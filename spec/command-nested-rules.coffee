@@ -31,17 +31,6 @@ describe 'Nested Rules', ->
     afterEach ->
       remove(container)
 
-
-    Scenario = (done, container, steps, i) ->
-      i = i || 0
-      if steps[i]
-        container.addEventListener 'solve', callback = ->
-          steps[i]()
-          container.removeEventListener 'solve', callback
-          Scenario(done, container, steps, i + 1)
-      else
-        done()
-
     describe 'flat', ->
     
       it 'Runs commands from sourceNode', (done) ->
@@ -60,6 +49,7 @@ describe 'Nested Rules', ->
           done()
         
         engine.solve(rules)
+        
     describe 'mixed selectors', ->
       it 'should support mixed selectors', (done) ->
         rules = [
@@ -146,7 +136,7 @@ describe 'Nested Rules', ->
         parent = all.main0.parentNode
 
         
-        window.$engine = engine = new GSS(container)
+        engine = new GSS(container)
         engine.once 'solve', -> 
           expect(stringify engine.workflown.getProblems()).to.eql stringify [[
             ['==', ["get", "$header0", "width", "div+main$main0↑!~$header0↑*"], 50]
@@ -605,7 +595,7 @@ describe 'Nested Rules', ->
         clone.innerHTML = container.innerHTML.replace /\d+/g, (d) ->
           return "1" + d
 
-        engine = window.$engine = new GSS(container)
+        engine = new GSS(container)
 
         engine.once 'solve', ->        
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [
@@ -883,7 +873,7 @@ describe 'Nested Rules', ->
           <div id="box4" class="box"></div>
           """
         
-        window.$engine = engine = new GSS(container)
+        engine = new GSS(container)
                               
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [[

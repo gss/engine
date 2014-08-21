@@ -55,8 +55,7 @@ class Queries
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
-    if window.zzz
-      debugger
+    console.log('q', mutations)
     @engine.engine.solve 'mutations', ->
       @engine.workflow.queries = undefined
       @engine.workflow.reflown = undefined

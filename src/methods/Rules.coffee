@@ -148,7 +148,7 @@ class Rules
           scope = node.parentNode
 
       rules = @['_' + type](source)
-      @document.expressions.solve(label, @clone(rules), continuation, scope, @engine.DOWN)
+      @document.expressions.solve(@clone(rules), continuation, scope, @engine.DOWN)
       return
 
   # Load & evaluate stylesheet

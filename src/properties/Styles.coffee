@@ -128,6 +128,7 @@ class Styles
   left:                ['Length', 'Percentage', 'auto']
   right:               ['Length', 'Percentage', 'auto']
   bottom:              ['Length', 'Percentage', 'auto']
+  opacity:             ['Float']
   'z-index':           ['Integer']
   cursor:              ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize',
                        'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help']

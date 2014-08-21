@@ -36,7 +36,7 @@ describe 'Domain', ->
 				result: 667
 
 		it 'should calculate simplified variable', ->
-			window.engine = new GSS({
+			engine =  new GSS({
 				a: 666
 			})
 
@@ -56,7 +56,7 @@ describe 'Domain', ->
 
 
 		it 'should simplify partially', ->
-			window.$engine = engine = new GSS({
+			engine = new GSS({
 				a: 555
 			})
 
@@ -122,7 +122,7 @@ describe 'Domain', ->
 				result: -545
 
 		it 'should change variable domain after the fact', ->
-			window.engine = new GSS
+			engine =  new GSS
 			expect(engine.solve [
 				['=='
 					['get', 'result']
@@ -155,7 +155,7 @@ describe 'Domain', ->
 				<div id="box1" style="width: 50px"></div>
 			"""
 			document.body.appendChild(el)
-			window.engine = new GSS(el)
+			engine =  new GSS(el)
 			engine.solve [
 				['==',
 					['get', 'a']
@@ -178,7 +178,7 @@ describe 'Domain', ->
 				<div id="box0" style="width: 20px"></div>
 			"""
 			document.body.appendChild(root)
-			window.engine = new GSS(root, true)
+			engine =  new GSS(root, true)
 			problem = [
 				['=='
 					['get', 'result', null, 'my_funny_tracker_path']
@@ -252,7 +252,7 @@ describe 'Domain', ->
 
 	describe 'framed domains', ->
 		it 'should not merge expressions of a framed domain', ->
-			window.engine = new GSS
+			engine =  new GSS
 			problem = [
 				['framed', 
 					['>=',
@@ -278,7 +278,7 @@ describe 'Domain', ->
 
 	describe 'variable graphs', ->
 		it 'should unmerge multiple domains', ->
-			window.engine = new GSS
+			engine =  new GSS
 			problem = [
 				['==',
 					['get', 'a']
@@ -314,7 +314,7 @@ describe 'Domain', ->
 
 
 		it 'should merge multiple domains', ->
-			window.engine = new GSS
+			engine =  new GSS
 			# Makes two separate graphs
 			problem = [
 				['=='

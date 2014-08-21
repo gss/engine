@@ -51,6 +51,7 @@ class Domain
       @substituted = []
       @constraints = []
       @values       = {} unless @hasOwnProperty('values')
+      @engine.domains ||= []
       unless @domain == @engine
         @domains.push(@)
       @MAYBE       = undefined
@@ -73,10 +74,6 @@ class Domain
         result = object.solve.apply(object, arguments)
       else
         result = @[strategy].apply(@, arguments)
-
-    if @constraints.length == 0
-      if (index = @engine.domains.indexOf(@)) > -1
-        @engine.domains.splice(index, 1)
 
     return result
 
@@ -147,6 +144,8 @@ class Domain
 
   # Set key-value pair or merge object
   set: (object, property, value, meta) ->
+    @setup()
+
     path = @engine.getPath(object, property)
     old = @values[path]
     return if old == value
@@ -226,7 +225,7 @@ class Domain
         object[property] = value
     return object
 
-  compare: (a, b) ->
+  compare: (a, b, mutate) ->
     if a != b
       if typeof a == 'object'
         return unless typeof b == 'object'
@@ -244,20 +243,21 @@ class Domain
         return if typeof b == 'object'
     return true
 
+  reconstrain: (other, constraint) ->
+    if @compare(other.operation, constraint.operation)
+      console.info('updating constraint', other.operation, '->', constraint.operation)
+      @unconstrain(other)
+
+
   constrain: (constraint) ->
     console.info(constraint, JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
     if constraint.paths
       for path in constraint.paths
         if path[0] == 'value'
           for other in @constraints by -1
-            if @compare(other.operation, constraint.operation)
-              console.info('updating constraint', other.operation, '->', constraint.operation)
-              @unconstrain(other)
-
+            @reconstrain other, constraint
       for other in @substituted by -1
-        if @compare(other.operation, constraint.operation)
-          console.info('updating constraint', other.operation, '->', constraint.operation)
-          @unconstrain(other)
+        @reconstrain other, constraint
 
       for path in constraint.paths
         if typeof path == 'string'
@@ -353,6 +353,12 @@ class Domain
             group[index] = constraint.operation
 
 
+
+      if @constraints.length == 0
+        if (index = @engine.domains.indexOf(@)) > -1
+          @engine.domains.splice(index, 1)
+
+          
     @constrained = undefined
 
     result = {}
@@ -453,7 +459,6 @@ class Domain
       EngineDomain.displayName  = name
       unless engine.prototype
         engine[name.toLowerCase()] = new engine[name]
-    engine.domains = []
     @
 
   DONE: 'solve'

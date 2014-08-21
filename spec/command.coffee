@@ -46,7 +46,7 @@ describe 'GSS commands', ->
         <div class="box block" id="12322">One</div>
         <div class="box block" id="34222">One</div>
       """
-      window.$engine = engine
+      engine
       engine.solve [
           ['stay', ['get', ['$class','box']  , 'x'    ]]
           ['stay', ['get', ['$class','box']  , 'y'    ]]

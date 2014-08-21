@@ -76,7 +76,6 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
-      @intrinsic.queries.connect()
       @engine.solve 'Document', 'stylesheets', [
         ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
         ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]

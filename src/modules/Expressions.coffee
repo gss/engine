@@ -92,11 +92,6 @@ class Expressions
     if onAfter = operation.def.after
       result = @engine[onAfter](context || node || scope, args, result, operation, continuation, scope)
 
-    # If it's NaN, then we've done some bad math, leave it to solver
-    unless result == result
-      args.unshift operation.name
-      return args
-      
     return result
 
   # Try to read saved results within continuation

@@ -46,6 +46,7 @@ Workflower = (engine) ->
     if typeof problem[0] == 'string'
       workflow.wrap(problem, @)
     if start || foreign
+      console.log(this, @workflow, workflow, 999, problem)
       if @workflow
         if @workflow != workflow
           return @workflow.merge(workflow)
@@ -81,7 +82,10 @@ Workflow.prototype =
     parent = operation.parent
     # Provide solution for constraint that was set before
     if domain = parent.domain
-      root = solution.domain.getRootOperation(parent)
+      if parent.parent?.domain == domain
+        root = solution.domain.getRootOperation(parent)
+      else
+        root = parent
       index = @domains.indexOf(domain, @index + 1)
       if index == -1
         index += @domains.push(domain)
@@ -143,7 +147,6 @@ Workflow.prototype =
                         exps = @problems[n]
                     break
                   else if !other.MAYBE
-                    debugger
                     @problems[i].push.apply(@problems[i], @problems[n])
                     @domains.splice(n, 1)
                     @problems.splice(n, 1)
@@ -271,6 +274,8 @@ Workflow.prototype =
                 else
                   framed = domain.frame && domain || other
                   console.log(variable, 'framed')
+    while connected
+      break unless @connect()
     return connected
 
   # Remove empty domains again

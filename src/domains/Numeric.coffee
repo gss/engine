@@ -45,6 +45,9 @@ class Numeric::Methods
   isConstraint: (object) ->
     return @constraints[object[0]]
 
+  #value: (value) ->
+  #  return value
+
   get: 
     command: (operation, continuation, scope, meta, object, path) ->
       return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
