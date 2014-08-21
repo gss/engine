@@ -33,7 +33,7 @@ class Queries
     @listener.disconnect()
     
 
-  onRelease: ->
+  onBeforeSolve: ->
     if @removed
       for id in @removed
         @remove id
@@ -51,20 +51,16 @@ class Queries
       for node in @removing
         delete node._gss_id
 
-    if @engine.workflow.queries
-      evalDiff = @engine.time(@engine.expressions.startTime)
-      queryDiff = @engine.time(queryTime)
-
-      @engine.console.row('queries', @engine.workflow.queries, evalDiff + 'ms + ' + queryDiff + 'ms')
-
     @buffer = @engine.workflow.queries = undefined
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
-    debugger
+    if window.zzz
+      debugger
     @engine.engine.solve 'mutations', ->
       @engine.workflow.queries = undefined
       @engine.workflow.reflown = undefined
+      qualified = @queries.qualified = @engine.workflow.qualified = []
       for mutation in mutations
         switch mutation.type
           when "attributes"
@@ -75,6 +71,8 @@ class Queries
             @queries.$characterData(mutation.target, mutation)
 
         @intrinsic.validate(mutation.target)
+      for operation, index in qualified by 3
+        @document.solve operation, qualified[index + 1], qualified[index + 2]
       return
 
   $attribute: (target, name, changed) ->
@@ -267,10 +265,13 @@ class Queries
 
   # Remove observers from element
   unobserve: (id, continuation, plural, quick) ->
+    if continuation == ".group .vessel$vessel11"
+      debugger
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
       if typeof id != 'object'
         @unpair continuation, @engine.identity[id]
+    console.log(refs, 66)
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
@@ -295,12 +296,13 @@ class Queries
         @clean(continuation + id + '→' + subpath, null, null, null, null, true)
        
     # Remove all watchers that match continuation path
-    ref = continuation + (collection && collection.length != undefined && id || '')
+    ref = continuation + (collection?.length? && id || '')
     @unobserve(id, ref, plural)
 
-    return unless (result = @engine.queries.get(continuation))?
+    return unless (result = @get(continuation))?
 
-    @updateOperationCollection operation, continuation, scope, undefined, result
+    #@updateOperationCollection operation, continuation, scope, undefined, result
+    
     if result.length?
       if typeof manual == 'string' && @isPaired(null, manual)
         for item in result
@@ -346,11 +348,12 @@ class Queries
           keys.splice(index, 1)
         @chain collection[index - 1], node, collection.slice(), continuation
         @chain node, collection[index], collection.slice(), continuation
+        return true
 
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, plural) ->
-    @engine.console.row('remove', (id.nodeType && @engine.identity.provide(id) || id), continuation)
+    #@engine.console.row('remove', (id.nodeType && @engine.identity.provide(id) || id), continuation)
     if typeof id == 'object'
       node = id
       id = @engine.identity.provide(id)
@@ -360,8 +363,11 @@ class Queries
     if continuation
       collection = @get(continuation)
 
-      unless @removeFromCollection(node, continuation, operation, scope, manual) == false
+      removed = @removeFromCollection(node, continuation, operation, scope, manual)
+
+      unless removed == false
         @removeFromNode(id, continuation, operation, scope, plural)
+
       if collection && !collection.length
         this.set continuation, undefined 
 
@@ -369,15 +375,16 @@ class Queries
       # Detach queries attached to an element when removing element by id
       @unobserve(id, true)
 
+    return removed
   clean: (path, continuation, operation, scope, bind, plural) ->
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
     #@engine.values.clean(path, continuation, operation, scope)
-    if result && !@engine.isCollection(result)
-      if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
-        @remove result, oppath
+    # if result && !@engine.isCollection(result)
+    #   if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
+    #     @remove result, oppath
     @unpair path, result if result?.nodeType
     unless plural
       if (result = @get(path, undefined, true)) != undefined
@@ -396,13 +403,15 @@ class Queries
       delete @_plurals[path]
 
     # Remove queries in queue and global watchers that match the path 
-    if @lastOutput
-      @unobserve(@lastOutput, path, null, true)
+    console.log(@qualified, path, 6666666)
+    if path == ".group .vessel$vessel1↓::parent .box:last-child$box1"
+      debugger
+    if @qualified
+      @unobserve(@qualified, path, null, true)
 
     @unobserve(@engine.scope._gss_id, path)
 
     if !result || result.length == undefined
-      console.log('remove ma breda clean', path)
       @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 
@@ -532,19 +541,26 @@ class Queries
     return if path == oppath
     collection = @get(oppath)
     return if removed && removed == collection
+    updated = undefined
     if removed
-      @each 'remove', removed, oppath, operation, scope, true
+      if @each 'remove', removed, oppath, operation, scope, true
+        updated = true
     if added
-      @each 'add', added, oppath, operation, scope, true
+      if @each 'add', added, oppath, operation, scope, true
+        updated = true
+    return updated
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result, continuation, operation, scope, manual) ->
     if result.length != undefined
       copy = result.slice()
+      returned = undefined
       for child in copy
-        @[method] child, continuation, operation, scope, manual
+        if @[method] child, continuation, operation, scope, manual
+          returned = true
+      return returned
     else if typeof result == 'object'
-      @[method] result, continuation, operation, scope, manual
+      return @[method] result, continuation, operation, scope, manual
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
@@ -552,58 +568,55 @@ class Queries
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
 
+    @engine.workflow.queries ||= {}
+
     # Normalize query to reuse results
-    query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
-    if group = (query && @engine.workflow.queries?[query])
-      result = group[0]
-      unless old?
-        old = group[1]
-        scoped = true 
-      else
-        @set path, group[0]
-    else if !old? && (result && result.length == 0) && continuation
+
+    
+    if pathed = @engine.workflow.queries[path]
+      old = pathed[1]
+
+    if query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
+      if queried = @engine.workflow.queries[query]
+        old ?= queried[1]
+        result = queried[0]
+
+    if !old? && (result && result.length == 0) && continuation
       old = @get(@engine.getCanonicalPath(path))
-    if (group ||= @engine.workflow.queries?[path])
-      if scoped
-        added = result
-      else
-        added = group[2]
-        removed = group[3]
+
+    isCollection = result && result.length != undefined
+    if old == result || (old == undefined && @removed)
+      noop = true unless result && result.keys
+      old = undefined
+    
+    # Clean refs of nodes that dont match anymore
+    if old
+      if old.length != undefined
+        removed = undefined
+        old = old.slice()
+        for child in old
+          if !result || Array.prototype.indexOf.call(result, child) == -1
+            @remove child, path, operation, scope
+            (removed ||= []).push child
+      else if !result
+        @clean(path)
+        removed = old
+
+    # Register newly found nodes
+    if isCollection
+      added = undefined
+      for child in result
+        if !old || Array.prototype.indexOf.call(old, child) == -1  
+          (added ||= []).push child
+
+      # Snapshot live node list for future reference
+      if result && result.item
+        result = Array.prototype.slice.call(result, 0)
     else
+      added = result
 
-      isCollection = result && result.length != undefined
-      if old == result || (old == undefined && @removed)
-        noop = true unless result && result.keys
-        old = undefined
-      
-      # Clean refs of nodes that dont match anymore
-      if old
-        if old.length != undefined
-          removed = undefined
-          o = old.slice()
-          for child in o
-            if !result || Array.prototype.indexOf.call(result, child) == -1
-              @remove child, path, operation, scope
-              (removed ||= []).push child
-        else# if !result
-          @clean(path)
-          removed = old
-
-      # Register newly found nodes
-      if isCollection
-        added = undefined
-        for child in result
-          if !old || Array.prototype.indexOf.call(old, child) == -1  
-            (added ||= []).push child
-
-        # Snapshot live node list for future reference
-        if result && result.item
-          result = Array.prototype.slice.call(result, 0)
-      else
-        added = result
-
-      if (added || removed)
-        @updateOperationCollection operation, path, scope, added, removed
+    if (added || removed)
+      @updateOperationCollection operation, path, scope, added, removed
 
     # Subscribe node to the query
     if id = @engine.identity.provide(node)
@@ -617,16 +630,12 @@ class Queries
 
     if plurals = @_plurals?[path]
       (@_repairing ||= {})[path] = true
-
-    @engine.workflow.queries ||= {}
-    #unless @engine.workflow.queries == undefined 
       
     group = @engine.workflow.queries[query] ||= [] if query
     @engine.workflow.queries[path] ||= group ||= []
+
     group[0] ||= result
-    group[1] ||= old?.slice?() unless old == result
-    group[2] ||= added
-    group[3] ||= removed
+    group[1] ||= old
 
     contd = continuation
     if contd && contd.charAt(contd.length - 1) == '→'
@@ -690,7 +699,12 @@ class Queries
   # Check if query observes qualifier by combinator 
   qualify: (operation, continuation, scope, groupped, qualifier, fallback) ->
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
-      @engine.document.expressions.solve(operation, continuation, scope)
+      if @engine.indexOfTriplet(@qualified, operation, continuation, scope) == -1
+        length = (continuation || '').length
+        for qualified, index in @qualified by 3
+          if (@qualified[index + 1] || '').length > length
+            break
+        @qualified.splice(index, 0, operation, continuation, scope)
     @
 
   comparePosition: (a, b) ->

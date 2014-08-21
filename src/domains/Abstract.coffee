@@ -29,7 +29,8 @@ class Abstract::Methods
         if prop = @properties[property]
           unless prop.matcher
             return prop.call(@, object, contd)
-
+      if @getContinuation(continuation || contd || '') == ".group .vessel$vessel1↓ .box:last-child$box5"
+        debugger
       return ['get', id, property, @getContinuation(continuation || contd || '')]
 
   set:

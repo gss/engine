@@ -164,7 +164,7 @@ class Expressions
       if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain)
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection?(result)
-          @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
+          @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item, @engine.UP)
             @solve operation.parent, breadcrumbs, scope, meta, operation.index, item
@@ -206,7 +206,6 @@ class Expressions
       else if parent && (typeof parent[0] == 'string' && (parent.domain != operation.domain))
         solution = ['value', result, continuation || '', operation.toString()]
         console.error('shashsks', solution)
-        debugger
         solution.push true if operation.exported
         solution.operation = operation
         solution.parent    = operation.parent

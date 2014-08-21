@@ -17,11 +17,12 @@ class Linear extends Domain
   isExpression: (object) ->
     return object instanceof c.Expression
 
-  constructor: () ->
-    @solver = new c.SimplexSolver()
-    @solver.autoSolve = false
-    c.debug = true
-    super
+  setup: () ->
+    Domain::setup.apply(@, arguments)
+    unless @hasOwnProperty('solver')
+      @solver = new c.SimplexSolver()
+      @solver.autoSolve = false
+      c.debug = true
 
   provide: (result) ->
     @constrain(result)

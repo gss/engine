@@ -201,24 +201,32 @@ class Engine extends Domain.Events
     else if @workflow.reflown
       @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
 
+    @queries?.onBeforeSolve()
+    
     solution = workflow.each @resolve, @, solution
 
     @engine.workflow = old
 
-    return @solved(solution)
+    return @solved(solution, workflow)
 
-  solved: (solution) ->
-    return solution unless typeof solution == 'object'
-    for property, value of solution
-      @values[property] = value
-    #@merge solution
+  solved: (solution, workflow) ->
+    console.log('solved', solution)
+    if typeof solution == 'object'
+      for property, value of solution
+        if value?
+          @values[property] = value
+        else
+          delete @values[property]
+    else if workflow.domains.length != 1 || workflow.domains[0] != null
+      return
 
-    @console.info('Solution\t   ', solution)
+
+    @console.info('Solution\t   ', solution,)
 
     # Trigger events on engine and scope node
-    @triggerEvent('solve', solution)
+    @triggerEvent('solve', solution, workflow)
     if @scope
-      @dispatchEvent(@scope, 'solve', solution)
+      @dispatchEvent(@scope, 'solve', solution, workflow)
 
     return solution
 
@@ -246,9 +254,7 @@ class Engine extends Domain.Events
       problems = problem
 
     if domain
-      @console.start(problems, domain.displayName)
       @providing = null
-      debugger
       result = domain.solve(problems) || @providing || undefined
       if @providing && @providing != result
         workflow.merge(@Workflow(@frame || true, @providing))
@@ -280,13 +286,11 @@ class Engine extends Domain.Events
               locals.push(path)
         if locals.length
           locals.unshift 'remove'
-          workflow.merge(locals, domain)
+          workflow.merge([locals], domain)
         if others.length
           workflow.merge(others, domain)
       for url, worker of @workers
         workflow.merge problems, worker
-
-    console.error(result, 1222)
 
     return result
 

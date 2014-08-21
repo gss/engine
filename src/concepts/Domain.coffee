@@ -60,6 +60,7 @@ class Domain
   solve: (args) ->
     return unless args
 
+
     @setup()
 
     if typeof args == 'object' && !args.push
@@ -72,7 +73,12 @@ class Domain
         result = object.solve.apply(object, arguments)
       else
         result = @[strategy].apply(@, arguments)
-      return result
+
+    if @constraints.length == 0
+      if (index = @engine.domains.indexOf(@)) > -1
+        @engine.domains.splice(index, 1)
+
+    return result
 
   provide: (solution, value) ->
     if solution instanceof Domain
@@ -239,7 +245,6 @@ class Domain
     return true
 
   constrain: (constraint) ->
-    debugger
     console.info(constraint, JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
     if constraint.paths
       for path in constraint.paths
@@ -351,6 +356,7 @@ class Domain
     @constrained = undefined
 
     result = {}
+    console.log(@constrained, @nullified, @added)
     for path, value of solution
       unless @nullified?[path]
         result[path] = value
@@ -399,6 +405,7 @@ class Domain
 
 
   export: ->
+    debugger
     for constraint in @constraints
       constraint.operation
 

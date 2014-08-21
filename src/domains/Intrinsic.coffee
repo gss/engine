@@ -40,7 +40,13 @@ class Intrinsic extends Numeric
     return old
 
   restyle: (element, property, value = '') -> 
+    switch property
+      when "x"
+        property = "left"
+      when "y"
+        property = "top"
     return unless prop = @properties[property]
+        
     if typeof value != 'string'
       value = prop.toString(value)
     element.style[property] = value

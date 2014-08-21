@@ -32,7 +32,6 @@ Workflower = (engine) ->
             else
               d = domain || true
             workload = @Workflow(d, arg)
-            console.log('phramed', d, arg, workload)
             break
 
       if workflow && workflow != workload
@@ -144,6 +143,7 @@ Workflow.prototype =
                         exps = @problems[n]
                     break
                   else if !other.MAYBE
+                    debugger
                     @problems[i].push.apply(@problems[i], @problems[n])
                     @domains.splice(n, 1)
                     @problems.splice(n, 1)
@@ -250,8 +250,6 @@ Workflow.prototype =
   connect: ->
     connected = undefined
     for domain, i in @domains by -1
-      if i == @index
-        debugger
       break if i == @index
       problems = @problems[i]
       @setVariables(problems, null, domain)
@@ -301,7 +299,7 @@ Workflow.prototype =
     priority = @domains.length
     position = @index + 1
     while (other = @domains[position]) != undefined
-      if other
+      if other || !domain
         if other == domain
           cmds = @problems[position]
           for problem in problems
@@ -315,7 +313,7 @@ Workflow.prototype =
               cmds.push problem
           merged = true
           break
-        else 
+        else if other && domain
           if (other.priority < domain.priority) && (!other.frame || other.frame == domain.frame)
             priority = position
       position++

@@ -18,19 +18,19 @@ class Document extends Abstract
   constructor: () ->
     if document?
       @engine.queries   ||= new @Queries(@)
-      @engine.positions ||= new @Positions(@) 
+      @engine.positions ||= new @Positions(@)
       @engine.applier   ||= @engine.positions
       @engine.scope     ||= document
       @engine.all         = @engine.scope.getElementsByTagName('*')
-    
-    if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
-      @scope.addEventListener 'DOMContentLoaded', @
-    else if @running
-      @compile()
+      
+      if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
+        @scope.addEventListener 'DOMContentLoaded', @
+      else if @running
+        @compile()
 
-    @scope.addEventListener 'scroll', @
-    if window?
-      window.addEventListener 'resize', @
+      @scope.addEventListener 'scroll', @
+      if window?
+        window.addEventListener 'resize', @
 
     super
     

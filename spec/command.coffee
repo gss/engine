@@ -153,7 +153,7 @@ describe 'GSS commands', ->
         engine.once 'solve', ->
           chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
             [["remove",".box$12322"]],
-            ["remove",".box$12322"]
+            [["remove",".box$12322"]]
           ]
           done()
 
@@ -267,7 +267,7 @@ describe 'GSS commands', ->
           else if count is 2
             chai.expect(engine.workflown.getProblems()).to.eql [
               [['remove', '.box$34222']]
-              ['remove', '.box$34222']
+              [['remove', '.box$34222']]
             ]
             engine.removeEventListener 'solve', listener
             done()
@@ -295,7 +295,7 @@ describe 'GSS commands', ->
           else if count is 2
             chai.expect(engine.workflown.getProblems()).to.eql [
                 [['remove', '.box$34222']]
-                ['remove', '.box$34222']
+                [['remove', '.box$34222']]
               ]
             engine.removeEventListener 'solve', listener
             done()
