@@ -22,7 +22,6 @@ class Numeric::Methods
     return a || b
 
   "+": (a, b) ->
-    debugger
     return a + b
 
   "-": (a, b) ->
@@ -45,25 +44,10 @@ class Numeric::Methods
   isConstraint: (object) ->
     return @constraints[object[0]]
 
-  #value: (value) ->
-  #  return value
-
   get: 
     command: (operation, continuation, scope, meta, object, path) ->
       return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
 
-
-
-for property, fn of Numeric::Methods::
-  if typeof fn == 'function'
-    fn = do (property, fn) ->
-      func = Numeric::Methods::[property] = (a, b) ->
-        ap = @isPrimitive(a)
-        bp = @isPrimitive(b)
-        if ap && bp
-          return fn.apply(@, arguments)
-        return [property, a, b]
-    fn.binary = true
 
 Numeric::Methods::['*'].linear = false
 Numeric::Methods::['/'].linear = false

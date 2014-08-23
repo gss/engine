@@ -203,13 +203,13 @@ class Queries
 
     # Clean removed elements by id
     for removed in allRemoved
-      if id = @engine.identity.solve(removed)
+      if id = @engine.identity.find(removed)
         (@removed ||= []).push(id)
     @
 
   $characterData: (target) ->
     parent = target.parentNode
-    if id = @engine.identity.solve(parent)
+    if id = @engine.identity.find(parent)
       if parent.tagName == 'STYLE' 
         if parent.getAttribute('type')?.indexOf('text/gss') > -1
           @engine.eval(parent)
@@ -393,8 +393,12 @@ class Queries
 
           @each 'remove', result, path, operation
 
-        if scope && operation.def.cleaning
-          @remove @engine.identity.solve(scope), path, operation
+    if scope && operation.def.cleaning
+      @remove @engine.identity.find(scope), path, operation
+    @engine.solved.remove(path)
+    console.log('CLEAN', path, 7777)
+    console.error(result, 'crean', path)
+    console.error(Object.keys(@engine.solved.observers))
 
     @set path, undefined
 
@@ -402,13 +406,11 @@ class Queries
       delete @_plurals[path]
 
     # Remove queries in queue and global watchers that match the path 
-    console.log(@qualified, path, 6666666)
-    if path == ".group .vessel$vessel1↓::parent .box:last-child$box1"
-      debugger
     if @qualified
       @unobserve(@qualified, path, null, true)
 
     @unobserve(@engine.scope._gss_id, path)
+
 
     if !result || result.length == undefined
       @engine.provide(['remove', @engine.getContinuation(path)])
@@ -621,6 +623,8 @@ class Queries
     if id = @engine.identity.provide(node)
       watchers = @watchers[id] ||= []
       if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+        if id == '$box1'
+          debugger
         watchers.push(operation, continuation, scope)
     
     return if noop

@@ -102,6 +102,7 @@ Workflow.prototype =
           if (i = problems.indexOf(p)) > -1
             @substitute(problems[i], operation, solution)
           p = p.parent
+    console.error('provided solution', solution, parent)
     return
 
   # Group expressions
@@ -131,16 +132,22 @@ Workflow.prototype =
                   if !domain.MAYBE
                     if !other.MAYBE
                       if index < n
+                        console.log("EXPORTIN2G", domain, domain.export())
                         exps.push.apply(exps, domain.export())
                         exps.push.apply(exps, probs)
                         @domains.splice(n, 1)
                         @problems.splice(n, 1)
+                        for constraint in domain.constraints by -1
+                          domain.unconstrain(constraint)
                         @engine.domains.splice @engine.domains.indexOf(domain), 1
                       else
+                        console.log("EXPORTING", other, other.export())
                         probs.push.apply(probs, other.export())
                         probs.push.apply(probs, exps)
                         @domains.splice(index, 1)
                         @problems.splice(index, 1)
+                        for constraint in other.constraints by -1
+                          other.unconstrain(constraint)
                         @engine.domains.splice @engine.domains.indexOf(other), 1
                         other = domain
                         i = j + 1
@@ -295,7 +302,7 @@ Workflow.prototype =
 
 
   # Merge source workflow into target workflow
-  merge: (problems, domain) ->
+  merge: (problems, domain, reverse) ->
     if domain == undefined
       for domain, index in problems.domains
         @merge problems.problems[index], domain
@@ -315,7 +322,10 @@ Workflow.prototype =
                   exported = true
                   break
             unless exported
-              cmds.push problem
+              if reverse
+                cmds.unshift problem
+              else
+                cmds.push problem
           merged = true
           break
         else if other && domain

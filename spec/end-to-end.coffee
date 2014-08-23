@@ -449,7 +449,7 @@ describe 'End - to - End', ->
                 <div class="b" id="b1"></div>
               """
           
-      describe 'of dimensions', ->
+      xdescribe 'of dimensions', ->
         describe 'with units other than pixels', ->
           it 'should use intrinsic value when there is no regular value set', (done) ->                                 
             container.innerHTML =  """
@@ -998,8 +998,6 @@ describe 'End - to - End', ->
           expect(engine.values).to.eql 
             "$sugar1[x]": 5
             "$sugar1[y]": 5
-            "$sugar1[intrinsic-width]": 10
-            "$sugar1[intrinsic-height]": 10
             "$sugar2[width]": 10
             "$sugar2[height]": 10
             "$sugar2[x]": 0
@@ -1019,7 +1017,6 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
-            "$sync1[intrinsic-width]": 100
             "$sync1[height]": 100            
           done()
     
@@ -1038,7 +1035,6 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
-            "$sync1[intrinsic-width]": 120
             "$sync1[height]": 120            
           done()
     
@@ -1058,17 +1054,14 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
-            "$sync1[intrinsic-width]": 100
             "$sync1[height]": 100     
             "$sync1[test]": 0
           # do again
           container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
-              "$sync1[intrinsic-width]": 100
               "$sync1[height]": 100
               "$sync1[test]": 0
-              "$async1[intrinsic-width]": 100
               "$async1[height]": 100
               "$async1[test]": 0
             done()
@@ -1090,10 +1083,6 @@ describe 'End - to - End', ->
           h = (window.innerHeight)
           cy = h / 2
           expect(engine.values).to.eql 
-            "::window[height]": h
-            "::window[width]": w
-            "::window[x]": 0
-            "::window[y]": 0
             "center-x": cx
             "center-y": cy
           done()                             
@@ -1109,13 +1098,9 @@ describe 'End - to - End', ->
           w = (window.innerWidth)# - GSS.get.scrollbarWidth())
           h = (window.innerHeight)
           expect(engine.values).to.eql 
-            "::window[y]": 0
             "top": 0
-            "::window[width]": w
             "right": w
-            "::window[height]": h
             "bottom": h
-            "::window[x]": 0
             "left": 0
           done()                             
         container.innerHTML =  """

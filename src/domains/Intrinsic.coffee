@@ -223,7 +223,6 @@ class Intrinsic extends Numeric
             when "width", "intrinsic-width"
               @set id, prop, node.offsetWidth
             when "height", "intrinsic-height"
-              debugger
               @set id, prop, node.offsetHeight
             else
               @set id, prop, @getStyle(node, @engine.getIntrinsicProperty(prop))

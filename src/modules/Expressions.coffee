@@ -51,6 +51,7 @@ class Expressions
       contd = continuation
       continuation = @engine.getOperationPath(operation, continuation)
 
+
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
 
@@ -156,7 +157,7 @@ class Expressions
     if result? 
       if parent = operation.parent
         pdef = parent.def
-      if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain)
+      if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document)
         # For each node in collection, we recurse to a parent op with a distinct continuation key
         if parent && @engine.isCollection?(result)
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
@@ -199,6 +200,7 @@ class Expressions
           else
             return result
       else if parent && (typeof parent[0] == 'string' && (parent.domain != operation.domain))
+
         solution = ['value', result, continuation || '', operation.toString()]
         console.error('shashsks', solution)
         solution.push true if operation.exported

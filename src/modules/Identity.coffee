@@ -27,6 +27,6 @@ class Identity
 
   # Get id if given object has one
   find: (object) ->
-    return @constructor.identity.provide(object, false)
+    return @provide(object, false)
 
 module.exports = Identity

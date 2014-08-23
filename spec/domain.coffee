@@ -305,12 +305,14 @@ describe 'Domain', ->
 			]).to.eql
 				b: 2
 				c: 2
+				a: 1
 			console.log(1)
 			expect(engine.solve [
 				['remove', 'my_tracker_path']
 			]).to.eql
 				b: 0
 				c: 0
+				a: 1
 
 
 		it 'should merge multiple domains', ->

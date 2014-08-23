@@ -34,6 +34,7 @@
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
+    "lib/domains/Boolean.js",
     
     "lib/domains/Linear.js", 
     "lib/domains/Intrinsic.js",

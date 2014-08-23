@@ -75,6 +75,8 @@ class Conventions
     if property.indexOf('[') > -1 || !id
       return property
     else
+      if id.nodeType
+        id = @identity.provide(id)
       return id + '[' + property + ']'
 
   # Hook: Should interpreter iterate returned object?

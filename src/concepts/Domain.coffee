@@ -40,7 +40,7 @@ class Domain
     else
       return @find.apply(@, arguments)
 
-  setup: ->
+  setup: (hidden = @immutable) ->
     @variables   ||= {}
     unless @hasOwnProperty('watchers')
       @expressions = new @Expressions(@) 
@@ -52,7 +52,7 @@ class Domain
       @constraints = []
       @values       = {} unless @hasOwnProperty('values')
       @engine.domains ||= []
-      unless @domain == @engine
+      if !hidden && @domain != @engine
         @domains.push(@)
       @MAYBE       = undefined
 
@@ -81,9 +81,11 @@ class Domain
     if solution instanceof Domain
       return @merge solution
     else if @domain
-      return @engine.engine.provide solution
+      @engine.engine.provide solution
+      return 
     else
-      return @engine.provide solution
+      @engine.provide solution
+      return 
     return true
 
 
@@ -141,6 +143,7 @@ class Domain
     async = false
     for path, value of object
       domain.set undefined, path, value, meta
+    return
 
   # Set key-value pair or merge object
   set: (object, property, value, meta) ->
@@ -164,20 +167,22 @@ class Domain
 
     return value
 
-  sanitize: (exps, parent = exps.parent, index = exps.index) ->
+  sanitize: (exps, soft, parent = exps.parent, index = exps.index) ->
     if exps[0] == 'value' && exps.operation
-      return parent[index] = @sanitize exps.operation, parent, index
+      return parent[index] = @sanitize exps.operation, soft, parent, index
     for own prop, value of exps
       unless isFinite(parseInt(prop))
         delete exps[prop]
     for exp, i in exps
       if exp.push
-        @sanitize exp, exps, i
+        @sanitize exp, soft, exps, i
     exps.parent = parent
     exps.index  = index
     exps
 
   orphanize: (operation) ->
+    if operation[2] == 'big'
+      debugger
     if operation.domain
       delete operation.domain
     for arg in operation
@@ -197,7 +202,9 @@ class Domain
             domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
           else
             @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
-          
+    
+    return if domain.immutable
+
     if @workers
       for url, worker of @workers
         if values = worker.values
@@ -251,6 +258,7 @@ class Domain
 
   constrain: (constraint) ->
     console.info(constraint, JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
+    
     if constraint.paths
       for path in constraint.paths
         if path[0] == 'value'
@@ -299,6 +307,16 @@ class Domain
           path.constraints.splice(index, 1)
           unless path.constraints.length
             @undeclare(path)
+        console.error('unconstraint', path.name, @clone path.operations)
+        if @solver._externalParametricVars.storage.length
+          debugger
+        if path.operations
+          for op, index in path.operations by -1
+            while op
+              if op == constraint.operation
+                path.operations.splice(index, 1)
+                break
+              op = op.parent
 
     @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
@@ -310,10 +328,12 @@ class Domain
       ops = variable.operations ||= []
       if ops.indexOf(operation)
         ops.push(operation)
+    console.log(@added, variable, 999999999)
     return variable
 
   undeclare: (variable) ->
     delete @variables[variable.name]
+    console.log(@added, variable, 9989078)
     (@nullified ||= {})[variable.name] = true
     return
 
@@ -344,11 +364,16 @@ class Domain
   apply: (solution) ->
     if @constrained
       groups = @reach(@constraints).sort (a, b) ->
-        return a.length - b.length
+        al = a.length
+        bl = b.length
+        return bl - al
+
+      console.error(@constraints.slice(), groups.slice(), '!!!!!!!!!!!!!!!!!!!!', solution)
       separated = groups.splice(1)
       if separated.length
         for group in separated
           for constraint, index in group
+            debugger
             @unconstrain constraint
             group[index] = constraint.operation
 
@@ -358,7 +383,7 @@ class Domain
         if (index = @engine.domains.indexOf(@)) > -1
           @engine.domains.splice(index, 1)
 
-          
+
     @constrained = undefined
 
     result = {}
@@ -372,6 +397,8 @@ class Domain
         result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]
+
+
       @nullified = undefined
     if @added
       for path of @added
@@ -382,6 +409,8 @@ class Domain
       if separated.length == 1
         separated = separated[0]
       @engine.provide @orphanize separated
+    if @values.big == 0
+      debugger
     console.log 'provide', result
     return result
 
@@ -411,7 +440,6 @@ class Domain
 
 
   export: ->
-    debugger
     for constraint in @constraints
       constraint.operation
 
@@ -438,16 +466,14 @@ class Domain
           @addListeners(@events)
           @events    = new (Native::mixin(@engine.events))
 
-        unless @Methods == engine.Methods
-          @Wrapper.compile @Methods::, @ if @Wrapper
-          @Method.compile  @Methods::, @
-          Methods    = @Methods
-        @methods     = new (Native::mixin(@engine.methods, Methods))
+        @Wrapper.compile @Methods::, @ if @Wrapper
+        @Method.compile  @Methods::, @
+        Methods    = @Methods
+        @methods     = new Methods
 
-        unless @Properties == engine.Properties
-          @Property.compile @Properties::, @
-          Properties = @Properties
-        @properties  = new (Native::mixin(@engine.properties, Properties))
+        @Property.compile @Properties::, @
+        Properties = @Properties
+        @properties  = Properties && (new Properties) || {}
 
         return Domain::constructor.call(@, engine)
 

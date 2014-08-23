@@ -8,6 +8,7 @@ class Abstract::Methods
 
   get:
     command: (operation, continuation, scope, meta, object, property, contd) ->
+      console.error(object, property, operation, 555)
       if typeof object == 'string'
         id = object
 
@@ -29,14 +30,15 @@ class Abstract::Methods
         if prop = @properties[property]
           unless prop.matcher
             return prop.call(@, object, contd)
-      if @getContinuation(continuation || contd || '') == ".group .vessel$vessel1↓ .box:last-child$box5"
-        debugger
       return ['get', id, property, @getContinuation(continuation || contd || '')]
 
   set:
-    command: ->
-      object = @intrinsic || @assumed
-      object.set.apply(object, arguments)
+    command: (operation, continuation, scope, meta, property, value) ->
+      if @intrinsic
+        @intrinsic.restyle scope, property, value
+      else
+        @assumed.set scope, property, value
+      return
 
   suggest:
     command: ->

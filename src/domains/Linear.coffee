@@ -41,8 +41,8 @@ class Linear extends Domain
       @solver.addConstraint(constraint)
 
   unconstrain: (constraint) ->
-    unless super
-      @solver.removeConstraint(constraint)
+    @solver.removeConstraint(constraint)
+    super
 
   undeclare: (variable) ->
     unless super
@@ -103,7 +103,6 @@ class Linear::Methods extends Domain::Methods
     return new c.Expression name: name
 
   suggest: ->
-    debugger
     return @suggest.apply(@, arguments)
 
 

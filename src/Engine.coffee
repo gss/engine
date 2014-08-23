@@ -31,6 +31,7 @@ class Engine extends Domain.Events
     Numeric:   require('./domains/Numeric')
     Linear:    require('./domains/Linear')
     Finite:    require('./domains/Finite')
+    Boolean:   require('./domains/Boolean')
 
   constructor: (scope, url) ->
     for argument, index in arguments
@@ -43,7 +44,7 @@ class Engine extends Domain.Events
               @scope = scope
             else
               while scope
-                if id = Engine.identity.solve(scope)
+                if id = Engine.identity.find(scope)
                   if engine = Engine[id]
                     return engine
                 break unless scope.parentNode
@@ -74,6 +75,12 @@ class Engine extends Domain.Events
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
     @assumed.setup()
+
+    @solved = new @Boolean
+    @solved.displayName = 'Solved'
+    @solved.setup()
+
+    @values = @solved.values
 
 
     unless window?
@@ -156,7 +163,6 @@ class Engine extends Domain.Events
         else
           problematic = arg
 
-
     if typeof args[0] == 'object'
       if name = source || @displayName
         @console.start(reason || args[0], name)
@@ -176,13 +182,12 @@ class Engine extends Domain.Events
         if args[0]?.index
           provided.index ?= args[0].index
           provided.parent ?= args[0].parent
-        solution = @Workflow(provided)
+        @Workflow(provided)
     if providing
       @providing = undefined
 
     if name
       @console.end(reason)
-
 
     workflow = @workflow
     if workflow.domains.length
@@ -190,12 +195,12 @@ class Engine extends Domain.Events
         if old != workflow
           old.merge(workflow)
       else
-        @workflown = workflow
         solution = workflow.each @resolve, @
 
-    return solution unless @engine == @
+      if @engine == @
+        return @onSolve(solution, workflow)
 
-
+  onSolve: (solution, workflow = @workflow, result) ->
     # Apply styles
     if solution
       @applier?.solve(solution)
@@ -203,26 +208,29 @@ class Engine extends Domain.Events
       @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
 
     @queries?.onBeforeSolve()
+
+    @solved.merge solution
     
-    solution = workflow.each @resolve, @, solution
 
-    @engine.workflow = old
+    @console.info('Solution\t   ', solution, JSON.stringify(solution), @solved.values)
 
-    return @solved(solution, workflow)
+    updated = {}
+    updated = workflow.each(@resolve, @, updated)
+    if Object.keys(updated).length
+      return @onSolve(updated, workflow, solution)
 
-  solved: (solution, workflow) ->
-    console.log('solved', solution)
-    if typeof solution == 'object'
-      for property, value of solution
-        if value?
-          @values[property] = value
-        else
-          delete @values[property]
-    else if workflow.domains.length != 1 || workflow.domains[0] != null
-      return
+    if result
+      for property, value of updated
+        solution[property] = value
 
+    if (!solution || workflow.problems[@workflow.index + 1]) &&
+        (workflow.problems.length != 1 || workflow.domains[0] != null)
+      return 
+    @engine.workflown = workflow
+    @engine.workflow = undefined
+    
 
-    @console.info('Solution\t   ', solution,)
+    @console.info('Solution\t   ', solution, JSON.stringify(solution), @solved.values)
 
     # Trigger events on engine and scope node
     @triggerEvent('solve', solution, workflow)
@@ -236,7 +244,7 @@ class Engine extends Domain.Events
     if solution.operation
       return @engine.workflow.provide solution
     if !solution.push
-      return @solved(solution)
+      return @onSolve(solution)
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
@@ -254,9 +262,9 @@ class Engine extends Domain.Events
     if problems instanceof Array && problems.length == 1 && problem instanceof Array
       problems = problem
 
-    console.log(problems.slice(), problems, 555530)
     if domain
       @providing = null
+      @console.start(problems, domain.displayName)
       result = domain.solve(problems) || @providing || undefined
       if @providing && @providing != result
         workflow.merge(@Workflow(@frame || true, @providing))
@@ -279,21 +287,20 @@ class Engine extends Domain.Events
             removes.push(problem)
           else
             others.push(problem)
-      for domain in @domains
+      for other in @domains
         locals = []
         for remove in removes
           for path, index in remove
             continue if index == 0
-            if domain.paths[path]
+            if other.paths[path]
               locals.push(path)
         if locals.length
           locals.unshift 'remove'
-          workflow.merge([locals], domain)
+          workflow.merge([locals], other, true)
         if others.length
-          workflow.merge(others, domain)
+          workflow.merge(others, other)
       for url, worker of @workers
         workflow.merge problems, worker
-
     return result
 
   # Initialize new worker and subscribe engine to its events
@@ -313,7 +320,6 @@ class Engine extends Domain.Events
   # Compile initial domains and shared engine features 
   precompile: ->
     if @constructor::running == undefined
-      console.error(@constructor::helps)
       for property, method of @Methods::
         @constructor::[property] ||= 
         @constructor[property] ||= Engine::Method(method, property)
@@ -325,7 +331,7 @@ class Engine extends Domain.Events
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @Workflow = Engine::Workflow.compile(@)
-    @intrinsic.queries.connect()
+    @intrinsic?.queries.connect()
 
   # Comile user provided features specific to this engine
   compile: (state) ->
@@ -333,7 +339,6 @@ class Engine extends Domain.Events
     properties = @properties || @Properties::
     @Method  .compile(methods,    @)
     @Property.compile(properties, @)
-    @Domain  .compile(@Domains,   @) if @running
 
     @running = state ? null
     
