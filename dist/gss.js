@@ -21884,7 +21884,7 @@ Domain = (function() {
                 if (constraint.paths.indexOf(variable) > -1) {
                   if (groupped && groupped !== group) {
                     groupped.push.apply(groupped, group);
-                    groups.splice(group.indexOf(group), 1);
+                    groups.splice(groups.indexOf(group), 1);
                   } else {
                     groupped = group;
                   }
@@ -23827,6 +23827,7 @@ Intrinsic = (function(_super) {
         }
       }
     }
+    debugger;
     return Numeric.prototype.get.apply(this, arguments);
   };
 
@@ -24414,7 +24415,7 @@ Expressions = (function() {
       if (parent = operation.parent) {
         pdef = parent.def;
       }
-      if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain)) {
+      if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document)) {
         if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
           this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
@@ -24453,7 +24454,7 @@ Expressions = (function() {
             return result;
           }
         }
-      } else if (parent && (typeof parent[0] === 'string' && (parent.domain !== operation.domain))) {
+      } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
         solution = ['value', result, continuation || '', operation.toString()];
         console.error('shashsks', solution);
         if (operation.exported) {

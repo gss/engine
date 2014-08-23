@@ -72,6 +72,7 @@ class Intrinsic extends Numeric
           return prop.call(@, object, continuation)
         else if prop && typeof prop != 'function'
           return prop
+    debugger
     return Numeric::get.apply(@, arguments)
 
 

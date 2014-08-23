@@ -349,7 +349,7 @@ class Domain
                 if constraint.paths.indexOf(variable) > -1
                   if groupped && groupped != group
                     groupped.push.apply(groupped, group)
-                    groups.splice(group.indexOf(group), 1)
+                    groups.splice(groups.indexOf(group), 1)
                   else
                     groupped = group
                   break
