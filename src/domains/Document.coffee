@@ -34,21 +34,6 @@ class Document extends Abstract
 
     super
     
-
-  # Trigger scheduled reflow and suggest updated measurements
-  flush: (reflow) ->
-    suggestions = undefined
-    if (reflow)
-      @positions.render(null, @reflown)
-    @reflown = undefined
-
-    if @buffer
-      for property, value of @buffer
-        if value? && value != @values[property]
-          (suggestions ||= []).push ['suggest', property, value, 'required']
-      @values.merge @buffer
-      @buffer = undefined
-
   events:
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e

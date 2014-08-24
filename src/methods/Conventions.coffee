@@ -150,8 +150,6 @@ class Conventions
     return true
 
   getOperationDomain: (operation, domain) ->
-    if operation[0] == '=='
-      console.log(operation, domain, 899999)
     if typeof operation[0] == 'string'
       if !domain.methods[operation[0]]
         return @linear.maybe()

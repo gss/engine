@@ -17,7 +17,6 @@ Workflower = (engine) ->
       offset = 0
       if arg[0] == 'get'
         vardomain = @getVariableDomain(arg)
-        console.log(domain, arg, vardomain)
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         workload = new Workflow vardomain, [arg]
@@ -46,7 +45,6 @@ Workflower = (engine) ->
     if typeof problem[0] == 'string'
       workflow.wrap(problem, @)
     if start || foreign
-      console.log(this, @workflow, workflow, 999, problem)
       if @workflow
         if @workflow != workflow
           return @workflow.merge(workflow)
@@ -102,7 +100,6 @@ Workflow.prototype =
           if (i = problems.indexOf(p)) > -1
             @substitute(problems[i], operation, solution)
           p = p.parent
-    console.error('provided solution', solution, parent)
     return
 
   # Group expressions
@@ -132,7 +129,6 @@ Workflow.prototype =
                   if !domain.MAYBE
                     if !other.MAYBE
                       if index < n
-                        console.log("EXPORTIN2G", domain, domain.export())
                         exps.push.apply(exps, domain.export())
                         exps.push.apply(exps, probs)
                         @domains.splice(n, 1)
@@ -141,7 +137,6 @@ Workflow.prototype =
                           domain.unconstrain(constraint)
                         @engine.domains.splice @engine.domains.indexOf(domain), 1
                       else
-                        console.log("EXPORTING", other, other.export())
                         probs.push.apply(probs, other.export())
                         probs.push.apply(probs, exps)
                         @domains.splice(index, 1)
@@ -179,8 +174,6 @@ Workflow.prototype =
               strong = true
           unless strong
             exps.splice(--i, 1)
-
-          console.error(opdomain, '->', other, problem)
         else unless bubbled
           bubbled = true
           exps[i - 1] = problem
@@ -199,7 +192,6 @@ Workflow.prototype =
 
   # Simplify groupped multi-domain expression down to variables
   unwrap: (problems, domain, result = []) ->
-    console.log('unwrapping', problems, domain)
     if problems[0] == 'get'
       problems.exported = true
       problems.parent = undefined
@@ -225,7 +217,6 @@ Workflow.prototype =
 
   # Last minute changes to workflow before execution
   optimize: ->
-    console.log(JSON.stringify(@problems))
     @compact()
 
     if @connect()
@@ -233,7 +224,6 @@ Workflow.prototype =
 
     @defer()
 
-    console.log(JSON.stringify(@problems))
 
     @
 
@@ -248,9 +238,11 @@ Workflow.prototype =
               problem = @problems[j]
               if problem.indexOf(prob) > -1
                 probs = @problems[i][p]
-                @problems[i].splice(p, 1)
-                console.error('!!!!!!!!!!!!!!!!', probs)
-                @engine.Workflow(@unwrap(probs, @domains[j], [], @problems[j]))
+                unless probs.unwrapped
+                  @problems[i].splice(p--, 1)
+                  probs.unwrapped = @unwrap(probs, @domains[j], [], @problems[j])
+                  @engine.Workflow(probs.unwrapped)
+                  console.error('unwrapped', problem.slice(),probs.slice(), @engine.workflow?.problems?[0]?.length)
                 break
               prob = prob.parent
     return
@@ -280,7 +272,6 @@ Workflow.prototype =
                   break
                 else
                   framed = domain.frame && domain || other
-                  console.log(variable, 'framed')
     while connected
       break unless @connect()
     return connected
@@ -318,9 +309,10 @@ Workflow.prototype =
             exported = undefined
             if problem.exported
               for cmd in cmds
-                if cmd.exported && cmd.parent.domain == problem.parent.domain
-                  exported = true
-                  break
+                if cmd[0] == problem[0] && cmd[1] == problem[1] && cmd[2] == problem[2]
+                  if cmd.exported && cmd.parent.domain == problem.parent.domain
+                    exported = true
+                    break
             unless exported
               if reverse
                 cmds.unshift problem
@@ -338,24 +330,44 @@ Workflow.prototype =
 
     return @
 
-  each: (callback, bind, solution = @solution) ->
-    return solution unless @problems[@index + 1]
+  each: (callback, bind, solution) ->
+    if solution
+      @apply(solution) 
+
+    return unless @problems[@index + 1]
+     
     @optimize()
-    console.log("Workflow", @)
     while (domain = @domains[++@index]) != undefined
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
-      if result && !result.push
-        for own prop, value of result
-          (solution ||= {})[prop] = value
-    @index--
 
-    return @solution = (solution || result)
+      if @busy
+        return result
+
+      if result && !result.push
+        @apply(result)
+        solution = @apply(result, solution || {})
+
+    @index--
+    console.log(@index, solution, @)
+
+    return solution || @
+
+  apply: (result, solution = @solution) ->
+    if solution && result != @solution
+      for property, value of result
+        solution[property] = value
+    else unless solution
+      @solution = solution = result
+    return solution
+
+
 
   getProblems: (callback, bind) ->
     return GSS.clone @problems
 
   index: -1
+  busy: 0
 
 
 module.exports = Workflow

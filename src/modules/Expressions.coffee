@@ -202,7 +202,7 @@ class Expressions
       else if parent && ((typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain))
 
         solution = ['value', result, continuation || '', operation.toString()]
-        console.error('shashsks', solution)
+        console.error('shashsks', solution, @engine.workflow)
         solution.push true if operation.exported
         solution.operation = operation
         solution.parent    = operation.parent
@@ -210,7 +210,8 @@ class Expressions
         solution.index     = operation.index
         parent[operation.index] = solution
         @engine.provide solution
-        return 
+        debugger
+        return
       else
         return @engine.provide result
 

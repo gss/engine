@@ -323,10 +323,10 @@ describe 'GSS commands', ->
             
           else if count is 2     
             chai.expect(engine.workflown.getProblems()).to.eql [
-                [
-                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
-                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
-                ],
+                #[
+                #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                #],
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]
@@ -341,7 +341,7 @@ describe 'GSS commands', ->
                 ]
               ]
             #chai.expect(engine.values['$box1[intrinsic-width]']).to.equal 1110
-            #chai.expect(engine.values['$box2[height]']).to.equal 1110
+            chai.expect(engine.values['$box2[height]']).to.equal 1110
             engine.removeEventListener 'solve', listener
             done()
 
@@ -362,10 +362,10 @@ describe 'GSS commands', ->
             engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2
             chai.expect(engine.workflown.getProblems()).to.eql [
-                [
-                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
-                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
-                ],
+                #[
+                #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                #],
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]
@@ -400,10 +400,10 @@ describe 'GSS commands', ->
             el.innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2            
             chai.expect(engine.workflown.getProblems()).to.eql [
-                [
-                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
-                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
-                ],
+                #[
+                #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                #],
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]

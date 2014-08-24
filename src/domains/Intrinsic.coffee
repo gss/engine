@@ -50,7 +50,6 @@ class Intrinsic extends Numeric
 
     if typeof value != 'string'
       value = prop.toString(value)
-    console.log('restyle', element, property, value)
     element.style[@camelize property] = value
 
   solve: ->
@@ -72,7 +71,6 @@ class Intrinsic extends Numeric
           return prop.call(@, object, continuation)
         else if prop && typeof prop != 'function'
           return prop
-    debugger
     return Numeric::get.apply(@, arguments)
 
 
@@ -227,7 +225,7 @@ class Intrinsic extends Numeric
               @set id, prop, node.offsetHeight
             else
               @set id, prop, @getStyle(node, @engine.getIntrinsicProperty(prop))
-
+    @
 
   @condition: ->
     window?  

@@ -96,6 +96,8 @@ class Engine extends Domain.Events
       values = e.target.values ||= {}
       for property, value of e.data
         values[property] = value
+      if @workflow
+        @workflow.busy--
       @provide e.data
 
     # Handle error from worker
@@ -104,6 +106,9 @@ class Engine extends Domain.Events
 
     destroy: (e) ->
       Engine[@scope._gss_id] = undefined
+      if @worker
+        @worker.removeEventListener 'message', @eventHandler
+        @worker.removeEventListener 'error', @eventHandler
 
   # Import exported variables to thread
   substitute: (expressions, result, parent, index) ->
@@ -131,8 +136,6 @@ class Engine extends Domain.Events
     if result
       @assumed.merge result
     @inputs = result
-    console.log('inputs')
-    console.info(JSON.stringify(result))
     if expressions.length
       @provide expressions
 
@@ -194,48 +197,49 @@ class Engine extends Domain.Events
       if old
         if old != workflow
           old.merge(workflow)
-      else
-        solution = workflow.each @resolve, @
+      if !old || !workflow.busy
+        workflow.each @resolve, @
+      if workflow.busy
+        return workflow
+    if @engine == @ && !workflow.problems[workflow.index + 1]
+      return @onSolve()
 
-      if @engine == @
-        return @onSolve(solution, workflow)
-
-  onSolve: (solution, workflow = @workflow, result) ->
+  onSolve: (update) ->
     # Apply styles
-    if solution
+    if solution = update || @workflow.solution
       @applier?.solve(solution)
-    else if @workflow.reflown
-      @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
+    else if !@workflow.reflown
+      return
+    @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
 
     @queries?.onBeforeSolve()
 
     @solved.merge solution
     
+    # Launch another pass here if solutions caused effects
+    # Effects are processed separately, then merged with found solution
+    effects = {}
+    effects = @workflow.each(@resolve, @, effects)
+    if @workflow.busy
+      return effects
+    if effects && Object.keys(effects).length
+      return @onSolve(effects)
 
-    @console.info('Solution\t   ', solution, JSON.stringify(solution), @solved.values)
-
-    updated = {}
-    updated = workflow.each(@resolve, @, updated)
-    if Object.keys(updated).length
-      return @onSolve(updated, workflow, solution)
-
-    if result
-      for property, value of updated
-        solution[property] = value
-
-    if (!solution || workflow.problems[@workflow.index + 1]) &&
-        (workflow.problems.length != 1 || workflow.domains[0] != null)
+    # Fire up solved event if we've had remove commands that 
+    # didnt cause any reactions
+    if (!solution || @workflow.problems[@workflow.index + 1]) &&
+        (@workflow.problems.length != 1 || @workflow.domains[0] != null)
       return 
-    @engine.workflown = workflow
-    @engine.workflow = undefined
+    @workflown = @workflow
+    @workflow = undefined
     
 
-    @console.info('Solution\t   ', solution, JSON.stringify(solution), @solved.values)
+    @console.info('Solution\t   ', @workflown, solution, JSON.stringify(solution), @solved.values)
 
     # Trigger events on engine and scope node
-    @triggerEvent('solve', solution, workflow)
+    @triggerEvent('solve', solution, @workflown)
     if @scope
-      @dispatchEvent(@scope, 'solve', solution, workflow)
+      @dispatchEvent(@scope, 'solve', solution, @workflown)
 
     return solution
 
@@ -244,7 +248,7 @@ class Engine extends Domain.Events
     if solution.operation
       return @engine.workflow.provide solution
     if !solution.push
-      return @onSolve(solution)
+      return @workflow.each(@resolve, @, solution) || @onSolve()
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
@@ -255,7 +259,10 @@ class Engine extends Domain.Events
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
-      return domain.postMessage(@clone problems)
+      console.log('Worker', problems)
+      domain.postMessage(@clone problems)
+      workflow.busy++
+      return
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
@@ -266,14 +273,18 @@ class Engine extends Domain.Events
       @providing = null
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || @providing || undefined
-      if @providing && @providing != result
-        workflow.merge(@Workflow(@frame || true, @providing))
-        workflow.optimize()
+      if result && result.postMessage
+        workflow.busy++
+      else
+        if @providing && @providing != result
+          workflow.merge(@Workflow(@frame || true, @providing))
+          workflow.optimize()
+
+        if result?.length == 1
+          result = result[0]
 
       @providing = undefined
       @console.end()
-      if result?.length == 1
-        result = result[0]
 
     # Broadcast operations without specific domain (e.g. remove)
     else
@@ -311,8 +322,7 @@ class Engine extends Domain.Events
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
       @worker.postMessage(@clone(commands))
-
-      return
+      return @worker
 
   getWorker: (url) ->
     return (Engine::workers ||= {})[url] ||= new Worker(url)
@@ -335,7 +345,7 @@ class Engine extends Domain.Events
 
   # Comile user provided features specific to this engine
   compile: (state) ->
-    methods    = @methods    || @Methods  ::
+    methods    = @methods    || @Methods::
     properties = @properties || @Properties::
     @Method  .compile(methods,    @)
     @Property.compile(properties, @)
@@ -363,8 +373,6 @@ if !self.window && self.onmessage != undefined
     for property, value of engine.inputs
       if value? || !solution[property]?
         solution[property] = value
-    console.error(engine.domains.map (d) ->
-      [d.constraints?.length, d.substituted?.length])
     postMessage(solution)
 
 module.exports = @GSS = Engine

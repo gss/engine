@@ -210,10 +210,11 @@ class Domain
         if values = worker.values
           if values.hasOwnProperty(path)
             @Workflow(worker, [['value', value, path]])
-            console.error(path, @workflow)
+
     if exports = @workflow?.exports?[path]
       for domain in exports
         @Workflow(domain, [['value', value, path]])
+
     if variable = @variables[path]
       for op in variable.operations
         if !watchers || watchers.indexOf(op) == -1
@@ -251,14 +252,14 @@ class Domain
     return true
 
   reconstrain: (other, constraint) ->
+    console.error('reconstrain', other.operation, constraint.operation, @compare(other.operation, constraint.operation))
+      
     if @compare(other.operation, constraint.operation)
-      console.info('updating constraint', other.operation, '->', constraint.operation)
+      debugger
       @unconstrain(other)
 
 
   constrain: (constraint) ->
-    console.info(constraint, JSON.stringify(constraint.operation), @constraints, constraint.paths, @substituted)
-    
     if constraint.paths
       for path in constraint.paths
         if path[0] == 'value'
@@ -307,7 +308,6 @@ class Domain
           path.constraints.splice(index, 1)
           unless path.constraints.length
             @undeclare(path)
-        console.error('unconstraint', path.name, @clone path.operations)
         if @solver._externalParametricVars.storage.length
           debugger
         if path.operations
@@ -328,12 +328,10 @@ class Domain
       ops = variable.operations ||= []
       if ops.indexOf(operation)
         ops.push(operation)
-    console.log(@added, variable, 999999999)
     return variable
 
   undeclare: (variable) ->
     delete @variables[variable.name]
-    console.log(@added, variable, 9989078)
     (@nullified ||= {})[variable.name] = true
     return
 
@@ -368,9 +366,9 @@ class Domain
         bl = b.length
         return bl - al
 
-      console.error(@constraints.slice(), groups.slice(), '!!!!!!!!!!!!!!!!!!!!', solution)
       separated = groups.splice(1)
       if separated.length
+        console.log('split', groups, separated)
         for group in separated
           for constraint, index in group
             debugger
@@ -387,7 +385,6 @@ class Domain
     @constrained = undefined
 
     result = {}
-    console.log(@constrained, @nullified, @added)
     for path, value of solution
       unless @nullified?[path]
         result[path] = value
@@ -409,9 +406,6 @@ class Domain
       if separated.length == 1
         separated = separated[0]
       @engine.provide @orphanize separated
-    if @values.big == 0
-      debugger
-    console.log 'provide', result
     return result
 
 
@@ -467,19 +461,20 @@ class Domain
           @events    = new (Native::mixin(@engine.events))
 
         @Wrapper.compile @Methods::, @ if @Wrapper
+
         @Method.compile  @Methods::, @
-        Methods    = @Methods
-        @methods     = new Methods
+        Methods = @Methods
+        @methods = new Methods
 
         @Property.compile @Properties::, @
         Properties = @Properties
-        @properties  = Properties && (new Properties) || {}
+        @properties  = new (Properties || Object)
 
         return Domain::constructor.call(@, engine)
 
       EngineDomainWrapper       = engine.mixin(engine, domain)
       EngineDomain.prototype    = new EngineDomainWrapper
-      EngineDomain::solve       ||= Domain::solve unless domain::solve
+      EngineDomain::solve     ||= Domain::solve unless domain::solve
       EngineDomain::strategy    = 'expressions'
       EngineDomain::displayName = name
       EngineDomain.displayName  = name

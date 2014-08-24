@@ -2,6 +2,11 @@ assert = chai.assert
 expect = chai.expect
 
 describe 'Domain', ->
+	engine = null
+	afterEach ->
+		if engine
+			engine.destroy()
+
 	describe 'single solving domain', ->
 		it 'should find solutions', ->
 			engine = new GSS.Engine()
@@ -178,7 +183,7 @@ describe 'Domain', ->
 				<div id="box0" style="width: 20px"></div>
 			"""
 			document.body.appendChild(root)
-			engine =  new GSS(root, true)
+			window.engine = engine =  new GSS(root, true)
 			problem = [
 				['=='
 					['get', 'result', null, 'my_funny_tracker_path']
@@ -240,15 +245,11 @@ describe 'Domain', ->
 				]
 			]
 
-			solved = 
-				engine.solve problem, (solution) ->
-					expect(solution).to.eql 
-						a: -1
-						result: 0
-					done()
-
-
-			expect(solved).to.eql undefined
+			engine.solve problem, (solution) ->
+				expect(solution).to.eql 
+					a: -1
+					result: 0
+				done()
 
 	describe 'framed domains', ->
 		it 'should not merge expressions of a framed domain', ->

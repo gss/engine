@@ -51,7 +51,7 @@ class Queries
       for node in @removing
         delete node._gss_id
 
-    @buffer = @engine.workflow.queries = undefined
+    @buffer = undefined
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
@@ -413,6 +413,7 @@ class Queries
 
 
     if !result || result.length == undefined
+      debugger
       @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 

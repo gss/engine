@@ -8,7 +8,6 @@ class Abstract::Methods
 
   get:
     command: (operation, continuation, scope, meta, object, property, contd) ->
-      console.error(object, property, operation, 555)
       if typeof object == 'string'
         id = object
 

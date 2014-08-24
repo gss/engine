@@ -15,7 +15,7 @@ describe 'Perf', ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
-    engine = new GSS(scope, '../dist/worker.js')     
+    window.engine = engine = new GSS(scope, true)     
 
   afterEach (done) ->
     remove(scope)
@@ -36,7 +36,7 @@ describe 'Perf', ->
 
       console.timeStamp(321)
 
-      engine.once 'solved', ->
+      engine.once 'solve', ->
         console.timeStamp(123)
         console.profileEnd('100 at once')
         #console.profileEnd(123)
@@ -57,7 +57,7 @@ describe 'Perf', ->
       scope.innerHTML = innerHTML
 
       #console.profile('100 intrinsics at once')
-      engine.once 'solved', ->     
+      engine.once 'solve', ->     
         #console.profileEnd('100 intrinsics at once')
         done()
         
@@ -82,7 +82,7 @@ describe 'Perf', ->
         count++
         #console.error(count)
         if count is 100
-          engine.removeEventListener 'solved', listener
+          engine.removeEventListener 'solve', listener
           console.profileEnd('100 serially')
           done()
         else
@@ -90,7 +90,7 @@ describe 'Perf', ->
             <div class='box' id='gen-35346#{count}'>One</div>
           """
 
-      engine.addEventListener 'solved', listener
+      engine.addEventListener 'solve', listener
     
 
       engine.solve [
@@ -113,11 +113,11 @@ describe 'Perf', ->
             <div class='box' id='35346#{count}'>One</div>
           """
         if count is 100
-          engine.removeEventListener 'solved', listener
+          engine.removeEventListener 'solve', listener
           console.profileEnd('100 intrinsics serially')
           done()
           
-      engine.addEventListener 'solved', listener
+      engine.addEventListener 'solve', listener
 
       engine.solve [
           ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'], 'intrinsic-width']]
