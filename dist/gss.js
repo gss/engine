@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-25) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-26) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19181,8 +19181,6 @@ Engine = (function(_super) {
       if (this.workflow) {
         this.workflow.busy--;
       }
-      console.log('provide', e.data);
-      debugger;
       return this.provide(e.data);
     },
     error: function(e) {
@@ -19392,7 +19390,6 @@ Engine = (function(_super) {
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
     var locals, other, others, path, problem, remove, removes, result, url, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
     if (domain && !domain.solve && domain.postMessage) {
-      console.log('Worker', problems);
       domain.postMessage(this.clone(problems));
       workflow.busy++;
       return;
@@ -19411,7 +19408,6 @@ Engine = (function(_super) {
       this.console.start(problems, domain.displayName);
       result = domain.solve(problems) || this.providing || void 0;
       if (result && result.postMessage) {
-        console.log('Busy', problems);
         workflow.busy++;
       } else {
         if (this.providing && this.providing !== result) {
@@ -19482,7 +19478,6 @@ Engine = (function(_super) {
     this.worker.addEventListener('error', this.eventHandler);
     return this.solve = function(commands) {
       _this.worker.postMessage(_this.clone(commands));
-      debugger;
       return _this.worker;
     };
   };
@@ -20013,7 +20008,6 @@ Rules = (function() {
           condition.index = operation.index;
           condition.domain = operation.domain;
         }
-        console.error('execute solver blah blah', continuation);
         this.solved.solve(condition, continuation, scope);
         return false;
       }
@@ -20050,7 +20044,6 @@ Rules = (function() {
       if (query === void 0 || (!!query !== !!condition)) {
         index = condition && 2 || 3;
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
-        console.error(query, condition, 7777, path);
         if (query !== void 0) {
           this.queries.clean(path, continuation, operation.parent, scope);
         }
@@ -21347,7 +21340,6 @@ Wrapper = function(node, args, result, operation, continuation, scope) {
   }
   if (result.length > 0) {
     if (result.length > 1) {
-      console.error(result.slice());
       result[0].paths = result.splice(1);
     }
     result[0].operation = operation;
@@ -21436,7 +21428,7 @@ Domain = (function() {
         this.merge(values);
       }
       if (this.url && this.getWorkerURL) {
-        if (this.url = this.getWorkerURL(this.url)) {
+        if (this.url && (this.url = typeof this.getWorkerURL === "function" ? this.getWorkerURL(this.url) : void 0)) {
           if (engine !== this) {
             this.useWorker(this.url);
           }
@@ -21754,7 +21746,6 @@ Domain = (function() {
   };
 
   Domain.prototype.reconstrain = function(other, constraint) {
-    console.error('reconstrain', other.operation, constraint.operation, this.compare(other.operation, constraint.operation));
     if (this.compare(other.operation, constraint.operation)) {
       return this.unconstrain(other);
     }
@@ -21925,7 +21916,6 @@ Domain = (function() {
       });
       separated = groups.splice(1);
       if (separated.length) {
-        console.log('split', groups, separated);
         for (_i = 0, _len = separated.length; _i < _len; _i++) {
           group = separated[_i];
           for (index = _j = 0, _len1 = group.length; _j < _len1; index = ++_j) {
@@ -23081,7 +23071,7 @@ Workflow.prototype = {
     return this;
   },
   defer: function() {
-    var domain, i, j, p, prob, problem, probs, url, _i, _j, _k, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
+    var domain, i, j, p, prob, problem, probs, url, _i, _j, _k, _ref, _ref1, _ref2, _ref3, _ref4;
     _ref = this.domains;
     for (i = _i = _ref.length - 1; _i >= 0; i = _i += -1) {
       domain = _ref[i];
@@ -23101,7 +23091,6 @@ Workflow.prototype = {
                   this.problems[i].splice(p--, 1);
                   probs.unwrapped = this.unwrap(probs, this.domains[j], [], this.problems[j]);
                   this.engine.Workflow(probs.unwrapped);
-                  console.error('unwrapped', problem.slice(), probs.slice(), (_ref5 = this.engine.workflow) != null ? (_ref6 = _ref5.problems) != null ? (_ref7 = _ref6[0]) != null ? _ref7.length : void 0 : void 0 : void 0);
                 }
                 break;
               }
@@ -23257,7 +23246,6 @@ Workflow.prototype = {
       }
     }
     this.index--;
-    console.log(this.index, solution, this);
     return solution || this;
   },
   apply: function(result, solution) {
@@ -23442,7 +23430,6 @@ Abstract.prototype.Methods = (function() {
 
   Methods.prototype.value = function(value, continuation, string, exported) {
     var op, property, scope;
-    console.info(Array.prototype.slice.call(arguments));
     if (exported) {
       op = string.split(',');
       scope = op[1];
@@ -23961,7 +23948,6 @@ Intrinsic = (function(_super) {
     value = node.style[property] || this.getComputedStyle(node)[property];
     if (value) {
       num = parseFloat(value);
-      console.log(num, value, 5);
       if (num == value || (num + 'px') === value) {
         return num;
       }
@@ -24415,7 +24401,7 @@ Expressions = (function() {
         }
       } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
         solution = ['value', result, continuation || '', operation.toString()];
-        console.error('shashsks', solution, this.engine.workflow);
+        this.engine.console.log('solution', solution, this.engine.workflow);
         if (operation.exported) {
           solution.push(true);
         }
@@ -25273,9 +25259,6 @@ Queries = (function() {
       this.remove(this.engine.identity.find(scope), path, operation);
     }
     this.engine.solved.remove(path);
-    console.log('CLEAN', path, 7777);
-    console.error(result, 'crean', path);
-    console.error(Object.keys(this.engine.solved.observers));
     this.set(path, void 0);
     if ((_ref1 = this._plurals) != null ? _ref1[path] : void 0) {
       delete this._plurals[path];
@@ -25683,7 +25666,6 @@ Axioms = (function() {
 
   Axioms.prototype.center = {
     x: function(scope, path) {
-      console.error("CENTER X", scope, path);
       return this['+'](this._get(scope, "x", path), this['/'](this._get(scope, "width", path), 2));
     },
     y: function(scope, path) {

@@ -101,8 +101,6 @@ class Engine extends Domain.Events
         values[property] = value
       if @workflow
         @workflow.busy--
-      console.log('provide', e.data)
-      debugger
       @provide e.data
 
     # Handle error from worker
@@ -275,7 +273,6 @@ class Engine extends Domain.Events
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
-      console.log('Worker', problems)
       domain.postMessage(@clone problems)
       workflow.busy++
       return
@@ -290,7 +287,6 @@ class Engine extends Domain.Events
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || @providing || undefined
       if result && result.postMessage
-        console.log('Busy', problems)
         workflow.busy++
       else
         if @providing && @providing != result
@@ -340,7 +336,6 @@ class Engine extends Domain.Events
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
       @worker.postMessage(@clone(commands))
-      debugger
       return @worker
 
   getWorker: (url) ->

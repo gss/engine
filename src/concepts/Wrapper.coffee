@@ -18,7 +18,6 @@ Wrapper = (node, args, result, operation, continuation, scope) ->
   # [variable, path] -> variable[paths]
   if result.length > 0
     if result.length > 1
-      console.error(result.slice())
       result[0].paths = result.splice(1)
     result[0].operation = operation
     return result[0]

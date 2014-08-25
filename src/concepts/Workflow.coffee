@@ -242,7 +242,6 @@ Workflow.prototype =
                   @problems[i].splice(p--, 1)
                   probs.unwrapped = @unwrap(probs, @domains[j], [], @problems[j])
                   @engine.Workflow(probs.unwrapped)
-                  console.error('unwrapped', problem.slice(),probs.slice(), @engine.workflow?.problems?[0]?.length)
                 break
               prob = prob.parent
     return
@@ -349,7 +348,6 @@ Workflow.prototype =
         solution = @apply(result, solution || {})
 
     @index--
-    console.log(@index, solution, @)
 
     return solution || @
 

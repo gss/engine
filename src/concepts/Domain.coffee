@@ -32,7 +32,7 @@ class Domain
       @merge(values)         if values
 
       if @url && @getWorkerURL
-        if @url = @getWorkerURL(@url)
+        if @url && (@url = @getWorkerURL?(@url))
           if engine != @
             @useWorker(@url)
 
@@ -250,8 +250,6 @@ class Domain
     return true
 
   reconstrain: (other, constraint) ->
-    console.error('reconstrain', other.operation, constraint.operation, @compare(other.operation, constraint.operation))
-      
     if @compare(other.operation, constraint.operation)
       @unconstrain(other)
 
@@ -362,7 +360,6 @@ class Domain
 
       separated = groups.splice(1)
       if separated.length
-        console.log('split', groups, separated)
         for group in separated
           for constraint, index in group
             @unconstrain constraint

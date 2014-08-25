@@ -50,7 +50,6 @@ class Abstract::Methods
       @assumed.set.apply(@assumed, arguments)
 
   value: (value, continuation, string, exported) ->
-    console.info(Array.prototype.slice.call(arguments))
     if exported
       op = string.split(',')
       scope = op[1]

@@ -169,7 +169,6 @@ class Intrinsic extends Numeric
     value = node.style[property] || @getComputedStyle(node)[property]
     if value
       num = parseFloat(value)
-      console.log(num, value, 5)
       if `num == value` || (num + 'px') == value
         return num
     return value

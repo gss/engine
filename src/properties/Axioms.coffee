@@ -10,7 +10,6 @@ class Axioms
   
   center:
     x: (scope, path) ->
-      console.error("CENTER X", scope, path)
       return @['+'](@_get(scope, "x", path), @['/'](@_get(scope, "width", path), 2))
 
     y: (scope, path) ->

@@ -393,9 +393,6 @@ class Queries
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation
     @engine.solved.remove(path)
-    console.log('CLEAN', path, 7777)
-    console.error(result, 'crean', path)
-    console.error(Object.keys(@engine.solved.observers))
 
     @set path, undefined
 

@@ -83,7 +83,6 @@ class Rules
           condition.parent = operation.parent
           condition.index = operation.index
           condition.domain = operation.domain
-        console.error('execute solver blah blah', continuation)
         @solved.solve condition, continuation, scope
         return false
 
@@ -115,7 +114,6 @@ class Rules
       if query == undefined || (!!query != !!condition)
         index = condition && 2 || 3
         @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation
-        console.error(query, condition, 7777, path)
         unless query == undefined
           @queries.clean(path, continuation, operation.parent, scope)
         if branch = operation.parent[index]
