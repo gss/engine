@@ -21579,6 +21579,9 @@ Domain = (function() {
       return;
     }
     if (value != null) {
+      if (path === 'big' && !value) {
+        debugger;
+      }
       this.values[path] = value;
     } else {
       delete this.values[path];
@@ -21624,9 +21627,6 @@ Domain = (function() {
 
   Domain.prototype.orphanize = function(operation) {
     var arg, _i, _len;
-    if (operation[2] === 'big') {
-      debugger;
-    }
     if (operation.domain) {
       delete operation.domain;
     }
@@ -21745,7 +21745,6 @@ Domain = (function() {
   Domain.prototype.reconstrain = function(other, constraint) {
     console.error('reconstrain', other.operation, constraint.operation, this.compare(other.operation, constraint.operation));
     if (this.compare(other.operation, constraint.operation)) {
-      debugger;
       return this.unconstrain(other);
     }
   };
@@ -21787,9 +21786,8 @@ Domain = (function() {
           if (length === 1) {
             if (this.nullified && this.nullified[path.name]) {
               delete this.nullified[path.name];
-            } else {
-              (this.added || (this.added = {}))[path.name] = 0;
             }
+            (this.added || (this.added = {}))[path.name] = 0;
           }
         }
       }
@@ -21828,9 +21826,6 @@ Domain = (function() {
             this.undeclare(path);
           }
         }
-        if (this.solver._externalParametricVars.storage.length) {
-          debugger;
-        }
         if (path.operations) {
           _ref1 = path.operations;
           for (index = _j = _ref1.length - 1; _j >= 0; index = _j += -1) {
@@ -21864,7 +21859,8 @@ Domain = (function() {
 
   Domain.prototype.undeclare = function(variable) {
     delete this.variables[variable.name];
-    (this.nullified || (this.nullified = {}))[variable.name] = true;
+    delete this.values[variable.name];
+    return (this.nullified || (this.nullified = {}))[variable.name] = true;
   };
 
   Domain.prototype.reach = function(constraints, groups) {
@@ -21923,7 +21919,6 @@ Domain = (function() {
           group = separated[_i];
           for (index = _j = 0, _len1 = group.length; _j < _len1; index = ++_j) {
             constraint = group[index];
-            debugger;
             this.unconstrain(constraint);
             group[index] = constraint.operation;
           }
@@ -21942,6 +21937,9 @@ Domain = (function() {
       if (!((_ref = this.nullified) != null ? _ref[path] : void 0)) {
         result[path] = value;
         this.values[path] = value;
+        if (path === 'big' && !value) {
+          debugger;
+        }
       }
     }
     if (this.nullified) {
@@ -23597,15 +23595,15 @@ Linear = (function(_super) {
 
   Linear.prototype.undeclare = function(variable) {
     var cei;
-    if (!Linear.__super__.undeclare.apply(this, arguments)) {
-      if (variable.editing) {
-        if (cei = this.solver._editVarMap.get(variable)) {
-          this.solver.removeColumn(cei.editMinus);
-          this.solver._editVarMap["delete"](variable);
-        }
+    Linear.__super__.undeclare.apply(this, arguments);
+    delete variable.value;
+    if (variable.editing) {
+      if (cei = this.solver._editVarMap.get(variable)) {
+        this.solver.removeColumn(cei.editMinus);
+        this.solver._editVarMap["delete"](variable);
       }
-      return this.solver._externalParametricVars["delete"](variable);
     }
+    return this.solver._externalParametricVars["delete"](variable);
   };
 
   Linear.prototype.edit = function(variable, strength, weight, continuation) {

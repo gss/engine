@@ -420,10 +420,10 @@ describe 'GSS commands', ->
             el.innerHTML = ""            
           else if count is 3
             chai.expect(engine.workflown.getProblems()).to.eql [
-                [
-                  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
-                  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
-                ],
+                #[
+                #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
+                #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
+                #],
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]

@@ -45,12 +45,13 @@ class Linear extends Domain
     super
 
   undeclare: (variable) ->
-    unless super
-      if variable.editing
-        if cei = @solver._editVarMap.get(variable)
-          @solver.removeColumn(cei.editMinus)
-          @solver._editVarMap.delete(variable)
-      @solver._externalParametricVars.delete(variable)
+    super
+    delete variable.value
+    if variable.editing
+      if cei = @solver._editVarMap.get(variable)
+        @solver.removeColumn(cei.editMinus)
+        @solver._editVarMap.delete(variable)
+    @solver._externalParametricVars.delete(variable)
 
   edit: (variable, strength, weight, continuation) ->
     constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))

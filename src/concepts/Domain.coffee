@@ -154,6 +154,8 @@ class Domain
     return if old == value
 
     if value?
+      if path == 'big' && !value
+        debugger
       @values[path] = value
     else
       delete @values[path]
@@ -181,8 +183,6 @@ class Domain
     exps
 
   orphanize: (operation) ->
-    if operation[2] == 'big'
-      debugger
     if operation.domain
       delete operation.domain
     for arg in operation
@@ -255,7 +255,6 @@ class Domain
     console.error('reconstrain', other.operation, constraint.operation, @compare(other.operation, constraint.operation))
       
     if @compare(other.operation, constraint.operation)
-      debugger
       @unconstrain(other)
 
 
@@ -282,8 +281,7 @@ class Domain
           if length == 1
             if @nullified && @nullified[path.name]
               delete @nullified[path.name]
-            else
-              (@added ||= {})[path.name] = 0
+            (@added ||= {})[path.name] = 0
 
     if typeof (name = constraint[0]) == 'string'
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
@@ -308,8 +306,6 @@ class Domain
           path.constraints.splice(index, 1)
           unless path.constraints.length
             @undeclare(path)
-        if @solver._externalParametricVars.storage.length
-          debugger
         if path.operations
           for op, index in path.operations by -1
             while op
@@ -332,8 +328,8 @@ class Domain
 
   undeclare: (variable) ->
     delete @variables[variable.name]
+    delete @values[variable.name]
     (@nullified ||= {})[variable.name] = true
-    return
 
   reach: (constraints, groups) ->
     groups ||= []
@@ -371,7 +367,6 @@ class Domain
         console.log('split', groups, separated)
         for group in separated
           for constraint, index in group
-            debugger
             @unconstrain constraint
             group[index] = constraint.operation
 
@@ -389,6 +384,8 @@ class Domain
       unless @nullified?[path]
         result[path] = value
         @values[path] = value
+        if path == 'big' && !value
+          debugger
     if @nullified
       for path of @nullified
         result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
