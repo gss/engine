@@ -23,7 +23,6 @@ describe 'End - to - End', ->
   beforeEach ->
     container = document.createElement 'div'
     $('#fixtures').appendChild container
-    debugger
     window.$engine = engine = new GSS(container)
     
   afterEach ->
@@ -1714,7 +1713,7 @@ describe 'End - to - End', ->
         engine.once 'solve', listen
     
   
-    describe 'top level @if @else w/ nested VFLs', ->
+    xdescribe 'top level @if @else w/ nested VFLs', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->             

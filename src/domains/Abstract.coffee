@@ -3,6 +3,12 @@
 Domain = require('../concepts/Domain')
 
 class Abstract extends Domain
+  url: undefined
+  
+  constructor: ->
+    if @running
+      @compile()
+    super
 
 class Abstract::Methods
 

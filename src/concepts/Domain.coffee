@@ -154,8 +154,6 @@ class Domain
     return if old == value
 
     if value?
-      if path == 'big' && !value
-        debugger
       @values[path] = value
     else
       delete @values[path]
@@ -384,8 +382,6 @@ class Domain
       unless @nullified?[path]
         result[path] = value
         @values[path] = value
-        if path == 'big' && !value
-          debugger
     if @nullified
       for path of @nullified
         result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
@@ -444,7 +440,7 @@ class Domain
   # Overloads parts of the world (methods, variables, observers)
   @compile = (domains, engine) ->
     for own name, domain of domains
-      continue if domain.condition?() == false
+      continue if domain.condition?.call(engine) == false
       EngineDomain = engine[name] = (object) ->
         if object
           for property, value of object

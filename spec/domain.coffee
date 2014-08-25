@@ -10,7 +10,6 @@ describe 'Domain', ->
 	describe 'single solving domain', ->
 		it 'should find solutions', ->
 			engine = new GSS.Engine()
-			debugger
 			expect(engine.solve [
 				['==',
 					['get', 'result']
@@ -183,7 +182,7 @@ describe 'Domain', ->
 				<div id="box0" style="width: 20px"></div>
 			"""
 			document.body.appendChild(root)
-			window.engine = engine =  new GSS(root, true)
+			engine =  new GSS(root, true)
 			problem = [
 				['=='
 					['get', 'result', null, 'my_funny_tracker_path']
@@ -371,7 +370,6 @@ describe 'Domain', ->
 			]).to.eql
 				c: 9
 				b: 3
-			debugger
 			# merge two graphs
 			expect(engine.solve [
 				['<=', 

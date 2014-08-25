@@ -26,6 +26,7 @@ class Engine extends Domain.Events
   Methods:     Native::mixin new Native,
                require('./methods/Conventions')
   Domains: 
+    Abstract:  require('./domains/Abstract')
     Document:  require('./domains/Document')
     Intrinsic: require('./domains/Intrinsic')
     Numeric:   require('./domains/Numeric')
@@ -85,8 +86,10 @@ class Engine extends Domain.Events
 
     unless window?
       @strategy = 'substitute'
+    else if @scope
+      @strategy = 'document'
     else
-      @strategy =  'document'
+      @strategy = 'abstract'
 
     return @
 
@@ -98,6 +101,8 @@ class Engine extends Domain.Events
         values[property] = value
       if @workflow
         @workflow.busy--
+      console.log('provide', e.data)
+      debugger
       @provide e.data
 
     # Handle error from worker
@@ -105,7 +110,8 @@ class Engine extends Domain.Events
       throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
 
     destroy: (e) ->
-      Engine[@scope._gss_id] = undefined
+      if @scope
+        Engine[@scope._gss_id] = undefined
       if @worker
         @worker.removeEventListener 'message', @eventHandler
         @worker.removeEventListener 'error', @eventHandler
@@ -201,16 +207,21 @@ class Engine extends Domain.Events
         workflow.each @resolve, @
       if workflow.busy
         return workflow
-    if @engine == @ && !workflow.problems[workflow.index + 1]
-      return @onSolve()
+    onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
+    if @engine == @ && (!workflow.problems[workflow.index + 1] || onlyRemoving)
+      return @onSolve(null, onlyRemoving)
 
-  onSolve: (update) ->
+  onSolve: (update, onlyRemoving) ->
     # Apply styles
     if solution = update || @workflow.solution
       @applier?.solve(solution)
-    else if !@workflow.reflown
+    else if !@workflow.reflown && !onlyRemoving
       return
-    @intrinsic?.each(@workflow.reflown || @scope, @intrinsic.update)
+    if @intrinsic
+      scope = @workflow.reflown || @scope
+      @workflow.reflown = undefined
+      @intrinsic?.each(scope, @intrinsic.update)
+
 
     @queries?.onBeforeSolve()
 
@@ -240,6 +251,11 @@ class Engine extends Domain.Events
     @triggerEvent('solve', solution, @workflown)
     if @scope
       @dispatchEvent(@scope, 'solve', solution, @workflown)
+
+    # Legacy events
+    @triggerEvent('solved', solution, @workflown)
+    if @scope
+      @dispatchEvent(@scope, 'solved', solution, @workflown)
 
     return solution
 
@@ -274,6 +290,7 @@ class Engine extends Domain.Events
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || @providing || undefined
       if result && result.postMessage
+        console.log('Busy', problems)
         workflow.busy++
       else
         if @providing && @providing != result
@@ -317,15 +334,17 @@ class Engine extends Domain.Events
   # Initialize new worker and subscribe engine to its events
   useWorker: (url) ->
     return unless typeof url == 'string' && self.onmessage != undefined
-    @worker = new @getWorker(url)
+
+    @worker = @getWorker(url)
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
       @worker.postMessage(@clone(commands))
+      debugger
       return @worker
 
   getWorker: (url) ->
-    return (Engine::workers ||= {})[url] ||= new Worker(url)
+    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
 
   # Compile initial domains and shared engine features 
   precompile: ->
@@ -341,7 +360,7 @@ class Engine extends Domain.Events
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @Workflow = Engine::Workflow.compile(@)
-    @intrinsic?.queries.connect()
+    @queries?.connect()
 
   # Comile user provided features specific to this engine
   compile: (state) ->

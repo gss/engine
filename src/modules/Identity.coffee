@@ -11,8 +11,7 @@ class Identity
 
       unless generate == false
         object._gss_id = id ||= 
-          "$" + (object.id || 
-                (@uid ||= (@uid || 0) + 1))
+          "$" + (object.id || ++Identity.uid)
       @[id] = object
     return id
 

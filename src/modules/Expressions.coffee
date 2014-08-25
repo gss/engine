@@ -210,7 +210,6 @@ class Expressions
         solution.index     = operation.index
         parent[operation.index] = solution
         @engine.provide solution
-        debugger
         return
       else
         return @engine.provide result

@@ -264,13 +264,10 @@ class Queries
 
   # Remove observers from element
   unobserve: (id, continuation, plural, quick) ->
-    if continuation == ".group .vessel$vessel11"
-      debugger
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
       if typeof id != 'object'
         @unpair continuation, @engine.identity[id]
-    console.log(refs, 66)
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
@@ -413,7 +410,6 @@ class Queries
 
 
     if !result || result.length == undefined
-      debugger
       @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 
@@ -624,8 +620,6 @@ class Queries
     if id = @engine.identity.provide(node)
       watchers = @watchers[id] ||= []
       if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
-        if id == '$box1'
-          debugger
         watchers.push(operation, continuation, scope)
     
     return if noop

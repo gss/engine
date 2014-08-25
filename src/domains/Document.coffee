@@ -16,36 +16,36 @@ class Document extends Abstract
   helps: true
 
   constructor: () ->
-    if document?
-      @engine.queries   ||= new @Queries(@)
-      @engine.positions ||= new @Positions(@)
-      @engine.applier   ||= @engine.positions
-      @engine.scope     ||= document
-      @engine.all         = @engine.scope.getElementsByTagName('*')
-      
-      if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
-        @scope.addEventListener 'DOMContentLoaded', @
-      else if @running
-        @compile()
+    @engine.positions ||= new @Positions(@)
+    @engine.applier   ||= @engine.positions
+    @engine.scope     ||= document
+    @engine.queries   ||= new @Queries(@)
+    @engine.all         = @engine.scope.getElementsByTagName('*')
 
-      @scope.addEventListener 'scroll', @
-      if window?
-        window.addEventListener 'resize', @
+    
+    if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
+      @scope.addEventListener 'DOMContentLoaded', @
+    else if @running
+      @compile()
+
+    @scope.addEventListener 'scroll', @
+    if window?
+      window.addEventListener 'resize', @
 
     super
-    
+
   events:
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      @solve id + ' resized', ->
-        @intrinsic.verify(id, "width", undefined, false)
-        @intrinsic.verify(id, "height", undefined, false)
+      @engine.solve id + ' resized', ->
+        @intrinsic.verify(id, "width")
+        @intrinsic.verify(id, "height")
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      @solve id + ' scrolled', ->
-        @intrinsic.verify(id, "scroll-top", undefined, false)
-        @intrinsic.verify(id, "scroll-left", undefined, false)
+      @engine.solve id + ' scrolled', ->
+        @intrinsic.verify(id, "scroll-top")
+        @intrinsic.verify(id, "scroll-left")
 
     solve: ->
       # Unreference removed elements
@@ -73,6 +73,6 @@ class Document extends Abstract
       @engine.events.destroy.apply(@, arguments)
 
   @condition: ->
-    window?  
+    @scope?  
   url: null
 module.exports = Document

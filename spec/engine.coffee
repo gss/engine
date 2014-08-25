@@ -38,13 +38,13 @@ describe 'GSS engine', ->
   describe 'new GSS(url) - scopeless with web worker', ->
     e = null
     it 'should initialize', ->
-      e = new GSS('../dist/worker.js')
+      e = new GSS(true)
     it 'should run commands', (done)->
       e.once 'solved', ->
         val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
-      e.run [
+      e.solve [
           ['==', ['get','x'], 222]
         ]
     it 'should destroy', (done)->
@@ -60,7 +60,7 @@ describe 'GSS engine', ->
         val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
         done()
-      e.run [
+      e.solve [
           ['==', ['get','x'], 222]
         ]
     it 'should destroy', (done)->
@@ -85,7 +85,7 @@ describe 'GSS engine', ->
             <button id="button3">Three</button>
             <button id="button4">4</button>
           """
-          engine = new GSS(container, useWorker && '../dist/worker.js' || undefined)
+          engine = new GSS(container, useWorker || undefined)
         after (done) ->
           remove(container)
           # have to manually destroy, otherwise there is some clash!
@@ -132,7 +132,7 @@ describe 'GSS engine', ->
             <h1 id="text1" style="line-height:12px;font-size:12px;">One</h1>
             <h1 id="text2" style="line-height:12px;font-size:12px;">Two</h1>
           """
-          engine = new GSS(container, useWorker && '../dist/worker.js' || undefined)
+          engine = new GSS(container, useWorker || undefined)
           
         after (done) ->
           remove(container)
@@ -202,7 +202,7 @@ describe 'GSS engine', ->
       assert !button2, "button2 doesn't exist"
     
     it 'engine remains idle',  ->            
-      assert engine.workflown.getProblems() == undefined
+      assert engine.workflown == undefined
     
     it 'after solving the buttons should have right', (done) ->
       onSolved = (e) ->
@@ -294,7 +294,8 @@ describe 'GSS engine', ->
       container.addEventListener 'solved', onSolved
       engine.solve [
         ['==', ['get', 'y'], 10]
-        ['==', ['get', 'x'], ['*',['get','y'],['/',1,2]] ]
+        ['==', ['get', 'x'], 
+          ['*',['get','y'], 0.5] ]
       ]
   
   describe 'Engine::vars', ->
@@ -324,42 +325,7 @@ describe 'GSS engine', ->
           ['==', ['get', 'col-width'], 100]
           ['==', ['get', 'row-height'], 50]
         ]
-    
-    it 'engine.vars are updated after many suggests', (done) ->
-      count = 0
-      onSolved =  (e) ->        
-        count++
-        if count is 1
-          colwidth = engine.values['col-width']
-          rowheight = engine.values['row-height']
-          assert colwidth is 10, "fist step [col-width] == #{colwidth}"
-          assert rowheight , "fist step [row-height] == #{rowheight}"
-          engine.solve [
-              ['suggest', 'col-width', 1]
-              ['suggest', 'row-height', .5]
-            ]
-        else if count is 2
-          expect(engine.values.toObject()).to.eql 
-            'col-width': 1
-            'row-height': .5
-          engine.solve [
-              ['suggest', 'col-width', 333]
-              ['suggest', 'row-height', 222]
-            ]
-        else if count is 3
-          expect(engine.values.toObject()).to.eql 
-            'col-width': 333
-            'row-height': 222
-          container.removeEventListener 'solved', onSolved
-          done()
-      container.addEventListener 'solved', onSolved
-      engine.solve [
-          ['suggest', 'col-width', 10, 'strong']
-          ['suggest', 'row-height', 5]
-          # YF: FIXME Why did this work? Why this has stopped working?
-          #['==', ['get', 'col-width'], 100, 'medium']
-          #['==', ['get', 'row-height'], 50, 'medium']
-        ]
+  
       
       
   describe "Display pre-computed constraint values", ->
@@ -380,19 +346,15 @@ describe 'GSS engine', ->
       remove(container)
       done()
       
-    it "force display on un-queried views", (done)->
-      onSolved = (e) ->
-        w = Math.round($('#d1').getBoundingClientRect().width)
-        assert w is 1, "d1 width: #{w}"
-        w = Math.round($('#d2').getBoundingClientRect().width)
-        assert w is 2, "d2 width: #{w}"
-        w = Math.round($('#d3').getBoundingClientRect().width)
-        assert w is 3, "d3 width: #{w}"
-        container.removeEventListener 'solved', onSolved
-        done()
-      container.addEventListener 'solved', onSolved
-      
-      engine.restyles.pull {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
+    it "force display on un-queried views", ->
+      engine.positions.solve {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
+      w = Math.round($('#d1').getBoundingClientRect().width)
+      assert w is 1, "d1 width: #{w}"
+      w = Math.round($('#d2').getBoundingClientRect().width)
+      assert w is 2, "d2 width: #{w}"
+      w = Math.round($('#d3').getBoundingClientRect().width)
+      assert w is 3, "d3 width: #{w}"
+
       
     
 
@@ -413,8 +375,8 @@ describe 'GSS engine', ->
       it 'Runs commands from sourceNode', (done) ->
         listener = (e) ->        
           expect(engine.workflown.getProblems()).to.eql [
-              ['==', ['get','$box1','x','style$style1↓.box$box1'], 100]
-              ['==', ['get','$box2','x','style$style1↓.box$box2'], 100]
+              [['==', ['get','$box1','x','style$style1↓.box$box1'], 100]]
+              [['==', ['get','$box2','x','style$style1↓.box$box2'], 100]]
             ]
           container.removeEventListener 'solved', listener
           done()
@@ -451,7 +413,7 @@ describe 'GSS engine', ->
         container.innerHTML =  """
           <style id="gssa" type="text/gss-ast" scoped>
             [
-              ["suggest", "col-width-1", 111]
+              ["==", ["get", "col-width-1"], 111]
             ]
           </style>
           """
@@ -466,7 +428,7 @@ describe 'GSS engine', ->
         styleNode = engine.$id 'gssa'
         styleNode.innerHTML = """
           [
-            ["suggest", "col-width-11", 1111]
+              ["==", ["get", "col-width-11"], 1111]
           ]  
         """        
         listener = (e) ->
@@ -483,7 +445,7 @@ describe 'GSS engine', ->
         container.innerHTML =  """
           <style id="gssb" type="text/gss-ast" scoped>
           [
-            ["suggest", "col-width-2", 222]
+              ["==", ["get", "col-width-2"], 222]
           ]  
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
@@ -503,12 +465,12 @@ describe 'GSS engine', ->
         container.innerHTML =  """
           <style id="gssc" type="text/gss-ast" scoped>
           [
-            ["suggest", "col-width-3", 333]
+             ["==", ["get", "col-width-3"], 333]
           ]  
           </style>
           <style id="gssd" type="text/gss-ast" scoped>
           [
-            ["suggest", "col-width-4", 444]
+             ["==", ["get", "col-width-4"], 444]
           ]  
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>

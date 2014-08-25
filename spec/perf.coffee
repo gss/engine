@@ -15,7 +15,7 @@ describe 'Perf', ->
     fixtures = document.getElementById 'fixtures'
     scope = document.createElement 'div'
     fixtures.appendChild scope
-    window.engine = engine = new GSS(scope, true)     
+    engine = new GSS(scope, true)     
 
   afterEach (done) ->
     remove(scope)

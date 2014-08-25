@@ -28,6 +28,17 @@ describe "GSS.View", ->
   describe 'Display Pass percolates downward through unconstrained views', ->
                    
     it 'before & after', (done) ->
+      onSolved = (e) ->
+        values = e.detail.values
+        assert target1.style['width'] is "88px","width should be 88px"
+        assert target2.style['width'] is "88px","width should be 88px"
+        container.removeEventListener 'solved', onSolved
+        done()
+      container.addEventListener 'solved', onSolved
+      engine.solve [
+          ['==', ['get',['$class', 'target'],   'width'], 88]
+        ]
+
       container.innerHTML = """
         <div>
           <div>
@@ -46,17 +57,6 @@ describe "GSS.View", ->
       target2 = engine.$class('target')[1]
       assert target1.style['width'] is "10px"
       assert target2.style['width'] is "10px"
-      ast = [
-          ['==', ['get',['$class', 'target'],   'width'], 88]
-        ]
-      onSolved = (e) ->
-        values = e.detail.values
-        assert target1.style['width'] is "88px","width should be 88px"
-        assert target2.style['width'] is "88px","width should be 88px"
-        container.removeEventListener 'solved', onSolved
-        done()
-      container.addEventListener 'solved', onSolved
-      engine.solve ast
   
   describe 'Display passes down translated offsets', ->    
     
@@ -80,8 +80,6 @@ describe "GSS.View", ->
         assert values['$target2[y]'] is 100, "solved value is 0. #{}"   
         assert target1.style.top == '100px'             
         assert target2.style.top == '0px'
-        assert target1.offsetTop == 100            
-        assert target2.offsetTop == 0
         done()
       engine.once 'solved', onSolved
       engine.solve ast
@@ -103,8 +101,8 @@ describe "GSS.View", ->
         
       engine.once 'solved', ->
         expect(engine.values['$floater[y]']).to.eql 20
-
-        engine.setStyle(engine.$id('pusher'), 'paddingTop', '11px') 
+        debugger
+        engine.intrinsic.restyle(engine.$id('pusher'), 'padding-top', '11px') 
 
         engine.once 'solved', ->  
           expect(engine.values['$floater[y]']).to.eql 31        
@@ -119,7 +117,12 @@ describe "GSS.View", ->
 
   describe 'Display Pass takes in account parent offsets when requested', ->
               
-    it 'after solving', (done) ->
+    it 'after solving', (done) ->   
+        
+      engine.solve [
+          ['==', ['get',['$class', 'target'],'y'], 100]
+        ]
+      
       
       container.innerHTML = """
         <div style="border: 1px solid black;top:1px; position:absolute;">
@@ -132,12 +135,8 @@ describe "GSS.View", ->
             </div>
           </div>
         </div>        
-      """
+      """  
 
-      ast = [
-          ['==', ['get',['$class', 'target'],'y'], 100]
-        ]        
-      
       q = document.getElementsByClassName('target')
       target1 = q[0]      
       
@@ -146,9 +145,8 @@ describe "GSS.View", ->
         assert target1.offsetTop == 92, "Top offset should match"        
         assert target1.offsetLeft == 0, "Left offset should match"                
         done()
-        
+      
       engine.once 'solved', onSolved
-      engine.solve ast
       
   xdescribe 'printCss', ->
     it 'prints css', (done) ->

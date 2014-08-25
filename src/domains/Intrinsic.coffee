@@ -45,12 +45,25 @@ class Intrinsic extends Numeric
         property = "left"
       when "y"
         property = "top"
-
     return unless prop = @properties[property]
-
+    camel = @camelize property
     if typeof value != 'string'
       value = prop.toString(value)
-    element.style[@camelize property] = value
+
+    if property == 'left' || property == 'top'
+
+      if element.style[camel] == ''
+        if value
+          element.style.positioned = (element.style.positioned || 0) + 1
+      else 
+        if !value
+          element.style.positioned = (element.style.positioned || 0) - 1
+      if element.style.positioned == 1
+        element.style.position = 'absolute'
+      else if element.style.positioned == 0
+        element.style.position = ''
+
+    element.style[camel] = value
 
   solve: ->
     Numeric::solve.apply(@, arguments)
@@ -96,55 +109,6 @@ class Intrinsic extends Numeric
       node = node.parentNode
     @engine.workflow.reflown = reflown
 
-  # Compute value of a property, reads the styles on elements
-  verify: (node, property, continuation, old, returnPath, primitive) ->
-    if node == window
-      id = '::window'
-    else if node.nodeType
-      id = @identity.provide(node)
-    else
-      id = node
-      node = @ids[id]
-
-    path = @getPath(id, property)
-
-    unless (value = @buffer?[path])?
-      # property on specific element (e.g. ::window[height])
-      if (prop = @properties[id]?[property])? 
-        current = @values[path]
-        if current == undefined || old == false
-          switch typeof prop
-            when 'function'
-              value = prop.call(@, node, continuation)
-            when 'string'
-              path = prop
-              value = @properties[prop].call(@, node, continuation)
-            else
-              value = prop
-      # dom measurement
-      else if intrinsic = @getIntrinsicProperty(property)
-        if document.body.contains(node)
-          if prop ||= @properties[property]
-            value = prop.call(@, node, property, continuation)
-          else
-            value = @getStyle(node, intrinsic)
-        else
-          value = null
-      #else if GSS.dummy.style.hasOwnProperty(property) || (property == 'x' || property == 'y')
-      #  if @properties.intrinsic[property]
-      #    val = @properties.intrinsic[property].call(@, node, continuation)
-      #    console.error('precalc', node, property, value)
-      #    (@computed ||= {})[path] = val
-      else if @[property]
-        value = @[property](node, continuation)
-      else return
-    if primitive
-      return @values.set(id, property, value)
-    else
-      if value != undefined
-        (@buffer ||= {})[path] = value
-    return if returnPath then path else value
-
   # Decide common parent for all mutated nodes
   getCommonParent: (a, b) ->
     aps = []
@@ -160,12 +124,15 @@ class Intrinsic extends Numeric
         return ap
       if aps.indexOf(bp) > -1
         return bp
+    return
 
-    return suggestions
+  verify: (object, property, continuation) ->
+    path = @getPath(object, property)
+    @set(null, path, @get(null, path, continuation))
 
 
   # Iterate elements and measure intrinsic offsets
-  each: (parent, callback, x,y, offsetParent, a,r,g,s) ->
+  each: (parent, callback, x = 0,y = 0, offsetParent, a,r,g,s) ->
     scope = @engine.scope
     parent ||= scope
 
@@ -187,7 +154,7 @@ class Intrinsic extends Numeric
     child = parent.firstChild
     index = 0
     while child
-      if child.nodeType = 1
+      if child.nodeType == 1
         if measure && index == 0 && child.offsetParent == parent
           x += parent.offsetLeft + parent.clientLeft
           y += parent.offsetTop + parent.clientTop
@@ -225,9 +192,10 @@ class Intrinsic extends Numeric
               @set id, prop, node.offsetHeight
             else
               @set id, prop, @getStyle(node, @engine.getIntrinsicProperty(prop))
-    @
+    return
 
   @condition: ->
-    window?  
+    @scope?
+    
   url: null
 module.exports = Intrinsic
