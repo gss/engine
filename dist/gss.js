@@ -19937,14 +19937,12 @@ Rules = (function() {
     separator: ',',
     serialized: true,
     eager: true,
-    command: function(operation, continuation, scope, meta) {
-      debugger;
-    },
+    command: function(operation, continuation, scope, meta) {},
     capture: function(result, operation, continuation, scope, meta, ascender) {
       var contd;
       contd = this.getScopePath(continuation) + operation.parent.path;
       this.queries.add(result, contd, operation.parent, scope, true);
-      if (meta === this.UP) {
+      if ((ascender != null) || meta === this.UP) {
         return contd + this.identity.provide(result);
       }
       return true;
@@ -24364,12 +24362,12 @@ Expressions = (function() {
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             breadcrumbs = this.engine.getContinuation(continuation, item, this.engine.UP);
-            this.solve(operation.parent, breadcrumbs, scope, meta || this.engine.UP, operation.index, item);
+            this.solve(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
           this.engine.console.groupEnd();
           return;
         } else {
-          captured = pdef != null ? (_ref = pdef.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta) : void 0 : void 0;
+          captured = pdef != null ? (_ref = pdef.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta, ascender) : void 0 : void 0;
           switch (captured) {
             case true:
               return;

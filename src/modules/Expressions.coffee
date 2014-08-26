@@ -163,13 +163,13 @@ class Expressions
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item, @engine.UP)
-            @solve operation.parent, breadcrumbs, scope, meta || @engine.UP, operation.index, item
+            @solve operation.parent, breadcrumbs, scope, meta, operation.index, item
 
           @engine.console.groupEnd()
           return
         else 
           # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-          captured = pdef?.capture?.call(@engine, result, operation, continuation, scope, meta)
+          captured = pdef?.capture?.call(@engine, result, operation, continuation, scope, meta, ascender)
           switch captured
             when true then return
             else 

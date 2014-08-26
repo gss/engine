@@ -19,7 +19,6 @@ class Rules
 
     # Return deduplicated collection of all found elements
     command: (operation, continuation, scope, meta) ->
-      debugger
       return
 
     # Recieve a single element found by one of sub-selectors
@@ -28,7 +27,7 @@ class Rules
       
       contd = @getScopePath(continuation) + operation.parent.path
       @queries.add(result, contd, operation.parent, scope, true)
-      return contd + @identity.provide(result) if meta == @UP
+      return contd + @identity.provide(result) if ascender? || meta == @UP
       return true
 
     # Remove a single element that was found by sub-selector
