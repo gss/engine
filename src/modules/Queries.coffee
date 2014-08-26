@@ -24,6 +24,7 @@ class Queries
 
   constructor: (@engine) ->
     @watchers = {}
+    @qualified = []
     @listener = new @Observer @solve.bind(this)
 
   connect: ->
@@ -53,6 +54,16 @@ class Queries
 
     @buffer = undefined
 
+  onSolve: ->
+    if window.zzzz 
+      debugger
+    console.error(73737864863487387, @queries)
+    if @added
+      for path in @added
+        console.log('reset', path)
+        @set path, @[path]
+      @added = undefined
+
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     console.log('q', mutations)
@@ -75,13 +86,7 @@ class Queries
         @document.solve qualified[index], qualified[index + 1], qualified[index + 2]
         index += 3
 
-      console.error(73737864863487387, @queries.added)
-      if @queries.added
-        for path in @queries.added
-          console.log('reset', path)
-          @queries.set path, @queries[path]
-        @queries.added = undefined
-      return
+      @queries.onSolve()
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -244,12 +249,12 @@ class Queries
       #@chain collection[index - 1], node, collection, continuation
       #@chain node, collection[index + 1], collection, continuation
       keys.splice(index - 1, 0, key)
+      (@added ||= []).push(continuation)
     else
       (collection.duplicates ||= []).push(node)
       keys.push(key)
 
       
-    (@added ||= []).push(continuation)
     return collection
 
   # Return collection by path & scope

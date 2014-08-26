@@ -422,7 +422,7 @@ describe 'Nested Rules', ->
         box4    = container.getElementsByClassName('box')[4]
         group1  = container.getElementsByClassName('group')[0]
         
-        engine = new GSS(container)
+        window.$engine = engine = new GSS(container)
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
@@ -458,7 +458,6 @@ describe 'Nested Rules', ->
             vessel0.insertBefore(box1, vessel0.firstChild)
 
             console.error('prepend(box1)')
-            window.zzzz = true
             engine.once 'solve', ->
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
                 [
@@ -531,7 +530,6 @@ describe 'Nested Rules', ->
                       ])
                       expect(engine.queries['>'].slice()).to.eql([box0, group1])
                       box0.parentNode.removeChild(box0)
-                      window.zzz = true
                       engine.once 'solve', ->
                         expect(stringify(engine.workflown.getProblems())).to.eql stringify([[
                           ['remove', "#box1!>,>div$box0"]
@@ -549,6 +547,8 @@ describe 'Nested Rules', ->
                             ['remove', ">$group1↑div"]
                             ['remove', ">$group1"]
                           ]])
+                          window.zzzz = true
+                          console.log('append vessel0')
 
                           engine.scope.appendChild(vessel0)
 

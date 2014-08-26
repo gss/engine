@@ -19237,7 +19237,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref;
+    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19284,10 +19284,13 @@ Engine = (function(_super) {
     } else {
       solution = Domain.prototype.solve.apply(this, args);
     }
+    if ((_ref = this.queries) != null) {
+      _ref.onSolve();
+    }
     if ((solution == null) && providing) {
       while (provided = this.providing) {
         this.providing = null;
-        if ((_ref = args[0]) != null ? _ref.index : void 0) {
+        if ((_ref1 = args[0]) != null ? _ref1.index : void 0) {
           if (provided.index == null) {
             provided.index = args[0].index;
           }
@@ -19937,11 +19940,19 @@ Rules = (function() {
     separator: ',',
     serialized: true,
     eager: true,
-    command: function(operation, continuation, scope, meta) {},
+    command: function(operation, continuation, scope, meta) {
+      var contd;
+      contd = this.getScopePath(continuation) + operation.path;
+      return this.queries.get(contd);
+    },
     capture: function(result, operation, continuation, scope, meta) {
       var contd;
       contd = this.getScopePath(continuation) + operation.parent.path;
-      return this.queries.add(result, contd, operation.parent, scope, true);
+      this.queries.add(result, contd, operation.parent, scope, true);
+      if (meta === this.UP) {
+        return contd + this.identity.provide(result);
+      }
+      return true;
     },
     release: function(result, operation, continuation, scope) {
       var contd;
@@ -24358,7 +24369,7 @@ Expressions = (function() {
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             breadcrumbs = this.engine.getContinuation(continuation, item, this.engine.UP);
-            this.solve(operation.parent, breadcrumbs, scope, meta || this.engine.UP, operation.index, item);
+            this.solve(operation.parent, breadcrumbs, scope, meta, operation.index, item);
           }
           this.engine.console.groupEnd();
           return;
@@ -24746,6 +24757,7 @@ Queries = (function() {
   function Queries(engine) {
     this.engine = engine;
     this.watchers = {};
+    this.qualified = [];
     this.listener = new this.Observer(this.solve.bind(this));
   }
 
@@ -24791,10 +24803,27 @@ Queries = (function() {
     return this.buffer = void 0;
   };
 
+  Queries.prototype.onSolve = function() {
+    var path, _i, _len, _ref;
+    if (window.zzzz) {
+      debugger;
+    }
+    console.error(73737864863487387, this.queries);
+    if (this.added) {
+      _ref = this.added;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        path = _ref[_i];
+        console.log('reset', path);
+        this.set(path, this[path]);
+      }
+      return this.added = void 0;
+    }
+  };
+
   Queries.prototype.solve = function(mutations) {
     console.log('q', mutations);
     return this.engine.engine.solve('mutations', function() {
-      var index, mutation, path, qualified, _i, _j, _len, _len1, _ref;
+      var index, mutation, qualified, _i, _len;
       this.engine.workflow.queries = void 0;
       this.engine.workflow.reflown = void 0;
       qualified = this.queries.qualified = this.engine.workflow.qualified = [];
@@ -24817,16 +24846,7 @@ Queries = (function() {
         this.document.solve(qualified[index], qualified[index + 1], qualified[index + 2]);
         index += 3;
       }
-      console.error(73737864863487387, this.queries.added);
-      if (this.queries.added) {
-        _ref = this.queries.added;
-        for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-          path = _ref[_j];
-          console.log('reset', path);
-          this.queries.set(path, this.queries[path]);
-        }
-        this.queries.added = void 0;
-      }
+      return this.queries.onSolve();
     });
   };
 
@@ -25062,11 +25082,11 @@ Queries = (function() {
       }
       collection.splice(index, 0, node);
       keys.splice(index - 1, 0, key);
+      (this.added || (this.added = [])).push(continuation);
     } else {
       (collection.duplicates || (collection.duplicates = [])).push(node);
       keys.push(key);
     }
-    (this.added || (this.added = [])).push(continuation);
     return collection;
   };
 
