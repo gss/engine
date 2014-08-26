@@ -19,12 +19,12 @@ class Rules
 
     # Return deduplicated collection of all found elements
     command: (operation, continuation, scope, meta) ->
-      contd = @getScopePath(continuation) + operation.path
-      return @queries.get(contd)
+      debugger
+      return
 
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
-    capture: (result, operation, continuation, scope, meta) -> 
+    capture: (result, operation, continuation, scope, meta, ascender) -> 
       
       contd = @getScopePath(continuation) + operation.parent.path
       @queries.add(result, contd, operation.parent, scope, true)
@@ -164,7 +164,7 @@ class Rules
           scope = node.parentNode
 
       rules = @['_' + type](source)
-      @engine.engine.solve(@clone(rules), continuation, scope, @engine.DOWN)
+      @engine.engine.solve(@clone(rules), continuation, scope)
 
       return
 

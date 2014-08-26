@@ -54,16 +54,6 @@ class Queries
 
     @buffer = undefined
 
-  onSolve: ->
-    if window.zzzz 
-      debugger
-    console.error(73737864863487387, @queries)
-    if @added
-      for path in @added
-        console.log('reset', path)
-        @set path, @[path]
-      @added = undefined
-
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     console.log('q', mutations)
@@ -86,7 +76,7 @@ class Queries
         @document.solve qualified[index], qualified[index + 1], qualified[index + 2]
         index += 3
 
-      @queries.onSolve()
+      return
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes

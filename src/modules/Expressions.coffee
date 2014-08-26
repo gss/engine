@@ -163,7 +163,7 @@ class Expressions
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             breadcrumbs = @engine.getContinuation(continuation, item, @engine.UP)
-            @solve operation.parent, breadcrumbs, scope, meta, operation.index, item
+            @solve operation.parent, breadcrumbs, scope, meta || @engine.UP, operation.index, item
 
           @engine.console.groupEnd()
           return

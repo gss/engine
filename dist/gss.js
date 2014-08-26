@@ -19237,7 +19237,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1;
+    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19284,13 +19284,10 @@ Engine = (function(_super) {
     } else {
       solution = Domain.prototype.solve.apply(this, args);
     }
-    if ((_ref = this.queries) != null) {
-      _ref.onSolve();
-    }
     if ((solution == null) && providing) {
       while (provided = this.providing) {
         this.providing = null;
-        if ((_ref1 = args[0]) != null ? _ref1.index : void 0) {
+        if ((_ref = args[0]) != null ? _ref.index : void 0) {
           if (provided.index == null) {
             provided.index = args[0].index;
           }
@@ -19941,11 +19938,9 @@ Rules = (function() {
     serialized: true,
     eager: true,
     command: function(operation, continuation, scope, meta) {
-      var contd;
-      contd = this.getScopePath(continuation) + operation.path;
-      return this.queries.get(contd);
+      debugger;
     },
-    capture: function(result, operation, continuation, scope, meta) {
+    capture: function(result, operation, continuation, scope, meta, ascender) {
       var contd;
       contd = this.getScopePath(continuation) + operation.parent.path;
       this.queries.add(result, contd, operation.parent, scope, true);
@@ -20118,7 +20113,7 @@ Rules = (function() {
         }
       }
       rules = this['_' + type](source);
-      this.engine.engine.solve(this.clone(rules), continuation, scope, this.engine.DOWN);
+      this.engine.engine.solve(this.clone(rules), continuation, scope);
     }
   };
 
@@ -24369,7 +24364,7 @@ Expressions = (function() {
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             breadcrumbs = this.engine.getContinuation(continuation, item, this.engine.UP);
-            this.solve(operation.parent, breadcrumbs, scope, meta, operation.index, item);
+            this.solve(operation.parent, breadcrumbs, scope, meta || this.engine.UP, operation.index, item);
           }
           this.engine.console.groupEnd();
           return;
@@ -24803,23 +24798,6 @@ Queries = (function() {
     return this.buffer = void 0;
   };
 
-  Queries.prototype.onSolve = function() {
-    var path, _i, _len, _ref;
-    if (window.zzzz) {
-      debugger;
-    }
-    console.error(73737864863487387, this.queries);
-    if (this.added) {
-      _ref = this.added;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        path = _ref[_i];
-        console.log('reset', path);
-        this.set(path, this[path]);
-      }
-      return this.added = void 0;
-    }
-  };
-
   Queries.prototype.solve = function(mutations) {
     console.log('q', mutations);
     return this.engine.engine.solve('mutations', function() {
@@ -24846,7 +24824,6 @@ Queries = (function() {
         this.document.solve(qualified[index], qualified[index + 1], qualified[index + 2]);
         index += 3;
       }
-      return this.queries.onSolve();
     });
   };
 
