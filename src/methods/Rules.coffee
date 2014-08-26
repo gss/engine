@@ -19,8 +19,8 @@ class Rules
 
     # Return deduplicated collection of all found elements
     command: (operation, continuation, scope, meta) ->
-      contd = @getScopePath(continuation) + operation.path
-      return @queries.get(contd)
+      #contd = @getScopePath(continuation) + operation.path
+      #return @queries.get(contd)
 
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
@@ -28,8 +28,8 @@ class Rules
       
       contd = @getScopePath(continuation) + operation.parent.path
       @queries.add(result, contd, operation.parent, scope, true)
-      return contd + @identity.provide(result) if meta == @UP
-      return true
+      #return contd + @identity.provide(result)# if meta == @UP
+      #return true
 
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector

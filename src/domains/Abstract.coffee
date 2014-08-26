@@ -34,7 +34,7 @@ class Abstract::Methods
       if object
         if prop = @properties[property]
           unless prop.matcher
-            return prop.call(@, object, contd)
+            return prop.call(@, object, @getContinuation(continuation || contd || ''))
       return ['get', id, property, @getContinuation(continuation || contd || '')]
 
   set:

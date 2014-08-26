@@ -238,7 +238,38 @@ describe 'End - to - End', ->
             "blah2": 70
             "md2": 71 / 4
           done()
-    xdescribe 'simple order dependent selectors', ->
+    describe 'simpliest order dependent selectors', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              .a {
+                (&:next)[left] == 666;
+                (&:previous)[left] == 111;
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div> 
+        """
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[x]": 111,
+            "$a2[x]": 666
+          console.error('111')
+
+          container.appendChild(engine.$id('a1'))
+          engine.once 'solve', ->
+            console.error('222')
+          
+            expect(engine.values).to.eql
+              "$a1[x]": 666,
+              "$a2[x]": 111
+
+            container.innerHTML = ""
+            engine.once 'solve', ->
+              expect(engine.values).to.eql {}
+              done()
+
+    describe 'simple order dependent selectors', ->
       it 'should compute values', (done) ->                        
         container.innerHTML =  """
             <style type="text/gss">                            
@@ -270,6 +301,7 @@ describe 'End - to - End', ->
               "$a2[width]": 100,
               "$a1[x]": 0,
               "$a2[x]": 100,
+            debugger
             engine.scope.appendChild(a3)
             console.info('add a3')
             engine.once 'solve', ->
@@ -280,6 +312,7 @@ describe 'End - to - End', ->
                 "$a1[x]": 0,
                 "$a2[x]": 100,
                 "$a3[x]": 200,
+              debugger
               a1 = engine.$id('a1')
               a1.parentNode.removeChild(a1)
               console.info('remove a1')
@@ -289,6 +322,7 @@ describe 'End - to - End', ->
                   "$a3[width]": 100,
                   "$a2[x]": 0,
                   "$a3[x]": 100,
+                debugger
                 engine.scope.appendChild(a1)
                 console.info('add a1')
 
@@ -560,7 +594,7 @@ describe 'End - to - End', ->
                             "x": 100
                           done()
 
-    xdescribe 'order dependent complex selectors', ->
+    describe 'order dependent complex selectors', ->
       it 'should compute values', (done) ->                        
         container.innerHTML =  """
             <style type="text/gss" id="style">                            
@@ -604,6 +638,7 @@ describe 'End - to - End', ->
                 "$a3[x]": 200,
               a1 = engine.$id('a1')
               a1.parentNode.removeChild(a1)
+              window.zzzz = true
               console.info('remove a1')
               engine.once 'solve', ->
                 expect(engine.values).to.eql
@@ -640,7 +675,7 @@ describe 'End - to - End', ->
                       done()
 
                       describe 'order dependent complex selectors', ->
-    xdescribe 'order dependent selectors with comma', ->
+    describe 'order dependent selectors with comma', ->
       it 'should compute values', (done) ->                        
         container.innerHTML =  """
             <style type="text/gss" id="style">                            
@@ -674,6 +709,7 @@ describe 'End - to - End', ->
               "$a2[x]": 100,
             engine.scope.appendChild(a3)
             console.info('add a3')
+            window.zzzz = true
             engine.once 'solve', ->
               expect(engine.values).to.eql
                 "$a1[width]": 100,

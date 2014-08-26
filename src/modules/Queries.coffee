@@ -70,8 +70,17 @@ class Queries
             @queries.$characterData(mutation.target, mutation)
 
         @intrinsic.validate(mutation.target)
-      for operation, index in qualified by 3
-        @document.solve operation, qualified[index + 1], qualified[index + 2]
+      index = 0
+      while qualified[index]
+        @document.solve qualified[index], qualified[index + 1], qualified[index + 2]
+        index += 3
+
+      console.error(73737864863487387, @queries.added)
+      if @queries.added
+        for path in @queries.added
+          console.log('reset', path)
+          @queries.set path, @queries[path]
+        @queries.added = undefined
       return
 
   $attribute: (target, name, changed) ->
@@ -232,12 +241,15 @@ class Queries
       for el, index in collection
         break unless @comparePosition(el, node) == 4
       collection.splice(index, 0, node)
-      @chain collection[index - 1], node, collection, continuation
-      @chain node, collection[index + 1], collection, continuation
+      #@chain collection[index - 1], node, collection, continuation
+      #@chain node, collection[index + 1], collection, continuation
       keys.splice(index - 1, 0, key)
     else
       (collection.duplicates ||= []).push(node)
       keys.push(key)
+
+      
+    (@added ||= []).push(continuation)
     return collection
 
   # Return collection by path & scope
@@ -282,7 +294,7 @@ class Queries
     delete @watchers[id] unless watchers.length
 
   # Detach everything related to continuation from specific element
-  removeFromNode: (id, continuation, operation, scope, plural) ->
+  removeFromNode: (id, continuation, operation, scope, plural, strict) ->
     collection = @get(continuation)
     # Unbind paired elements 
     if plurals = @_plurals?[continuation]
@@ -297,13 +309,14 @@ class Queries
 
     return unless (result = @get(continuation))?
 
-    #@updateOperationCollection operation, continuation, scope, undefined, result
+    console.error('remove from node', id, [continuation, @engine.getCanonicalPath(continuation)])
+    @updateOperationCollection operation, continuation, scope, undefined, result, true
     
     if result.length?
       if typeof manual == 'string' && @isPaired(null, manual)
         for item in result
           @unpair(continuation, item)
-      else
+      else unless strict
         @clean(continuation + id)
     else
       @unpair continuation, result
@@ -348,7 +361,7 @@ class Queries
 
 
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope, manual, plural) ->
+  remove: (id, continuation, operation, scope, manual, plural, strict) ->
     #@engine.console.row('remove', (id.nodeType && @engine.identity.provide(id) || id), continuation)
     if typeof id == 'object'
       node = id
@@ -356,13 +369,16 @@ class Queries
     else
       node = @engine.identity[id]
 
+    if strict
+      debugger
+
     if continuation
       collection = @get(continuation)
 
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
 
       unless removed == false
-        @removeFromNode(id, continuation, operation, scope, plural)
+        @removeFromNode(id, continuation, operation, scope, plural, strict)
 
       if collection && !collection.length
         this.set continuation, undefined 
@@ -528,40 +544,41 @@ class Queries
       @match(left, '$pseudo', 'next', undefined, continuation)
     if right
       @match(right, '$pseudo', 'previous', undefined, continuation)
+      if window.zzzz
+        debugger
       @match(right, '$pseudo', 'first', undefined, continuation)
 
   # Combine nodes from multiple selector paths
-  updateOperationCollection: (operation, path, scope, added, removed) ->
+  updateOperationCollection: (operation, path, scope, added, removed, strict) ->
     oppath = @engine.getCanonicalPath(path)
     return if path == oppath
     collection = @get(oppath)
     return if removed && removed == collection
-    updated = undefined
     if removed
-      if @each 'remove', removed, oppath, operation, scope, true
-        updated = true
+      @each 'remove', removed, oppath, operation, scope, true, null, strict
     if added
-      if @each 'add', added, oppath, operation, scope, true
-        updated = true
-    return updated
+      @each 'add', added, oppath, operation, scope, true
 
   # Perform method over each node in nodelist, or against given node
-  each: (method, result, continuation, operation, scope, manual) ->
+  each: (method, result, continuation, operation, scope, manual, plural, strict) ->
     if result.length != undefined
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] child, continuation, operation, scope, manual
+        if @[method] child, continuation, operation, scope, manual, plural, strict
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] result, continuation, operation, scope, manual
+      return @[method] result, continuation, operation, scope, manual, plural, strict
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
+    if window.zzzz
+      debugger
+
 
     @engine.workflow.queries ||= {}
 
@@ -580,10 +597,9 @@ class Queries
       old = @get(@engine.getCanonicalPath(path))
 
     isCollection = result && result.length != undefined
-    if old == result || (old == undefined && @removed)
-      noop = true unless result && result.keys
-      old = undefined
-    
+    #if old == result || (old == undefined && @removed)
+    #  noop = true unless result && result.keys
+    #  old = undefined
     # Clean refs of nodes that dont match anymore
     if old
       if old.length != undefined
@@ -593,9 +609,10 @@ class Queries
           if !result || Array.prototype.indexOf.call(result, child) == -1
             @remove child, path, operation, scope
             (removed ||= []).push child
-      else if !result
+      else if result != old
+        if !result
+          removed = old
         @clean(path)
-        removed = old
 
     # Register newly found nodes
     if isCollection
@@ -608,10 +625,11 @@ class Queries
       if result && result.item
         result = Array.prototype.slice.call(result, 0)
     else
-      added = result
+      added = result 
 
-    if (added || removed)
-      @updateOperationCollection operation, path, scope, added, removed
+    unless added == removed
+      if added || removed
+        @updateOperationCollection operation, path, scope, added, removed, true
 
     # Subscribe node to the query
     if id = @engine.identity.provide(node)
@@ -619,18 +637,20 @@ class Queries
       if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         watchers.push(operation, continuation, scope)
     
-    return if noop
+    #return if noop
+      
+    group = @engine.workflow.queries[query] ||= [] if query
+    group = @engine.workflow.queries[path] ||= group || []
+
+    group[0] ||= result
+    group[1] ||= old
+
+    return if result == old
     
     @set path, result
 
     if plurals = @_plurals?[path]
       (@_repairing ||= {})[path] = true
-      
-    group = @engine.workflow.queries[query] ||= [] if query
-    @engine.workflow.queries[path] ||= group ||= []
-
-    group[0] ||= result
-    group[1] ||= old
 
     contd = continuation
     if contd && contd.charAt(contd.length - 1) == '→'
@@ -641,7 +661,6 @@ class Queries
       else
         return result[index]
 
-    return if removed && !added
     return added
 
   set: (path, result) ->
@@ -651,7 +670,8 @@ class Queries
       if result.length != undefined
         for item, index in result
           @chain result[index - 1], item, result, path
-        @chain item, undefined, result, path
+        if item
+          @chain item, undefined, result, path
     else
       delete @[path]
 
@@ -696,6 +716,7 @@ class Queries
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
       if @engine.indexOfTriplet(@qualified, operation, continuation, scope) == -1
         length = (continuation || '').length
+        # Make shorter continuation keys run before longer ones
         for qualified, index in @qualified by 3
           if (@qualified[index + 1] || '').length > length
             break

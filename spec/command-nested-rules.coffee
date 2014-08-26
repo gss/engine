@@ -434,6 +434,7 @@ describe 'Nested Rules', ->
           expect(box3.style.top).to.eql('100px')
           expect(engine.queries['#box1!>,>div'].length).to.eql(3)
           expect(engine.queries['#box1!>,>div'].duplicates.length).to.eql(1)
+          
           console.error('box1.remove()')
           box1.parentNode.removeChild(box1)
           engine.once 'solve', ->
@@ -454,69 +455,105 @@ describe 'Nested Rules', ->
             expect(engine.queries['#box1']).to.eql(undefined)
             expect(engine.queries['#box1!>']).to.eql(undefined)
 
-            vessel0.parentNode.removeChild(vessel0)
-            console.error('vessel0.remove()')
+            vessel0.insertBefore(box1, vessel0.firstChild)
 
+            console.error('prepend(box1)')
+            window.zzzz = true
             engine.once 'solve', ->
-              expect(box1.style.top).to.eql('')
-              expect(box2.style.top).to.eql('')
-              expect(box3.style.top).to.eql('100px')
-              expect(box4.style.top).to.eql('')
-              expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
-              expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
                 [
-                  ['remove',  "#box1!>,>div$vessel0↓ :first-child$box2"]
-                  ['remove',  "#box1!>,>div$vessel0"] 
-                  ['remove',  ">$vessel0↑div"]
-                  ['remove',  ">$vessel0"]
+                  ['remove', "#box1!>,>div$vessel0↓ :first-child$box2"]
                 ]
-                [['remove',  "#box1!>,>div$vessel0↓ :first-child$box2"]]
+                [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↓ :first-child$box1'], 100]]
+                [['remove',  '#box1!>,>div$vessel0↓ :first-child$box2']]
               ])
-              box3.parentNode.removeChild(box3)
+              expect(box1.style.top).to.eql('100px')
+              expect(box2.style.top).to.eql('')
+              expect(box3.style.top).to.eql('100px')
+
+              vessel0.removeChild(box1)
+              console.error('vessel0.remove()')
 
               engine.once 'solve', ->
-                expect(box1.style.top).to.eql('')
-                expect(box2.style.top).to.eql('')
-                expect(box3.style.top).to.eql('')
-                expect(box4.style.top).to.eql('100px')
                 expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                  [['remove', "#box1!>,>div$group1↓ :first-child$box3"]]
-                  [['==', ['get', '$box4', 'y','#box1!>,>div$group1↓ :first-child$box4'], 100]]
-                  [['remove', "#box1!>,>div$group1↓ :first-child$box3"]]
+                  [
+                    ['remove', "#box1!>"]
+                    ['remove', "#box1"]
+                    ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
+                  ]
+                  [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↓ :first-child$box2'], 100]]
+                  [['remove',  "#box1!>,>div$vessel0↓ :first-child$box1"]]
                 ])
-                box4.parentNode.removeChild(box4)
+                expect(box1.style.top).to.eql('')
+                expect(box2.style.top).to.eql('100px')
+                expect(box3.style.top).to.eql('100px')
+
+                vessel0.parentNode.removeChild(vessel0)
 
                 engine.once 'solve', ->
                   expect(box1.style.top).to.eql('')
                   expect(box2.style.top).to.eql('')
-                  expect(box3.style.top).to.eql('')
+                  expect(box3.style.top).to.eql('100px')
                   expect(box4.style.top).to.eql('')
+                  expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
+                  expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
                   expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                    [['remove', "#box1!>,>div$group1↓ :first-child$box4"]]
-                    [['remove', "#box1!>,>div$group1↓ :first-child$box4"]]
+                    [
+                      ['remove',  "#box1!>,>div$vessel0↓ :first-child$box2"]
+                      ['remove',  "#box1!>,>div$vessel0"] 
+                      ['remove',  ">$vessel0↑div"]
+                      ['remove',  ">$vessel0"]
+                    ]
+                    [['remove',  "#box1!>,>div$vessel0↓ :first-child$box2"]]
                   ])
-                  expect(engine.queries['>'].slice()).to.eql([box0, group1])
-                  box0.parentNode.removeChild(box0)
-                  window.zzz = true
+                  box3.parentNode.removeChild(box3)
+
                   engine.once 'solve', ->
-                    expect(stringify(engine.workflown.getProblems())).to.eql stringify([[
-                      ['remove', "#box1!>,>div$box0"]
-                      ['remove', ">$box0↑div"]
-                      ['remove', ">$box0"]
-                    ]])
-                    expect(engine.queries['#box1']).to.eql(undefined)
-                    expect(engine.queries['#box1!>']).to.eql(undefined)
-                    expect(engine.queries['#box1!>,>div'].slice()).to.eql([group1])
-                    expect(engine.queries['>'].slice()).to.eql([group1])
-                    group1.parentNode.removeChild(group1)
+                    expect(box1.style.top).to.eql('')
+                    expect(box2.style.top).to.eql('')
+                    expect(box3.style.top).to.eql('')
+                    expect(box4.style.top).to.eql('100px')
+                    expect(stringify(engine.workflown.getProblems())).to.eql stringify([
+                      [['remove', "#box1!>,>div$group1↓ :first-child$box3"]]
+                      [['==', ['get', '$box4', 'y','#box1!>,>div$group1↓ :first-child$box4'], 100]]
+                      [['remove', "#box1!>,>div$group1↓ :first-child$box3"]]
+                    ])
+                    box4.parentNode.removeChild(box4)
+
                     engine.once 'solve', ->
-                      expect(stringify(engine.workflown.getProblems())).to.eql stringify([[
-                        ['remove', "#box1!>,>div$group1"]
-                        ['remove', ">$group1↑div"]
-                        ['remove', ">$group1"]
-                      ]])
-                      done()
+                      expect(box1.style.top).to.eql('')
+                      expect(box2.style.top).to.eql('')
+                      expect(box3.style.top).to.eql('')
+                      expect(box4.style.top).to.eql('')
+                      expect(stringify(engine.workflown.getProblems())).to.eql stringify([
+                        [['remove', "#box1!>,>div$group1↓ :first-child$box4"]]
+                        [['remove', "#box1!>,>div$group1↓ :first-child$box4"]]
+                      ])
+                      expect(engine.queries['>'].slice()).to.eql([box0, group1])
+                      box0.parentNode.removeChild(box0)
+                      window.zzz = true
+                      engine.once 'solve', ->
+                        expect(stringify(engine.workflown.getProblems())).to.eql stringify([[
+                          ['remove', "#box1!>,>div$box0"]
+                          ['remove', ">$box0↑div"]
+                          ['remove', ">$box0"]
+                        ]])
+                        expect(engine.queries['#box1']).to.eql(undefined)
+                        expect(engine.queries['#box1!>']).to.eql(undefined)
+                        expect(engine.queries['#box1!>,>div'].slice()).to.eql([group1])
+                        expect(engine.queries['>'].slice()).to.eql([group1])
+                        group1.parentNode.removeChild(group1)
+                        engine.once 'solve', ->
+                          expect(stringify(engine.workflown.getProblems())).to.eql stringify([[
+                            ['remove', "#box1!>,>div$group1"]
+                            ['remove', ">$group1↑div"]
+                            ['remove', ">$group1"]
+                          ]])
+
+                          engine.scope.appendChild(vessel0)
+
+                          engine.once 'solve', ->
+                            done()
         engine.solve(rules)
 
     describe '1 level w/ ::scope', ->
@@ -1174,6 +1211,7 @@ describe 'Nested Rules', ->
           ['==',['get','med'], 50]
           ['==',['get','small'],5]
           ['==',['get','target-width'], 900]
+
           ['rule', 
             ['$class',
               ['$combinator'
