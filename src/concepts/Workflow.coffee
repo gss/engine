@@ -161,7 +161,8 @@ Workflow.prototype =
             break
 
         # Force operation domain
-        opdomain = @engine.getOperationDomain(problem, other)
+        if other
+          opdomain = @engine.getOperationDomain(problem, other)
         if opdomain && opdomain.displayName != other.displayName
           if (index = @domains.indexOf(opdomain)) == -1
             index = @domains.push(opdomain) - 1
@@ -178,16 +179,16 @@ Workflow.prototype =
           bubbled = true
           exps[i - 1] = problem
 
+        if other
+          for domain, counter in @domains
+            if domain != other || bubbled
+              if (other.MAYBE && domain.MAYBE) || domain.displayName == other.displayName
+                problems = @problems[counter]
+                for arg in problem
+                  if (j = problems.indexOf(arg)) > -1
+                    problems.splice(j, 1)
 
-        for domain, counter in @domains
-          if domain != other || bubbled
-            if (other.MAYBE && domain.MAYBE) || domain.displayName == other.displayName
-              problems = @problems[counter]
-              for arg in problem
-                if (j = problems.indexOf(arg)) > -1
-                  problems.splice(j, 1)
-
-        @setVariables(problem, null, opdomain || other)
+          @setVariables(problem, null, opdomain || other)
         return true
 
   # Simplify groupped multi-domain expression down to variables

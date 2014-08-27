@@ -11,6 +11,8 @@ class Document extends Abstract
                require('../methods/Rules')
 
   Queries:     require('../modules/Queries')
+  Pairs:       require('../modules/Pairs')
+  Mutations:   require('../modules/Mutations')
   Positions:   require('../modules/Positions')
 
   helps: true
@@ -20,6 +22,8 @@ class Document extends Abstract
     @engine.applier   ||= @engine.positions
     @engine.scope     ||= document
     @engine.queries   ||= new @Queries(@)
+    @engine.pairs     ||= new @Pairs(@)
+    @engine.mutations ||= new @Mutations(@)
     @engine.all         = @engine.scope.getElementsByTagName('*')
 
     

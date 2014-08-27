@@ -43,9 +43,10 @@
 
     "lib/modules/Expressions.js", 
     "lib/modules/Identity.js", 
-    "lib/modules/Matches.js",
     "lib/modules/Positions.js", 
     "lib/modules/Queries.js", 
+    "lib/modules/Mutations.js", 
+    "lib/modules/Pairs.js", 
 
     "lib/properties/Axioms.js",
     "lib/properties/Dimensions.js", 

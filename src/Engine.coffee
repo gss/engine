@@ -358,7 +358,7 @@ class Engine extends Domain.Events
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @Workflow = Engine::Workflow.compile(@)
-    @queries?.connect()
+    @mutations?.connect()
 
   # Comile user provided features specific to this engine
   compile: (state) ->

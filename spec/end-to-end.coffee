@@ -881,7 +881,30 @@ describe 'End - to - End', ->
             "$b1[x]": 100
             "$b2[x]": 100
             "$b3[x]": 100
-          done()
+          
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$a2[x]": 100
+              "$b1[x]": 100
+              "$b2[x]": 100
+              "$b3[x]": 100
+          
+            b1 = engine.$id('b1')
+            b1.parentNode.removeChild(b1)
+            window.zzzz = true
+
+            engine.once 'solve', (e) ->
+              expect(engine.values).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$b2[x]": 100
+                "$b3[x]": 100
+              done()
     
     describe 'WARN: unbalanced plural selectors', ->  
       it 'should compute values', (done) ->                                 

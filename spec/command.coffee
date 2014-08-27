@@ -95,10 +95,11 @@ describe 'GSS commands', ->
 
     it 'lte for class & id selectos', ->
       scope.innerHTML = """
-        <div id="box1" class="box">One</div>
+        <div class="box" id="box1">One</div>
         <div class="box" id="34222">One</div>
         <div class="box" id="35346">One</div>
       """
+      window.$engine = engine
       engine.solve [
         ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
       ]

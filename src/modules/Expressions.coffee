@@ -30,12 +30,18 @@ class Expressions
     if operation.tail
       operation = @skip(operation, ascender)
 
-    # Use computed result by *cough* parsing continuation string
-    if continuation && operation.path
-      if (result = @reuse(operation.path, continuation)) != false
-        return result
+    # Let engine modify continuation or return cached result
+    if continuation && operation.path && operation.def.serialized
+      result = @engine.getOperationSolution(operation, continuation, scope)
+      switch typeof result
+        when 'string'
+          continuation = result
+        when 'object'
+          return result
+        when 'boolean'
+          return
 
-    # Recursively solve arguments,stop on undefined
+    # Recursively solve arguments, stop on undefined
     args = @descend(operation, continuation, scope, meta, ascender, ascending)
 
     return if args == false
@@ -48,9 +54,8 @@ class Expressions
       result = args
     else
       result = @execute(operation, continuation, scope, args)
-      contd = continuation
-      continuation = @engine.getOperationPath(operation, continuation)
 
+      continuation = @engine.getOperationPath(operation, continuation, scope)
 
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
@@ -95,20 +100,6 @@ class Expressions
 
     return result
 
-  # Try to read saved results within continuation
-  reuse: (path, continuation) ->
-    length = path.length
-    for key in continuation.split(@engine.RIGHT)
-      bit = key
-      if (index = bit.lastIndexOf(@engine.DOWN)) > -1
-        bit = bit.substring(index + 1)
-      if bit == path || bit.substring(0, path.length) == path
-        if length < bit.length && bit.charAt(length) == '$'
-          return @engine.identity.solve(bit.substring(length))
-        else
-          return @engine.queries[key]
-    return false
-
   # Evaluate operation arguments in order, break on undefined
   descend: (operation, continuation, scope, meta, ascender, ascending) ->
     args = prev = undefined
@@ -129,12 +120,10 @@ class Expressions
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
         if ascender?
-          mark = operation.def.rule && ascender == 1 && @engine.DOWN || @engine.RIGHT
-          if mark
-            contd = @engine.getContinuation(continuation, null, mark)
-          else
-            contd = continuation
-        argument = @solve(argument, contd || continuation, scope, meta, undefined, prev)
+          contd = @engine.getDescendingContinuation(operation, continuation, ascender)
+        else
+          contd = continuation
+        argument = @solve(argument, contd, scope, meta, undefined, prev)
       if argument == undefined
         if !operation.def.eager || ascender?
           if operation.def.capture and 
@@ -150,63 +139,50 @@ class Expressions
       (args ||= [])[index - offset + shift] = prev = argument
     return args
 
-  # Pass control back to parent operation. 
-  # If child op returns DOM collection or node, evaluator recurses to do so.
-  # When recursion unrolls all caller ops are discarded
+  # Pass control (back) to parent operation. 
+  # If child op returns DOM collection or node, evaluator recurses for each node.
+  # In that case, it discards the descension stack
   ascend: (operation, continuation, result, scope, meta, ascender) ->
     if result? 
       if parent = operation.parent
         pdef = parent.def
       if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document)
-        # For each node in collection, we recurse to a parent op with a distinct continuation key
+        # For each node in collection, recurse to a parent with id appended to continuation key
         if parent && @engine.isCollection?(result)
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
-            breadcrumbs = @engine.getContinuation(continuation, item, @engine.UP)
-            @solve operation.parent, breadcrumbs, scope, meta, operation.index, item
+            contd = @engine.getAscendingContinuation(continuation, item)
+            @solve operation.parent, contd, scope, meta, operation.index, item
 
           @engine.console.groupEnd()
           return
         else 
           # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-          captured = pdef?.capture?.call(@engine, result, operation, continuation, scope, meta, ascender)
-          switch captured
-            when true
-              return
-            else 
-              #if ascender?
-              #if typeof captured == 'string'
-              #  if @engine.indexOfTriplet(@engine.queries.qualified, operation.parent.parent, captured, scope) == -1
-              #    @engine.queries.qualified.push(operation.parent.parent, captured, scope)
-              #  return
-              #else
-                
-              #if typeof captured == 'string'
-              #  continuation = captured
-              #  operation = operation.parent
-              #  parent = parent.parent
+          return if pdef?.capture?.call(@engine, result, operation, continuation, scope, meta, ascender)
 
           # Topmost unknown commands are returned as results
           if operation.def.noop && operation.name && result.length == 1
             return 
-          if !parent.name
 
-            if result && (!parent ||            # if current command is root
-              ((!pdef || pdef.noop) &&               # or parent is unknown command
-                (!parent.parent ||              # and parent is a root
-                parent.length == 1) ||           # or a branch with a single item
-                (ascender?)))                    # or if value bubbles up
+          if !parent.name
+            if result && (!parent ||    # if current command is root
+              ((!pdef || pdef.noop) &&  # or parent is unknown command
+                (!parent.parent ||        # and parent is a root
+                parent.length == 1) ||    # or a branch with a single item
+                ascender?))               # or if value bubbles up
 
               if result.length == 1
-                result = result[0] 
+                result = result[0]
+
               return @engine.provide result
+
           else if parent && (ascender? || 
               (result.nodeType && 
               (!operation.def.hidden || parent.tail == parent)))
             @solve parent, continuation, scope, meta, operation.index, result
             return
-          else
-            return result
+
+          return result
       else if parent && ((typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain))
 
         solution = ['value', result, continuation || '', operation.toString()]

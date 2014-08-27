@@ -104,7 +104,7 @@ class Conventions
   getCanonicalPath: (continuation, compact) ->
     bits = @getContinuation(continuation).split(@DOWN);
     last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.split(@RIGHT).pop().replace(@CanonicalizeRegExp, '')
+    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')
     return last if compact
     return bits.join(@DOWN)
   CanonicalizeRegExp: /\$[^↑]+(?:↑|$)/g
@@ -116,8 +116,23 @@ class Conventions
     bits[bits.length - 1] = ""
     return bits.join(@DOWN)
 
+  getOperationSolution: (operation, continuation, scope) ->
+    if operation.def.serialized && !operation.def.hidden
+      return @pairs.getSolution(operation, continuation, scope)
+
+  getAscendingContinuation: (continuation, item) ->
+    return @engine.getContinuation(continuation, item, @engine.UP)
+
+  getDescendingContinuation: (operation, continuation, ascender) ->
+    if ascender?
+      mark = operation.def.rule && ascender == 1 && @engine.DOWN || @engine.RIGHT
+      if mark
+        return @engine.getContinuation(continuation, null, mark)
+      else
+        return continuation
+
   # Return path for given operation
-  getOperationPath: (operation, continuation) ->
+  getOperationPath: (operation, continuation, scope) ->
     if continuation?
       if operation.def.serialized && !operation.def.hidden
         return continuation + (operation.key || operation.path)

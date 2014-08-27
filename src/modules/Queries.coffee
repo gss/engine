@@ -12,27 +12,9 @@
 ###
 
 class Queries
-  options:
-    subtree: true
-    childList: true
-    attributes: true
-    characterData: true
-    attributeOldValue: true
-
-  Observer: 
-    window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
-
   constructor: (@engine) ->
     @watchers = {}
     @qualified = []
-    @listener = new @Observer @solve.bind(this)
-
-  connect: ->
-    @listener.observe @engine.scope, @options 
-
-  disconnect: ->
-    @listener.disconnect()
-    
 
   onBeforeSolve: ->
     if @removed
@@ -40,29 +22,23 @@ class Queries
         @remove id
       @removed = undefined
 
-    @buffer = undefined
-    repairing = @_repairing
-    @_repairing = undefined
-    if repairing
-      for property, value of repairing
-        if plurals = @_plurals[property]
-          for plural, index in plurals by 3
-            @repair property, plural, plurals[index + 1], plurals[index + 2], plurals[index + 3]
+    @engine.pairs.solve()
+
     if @removing
       for node in @removing
         delete node._gss_id
 
-    @buffer = undefined
-
   onSolve: ->
+    # Update all DOM queries that matched mutations
     index = 0
     while @qualified[index]
       @engine.document.solve @qualified[index], @qualified[index + 1], @qualified[index + 2]
       index += 3
+
+    # Execute all deferred selectors (e.g. comma)
     index = 0
     if @ascending
       console.error(@ascending?.slice())
-      debugger
       while @ascending[index]
         contd = @ascending[index + 1]
         collection = @[contd]
@@ -77,166 +53,6 @@ class Queries
         index += 3
       @ascending = undefined
     @
-
-  # Listen to changes in DOM to broadcast them all around, update queries in batch
-  solve: (mutations) ->
-    console.log('q', mutations)
-    result = @engine.engine.solve 'mutations', ->
-      @engine.workflow.queries = undefined
-      @engine.workflow.reflown = undefined
-      qualified = @queries.qualified = @engine.workflow.qualified = []
-      for mutation in mutations
-        switch mutation.type
-          when "attributes"
-            @queries.$attribute(mutation.target, mutation.attributeName, mutation.oldValue)
-          when "childList"
-            @queries.$children(mutation.target, mutation)
-          when "characterData"
-            @queries.$characterData(mutation.target, mutation)
-
-        @intrinsic.validate(mutation.target)
-      return
-    return result
-
-  $attribute: (target, name, changed) ->
-    # Notify parents about class and attribute changes
-    if name == 'class' && typeof changed == 'string'
-      klasses = target.classList
-      old = changed.split(' ')
-      changed = []
-      for kls in old
-        changed.push kls unless kls && klasses.contains(kls)
-      for kls in klasses
-        changed.push kls unless kls && old.indexOf(kls) > -1
-
-    parent = target
-    while parent
-      $attribute = target == parent && '$attribute' || ' $attribute'
-      @match(parent, $attribute, name, target)
-      if changed?.length && name == 'class'
-        $class = target == parent && '$class' || ' $class'
-        for kls in changed
-          @match(parent, $class, kls, target)
-      break if parent == @engine.scope
-      break unless parent = parent.parentNode
-    @
-
-  index: (update, type, value) ->
-    if group = update[type]
-      return unless group.indexOf(value) == -1
-    else
-      update[type] = []
-    update[type].push(value)
-
-  $children: (target, mutation) ->
-    # Invalidate sibling observers
-    added = []
-    removed = []
-    for child in mutation.addedNodes
-      if child.nodeType == 1
-        added.push(child)
-    for child in mutation.removedNodes
-      if child.nodeType == 1
-        if (index = added.indexOf(child)) > -1
-          added.splice index, 1
-        else
-          removed.push(child)
-    changed = added.concat(removed)
-    changedTags = []
-    for node in changed
-      tag = node.tagName
-      if changedTags.indexOf(tag) == -1
-        changedTags.push(tag)
-
-    prev = next = mutation
-    firstPrev = firstNext = true
-    while (prev = prev.previousSibling)
-      if prev.nodeType == 1
-        if firstPrev
-          @match(prev, '+', undefined, '*') 
-          @match(prev, '++', undefined, '*')
-          firstPrev = false
-        @match(prev, '~', undefined, changedTags)
-        @match(prev, '~~', undefined, changedTags)
-        next = prev
-    while (next = next.nextSibling)
-      if next.nodeType == 1
-        if firstNext
-          @match(next, '!+', undefined, '*') 
-          @match(next, '++', undefined, '*')
-          firstNext = false
-        @match(next, '!~', undefined, changedTags)
-        @match(next, '~~', undefined, changedTags)
-
-
-    # Invalidate descendants observers
-    @match(target, '>', undefined, changedTags)
-    allAdded = []
-    allRemoved = []
-
-    for child in added
-      @match(child, '!>', undefined, target)
-      allAdded.push(child)
-      allAdded.push.apply(allAdded, child.getElementsByTagName('*'))
-    for child in removed
-      allRemoved.push(child)
-      allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'))
-    allChanged = allAdded.concat(allRemoved)
-
-    # Generate map of qualifiers to invalidate (to re-query native selectors)
-    update = {}
-    for node in allChanged
-      for attribute in node.attributes
-        switch attribute.name
-          when 'class'
-            for kls in node.classList
-              @index update, ' $class', kls
-          when 'id'
-            @index update, ' $id', attribute.value
-
-        @index update, ' $attribute', attribute.name
-      prev = next = node  
-      while prev = prev.previousSibling
-        if prev.nodeType == 1
-          @index update, ' +', prev.tagName
-          break
-      while next = next.nextSibling
-        if next.nodeType == 1
-          break
-
-      @index update, ' $pseudo', 'first-child' unless prev
-      @index update, ' $pseudo', 'last-child' unless next
-      @index update, ' +', child.tagName
-
-    parent = target
-    while parent#.nodeType == 1
-      # Let parents know about inserted nodes
-      @match(parent, ' ', undefined, allChanged)
-      for child in allChanged
-        @match(child, '!', undefined, parent)
-
-      for prop, values of update
-        for value in values
-          if prop.charAt(1) == '$' # qualifiers
-            @match(parent, prop, value)
-          else
-            @match(parent, prop, undefined, value)
-
-      break if parent == @engine.scope
-      break unless parent = parent.parentNode
-
-    # Clean removed elements by id
-    for removed in allRemoved
-      if id = @engine.identity.find(removed)
-        (@removed ||= []).push(id)
-    @
-
-  $characterData: (target) ->
-    parent = target.parentNode
-    if id = @engine.identity.find(parent)
-      if parent.tagName == 'STYLE' 
-        if parent.getAttribute('type')?.indexOf('text/gss') > -1
-          @engine.eval(parent)
 
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
@@ -291,7 +107,7 @@ class Queries
       return result
 
   # Remove observers from element
-  unobserve: (id, continuation, plural, quick) ->
+  unobserve: (id, continuation, pair, quick) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
       if typeof id != 'object'
@@ -306,36 +122,41 @@ class Queries
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       unless quick
-        @clean(watcher, contd, watcher, subscope, true, plural)
+        @clean(watcher, contd, watcher, subscope, true, pair)
     delete @watchers[id] unless watchers.length
 
   # Detach everything related to continuation from specific element
-  removeFromNode: (id, continuation, operation, scope, plural, strict) ->
+  removeFromNode: (id, continuation, operation, scope, pair, strict) ->
     collection = @get(continuation)
+
+    @engine.pairs.remove(id, continuation)
     # Unbind paired elements 
-    if plurals = @_plurals?[continuation]
-      for subpath, index in plurals by 3
-        subpath = continuation + id + '→' + subpath
-        @remove plurals[index + 2], continuation + id + '→', null, null, null, true
+    if pairs = @engine.pairs[continuation]
+      for subpath, index in pairs by 3
+        @remove pairs[index + 2], continuation + id + '→', null, null, null, true
         @clean(continuation + id + '→' + subpath, null, null, null, null, true)
        
     # Remove all watchers that match continuation path
     ref = continuation + (collection?.length? && id || '')
-    @unobserve(id, ref, plural)
+    @unobserve(id, ref, pair)
 
     return unless (result = @get(continuation))?
 
     console.error('remove from node', id, [continuation, @engine.getCanonicalPath(continuation)])
-    @updateOperationCollection operation, continuation, scope, undefined, result, true
+  
+    if window.zzzz
+      debugger
+
+    @updateOperationCollection operation, continuation, scope, undefined, @engine.identity[id], true
     
     if result.length?
-      if typeof manual == 'string' && @isPaired(null, manual)
-        for item in result
-          @unpair(continuation, item)
-      else unless strict
-        @clean(continuation + id)
-    else
-      @unpair continuation, result
+      #if typeof manual == 'string' && @isPaired(null, manual)
+      #  for item in result
+      #    @unpair(continuation, item)
+      #else unless strict
+      @clean(continuation + id)
+    #else
+    #  @unpair continuation, result
 
   # Remove element from collection manually
   removeFromCollection: (node, continuation, operation, scope, manual) ->
@@ -376,7 +197,7 @@ class Queries
 
 
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope, manual, plural, strict) ->
+  remove: (id, continuation, operation, scope, manual, pair, strict) ->
     #@engine.console.row('remove', (id.nodeType && @engine.identity.provide(id) || id), continuation)
     if typeof id == 'object'
       node = id
@@ -395,7 +216,7 @@ class Queries
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
 
       unless removed == false
-        @removeFromNode(id, continuation, operation, scope, plural, strict)
+        @removeFromNode(id, continuation, operation, scope, pair, strict)
 
       if collection && !collection.length
         this.set continuation, undefined 
@@ -405,7 +226,7 @@ class Queries
       @unobserve(id, true)
 
     return removed
-  clean: (path, continuation, operation, scope, bind, plural) ->
+  clean: (path, continuation, operation, scope, bind, pair) ->
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
@@ -415,7 +236,7 @@ class Queries
     #   if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
     #     @remove result, oppath
     @unpair path, result if result?.nodeType
-    unless plural
+    unless pair
       if (result = @get(path, undefined, true)) != undefined
         if result
           if parent = operation?.parent
@@ -429,8 +250,7 @@ class Queries
 
     @set path, undefined
 
-    if @_plurals?[path]
-      delete @_plurals[path]
+    @engine.pairs.clean(path)
 
     # Remove queries in queue and global watchers that match the path 
     if @qualified
@@ -443,117 +263,13 @@ class Queries
       @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 
-  # Update bindings of two plural collections
-  repair: (path, key, operation, scope, collected) ->
-    leftUpdate = @engine.workflow.queries?[path]
-    leftNew = (if leftUpdate?[0] != undefined then leftUpdate[0] else @get(path)) || []
-    if leftNew.old != undefined
-      leftOld = leftNew.old || []
-    else
-      leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = @engine.getScopePath(path) + key
-    rightUpdate = @engine.workflow.queries?[rightPath]
-
-    rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
-    if !rightNew && collected
-      rightNew = @get(path + @engine.identity.provide(leftNew[0] || leftOld[0]) + '→' + key)
-      
-    rightNew ||= []
-
-    if rightNew.old != undefined
-      rightOld = rightNew.old
-    else if rightUpdate?[1] != undefined
-      rightOld = rightUpdate[1]
-    else if !rightUpdate
-      rightOld = @get(rightPath)
-      rightOld = rightNew if rightOld == undefined
-
-    rightOld ||= []
-
-    removed = []
-    added = []
-
-    for object, index in leftOld
-      if leftNew[index] != object || rightOld[index] != rightNew[index]
-        if rightOld && rightOld[index]
-          removed.push([object, rightOld[index]])
-        if leftNew[index] && rightNew[index]
-          added.push([leftNew[index], rightNew[index]])
-    if leftOld.length < leftNew.length
-      for index in [leftOld.length ... leftNew.length]
-        if rightNew[index]
-          added.push([leftNew[index], rightNew[index]])
-
-    for pair in removed
-      prefix = @engine.getContinuation(path, pair[0], '→')
-      @remove(scope, prefix, null, null, null, true)
-      @clean(prefix + key, null, null, null, null, true)
-    
-    for pair in added
-      prefix = @engine.getContinuation(path, pair[0], '→')
-      # not too good
-      contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
-      if operation.path != operation.key
-        @engine.provide operation.parent, prefix + operation.path, scope, @engine.UP, operation.index, pair[1]
-      else
-        @engine.provide operation, contd, scope, @engine.UP, true, true
-
-    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path)
-
-  isPariedRegExp: /(?:^|→)([^→]+?)(\$[a-z0-9-]+)?→([^→]+)→?$/i
-                  # path1 ^        id ^        ^path2   
-
-  isPaired: (operation, continuation) ->
-    if match = continuation.match(@isPariedRegExp)
-      if operation && operation.parent.def.serialized
-        return
-      if !@engine.isCollection(@[continuation]) && match[3].indexOf('$') == -1
-        return
-      return match
-
-
-
-  unpair: (continuation, node) ->
-    return unless match = @isPaired(null, continuation)
-    path = @engine.getCanonicalPath(match[1])
-    collection = @get(path)
-    return unless plurals = @_plurals?[path]
-
-    oppath = @engine.getCanonicalPath(continuation, true)
-    for plural, index in plurals by 3
-      continue unless oppath == plural
-      contd = path + '→' + plural
-      @remove(node, contd, plurals[index + 1], plurals[index + 2], continuation)
-      #@clean(path + match[2] + '→' + plural)
-      ((@engine.workflow.queries ||= {})[contd] ||= [])[0] = @get(contd)
-      if @_repairing != undefined
-        schedule = (@_repairing ||= {})[path] = true
-    return
-
-  # Check if operation is plurally bound with another selector
-  # Choose a good match for element from the first collection
-  # Currently bails out and schedules re-pairing 
-  pair: (continuation, operation, scope, result) ->
-    return unless match = @isPaired(operation, continuation, true)
-    left = @engine.getCanonicalPath(match[1])
-    plurals = (@_plurals ||= {})[left] ||= []
-    if plurals.indexOf(operation.path) == -1
-      pushed = plurals.push(operation.path, operation, scope)
-    collection = @get(left)
-    element =  if match[2] then @engine.identity[match[2]] else @get(match[1])
-
-    if @_repairing != undefined
-      schedule = (@_repairing ||= {})[left] = true
-      return -1
-    return collection.indexOf(element)
-
   # If a query selects element from some other node than current scope
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     if @engine.workflow.queries# && node != scope
       query = @engine.getQueryPath(operation, node)
-      return @engine.workflow.queries[query]
+      return @engine.workflow.queries[query]?[0]
 
   chain: (left, right, collection, continuation) ->
     if left
@@ -561,8 +277,6 @@ class Queries
       @match(left, '$pseudo', 'next', undefined, continuation)
     if right
       @match(right, '$pseudo', 'previous', undefined, continuation)
-      if window.zzzz
-        debugger
       @match(right, '$pseudo', 'first', undefined, continuation)
 
   # Combine nodes from multiple selector paths
@@ -577,25 +291,22 @@ class Queries
       @each 'add', added, oppath, operation, scope, true
 
   # Perform method over each node in nodelist, or against given node
-  each: (method, result, continuation, operation, scope, manual, plural, strict) ->
+  each: (method, result, continuation, operation, scope, manual, pair, strict) ->
     if result.length != undefined
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] child, continuation, operation, scope, manual, plural, strict
+        if @[method] child, continuation, operation, scope, manual, pair, strict
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] result, continuation, operation, scope, manual, plural, strict
+      return @[method] result, continuation, operation, scope, manual, pair, strict
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
-    if window.zzzz
-      debugger
-
 
     @engine.workflow.queries ||= {}
 
@@ -608,7 +319,7 @@ class Queries
     if query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
       if queried = @engine.workflow.queries[query]
         old ?= queried[1]
-        result = queried[0]
+        result ?= queried[0]
 
     if !old? && (result && result.length == 0) && continuation
       old = @get(@engine.getCanonicalPath(path))
@@ -666,17 +377,7 @@ class Queries
     
     @set path, result
 
-    if plurals = @_plurals?[path]
-      (@_repairing ||= {})[path] = true
-
-    contd = continuation
-    if contd && contd.charAt(contd.length - 1) == '→'
-      contd = @engine.getOperationPath(operation, contd)
-    if continuation && (index = @pair(contd, operation, scope, result))?
-      if index == -1
-        return
-      else
-        return result[index]
+    @engine.pairs.set path, result
 
     return added
 

@@ -30,7 +30,7 @@ class Positions
 
   solve: (data, node) ->
     node ||= @reflown || @engine.scope
-    @engine.queries?.disconnect()
+    @engine.mutations?.disconnect()
 
     # Apply changed styles in batch, 
     # leave out positioning properties (Restyle/Reflow)
@@ -48,7 +48,7 @@ class Positions
       for prop, value of styles
         @provide id, prop, value
         
-    @engine.queries?.connect()
+    @engine.mutations?.connect()
     return data
 
   # Calculate offsets according to new values (but dont set anything)
