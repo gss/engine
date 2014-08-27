@@ -37,7 +37,7 @@ class Expressions
 
     # Recursively solve arguments,stop on undefined
     args = @descend(operation, continuation, scope, meta, ascender, ascending)
-    
+
     return if args == false
 
     if operation.name && !operation.def.hidden
@@ -171,12 +171,20 @@ class Expressions
           # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
           captured = pdef?.capture?.call(@engine, result, operation, continuation, scope, meta, ascender)
           switch captured
-            when true then return
+            when true
+              return
             else 
-              if typeof captured == 'string'
-                continuation = captured
-                operation = operation.parent
-                parent = parent.parent
+              #if ascender?
+              #if typeof captured == 'string'
+              #  if @engine.indexOfTriplet(@engine.queries.qualified, operation.parent.parent, captured, scope) == -1
+              #    @engine.queries.qualified.push(operation.parent.parent, captured, scope)
+              #  return
+              #else
+                
+              #if typeof captured == 'string'
+              #  continuation = captured
+              #  operation = operation.parent
+              #  parent = parent.parent
 
           # Topmost unknown commands are returned as results
           if operation.def.noop && operation.name && result.length == 1

@@ -674,7 +674,6 @@ describe 'End - to - End', ->
 
                       done()
 
-                      describe 'order dependent complex selectors', ->
     describe 'order dependent selectors with comma', ->
       it 'should compute values', (done) ->                        
         container.innerHTML =  """

@@ -17,17 +17,31 @@ class Rules
     # Dont let undefined arguments stop execution
     eager: true
 
+    before: '_onBeforeQuery'
+    after: '_onQuery'
+    init: '_onSelector'
+
     # Return deduplicated collection of all found elements
     command: (operation, continuation, scope, meta) ->
-      return
+      contd = @getScopePath(continuation) + operation.path
+
+      if @queries.ascending
+        index = @engine.indexOfTriplet(@queries.ascending, operation, contd, scope) == -1
+        if index > -1
+          @queries.ascending.splice(index, 3)
+
+      return @queries[contd]
 
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope, meta, ascender) -> 
-      
       contd = @getScopePath(continuation) + operation.parent.path
+      if result.id == 'vessel0'
+        debugger
       @queries.add(result, contd, operation.parent, scope, true)
-      return contd + @identity.provide(result) if ascender? || meta == @UP
+      @queries.ascending ||= []
+      if @engine.indexOfTriplet(@queries.ascending, operation.parent, contd, scope) == -1
+        @queries.ascending.push(operation.parent, contd, scope)
       return true
 
     # Remove a single element that was found by sub-selector
@@ -44,6 +58,8 @@ class Rules
 
     # Set rule body scope to a found element
     solve: (operation, continuation, scope, meta, ascender, ascending) ->
+      if ascending?.length
+        debugger
       if operation.index == 2 && !ascender
         @expressions.solve operation, continuation, ascending, operation
         return false
@@ -57,8 +73,7 @@ class Rules
   ### Conditional structure 
 
   Evaluates one of two branches
-  chosen by truthiness of condition,
-  which is stored as dom query
+  chosen by truthiness of condition.
 
   Invisible to solver, 
   it leaves trail in continuation path

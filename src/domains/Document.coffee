@@ -61,10 +61,12 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
+      @engine.compiling = true
       @engine.solve 'Document', 'stylesheets', [
         ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
         ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
       ]
+      delete @engine.compiling
 
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @

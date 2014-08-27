@@ -483,6 +483,8 @@ describe 'GSS commands', ->
       it '@chain .box width(+[hgap]*2)', (done) ->
         el = null
 
+        window.$engine = engine
+
         engine.solve [  
           ['==', ['get','hgap'], 20]
           ['==', ['get',['$id','thing1'],'width'], 100]

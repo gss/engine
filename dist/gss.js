@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-26) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-27) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19237,7 +19237,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref;
+    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19284,10 +19284,13 @@ Engine = (function(_super) {
     } else {
       solution = Domain.prototype.solve.apply(this, args);
     }
+    if ((_ref = this.queries) != null) {
+      _ref.onSolve();
+    }
     if ((solution == null) && providing) {
       while (provided = this.providing) {
         this.providing = null;
-        if ((_ref = args[0]) != null ? _ref.index : void 0) {
+        if ((_ref1 = args[0]) != null ? _ref1.index : void 0) {
           if (provided.index == null) {
             provided.index = args[0].index;
           }
@@ -19937,13 +19940,30 @@ Rules = (function() {
     separator: ',',
     serialized: true,
     eager: true,
-    command: function(operation, continuation, scope, meta) {},
+    before: '_onBeforeQuery',
+    after: '_onQuery',
+    init: '_onSelector',
+    command: function(operation, continuation, scope, meta) {
+      var contd, index;
+      contd = this.getScopePath(continuation) + operation.path;
+      if (this.queries.ascending) {
+        index = this.engine.indexOfTriplet(this.queries.ascending, operation, contd, scope) === -1;
+        if (index > -1) {
+          this.queries.ascending.splice(index, 3);
+        }
+      }
+      return this.queries[contd];
+    },
     capture: function(result, operation, continuation, scope, meta, ascender) {
-      var contd;
+      var contd, _base;
       contd = this.getScopePath(continuation) + operation.parent.path;
+      if (result.id === 'vessel0') {
+        debugger;
+      }
       this.queries.add(result, contd, operation.parent, scope, true);
-      if ((ascender != null) || meta === this.UP) {
-        return contd + this.identity.provide(result);
+      (_base = this.queries).ascending || (_base.ascending = []);
+      if (this.engine.indexOfTriplet(this.queries.ascending, operation.parent, contd, scope) === -1) {
+        this.queries.ascending.push(operation.parent, contd, scope);
       }
       return true;
     },
@@ -19958,6 +19978,9 @@ Rules = (function() {
   Rules.prototype["rule"] = {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
+      if (ascending != null ? ascending.length : void 0) {
+        debugger;
+      }
       if (operation.index === 2 && !ascender) {
         this.expressions.solve(operation, continuation, ascending, operation);
         return false;
@@ -19974,8 +19997,7 @@ Rules = (function() {
   /* Conditional structure 
   
   Evaluates one of two branches
-  chosen by truthiness of condition,
-  which is stored as dom query
+  chosen by truthiness of condition.
   
   Invisible to solver, 
   it leaves trail in continuation path
@@ -20576,6 +20598,7 @@ Selectors = (function() {
   Selectors.prototype[':previous'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
+      debugger;
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
@@ -24169,7 +24192,9 @@ Document = (function(_super) {
       return this.start();
     },
     compile: function() {
-      return this.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+      this.engine.compiling = true;
+      this.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
+      return delete this.engine.compiling;
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -24371,12 +24396,6 @@ Expressions = (function() {
           switch (captured) {
             case true:
               return;
-            default:
-              if (typeof captured === 'string') {
-                continuation = captured;
-                operation = operation.parent;
-                parent = parent.parent;
-              }
           }
           if (operation.def.noop && operation.name && result.length === 1) {
             return;
@@ -24796,10 +24815,45 @@ Queries = (function() {
     return this.buffer = void 0;
   };
 
+  Queries.prototype.onSolve = function() {
+    var collection, contd, i, index, item, old, _i, _ref, _ref1, _ref2, _ref3;
+    index = 0;
+    while (this.qualified[index]) {
+      this.engine.document.solve(this.qualified[index], this.qualified[index + 1], this.qualified[index + 2]);
+      index += 3;
+    }
+    index = 0;
+    if (this.ascending) {
+      console.error((_ref = this.ascending) != null ? _ref.slice() : void 0);
+      debugger;
+      while (this.ascending[index]) {
+        contd = this.ascending[index + 1];
+        collection = this[contd];
+        if (old = (_ref1 = this.engine.workflow) != null ? (_ref2 = _ref1.queries) != null ? (_ref3 = _ref2[contd]) != null ? _ref3[1] : void 0 : void 0 : void 0) {
+          collection = collection.slice();
+          for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
+            item = collection[i];
+            if (old.indexOf(item) > -1) {
+              collection.splice(i, 1);
+            }
+          }
+        }
+        console.error(contd, collection, old);
+        if (collection != null ? collection.length : void 0) {
+          this.engine.document.expressions.ascend(this.ascending[index], contd, collection, this.ascending[index + 2]);
+        }
+        index += 3;
+      }
+      this.ascending = void 0;
+    }
+    return this;
+  };
+
   Queries.prototype.solve = function(mutations) {
+    var result;
     console.log('q', mutations);
-    return this.engine.engine.solve('mutations', function() {
-      var index, mutation, qualified, _i, _len;
+    result = this.engine.engine.solve('mutations', function() {
+      var mutation, qualified, _i, _len;
       this.engine.workflow.queries = void 0;
       this.engine.workflow.reflown = void 0;
       qualified = this.queries.qualified = this.engine.workflow.qualified = [];
@@ -24817,12 +24871,8 @@ Queries = (function() {
         }
         this.intrinsic.validate(mutation.target);
       }
-      index = 0;
-      while (qualified[index]) {
-        this.document.solve(qualified[index], qualified[index + 1], qualified[index + 2]);
-        index += 3;
-      }
     });
+    return result;
   };
 
   Queries.prototype.$attribute = function(target, name, changed) {
@@ -25057,10 +25107,11 @@ Queries = (function() {
       }
       collection.splice(index, 0, node);
       keys.splice(index - 1, 0, key);
-      (this.added || (this.added = [])).push(continuation);
+      return true;
     } else {
       (collection.duplicates || (collection.duplicates = [])).push(node);
       keys.push(key);
+      return;
     }
     return collection;
   };
@@ -25159,7 +25210,7 @@ Queries = (function() {
   };
 
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, manual) {
-    var collection, copy, dup, duplicate, duplicates, index, keys, length, _base, _base1, _base2, _i, _len;
+    var collection, dup, duplicate, duplicates, index, keys, length, _base, _base1, _base2, _i, _len;
     if (!(collection = this.get(continuation))) {
       return;
     }
@@ -25181,9 +25232,7 @@ Queries = (function() {
       }
     }
     if (operation && length && manual) {
-      if (copy = collection.slice()) {
-        (_base = ((_base1 = ((_base2 = this.engine.workflow).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = copy);
-      }
+      (_base = ((_base1 = ((_base2 = this.engine.workflow).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       if ((index = collection.indexOf(node)) > -1) {
         if (keys) {
           if (keys[index] !== manual) {
@@ -25208,7 +25257,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, plural, strict) {
-    var collection, node, removed;
+    var collection, node, removed, _base, _base1, _base2;
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identity.provide(id);
@@ -25220,6 +25269,10 @@ Queries = (function() {
     }
     if (continuation) {
       collection = this.get(continuation);
+      console.error(continuation, collection);
+      if ((collection != null ? collection.length : void 0) !== void 0) {
+        (_base = ((_base1 = ((_base2 = this.engine.workflow).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
+      }
       removed = this.removeFromCollection(node, continuation, operation, scope, manual);
       if (removed !== false) {
         this.removeFromNode(id, continuation, operation, scope, plural, strict);

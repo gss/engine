@@ -54,10 +54,34 @@ class Queries
 
     @buffer = undefined
 
+  onSolve: ->
+    index = 0
+    while @qualified[index]
+      @engine.document.solve @qualified[index], @qualified[index + 1], @qualified[index + 2]
+      index += 3
+    index = 0
+    if @ascending
+      console.error(@ascending?.slice())
+      debugger
+      while @ascending[index]
+        contd = @ascending[index + 1]
+        collection = @[contd]
+        if old = @engine.workflow?.queries?[contd]?[1]
+          collection = collection.slice()
+          for item, i in collection by -1
+            if old.indexOf(item) > -1
+              collection.splice(i, 1)
+        console.error(contd, collection, old)
+        if collection?.length
+          @engine.document.expressions.ascend @ascending[index], contd, collection, @ascending[index + 2]
+        index += 3
+      @ascending = undefined
+    @
+
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     console.log('q', mutations)
-    @engine.engine.solve 'mutations', ->
+    result = @engine.engine.solve 'mutations', ->
       @engine.workflow.queries = undefined
       @engine.workflow.reflown = undefined
       qualified = @queries.qualified = @engine.workflow.qualified = []
@@ -71,12 +95,8 @@ class Queries
             @queries.$characterData(mutation.target, mutation)
 
         @intrinsic.validate(mutation.target)
-      index = 0
-      while qualified[index]
-        @document.solve qualified[index], qualified[index + 1], qualified[index + 2]
-        index += 3
-
       return
+    return result
 
   $attribute: (target, name, changed) ->
     # Notify parents about class and attribute changes
@@ -239,10 +259,11 @@ class Queries
       #@chain collection[index - 1], node, collection, continuation
       #@chain node, collection[index + 1], collection, continuation
       keys.splice(index - 1, 0, key)
-      (@added ||= []).push(continuation)
+      return true
     else
       (collection.duplicates ||= []).push(node)
       keys.push(key)
+      return
 
       
     return collection
@@ -335,8 +356,7 @@ class Queries
             duplicate = index
 
     if operation && length && manual
-      if copy = collection.slice()
-        ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= copy
+      ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
@@ -369,7 +389,9 @@ class Queries
 
     if continuation
       collection = @get(continuation)
-
+      console.error(continuation, collection)
+      if collection?.length != undefined
+        ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
 
       unless removed == false

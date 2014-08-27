@@ -184,6 +184,8 @@ class Engine extends Domain.Events
     else
       solution = Domain::solve.apply(@, args)
 
+    @queries?.onSolve()
+
     if !solution? && providing
       while provided = @providing
         @providing = null
