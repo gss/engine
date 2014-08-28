@@ -75,6 +75,7 @@ class Queries
       keys.splice(index - 1, 0, key)
       return true
     else
+      debugger
       (collection.duplicates ||= []).push(node)
       keys.push(key)
       return
@@ -209,6 +210,7 @@ class Queries
 
     return removed
   clean: (path, continuation, operation, scope, bind) ->
+    console.error('clean', path)
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
@@ -226,7 +228,7 @@ class Queries
         @each 'remove', result, path, operation
 
     if scope && operation.def.cleaning
-      @remove @engine.identity.find(scope), path, operation
+      @remove @engine.identity.find(scope), path, operation, scope, undefined, true
     @engine.solved.remove(path)
 
     @set path, undefined
@@ -373,6 +375,8 @@ class Queries
         if item
           @chain item, undefined, result, path
     else
+      if path == ".vessel .box"
+        debugger
       delete @[path]
 
     if removed = @engine.workflow.queries?[path]?[3]

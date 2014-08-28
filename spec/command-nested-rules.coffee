@@ -1246,6 +1246,7 @@ describe 'Nested Rules', ->
               "med":50
               "small":5
               "target-width":900 
+            debugger
           else if counter is 2   
             expect(stringify(engine.values)).to.eql stringify
               "big":500

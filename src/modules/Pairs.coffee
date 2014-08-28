@@ -9,8 +9,10 @@ class Pairs
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
-
-    return @engine.RIGHT
+      return @engine.RIGHT
+    else
+      #(@dirty ||= {})[left] = true
+      return false
 
   getTopmostOperation: (operation) ->
     while !operation.def.noop
@@ -21,7 +23,7 @@ class Pairs
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, continuation, scope, left, right) ->
-    right = @engine.RIGHT + @engine.getCanonicalPath(continuation.substring(1, continuation.length - 1))
+    right = @engine.getCanonicalPath(continuation.substring(0, continuation.length - 1))
     parent = @getTopmostOperation(operation)
     if (index = @lefts.indexOf(parent)) > -1
       left = @lefts[index + 1]
@@ -50,6 +52,8 @@ class Pairs
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
     console.log('get sol', continuation, single)
+    if continuation == "style$2↓.a$a1↑"
+      debugger
     if continuation.charAt(continuation.length - 1) == @engine.RIGHT
       return if continuation.length == 1
       parent = operation
@@ -67,18 +71,21 @@ class Pairs
           prev = index 
         return @onLeft(operation, continuation, scope)
     else if continuation.lastIndexOf(@engine.RIGHT) <= 0
-      if @engine.getCanonicalPath(continuation, true) == operation.path
+      contd = @engine.getCanonicalPath(continuation, true) 
+      if contd.charAt(0) == @engine.RIGHT
+        contd = contd.substring(1)
+      if contd == operation.path
         console.info('match', continuation,  continuation.match(@TrailingIDRegExp))
         if id = continuation.match(@TrailingIDRegExp)
-          return @engine.identity[id[0]]
+          return @engine.identity[id[1]]
         else
           return @engine.queries[continuation]
       else
-        console.info('no match', [@engine.getCanonicalPath(continuation) , operation.path])
+        console.info('no match', [contd, operation.path])
       
     return
 
-  TrailingIDRegExp: /\$[a-z0-9-_]+$/i
+  TrailingIDRegExp: /(\$[a-z0-9-_]+)[↓↑→]?$/i
 
 
   onBeforeSolve: () ->
@@ -109,6 +116,7 @@ class Pairs
 
     sorted = values.slice().sort (a, b) -> 
       (b?.push && b.length ? -1) - (a?.push && a.length ? -1)
+    sorted[0] ||= []
 
     console.info(leftUpdate, rightUpdate,)
     console.error(left, right, sorted.slice())
@@ -169,7 +177,7 @@ class Pairs
     if pairs = @paths?[path]
       (@dirty ||= {})[path] = true
     else if path.charAt(0) == @engine.RIGHT
-      path = @engine.RIGHT + @engine.getCanonicalPath(path)
+      path = @engine.getCanonicalPath(path)
       for left, watchers of @paths
         if watchers.indexOf(path) > -1
           (@dirty ||= {})[left] = true

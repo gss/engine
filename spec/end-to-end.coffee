@@ -520,7 +520,6 @@ describe 'End - to - End', ->
             <div id="b2" class="b"></div>
             <div id="b3" class="b"></div>
           """
-        engine
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
             "x": 100
@@ -543,6 +542,7 @@ describe 'End - to - End', ->
             b2 = engine.$id('b2')
             console.info('remove b2')
             b2.parentNode.removeChild(b2)
+            debugger
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
@@ -550,6 +550,7 @@ describe 'End - to - End', ->
                 "$b1[x]": 100
               console.info('add b2')
               engine.scope.appendChild(b2)
+              debugger
               engine.once 'solve', (e) ->
                 expect(engine.values).to.eql 
                   "x": 100
@@ -560,6 +561,7 @@ describe 'End - to - End', ->
                 a1 = engine.$id('a1')
                 console.info('remove a1')
                 a1.parentNode.removeChild(a1)
+                debugger
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql 
                     "x": 100
@@ -779,6 +781,7 @@ describe 'End - to - End', ->
           b3 = engine.$id('b3')
           console.info('remove b3')
           b3.parentNode.removeChild(b3)
+          debugger
 
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
@@ -787,6 +790,7 @@ describe 'End - to - End', ->
               "$b1[x]": 100
             engine.scope.appendChild(b3)
             console.info('add b3')
+            debugger
 
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
@@ -803,6 +807,7 @@ describe 'End - to - End', ->
                 expect(engine.values).to.eql 
                   "x": 100
                 engine.scope.innerHTML = ""
+                done()
 
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql {}

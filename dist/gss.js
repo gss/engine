@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-28) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-08-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19672,7 +19672,7 @@ Conventions = (function() {
     return bits.join(this.DOWN);
   };
 
-  Conventions.prototype.CanonicalizeRegExp = /^→|\$[^↑]+(?:↑|$)/g;
+  Conventions.prototype.CanonicalizeRegExp = /\$[^↑]+(?:↑|$)/g;
 
   Conventions.prototype.getScopePath = function(continuation) {
     var bits;
@@ -24427,7 +24427,6 @@ Expressions = (function() {
       if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document)) {
         if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
           this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
-          debugger;
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             contd = this.engine.getAscendingContinuation(continuation, item);
@@ -24879,6 +24878,7 @@ Queries = (function() {
       keys.splice(index - 1, 0, key);
       return true;
     } else {
+      debugger;
       (collection.duplicates || (collection.duplicates = [])).push(node);
       keys.push(key);
       return;
@@ -25037,6 +25037,7 @@ Queries = (function() {
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
     var parent, result, _ref;
+    console.error('clean', path);
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -25055,7 +25056,7 @@ Queries = (function() {
       }
     }
     if (scope && operation.def.cleaning) {
-      this.remove(this.engine.identity.find(scope), path, operation);
+      this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, true);
     }
     this.engine.solved.remove(path);
     this.set(path, void 0);
@@ -25221,6 +25222,9 @@ Queries = (function() {
         }
       }
     } else {
+      if (path === ".vessel .box") {
+        debugger;
+      }
       delete this[path];
     }
     if (removed = (_ref = this.engine.workflow.queries) != null ? (_ref1 = _ref[path]) != null ? _ref1[3] : void 0 : void 0) {
@@ -25588,8 +25592,10 @@ Pairs = (function() {
     parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
+      return this.engine.RIGHT;
+    } else {
+      return false;
     }
-    return this.engine.RIGHT;
   };
 
   Pairs.prototype.getTopmostOperation = function(operation) {
@@ -25601,7 +25607,7 @@ Pairs = (function() {
 
   Pairs.prototype.onRight = function(operation, continuation, scope, left, right) {
     var index, pairs, parent, pushed, _base;
-    right = this.engine.RIGHT + this.engine.getCanonicalPath(continuation.substring(1, continuation.length - 1));
+    right = this.engine.getCanonicalPath(continuation.substring(0, continuation.length - 1));
     parent = this.getTopmostOperation(operation);
     if ((index = this.lefts.indexOf(parent)) > -1) {
       left = this.lefts[index + 1];
@@ -25635,8 +25641,11 @@ Pairs = (function() {
   };
 
   Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
-    var id, index, parent, prev, result;
+    var contd, id, index, parent, prev, result;
     console.log('get sol', continuation, single);
+    if (continuation === "style$2↓.a$a1↑") {
+      debugger;
+    }
     if (continuation.charAt(continuation.length - 1) === this.engine.RIGHT) {
       if (continuation.length === 1) {
         return;
@@ -25660,20 +25669,24 @@ Pairs = (function() {
         return this.onLeft(operation, continuation, scope);
       }
     } else if (continuation.lastIndexOf(this.engine.RIGHT) <= 0) {
-      if (this.engine.getCanonicalPath(continuation, true) === operation.path) {
+      contd = this.engine.getCanonicalPath(continuation, true);
+      if (contd.charAt(0) === this.engine.RIGHT) {
+        contd = contd.substring(1);
+      }
+      if (contd === operation.path) {
         console.info('match', continuation, continuation.match(this.TrailingIDRegExp));
         if (id = continuation.match(this.TrailingIDRegExp)) {
-          return this.engine.identity[id[0]];
+          return this.engine.identity[id[1]];
         } else {
           return this.engine.queries[continuation];
         }
       } else {
-        console.info('no match', [this.engine.getCanonicalPath(continuation), operation.path]);
+        console.info('no match', [contd, operation.path]);
       }
     }
   };
 
-  Pairs.prototype.TrailingIDRegExp = /\$[a-z0-9-_]+$/i;
+  Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_]+)[↓↑→]?$/i;
 
   Pairs.prototype.onBeforeSolve = function() {
     var dirty, index, pair, pairs, property, value, _i, _len;
@@ -25704,6 +25717,7 @@ Pairs = (function() {
       var _ref4, _ref5;
       return ((_ref4 = (b != null ? b.push : void 0) && b.length) != null ? _ref4 : -1) - ((_ref5 = (a != null ? a.push : void 0) && a.length) != null ? _ref5 : -1);
     });
+    sorted[0] || (sorted[0] = []);
     console.info(leftUpdate, rightUpdate);
     console.error(left, right, sorted.slice());
     padded = void 0;
@@ -25781,7 +25795,7 @@ Pairs = (function() {
     if (pairs = (_ref = this.paths) != null ? _ref[path] : void 0) {
       return (this.dirty || (this.dirty = {}))[path] = true;
     } else if (path.charAt(0) === this.engine.RIGHT) {
-      path = this.engine.RIGHT + this.engine.getCanonicalPath(path);
+      path = this.engine.getCanonicalPath(path);
       _ref1 = this.paths;
       _results = [];
       for (left in _ref1) {
