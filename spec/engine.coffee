@@ -450,12 +450,13 @@ describe 'GSS engine', ->
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
+        debugger
         listener = (e) ->
           engine2 = GSS(container)
           assert engine1 is engine2, "engine is maintained" 
-          assert !engine1.values['col-width-1']?, "engine1.vars['col-width-1'] removed" 
-          expect(engine1.values['col-width-11']).to.equal undefined
-          expect(engine1.values['col-width-2']).to.equal 222
+          assert !engine2.values['col-width-1']?, "engine1.vars['col-width-1'] removed" 
+          expect(engine2.values['col-width-11']).to.equal undefined
+          expect(engine2.values['col-width-2']).to.equal 222
           container.removeEventListener 'solved', listener
           done()
         container.addEventListener 'solved', listener

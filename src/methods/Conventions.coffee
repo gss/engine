@@ -107,7 +107,7 @@ class Conventions
     last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')
     return last if compact
     return bits.join(@DOWN)
-  CanonicalizeRegExp: /\$[^↑]+(?:↑|$)/g
+  CanonicalizeRegExp: /^→|\$[^↑]+(?:↑|$)/g
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)

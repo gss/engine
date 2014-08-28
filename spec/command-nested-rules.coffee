@@ -788,7 +788,7 @@ describe 'Nested Rules', ->
           return "1" + d
 
 
-        engine = new GSS(container)
+        window.$engine = engine = new GSS(container)
 
         engine.once 'solve', ->       
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [

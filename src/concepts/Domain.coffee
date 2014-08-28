@@ -274,10 +274,6 @@ class Domain
           @substituted.push(constraint)
         else if path.name
           length = (path.constraints ||= []).push(constraint)
-          if length == 1
-            if @nullified && @nullified[path.name]
-              delete @nullified[path.name]
-            (@added ||= {})[path.name] = 0
 
     if typeof (name = constraint[0]) == 'string'
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
@@ -290,8 +286,9 @@ class Domain
     for path in constraint.paths
       if typeof path == 'string'
         if group = @paths[path]
-          if (index = group.indexOf(constraint)) > -1
-            group.splice(index, 1)
+          for other, index in group by -1
+            if other == constraint
+              group.splice(index, 1)
           unless group.length
             delete @paths[path]
       else if path[0] == 'value'
@@ -315,7 +312,11 @@ class Domain
     return
 
   declare: (name, operation) ->
-    variable = @variables[name] ||= value ? @variable(name)
+    unless variable = @variables[name]
+      variable = @variables[name] = @variable(name)
+    if @nullified && @nullified[name]
+      delete @nullified[name]
+    (@added ||= {})[name] = variable
     if operation
       ops = variable.operations ||= []
       if ops.indexOf(operation)
@@ -323,9 +324,8 @@ class Domain
     return variable
 
   undeclare: (variable) ->
-    delete @variables[variable.name]
-    delete @values[variable.name]
-    (@nullified ||= {})[variable.name] = true
+    console.error('undeclare 6666666', variable.name)
+    (@nullified ||= {})[variable.name] = variable
 
   reach: (constraints, groups) ->
     groups ||= []
@@ -350,6 +350,8 @@ class Domain
       groupped.push(constraint)
     return groups
 
+  nullify: ->
+
 
   apply: (solution) ->
     if @constrained
@@ -373,24 +375,29 @@ class Domain
 
 
     @constrained = undefined
-
+    console.log(@nullified, @added, 'wtf rol')
     result = {}
     for path, value of solution
       unless @nullified?[path]
         result[path] = value
         @values[path] = value
     if @nullified
-      for path of @nullified
+      for path, variable of @nullified
+        #@solver._externalParametricVars.delete(variable)
         result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]
+        @nullify(variable)
+        delete @variables[path]
 
 
       @nullified = undefined
     if @added
-      for path of @added
-        result[path] ?= 0
-        @values[path] ?= 0
+      for path, variable of @added
+        value = variable.value ? 0
+        unless @values[path] == value
+          result[path] ?= value
+          @values[path] = value
       @added = undefined
     if separated?.length
       if separated.length == 1
@@ -401,6 +408,8 @@ class Domain
 
   remove: ->
     for path in arguments
+      if path == "style$2↓.a$a4→.b$b4"
+        debugger
       for contd in @getPossibleContinuations(path)
         if observers = @observers[contd]
           while observers[0]
@@ -410,8 +419,8 @@ class Domain
         for constraint in constraints by -1
           if @isConstraint(constraint)
             @unconstrain(constraint, path)
-          else if @isVariable(constraint)
-            @undeclare(constraint)
+          #else if @isVariable(constraint)
+          #  @undeclare(constraint)
     return
 
   # Schedule execution of expressions to the next tick, buffer input

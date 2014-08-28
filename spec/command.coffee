@@ -93,21 +93,67 @@ describe 'GSS commands', ->
         ['==', 100,['get', '', 'grid-col', ""]]
       ]]
 
-    it 'lte for class & id selectos', ->
+    it 'lte for class & id selectos', (done) ->
+      window.$engine = engine
+
+      engine.solve [
+        ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
+      ], (solution) ->
+        expect(engine.workflown.getProblems()).to.eql [[
+          ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
+          ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
+          ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
+        ]]
+        box2 = engine.$id("34222")
+        box2.parentNode.removeChild(box2)
+
+        engine.then (solution) ->
+
+          expect(engine.workflown.getProblems()).to.eql [
+            [
+              ['remove', '.box$34222']
+              ['remove', '.box$34222→#box1']
+            ]
+            [['remove', '.box$34222→#box1']]
+          ]
+
+          scope.appendChild(box2)
+
+          engine.then (solution) ->
+
+            expect(engine.workflown.getProblems()).to.eql [[
+              ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
+            ]]
+
+            box1 = engine.$id("box1")
+            box1.parentNode.removeChild(box1)
+
+            engine.then (solution) ->
+
+              expect(engine.workflown.getProblems()).to.eql [
+                [
+                  ['remove', '.box$box1']
+                  ['remove', '.box$box1→#box1']
+                  ['remove', '.box$35346→#box1']
+                  ['remove', '.box$34222→#box1']
+                ],
+                [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]
+              ]
+              scope.appendChild(box1)
+
+              engine.then (solution) ->
+                expect(engine.workflown.getProblems()).to.eql [[
+                  ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
+                  ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
+                  ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
+                ]]
+                done()
+
       scope.innerHTML = """
         <div class="box" id="box1">One</div>
         <div class="box" id="34222">One</div>
         <div class="box" id="35346">One</div>
       """
-      window.$engine = engine
-      engine.solve [
-        ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
-      ]
-      expect(engine.workflown.getProblems()).to.eql [[
-        ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
-        ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
-        ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
-      ]]
 
     it 'intrinsic-width with class', (done) ->
 

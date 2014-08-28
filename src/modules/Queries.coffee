@@ -16,25 +16,23 @@ class Queries
     @watchers = {}
     @qualified = []
 
-  onBeforeSolve: ->
+  onSolve: ->
     if @removed
       for id in @removed
         @remove id
       @removed = undefined
 
-    @engine.pairs.solve()
-
     if @removing
       for node in @removing
         delete node._gss_id
 
-  onSolve: ->
+  onBeforeSolve: ->
     # Update all DOM queries that matched mutations
     index = 0
     while @qualified[index]
-      @engine.document.solve @qualified[index], @qualified[index + 1], @qualified[index + 2]
-      index += 3
-
+      watcher = @qualified.splice(0, 3)
+      @engine.document.solve watcher[0], watcher[1], watcher[2]
+      
     # Execute all deferred selectors (e.g. comma)
     index = 0
     if @ascending
@@ -110,8 +108,6 @@ class Queries
   unobserve: (id, continuation, pair, quick) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
-      if typeof id != 'object'
-        @unpair continuation, @engine.identity[id]
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
@@ -130,33 +126,19 @@ class Queries
     collection = @get(continuation)
 
     @engine.pairs.remove(id, continuation)
-    # Unbind paired elements 
-    if pairs = @engine.pairs[continuation]
-      for subpath, index in pairs by 3
-        @remove pairs[index + 2], continuation + id + '→', null, null, null, true
-        @clean(continuation + id + '→' + subpath, null, null, null, null, true)
-       
+
     # Remove all watchers that match continuation path
     ref = continuation + (collection?.length? && id || '')
     @unobserve(id, ref, pair)
 
-    return unless (result = @get(continuation))?
+    return if strict || !(result = @get(continuation))? 
 
     console.error('remove from node', id, [continuation, @engine.getCanonicalPath(continuation)])
   
-    if window.zzzz
-      debugger
-
     @updateOperationCollection operation, continuation, scope, undefined, @engine.identity[id], true
     
     if result.length?
-      #if typeof manual == 'string' && @isPaired(null, manual)
-      #  for item in result
-      #    @unpair(continuation, item)
-      #else unless strict
       @clean(continuation + id)
-    #else
-    #  @unpair continuation, result
 
   # Remove element from collection manually
   removeFromCollection: (node, continuation, operation, scope, manual) ->
@@ -226,7 +208,7 @@ class Queries
       @unobserve(id, true)
 
     return removed
-  clean: (path, continuation, operation, scope, bind, pair) ->
+  clean: (path, continuation, operation, scope, bind) ->
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
@@ -235,14 +217,13 @@ class Queries
     # if result && !@engine.isCollection(result)
     #   if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
     #     @remove result, oppath
-    @unpair path, result if result?.nodeType
-    unless pair
-      if (result = @get(path, undefined, true)) != undefined
-        if result
-          if parent = operation?.parent
-            parent.def.release?.call(@engine, result, operation, continuation, scope)
+    
+    if (result = @get(path, undefined, true)) != undefined
+      if result
+        if parent = operation?.parent
+          parent.def.release?.call(@engine, result, operation, continuation, scope)
 
-          @each 'remove', result, path, operation
+        @each 'remove', result, path, operation
 
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation
@@ -260,7 +241,8 @@ class Queries
 
 
     if !result || result.length == undefined
-      @engine.provide(['remove', @engine.getContinuation(path)])
+      unless path.charAt(0) == @engine.RIGHT
+        @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 
   # If a query selects element from some other node than current scope
@@ -282,7 +264,7 @@ class Queries
   # Combine nodes from multiple selector paths
   updateOperationCollection: (operation, path, scope, added, removed, strict) ->
     oppath = @engine.getCanonicalPath(path)
-    return if path == oppath
+    return if path == oppath || @engine.RIGHT + oppath == path
     collection = @get(oppath)
     return if removed && removed == collection
     if removed

@@ -3,8 +3,10 @@
 # while keeping meta data around.
 
 Wrapper = (node, args, result, operation, continuation, scope) ->
-  # variable[paths] -> constrain[paths]
+  # variable[paths] -> constraint[paths]
   if @isConstraint(result) || @isExpression(result) || @isVariable(result)
+    unless @isVariable(result)
+      result.operation = operation
     result = [result]
     offset = +(typeof operation[0] == 'string')
     for arg, index in args
@@ -14,12 +16,12 @@ Wrapper = (node, args, result, operation, continuation, scope) ->
         result.push(arg)
       if arg.paths
         result.push.apply(result, arg.paths)
-        arg.paths = undefined
+    for arg in args
+      arg.paths = undefined
   # [variable, path] -> variable[paths]
   if result.length > 0
     if result.length > 1
       result[0].paths = result.splice(1)
-    result[0].operation = operation
     return result[0]
   return result
 

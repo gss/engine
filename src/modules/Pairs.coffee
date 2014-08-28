@@ -6,20 +6,28 @@ class Pairs
 
   onLeft: (operation, continuation, scope) ->
     left = @engine.getCanonicalPath(continuation)
+    parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
-    console.error('left', parent, left)
+
     return @engine.RIGHT
+
+  getTopmostOperation: (operation) ->
+    while !operation.def.noop
+      operation = operation.parent
+    return operation
 
   # Check if operation is pairly bound with another selector
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, continuation, scope, left, right) ->
-    right = continuation.substring(1, continuation.length - 1)
+    right = @engine.RIGHT + @engine.getCanonicalPath(continuation.substring(1, continuation.length - 1))
+    parent = @getTopmostOperation(operation)
     if (index = @lefts.indexOf(parent)) > -1
       left = @lefts[index + 1]
-      @lefts.splice(index, 3)
-      @pair(operation, continuation, scope, left, right)
+      #@lefts.splice(index, 3)
+      @watch(operation, continuation, scope, left, right)
+    return unless left
     console.error('right', 'roruro', [left, right], parent, @lefts.slice())
 
     left = @engine.getCanonicalPath(left)
@@ -28,12 +36,22 @@ class Pairs
       pushed = pairs.push(right, operation, scope)
     if @repairing == undefined
       (@dirty ||= {})[left] = true
-    return
+    return false
+
+  onLeftRemoved: ->
+
+  onRightRemoved: ->
+
+  remove: (id, continuation) ->
+    return unless @paths[continuation]
+    (@dirty ||= {})[continuation] = true
+    console.info('removing', id, continuation)
     
-  getSolution: (operation, continuation, scope) ->
+  getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
-    console.log('get sol', continuation)
+    console.log('get sol', continuation, single)
     if continuation.charAt(continuation.length - 1) == @engine.RIGHT
+      return if continuation.length == 1
       parent = operation
       while parent = parent.parent
         break if parent.def.noop
@@ -42,49 +60,68 @@ class Pairs
         return @onRight(operation, continuation, scope)
       # Found left side, rewrite continuation
       else if operation.def.serialized
+        prev = -1
+        while (index = continuation.indexOf(@engine.RIGHT, prev + 1)) > -1
+          if result = @getSolution(operation, continuation.substring(prev || 0, index), scope, true)
+            return result
+          prev = index 
         return @onLeft(operation, continuation, scope)
+    else if continuation.lastIndexOf(@engine.RIGHT) <= 0
+      if @engine.getCanonicalPath(continuation, true) == operation.path
+        console.info('match', continuation,  continuation.match(@TrailingIDRegExp))
+        if id = continuation.match(@TrailingIDRegExp)
+          return @engine.identity[id[0]]
+        else
+          return @engine.queries[continuation]
+      else
+        console.info('no match', [@engine.getCanonicalPath(continuation) , operation.path])
+      
+    return
+
+  TrailingIDRegExp: /\$[a-z0-9-_]+$/i
 
 
-
-  solve: () ->
+  onBeforeSolve: () ->
     dirty = @dirty
+    console.error('dirty', dirty)
+    delete @dirty
     @repairing = true
     if dirty
       for property, value of dirty
         if pairs = @paths[property]
           for pair, index in pairs by 3
-            @repair property, pair, pairs[index + 1], pairs[index + 2], pairs[index + 3]
+            @solve property, pair, pairs[index + 1], pairs[index + 2]
     delete @repairing
     
 
   # Update bindings of two pair collections
-  repair: (path, key, operation, scope, collected) ->
-    if window.zzzz
-      debugger
-    leftUpdate = @engine.workflow.queries?[path]
-    leftNew = (if leftUpdate?[0] != undefined then leftUpdate[0] else @get(path)) || []
-    if leftNew.old != undefined
-      leftOld = leftNew.old || []
-    else
-      leftOld = (if leftUpdate then leftUpdate[1] else @get(path)) || []
-    rightPath = @engine.getScopePath(path) + key
-    rightUpdate = @engine.workflow.queries?[rightPath]
+  solve: (left, right, operation, scope) ->
+    leftUpdate = @engine.workflow.queries?[left]
+    rightUpdate = @engine.workflow.queries?[right]
 
-    rightNew = (   rightUpdate &&   rightUpdate[0] ||   @get(rightPath))
-    if !rightNew && collected
-      rightNew = @get(path + @engine.identity.provide(leftNew[0] || leftOld[0]) + '→' + key)
-      
-    rightNew ||= []
+    values = [
+      leftUpdate?[0] ? @engine.queries.get(left)
+      if leftUpdate then leftUpdate[1] else @engine.queries.get(left)
 
-    if rightNew.old != undefined
-      rightOld = rightNew.old
-    else if rightUpdate?[1] != undefined
-      rightOld = rightUpdate[1]
-    else if !rightUpdate
-      rightOld = @get(rightPath)
-      rightOld = rightNew if rightOld == undefined
+      rightUpdate?[0] ? @engine.queries.get(right)
+      if rightUpdate then rightUpdate[1] else @engine.queries.get(right)
+    ]
 
-    rightOld ||= []
+    sorted = values.slice().sort (a, b) -> 
+      (b?.push && b.length ? -1) - (a?.push && a.length ? -1)
+
+    console.info(leftUpdate, rightUpdate,)
+    console.error(left, right, sorted.slice())
+    padded = undefined
+    for value, index in values
+      unless value?.push
+        values[index] = sorted[0].map && (sorted[0].map -> value) || [value]
+        values[index].single = true
+      else
+        values[index] ||= []
+
+    [leftNew, leftOld, rightNew, rightOld] = values
+    console.error(left, right, @engine.clone values)
 
     removed = []
     added = []
@@ -100,52 +137,56 @@ class Pairs
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
+    cleaned = []
     for pair in removed
-      prefix = @engine.getContinuation(path, pair[0], '→')
-      @remove(scope, prefix, null, null, null, true)
-      @clean(prefix + key, null, null, null, null, true)
+      contd = left
+      unless leftOld.single
+        contd += @engine.identity.provide(pair[0])
+      contd += right
+      unless rightOld.single
+        contd += @engine.identity.provide(pair[1])
+      cleaned.push(contd)
     
     for pair in added
-      prefix = @engine.getContinuation(path, pair[0], '→')
-      # not too good
-      contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length)
-      if operation.path != operation.key
-        @engine.document.solve operation.parent, prefix + operation.path, scope, @engine.UP, operation.index, pair[1]
-      else
-        @engine.document.solve operation, contd, scope, @engine.UP, true, true
+      contd = left
+      unless leftNew.single
+        contd += @engine.identity.provide(pair[0])
+      contd += right
+      unless rightNew.single
+        contd += @engine.identity.provide(pair[1])
 
-    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path)
+      if (index = cleaned.indexOf(contd)) > -1
+        cleaned.splice(index, 1)
+      else
+        @engine.document.solve operation.parent, contd + @engine.RIGHT, scope, operation.index, pair[1]
+      
+    for contd in cleaned
+      @engine.queries.clean(contd)
+
+    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left, right)
 
   set: (path, result) ->
     if pairs = @paths?[path]
       (@dirty ||= {})[path] = true
+    else if path.charAt(0) == @engine.RIGHT
+      path = @engine.RIGHT + @engine.getCanonicalPath(path)
+      for left, watchers of @paths
+        if watchers.indexOf(path) > -1
+          (@dirty ||= {})[left] = true
 
-  unpair: (continuation, node) ->
-    return unless match = @isPaired(null, continuation)
-    path = @engine.getCanonicalPath(match[1])
-    collection = @get(path)
-    return unless pairs = @paths?[path]
+  watch: (operation, continuation, scope, left, right) ->
+    watchers = @paths[left] ||= []
+    if @engine.indexOfTriplet(watchers, right, operation, scope) == -1
+      watchers.push(right, operation, scope)
 
-    console.log('unpair', continuation)
-    debugger
-
-    oppath = @engine.getCanonicalPath(continuation, true)
-    for pair, index in pairs by 3
-      continue unless oppath == pair
-      #contd = path + '→' + pair
-      #@remove(node, contd, pairs[index + 1], pairs[index + 2], continuation)
-      #@clean(path + match[2] + '→' + pair)
-      #((@engine.workflow.queries ||= {})[contd] ||= [])[0] = @get(contd)
-      schedule = (@dirty ||= {})[path] = true
-    return
-
-  watch: ->
-
-  unwatch: ->
+  unwatch: (operation, continuation, scope, left, right) ->
+    watchers = @paths[left] ||= []
+    unless (index = @engine.indexOfTriplet(watchers, right, operation, scope)) == -1
+      watchers.splice(index, 3)
 
   clean: (path) ->
-    if @[path]
-      delete @[path]
+    console.error('pos clewan', path)
+    @set path
 
 
 module.exports = Pairs

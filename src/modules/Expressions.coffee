@@ -150,6 +150,7 @@ class Expressions
         # For each node in collection, recurse to a parent with id appended to continuation key
         if parent && @engine.isCollection?(result)
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
+          debugger
           for item in result
             contd = @engine.getAscendingContinuation(continuation, item)
             @solve operation.parent, contd, scope, meta, operation.index, item

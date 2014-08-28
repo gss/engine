@@ -19237,7 +19237,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1;
+    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1, _ref2;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19285,12 +19285,16 @@ Engine = (function(_super) {
       solution = Domain.prototype.solve.apply(this, args);
     }
     if ((_ref = this.queries) != null) {
-      _ref.onSolve();
+      _ref.onBeforeSolve();
+    }
+    console.log('Fuccken solve already', args, this.pairs);
+    if ((_ref1 = this.pairs) != null) {
+      _ref1.onBeforeSolve();
     }
     if ((solution == null) && providing) {
       while (provided = this.providing) {
         this.providing = null;
-        if ((_ref1 = args[0]) != null ? _ref1.index : void 0) {
+        if ((_ref2 = args[0]) != null ? _ref2.index : void 0) {
           if (provided.index == null) {
             provided.index = args[0].index;
           }
@@ -19329,6 +19333,7 @@ Engine = (function(_super) {
 
   Engine.prototype.onSolve = function(update, onlyRemoving) {
     var effects, scope, solution, _ref, _ref1, _ref2;
+    console.error('lol', update);
     if (solution = update || this.workflow.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
@@ -19344,7 +19349,7 @@ Engine = (function(_super) {
       }
     }
     if ((_ref2 = this.queries) != null) {
-      _ref2.onBeforeSolve();
+      _ref2.onSolve();
     }
     this.solved.merge(solution);
     effects = {};
@@ -19667,7 +19672,7 @@ Conventions = (function() {
     return bits.join(this.DOWN);
   };
 
-  Conventions.prototype.CanonicalizeRegExp = /\$[^↑]+(?:↑|$)/g;
+  Conventions.prototype.CanonicalizeRegExp = /^→|\$[^↑]+(?:↑|$)/g;
 
   Conventions.prototype.getScopePath = function(continuation) {
     var bits;
@@ -21361,8 +21366,11 @@ var Wrapper,
   __hasProp = {}.hasOwnProperty;
 
 Wrapper = function(node, args, result, operation, continuation, scope) {
-  var arg, index, offset, _i, _len, _ref;
+  var arg, index, offset, _i, _j, _len, _len1, _ref;
   if (this.isConstraint(result) || this.isExpression(result) || this.isVariable(result)) {
+    if (!this.isVariable(result)) {
+      result.operation = operation;
+    }
     result = [result];
     offset = +(typeof operation[0] === 'string');
     for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
@@ -21375,15 +21383,17 @@ Wrapper = function(node, args, result, operation, continuation, scope) {
       }
       if (arg.paths) {
         result.push.apply(result, arg.paths);
-        arg.paths = void 0;
       }
+    }
+    for (_j = 0, _len1 = args.length; _j < _len1; _j++) {
+      arg = args[_j];
+      arg.paths = void 0;
     }
   }
   if (result.length > 0) {
     if (result.length > 1) {
       result[0].paths = result.splice(1);
     }
-    result[0].operation = operation;
     return result[0];
   }
   return result;
@@ -21826,12 +21836,6 @@ Domain = (function() {
           this.substituted.push(constraint);
         } else if (path.name) {
           length = (path.constraints || (path.constraints = [])).push(constraint);
-          if (length === 1) {
-            if (this.nullified && this.nullified[path.name]) {
-              delete this.nullified[path.name];
-            }
-            (this.added || (this.added = {}))[path.name] = 0;
-          }
         }
       }
     }
@@ -21846,14 +21850,17 @@ Domain = (function() {
   };
 
   Domain.prototype.unconstrain = function(constraint, continuation) {
-    var group, index, op, path, _i, _j, _len, _ref, _ref1;
+    var group, index, op, other, path, _i, _j, _k, _len, _ref, _ref1;
     _ref = constraint.paths;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
       if (typeof path === 'string') {
         if (group = this.paths[path]) {
-          if ((index = group.indexOf(constraint)) > -1) {
-            group.splice(index, 1);
+          for (index = _j = group.length - 1; _j >= 0; index = _j += -1) {
+            other = group[index];
+            if (other === constraint) {
+              group.splice(index, 1);
+            }
           }
           if (!group.length) {
             delete this.paths[path];
@@ -21871,7 +21878,7 @@ Domain = (function() {
         }
         if (path.operations) {
           _ref1 = path.operations;
-          for (index = _j = _ref1.length - 1; _j >= 0; index = _j += -1) {
+          for (index = _k = _ref1.length - 1; _k >= 0; index = _k += -1) {
             op = _ref1[index];
             while (op) {
               if (op === constraint.operation) {
@@ -21889,8 +21896,14 @@ Domain = (function() {
   };
 
   Domain.prototype.declare = function(name, operation) {
-    var ops, variable, _base;
-    variable = (_base = this.variables)[name] || (_base[name] = typeof value !== "undefined" && value !== null ? value : this.variable(name));
+    var ops, variable;
+    if (!(variable = this.variables[name])) {
+      variable = this.variables[name] = this.variable(name);
+    }
+    if (this.nullified && this.nullified[name]) {
+      delete this.nullified[name];
+    }
+    (this.added || (this.added = {}))[name] = variable;
     if (operation) {
       ops = variable.operations || (variable.operations = []);
       if (ops.indexOf(operation)) {
@@ -21901,9 +21914,8 @@ Domain = (function() {
   };
 
   Domain.prototype.undeclare = function(variable) {
-    delete this.variables[variable.name];
-    delete this.values[variable.name];
-    return (this.nullified || (this.nullified = {}))[variable.name] = true;
+    console.error('undeclare 6666666', variable.name);
+    return (this.nullified || (this.nullified = {}))[variable.name] = variable;
   };
 
   Domain.prototype.reach = function(constraints, groups) {
@@ -21946,8 +21958,10 @@ Domain = (function() {
     return groups;
   };
 
+  Domain.prototype.nullify = function() {};
+
   Domain.prototype.apply = function(solution) {
-    var constraint, group, groups, index, path, result, separated, value, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var constraint, group, groups, index, path, result, separated, value, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     if (this.constrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
@@ -21973,6 +21987,7 @@ Domain = (function() {
       }
     }
     this.constrained = void 0;
+    console.log(this.nullified, this.added, 'wtf rol');
     result = {};
     for (path in solution) {
       value = solution[path];
@@ -21982,21 +21997,28 @@ Domain = (function() {
       }
     }
     if (this.nullified) {
-      for (path in this.nullified) {
-        result[path] = (_ref1 = (_ref2 = this.assumed.values[path]) != null ? _ref2 : (_ref3 = this.intrinsic) != null ? _ref3.values[path] : void 0) != null ? _ref1 : null;
+      _ref1 = this.nullified;
+      for (path in _ref1) {
+        variable = _ref1[path];
+        result[path] = (_ref2 = (_ref3 = this.assumed.values[path]) != null ? _ref3 : (_ref4 = this.intrinsic) != null ? _ref4.values[path] : void 0) != null ? _ref2 : null;
         if (this.values.hasOwnProperty(path)) {
           delete this.values[path];
         }
+        this.nullify(variable);
+        delete this.variables[path];
       }
       this.nullified = void 0;
     }
     if (this.added) {
-      for (path in this.added) {
-        if (result[path] == null) {
-          result[path] = 0;
-        }
-        if ((_base = this.values)[path] == null) {
-          _base[path] = 0;
+      _ref5 = this.added;
+      for (path in _ref5) {
+        variable = _ref5[path];
+        value = (_ref6 = variable.value) != null ? _ref6 : 0;
+        if (this.values[path] !== value) {
+          if (result[path] == null) {
+            result[path] = value;
+          }
+          this.values[path] = value;
         }
       }
       this.added = void 0;
@@ -22014,6 +22036,9 @@ Domain = (function() {
     var constraint, constraints, contd, observers, path, _i, _j, _k, _len, _len1, _ref;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
+      if (path === "style$2↓.a$a4→.b$b4") {
+        debugger;
+      }
       _ref = this.getPossibleContinuations(path);
       for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
         contd = _ref[_j];
@@ -22028,8 +22053,6 @@ Domain = (function() {
           constraint = constraints[_k];
           if (this.isConstraint(constraint)) {
             this.unconstrain(constraint, path);
-          } else if (this.isVariable(constraint)) {
-            this.undeclare(constraint);
           }
         }
       }
@@ -23628,26 +23651,28 @@ Linear = (function(_super) {
 
   Linear.prototype.constrain = function(constraint) {
     if (!Linear.__super__.constrain.apply(this, arguments)) {
+      console.error('constraint', constraint);
       return this.solver.addConstraint(constraint);
     }
   };
 
   Linear.prototype.unconstrain = function(constraint) {
+    console.error('unconstrain', constraint);
     this.solver.removeConstraint(constraint);
     return Linear.__super__.unconstrain.apply(this, arguments);
   };
 
   Linear.prototype.undeclare = function(variable) {
     var cei;
-    Linear.__super__.undeclare.apply(this, arguments);
-    delete variable.value;
-    if (variable.editing) {
-      if (cei = this.solver._editVarMap.get(variable)) {
-        this.solver.removeColumn(cei.editMinus);
-        this.solver._editVarMap["delete"](variable);
+    console.error('undeclare', variable);
+    if (!Linear.__super__.undeclare.apply(this, arguments)) {
+      if (variable.editing) {
+        if (cei = this.solver._editVarMap.get(variable)) {
+          this.solver.removeColumn(cei.editMinus);
+          return this.solver._editVarMap["delete"](variable);
+        }
       }
     }
-    return this.solver._externalParametricVars["delete"](variable);
   };
 
   Linear.prototype.edit = function(variable, strength, weight, continuation) {
@@ -23656,6 +23681,10 @@ Linear = (function(_super) {
     this.constrain(constraint);
     variable.editing = constraint;
     return constraint;
+  };
+
+  Linear.prototype.nullify = function(variable) {
+    return this.solver._externalParametricVars["delete"](variable);
   };
 
   Linear.prototype.suggest = function(path, value, strength, weight, continuation) {
@@ -24398,6 +24427,7 @@ Expressions = (function() {
       if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document)) {
         if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
           this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
+          debugger;
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             contd = this.engine.getAscendingContinuation(continuation, item);
@@ -24769,7 +24799,7 @@ Queries = (function() {
     this.qualified = [];
   }
 
-  Queries.prototype.onBeforeSolve = function() {
+  Queries.prototype.onSolve = function() {
     var id, node, _i, _j, _len, _len1, _ref, _ref1, _results;
     if (this.removed) {
       _ref = this.removed;
@@ -24779,7 +24809,6 @@ Queries = (function() {
       }
       this.removed = void 0;
     }
-    this.engine.pairs.solve();
     if (this.removing) {
       _ref1 = this.removing;
       _results = [];
@@ -24791,12 +24820,12 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.onSolve = function() {
-    var collection, contd, i, index, item, old, _i, _ref, _ref1, _ref2, _ref3;
+  Queries.prototype.onBeforeSolve = function() {
+    var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1, _ref2, _ref3;
     index = 0;
     while (this.qualified[index]) {
-      this.engine.document.solve(this.qualified[index], this.qualified[index + 1], this.qualified[index + 2]);
-      index += 3;
+      watcher = this.qualified.splice(0, 3);
+      this.engine.document.solve(watcher[0], watcher[1], watcher[2]);
     }
     index = 0;
     if (this.ascending) {
@@ -24891,9 +24920,6 @@ Queries = (function() {
     var contd, index, refs, subscope, watcher, watchers;
     if (continuation !== true) {
       refs = this.engine.getPossibleContinuations(continuation);
-      if (typeof id !== 'object') {
-        this.unpair(continuation, this.engine.identity[id]);
-      }
     }
     index = 0;
     if (!(watchers = typeof id === 'object' && id || this.watchers[id])) {
@@ -24917,25 +24943,15 @@ Queries = (function() {
   };
 
   Queries.prototype.removeFromNode = function(id, continuation, operation, scope, pair, strict) {
-    var collection, index, pairs, ref, result, subpath, _i, _len;
+    var collection, ref, result;
     collection = this.get(continuation);
     this.engine.pairs.remove(id, continuation);
-    if (pairs = this.engine.pairs[continuation]) {
-      for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
-        subpath = pairs[index];
-        this.remove(pairs[index + 2], continuation + id + '→', null, null, null, true);
-        this.clean(continuation + id + '→' + subpath, null, null, null, null, true);
-      }
-    }
     ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
     this.unobserve(id, ref, pair);
-    if ((result = this.get(continuation)) == null) {
+    if (strict || ((result = this.get(continuation)) == null)) {
       return;
     }
     console.error('remove from node', id, [continuation, this.engine.getCanonicalPath(continuation)]);
-    if (window.zzzz) {
-      debugger;
-    }
     this.updateOperationCollection(operation, continuation, scope, void 0, this.engine.identity[id], true);
     if (result.length != null) {
       return this.clean(continuation + id);
@@ -25019,7 +25035,7 @@ Queries = (function() {
     return removed;
   };
 
-  Queries.prototype.clean = function(path, continuation, operation, scope, bind, pair) {
+  Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
     var parent, result, _ref;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
@@ -25028,19 +25044,14 @@ Queries = (function() {
       continuation = path;
     }
     result = this.get(path);
-    if (result != null ? result.nodeType : void 0) {
-      this.unpair(path, result);
-    }
-    if (!pair) {
-      if ((result = this.get(path, void 0, true)) !== void 0) {
-        if (result) {
-          if (parent = operation != null ? operation.parent : void 0) {
-            if ((_ref = parent.def.release) != null) {
-              _ref.call(this.engine, result, operation, continuation, scope);
-            }
+    if ((result = this.get(path, void 0, true)) !== void 0) {
+      if (result) {
+        if (parent = operation != null ? operation.parent : void 0) {
+          if ((_ref = parent.def.release) != null) {
+            _ref.call(this.engine, result, operation, continuation, scope);
           }
-          this.each('remove', result, path, operation);
         }
+        this.each('remove', result, path, operation);
       }
     }
     if (scope && operation.def.cleaning) {
@@ -25054,7 +25065,9 @@ Queries = (function() {
     }
     this.unobserve(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
-      this.engine.provide(['remove', this.engine.getContinuation(path)]);
+      if (path.charAt(0) !== this.engine.RIGHT) {
+        this.engine.provide(['remove', this.engine.getContinuation(path)]);
+      }
     }
     return true;
   };
@@ -25082,7 +25095,7 @@ Queries = (function() {
   Queries.prototype.updateOperationCollection = function(operation, path, scope, added, removed, strict) {
     var collection, oppath;
     oppath = this.engine.getCanonicalPath(path);
-    if (path === oppath) {
+    if (path === oppath || this.engine.RIGHT + oppath === path) {
       return;
     }
     collection = this.get(oppath);
@@ -25570,22 +25583,32 @@ Pairs = (function() {
   }
 
   Pairs.prototype.onLeft = function(operation, continuation, scope) {
-    var left;
+    var left, parent;
     left = this.engine.getCanonicalPath(continuation);
+    parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
     }
-    console.error('left', parent, left);
     return this.engine.RIGHT;
   };
 
+  Pairs.prototype.getTopmostOperation = function(operation) {
+    while (!operation.def.noop) {
+      operation = operation.parent;
+    }
+    return operation;
+  };
+
   Pairs.prototype.onRight = function(operation, continuation, scope, left, right) {
-    var index, pairs, pushed, _base;
-    right = continuation.substring(1, continuation.length - 1);
+    var index, pairs, parent, pushed, _base;
+    right = this.engine.RIGHT + this.engine.getCanonicalPath(continuation.substring(1, continuation.length - 1));
+    parent = this.getTopmostOperation(operation);
     if ((index = this.lefts.indexOf(parent)) > -1) {
       left = this.lefts[index + 1];
-      this.lefts.splice(index, 3);
-      this.pair(operation, continuation, scope, left, right);
+      this.watch(operation, continuation, scope, left, right);
+    }
+    if (!left) {
+      return;
     }
     console.error('right', 'roruro', [left, right], parent, this.lefts.slice());
     left = this.engine.getCanonicalPath(left);
@@ -25596,12 +25619,28 @@ Pairs = (function() {
     if (this.repairing === void 0) {
       (this.dirty || (this.dirty = {}))[left] = true;
     }
+    return false;
   };
 
-  Pairs.prototype.getSolution = function(operation, continuation, scope) {
-    var parent;
-    console.log('get sol', continuation);
+  Pairs.prototype.onLeftRemoved = function() {};
+
+  Pairs.prototype.onRightRemoved = function() {};
+
+  Pairs.prototype.remove = function(id, continuation) {
+    if (!this.paths[continuation]) {
+      return;
+    }
+    (this.dirty || (this.dirty = {}))[continuation] = true;
+    return console.info('removing', id, continuation);
+  };
+
+  Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
+    var id, index, parent, prev, result;
+    console.log('get sol', continuation, single);
     if (continuation.charAt(continuation.length - 1) === this.engine.RIGHT) {
+      if (continuation.length === 1) {
+        return;
+      }
       parent = operation;
       while (parent = parent.parent) {
         if (parent.def.noop) {
@@ -25611,14 +25650,36 @@ Pairs = (function() {
       if (continuation.charAt(0) === this.engine.RIGHT) {
         return this.onRight(operation, continuation, scope);
       } else if (operation.def.serialized) {
+        prev = -1;
+        while ((index = continuation.indexOf(this.engine.RIGHT, prev + 1)) > -1) {
+          if (result = this.getSolution(operation, continuation.substring(prev || 0, index), scope, true)) {
+            return result;
+          }
+          prev = index;
+        }
         return this.onLeft(operation, continuation, scope);
+      }
+    } else if (continuation.lastIndexOf(this.engine.RIGHT) <= 0) {
+      if (this.engine.getCanonicalPath(continuation, true) === operation.path) {
+        console.info('match', continuation, continuation.match(this.TrailingIDRegExp));
+        if (id = continuation.match(this.TrailingIDRegExp)) {
+          return this.engine.identity[id[0]];
+        } else {
+          return this.engine.queries[continuation];
+        }
+      } else {
+        console.info('no match', [this.engine.getCanonicalPath(continuation), operation.path]);
       }
     }
   };
 
-  Pairs.prototype.solve = function() {
+  Pairs.prototype.TrailingIDRegExp = /\$[a-z0-9-_]+$/i;
+
+  Pairs.prototype.onBeforeSolve = function() {
     var dirty, index, pair, pairs, property, value, _i, _len;
     dirty = this.dirty;
+    console.error('dirty', dirty);
+    delete this.dirty;
     this.repairing = true;
     if (dirty) {
       for (property in dirty) {
@@ -25626,7 +25687,7 @@ Pairs = (function() {
         if (pairs = this.paths[property]) {
           for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
             pair = pairs[index];
-            this.repair(property, pair, pairs[index + 1], pairs[index + 2], pairs[index + 3]);
+            this.solve(property, pair, pairs[index + 1], pairs[index + 2]);
           }
         }
       }
@@ -25634,39 +25695,34 @@ Pairs = (function() {
     return delete this.repairing;
   };
 
-  Pairs.prototype.repair = function(path, key, operation, scope, collected) {
-    var added, contd, index, leftNew, leftOld, leftUpdate, object, pair, prefix, removed, rightNew, rightOld, rightPath, rightUpdate, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
-    if (window.zzzz) {
-      debugger;
-    }
-    leftUpdate = (_ref = this.engine.workflow.queries) != null ? _ref[path] : void 0;
-    leftNew = ((leftUpdate != null ? leftUpdate[0] : void 0) !== void 0 ? leftUpdate[0] : this.get(path)) || [];
-    if (leftNew.old !== void 0) {
-      leftOld = leftNew.old || [];
-    } else {
-      leftOld = (leftUpdate ? leftUpdate[1] : this.get(path)) || [];
-    }
-    rightPath = this.engine.getScopePath(path) + key;
-    rightUpdate = (_ref1 = this.engine.workflow.queries) != null ? _ref1[rightPath] : void 0;
-    rightNew = rightUpdate && rightUpdate[0] || this.get(rightPath);
-    if (!rightNew && collected) {
-      rightNew = this.get(path + this.engine.identity.provide(leftNew[0] || leftOld[0]) + '→' + key);
-    }
-    rightNew || (rightNew = []);
-    if (rightNew.old !== void 0) {
-      rightOld = rightNew.old;
-    } else if ((rightUpdate != null ? rightUpdate[1] : void 0) !== void 0) {
-      rightOld = rightUpdate[1];
-    } else if (!rightUpdate) {
-      rightOld = this.get(rightPath);
-      if (rightOld === void 0) {
-        rightOld = rightNew;
+  Pairs.prototype.solve = function(left, right, operation, scope) {
+    var added, cleaned, contd, index, leftNew, leftOld, leftUpdate, object, padded, pair, removed, rightNew, rightOld, rightUpdate, sorted, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    leftUpdate = (_ref = this.engine.workflow.queries) != null ? _ref[left] : void 0;
+    rightUpdate = (_ref1 = this.engine.workflow.queries) != null ? _ref1[right] : void 0;
+    values = [(_ref2 = leftUpdate != null ? leftUpdate[0] : void 0) != null ? _ref2 : this.engine.queries.get(left), leftUpdate ? leftUpdate[1] : this.engine.queries.get(left), (_ref3 = rightUpdate != null ? rightUpdate[0] : void 0) != null ? _ref3 : this.engine.queries.get(right), rightUpdate ? rightUpdate[1] : this.engine.queries.get(right)];
+    sorted = values.slice().sort(function(a, b) {
+      var _ref4, _ref5;
+      return ((_ref4 = (b != null ? b.push : void 0) && b.length) != null ? _ref4 : -1) - ((_ref5 = (a != null ? a.push : void 0) && a.length) != null ? _ref5 : -1);
+    });
+    console.info(leftUpdate, rightUpdate);
+    console.error(left, right, sorted.slice());
+    padded = void 0;
+    for (index = _i = 0, _len = values.length; _i < _len; index = ++_i) {
+      value = values[index];
+      if (!(value != null ? value.push : void 0)) {
+        values[index] = sorted[0].map && (sorted[0].map(function() {
+          return value;
+        })) || [value];
+        values[index].single = true;
+      } else {
+        values[index] || (values[index] = []);
       }
     }
-    rightOld || (rightOld = []);
+    leftNew = values[0], leftOld = values[1], rightNew = values[2], rightOld = values[3];
+    console.error(left, right, this.engine.clone(values));
     removed = [];
     added = [];
-    for (index = _i = 0, _len = leftOld.length; _i < _len; index = ++_i) {
+    for (index = _j = 0, _len1 = leftOld.length; _j < _len1; index = ++_j) {
       object = leftOld[index];
       if (leftNew[index] !== object || rightOld[index] !== rightNew[index]) {
         if (rightOld && rightOld[index]) {
@@ -25678,68 +25734,87 @@ Pairs = (function() {
       }
     }
     if (leftOld.length < leftNew.length) {
-      for (index = _j = _ref2 = leftOld.length, _ref3 = leftNew.length; _ref2 <= _ref3 ? _j < _ref3 : _j > _ref3; index = _ref2 <= _ref3 ? ++_j : --_j) {
+      for (index = _k = _ref4 = leftOld.length, _ref5 = leftNew.length; _ref4 <= _ref5 ? _k < _ref5 : _k > _ref5; index = _ref4 <= _ref5 ? ++_k : --_k) {
         if (rightNew[index]) {
           added.push([leftNew[index], rightNew[index]]);
         }
       }
     }
-    for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
-      pair = removed[_k];
-      prefix = this.engine.getContinuation(path, pair[0], '→');
-      this.remove(scope, prefix, null, null, null, true);
-      this.clean(prefix + key, null, null, null, null, true);
+    cleaned = [];
+    for (_l = 0, _len2 = removed.length; _l < _len2; _l++) {
+      pair = removed[_l];
+      contd = left;
+      if (!leftOld.single) {
+        contd += this.engine.identity.provide(pair[0]);
+      }
+      contd += right;
+      if (!rightOld.single) {
+        contd += this.engine.identity.provide(pair[1]);
+      }
+      cleaned.push(contd);
     }
-    for (_l = 0, _len2 = added.length; _l < _len2; _l++) {
-      pair = added[_l];
-      prefix = this.engine.getContinuation(path, pair[0], '→');
-      contd = prefix + operation.path.substring(0, operation.path.length - operation.key.length);
-      if (operation.path !== operation.key) {
-        this.engine.document.solve(operation.parent, prefix + operation.path, scope, this.engine.UP, operation.index, pair[1]);
+    for (_m = 0, _len3 = added.length; _m < _len3; _m++) {
+      pair = added[_m];
+      contd = left;
+      if (!leftNew.single) {
+        contd += this.engine.identity.provide(pair[0]);
+      }
+      contd += right;
+      if (!rightNew.single) {
+        contd += this.engine.identity.provide(pair[1]);
+      }
+      if ((index = cleaned.indexOf(contd)) > -1) {
+        cleaned.splice(index, 1);
       } else {
-        this.engine.document.solve(operation, contd, scope, this.engine.UP, true, true);
+        this.engine.document.solve(operation.parent, contd + this.engine.RIGHT, scope, operation.index, pair[1]);
       }
     }
-    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], path);
+    for (_n = 0, _len4 = cleaned.length; _n < _len4; _n++) {
+      contd = cleaned[_n];
+      this.engine.queries.clean(contd);
+    }
+    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left, right);
   };
 
   Pairs.prototype.set = function(path, result) {
-    var pairs, _ref;
+    var left, pairs, watchers, _ref, _ref1, _results;
     if (pairs = (_ref = this.paths) != null ? _ref[path] : void 0) {
       return (this.dirty || (this.dirty = {}))[path] = true;
-    }
-  };
-
-  Pairs.prototype.unpair = function(continuation, node) {
-    var collection, index, match, oppath, pair, pairs, path, schedule, _i, _len, _ref;
-    if (!(match = this.isPaired(null, continuation))) {
-      return;
-    }
-    path = this.engine.getCanonicalPath(match[1]);
-    collection = this.get(path);
-    if (!(pairs = (_ref = this.paths) != null ? _ref[path] : void 0)) {
-      return;
-    }
-    console.log('unpair', continuation);
-    debugger;
-    oppath = this.engine.getCanonicalPath(continuation, true);
-    for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
-      pair = pairs[index];
-      if (oppath !== pair) {
-        continue;
+    } else if (path.charAt(0) === this.engine.RIGHT) {
+      path = this.engine.RIGHT + this.engine.getCanonicalPath(path);
+      _ref1 = this.paths;
+      _results = [];
+      for (left in _ref1) {
+        watchers = _ref1[left];
+        if (watchers.indexOf(path) > -1) {
+          _results.push((this.dirty || (this.dirty = {}))[left] = true);
+        } else {
+          _results.push(void 0);
+        }
       }
-      schedule = (this.dirty || (this.dirty = {}))[path] = true;
+      return _results;
     }
   };
 
-  Pairs.prototype.watch = function() {};
+  Pairs.prototype.watch = function(operation, continuation, scope, left, right) {
+    var watchers, _base;
+    watchers = (_base = this.paths)[left] || (_base[left] = []);
+    if (this.engine.indexOfTriplet(watchers, right, operation, scope) === -1) {
+      return watchers.push(right, operation, scope);
+    }
+  };
 
-  Pairs.prototype.unwatch = function() {};
+  Pairs.prototype.unwatch = function(operation, continuation, scope, left, right) {
+    var index, watchers, _base;
+    watchers = (_base = this.paths)[left] || (_base[left] = []);
+    if ((index = this.engine.indexOfTriplet(watchers, right, operation, scope)) !== -1) {
+      return watchers.splice(index, 3);
+    }
+  };
 
   Pairs.prototype.clean = function(path) {
-    if (this[path]) {
-      return delete this[path];
-    }
+    console.error('pos clewan', path);
+    return this.set(path);
   };
 
   return Pairs;

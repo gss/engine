@@ -36,28 +36,34 @@ class Linear extends Domain
     else
       @solver.resolve()
     return @apply(@solver._changed)
+
   constrain: (constraint) ->
     unless super
+      console.error('constraint', constraint)
       @solver.addConstraint(constraint)
 
   unconstrain: (constraint) ->
+    console.error('unconstrain', constraint)
     @solver.removeConstraint(constraint)
     super
 
   undeclare: (variable) ->
-    super
-    delete variable.value
-    if variable.editing
-      if cei = @solver._editVarMap.get(variable)
-        @solver.removeColumn(cei.editMinus)
-        @solver._editVarMap.delete(variable)
-    @solver._externalParametricVars.delete(variable)
+    console.error('undeclare', variable)
+    unless super
+      if variable.editing
+        if cei = @solver._editVarMap.get(variable)
+          @solver.removeColumn(cei.editMinus)
+          @solver._editVarMap.delete(variable)
 
   edit: (variable, strength, weight, continuation) ->
     constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
     @constrain constraint
     variable.editing = constraint
     return constraint
+
+  nullify: (variable) ->
+    @solver._externalParametricVars.delete(variable)
+
 
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'

@@ -902,6 +902,7 @@ describe 'End - to - End', ->
               expect(engine.values).to.eql 
                 "x": 100
                 "$a1[x]": 100
+                "$a2[x]": 100
                 "$b2[x]": 100
                 "$b3[x]": 100
               done()

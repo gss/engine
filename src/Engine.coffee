@@ -184,7 +184,10 @@ class Engine extends Domain.Events
     else
       solution = Domain::solve.apply(@, args)
 
-    @queries?.onSolve()
+
+    @queries?.onBeforeSolve()
+    console.log('Fuccken solve already', args, @pairs)
+    @pairs?.onBeforeSolve()
 
     if !solution? && providing
       while provided = @providing
@@ -213,6 +216,7 @@ class Engine extends Domain.Events
       return @onSolve(null, onlyRemoving)
 
   onSolve: (update, onlyRemoving) ->
+    console.error('lol', update)
     # Apply styles
     if solution = update || @workflow.solution
       @applier?.solve(solution)
@@ -224,7 +228,8 @@ class Engine extends Domain.Events
       @intrinsic?.each(scope, @intrinsic.update)
 
 
-    @queries?.onBeforeSolve()
+    @queries?.onSolve()
+    #@pairs?.onSolve()
 
     @solved.merge solution
     
@@ -236,6 +241,7 @@ class Engine extends Domain.Events
       return effects
     if effects && Object.keys(effects).length
       return @onSolve(effects)
+
 
     # Fire up solved event if we've had remove commands that 
     # didnt cause any reactions
