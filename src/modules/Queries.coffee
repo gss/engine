@@ -105,7 +105,7 @@ class Queries
       return result
 
   # Remove observers from element
-  unobserve: (id, continuation, pair, quick) ->
+  unobserve: (id, continuation, quick) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
@@ -118,18 +118,18 @@ class Queries
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       unless quick
-        @clean(watcher, contd, watcher, subscope, true, pair)
+        @clean(watcher, contd, watcher, subscope, true)
     delete @watchers[id] unless watchers.length
 
   # Detach everything related to continuation from specific element
-  removeFromNode: (id, continuation, operation, scope, pair, strict) ->
+  removeFromNode: (id, continuation, operation, scope, strict) ->
     collection = @get(continuation)
 
     @engine.pairs.remove(id, continuation)
 
     # Remove all watchers that match continuation path
     ref = continuation + (collection?.length? && id || '')
-    @unobserve(id, ref, pair)
+    @unobserve(id, ref)
 
     return if strict || !(result = @get(continuation))? 
 
@@ -179,7 +179,7 @@ class Queries
 
 
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope, manual, pair, strict) ->
+  remove: (id, continuation, operation, scope, manual, strict) ->
     #@engine.console.row('remove', (id.nodeType && @engine.identity.provide(id) || id), continuation)
     if typeof id == 'object'
       node = id
@@ -198,7 +198,7 @@ class Queries
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
 
       unless removed == false
-        @removeFromNode(id, continuation, operation, scope, pair, strict)
+        @removeFromNode(id, continuation, operation, scope, strict)
 
       if collection && !collection.length
         this.set continuation, undefined 
@@ -235,7 +235,7 @@ class Queries
 
     # Remove queries in queue and global watchers that match the path 
     if @qualified
-      @unobserve(@qualified, path, null, true)
+      @unobserve(@qualified, path, true)
 
     @unobserve(@engine.scope._gss_id, path)
 
@@ -268,21 +268,21 @@ class Queries
     collection = @get(oppath)
     return if removed && removed == collection
     if removed
-      @each 'remove', removed, oppath, operation, scope, true, null, strict
+      @each 'remove', removed, oppath, operation, scope, true, strict
     if added
       @each 'add', added, oppath, operation, scope, true
 
   # Perform method over each node in nodelist, or against given node
-  each: (method, result, continuation, operation, scope, manual, pair, strict) ->
+  each: (method, result, continuation, operation, scope, manual, strict) ->
     if result.length != undefined
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] child, continuation, operation, scope, manual, pair, strict
+        if @[method] child, continuation, operation, scope, manual, strict
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] result, continuation, operation, scope, manual, pair, strict
+      return @[method] result, continuation, operation, scope, manual, strict
 
   # Filter out known nodes from DOM collections
   update: (node, args, result, operation, continuation, scope) ->
