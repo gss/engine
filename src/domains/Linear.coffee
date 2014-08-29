@@ -91,7 +91,7 @@ class Linear extends Domain
 class Linear::Methods extends Domain::Methods
   get: 
     command: (operation, continuation, scope, meta, object, property, path) ->
-      if typeof @properties[property] == 'function' && scope
+      if typeof @properties[property] == 'function' && scope && scope != @scope
         return @properties[property].call(@, object, object)
       else
         variable = @declare(@getPath(object, property), operation)

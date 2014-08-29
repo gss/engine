@@ -13,7 +13,7 @@ class Expressions
   constructor: (@engine) ->
 
   # Evaluate operation depth first
-  solve: (operation, continuation, scope, meta, ascender, ascending) ->
+  solve: (operation, continuation, scope = @engine.scope, meta, ascender, ascending) ->
     # Analyze operation once
     unless operation.def
       @analyze(operation)

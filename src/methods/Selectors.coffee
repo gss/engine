@@ -266,6 +266,7 @@ class Selectors
 
   # Return abstract reference to window
   '::window': ->
+    debugger
     return '::window' 
 
 
