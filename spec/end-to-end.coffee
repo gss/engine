@@ -799,15 +799,14 @@ describe 'End - to - End', ->
                 "$a2[x]": 100
                 "$b1[x]": 100
                 "$b2[x]": 100
-                divs = engine.$tag('div')
-                while divs[0]
-                  divs[0].parentNode.removeChild(divs[0])
+              divs = engine.$tag('div')
+              while divs[0]
+                divs[0].parentNode.removeChild(divs[0])
 
               engine.once 'solve', (e) ->
                 expect(engine.values).to.eql 
                   "x": 100
                 engine.scope.innerHTML = ""
-                done()
 
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql {}
@@ -862,7 +861,20 @@ describe 'End - to - End', ->
                   "$a2[x]": 100
                   "$b1[x]": 100
                   "$b2[x]": 100
-                done()
+
+                divs = engine.$tag('div')
+                while divs[0]
+                  divs[0].parentNode.removeChild(divs[0])
+
+                engine.once 'solve', (e) ->
+                  expect(engine.values).to.eql 
+                    "x": 100
+                  engine.scope.innerHTML = ""
+
+                  engine.once 'solve', (e) ->
+                    expect(engine.values).to.eql {}
+                    done()
+                    
     describe 'balanced plural selectors', ->
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """

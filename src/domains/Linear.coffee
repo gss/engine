@@ -39,16 +39,13 @@ class Linear extends Domain
 
   constrain: (constraint) ->
     unless super
-      console.error('constraint', constraint)
       @solver.addConstraint(constraint)
 
   unconstrain: (constraint) ->
-    console.error('unconstrain', constraint)
     @solver.removeConstraint(constraint)
     super
 
   undeclare: (variable) ->
-    console.error('undeclare', variable)
     unless super
       if variable.editing
         if cei = @solver._editVarMap.get(variable)

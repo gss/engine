@@ -36,7 +36,6 @@ class Queries
     # Execute all deferred selectors (e.g. comma)
     index = 0
     if @ascending
-      console.error(@ascending?.slice())
       while @ascending[index]
         contd = @ascending[index + 1]
         collection = @[contd]
@@ -45,7 +44,6 @@ class Queries
           for item, i in collection by -1
             if old.indexOf(item) > -1
               collection.splice(i, 1)
-        console.error(contd, collection, old)
         if collection?.length
           @engine.document.expressions.ascend @ascending[index], contd, collection, @ascending[index + 2]
         index += 3
@@ -133,8 +131,6 @@ class Queries
 
     return if strict || !(result = @get(continuation))? 
 
-    console.error('remove from node', id, [continuation, @engine.getCanonicalPath(continuation)])
-  
     @updateOperationCollection operation, continuation, scope, undefined, @engine.identity[id], true
     
     if result.length?
@@ -180,7 +176,7 @@ class Queries
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, strict) ->
-    #@engine.console.row('remove', (id.nodeType && @engine.identity.provide(id) || id), continuation)
+    
     if typeof id == 'object'
       node = id
       id = @engine.identity.provide(id)
@@ -189,7 +185,6 @@ class Queries
 
     if continuation
       collection = @get(continuation)
-      console.error(continuation, collection)
       if collection?.length != undefined
         ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
@@ -205,16 +200,13 @@ class Queries
       @unobserve(id, true)
 
     return removed
+
+
   clean: (path, continuation, operation, scope, bind) ->
-    console.error('clean', path)
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
-    #@engine.values.clean(path, continuation, operation, scope)
-    # if result && !@engine.isCollection(result)
-    #   if continuation && continuation != (oppath = @engine.getCanonicalPath(continuation))
-    #     @remove result, oppath
     
     if (result = @get(path, undefined, true)) != undefined
       if result

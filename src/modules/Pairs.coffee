@@ -30,7 +30,6 @@ class Pairs
       #@lefts.splice(index, 3)
       @watch(operation, continuation, scope, left, right)
     return unless left
-    console.error('right', 'roruro', [left, right], parent, @lefts.slice())
 
     left = @engine.getCanonicalPath(left)
     pairs = @paths[left] ||= []
@@ -47,11 +46,9 @@ class Pairs
   remove: (id, continuation) ->
     return unless @paths[continuation]
     (@dirty ||= {})[continuation] = true
-    console.info('removing', id, continuation)
     
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
-    console.log('get sol', continuation, single)
     if continuation.charAt(continuation.length - 1) == @engine.RIGHT
       return if continuation.length == 1
       parent = operation
@@ -68,18 +65,16 @@ class Pairs
             return result
           prev = index 
         return @onLeft(operation, continuation, scope)
+    # Fetch saved result if operation path mathes continuation canonical path
     else if continuation.lastIndexOf(@engine.RIGHT) <= 0
       contd = @engine.getCanonicalPath(continuation, true) 
       if contd.charAt(0) == @engine.RIGHT
         contd = contd.substring(1)
       if contd == operation.path
-        console.info('match', continuation,  continuation.match(@TrailingIDRegExp))
         if id = continuation.match(@TrailingIDRegExp)
           return @engine.identity[id[1]]
         else
           return @engine.queries[continuation]
-      else
-        console.info('no match', [contd, operation.path])
       
     return
 
@@ -88,7 +83,6 @@ class Pairs
 
   onBeforeSolve: () ->
     dirty = @dirty
-    console.error('dirty', dirty)
     delete @dirty
     @repairing = true
     if dirty
@@ -116,8 +110,6 @@ class Pairs
       (b?.push && b.length ? -1) - (a?.push && a.length ? -1)
     sorted[0] ||= []
 
-    console.info(leftUpdate, rightUpdate,)
-    console.error(left, right, sorted.slice())
     padded = undefined
     for value, index in values
       unless value?.push
@@ -127,7 +119,6 @@ class Pairs
         values[index] ||= []
 
     [leftNew, leftOld, rightNew, rightOld] = values
-    console.error(left, right, @engine.clone values)
 
     removed = []
     added = []
@@ -191,7 +182,6 @@ class Pairs
       watchers.splice(index, 3)
 
   clean: (path) ->
-    console.error('pos clewan', path)
     @set path
 
 

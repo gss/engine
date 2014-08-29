@@ -17,7 +17,6 @@ Workflower = (engine) ->
       offset = 0
       if arg[0] == 'get'
         vardomain = @getVariableDomain(arg)
-        console.log('get variable domain', arg, vardomain)
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         workload = new Workflow vardomain, [arg]

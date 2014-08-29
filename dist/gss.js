@@ -19287,7 +19287,6 @@ Engine = (function(_super) {
     if ((_ref = this.queries) != null) {
       _ref.onBeforeSolve();
     }
-    console.log('Fuccken solve already', args, this.pairs);
     if ((_ref1 = this.pairs) != null) {
       _ref1.onBeforeSolve();
     }
@@ -19333,7 +19332,6 @@ Engine = (function(_super) {
 
   Engine.prototype.onSolve = function(update, onlyRemoving) {
     var effects, scope, solution, _ref, _ref1, _ref2;
-    console.error('lol', update);
     if (solution = update || this.workflow.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
@@ -21907,7 +21905,6 @@ Domain = (function() {
   };
 
   Domain.prototype.undeclare = function(variable) {
-    console.error('undeclare 6666666', variable.name);
     return (this.nullified || (this.nullified = {}))[variable.name] = variable;
   };
 
@@ -21980,7 +21977,6 @@ Domain = (function() {
       }
     }
     this.constrained = void 0;
-    console.log(this.nullified, this.added, 'wtf rol');
     result = {};
     for (path in solution) {
       value = solution[path];
@@ -22833,7 +22829,6 @@ Workflower = function(engine) {
       offset = 0;
       if (arg[0] === 'get') {
         vardomain = this.getVariableDomain(arg);
-        console.log('get variable domain', arg, vardomain);
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;
         }
@@ -23642,20 +23637,17 @@ Linear = (function(_super) {
 
   Linear.prototype.constrain = function(constraint) {
     if (!Linear.__super__.constrain.apply(this, arguments)) {
-      console.error('constraint', constraint);
       return this.solver.addConstraint(constraint);
     }
   };
 
   Linear.prototype.unconstrain = function(constraint) {
-    console.error('unconstrain', constraint);
     this.solver.removeConstraint(constraint);
     return Linear.__super__.unconstrain.apply(this, arguments);
   };
 
   Linear.prototype.undeclare = function(variable) {
     var cei;
-    console.error('undeclare', variable);
     if (!Linear.__super__.undeclare.apply(this, arguments)) {
       if (variable.editing) {
         if (cei = this.solver._editVarMap.get(variable)) {
@@ -24447,7 +24439,6 @@ Expressions = (function() {
         }
       } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
         solution = ['value', result, continuation || '', operation.toString()];
-        this.engine.console.log('solution', solution, this.engine.workflow);
         if (operation.exported) {
           solution.push(true);
         }
@@ -24811,7 +24802,7 @@ Queries = (function() {
   };
 
   Queries.prototype.onBeforeSolve = function() {
-    var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1, _ref2, _ref3;
+    var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1, _ref2;
     index = 0;
     while (this.qualified[index]) {
       watcher = this.qualified.splice(0, 3);
@@ -24819,11 +24810,10 @@ Queries = (function() {
     }
     index = 0;
     if (this.ascending) {
-      console.error((_ref = this.ascending) != null ? _ref.slice() : void 0);
       while (this.ascending[index]) {
         contd = this.ascending[index + 1];
         collection = this[contd];
-        if (old = (_ref1 = this.engine.workflow) != null ? (_ref2 = _ref1.queries) != null ? (_ref3 = _ref2[contd]) != null ? _ref3[1] : void 0 : void 0 : void 0) {
+        if (old = (_ref = this.engine.workflow) != null ? (_ref1 = _ref.queries) != null ? (_ref2 = _ref1[contd]) != null ? _ref2[1] : void 0 : void 0 : void 0) {
           collection = collection.slice();
           for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
             item = collection[i];
@@ -24832,7 +24822,6 @@ Queries = (function() {
             }
           }
         }
-        console.error(contd, collection, old);
         if (collection != null ? collection.length : void 0) {
           this.engine.document.expressions.ascend(this.ascending[index], contd, collection, this.ascending[index + 2]);
         }
@@ -24941,7 +24930,6 @@ Queries = (function() {
     if (strict || ((result = this.get(continuation)) == null)) {
       return;
     }
-    console.error('remove from node', id, [continuation, this.engine.getCanonicalPath(continuation)]);
     this.updateOperationCollection(operation, continuation, scope, void 0, this.engine.identity[id], true);
     if (result.length != null) {
       return this.clean(continuation + id);
@@ -25005,7 +24993,6 @@ Queries = (function() {
     }
     if (continuation) {
       collection = this.get(continuation);
-      console.error(continuation, collection);
       if ((collection != null ? collection.length : void 0) !== void 0) {
         (_base = ((_base1 = ((_base2 = this.engine.workflow).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       }
@@ -25024,7 +25011,6 @@ Queries = (function() {
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
     var parent, result, _ref;
-    console.error('clean', path);
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -25321,7 +25307,6 @@ Mutations = (function() {
 
   Mutations.prototype.solve = function(mutations) {
     var result;
-    console.log('q', mutations);
     result = this.engine.engine.solve('mutations', function() {
       var mutation, qualified, _i, _len;
       this.engine.workflow.queries = void 0;
@@ -25600,7 +25585,6 @@ Pairs = (function() {
     if (!left) {
       return;
     }
-    console.error('right', 'roruro', [left, right], parent, this.lefts.slice());
     left = this.engine.getCanonicalPath(left);
     pairs = (_base = this.paths)[left] || (_base[left] = []);
     if (pairs.indexOf(right) === -1) {
@@ -25620,13 +25604,11 @@ Pairs = (function() {
     if (!this.paths[continuation]) {
       return;
     }
-    (this.dirty || (this.dirty = {}))[continuation] = true;
-    return console.info('removing', id, continuation);
+    return (this.dirty || (this.dirty = {}))[continuation] = true;
   };
 
   Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
     var contd, id, index, parent, prev, result;
-    console.log('get sol', continuation, single);
     if (continuation.charAt(continuation.length - 1) === this.engine.RIGHT) {
       if (continuation.length === 1) {
         return;
@@ -25655,14 +25637,11 @@ Pairs = (function() {
         contd = contd.substring(1);
       }
       if (contd === operation.path) {
-        console.info('match', continuation, continuation.match(this.TrailingIDRegExp));
         if (id = continuation.match(this.TrailingIDRegExp)) {
           return this.engine.identity[id[1]];
         } else {
           return this.engine.queries[continuation];
         }
-      } else {
-        console.info('no match', [contd, operation.path]);
       }
     }
   };
@@ -25672,7 +25651,6 @@ Pairs = (function() {
   Pairs.prototype.onBeforeSolve = function() {
     var dirty, index, pair, pairs, property, value, _i, _len;
     dirty = this.dirty;
-    console.error('dirty', dirty);
     delete this.dirty;
     this.repairing = true;
     if (dirty) {
@@ -25699,8 +25677,6 @@ Pairs = (function() {
       return ((_ref4 = (b != null ? b.push : void 0) && b.length) != null ? _ref4 : -1) - ((_ref5 = (a != null ? a.push : void 0) && a.length) != null ? _ref5 : -1);
     });
     sorted[0] || (sorted[0] = []);
-    console.info(leftUpdate, rightUpdate);
-    console.error(left, right, sorted.slice());
     padded = void 0;
     for (index = _i = 0, _len = values.length; _i < _len; index = ++_i) {
       value = values[index];
@@ -25714,7 +25690,6 @@ Pairs = (function() {
       }
     }
     leftNew = values[0], leftOld = values[1], rightNew = values[2], rightOld = values[3];
-    console.error(left, right, this.engine.clone(values));
     removed = [];
     added = [];
     for (index = _j = 0, _len1 = leftOld.length; _j < _len1; index = ++_j) {
@@ -25808,7 +25783,6 @@ Pairs = (function() {
   };
 
   Pairs.prototype.clean = function(path) {
-    console.error('pos clewan', path);
     return this.set(path);
   };
 

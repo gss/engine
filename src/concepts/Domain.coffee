@@ -324,7 +324,6 @@ class Domain
     return variable
 
   undeclare: (variable) ->
-    console.error('undeclare 6666666', variable.name)
     (@nullified ||= {})[variable.name] = variable
 
   reach: (constraints, groups) ->
@@ -375,7 +374,6 @@ class Domain
 
 
     @constrained = undefined
-    console.log(@nullified, @added, 'wtf rol')
     result = {}
     for path, value of solution
       unless @nullified?[path]

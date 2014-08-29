@@ -186,7 +186,6 @@ class Engine extends Domain.Events
 
 
     @queries?.onBeforeSolve()
-    console.log('Fuccken solve already', args, @pairs)
     @pairs?.onBeforeSolve()
 
     if !solution? && providing
@@ -216,7 +215,6 @@ class Engine extends Domain.Events
       return @onSolve(null, onlyRemoving)
 
   onSolve: (update, onlyRemoving) ->
-    console.error('lol', update)
     # Apply styles
     if solution = update || @workflow.solution
       @applier?.solve(solution)

@@ -43,7 +43,7 @@ describe("Polymer: poly-test", function() {
         return done();
       };
       container.addEventListener('solved', onSolved);
-      return engine.solve(ast);
+      return engine.run(ast);
     });
   });
   return describe('Constraining Element & its LightDOM ', function() {
@@ -107,7 +107,7 @@ describe("Polymer: poly-test", function() {
         return done();
       };
       container.addEventListener('solved', onSolved);
-      return engine.solve(ast);
+      return engine.run(ast);
     });
   });
 });

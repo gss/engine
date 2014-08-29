@@ -186,7 +186,6 @@ class Expressions
       else if parent && ((typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain))
 
         solution = ['value', result, continuation || '', operation.toString()]
-        @engine.console.log('solution', solution, @engine.workflow)
         solution.push true if operation.exported
         solution.operation = operation
         solution.parent    = operation.parent
