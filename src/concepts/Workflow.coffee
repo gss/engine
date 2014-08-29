@@ -343,7 +343,7 @@ Workflow.prototype =
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
-      if @busy
+      if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         return result
 
       if result && !result.push
@@ -368,7 +368,6 @@ Workflow.prototype =
     return GSS.clone @problems
 
   index: -1
-  busy: 0
 
 
 module.exports = Workflow

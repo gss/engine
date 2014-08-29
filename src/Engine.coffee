@@ -99,8 +99,12 @@ class Engine extends Domain.Events
       values = e.target.values ||= {}
       for property, value of e.data
         values[property] = value
+      console.log('msg', e)
       if @workflow
-        @workflow.busy--
+        @workflow.busy.splice(@workflow.busy.indexOf(e.target.url), 1)
+        if @workflow.busy.length
+          return @workflow.apply(e.data)
+
       @provide e.data
 
     # Handle error from worker
@@ -206,9 +210,9 @@ class Engine extends Domain.Events
       if old
         if old != workflow
           old.merge(workflow)
-      if !old || !workflow.busy
+      if !old || !workflow.busy?.length
         workflow.each @resolve, @
-      if workflow.busy
+      if workflow.busy?.length
         return workflow
     onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
     if @engine == @ && (!workflow.problems[workflow.index + 1] || onlyRemoving)
@@ -235,7 +239,7 @@ class Engine extends Domain.Events
     # Effects are processed separately, then merged with found solution
     effects = {}
     effects = @workflow.each(@resolve, @, effects)
-    if @workflow.busy
+    if @workflow.busy?.length
       return effects
     if effects && Object.keys(effects).length
       return @onSolve(effects)
@@ -281,7 +285,7 @@ class Engine extends Domain.Events
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
       domain.postMessage(@clone problems)
-      workflow.busy++
+      (workflow.busy ||= []).push(domain.url)
       return
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
@@ -294,7 +298,7 @@ class Engine extends Domain.Events
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || @providing || undefined
       if result && result.postMessage
-        workflow.busy++
+        (workflow.busy ||= []).push(result.url)
       else
         if @providing && @providing != result
           workflow.merge(@Workflow(@frame || true, @providing))
@@ -339,6 +343,7 @@ class Engine extends Domain.Events
     return unless typeof url == 'string' && self.onmessage != undefined
 
     @worker = @getWorker(url)
+    @worker.url = url
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>

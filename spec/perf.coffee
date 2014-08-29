@@ -48,7 +48,6 @@ describe 'Perf', ->
       ]
       
 
-  describe 'live command perfs', ->
     it '100 intrinsics at once', (done) ->
 
       innerHTML = "" 

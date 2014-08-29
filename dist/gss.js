@@ -19178,8 +19178,12 @@ Engine = (function(_super) {
         value = _ref[property];
         values[property] = value;
       }
+      console.log('msg', e);
       if (this.workflow) {
-        this.workflow.busy--;
+        this.workflow.busy.splice(this.workflow.busy.indexOf(e.target.url), 1);
+        if (this.workflow.busy.length) {
+          return this.workflow.apply(e.data);
+        }
       }
       return this.provide(e.data);
     },
@@ -19237,7 +19241,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1, _ref2;
+    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19317,10 +19321,10 @@ Engine = (function(_super) {
           old.merge(workflow);
         }
       }
-      if (!old || !workflow.busy) {
+      if (!old || !((_ref3 = workflow.busy) != null ? _ref3.length : void 0)) {
         workflow.each(this.resolve, this);
       }
-      if (workflow.busy) {
+      if ((_ref4 = workflow.busy) != null ? _ref4.length : void 0) {
         return workflow;
       }
     }
@@ -19331,7 +19335,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(update, onlyRemoving) {
-    var effects, scope, solution, _ref, _ref1, _ref2;
+    var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
     if (solution = update || this.workflow.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
@@ -19352,7 +19356,7 @@ Engine = (function(_super) {
     this.solved.merge(solution);
     effects = {};
     effects = this.workflow.each(this.resolve, this, effects);
-    if (this.workflow.busy) {
+    if ((_ref3 = this.workflow.busy) != null ? _ref3.length : void 0) {
       return effects;
     }
     if (effects && Object.keys(effects).length) {
@@ -19397,7 +19401,7 @@ Engine = (function(_super) {
     var locals, other, others, path, problem, remove, removes, result, url, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
     if (domain && !domain.solve && domain.postMessage) {
       domain.postMessage(this.clone(problems));
-      workflow.busy++;
+      (workflow.busy || (workflow.busy = [])).push(domain.url);
       return;
     }
     for (index = _i = 0, _len = problems.length; _i < _len; index = ++_i) {
@@ -19414,7 +19418,7 @@ Engine = (function(_super) {
       this.console.start(problems, domain.displayName);
       result = domain.solve(problems) || this.providing || void 0;
       if (result && result.postMessage) {
-        workflow.busy++;
+        (workflow.busy || (workflow.busy = [])).push(result.url);
       } else {
         if (this.providing && this.providing !== result) {
           workflow.merge(this.Workflow(this.frame || true, this.providing));
@@ -19480,6 +19484,7 @@ Engine = (function(_super) {
       return;
     }
     this.worker = this.getWorker(url);
+    this.worker.url = url;
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
     return this.solve = function(commands) {
@@ -23281,7 +23286,7 @@ Workflow.prototype = {
     return this;
   },
   each: function(callback, bind, solution) {
-    var domain, result;
+    var domain, result, _ref, _ref1;
     if (solution) {
       this.apply(solution);
     }
@@ -23291,7 +23296,7 @@ Workflow.prototype = {
     this.optimize();
     while ((domain = this.domains[++this.index]) !== void 0) {
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
-      if (this.busy) {
+      if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         return result;
       }
       if (result && !result.push) {
@@ -23320,8 +23325,7 @@ Workflow.prototype = {
   getProblems: function(callback, bind) {
     return GSS.clone(this.problems);
   },
-  index: -1,
-  busy: 0
+  index: -1
 };
 
 module.exports = Workflow;
