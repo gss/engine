@@ -17,6 +17,7 @@ Workflower = (engine) ->
       offset = 0
       if arg[0] == 'get'
         vardomain = @getVariableDomain(arg)
+        console.log('get variable domain', arg, vardomain)
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         workload = new Workflow vardomain, [arg]
@@ -321,7 +322,9 @@ Workflow.prototype =
           merged = true
           break
         else if other && domain
-          if (other.priority < domain.priority) && (!other.frame || other.frame == domain.frame)
+          if ((other.priority < domain.priority) || 
+              (other.priority == domain.priority && other.MAYBE && !domain.MAYBE)) && 
+              (!other.frame || other.frame == domain.frame)
             priority = position
       position++
     if !merged

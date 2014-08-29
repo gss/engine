@@ -52,8 +52,6 @@ class Pairs
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
     console.log('get sol', continuation, single)
-    if continuation == "style$2↓.a$a1↑"
-      debugger
     if continuation.charAt(continuation.length - 1) == @engine.RIGHT
       return if continuation.length == 1
       parent = operation

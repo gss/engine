@@ -408,8 +408,6 @@ class Domain
 
   remove: ->
     for path in arguments
-      if path == "style$2↓.a$a4→.b$b4"
-        debugger
       for contd in @getPossibleContinuations(path)
         if observers = @observers[contd]
           while observers[0]

@@ -36,8 +36,6 @@ class Rules
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope, meta, ascender) -> 
       contd = @getScopePath(continuation) + operation.parent.path
-      if result.id == 'vessel0'
-        debugger
       @queries.add(result, contd, operation.parent, scope, true)
       @queries.ascending ||= []
       if @engine.indexOfTriplet(@queries.ascending, operation.parent, contd, scope) == -1
@@ -58,8 +56,6 @@ class Rules
 
     # Set rule body scope to a found element
     solve: (operation, continuation, scope, meta, ascender, ascending) ->
-      if ascending?.length
-        debugger
       if operation.index == 2 && !ascender
         @expressions.solve operation, continuation, ascending, operation
         return false

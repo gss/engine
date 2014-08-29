@@ -75,7 +75,6 @@ class Queries
       keys.splice(index - 1, 0, key)
       return true
     else
-      debugger
       (collection.duplicates ||= []).push(node)
       keys.push(key)
       return
@@ -187,9 +186,6 @@ class Queries
       id = @engine.identity.provide(id)
     else
       node = @engine.identity[id]
-
-    if strict
-      debugger
 
     if continuation
       collection = @get(continuation)
@@ -375,8 +371,6 @@ class Queries
         if item
           @chain item, undefined, result, path
     else
-      if path == ".vessel .box"
-        debugger
       delete @[path]
 
     if removed = @engine.workflow.queries?[path]?[3]

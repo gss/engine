@@ -19984,9 +19984,6 @@ Rules = (function() {
     capture: function(result, operation, continuation, scope, meta, ascender) {
       var contd, _base;
       contd = this.getScopePath(continuation) + operation.parent.path;
-      if (result.id === 'vessel0') {
-        debugger;
-      }
       this.queries.add(result, contd, operation.parent, scope, true);
       (_base = this.queries).ascending || (_base.ascending = []);
       if (this.engine.indexOfTriplet(this.queries.ascending, operation.parent, contd, scope) === -1) {
@@ -20005,9 +20002,6 @@ Rules = (function() {
   Rules.prototype["rule"] = {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
-      if (ascending != null ? ascending.length : void 0) {
-        debugger;
-      }
       if (operation.index === 2 && !ascender) {
         this.expressions.solve(operation, continuation, ascending, operation);
         return false;
@@ -20625,7 +20619,6 @@ Selectors = (function() {
   Selectors.prototype[':previous'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
-      debugger;
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
@@ -22036,9 +22029,6 @@ Domain = (function() {
     var constraint, constraints, contd, observers, path, _i, _j, _k, _len, _len1, _ref;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
-      if (path === "style$2↓.a$a4→.b$b4") {
-        debugger;
-      }
       _ref = this.getPossibleContinuations(path);
       for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
         contd = _ref[_j];
@@ -22843,6 +22833,7 @@ Workflower = function(engine) {
       offset = 0;
       if (arg[0] === 'get') {
         vardomain = this.getVariableDomain(arg);
+        console.log('get variable domain', arg, vardomain);
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;
         }
@@ -23281,7 +23272,7 @@ Workflow.prototype = {
           merged = true;
           break;
         } else if (other && domain) {
-          if ((other.priority < domain.priority) && (!other.frame || other.frame === domain.frame)) {
+          if (((other.priority < domain.priority) || (other.priority === domain.priority && other.MAYBE && !domain.MAYBE)) && (!other.frame || other.frame === domain.frame)) {
             priority = position;
           }
         }
@@ -24878,7 +24869,6 @@ Queries = (function() {
       keys.splice(index - 1, 0, key);
       return true;
     } else {
-      debugger;
       (collection.duplicates || (collection.duplicates = [])).push(node);
       keys.push(key);
       return;
@@ -25012,9 +25002,6 @@ Queries = (function() {
       id = this.engine.identity.provide(id);
     } else {
       node = this.engine.identity[id];
-    }
-    if (strict) {
-      debugger;
     }
     if (continuation) {
       collection = this.get(continuation);
@@ -25222,9 +25209,6 @@ Queries = (function() {
         }
       }
     } else {
-      if (path === ".vessel .box") {
-        debugger;
-      }
       delete this[path];
     }
     if (removed = (_ref = this.engine.workflow.queries) != null ? (_ref1 = _ref[path]) != null ? _ref1[3] : void 0 : void 0) {
@@ -25643,9 +25627,6 @@ Pairs = (function() {
   Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
     var contd, id, index, parent, prev, result;
     console.log('get sol', continuation, single);
-    if (continuation === "style$2↓.a$a1↑") {
-      debugger;
-    }
     if (continuation.charAt(continuation.length - 1) === this.engine.RIGHT) {
       if (continuation.length === 1) {
         return;
