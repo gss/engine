@@ -39,10 +39,6 @@ class Pairs
       (@dirty ||= {})[left] = true
     return false
 
-  onLeftRemoved: ->
-
-  onRightRemoved: ->
-
   remove: (id, continuation) ->
     return unless @paths[continuation]
     (@dirty ||= {})[continuation] = true
@@ -160,7 +156,25 @@ class Pairs
     for contd in cleaned
       @engine.queries.clean(contd)
 
+    if leftNew.length == 0
+      @clean(left)
+
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left, right)
+
+  clean: (left) ->  
+    if pairs = @paths?[left]
+      rights = []
+
+      for op, index in pairs by 3
+        rights.push(op)
+      for left, others of @paths
+        for index, right in rights by -1
+          if others.indexOf(right) > -1
+            rights.splice(index, 1)
+      for right in rights
+        @engine.queries.unobserve(@engine.scope._gss_id, @engine.RIGHT, null, right.substring(1))
+        delete @engine.queries[right]
+
 
   set: (path, result) ->
     if pairs = @paths?[path]
@@ -181,8 +195,6 @@ class Pairs
     unless (index = @engine.indexOfTriplet(watchers, right, operation, scope)) == -1
       watchers.splice(index, 3)
 
-  clean: (path) ->
-    @set path
 
 
 module.exports = Pairs

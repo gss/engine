@@ -29,6 +29,8 @@ class Queries
   onBeforeSolve: ->
     # Update all DOM queries that matched mutations
     index = 0
+    console.error('q', @qualified.slice())
+    debugger
     while @qualified[index]
       watcher = @qualified.splice(0, 3)
       @engine.document.solve watcher[0], watcher[1], watcher[2]
@@ -73,6 +75,8 @@ class Queries
       keys.splice(index - 1, 0, key)
       return true
     else
+      debugger
+
       (collection.duplicates ||= []).push(node)
       keys.push(key)
       return
@@ -103,7 +107,7 @@ class Queries
       return result
 
   # Remove observers from element
-  unobserve: (id, continuation, quick) ->
+  unobserve: (id, continuation, quick, path) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
@@ -113,11 +117,21 @@ class Queries
       if refs && refs.indexOf(contd) == -1
         index += 3
         continue
+      if path
+        parent = watcher
+        matched = false
+        while parent
+          console.error(parent.path, path)
+          if parent.path == path
+            matched = true
+          parent = parent.parent
+        continue unless matched
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
-      unless quick
+      if !quick
         @clean(watcher, contd, watcher, subscope, true)
-    delete @watchers[id] unless watchers.length
+    if !watchers.length && watchers == @watchers[id]
+      delete @watchers[id] 
 
   # Detach everything related to continuation from specific element
   removeFromNode: (id, continuation, operation, scope, strict) ->
@@ -221,14 +235,11 @@ class Queries
 
     @set path, undefined
 
-    @engine.pairs.clean(path)
-
     # Remove queries in queue and global watchers that match the path 
     if @qualified
       @unobserve(@qualified, path, true)
 
     @unobserve(@engine.scope._gss_id, path)
-
 
     if !result || result.length == undefined
       unless path.charAt(0) == @engine.RIGHT
@@ -297,10 +308,12 @@ class Queries
       old = @get(@engine.getCanonicalPath(path))
 
     isCollection = result && result.length != undefined
+
     #if old == result || (old == undefined && @removed)
     #  noop = true unless result && result.keys
     #  old = undefined
     # Clean refs of nodes that dont match anymore
+    debugger if @engine.getContinuation(path) == 'style$2↓.a$a2↑!+'
     if old
       if old.length != undefined
         removed = undefined
@@ -313,6 +326,7 @@ class Queries
         if !result
           removed = old
         @clean(path)
+      else return
 
     # Register newly found nodes
     if isCollection
@@ -326,6 +340,7 @@ class Queries
         result = Array.prototype.slice.call(result, 0)
     else
       added = result 
+      removed = old
 
     unless added == removed
       if added || removed
@@ -349,11 +364,16 @@ class Queries
     
     @set path, result
 
-    @engine.pairs.set path, result
-
     return added
 
   set: (path, result) ->
+    if @engine.workflow
+      update = (@engine.workflow.queries ||= {})[path] ||= []
+      if update[1] == undefined 
+        update[1] = @[path] || null
+        if update[1]?.length
+          update[1] = update[1].slice()
+
     if result
       @[path] = result
 
@@ -363,6 +383,8 @@ class Queries
         if item
           @chain item, undefined, result, path
     else
+
+      debugger if @engine.getContinuation(path) == 'style$2↓.a$a2↑!+'
       delete @[path]
 
     if removed = @engine.workflow.queries?[path]?[3]
@@ -371,6 +393,9 @@ class Queries
         @match(item, '$pseudo', 'first', undefined, path)
         @match(item, '$pseudo', 'previous', undefined, path)
         @match(item, '$pseudo', 'last', undefined, path)
+
+    @engine.pairs?.set(path, result)
+
     return
 
   # Check if a node observes this qualifier or combinator

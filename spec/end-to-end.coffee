@@ -580,6 +580,7 @@ describe 'End - to - End', ->
                     console.info('add a1 && b2')
                     engine.scope.insertBefore(a1, engine.$id('b1'))
                     engine.scope.appendChild(b2)
+                    debugger
                     engine.once 'solve', (e) ->
                       expect(engine.values).to.eql 
                         "x": 100
@@ -594,7 +595,12 @@ describe 'End - to - End', ->
                         engine.once 'solve', (e) ->
                           expect(engine.values).to.eql 
                             "x": 100
-                          done()
+
+                          engine.scope.innerHTML = ""
+
+                          engine.once 'solve', (e) ->
+                            expect(engine.values).to.eql {}
+                            done()
 
     describe 'order dependent complex selectors', ->
       it 'should compute values', (done) ->                        
@@ -874,7 +880,7 @@ describe 'End - to - End', ->
                   engine.once 'solve', (e) ->
                     expect(engine.values).to.eql {}
                     done()
-                    
+
     describe 'balanced plural selectors', ->
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
