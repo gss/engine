@@ -53,10 +53,10 @@ class Intrinsic extends Numeric
     if property == 'left' || property == 'top'
 
       if element.style[camel] == ''
-        if value
+        if value?
           element.style.positioned = (element.style.positioned || 0) + 1
       else 
-        if !value
+        if !value?
           element.style.positioned = (element.style.positioned || 0) - 1
       if element.style.positioned == 1
         element.style.position = 'absolute'
@@ -67,6 +67,7 @@ class Intrinsic extends Numeric
 
   solve: ->
     Numeric::solve.apply(@, arguments)
+    debugger
     @each @scope, @update
 
   get: (object, property, continuation) ->
@@ -80,10 +81,11 @@ class Intrinsic extends Numeric
       if (j = path.indexOf('[')) > -1
         id = path.substring(0, j)
         prop = path.substring(j + 1, path.length - 1)
-        if (prop = @properties[property]).axiom
-          return prop.call(@, object, continuation)
-        else if prop && typeof prop != 'function'
-          return prop
+        if (prop = @properties[property])?
+          if prop.axiom
+            return prop.call(@, object, continuation)
+          else if typeof prop != 'function'
+            return prop
     return Numeric::get.apply(@, arguments)
 
 
@@ -128,6 +130,7 @@ class Intrinsic extends Numeric
 
   verify: (object, property, continuation) ->
     path = @getPath(object, property)
+    console.error(path, 'lol', @get(null, path))
     @set(null, path, @get(null, path, continuation))
 
 

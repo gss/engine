@@ -90,6 +90,7 @@ class Domain
 
 
   watch: (object, property, operation, continuation, scope) ->
+    @setup()
     path = @engine.getPath(object, property)
     if @engine.indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @observers[continuation] ||= []
@@ -105,6 +106,7 @@ class Domain
           obj = @objects[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           obj[prop] = true
+      
     return @get(path)
 
   unwatch: (object, property, operation, continuation, scope) ->
@@ -150,6 +152,8 @@ class Domain
     @setup()
 
     path = @engine.getPath(object, property)
+    if path == '$1[intrinsic-width]'
+      debugger
     old = @values[path]
     return if old == value
 
@@ -194,7 +198,7 @@ class Domain
         break unless watcher
         if watcher.domain != domain || !value?
           # Re-evaluate expression
-          @Workflow(@sanitize(@getRootOperation(watcher)))
+          @Workflow([@sanitize(@getRootOperation(watcher, domain))])
         else
           if watcher.parent.domain == domain
             domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value

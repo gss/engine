@@ -6,6 +6,7 @@ enables anonymous constraints on immutable values
 ###
 
 Domain  = require('../concepts/Domain')
+Selectors = require('../methods/Selectors')
 
 class Numeric extends Domain
   priority: 10
@@ -13,7 +14,7 @@ class Numeric extends Domain
   # Numeric domains usually dont use worker
   url: null
 
-class Numeric::Methods
+class Numeric::Methods extends Domain::Methods
 
   "&&": (a, b) ->
     return a && b
@@ -46,7 +47,23 @@ class Numeric::Methods
 
   get: 
     command: (operation, continuation, scope, meta, object, path) ->
-      return @watch(object, path, operation, @getContinuation(continuation || ""), scope)
+      debugger
+
+      domain = @getVariableDomain(operation, true)
+      if !domain || domain.priority < 0
+        domain = @
+      else if domain != @
+        if domain.structured
+          console.log('schedule', domain, operation, scope)
+          debugger
+          @Workflow(domain, operation)
+      path = @getPath(object,path)
+      watchers = domain.watchers[path]
+      #if continuation || !watchers || watchers.indexOf(operation) == -1
+      return domain.watch(object, path, operation, @getContinuation(continuation || ""), scope)
+
+for property, value of Selectors::
+  Numeric::Methods::[property] = value
 
 
 Numeric::Methods::['*'].linear = false

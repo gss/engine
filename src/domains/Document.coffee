@@ -32,7 +32,7 @@ class Document extends Abstract
     else if @running
       @compile()
 
-    @scope.addEventListener 'scroll', @
+    @scope.addEventListener 'scroll', @, true
     if window?
       window.addEventListener 'resize', @
 
@@ -47,6 +47,7 @@ class Document extends Abstract
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
+      console.log('scroll', e)
       @engine.solve id + ' scrolled', ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
@@ -61,7 +62,7 @@ class Document extends Abstract
     # Observe stylesheets in dom
     DOMContentLoaded: ->
       @scope.removeEventListener 'DOMContentLoaded', @
-      @start()
+      @compile()
 
     # Observe and parse stylesheets
     compile: ->

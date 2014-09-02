@@ -64,7 +64,7 @@ class Expressions
   execute: (operation, continuation, scope, args) ->
     scope ||= @engine.scope
     # Command needs current context (e.g. ::this)
-    if operation.def.scoped || !args
+    if !args
       node = scope
       (args ||= []).unshift scope
     # Operation has a context 
@@ -125,7 +125,7 @@ class Expressions
           contd = continuation
         argument = @solve(argument, contd, scope, meta, undefined, prev)
       if argument == undefined
-        if !operation.def.eager || ascender?
+        if ((!@engine.eager && !operation.def.eager) || ascender?)
           if operation.def.capture and 
           (if operation.parent then operation.def.noop else !operation.name)
 
@@ -179,6 +179,8 @@ class Expressions
           else if parent && (ascender? || 
               (result.nodeType && 
               (!operation.def.hidden || parent.tail == parent)))
+            if operation.def.mark
+              continuation = @engine.getContinuation(continuation, null, @engine[operation.def.mark])
             @solve parent, continuation, scope, meta, operation.index, result
             return
 

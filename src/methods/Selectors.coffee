@@ -138,10 +138,9 @@ class Selectors
     return found
 
   '$virtual':
-    scoped: true
     serialized: false
-    1: (node, value) ->
-      return @identity.provide(node) + '"' + value + '"'
+    command: (operation, continuation, scope, meta, value) ->
+      return @identity.provide(scope) + '"' + value + '"'
 
   # Filters
 
@@ -249,10 +248,10 @@ class Selectors
     lookup: true
 
   '::this':
-    scoped: true
     hidden: true
-    1: (node) ->
-      return node
+    mark: 'UP'
+    command: (operation, continuation, scope, meta, node) ->
+      return node || scope
 
   # Parent element (alias for !> *)
   '::parent':
@@ -266,7 +265,6 @@ class Selectors
 
   # Return abstract reference to window
   '::window': ->
-    debugger
     return '::window' 
 
 
@@ -358,9 +356,9 @@ class Selectors
 # to filter out old elements from collections
 for property, command of Selectors::
   if typeof command == 'object' && command.serialized != false
-    command.before = '_onBeforeQuery'
-    command.after = '_onQuery'
-    command.init = '_onSelector'
+    command.before = 'onBeforeQuery'
+    command.after = 'onQuery'
+    command.init = 'onSelector'
     command.serialized = true
 
 if document?

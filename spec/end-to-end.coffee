@@ -505,6 +505,31 @@ describe 'End - to - End', ->
                 "$b2[width]": 20
               done()
 
+    describe 'equal simple selector on the both sides', ->
+      it 'should bind elements with itself', (done) ->                            
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              .a {
+                ::[x] == 10;
+              } 
+              .a[y] == .a[x];
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>
+          """
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
+            "$a1[x]": 10
+            "$a2[x]": 10
+            "$a3[x]": 10
+            "$a1[y]": 10
+            "$a2[y]": 10
+            "$a3[y]": 10
+          b3 = engine.$id('b3')
+          done()
 
     describe 'complex plural selectors on the left', -> 
       it 'should compute values', (done) ->                                 

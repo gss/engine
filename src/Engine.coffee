@@ -79,6 +79,7 @@ class Engine extends Domain.Events
 
     @solved = new @Boolean
     @solved.displayName = 'Solved'
+    @solved.eager = true
     @solved.setup()
 
     @values = @solved.values
@@ -277,6 +278,7 @@ class Engine extends Domain.Events
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
+      debugger
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
     else

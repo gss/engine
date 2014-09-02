@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-08-30) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-02) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19157,6 +19157,7 @@ Engine = (function(_super) {
     this.assumed.setup();
     this.solved = new this.Boolean;
     this.solved.displayName = 'Solved';
+    this.solved.eager = true;
     this.solved.setup();
     this.values = this.solved.values;
     if (typeof window === "undefined" || window === null) {
@@ -19391,6 +19392,7 @@ Engine = (function(_super) {
       if (!this.hasOwnProperty('providing')) {
         (_base = this.engine).providing || (_base.providing = []);
       }
+      debugger;
       (this.providing || (this.providing = [])).push(Array.prototype.slice.call(arguments, 0));
     } else {
       return this.Workflow.apply(this, arguments);
@@ -19763,9 +19765,9 @@ Conventions = (function() {
     return domain;
   };
 
-  Conventions.prototype.getVariableDomain = function(operation) {
+  Conventions.prototype.getVariableDomain = function(operation, force) {
     var cmd, constraint, d, domain, index, path, prefix, property, scope, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
-    if (operation.domain) {
+    if (operation.domain && !force) {
       return operation.domain;
     }
     _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
@@ -19805,7 +19807,7 @@ Conventions = (function() {
         domain = this.linear.maybe();
       }
     }
-    if (variable) {
+    if (variable && !force) {
       variable.domain = domain;
     }
     return domain;
@@ -19822,10 +19824,13 @@ Conventions = (function() {
     };
   })();
 
-  Conventions.prototype.getRootOperation = function(operation) {
+  Conventions.prototype.getRootOperation = function(operation, domain) {
     var parent;
+    if (domain == null) {
+      domain = operation.domain;
+    }
     parent = operation;
-    while (parent.parent && typeof parent.parent[0] === 'string' && (!parent.parent.def || (!parent.parent.def.noop && parent.domain === operation.domain))) {
+    while (parent.parent && typeof parent.parent[0] === 'string' && (!parent.parent.def || (!parent.parent.def.noop && parent.domain === domain))) {
       parent = parent.parent;
     }
     return parent;
@@ -19970,9 +19975,9 @@ Rules = (function() {
     separator: ',',
     serialized: true,
     eager: true,
-    before: '_onBeforeQuery',
-    after: '_onQuery',
-    init: '_onSelector',
+    before: 'onBeforeQuery',
+    after: 'onQuery',
+    init: 'onSelector',
     command: function(operation, continuation, scope, meta) {
       var contd, index;
       contd = this.getScopePath(continuation) + operation.path;
@@ -20054,46 +20059,41 @@ Rules = (function() {
         return false;
       }
     },
-    subscribe: function(operation, continuation, scope) {
-      var id, watchers, _base;
-      if (scope == null) {
-        scope = this.scope;
-      }
+    update: function(operation, continuation, scope, meta, ascender, ascending) {
+      var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2;
+      console.info('branch dammit', operation.index, continuation, scope);
+      (_base = operation.parent).uid || (_base.uid = '@' + (this.methods.uid = ((_base1 = this.methods).uid || (_base1.uid = 0)) + 1));
+      path = continuation + operation.parent.uid;
       id = scope._gss_id;
-      watchers = (_base = this.queries.watchers)[id] || (_base[id] = []);
+      watchers = (_base2 = this.queries.watchers)[id] || (_base2[id] = []);
       if (!watchers.length || this.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
-        return watchers.push(operation, continuation, scope);
+        watchers.push(operation, continuation, scope);
+        this.solved.watch(null, path, operation, continuation, scope);
+      }
+      condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
+      old = this.solved[path];
+      if (this.solved.set(null, path, condition != null ? condition : null) === condition) {
+        index = condition && 2 || 3;
+        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
+        if (old !== void 0) {
+          this.solved.clean(path, continuation, operation.parent, scope);
+        }
+        if (branch = operation.parent[index]) {
+          result = this.document.solve(branch, path, scope, meta);
+        }
+        return this.console.groupEnd(path);
       }
     },
     capture: function(result, operation, continuation, scope, meta) {
+      console.log('capture', result, operation.index, continuation, this.displayName, 666);
       if (operation.index === 1) {
-        this.document.methods["if"].branch.call(this.document, operation.parent[1], this.getContinuation(continuation), scope, meta, void 0, result);
+        this.document.methods["if"].update.call(this.document, operation.parent[1], this.getContinuation(continuation), scope, meta, void 0, result);
         return true;
       } else {
         if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
           this.provide(result);
           return true;
         }
-      }
-    },
-    branch: function(operation, continuation, scope, meta, ascender, ascending) {
-      var branch, condition, index, path, query, _base, _base1;
-      this.methods["if"].subscribe.call(this, operation.parent, continuation, scope);
-      (_base = operation.parent).uid || (_base.uid = '@' + (this.methods.uid = ((_base1 = this.methods).uid || (_base1.uid = 0)) + 1));
-      condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
-      path = continuation + operation.parent.uid;
-      query = this.queries[path];
-      if (query === void 0 || (!!query !== !!condition)) {
-        index = condition && 2 || 3;
-        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
-        if (query !== void 0) {
-          this.queries.clean(path, continuation, operation.parent, scope);
-        }
-        if (branch = operation.parent[index]) {
-          this.document.solve(branch, path, scope, meta);
-        }
-        this.console.groupEnd(path);
-        return this.queries[path] = condition != null ? condition : null;
       }
     }
   };
@@ -20370,10 +20370,9 @@ Selectors = (function() {
   };
 
   Selectors.prototype['$virtual'] = {
-    scoped: true,
     serialized: false,
-    1: function(node, value) {
-      return this.identity.provide(node) + '"' + value + '"';
+    command: function(operation, continuation, scope, meta, value) {
+      return this.identity.provide(scope) + '"' + value + '"';
     }
   };
 
@@ -20506,10 +20505,10 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::this'] = {
-    scoped: true,
     hidden: true,
-    1: function(node) {
-      return node;
+    mark: 'UP',
+    command: function(operation, continuation, scope, meta, node) {
+      return node || scope;
     }
   };
 
@@ -20525,7 +20524,6 @@ Selectors = (function() {
   };
 
   Selectors.prototype['::window'] = function() {
-    debugger;
     return '::window';
   };
 
@@ -20668,9 +20666,9 @@ _ref = Selectors.prototype;
 for (property in _ref) {
   command = _ref[property];
   if (typeof command === 'object' && command.serialized !== false) {
-    command.before = '_onBeforeQuery';
-    command.after = '_onQuery';
-    command.init = '_onSelector';
+    command.before = 'onBeforeQuery';
+    command.after = 'onQuery';
+    command.init = 'onSelector';
     command.serialized = true;
   }
 }
@@ -21552,6 +21550,7 @@ Domain = (function() {
 
   Domain.prototype.watch = function(object, property, operation, continuation, scope) {
     var id, j, obj, observers, path, prop, watchers, _base, _base1, _base2;
+    this.setup();
     path = this.engine.getPath(object, property);
     if (this.engine.indexOfTriplet(this.watchers[path], operation, continuation, scope) === -1) {
       observers = (_base = this.observers)[continuation] || (_base[continuation] = []);
@@ -21628,6 +21627,9 @@ Domain = (function() {
     var old, path;
     this.setup();
     path = this.engine.getPath(object, property);
+    if (path === '$1[intrinsic-width]') {
+      debugger;
+    }
     old = this.values[path];
     if (old === value) {
       return;
@@ -21699,7 +21701,7 @@ Domain = (function() {
           break;
         }
         if (watcher.domain !== domain || (value == null)) {
-          this.Workflow(this.sanitize(this.getRootOperation(watcher)));
+          this.Workflow([this.sanitize(this.getRootOperation(watcher, domain))]);
         } else {
           if (watcher.parent.domain === domain) {
             domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
@@ -23113,7 +23115,7 @@ Workflow.prototype = {
     for (_i = 0, _len = problem.length; _i < _len; _i++) {
       arg = problem[_i];
       if (arg[0] === 'get') {
-        if (!arg.domain || arg.domain.MAYBE || arg.domain.displayName === domain.displayName) {
+        if (!arg.domain || arg.domain.MAYBE || (arg.domain.displayName === domain.displayName && domain.priority < 0)) {
           (variables || (variables = [])).push(this.engine.getPath(arg[1], arg[2]));
         }
       } else if (arg.variables) {
@@ -23232,7 +23234,7 @@ Workflow.prototype = {
     }
   },
   merge: function(problems, domain, reverse) {
-    var cmd, cmds, exported, index, merged, other, position, priority, problem, _i, _j, _k, _len, _len1, _len2, _ref;
+    var cmd, cmds, exported, index, merged, other, position, priority, problem, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
     if (domain === void 0) {
       _ref = problems.domains;
       for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
@@ -23280,6 +23282,9 @@ Workflow.prototype = {
       }
       position++;
     }
+    if ((problems != null ? (_ref1 = problems[0]) != null ? _ref1[0] : void 0 : void 0) === '/') {
+      debugger;
+    }
     if (!merged) {
       this.domains.splice(priority, 0, domain);
       this.problems.splice(priority, 0, problems);
@@ -23300,9 +23305,13 @@ Workflow.prototype = {
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         return result;
       }
-      if (result && !result.push) {
-        this.apply(result);
-        solution = this.apply(result, solution || {});
+      if (result) {
+        if (result.push) {
+          this.engine.Workflow(result);
+        } else {
+          this.apply(result);
+          solution = this.apply(result, solution || {});
+        }
       }
     }
     this.index--;
@@ -23339,11 +23348,13 @@ Merges values from all other domains,
 enables anonymous constraints on immutable values
 */
 
-var Domain, Numeric, _ref,
+var Domain, Numeric, Selectors, property, value, _ref, _ref1, _ref2,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Domain = require('../concepts/Domain');
+
+Selectors = require('../methods/Selectors');
 
 Numeric = (function(_super) {
   __extends(Numeric, _super);
@@ -23361,8 +23372,13 @@ Numeric = (function(_super) {
 
 })(Domain);
 
-Numeric.prototype.Methods = (function() {
-  function Methods() {}
+Numeric.prototype.Methods = (function(_super) {
+  __extends(Methods, _super);
+
+  function Methods() {
+    _ref1 = Methods.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
 
   Methods.prototype["&&"] = function(a, b) {
     return a && b;
@@ -23404,13 +23420,33 @@ Numeric.prototype.Methods = (function() {
 
   Methods.prototype.get = {
     command: function(operation, continuation, scope, meta, object, path) {
-      return this.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
+      debugger;
+      var domain, watchers;
+      domain = this.getVariableDomain(operation, true);
+      if (!domain || domain.priority < 0) {
+        domain = this;
+      } else if (domain !== this) {
+        if (domain.structured) {
+          console.log('schedule', domain, operation, scope);
+          debugger;
+          this.Workflow(domain, operation);
+        }
+      }
+      path = this.getPath(object, path);
+      watchers = domain.watchers[path];
+      return domain.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
     }
   };
 
   return Methods;
 
-})();
+})(Domain.prototype.Methods);
+
+_ref2 = Selectors.prototype;
+for (property in _ref2) {
+  value = _ref2[property];
+  Numeric.prototype.Methods.prototype[property] = value;
+}
 
 Numeric.prototype.Methods.prototype['*'].linear = false;
 
@@ -23517,11 +23553,9 @@ module.exports = Abstract;
 
 });
 require.register("gss/lib/domains/Boolean.js", function(exports, require, module){
-var Boolean, Numeric, Selectors, property, value, _ref, _ref1, _ref2,
+var Boolean, Numeric, property, value, _fn, _ref, _ref1, _ref2,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Selectors = require('../methods/Selectors');
 
 Numeric = require('./Numeric');
 
@@ -23539,13 +23573,8 @@ Boolean = (function(_super) {
 
 })(Numeric);
 
-Boolean.prototype.Methods = (function(_super) {
-  __extends(Methods, _super);
-
-  function Methods() {
-    _ref1 = Methods.__super__.constructor.apply(this, arguments);
-    return _ref1;
-  }
+Boolean.prototype.Methods = (function() {
+  function Methods() {}
 
   Methods.prototype["!="] = function(a, b) {
     return a === b;
@@ -23573,15 +23602,33 @@ Boolean.prototype.Methods = (function(_super) {
 
   return Methods;
 
-})(Numeric.prototype.Methods);
+})();
 
-_ref2 = Selectors.prototype;
+_ref1 = Boolean.prototype.Methods.prototype;
+_fn = function(property, value) {
+  return Boolean.prototype.Methods.prototype[property] = function(a, b) {
+    if ((a != null) && (b != null)) {
+      debugger;
+      if (typeof a !== 'object' && typeof b !== 'object') {
+        return value.call(this, a, b);
+      } else {
+        return [property, a, b];
+      }
+    }
+  };
+};
+for (property in _ref1) {
+  value = _ref1[property];
+  _fn(property, value);
+}
+
+module.exports = Boolean;
+
+_ref2 = Numeric.prototype.Methods.prototype;
 for (property in _ref2) {
   value = _ref2[property];
   Boolean.prototype.Methods.prototype[property] = value;
 }
-
-module.exports = Boolean;
 
 });
 require.register("gss/lib/domains/Linear.js", function(exports, require, module){
@@ -23864,11 +23911,11 @@ Intrinsic = (function(_super) {
     }
     if (property === 'left' || property === 'top') {
       if (element.style[camel] === '') {
-        if (value) {
+        if (value != null) {
           element.style.positioned = (element.style.positioned || 0) + 1;
         }
       } else {
-        if (!value) {
+        if (value == null) {
           element.style.positioned = (element.style.positioned || 0) - 1;
         }
       }
@@ -23883,6 +23930,7 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.solve = function() {
     Numeric.prototype.solve.apply(this, arguments);
+    debugger;
     return this.each(this.scope, this.update);
   };
 
@@ -23899,10 +23947,12 @@ Intrinsic = (function(_super) {
       if ((j = path.indexOf('[')) > -1) {
         id = path.substring(0, j);
         prop = path.substring(j + 1, path.length - 1);
-        if ((prop = this.properties[property]).axiom) {
-          return prop.call(this, object, continuation);
-        } else if (prop && typeof prop !== 'function') {
-          return prop;
+        if ((prop = this.properties[property]) != null) {
+          if (prop.axiom) {
+            return prop.call(this, object, continuation);
+          } else if (typeof prop !== 'function') {
+            return prop;
+          }
         }
       }
     }
@@ -23960,6 +24010,7 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.verify = function(object, property, continuation) {
     var path;
     path = this.getPath(object, property);
+    console.error(path, 'lol', this.get(null, path));
     return this.set(null, path, this.get(null, path, continuation));
   };
 
@@ -24195,7 +24246,7 @@ Document = (function(_super) {
     } else if (this.running) {
       this.compile();
     }
-    this.scope.addEventListener('scroll', this);
+    this.scope.addEventListener('scroll', this, true);
     if (typeof window !== "undefined" && window !== null) {
       window.addEventListener('resize', this);
     }
@@ -24220,6 +24271,7 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identity.provide(e.target) || e;
+      console.log('scroll', e);
       return this.engine.solve(id + ' scrolled', function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
@@ -24238,7 +24290,7 @@ Document = (function(_super) {
     },
     DOMContentLoaded: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
-      return this.start();
+      return this.compile();
     },
     compile: function() {
       this.engine.compiling = true;
@@ -24327,7 +24379,7 @@ Expressions = (function() {
   Expressions.prototype.execute = function(operation, continuation, scope, args) {
     var command, context, func, method, node, onAfter, onBefore, result;
     scope || (scope = this.engine.scope);
-    if (operation.def.scoped || !args) {
+    if (!args) {
       node = scope;
       (args || (args = [])).unshift(scope);
     } else {
@@ -24394,7 +24446,7 @@ Expressions = (function() {
         argument = this.solve(argument, contd, scope, meta, void 0, prev);
       }
       if (argument === void 0) {
-        if (!operation.def.eager || (ascender != null)) {
+        if ((!this.engine.eager && !operation.def.eager) || (ascender != null)) {
           if (operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
             stopping = true;
           } else if (!operation.def.noop || operation.name) {
@@ -24440,6 +24492,9 @@ Expressions = (function() {
               return this.engine.provide(result);
             }
           } else if (parent && ((ascender != null) || (result.nodeType && (!operation.def.hidden || parent.tail === parent)))) {
+            if (operation.def.mark) {
+              continuation = this.engine.getContinuation(continuation, null, this.engine[operation.def.mark]);
+            }
             this.solve(parent, continuation, scope, meta, operation.index, result);
             return;
           }
@@ -24812,8 +24867,6 @@ Queries = (function() {
   Queries.prototype.onBeforeSolve = function() {
     var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1, _ref2;
     index = 0;
-    console.error('q', this.qualified.slice());
-    debugger;
     while (this.qualified[index]) {
       watcher = this.qualified.splice(0, 3);
       this.engine.document.solve(watcher[0], watcher[1], watcher[2]);
@@ -24868,7 +24921,6 @@ Queries = (function() {
       keys.splice(index - 1, 0, key);
       return true;
     } else {
-      debugger;
       (collection.duplicates || (collection.duplicates = [])).push(node);
       keys.push(key);
       return;
@@ -24925,7 +24977,6 @@ Queries = (function() {
         parent = watcher;
         matched = false;
         while (parent) {
-          console.error(parent.path, path);
           if (parent.path === path) {
             matched = true;
           }

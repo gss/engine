@@ -174,8 +174,8 @@ class Conventions
     return domain
 
   # Return domain that should be used to evaluate given variable
-  getVariableDomain: (operation) ->
-    if operation.domain
+  getVariableDomain: (operation, force) ->
+    if operation.domain && !force
       return operation.domain
     [cmd, scope, property] = variable = operation
 
@@ -204,7 +204,7 @@ class Conventions
         #  domain = @intrinsic.maybe()
         #else
         domain = @linear.maybe()
-    if variable
+    if variable && !force
       variable.domain = domain
     return domain
 
@@ -217,12 +217,12 @@ class Conventions
       return typeof url == 'string' && url || src
 
   # get topmost meaniningful function call with matching domain
-  getRootOperation: (operation) ->
+  getRootOperation: (operation, domain = operation.domain) ->
     parent = operation
     while parent.parent &&  typeof parent.parent[0] == 'string' && 
           (!parent.parent.def || 
                               (!parent.parent.def.noop && 
-                              parent.domain == operation.domain))
+                              parent.domain == domain))
       parent = parent.parent
     return parent
 

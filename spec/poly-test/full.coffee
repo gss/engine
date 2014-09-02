@@ -1,17 +1,5 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>GSS engine in browser</title>
-    <script src="../vendor/weakmap.js"></script>
-    <script src="../vendor/MutationObserver.js"></script>
-    <script src="../dist/gss.js"></script>
-    <!--<script src="../vendor/c.js"></script> -->
-
-    <style>
-      #mocha .test {
-        overflow: auto;
-      }
+HTML = """
+    <style scoped>
       header {
         background: orange;
         height: 50px;
@@ -40,9 +28,8 @@
         top: 5px;
       }
     </style>
-  </head>
-  <body>
     <style type="text/gss">
+/*
       // plural selectors can be used as singular, a la jQ
       [left-margin] == (main)[right];
 
@@ -56,20 +43,20 @@
           background: yellow;
         }
       }
-
+*/
       header {
         ::[left] == 0;
-        // condition inside css rule
-        @if (::window[width] > ::window[height]) {
-          ::[width] == ::window[width] / 4;
+        //// condition inside css rule
+        @if (::scope[intrinsic-width] > ::scope[intrinsic-height]) {
+          ::[width] == ::scope[intrinsic-width] / 4;
         } @else {
-          ::[width] == ::window[width] / 2;
+          ::[width] == ::scope[intrinsic-width] / 2;
         }
       }
-
+      /*
       footer {
         ::[top] == (main)[height]; 
-        ::[height] == ::window[height] * 2;
+        ::[height] == ::scope[intrinsic-height] * 2;
       }
 
       aside {
@@ -80,15 +67,14 @@
 
       main {
         // Bind things to scroll position
-        ::[top] == ::window[scroll-top] + (header)[intrinsic-y];
+        ::[top] == ::scope[scroll-top] + (header)[intrinsic-y];
         ::[width] == (aside)[intrinsic-width];
         ::[left] == (header)[right];
 
         // use intrinsic-height to avoid binding. Should be:
         // height: :window[height] - (header)[height];
-        ::[height] == ::window[height] - (header)[intrinsic-height];
+        ::[height] == ::scope[intrinsic-height] - (header)[intrinsic-height];
       }
-
       // Custom combinators
       ul li !~ li {
 
@@ -104,9 +90,9 @@
         ::[width] == [li-width];
 
         (&:previous)[right] == &[left];
-        (&:last)[right] == ::window[width] - 16;
+        (&:last)[right] == ::scope[intrinsic-width] - 16;
         (&:first)[left] == 0;
-      }
+      }*/
     </style>
 
 
@@ -120,24 +106,37 @@
     </main>
     <aside id="aside"></aside>
     <footer id="footer"></footer>
+"""
+assert = chai.assert
+expect = chai.expect
 
-    <script>
-      GSS.document = new GSS(document)
-    </script>
+stringify = (o) ->
+  return JSON.stringify o, 1, 1
 
-    <script>
-      counter = GSS.$query('ul li').length
-      document.onclick = function(e) {
-        for (var node = e.target; node; node = node.parentNode)
-          if (node.tagName == 'LI')
-            return node.parentNode.removeChild(node)
+$  = () ->
+  return document.querySelector arguments...
+  
+$$ = () -> 
+  return document.querySelectorAll arguments...
 
-        counter++
-        li = document.createElement('li')
-        li.id = 'li' + counter
-        li.innerHTML = counter
-        ul = GSS.$tag('ul')[0].appendChild(li)
-      }
-    </script>
-  </body>
-</html>
+remove = (el) ->
+  el?.parentNode?.removeChild(el)
+
+
+describe 'Full page tests', -> 
+  container = document.createElement('div')
+  container.style.height = '480px'
+  container.style.width = '640px'
+  container.style.position = 'absolute'
+  container.style.overflow = 'auto'
+  container.style.left = 0
+  container.style.top = 0
+  $('#fixtures').appendChild container
+
+  window.$engine = engine = new GSS(container)
+
+  it 'should kompute', (done) ->
+    container.innerHTML = HTML
+    engine.then (solution) ->
+      console.log(solution)
+      done()

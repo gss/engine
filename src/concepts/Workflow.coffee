@@ -210,7 +210,7 @@ Workflow.prototype =
     variables = undefined
     for arg in problem
       if arg[0] == 'get'
-        if !arg.domain || arg.domain.MAYBE || arg.domain.displayName == domain.displayName
+        if !arg.domain || arg.domain.MAYBE || (arg.domain.displayName == domain.displayName && domain.priority < 0)
           (variables ||= []).push(@engine.getPath(arg[1], arg[2]))
       else if arg.variables
         (variables ||= []).push.apply(variables, arg.variables)
@@ -326,6 +326,8 @@ Workflow.prototype =
               (!other.frame || other.frame == domain.frame)
             priority = position
       position++
+    if problems?[0]?[0] == '/'
+      debugger
     if !merged
       @domains.splice(priority, 0, domain)
       @problems.splice(priority, 0, problems)
@@ -346,10 +348,12 @@ Workflow.prototype =
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         return result
 
-      if result && !result.push
-        @apply(result)
-        solution = @apply(result, solution || {})
-
+      if result
+        if result.push
+          @engine.Workflow(result)
+        else
+          @apply(result)
+          solution = @apply(result, solution || {})
     @index--
 
     return solution || @

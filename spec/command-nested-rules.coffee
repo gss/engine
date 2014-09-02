@@ -242,8 +242,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==', ['get', '$box1','x', '.vessel$vessel0↓ .box$box1'], 100]]
-            [['==', ['get', '$box2','x', '.vessel$vessel0↓ .box$box2'], 100]]
+            [['==', ['get', '$box1','x', '.vessel$vessel0↑ .box$box1'], 100]]
+            [['==', ['get', '$box2','x', '.vessel$vessel0↑ .box$box2'], 100]]
           ])
           expect(stringify(engine.values)).to.eql stringify
             "$box1[x]": 100
@@ -257,8 +257,8 @@ describe 'Nested Rules', ->
           engine.once 'solve', ->
             # One child doesnt match the subselector anymore
             expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-              [['remove', '.vessel$vessel0↓ .box$box1']]
-              [['remove', '.vessel$vessel0↓ .box$box1']]
+              [['remove', '.vessel$vessel0↑ .box$box1']]
+              [['remove', '.vessel$vessel0↑ .box$box1']]
             ])
             expect(stringify(engine.values)).to.eql stringify
               "$box2[x]": 100
@@ -269,7 +269,7 @@ describe 'Nested Rules', ->
             engine.once 'solve', ->
               # Child matches again
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                [['==', ['get', '$box1', 'x', '.vessel$vessel0↓ .box$box1'], 100]]
+                [['==', ['get', '$box1', 'x', '.vessel$vessel0↑ .box$box1'], 100]]
               ])
               expect(stringify(engine.values)).to.eql stringify
                 "$box2[x]": 100
@@ -282,12 +282,12 @@ describe 'Nested Rules', ->
                 # Parent doesnt match anymore: Remove the whole tree
                 expect(stringify(engine.workflown.getProblems())).to.eql stringify([
                   [
-                    ["remove", ".vessel$vessel0↓ .box$box1"]
-                    ["remove", ".vessel$vessel0↓ .box$box2"]
+                    ["remove", ".vessel$vessel0↑ .box$box1"]
+                    ["remove", ".vessel$vessel0↑ .box$box2"]
                     ["remove", ".vessel$vessel0"]
                   ],
-                  [["remove", ".vessel$vessel0↓ .box$box2"]]
-                  [["remove", ".vessel$vessel0↓ .box$box1"]]
+                  [["remove", ".vessel$vessel0↑ .box$box2"]]
+                  [["remove", ".vessel$vessel0↑ .box$box1"]]
                 ])
                 expect(box1.style.left).to.eql('')
                 expect(box2.style.left).to.eql('')
@@ -296,8 +296,8 @@ describe 'Nested Rules', ->
                 engine.once 'solve', ->
                   # Parent matches again, re-watch everything 
                   expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                    [['==', ['get', '$box1', 'x', '.vessel$vessel0↓ .box$box1'], 100]]
-                    [['==', ['get', '$box2', 'x', '.vessel$vessel0↓ .box$box2'], 100]]
+                    [['==', ['get', '$box1', 'x', '.vessel$vessel0↑ .box$box1'], 100]]
+                    [['==', ['get', '$box2', 'x', '.vessel$vessel0↑ .box$box2'], 100]]
                   ])
                   expect(stringify(engine.values)).to.eql stringify
                     "$box1[x]": 100
@@ -343,12 +343,12 @@ describe 'Nested Rules', ->
         box1 = container.getElementsByClassName('box')[1]
         box3 = container.getElementsByClassName('box')[3]
         
-        engine = new GSS(container)
+        window.$engine = engine = new GSS(container)
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↓ :first-child$box1'], 100]]
-            [['==', ['get', '$box3', 'y','.vessel,#group1$group1↓ :first-child$box3'], 100]]
+            [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↑ :first-child$box1'], 100]]
+            [['==', ['get', '$box3', 'y','.vessel,#group1$group1↑ :first-child$box3'], 100]]
           ])
 
           vessel0.classList.remove('vessel')
@@ -357,10 +357,10 @@ describe 'Nested Rules', ->
           engine.once 'solve', ->
             expect(stringify(engine.workflown.getProblems())).to.eql stringify([
               [
-                ['remove', ".vessel,#group1$vessel0↓ :first-child$box1"]
+                ['remove', ".vessel,#group1$vessel0↑ :first-child$box1"]
                 ['remove',  ".vessel,#group1$vessel0"]
               ],
-              [['remove', ".vessel,#group1$vessel0↓ :first-child$box1"]]
+              [['remove', ".vessel,#group1$vessel0↑ :first-child$box1"]]
             ])
             expect(box1.style.top).to.eql('')
             expect(box3.style.top).to.eql('100px')
@@ -369,7 +369,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solve', ->
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↓ :first-child$box1'], 100]]
+                [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↑ :first-child$box1'], 100]]
               ])
               expect(box1.style.top).to.eql('100px')
               expect(box3.style.top).to.eql('100px')
@@ -426,8 +426,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↓ :first-child$box1'], 100]]
-            [['==', ['get', '$box3', 'y','#box1!>,>div$group1↓ :first-child$box3'], 100]]
+            [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↑ :first-child$box1'], 100]]
+            [['==', ['get', '$box3', 'y','#box1!>,>div$group1↑ :first-child$box3'], 100]]
           ])
 
           expect(box1.style.top).to.eql('100px')
@@ -442,10 +442,10 @@ describe 'Nested Rules', ->
               [
                 ['remove', "#box1!>"]
                 ['remove', "#box1"]
-                ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
+                ['remove', "#box1!>,>div$vessel0↑ :first-child$box1"]
               ]
-              [['remove',  "#box1!>,>div$vessel0↓ :first-child$box1"]]
-              [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↓ :first-child$box2'], 100]]
+              [['remove',  "#box1!>,>div$vessel0↑ :first-child$box1"]]
+              [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↑ :first-child$box2'], 100]]
             ])
             expect(box1.style.top).to.eql('')
             expect(box2.style.top).to.eql('100px')
@@ -461,10 +461,10 @@ describe 'Nested Rules', ->
             engine.once 'solve', ->
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
                 [
-                  ['remove', "#box1!>,>div$vessel0↓ :first-child$box2"]
+                  ['remove', "#box1!>,>div$vessel0↑ :first-child$box2"]
                 ]
-                [['remove',  '#box1!>,>div$vessel0↓ :first-child$box2']]
-                [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↓ :first-child$box1'], 100]]
+                [['remove',  '#box1!>,>div$vessel0↑ :first-child$box2']]
+                [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↑ :first-child$box1'], 100]]
               ])
               expect(box1.style.top).to.eql('100px')
               expect(box2.style.top).to.eql('')
@@ -478,10 +478,10 @@ describe 'Nested Rules', ->
                   [
                     ['remove', "#box1!>"]
                     ['remove', "#box1"]
-                    ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
+                    ['remove', "#box1!>,>div$vessel0↑ :first-child$box1"]
                   ]
-                  [['remove',  "#box1!>,>div$vessel0↓ :first-child$box1"]]
-                  [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↓ :first-child$box2'], 100]]
+                  [['remove',  "#box1!>,>div$vessel0↑ :first-child$box1"]]
+                  [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↑ :first-child$box2'], 100]]
                 ])
                 expect(box1.style.top).to.eql('')
                 expect(box2.style.top).to.eql('100px')
@@ -498,12 +498,12 @@ describe 'Nested Rules', ->
                   expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
                   expect(stringify(engine.workflown.getProblems())).to.eql stringify([
                     [
-                      ['remove',  "#box1!>,>div$vessel0↓ :first-child$box2"]
+                      ['remove',  "#box1!>,>div$vessel0↑ :first-child$box2"]
                       ['remove',  "#box1!>,>div$vessel0"] 
                       ['remove',  ">$vessel0↑div"]
                       ['remove',  ">$vessel0"]
                     ]
-                    [['remove',  "#box1!>,>div$vessel0↓ :first-child$box2"]]
+                    [['remove',  "#box1!>,>div$vessel0↑ :first-child$box2"]]
                   ])
                   box3.parentNode.removeChild(box3)
 
@@ -513,9 +513,9 @@ describe 'Nested Rules', ->
                     expect(box3.style.top).to.eql('')
                     expect(box4.style.top).to.eql('100px')
                     expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                      [['remove', "#box1!>,>div$group1↓ :first-child$box3"]]
-                      [['remove', "#box1!>,>div$group1↓ :first-child$box3"]]
-                      [['==', ['get', '$box4', 'y','#box1!>,>div$group1↓ :first-child$box4'], 100]]
+                      [['remove', "#box1!>,>div$group1↑ :first-child$box3"]]
+                      [['remove', "#box1!>,>div$group1↑ :first-child$box3"]]
+                      [['==', ['get', '$box4', 'y','#box1!>,>div$group1↑ :first-child$box4'], 100]]
                     ])
                     box4.parentNode.removeChild(box4)
 
@@ -525,8 +525,8 @@ describe 'Nested Rules', ->
                       expect(box3.style.top).to.eql('')
                       expect(box4.style.top).to.eql('')
                       expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                        [['remove', "#box1!>,>div$group1↓ :first-child$box4"]]
-                        [['remove', "#box1!>,>div$group1↓ :first-child$box4"]]
+                        [['remove', "#box1!>,>div$group1↑ :first-child$box4"]]
+                        [['remove', "#box1!>,>div$group1↑ :first-child$box4"]]
                       ])
                       expect(engine.queries['>'].slice()).to.eql([box0, group1])
                       box0.parentNode.removeChild(box0)
@@ -1246,7 +1246,6 @@ describe 'Nested Rules', ->
               "med":50
               "small":5
               "target-width":900 
-            debugger
           else if counter is 2   
             expect(stringify(engine.values)).to.eql stringify
               "big":500

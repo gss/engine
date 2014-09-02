@@ -29,8 +29,6 @@ class Queries
   onBeforeSolve: ->
     # Update all DOM queries that matched mutations
     index = 0
-    console.error('q', @qualified.slice())
-    debugger
     while @qualified[index]
       watcher = @qualified.splice(0, 3)
       @engine.document.solve watcher[0], watcher[1], watcher[2]
@@ -70,13 +68,9 @@ class Queries
       for el, index in collection
         break unless @comparePosition(el, node) == 4
       collection.splice(index, 0, node)
-      #@chain collection[index - 1], node, collection, continuation
-      #@chain node, collection[index + 1], collection, continuation
       keys.splice(index - 1, 0, key)
       return true
     else
-      debugger
-
       (collection.duplicates ||= []).push(node)
       keys.push(key)
       return
@@ -121,7 +115,6 @@ class Queries
         parent = watcher
         matched = false
         while parent
-          console.error(parent.path, path)
           if parent.path == path
             matched = true
           parent = parent.parent
