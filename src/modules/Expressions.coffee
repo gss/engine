@@ -186,9 +186,12 @@ class Expressions
 
           return result
       else if parent && ((typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain))
-
-        solution = ['value', result, continuation || '', operation.toString()]
-        solution.push true if operation.exported
+        solution = ['value', result, continuation || '', 
+                    operation.toString()]
+        if operation.exported || (scope && scope != @engine.scope)
+          solution.push(operation.exported ? null)
+        if scope && scope != @engine.scope
+          solution.push(scope && @engine.identity.provide(scope) ? null)
         solution.operation = operation
         solution.parent    = operation.parent
         solution.domain    = operation.domain

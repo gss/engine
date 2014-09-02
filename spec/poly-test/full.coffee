@@ -29,7 +29,6 @@ HTML = """
       }
     </style>
     <style type="text/gss">
-/*
       // plural selectors can be used as singular, a la jQ
       [left-margin] == (main)[right];
 
@@ -43,7 +42,6 @@ HTML = """
           background: yellow;
         }
       }
-*/
       header {
         ::[left] == 0;
         //// condition inside css rule
@@ -53,7 +51,6 @@ HTML = """
           ::[width] == ::scope[intrinsic-width] / 2;
         }
       }
-      /*
       footer {
         ::[top] == (main)[height]; 
         ::[height] == ::scope[intrinsic-height] * 2;
@@ -92,7 +89,7 @@ HTML = """
         (&:previous)[right] == &[left];
         (&:last)[right] == ::scope[intrinsic-width] - 16;
         (&:first)[left] == 0;
-      }*/
+      }
     </style>
 
 
@@ -124,18 +121,18 @@ remove = (el) ->
 
 
 describe 'Full page tests', -> 
-  container = document.createElement('div')
-  container.style.height = '480px'
-  container.style.width = '640px'
-  container.style.position = 'absolute'
-  container.style.overflow = 'auto'
-  container.style.left = 0
-  container.style.top = 0
-  $('#fixtures').appendChild container
-
-  window.$engine = engine = new GSS(container)
 
   it 'should kompute', (done) ->
+    container = document.createElement('div')
+    container.style.height = '480px'
+    container.style.width = '640px'
+    container.style.position = 'absolute'
+    container.style.overflow = 'auto'
+    container.style.left = 0
+    container.style.top = 0
+    $('#fixtures').appendChild container
+
+    window.$engine = engine = new GSS(container)
     container.innerHTML = HTML
     engine.then (solution) ->
       console.log(solution)

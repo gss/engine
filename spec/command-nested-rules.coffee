@@ -202,8 +202,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', -> 
           expect(stringify engine.workflown.getProblems()).to.eql stringify [
-              [['==', ['get', '$box1', 'x', '.vessel .box$box1'], 100]]
-              [['==', ['get', '$box2', 'x', '.vessel .box$box2'], 100]]
+              [['==', ['get', '$box1', 'x', '.vessel .box$box1', "$box1"], 100]]
+              [['==', ['get', '$box2', 'x', '.vessel .box$box2', "$box2"], 100]]
             ]
           done()
         
@@ -242,8 +242,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==', ['get', '$box1','x', '.vessel$vessel0↑ .box$box1'], 100]]
-            [['==', ['get', '$box2','x', '.vessel$vessel0↑ .box$box2'], 100]]
+            [['==', ['get', '$box1','x', '.vessel$vessel0↑ .box$box1', "$vessel0"], 100]]
+            [['==', ['get', '$box2','x', '.vessel$vessel0↑ .box$box2', "$vessel0"], 100]]
           ])
           expect(stringify(engine.values)).to.eql stringify
             "$box1[x]": 100
@@ -269,7 +269,7 @@ describe 'Nested Rules', ->
             engine.once 'solve', ->
               # Child matches again
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                [['==', ['get', '$box1', 'x', '.vessel$vessel0↑ .box$box1'], 100]]
+                [['==', ['get', '$box1', 'x', '.vessel$vessel0↑ .box$box1', "$vessel0"], 100]]
               ])
               expect(stringify(engine.values)).to.eql stringify
                 "$box2[x]": 100
@@ -296,8 +296,8 @@ describe 'Nested Rules', ->
                 engine.once 'solve', ->
                   # Parent matches again, re-watch everything 
                   expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                    [['==', ['get', '$box1', 'x', '.vessel$vessel0↑ .box$box1'], 100]]
-                    [['==', ['get', '$box2', 'x', '.vessel$vessel0↑ .box$box2'], 100]]
+                    [['==', ['get', '$box1', 'x', '.vessel$vessel0↑ .box$box1', "$vessel0"], 100]]
+                    [['==', ['get', '$box2', 'x', '.vessel$vessel0↑ .box$box2', "$vessel0"], 100]]
                   ])
                   expect(stringify(engine.values)).to.eql stringify
                     "$box1[x]": 100
@@ -347,8 +347,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↑ :first-child$box1'], 100]]
-            [['==', ['get', '$box3', 'y','.vessel,#group1$group1↑ :first-child$box3'], 100]]
+            [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↑ :first-child$box1', "$vessel0"], 100]]
+            [['==', ['get', '$box3', 'y','.vessel,#group1$group1↑ :first-child$box3', "$group1"], 100]]
           ])
 
           vessel0.classList.remove('vessel')
@@ -369,7 +369,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solve', ->
               expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-                [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↑ :first-child$box1'], 100]]
+                [['==', ['get', '$box1', 'y','.vessel,#group1$vessel0↑ :first-child$box1', '$vessel0'], 100]]
               ])
               expect(box1.style.top).to.eql('100px')
               expect(box3.style.top).to.eql('100px')
@@ -426,8 +426,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↑ :first-child$box1'], 100]]
-            [['==', ['get', '$box3', 'y','#box1!>,>div$group1↑ :first-child$box3'], 100]]
+            [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↑ :first-child$box1', '$vessel0'], 100]]
+            [['==', ['get', '$box3', 'y','#box1!>,>div$group1↑ :first-child$box3', '$group1'], 100]]
           ])
 
           expect(box1.style.top).to.eql('100px')
@@ -445,7 +445,7 @@ describe 'Nested Rules', ->
                 ['remove', "#box1!>,>div$vessel0↑ :first-child$box1"]
               ]
               [['remove',  "#box1!>,>div$vessel0↑ :first-child$box1"]]
-              [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↑ :first-child$box2'], 100]]
+              [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↑ :first-child$box2', '$vessel0'], 100]]
             ])
             expect(box1.style.top).to.eql('')
             expect(box2.style.top).to.eql('100px')
@@ -464,7 +464,7 @@ describe 'Nested Rules', ->
                   ['remove', "#box1!>,>div$vessel0↑ :first-child$box2"]
                 ]
                 [['remove',  '#box1!>,>div$vessel0↑ :first-child$box2']]
-                [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↑ :first-child$box1'], 100]]
+                [['==', ['get', '$box1', 'y','#box1!>,>div$vessel0↑ :first-child$box1', "$vessel0"], 100]]
               ])
               expect(box1.style.top).to.eql('100px')
               expect(box2.style.top).to.eql('')
@@ -481,7 +481,7 @@ describe 'Nested Rules', ->
                     ['remove', "#box1!>,>div$vessel0↑ :first-child$box1"]
                   ]
                   [['remove',  "#box1!>,>div$vessel0↑ :first-child$box1"]]
-                  [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↑ :first-child$box2'], 100]]
+                  [['==', ['get', '$box2', 'y','#box1!>,>div$vessel0↑ :first-child$box2', "$vessel0"], 100]]
                 ])
                 expect(box1.style.top).to.eql('')
                 expect(box2.style.top).to.eql('100px')
@@ -515,7 +515,7 @@ describe 'Nested Rules', ->
                     expect(stringify(engine.workflown.getProblems())).to.eql stringify([
                       [['remove', "#box1!>,>div$group1↑ :first-child$box3"]]
                       [['remove', "#box1!>,>div$group1↑ :first-child$box3"]]
-                      [['==', ['get', '$box4', 'y','#box1!>,>div$group1↑ :first-child$box4'], 100]]
+                      [['==', ['get', '$box4', 'y','#box1!>,>div$group1↑ :first-child$box4', '$group1'], 100]]
                     ])
                     box4.parentNode.removeChild(box4)
 
@@ -584,8 +584,8 @@ describe 'Nested Rules', ->
         engine.once 'solve', ->  
 
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [[
-            ['<=', ['get','$box1','width', '.vessel .box$box1'], ['get', '$container0', 'width', '.vessel .box$box1']]
-            ['<=', ['get','$box2','width', '.vessel .box$box2'], ['get', '$container0', 'width', '.vessel .box$box2']]
+            ['<=', ['get','$box1','width', '.vessel .box$box1', "$box1"], ['get', '$container0', 'width', '.vessel .box$box1', "$box1"]]
+            ['<=', ['get','$box2','width', '.vessel .box$box2', "$box2"], ['get', '$container0', 'width', '.vessel .box$box2', "$box2"]]
           ]]
           done()
         
@@ -636,8 +636,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->        
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [
-              [['<=',['get','$box2','width', ".group .vessel$vessel1↓ .box:last-child$box2"], 100]]
-              [['<=',['get','$box4','width', ".group .vessel$vessel1↓ .box:last-child$box4"], 100]]
+              [['<=',['get','$box2','width', ".group .vessel$vessel1↓ .box:last-child$box2", "$vessel1"], 100]]
+              [['<=',['get','$box4','width', ".group .vessel$vessel1↓ .box:last-child$box4", "$vessel1"], 100]]
             ]
           newLast = document.createElement('div')
           newLast.id = 'box5'
@@ -651,7 +651,7 @@ describe 'Nested Rules', ->
                   ["remove",".group .vessel$vessel1↓ .box:last-child$box4"]
                 ]
                 [
-                  ['<=',['get', '$box5', 'width', '.group .vessel$vessel1↓ .box:last-child$box5'], 100]
+                  ['<=',['get', '$box5', 'width', '.group .vessel$vessel1↓ .box:last-child$box5', "$vessel1"], 100]
                 ]
               ]
             container.firstElementChild.classList.remove('group')
@@ -673,23 +673,23 @@ describe 'Nested Rules', ->
               container.firstElementChild.classList.add('group')
               engine.once 'solve', ->  
                 expect(stringify(engine.workflown.getProblems())).to.eql stringify [
-                    [['<=',['get','$box2','width', '.group .vessel$vessel1↓ .box:last-child$box2'], 100]]
-                    [['<=',['get','$box5','width', '.group .vessel$vessel1↓ .box:last-child$box5'], 100]]
+                    [['<=',['get','$box2','width', '.group .vessel$vessel1↓ .box:last-child$box2', "$vessel1"], 100]]
+                    [['<=',['get','$box5','width', '.group .vessel$vessel1↓ .box:last-child$box5', "$vessel1"], 100]]
                   ] 
                 container.appendChild(clone)
                 
                 engine.once 'solve', ->   
                   expect(stringify(engine.workflown.getProblems())).to.eql stringify [
-                      [['<=',['get', '$box2',  'width', '.group .vessel$vessel11↓ .box:last-child$box2'], 100]]
-                      [['<=',['get', '$box5',  'width', '.group .vessel$vessel11↓ .box:last-child$box5'], 100]]
+                      [['<=',['get', '$box2',  'width', '.group .vessel$vessel11↓ .box:last-child$box2', "$vessel11"], 100]]
+                      [['<=',['get', '$box5',  'width', '.group .vessel$vessel11↓ .box:last-child$box5', "$vessel11"], 100]]
 
                       [
-                        ['<=',['get', '$box12', 'width', '.group .vessel$vessel11↓ .box:last-child$box12'], 100]
-                        ['<=',['get', '$box12', 'width', '.group .vessel$vessel1↓ .box:last-child$box12'], 100]
+                        ['<=',['get', '$box12', 'width', '.group .vessel$vessel11↓ .box:last-child$box12', "$vessel11"], 100]
+                        ['<=',['get', '$box12', 'width', '.group .vessel$vessel1↓ .box:last-child$box12', "$vessel1"], 100]
                       ],
                       [
-                        ['<=',['get', '$box14', 'width', '.group .vessel$vessel11↓ .box:last-child$box14'], 100]
-                        ['<=',['get', '$box14', 'width', '.group .vessel$vessel1↓ .box:last-child$box14'], 100]
+                        ['<=',['get', '$box14', 'width', '.group .vessel$vessel11↓ .box:last-child$box14', "$vessel11"], 100]
+                        ['<=',['get', '$box14', 'width', '.group .vessel$vessel1↓ .box:last-child$box14', "$vessel1"], 100]
                       ]
 
                     ]
@@ -724,7 +724,7 @@ describe 'Nested Rules', ->
                       expect(stringify(engine.workflown.getProblems())).to.eql stringify [
                           [['remove', '.group .vessel$vessel1↓ .box:last-child$box2']]
                           [['remove', '.group .vessel$vessel1↓ .box:last-child$box2']]
-                          [['<=',['get', '$box1', 'width', '.group .vessel$vessel1↓ .box:last-child$box1'], 100]]
+                          [['<=',['get', '$box1', 'width', '.group .vessel$vessel1↓ .box:last-child$box1', "$vessel1"], 100]]
                         ]
                       vessel = container.getElementsByClassName('vessel')[0]
                       vessel.parentNode.removeChild(vessel)
@@ -792,8 +792,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->       
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [
-              [['<=',['get', '$box2', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box2"], 100]]
-              [['<=',['get', '$box4', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box4"], 100]]
+              [['<=',['get', '$box2', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box2", "$vessel1"], 100]]
+              [['<=',['get', '$box4', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box4", "$vessel1"], 100]]
             ]
           newLast = document.createElement('div')
           newLast.id = 'box5'
@@ -804,7 +804,7 @@ describe 'Nested Rules', ->
             expect(stringify(engine.workflown.getProblems())).to.eql stringify [
                 [["remove", ".group .vessel$vessel1↓::parent .box:last-child$box4"]],
                 [["remove", ".group .vessel$vessel1↓::parent .box:last-child$box4"]]
-                [['<=',['get', '$box5', 'width', '.group .vessel$vessel1↓::parent .box:last-child$box5'], 100]]
+                [['<=',['get', '$box5', 'width', '.group .vessel$vessel1↓::parent .box:last-child$box5', "$vessel1"], 100]]
               ]
             container.firstElementChild.classList.remove('group')
 
@@ -827,15 +827,15 @@ describe 'Nested Rules', ->
 
               engine.once 'solve', -> 
                 expect(stringify(engine.workflown.getProblems())).to.eql stringify [
-                    [['<=',['get', '$box2', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box2"], 100]],
-                    [['<=',['get', '$box5', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box5"], 100]]
+                    [['<=',['get', '$box2', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box2", "$vessel1"], 100]],
+                    [['<=',['get', '$box5', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box5", "$vessel1"], 100]]
                   ]
                 container.appendChild(clone)
 
                 engine.once 'solve', -> 
                   expect(stringify(engine.workflown.getProblems())).to.eql stringify [
-                    [['<=',['get', '$box12', 'width', ".group .vessel$vessel11↓::parent .box:last-child$box12"], 100]],
-                    [['<=',['get', '$box14', 'width', ".group .vessel$vessel11↓::parent .box:last-child$box14"], 100]]
+                    [['<=',['get', '$box12', 'width', ".group .vessel$vessel11↓::parent .box:last-child$box12", "$vessel11"], 100]],
+                    [['<=',['get', '$box14', 'width', ".group .vessel$vessel11↓::parent .box:last-child$box14", "$vessel11"], 100]]
                     ]
                   container.replaceChild(container.firstElementChild, container.lastElementChild)
 
@@ -861,7 +861,7 @@ describe 'Nested Rules', ->
                       expect(stringify(engine.workflown.getProblems())).to.eql stringify [
                           [["remove", ".group .vessel$vessel1↓::parent .box:last-child$box2"]],
                           [["remove", ".group .vessel$vessel1↓::parent .box:last-child$box2"]]
-                          [['<=',['get', '$box1', 'width', '.group .vessel$vessel1↓::parent .box:last-child$box1'], 100]]
+                          [['<=',['get', '$box1', 'width', '.group .vessel$vessel1↓::parent .box:last-child$box1', "$vessel1"], 100]]
                         ]
                       vessel = container.getElementsByClassName('vessel')[0]
                       vessel.parentNode.removeChild(vessel)
@@ -915,11 +915,11 @@ describe 'Nested Rules', ->
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [[
             ["<=",
-              ["get","$box1","width",".vessel .box$box1↓#vessel1"],
-              ["get","$vessel1","width",".vessel .box$box1↓#vessel1"]],
+              ["get","$box1","width",".vessel .box$box1↓#vessel1", "$box1"],
+              ["get","$vessel1","width",".vessel .box$box1↓#vessel1", "$box1"]],
             ["<=",
-              ["get","$box2","width",".vessel .box$box2↓#vessel1"],
-              ["get","$vessel1","width",".vessel .box$box2↓#vessel1"]]
+              ["get","$box2","width",".vessel .box$box2↓#vessel1", "$box2"],
+              ["get","$vessel1","width",".vessel .box$box2↓#vessel1", "$box2"]]
             ]]
           vessel1 = engine.$id('vessel1')
           vessel1.parentNode.removeChild(vessel1)
@@ -941,11 +941,11 @@ describe 'Nested Rules', ->
             engine.once 'solve', ->
               expect(stringify(engine.workflown.getProblems())).to.eql stringify [
                 [["<=",
-                  ["get","$box1","width",".vessel .box$box1↓#vessel1"],
-                  ["get","$vessel1","width",".vessel .box$box1↓#vessel1"]],
+                  ["get","$box1","width",".vessel .box$box1↓#vessel1", "$box1"],
+                  ["get","$vessel1","width",".vessel .box$box1↓#vessel1", "$box1"]],
                 ["<=",
-                  ["get","$box2","width",".vessel .box$box2↓#vessel1"],
-                  ["get","$vessel1","width",".vessel .box$box2↓#vessel1"]]]]
+                  ["get","$box2","width",".vessel .box$box2↓#vessel1", "$box2"],
+                  ["get","$vessel1","width",".vessel .box$box2↓#vessel1", "$box2"]]]]
               vessel1.parentNode.removeChild(vessel1)
               engine.once 'solve', ->
                 expect(stringify(engine.workflown.getProblems())).to.eql stringify [
@@ -992,11 +992,11 @@ describe 'Nested Rules', ->
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify [[
             ["<=",
-              ["get","$box1","width",".vessel .box$box1↓::parent"],
-              ["get","$vessel1","width",".vessel .box$box1↓::parent"]],
+              ["get","$box1","width",".vessel .box$box1↓::parent", "$box1"],
+              ["get","$vessel1","width",".vessel .box$box1↓::parent", "$box1"]],
             ["<=",
-              ["get","$box2","width",".vessel .box$box2↓::parent"],
-              ["get","$vessel1","width",".vessel .box$box2↓::parent"]]]]
+              ["get","$box2","width",".vessel .box$box2↓::parent", "$box2"],
+              ["get","$vessel1","width",".vessel .box$box2↓::parent", "$box2"]]]]
           done()
 
         engine.solve rules
@@ -1027,8 +1027,8 @@ describe 'Nested Rules', ->
         vessel0 = container.getElementsByClassName('vessel')[0] 
         engine.once 'solve', ->
           expect(stringify engine.workflown.getProblems()).to.eql stringify [
-            [['==', ['get','$box1','x', ".vessel$vessel0↓.box$box1"], 100]]
-            [['==', ['get','$box2','x', ".vessel$vessel0↓.box$box2"], 100]]
+            [['==', ['get','$box1','x', ".vessel$vessel0↓.box$box1", "$box1"], 100]]
+            [['==', ['get','$box2','x', ".vessel$vessel0↓.box$box2", "$box2"], 100]]
           ]
           box1.classList.remove('box')
 
@@ -1041,7 +1041,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solve', ->
               expect(stringify engine.workflown.getProblems()).to.eql stringify [
-                [['==', ['get','$box1','x', ".vessel$vessel0↓.box$box1"], 100]]
+                [['==', ['get','$box1','x', ".vessel$vessel0↓.box$box1", "$box1"], 100]]
               ]
               vessel0.classList.remove('vessel')
 
@@ -1059,8 +1059,8 @@ describe 'Nested Rules', ->
 
                 engine.once 'solve', ->
                   expect(stringify engine.workflown.getProblems()).to.eql stringify [
-                    [['==',["get","$box1","x",".vessel$vessel0↓.box$box1"],100]]
-                    [['==',["get","$box2","x",".vessel$vessel0↓.box$box2"],100]]
+                    [['==',["get","$box1","x",".vessel$vessel0↓.box$box1", "$box1"],100]]
+                    [['==',["get","$box2","x",".vessel$vessel0↓.box$box2", "$box2"],100]]
                   ]
                   box1.parentNode.removeChild(box1)
 
@@ -1073,7 +1073,7 @@ describe 'Nested Rules', ->
 
                     engine.once 'solve', ->
                       expect(stringify engine.workflown.getProblems()).to.eql stringify [
-                        [['==',["get","$box1","x",".vessel$vessel0↓.box$box1"],100]]
+                        [['==',["get","$box1","x",".vessel$vessel0↓.box$box1", "$box1"],100]]
                       ]
                       engine.scope.innerHTML = ""
 
@@ -1125,8 +1125,8 @@ describe 'Nested Rules', ->
 
         engine.once 'solve', ->
           expect(stringify(engine.workflown.getProblems())).to.eql stringify([
-            [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2"],100]],
-            [['==',["get","$box4","x",".vessel,#group1$group1↓.box:last-child$box4"],100]]
+            [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2", "$box2"],100]],
+            [['==',["get","$box4","x",".vessel,#group1$group1↓.box:last-child$box4", "$box4"],100]]
           ])
           box2.classList.remove('box')
           
@@ -1139,7 +1139,7 @@ describe 'Nested Rules', ->
 
             engine.once 'solve', ->
               expect(stringify engine.workflown.getProblems()).to.eql stringify [
-                [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2"],100]]
+                [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2", "$box2"],100]]
               ]
               vessel0.classList.remove('vessel')
                   
@@ -1155,7 +1155,7 @@ describe 'Nested Rules', ->
                     
                 engine.once 'solve', ->
                   expect(stringify engine.workflown.getProblems()).to.eql stringify [
-                    [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2"],100]]
+                    [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2", "$box2"],100]]
                   ]
                   vessel0.removeChild(box2)
                       
@@ -1163,7 +1163,7 @@ describe 'Nested Rules', ->
                     expect(stringify engine.workflown.getProblems()).to.eql stringify [
                       [["remove",".vessel,#group1$vessel0↓.box:last-child$box2"]]
                       [["remove",".vessel,#group1$vessel0↓.box:last-child$box2"]]
-                      [['==',["get","$box1","x",".vessel,#group1$vessel0↓.box:last-child$box1"],100]]
+                      [['==',["get","$box1","x",".vessel,#group1$vessel0↓.box:last-child$box1", "$box1"],100]]
                     ]
                     vessel0.appendChild(box2)
                         
@@ -1171,7 +1171,7 @@ describe 'Nested Rules', ->
                       expect(stringify engine.workflown.getProblems()).to.eql stringify [
                         [["remove",".vessel,#group1$vessel0↓.box:last-child$box1"]]
                         [["remove",".vessel,#group1$vessel0↓.box:last-child$box1"]]
-                        [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2"],100]]
+                        [['==',["get","$box2","x",".vessel,#group1$vessel0↓.box:last-child$box2", "$box2"],100]]
                       ]
                       engine.scope.innerHTML = ""
 
@@ -1205,8 +1205,6 @@ describe 'Nested Rules', ->
     
       it 'step 1', (done) ->
         rules = [
-
-# .vessel .box$box1@if([target-width]>=960)
           ['==',['get','big'], 500]
           ['==',['get','med'], 50]
           ['==',['get','small'],5]

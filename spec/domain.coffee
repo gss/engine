@@ -307,6 +307,7 @@ describe 'Domain', ->
 				c: 2
 				a: 1
 			console.log(1)
+			debugger
 			expect(engine.solve [
 				['remove', 'my_tracker_path']
 			]).to.eql

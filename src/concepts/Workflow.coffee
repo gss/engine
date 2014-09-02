@@ -65,7 +65,7 @@ Workflow.prototype =
     if parent == operation
       return solution
     for child, index in parent
-      if child.push
+      if child?.push
         if child == operation 
           parent[index] = solution
         else
@@ -298,6 +298,7 @@ Workflow.prototype =
       for domain, index in problems.domains
         @merge problems.problems[index], domain
       return @
+    console.log('merge', problems, domain)
     merged = undefined
     priority = @domains.length
     position = @index + 1

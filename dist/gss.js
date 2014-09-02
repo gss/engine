@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-02) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-03) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20035,7 +20035,7 @@ Rules = (function() {
 
   Rules.prototype["if"] = {
     primitive: 1,
-    cleaning: 'solved',
+    cleaning: true,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
       var arg, condition, _i, _len, _ref;
       if (this === this.solved) {
@@ -20061,23 +20061,25 @@ Rules = (function() {
     },
     update: function(operation, continuation, scope, meta, ascender, ascending) {
       var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2;
-      console.info('branch dammit', operation.index, continuation, scope);
       (_base = operation.parent).uid || (_base.uid = '@' + (this.methods.uid = ((_base1 = this.methods).uid || (_base1.uid = 0)) + 1));
       path = continuation + operation.parent.uid;
+      debugger;
       id = scope._gss_id;
       watchers = (_base2 = this.queries.watchers)[id] || (_base2[id] = []);
-      if (!watchers.length || this.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
-        watchers.push(operation, continuation, scope);
-        this.solved.watch(null, path, operation, continuation, scope);
+      if (!watchers.length || this.indexOfTriplet(watchers, operation.parent, continuation, scope) === -1) {
+        watchers.push(operation.parent, continuation, scope);
       }
       condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
-      old = this.solved[path];
-      if (this.solved.set(null, path, condition != null ? condition : null) === condition) {
+      old = this.queries[path];
+      console.info('branch dammit', continuation, scope, [old, condition]);
+      if (!!old !== !!condition || (old === void 0 && old !== condition)) {
+        if (old !== void 0) {
+          debugger;
+          this.queries.clean(path, continuation, operation.parent, scope);
+        }
+        this.queries[path] = condition;
         index = condition && 2 || 3;
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
-        if (old !== void 0) {
-          this.solved.clean(path, continuation, operation.parent, scope);
-        }
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, path, scope, meta);
         }
@@ -20085,7 +20087,7 @@ Rules = (function() {
       }
     },
     capture: function(result, operation, continuation, scope, meta) {
-      console.log('capture', result, operation.index, continuation, this.displayName, 666);
+      console.log('capture', result, operation.index, continuation, this.displayName, 666, scope);
       if (operation.index === 1) {
         this.document.methods["if"].update.call(this.document, operation.parent[1], this.getContinuation(continuation), scope, meta, void 0, result);
         return true;
@@ -21627,9 +21629,6 @@ Domain = (function() {
     var old, path;
     this.setup();
     path = this.engine.getPath(object, property);
-    if (path === '$1[intrinsic-width]') {
-      debugger;
-    }
     old = this.values[path];
     if (old === value) {
       return;
@@ -21669,7 +21668,7 @@ Domain = (function() {
     }
     for (i = _i = 0, _len = exps.length; _i < _len; i = ++_i) {
       exp = exps[i];
-      if (exp.push) {
+      if (exp != null ? exp.push : void 0) {
         this.sanitize(exp, soft, exps, i);
       }
     }
@@ -21685,7 +21684,7 @@ Domain = (function() {
     }
     for (_i = 0, _len = operation.length; _i < _len; _i++) {
       arg = operation[_i];
-      if (arg.push) {
+      if (arg != null ? arg.push : void 0) {
         this.orphanize(arg);
       }
     }
@@ -22140,8 +22139,15 @@ Domain = (function() {
 Domain.prototype.Methods = (function() {
   function Methods() {}
 
-  Methods.prototype.value = function(value) {
-    return value;
+  Methods.prototype.value = {
+    command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
+      console.error(continuation, contd, scoped, scope);
+      if (!continuation && contd) {
+        debugger;
+        return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
+      }
+      return value;
+    }
   };
 
   Methods.prototype.framed = function(value) {
@@ -22911,7 +22917,7 @@ Workflow.prototype = {
     }
     for (index = _i = 0, _len = parent.length; _i < _len; index = ++_i) {
       child = parent[index];
-      if (child.push) {
+      if (child != null ? child.push : void 0) {
         if (child === operation) {
           parent[index] = solution;
         } else {
@@ -23243,6 +23249,7 @@ Workflow.prototype = {
       }
       return this;
     }
+    console.log('merge', problems, domain);
     merged = void 0;
     priority = this.domains.length;
     position = this.index + 1;
@@ -23419,22 +23426,34 @@ Numeric.prototype.Methods = (function(_super) {
   };
 
   Methods.prototype.get = {
-    command: function(operation, continuation, scope, meta, object, path) {
+    command: function(operation, continuation, scope, meta, object, path, contd, scoped) {
       debugger;
-      var domain, watchers;
+      var clone, domain;
+      path = this.getPath(object, path);
       domain = this.getVariableDomain(operation, true);
       if (!domain || domain.priority < 0) {
         domain = this;
       } else if (domain !== this) {
         if (domain.structured) {
-          console.log('schedule', domain, operation, scope);
-          debugger;
-          this.Workflow(domain, operation);
+          clone = ['get', null, path, this.getContinuation(continuation || "")];
+          if (scope && scope !== this.scope) {
+            clone.push(this.identity.provide(scope));
+          }
+          clone.parent = operation.parent;
+          clone.index = operation.index;
+          clone.domain = domain;
+          console.log('schedule', domain, [operation, clone], scope);
+          this.Workflow([clone]);
+          return;
         }
       }
-      path = this.getPath(object, path);
-      watchers = domain.watchers[path];
-      return domain.watch(object, path, operation, this.getContinuation(continuation || ""), scope);
+      if (scoped) {
+        scoped = this.engine.identity.solve(scoped);
+      } else {
+        scoped = scope;
+      }
+      console.error('wtf', scoped);
+      return domain.watch(null, path, operation, this.getContinuation(continuation || contd || ""), scoped);
     }
   };
 
@@ -23483,7 +23502,7 @@ Abstract.prototype.Methods = (function() {
 
   Methods.prototype.get = {
     command: function(operation, continuation, scope, meta, object, property, contd) {
-      var id, prop;
+      var getter, id, prop;
       if (typeof object === 'string') {
         id = object;
       } else if (object.absolute === 'window' || object === document) {
@@ -23503,7 +23522,11 @@ Abstract.prototype.Methods = (function() {
           }
         }
       }
-      return ['get', id, property, this.getContinuation(continuation || contd || '')];
+      getter = ['get', id, property, this.getContinuation(continuation || contd || '')];
+      if (scope && scope !== this.scope) {
+        getter.push(this.identity.provide(scope));
+      }
+      return getter;
     }
   };
 
@@ -24462,7 +24485,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var contd, item, parent, pdef, solution, _base, _i, _len, _ref;
+    var contd, item, parent, pdef, solution, _base, _i, _len, _ref, _ref1, _ref2;
     if (result != null) {
       if (parent = operation.parent) {
         pdef = parent.def;
@@ -24502,8 +24525,11 @@ Expressions = (function() {
         }
       } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
         solution = ['value', result, continuation || '', operation.toString()];
-        if (operation.exported) {
-          solution.push(true);
+        if (operation.exported || (scope && scope !== this.engine.scope)) {
+          solution.push((_ref1 = operation.exported) != null ? _ref1 : null);
+        }
+        if (scope && scope !== this.engine.scope) {
+          solution.push((_ref2 = scope && this.engine.identity.provide(scope)) != null ? _ref2 : null);
         }
         solution.operation = operation;
         solution.parent = operation.parent;

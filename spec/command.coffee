@@ -173,15 +173,15 @@ describe 'GSS commands', ->
           ], [
             ['==', 
               ['get','$12322','width','.box$12322'],
-              ["value",111,"","get,$12322,intrinsic-width,.box$12322"]]
+              ["value",111, '.box$12322',"get,$12322,intrinsic-width,.box$12322"]]
           ], [
             ['==', 
               ['get','$34222','width','.box$34222'],
-              ["value",222,"","get,$34222,intrinsic-width,.box$34222"]]
+              ["value",222, '.box$34222',"get,$34222,intrinsic-width,.box$34222"]]
           ], [
             ['==', 
               ['get','$35346','width','.box$35346'],
-              ["value",333,"","get,$35346,intrinsic-width,.box$35346"]]
+              ["value",333, '.box$35346',"get,$35346,intrinsic-width,.box$35346"]]
           ]
         ]
         expect(solution).to.eql
@@ -377,13 +377,13 @@ describe 'GSS commands', ->
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 1110, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["value", 1110, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
                   ]
                 ],
                 [
                   ["==",
                     ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 1110, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["value", 1110, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
                   ]
                 ]
               ]
@@ -416,13 +416,13 @@ describe 'GSS commands', ->
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
                   ]
                 ],
                 [
                   ["==",
                     ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
                   ]
                 ]
               ]
@@ -454,13 +454,13 @@ describe 'GSS commands', ->
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
                   ]
                 ],
                 [
                   ["==",
                     ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 111, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
                   ]
                 ]
               ]
@@ -474,13 +474,13 @@ describe 'GSS commands', ->
                 [
                   ["==",
                     ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 0, "", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["value", 0, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
                   ]
                 ],
                 [
                   ["==",
                     ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 0, "", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["value", 0, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
                   ]
                 ]
               ]

@@ -130,7 +130,7 @@ describe 'Styles', ->
         'border-bottom-style': 'double'
         'border-left-style': 'ridge'
 
-  describe 'transformations', ->
+  xdescribe 'transformations', ->
     it 'should generate matrix', ->
       debugger
       engine.solve [

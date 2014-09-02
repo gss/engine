@@ -46,21 +46,30 @@ class Numeric::Methods extends Domain::Methods
     return @constraints[object[0]]
 
   get: 
-    command: (operation, continuation, scope, meta, object, path) ->
+    command: (operation, continuation, scope, meta, object, path, contd, scoped) ->
       debugger
+      path = @getPath(object, path)
 
       domain = @getVariableDomain(operation, true)
       if !domain || domain.priority < 0
         domain = @
       else if domain != @
         if domain.structured
-          console.log('schedule', domain, operation, scope)
-          debugger
-          @Workflow(domain, operation)
-      path = @getPath(object,path)
-      watchers = domain.watchers[path]
-      #if continuation || !watchers || watchers.indexOf(operation) == -1
-      return domain.watch(object, path, operation, @getContinuation(continuation || ""), scope)
+          clone = ['get', null, path, @getContinuation(continuation || "")]
+          if scope && scope != @scope
+            clone.push(@identity.provide(scope))
+          clone.parent = operation.parent
+          clone.index = operation.index
+          clone.domain = domain
+          console.log('schedule', domain, [operation, clone], scope)
+          @Workflow([clone])
+          return
+      if scoped
+        scoped = @engine.identity.solve(scoped)
+      else
+        scoped = scope
+      console.error('wtf', scoped)
+      return domain.watch(null, path, operation, @getContinuation(continuation || contd || ""), scoped)
 
 for property, value of Selectors::
   Numeric::Methods::[property] = value

@@ -106,7 +106,7 @@ class Domain
           obj = @objects[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           obj[prop] = true
-      
+
     return @get(path)
 
   unwatch: (object, property, operation, continuation, scope) ->
@@ -152,8 +152,6 @@ class Domain
     @setup()
 
     path = @engine.getPath(object, property)
-    if path == '$1[intrinsic-width]'
-      debugger
     old = @values[path]
     return if old == value
 
@@ -178,7 +176,7 @@ class Domain
       unless isFinite(parseInt(prop))
         delete exps[prop]
     for exp, i in exps
-      if exp.push
+      if exp?.push
         @sanitize exp, soft, exps, i
     exps.parent = parent
     exps.index  = index
@@ -188,7 +186,7 @@ class Domain
     if operation.domain
       delete operation.domain
     for arg in operation
-      if arg.push
+      if arg?.push
         @orphanize arg
     operation
 
@@ -484,8 +482,13 @@ class Domain
   DONE: 'solve'
 
 class Domain::Methods
-  value: (value) ->
-    return value
+  value: 
+    command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
+      console.error(continuation, contd, scoped, scope)
+      if !continuation && contd
+        debugger
+        return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
+      return value
 
   framed: (value) ->
     return value
