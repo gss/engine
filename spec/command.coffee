@@ -36,7 +36,7 @@ describe 'GSS commands', ->
       engine.solve [
           ['stay', ['get', ['$class','box'], 'x']]
         ]
-      chai.expect(engine.workflown.getProblems()).to.eql [
+      chai.expect(engine.updated.getProblems()).to.eql [
           [['stay', ['get', '$12322', 'x', '.box$12322']]]
           [['stay', ['get', '$34222', 'x', '.box$34222']]]
         ]
@@ -52,7 +52,7 @@ describe 'GSS commands', ->
           ['stay', ['get', ['$class','box']  , 'y'    ]]
           ['stay', ['get', ['$class','block'], 'width']]
         ]
-      chai.expect(engine.workflown.getProblems()).to.eql [
+      chai.expect(engine.updated.getProblems()).to.eql [
           # break up stays to allow multiple plural queries
           [['stay', ['get', '$12322','x'    ,'.box$12322'  ]]]
           [['stay', ['get', '$34222','x'    ,'.box$34222'  ]]] 
@@ -71,7 +71,7 @@ describe 'GSS commands', ->
         ['==', ['get', ['$class','box'], 'width'],['get','grid-col']]
         ['==', 100,['get','grid-col']]
       ], '%'
-      chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [[
+      chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
         ['==', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322"]]
         ['==', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222"]]
         ['==', 100, ['get', "", 'grid-col',"%"]]
@@ -87,7 +87,7 @@ describe 'GSS commands', ->
         ['==', ['get',['$class','box'],'width'],['get','grid-col']]
         ['==', 100, ['get','grid-col']]
       ]
-      expect(engine.workflown.getProblems()).to.eql [[
+      expect(engine.updated.getProblems()).to.eql [[
         ['==', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322"]]
         ['==', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222"]]
         ['==', 100,['get', '', 'grid-col', ""]]
@@ -99,7 +99,7 @@ describe 'GSS commands', ->
       engine.solve [
         ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
       ], (solution) ->
-        expect(engine.workflown.getProblems()).to.eql [[
+        expect(engine.updated.getProblems()).to.eql [[
           ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
           ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
           ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
@@ -109,7 +109,7 @@ describe 'GSS commands', ->
 
         engine.then (solution) ->
 
-          expect(engine.workflown.getProblems()).to.eql [
+          expect(engine.updated.getProblems()).to.eql [
             [
               ['remove', '.box$34222']
               ['remove', '.box$34222→#box1']
@@ -121,7 +121,7 @@ describe 'GSS commands', ->
 
           engine.then (solution) ->
 
-            expect(engine.workflown.getProblems()).to.eql [[
+            expect(engine.updated.getProblems()).to.eql [[
               ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
             ]]
 
@@ -130,7 +130,7 @@ describe 'GSS commands', ->
 
             engine.then (solution) ->
 
-              expect(engine.workflown.getProblems()).to.eql [
+              expect(engine.updated.getProblems()).to.eql [
                 [
                   ['remove', '.box$box1']
                   ['remove', '.box$box1→#box1']
@@ -142,7 +142,7 @@ describe 'GSS commands', ->
               scope.appendChild(box1)
 
               engine.then (solution) ->
-                expect(engine.workflown.getProblems()).to.eql [[
+                expect(engine.updated.getProblems()).to.eql [[
                   ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
                   ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
                   ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
@@ -165,7 +165,7 @@ describe 'GSS commands', ->
           ['get', ['$class','box'], 'width'],
           ['get', ['$class','box'], 'intrinsic-width']]
       ], (solution) ->
-        chai.expect(stringify engine.workflown.getProblems()).to.eql stringify  [
+        chai.expect(stringify engine.updated.getProblems()).to.eql stringify  [
           [
             ['get','$12322','intrinsic-width','.box$12322']
             ['get','$34222','intrinsic-width','.box$34222']
@@ -198,7 +198,7 @@ describe 'GSS commands', ->
         box0.parentNode.removeChild(box0)
 
         engine.once 'solve', ->
-          chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
+          chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
             [["remove",".box$12322"]],
             [["remove",".box$12322"]]
           ]
@@ -216,7 +216,7 @@ describe 'GSS commands', ->
         ['==', ['get', ['$class','box'], 'width'],['get', ['$reserved','window'], 'width']]
       ]
       engine.then ->
-        chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
+        chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
           [
             ['get','::window', 'width',".box$12322"]
           ],
@@ -245,7 +245,7 @@ describe 'GSS commands', ->
         ['>=',  ['get', 'hah'], ['get', ['$reserved','window'], 'height']]
         ['<=',  ['get', 'www'], ['get', ['$reserved','window'], 'width' ]]
       ]
-      chai.expect(stringify(engine.workflown.getProblems())).to.eql stringify [
+      chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
         [
           ["get",   "::window",   "x",   ""]
           ["get",   "::window",   "y",   ""]
@@ -280,13 +280,13 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            expect(engine.workflown.getProblems()).to.eql [
+            expect(engine.updated.getProblems()).to.eql [
                 [['==', ['get','$12322','x','.box$12322'], 100]]
                 [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
             scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>')            
           else if count is 2
-            expect(engine.workflown.getProblems()).to.eql [
+            expect(engine.updated.getProblems()).to.eql [
                 [['==', ['get','$35346','x','.box$35346'], 100]]
               ]
             engine.removeEventListener 'solve', listener
@@ -305,14 +305,14 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 [['==', ['get','$12322','x','.box$12322'], 100]]
                 [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
             res = engine.$id('34222')
             res.parentNode.removeChild res
           else if count is 2
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
               [['remove', '.box$34222']]
               [['remove', '.box$34222']]
             ]
@@ -332,7 +332,7 @@ describe 'GSS commands', ->
         listener = (e) ->
           count++
           if count is 1
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 [['==', ['get','$12322','x','.box$12322'], 100]]
                 [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
@@ -340,7 +340,7 @@ describe 'GSS commands', ->
             el.classList.remove('box')
 
           else if count is 2
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 [['remove', '.box$34222']]
                 [['remove', '.box$34222']]
               ]
@@ -369,7 +369,7 @@ describe 'GSS commands', ->
             engine.intrinsic.restyle el, "width", "1110px"
             
           else if count is 2     
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 #[
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
@@ -408,7 +408,7 @@ describe 'GSS commands', ->
           if count is 1           
             engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 #[
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
@@ -446,7 +446,7 @@ describe 'GSS commands', ->
             el = engine.$id('box1')            
             el.innerHTML = "<div style=\"width:111px;\"></div>"
           else if count is 2            
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 #[
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
@@ -466,7 +466,7 @@ describe 'GSS commands', ->
               ]
             el.innerHTML = ""            
           else if count is 3
-            chai.expect(engine.workflown.getProblems()).to.eql [
+            chai.expect(engine.updated.getProblems()).to.eql [
                 #[
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]

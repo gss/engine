@@ -24,9 +24,9 @@ class Mutations
     return @engine.engine.compile(true) unless @engine.engine.running
 
     result = @engine.engine.solve 'mutations', ->
-      @engine.workflow.queries = undefined
-      @engine.workflow.reflown = undefined
-      qualified = @queries.qualified = @engine.workflow.qualified = []
+      @engine.updating.queries = undefined
+      @engine.updating.reflown = undefined
+      qualified = @queries.qualified = @engine.updating.qualified = []
       for mutation in mutations
         switch mutation.type
           when "attributes"

@@ -1,8 +1,8 @@
 # Queue and group expressions by domain
 
-Workflower = (engine) ->
-  Workflow = (domain, problem) ->
-    if @ instanceof Workflow
+Updateer = (engine) ->
+  Update = (domain, problem) ->
+    if @ instanceof Update
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
       @problems = problem && (domain.push && problem || [problem]) || []
       return
@@ -19,7 +19,7 @@ Workflower = (engine) ->
         vardomain = @getVariableDomain(arg)
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
-        workload = new Workflow vardomain, [arg]
+        workload = new Update vardomain, [arg]
       else
         for a in arg
           if a?.push
@@ -30,7 +30,7 @@ Workflower = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            workload = @Workflow(d, arg)
+            workload = @Update(d, arg)
             break
 
       if workflow && workflow != workload
@@ -41,26 +41,26 @@ Workflower = (engine) ->
       if typeof arg[0] == 'string'
         arg = [arg]
       foreign = true
-      workflow = new @Workflow [domain != true && domain || null], [arg]
+      workflow = new @Update [domain != true && domain || null], [arg]
     if typeof problem[0] == 'string'
       workflow.wrap(problem, @)
     if start || foreign
-      if @workflow
-        if @workflow != workflow
-          return @workflow.merge(workflow)
+      if @updating
+        if @updating != workflow
+          return @updating.merge(workflow)
       else
         return workflow.each @resolve, @engine
 
     return workflow
   if @prototype
     for property, value of @prototype 
-      Workflow::[property] = value
-  Workflow::engine = engine if engine
-  return Workflow
+      Update::[property] = value
+  Update::engine = engine if engine
+  return Update
 
-Workflow = Workflower()
-Workflow.compile = Workflower
-Workflow.prototype =
+Update = Updateer()
+Update.compile = Updateer
+Update.prototype =
   substitute: (parent, operation, solution) ->
     if parent == operation
       return solution
@@ -242,7 +242,7 @@ Workflow.prototype =
                 unless probs.unwrapped
                   @problems[i].splice(p--, 1)
                   probs.unwrapped = @unwrap(probs, @domains[j], [], @problems[j])
-                  @engine.Workflow(probs.unwrapped)
+                  @engine.Update(probs.unwrapped)
                 break
               prob = prob.parent
     return
@@ -352,7 +352,7 @@ Workflow.prototype =
 
       if result
         if result.push
-          @engine.Workflow(result)
+          @engine.Update(result)
         else
           @apply(result)
           solution = @apply(result, solution || {})
@@ -376,4 +376,4 @@ Workflow.prototype =
   index: -1
 
 
-module.exports = Workflow
+module.exports = Update

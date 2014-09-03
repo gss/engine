@@ -61,7 +61,7 @@ class Numeric::Methods extends Domain::Methods
           clone.index = operation.index
           clone.domain = domain
           console.log('schedule', domain, [operation, clone], scope)
-          @Workflow([clone])
+          @Update([clone])
           return
       if scoped
         scoped = @engine.identity.solve(scoped)

@@ -79,12 +79,12 @@ describe 'Cassowary Thread', ->
 
     thread.solve 
       pad: 2
-    chai.expect(thread.workflown.solution).to.eql
+    chai.expect(thread.updated.solution).to.eql
       "actual-width": 102
     thread.solve 
       pad: 3
       pad: 4
-    chai.expect(thread.workflown.solution).to.eql
+    chai.expect(thread.updated.solution).to.eql
       "actual-width": 104
     done()
   
@@ -189,14 +189,14 @@ describe 'Cassowary Thread', ->
           ['==', ['get', '$112', 'x','.box'],10]
           ['==', ['get', '$112', 'right','.box'],100]
         ]
-      expect(thread.workflown.solution).to.eql
+      expect(thread.updated.solution).to.eql
         "$222[line-height]": 1.6
         "$112[x]": 10
         "$112[width]": 90
 
       thread.solve ['remove', '.box']
 
-      expect(thread.workflown.solution).to.eql
+      expect(thread.updated.solution).to.eql
         "$112[x]": null
         "$112[width]": null
     
@@ -207,12 +207,12 @@ describe 'Cassowary Thread', ->
           ['==', ['get','$112', 'x', '.big-box'],1000, 'required']
           ['==', ['get','$112', 'x', '.box'],50,'strong']
         ]
-      expect(thread.workflown.solution).to.eql
+      expect(thread.updated.solution).to.eql
         "$112[x]": 1000
       thread.solve [
           ['remove', '.big-box']
         ]
-      expect(thread.workflown.solution).to.eql
+      expect(thread.updated.solution).to.eql
         "$112[x]": 50
 
   

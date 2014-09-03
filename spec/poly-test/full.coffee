@@ -71,7 +71,7 @@ HTML = """
         // use intrinsic-height to avoid binding. Should be:
         // height: :window[height] - (header)[height];
         ::[height] == ::scope[intrinsic-height] - (header)[intrinsic-height];
-      }
+      } 
       // Custom combinators
       ul li !~ li {
 

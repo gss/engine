@@ -19,7 +19,7 @@ class Engine extends Domain.Events
   Method:      require('./concepts/Method')
   Property:    require('./concepts/Property')
   Console:     require('./concepts/Console')
-  Workflow:    require('./concepts/Workflow')
+  Update:    require('./concepts/Update')
   
   Properties:  require('./properties/Axioms')
 
@@ -101,10 +101,10 @@ class Engine extends Domain.Events
       for property, value of e.data
         values[property] = value
       console.log('msg', e)
-      if @workflow
-        @workflow.busy.splice(@workflow.busy.indexOf(e.target.url), 1)
-        if @workflow.busy.length
-          return @workflow.apply(e.data)
+      if @updating
+        @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+        if @updating.busy.length
+          return @updating.apply(e.data)
 
       @provide e.data
 
@@ -178,8 +178,8 @@ class Engine extends Domain.Events
     if typeof args[0] == 'object'
       if name = source || @displayName
         @console.start(reason || args[0], name)
-    unless old = @workflow
-      @engine.workflow = new @Workflow
+    unless old = @updating
+      @engine.updating = new @Update
 
     if @providing == undefined
       @providing = null
@@ -199,13 +199,13 @@ class Engine extends Domain.Events
         if args[0]?.index
           provided.index ?= args[0].index
           provided.parent ?= args[0].parent
-        @Workflow(provided)
+        @Update(provided)
       @providing = undefined
 
     if name
       @console.end(reason)
 
-    workflow = @workflow
+    workflow = @updating
     if workflow.domains.length
       if old
         if old != workflow
@@ -220,13 +220,13 @@ class Engine extends Domain.Events
 
   onSolve: (update, onlyRemoving) ->
     # Apply styles
-    if solution = update || @workflow.solution
+    if solution = update || @updating.solution
       @applier?.solve(solution)
-    else if !@workflow.reflown && !onlyRemoving
+    else if !@updating.reflown && !onlyRemoving
       return
     if @intrinsic
-      scope = @workflow.reflown || @scope
-      @workflow.reflown = undefined
+      scope = @updating.reflown || @scope
+      @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
 
 
@@ -238,8 +238,8 @@ class Engine extends Domain.Events
     # Launch another pass here if solutions caused effects
     # Effects are processed separately, then merged with found solution
     effects = {}
-    effects = @workflow.each(@resolve, @, effects)
-    if @workflow.busy?.length
+    effects = @updating.each(@resolve, @, effects)
+    if @updating.busy?.length
       return effects
     if effects && Object.keys(effects).length
       return @onSolve(effects)
@@ -247,40 +247,40 @@ class Engine extends Domain.Events
 
     # Fire up solved event if we've had remove commands that 
     # didnt cause any reactions
-    if (!solution || @workflow.problems[@workflow.index + 1]) &&
-        (@workflow.problems.length != 1 || @workflow.domains[0] != null)
+    if (!solution || @updating.problems[@updating.index + 1]) &&
+        (@updating.problems.length != 1 || @updating.domains[0] != null)
       return 
-    @workflown = @workflow
-    @workflow = undefined
+    @updated = @updating
+    @updating = undefined
     
 
-    @console.info('Solution\t   ', @workflown, solution, JSON.stringify(solution), @solved.values)
+    @console.info('Solution\t   ', @updated, solution, JSON.stringify(solution), @solved.values)
 
     # Trigger events on engine and scope node
-    @triggerEvent('solve', solution, @workflown)
+    @triggerEvent('solve', solution, @updated)
     if @scope
-      @dispatchEvent(@scope, 'solve', solution, @workflown)
+      @dispatchEvent(@scope, 'solve', solution, @updated)
 
     # Legacy events
-    @triggerEvent('solved', solution, @workflown)
+    @triggerEvent('solved', solution, @updated)
     if @scope
-      @dispatchEvent(@scope, 'solved', solution, @workflown)
+      @dispatchEvent(@scope, 'solved', solution, @updated)
 
     return solution
 
   # Accept solution from a solver and resolve it to verify
   provide: (solution) ->
     if solution.operation
-      return @engine.workflow.provide solution
+      return @engine.updating.provide solution
     if !solution.push
-      return @workflow.each(@resolve, @, solution) || @onSolve()
+      return @updating.each(@resolve, @, solution) || @onSolve()
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
     else
-      return @Workflow.apply(@, arguments)
+      return @Update.apply(@, arguments)
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
@@ -303,7 +303,7 @@ class Engine extends Domain.Events
         (workflow.busy ||= []).push(result.url)
       else
         if providing && @providing
-          workflow.merge(@Workflow(@frame || true, @providing))
+          workflow.merge(@Update(@frame || true, @providing))
           workflow.optimize()
 
         if result?.length == 1
@@ -313,7 +313,7 @@ class Engine extends Domain.Events
       @console.end()
 
     # Broadcast operations without specific domain (e.g. remove)
-    else
+    else  
       others = []
       removes = []
       if problems[0] == 'remove'
@@ -368,7 +368,7 @@ class Engine extends Domain.Events
         for property, method of domain::Methods::
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
-    @Workflow = Engine::Workflow.compile(@)
+    @Update = Engine::Update.compile(@)
     @mutations?.connect()
 
   # Comile user provided features specific to this engine

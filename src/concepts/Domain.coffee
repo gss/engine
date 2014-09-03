@@ -136,7 +136,7 @@ class Domain
     if object && !object.push
       if object instanceof Domain
         return# object
-      if @workflow
+      if @updating
         return @merger(object, meta)
       else
         return @engine.solve @displayName || 'GSS', @merger, object, meta, @
@@ -160,7 +160,7 @@ class Domain
     else
       delete @values[path]
     # notify subscribers
-    if @workflow
+    if @updating
       @engine.callback(@, path, value, meta)
     else
       @engine.solve @displayName || 'GSS', (domain) ->
@@ -196,7 +196,7 @@ class Domain
         break unless watcher
         if watcher.domain != domain || !value?
           # Re-evaluate expression
-          @Workflow([@sanitize(@getRootOperation(watcher, domain))])
+          @Update([@sanitize(@getRootOperation(watcher, domain))])
         else
           if watcher.parent.domain == domain
             domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
@@ -209,11 +209,11 @@ class Domain
       for url, worker of @workers
         if values = worker.values
           if values.hasOwnProperty(path)
-            @Workflow(worker, [['value', value, path]])
+            @Update(worker, [['value', value, path]])
 
-    if exports = @workflow?.exports?[path]
+    if exports = @updating?.exports?[path]
       for domain in exports
-        @Workflow(domain, [['value', value, path]])
+        @Update(domain, [['value', value, path]])
 
     if variable = @variables[path]
       for op in variable.operations
@@ -221,7 +221,7 @@ class Domain
           if value == null
             while op.domain == @
               op = op.parent
-          @Workflow(@sanitize(@getRootOperation(op)))
+          @Update(@sanitize(@getRootOperation(op)))
 
     return
 

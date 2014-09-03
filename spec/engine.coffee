@@ -202,7 +202,7 @@ describe 'GSS engine', ->
       assert !button2, "button2 doesn't exist"
     
     it 'engine remains idle',  ->            
-      assert engine.workflown == undefined
+      assert engine.updated == undefined
     
     it 'after solving the buttons should have right', (done) ->
       onSolved = (e) ->
@@ -374,7 +374,7 @@ describe 'GSS engine', ->
     
       it 'Runs commands from sourceNode', (done) ->
         listener = (e) ->        
-          expect(engine.workflown.getProblems()).to.eql [
+          expect(engine.updated.getProblems()).to.eql [
               [['==', ['get','$box1','x','style$style1↓.box$box1'], 100]]
               [['==', ['get','$box2','x','style$style1↓.box$box2'], 100]]
             ]

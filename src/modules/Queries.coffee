@@ -39,7 +39,7 @@ class Queries
       while @ascending[index]
         contd = @ascending[index + 1]
         collection = @[contd]
-        if old = @engine.workflow?.queries?[contd]?[1]
+        if old = @engine.updating?.queries?[contd]?[1]
           collection = collection.slice()
           for item, i in collection by -1
             if old.indexOf(item) > -1
@@ -54,7 +54,7 @@ class Queries
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key) ->
     collection = @get(continuation)
-    update = (@engine.workflow.queries ||= {})[continuation] ||= []
+    update = (@engine.updating.queries ||= {})[continuation] ||= []
     if update[1] == undefined 
       update[1] = (copy = collection?.slice?()) || null
 
@@ -83,7 +83,7 @@ class Queries
     if typeof operation == 'string'
       result = @[operation]
       # Return stuff that was removed this tick when cleaning up
-      if old && (updated = @engine.workflow.queries?[operation]?[3])
+      if old && (updated = @engine.updating.queries?[operation]?[3])
         if updated.length != undefined
           if result
             if result.length == undefined
@@ -162,7 +162,7 @@ class Queries
             duplicate = index
 
     if operation && length && manual
-      ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
+      ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
@@ -193,7 +193,7 @@ class Queries
     if continuation
       collection = @get(continuation)
       if collection?.length != undefined
-        ((@engine.workflow.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
+        ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
 
       unless removed == false
@@ -244,9 +244,9 @@ class Queries
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    if @engine.workflow.queries# && node != scope
+    if @engine.updating.queries# && node != scope
       query = @engine.getQueryPath(operation, node)
-      return @engine.workflow.queries[query]?[0]
+      return @engine.updating.queries[query]?[0]
 
   chain: (left, right, collection, continuation) ->
     if left
@@ -285,16 +285,16 @@ class Queries
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
 
-    @engine.workflow.queries ||= {}
+    @engine.updating.queries ||= {}
 
     # Normalize query to reuse results
 
     
-    if pathed = @engine.workflow.queries[path]
+    if pathed = @engine.updating.queries[path]
       old = pathed[1]
 
     if query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
-      if queried = @engine.workflow.queries[query]
+      if queried = @engine.updating.queries[query]
         old ?= queried[1]
         result ?= queried[0]
 
@@ -347,8 +347,8 @@ class Queries
     
     #return if noop
       
-    group = @engine.workflow.queries[query] ||= [] if query
-    group = @engine.workflow.queries[path] ||= group || []
+    group = @engine.updating.queries[query] ||= [] if query
+    group = @engine.updating.queries[path] ||= group || []
 
     group[0] ||= result
     group[1] ||= old
@@ -360,8 +360,8 @@ class Queries
     return added
 
   set: (path, result) ->
-    if @engine.workflow
-      update = (@engine.workflow.queries ||= {})[path] ||= []
+    if @engine.updating
+      update = (@engine.updating.queries ||= {})[path] ||= []
       if update[1] == undefined 
         update[1] = @[path] || null
         if update[1]?.length
@@ -379,7 +379,7 @@ class Queries
 
       delete @[path]
 
-    if removed = @engine.workflow.queries?[path]?[3]
+    if removed = @engine.updating.queries?[path]?[3]
       for item in removed
         @match(item, '$pseudo', 'next', undefined, path)
         @match(item, '$pseudo', 'first', undefined, path)

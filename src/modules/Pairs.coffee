@@ -91,8 +91,8 @@ class Pairs
 
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
-    leftUpdate = @engine.workflow.queries?[left]
-    rightUpdate = @engine.workflow.queries?[right]
+    leftUpdate = @engine.updating.queries?[left]
+    rightUpdate = @engine.updating.queries?[right]
 
     values = [
       leftUpdate?[0] ? @engine.queries.get(left)

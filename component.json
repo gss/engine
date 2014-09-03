@@ -30,7 +30,7 @@
     "lib/concepts/Parser.js",
     "lib/concepts/Property.js",
     "lib/concepts/Style.js",
-    "lib/concepts/Workflow.js",
+    "lib/concepts/Update.js",
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",

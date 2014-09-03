@@ -19092,7 +19092,7 @@ Engine = (function(_super) {
 
   Engine.prototype.Console = require('./concepts/Console');
 
-  Engine.prototype.Workflow = require('./concepts/Workflow');
+  Engine.prototype.Update = require('./concepts/Update');
 
   Engine.prototype.Properties = require('./properties/Axioms');
 
@@ -19180,10 +19180,10 @@ Engine = (function(_super) {
         values[property] = value;
       }
       console.log('msg', e);
-      if (this.workflow) {
-        this.workflow.busy.splice(this.workflow.busy.indexOf(e.target.url), 1);
-        if (this.workflow.busy.length) {
-          return this.workflow.apply(e.data);
+      if (this.updating) {
+        this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
+        if (this.updating.busy.length) {
+          return this.updating.apply(e.data);
         }
       }
       return this.provide(e.data);
@@ -19277,8 +19277,8 @@ Engine = (function(_super) {
         this.console.start(reason || args[0], name);
       }
     }
-    if (!(old = this.workflow)) {
-      this.engine.workflow = new this.Workflow;
+    if (!(old = this.updating)) {
+      this.engine.updating = new this.Update;
     }
     if (this.providing === void 0) {
       this.providing = null;
@@ -19306,14 +19306,14 @@ Engine = (function(_super) {
             provided.parent = args[0].parent;
           }
         }
-        this.Workflow(provided);
+        this.Update(provided);
       }
       this.providing = void 0;
     }
     if (name) {
       this.console.end(reason);
     }
-    workflow = this.workflow;
+    workflow = this.updating;
     if (workflow.domains.length) {
       if (old) {
         if (old !== workflow) {
@@ -19335,16 +19335,16 @@ Engine = (function(_super) {
 
   Engine.prototype.onSolve = function(update, onlyRemoving) {
     var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
-    if (solution = update || this.workflow.solution) {
+    if (solution = update || this.updating.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
       }
-    } else if (!this.workflow.reflown && !onlyRemoving) {
+    } else if (!this.updating.reflown && !onlyRemoving) {
       return;
     }
     if (this.intrinsic) {
-      scope = this.workflow.reflown || this.scope;
-      this.workflow.reflown = void 0;
+      scope = this.updating.reflown || this.scope;
+      this.updating.reflown = void 0;
       if ((_ref1 = this.intrinsic) != null) {
         _ref1.each(scope, this.intrinsic.update);
       }
@@ -19354,26 +19354,26 @@ Engine = (function(_super) {
     }
     this.solved.merge(solution);
     effects = {};
-    effects = this.workflow.each(this.resolve, this, effects);
-    if ((_ref3 = this.workflow.busy) != null ? _ref3.length : void 0) {
+    effects = this.updating.each(this.resolve, this, effects);
+    if ((_ref3 = this.updating.busy) != null ? _ref3.length : void 0) {
       return effects;
     }
     if (effects && Object.keys(effects).length) {
       return this.onSolve(effects);
     }
-    if ((!solution || this.workflow.problems[this.workflow.index + 1]) && (this.workflow.problems.length !== 1 || this.workflow.domains[0] !== null)) {
+    if ((!solution || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null)) {
       return;
     }
-    this.workflown = this.workflow;
-    this.workflow = void 0;
-    this.console.info('Solution\t   ', this.workflown, solution, JSON.stringify(solution), this.solved.values);
-    this.triggerEvent('solve', solution, this.workflown);
+    this.updated = this.updating;
+    this.updating = void 0;
+    this.console.info('Solution\t   ', this.updated, solution, JSON.stringify(solution), this.solved.values);
+    this.triggerEvent('solve', solution, this.updated);
     if (this.scope) {
-      this.dispatchEvent(this.scope, 'solve', solution, this.workflown);
+      this.dispatchEvent(this.scope, 'solve', solution, this.updated);
     }
-    this.triggerEvent('solved', solution, this.workflown);
+    this.triggerEvent('solved', solution, this.updated);
     if (this.scope) {
-      this.dispatchEvent(this.scope, 'solved', solution, this.workflown);
+      this.dispatchEvent(this.scope, 'solved', solution, this.updated);
     }
     return solution;
   };
@@ -19381,10 +19381,10 @@ Engine = (function(_super) {
   Engine.prototype.provide = function(solution) {
     var _base;
     if (solution.operation) {
-      return this.engine.workflow.provide(solution);
+      return this.engine.updating.provide(solution);
     }
     if (!solution.push) {
-      return this.workflow.each(this.resolve, this, solution) || this.onSolve();
+      return this.updating.each(this.resolve, this, solution) || this.onSolve();
     }
     if (this.providing !== void 0) {
       if (!this.hasOwnProperty('providing')) {
@@ -19392,7 +19392,7 @@ Engine = (function(_super) {
       }
       (this.providing || (this.providing = [])).push(Array.prototype.slice.call(arguments, 0));
     } else {
-      return this.Workflow.apply(this, arguments);
+      return this.Update.apply(this, arguments);
     }
   };
 
@@ -19423,7 +19423,7 @@ Engine = (function(_super) {
         (workflow.busy || (workflow.busy = [])).push(result.url);
       } else {
         if (providing && this.providing) {
-          workflow.merge(this.Workflow(this.frame || true, this.providing));
+          workflow.merge(this.Update(this.frame || true, this.providing));
           workflow.optimize();
         }
         if ((result != null ? result.length : void 0) === 1) {
@@ -19524,7 +19524,7 @@ Engine = (function(_super) {
         }
       }
     }
-    this.Workflow = Engine.prototype.Workflow.compile(this);
+    this.Update = Engine.prototype.Update.compile(this);
     return (_ref3 = this.mutations) != null ? _ref3.connect() : void 0;
   };
 
@@ -21607,7 +21607,7 @@ Domain = (function() {
       if (object instanceof Domain) {
         return;
       }
-      if (this.workflow) {
+      if (this.updating) {
         return this.merger(object, meta);
       } else {
         return this.engine.solve(this.displayName || 'GSS', this.merger, object, meta, this);
@@ -21640,7 +21640,7 @@ Domain = (function() {
     } else {
       delete this.values[path];
     }
-    if (this.workflow) {
+    if (this.updating) {
       this.engine.callback(this, path, value, meta);
     } else {
       this.engine.solve(this.displayName || 'GSS', function(domain) {
@@ -21702,7 +21702,7 @@ Domain = (function() {
           break;
         }
         if (watcher.domain !== domain || (value == null)) {
-          this.Workflow([this.sanitize(this.getRootOperation(watcher, domain))]);
+          this.Update([this.sanitize(this.getRootOperation(watcher, domain))]);
         } else {
           if (watcher.parent.domain === domain) {
             domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
@@ -21721,15 +21721,15 @@ Domain = (function() {
         worker = _ref1[url];
         if (values = worker.values) {
           if (values.hasOwnProperty(path)) {
-            this.Workflow(worker, [['value', value, path]]);
+            this.Update(worker, [['value', value, path]]);
           }
         }
       }
     }
-    if (exports = (_ref2 = this.workflow) != null ? (_ref3 = _ref2.exports) != null ? _ref3[path] : void 0 : void 0) {
+    if (exports = (_ref2 = this.updating) != null ? (_ref3 = _ref2.exports) != null ? _ref3[path] : void 0 : void 0) {
       for (_j = 0, _len1 = exports.length; _j < _len1; _j++) {
         domain = exports[_j];
-        this.Workflow(domain, [['value', value, path]]);
+        this.Update(domain, [['value', value, path]]);
       }
     }
     if (variable = this.variables[path]) {
@@ -21742,7 +21742,7 @@ Domain = (function() {
               op = op.parent;
             }
           }
-          this.Workflow(this.sanitize(this.getRootOperation(op)));
+          this.Update(this.sanitize(this.getRootOperation(op)));
         }
       }
     }
@@ -22813,14 +22813,14 @@ Matcher = function(name, keywords, types, keys, required, pad, depth, initial, c
 module.exports = Style;
 
 });
-require.register("gss/lib/concepts/Workflow.js", function(exports, require, module){
-var Workflow, Workflower;
+require.register("gss/lib/concepts/Update.js", function(exports, require, module){
+var Update, Updateer;
 
-Workflower = function(engine) {
-  var Workflow, property, value, _ref;
-  Workflow = function(domain, problem) {
+Updateer = function(engine) {
+  var Update, property, value, _ref;
+  Update = function(domain, problem) {
     var a, arg, d, foreign, index, offset, start, vardomain, workflow, workload, _base, _i, _j, _len, _len1;
-    if (this instanceof Workflow) {
+    if (this instanceof Update) {
       this.domains = domain && (domain.push && domain || [domain]) || [];
       this.problems = problem && (domain.push && problem || [problem]) || [];
       return;
@@ -22847,7 +22847,7 @@ Workflower = function(engine) {
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;
         }
-        workload = new Workflow(vardomain, [arg]);
+        workload = new Update(vardomain, [arg]);
       } else {
         for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
           a = arg[_j];
@@ -22861,7 +22861,7 @@ Workflower = function(engine) {
             } else {
               d = domain || true;
             }
-            workload = this.Workflow(d, arg);
+            workload = this.Update(d, arg);
             break;
           }
         }
@@ -22877,15 +22877,15 @@ Workflower = function(engine) {
         arg = [arg];
       }
       foreign = true;
-      workflow = new this.Workflow([domain !== true && domain || null], [arg]);
+      workflow = new this.Update([domain !== true && domain || null], [arg]);
     }
     if (typeof problem[0] === 'string') {
       workflow.wrap(problem, this);
     }
     if (start || foreign) {
-      if (this.workflow) {
-        if (this.workflow !== workflow) {
-          return this.workflow.merge(workflow);
+      if (this.updating) {
+        if (this.updating !== workflow) {
+          return this.updating.merge(workflow);
         }
       } else {
         return workflow.each(this.resolve, this.engine);
@@ -22897,20 +22897,20 @@ Workflower = function(engine) {
     _ref = this.prototype;
     for (property in _ref) {
       value = _ref[property];
-      Workflow.prototype[property] = value;
+      Update.prototype[property] = value;
     }
   }
   if (engine) {
-    Workflow.prototype.engine = engine;
+    Update.prototype.engine = engine;
   }
-  return Workflow;
+  return Update;
 };
 
-Workflow = Workflower();
+Update = Updateer();
 
-Workflow.compile = Workflower;
+Update.compile = Updateer;
 
-Workflow.prototype = {
+Update.prototype = {
   substitute: function(parent, operation, solution) {
     var child, index, _i, _len;
     if (parent === operation) {
@@ -23159,7 +23159,7 @@ Workflow.prototype = {
                 if (!probs.unwrapped) {
                   this.problems[i].splice(p--, 1);
                   probs.unwrapped = this.unwrap(probs, this.domains[j], [], this.problems[j]);
-                  this.engine.Workflow(probs.unwrapped);
+                  this.engine.Update(probs.unwrapped);
                 }
                 break;
               }
@@ -23316,7 +23316,7 @@ Workflow.prototype = {
       }
       if (result) {
         if (result.push) {
-          this.engine.Workflow(result);
+          this.engine.Update(result);
         } else {
           this.apply(result);
           solution = this.apply(result, solution || {});
@@ -23347,7 +23347,7 @@ Workflow.prototype = {
   index: -1
 };
 
-module.exports = Workflow;
+module.exports = Update;
 
 });
 require.register("gss/lib/domains/Numeric.js", function(exports, require, module){
@@ -23444,7 +23444,7 @@ Numeric.prototype.Methods = (function(_super) {
           clone.index = operation.index;
           clone.domain = domain;
           console.log('schedule', domain, [operation, clone], scope);
-          this.Workflow([clone]);
+          this.Update([clone]);
           return;
         }
       }
@@ -23995,14 +23995,14 @@ Intrinsic = (function(_super) {
     reflown = void 0;
     while (node) {
       if (node === this.scope) {
-        if (this.engine.workflow.reflown) {
-          reflown = this.getCommonParent(reflown, this.engine.workflow);
+        if (this.engine.updating.reflown) {
+          reflown = this.getCommonParent(reflown, this.engine.updating);
         } else {
           reflown = this.scope;
         }
         break;
       }
-      if (node === this.engine.workflow.reflown) {
+      if (node === this.engine.updating.reflown) {
         break;
       }
       if (id = node._gss_id) {
@@ -24012,7 +24012,7 @@ Intrinsic = (function(_super) {
       }
       node = node.parentNode;
     }
-    return this.engine.workflow.reflown = reflown;
+    return this.engine.updating.reflown = reflown;
   };
 
   Intrinsic.prototype.getCommonParent = function(a, b) {
@@ -24914,7 +24914,7 @@ Queries = (function() {
       while (this.ascending[index]) {
         contd = this.ascending[index + 1];
         collection = this[contd];
-        if (old = (_ref = this.engine.workflow) != null ? (_ref1 = _ref.queries) != null ? (_ref2 = _ref1[contd]) != null ? _ref2[1] : void 0 : void 0 : void 0) {
+        if (old = (_ref = this.engine.updating) != null ? (_ref1 = _ref.queries) != null ? (_ref2 = _ref1[contd]) != null ? _ref2[1] : void 0 : void 0 : void 0) {
           collection = collection.slice();
           for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
             item = collection[i];
@@ -24936,7 +24936,7 @@ Queries = (function() {
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
     var collection, copy, el, index, keys, update, _base, _base1, _i, _len;
     collection = this.get(continuation);
-    update = (_base = ((_base1 = this.engine.workflow).queries || (_base1.queries = {})))[continuation] || (_base[continuation] = []);
+    update = (_base = ((_base1 = this.engine.updating).queries || (_base1.queries = {})))[continuation] || (_base[continuation] = []);
     if (update[1] === void 0) {
       update[1] = (copy = collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0) || null;
     }
@@ -24970,7 +24970,7 @@ Queries = (function() {
     var result, upd, updated, _i, _len, _ref, _ref1;
     if (typeof operation === 'string') {
       result = this[operation];
-      if (old && (updated = (_ref = this.engine.workflow.queries) != null ? (_ref1 = _ref[operation]) != null ? _ref1[3] : void 0 : void 0)) {
+      if (old && (updated = (_ref = this.engine.updating.queries) != null ? (_ref1 = _ref[operation]) != null ? _ref1[3] : void 0 : void 0)) {
         if (updated.length !== void 0) {
           if (result) {
             if (result.length === void 0) {
@@ -25073,7 +25073,7 @@ Queries = (function() {
       }
     }
     if (operation && length && manual) {
-      (_base = ((_base1 = ((_base2 = this.engine.workflow).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
+      (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       if ((index = collection.indexOf(node)) > -1) {
         if (keys) {
           if (keys[index] !== manual) {
@@ -25108,7 +25108,7 @@ Queries = (function() {
     if (continuation) {
       collection = this.get(continuation);
       if ((collection != null ? collection.length : void 0) !== void 0) {
-        (_base = ((_base1 = ((_base2 = this.engine.workflow).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
+        (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       }
       removed = this.removeFromCollection(node, continuation, operation, scope, manual);
       if (removed !== false) {
@@ -25163,9 +25163,9 @@ Queries = (function() {
   Queries.prototype.fetch = function(node, args, operation, continuation, scope) {
     var query, _ref;
     node || (node = this.engine.getContext(args, operation, scope, node));
-    if (this.engine.workflow.queries) {
+    if (this.engine.updating.queries) {
       query = this.engine.getQueryPath(operation, node);
-      return (_ref = this.engine.workflow.queries[query]) != null ? _ref[0] : void 0;
+      return (_ref = this.engine.updating.queries[query]) != null ? _ref[0] : void 0;
     }
   };
 
@@ -25220,12 +25220,12 @@ Queries = (function() {
     node || (node = this.engine.getContext(args, operation, scope, node));
     path = this.engine.getQueryPath(operation, continuation);
     old = this.get(path);
-    (_base = this.engine.workflow).queries || (_base.queries = {});
-    if (pathed = this.engine.workflow.queries[path]) {
+    (_base = this.engine.updating).queries || (_base.queries = {});
+    if (pathed = this.engine.updating.queries[path]) {
       old = pathed[1];
     }
     if (query = !operation.def.relative && this.engine.getQueryPath(operation, node, scope)) {
-      if (queried = this.engine.workflow.queries[query]) {
+      if (queried = this.engine.updating.queries[query]) {
         if (old == null) {
           old = queried[1];
         }
@@ -25285,9 +25285,9 @@ Queries = (function() {
       }
     }
     if (query) {
-      group = (_base2 = this.engine.workflow.queries)[query] || (_base2[query] = []);
+      group = (_base2 = this.engine.updating.queries)[query] || (_base2[query] = []);
     }
-    group = (_base3 = this.engine.workflow.queries)[path] || (_base3[path] = group || []);
+    group = (_base3 = this.engine.updating.queries)[path] || (_base3[path] = group || []);
     group[0] || (group[0] = result);
     group[1] || (group[1] = old);
     if (result === old) {
@@ -25299,8 +25299,8 @@ Queries = (function() {
 
   Queries.prototype.set = function(path, result) {
     var index, item, removed, update, _base, _base1, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
-    if (this.engine.workflow) {
-      update = (_base = ((_base1 = this.engine.workflow).queries || (_base1.queries = {})))[path] || (_base[path] = []);
+    if (this.engine.updating) {
+      update = (_base = ((_base1 = this.engine.updating).queries || (_base1.queries = {})))[path] || (_base[path] = []);
       if (update[1] === void 0) {
         update[1] = this[path] || null;
         if ((_ref = update[1]) != null ? _ref.length : void 0) {
@@ -25322,7 +25322,7 @@ Queries = (function() {
     } else {
       delete this[path];
     }
-    if (removed = (_ref1 = this.engine.workflow.queries) != null ? (_ref2 = _ref1[path]) != null ? _ref2[3] : void 0 : void 0) {
+    if (removed = (_ref1 = this.engine.updating.queries) != null ? (_ref2 = _ref1[path]) != null ? _ref2[3] : void 0 : void 0) {
       for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
         item = removed[_j];
         this.match(item, '$pseudo', 'next', void 0, path);
@@ -25440,9 +25440,9 @@ Mutations = (function() {
     }
     result = this.engine.engine.solve('mutations', function() {
       var mutation, qualified, _i, _len;
-      this.engine.workflow.queries = void 0;
-      this.engine.workflow.reflown = void 0;
-      qualified = this.queries.qualified = this.engine.workflow.qualified = [];
+      this.engine.updating.queries = void 0;
+      this.engine.updating.reflown = void 0;
+      qualified = this.queries.qualified = this.engine.updating.qualified = [];
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         switch (mutation.type) {
@@ -25808,8 +25808,8 @@ Pairs = (function() {
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
     var added, cleaned, cleaning, contd, el, index, leftNew, leftOld, leftUpdate, object, padded, pair, removed, rightNew, rightOld, rightUpdate, sorted, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
-    leftUpdate = (_ref = this.engine.workflow.queries) != null ? _ref[left] : void 0;
-    rightUpdate = (_ref1 = this.engine.workflow.queries) != null ? _ref1[right] : void 0;
+    leftUpdate = (_ref = this.engine.updating.queries) != null ? _ref[left] : void 0;
+    rightUpdate = (_ref1 = this.engine.updating.queries) != null ? _ref1[right] : void 0;
     values = [(_ref2 = leftUpdate != null ? leftUpdate[0] : void 0) != null ? _ref2 : this.engine.queries.get(left), leftUpdate ? leftUpdate[1] : this.engine.queries.get(left), (_ref3 = rightUpdate != null ? rightUpdate[0] : void 0) != null ? _ref3 : this.engine.queries.get(right), rightUpdate ? rightUpdate[1] : this.engine.queries.get(right)];
     sorted = values.slice().sort(function(a, b) {
       var _ref4, _ref5;
@@ -31648,7 +31648,7 @@ module.exports = {
     "lib/concepts/Parser.js",
     "lib/concepts/Property.js",
     "lib/concepts/Style.js",
-    "lib/concepts/Workflow.js",
+    "lib/concepts/Update.js",
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
