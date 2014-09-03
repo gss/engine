@@ -1927,7 +1927,7 @@ describe 'End - to - End', ->
   # VFL
   # ===========================================================
   
-  describe "VFL", ->
+  xdescribe "VFL", ->
   
     describe 'simple VFL', ->
   
@@ -2166,7 +2166,7 @@ describe 'End - to - End', ->
             </style>
           """ 
     
-    describe 'VFLs w/ missing elements', ->
+    xdescribe 'VFLs w/ missing elements', ->
   
       it 'should compute', (done) ->
     

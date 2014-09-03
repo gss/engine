@@ -133,7 +133,6 @@ class Intrinsic extends Numeric
 
   verify: (object, property, continuation) ->
     path = @getPath(object, property)
-    console.error(path, 'lol', @get(null, path))
     @set(null, path, @get(null, path, continuation))
 
 
@@ -197,7 +196,6 @@ class Intrinsic extends Numeric
               @set id, prop, node.offsetHeight
             else
               style = @getIntrinsicProperty(prop)
-              console.error(prop, @properties[prop])
               if @properties[style]?.matcher
                 @set id, prop, @getStyle(node, style)
               else

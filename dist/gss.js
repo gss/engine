@@ -20089,7 +20089,6 @@ Rules = (function() {
       }
     },
     capture: function(result, operation, continuation, scope, meta) {
-      console.log('capture', result, operation.index, continuation, this.displayName, 666, scope);
       if (operation.index === 1) {
         this.document.methods["if"].update.call(this.document, operation.parent[1], this.getContinuation(continuation), scope, meta, void 0, result);
         return true;
@@ -22143,7 +22142,6 @@ Domain.prototype.Methods = (function() {
 
   Methods.prototype.value = {
     command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
-      console.error(continuation, contd, scoped, scope);
       if (!continuation && contd) {
         return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
       }
@@ -23443,7 +23441,6 @@ Numeric.prototype.Methods = (function(_super) {
           clone.parent = operation.parent;
           clone.index = operation.index;
           clone.domain = domain;
-          console.log('schedule', domain, [operation, clone], scope);
           this.Update([clone]);
           return;
         }
@@ -23453,7 +23450,6 @@ Numeric.prototype.Methods = (function(_super) {
       } else {
         scoped = scope;
       }
-      console.error('wtf', scoped);
       return domain.watch(null, path, operation, this.getContinuation(continuation || contd || ""), scoped);
     }
   };
@@ -24038,7 +24034,6 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.verify = function(object, property, continuation) {
     var path;
     path = this.getPath(object, property);
-    console.error(path, 'lol', this.get(null, path));
     return this.set(null, path, this.get(null, path, continuation));
   };
 
@@ -24126,7 +24121,6 @@ Intrinsic = (function(_super) {
               break;
             default:
               style = this.getIntrinsicProperty(prop);
-              console.error(prop, this.properties[prop]);
               if ((_ref = this.properties[style]) != null ? _ref.matcher : void 0) {
                 this.set(id, prop, this.getStyle(node, style));
               } else {
@@ -24305,9 +24299,7 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identity.provide(e.target) || e;
-      console.log('scroll', e);
       return this.engine.solve(id + ' scrolled', function() {
-        debugger;
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
       });
@@ -25904,7 +25896,6 @@ Pairs = (function() {
         op = pairs[index];
         rights.push(op);
       }
-      console.error(rights.slice());
       _ref1 = this.paths;
       for (left in _ref1) {
         others = _ref1[left];
@@ -25915,7 +25906,6 @@ Pairs = (function() {
           }
         }
       }
-      console.error(rights);
       _results = [];
       for (_k = 0, _len1 = rights.length; _k < _len1; _k++) {
         right = rights[_k];

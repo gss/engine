@@ -60,14 +60,12 @@ class Numeric::Methods extends Domain::Methods
           clone.parent = operation.parent
           clone.index = operation.index
           clone.domain = domain
-          console.log('schedule', domain, [operation, clone], scope)
           @Update([clone])
           return
       if scoped
         scoped = @engine.identity.solve(scoped)
       else
         scoped = scope
-      console.error('wtf', scoped)
       return domain.watch(null, path, operation, @getContinuation(continuation || contd || ""), scoped)
 
 for property, value of Selectors::

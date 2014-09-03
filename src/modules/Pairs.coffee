@@ -173,12 +173,10 @@ class Pairs
 
       for op, index in pairs by 3
         rights.push(op)
-      console.error(rights.slice())
       for left, others of @paths
         for index, right in rights by -1
           if others.indexOf(right) > -1
             rights.splice(index, 1)
-      console.error(rights)
       for right in rights
         @engine.queries.unobserve(@engine.scope._gss_id, @engine.RIGHT, null, right.substring(1))
         delete @engine.queries[right]

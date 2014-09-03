@@ -142,7 +142,7 @@ describe 'Full page tests', ->
       clone = li.cloneNode()
       clone.id = 'li4'
       clone.innerHTML = '4'
-      console.info(777)
+      
       li.parentNode.appendChild(clone)
       engine.then (solution) ->
         expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)

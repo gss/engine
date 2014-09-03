@@ -47,9 +47,7 @@ class Document extends Abstract
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      console.log('scroll', e)
       @engine.solve id + ' scrolled', ->
-        debugger
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
 
