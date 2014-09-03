@@ -19774,8 +19774,9 @@ Conventions = (function() {
     }
     _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
     path = this.getPath(scope, property);
-    console.log(path, property, scope, 8888888, (_ref1 = this.intrinsic) != null ? _ref1.properties[property] : void 0);
-    if (scope && property && (((_ref2 = this.intrinsic) != null ? _ref2.properties[path] : void 0) != null)) {
+    if (scope && property && (((_ref1 = this.intrinsic) != null ? _ref1.properties[path] : void 0) != null)) {
+      domain = this.intrinsic;
+    } else if (scope && property && ((_ref2 = this.intrinsic) != null ? _ref2.properties[property] : void 0) && !this.intrinsic.properties[property].matcher) {
       domain = this.intrinsic;
     } else {
       _ref3 = this.domains;
@@ -23282,7 +23283,9 @@ Workflow.prototype = {
           break;
         } else if (other && domain) {
           if (((other.priority < domain.priority) || (other.priority === domain.priority && other.MAYBE && !domain.MAYBE)) && (!other.frame || other.frame === domain.frame)) {
-            priority = position;
+            if (priority === this.domains.length) {
+              priority = position;
+            }
           }
         }
       }
@@ -23966,7 +23969,7 @@ Intrinsic = (function(_super) {
       if ((j = path.indexOf('[')) > -1) {
         id = path.substring(0, j);
         property = path.substring(j + 1, path.length - 1);
-        object || (object = this.identity.solve(path.substring(0, j)));
+        object = this.identity.solve(path.substring(0, j));
         if ((prop = this.properties[property]) != null) {
           if (prop.axiom) {
             return prop.call(this, object, continuation);
@@ -23978,7 +23981,7 @@ Intrinsic = (function(_super) {
         }
       }
     }
-    return Numeric.prototype.get.apply(this, arguments);
+    return Numeric.prototype.get.call(this, object, property);
   };
 
   Intrinsic.prototype.validate = function(node) {
@@ -24119,7 +24122,7 @@ Intrinsic = (function(_super) {
               this.set(id, prop, node.offsetHeight);
               break;
             default:
-              this.set(id, prop, this.getStyle(node, this.engine.getIntrinsicProperty(prop)));
+              this.set(id, prop, this.get(id, prop));
           }
         }
       }

@@ -351,29 +351,33 @@ describe 'End - to - End', ->
 
                       done()
     describe 'intrinsic properties', ->
-      it 'should bind to scrolling', ->
+      it 'should bind to scrolling', (done) ->
         engine.once 'solve', (e) ->
           expect(stringify engine.values).to.eql stringify
-            "#floater[x]": 0
-          done()
+            "$floater[x]": 0
+          engine.once 'solve', (e) ->
+            expect(stringify engine.values).to.eql stringify
+              "$floater[x]": 20
+
+            done()
+
+          console.log('now please scroll', engine.$id('scroller'))
+          engine.$id('scroller').onscroll = ->
+            console.error(123)
+          debugger
+          engine.$id('scroller').scrollTop = 20
         container.innerHTML =  """
           <style>
             #scroller {
               height: 50px;
-              width: 10px
-              overflow: hidden;
-            }
-            #scroller:before {
-              content: "";
-              display: block;
-              height: 100px;
-              width: 10px
+              overflow: scroll;
+              font-size: 100px;
             }
           </style>
           <style type="text/gss"> 
             #floater[x] == #scroller[scroll-top]
           </style>
-          <div class="a" id="scroller"></div>
+          <div class="a" id="scroller">content</div>
           <div class="b" id="floater"></div>
         """
     describe 'css binding', ->

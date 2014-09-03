@@ -80,7 +80,7 @@ class Intrinsic extends Numeric
       if (j = path.indexOf('[')) > -1
         id = path.substring(0, j)
         property = path.substring(j + 1, path.length - 1)
-        object ||= @identity.solve(path.substring(0, j))
+        object = @identity.solve(path.substring(0, j))
 
         if (prop = @properties[property])?
           if prop.axiom
@@ -89,7 +89,7 @@ class Intrinsic extends Numeric
             return prop
           else if !prop.matcher && property.indexOf('intrinsic') == -1
             return prop.call(@, object, continuation)
-    return Numeric::get.apply(@, arguments)
+    return Numeric::get.call(@, null, path, continuation)
 
 
   # Triggered on possibly resized element by mutation observer
@@ -196,7 +196,7 @@ class Intrinsic extends Numeric
             when "height", "intrinsic-height"
               @set id, prop, node.offsetHeight
             else
-              @set id, prop, @getStyle(node, @engine.getIntrinsicProperty(prop))
+              @set id, prop, @get(id, prop)
     return
 
   @condition: ->

@@ -324,8 +324,8 @@ Workflow.prototype =
           if ((other.priority < domain.priority) || 
               (other.priority == domain.priority && other.MAYBE && !domain.MAYBE)) && 
               (!other.frame || other.frame == domain.frame)
-            #if priority == @domains.length
-            priority = position
+            if priority == @domains.length
+              priority = position
       position++
     if !merged
       @domains.splice(priority, 0, domain)
