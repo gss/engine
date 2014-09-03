@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-03) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-04) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -23292,6 +23292,9 @@ Workflow.prototype = {
       position++;
     }
     if (!merged) {
+      if (!domain) {
+        debugger;
+      }
       this.domains.splice(priority, 0, domain);
       this.problems.splice(priority, 0, problems);
     }
@@ -23981,7 +23984,7 @@ Intrinsic = (function(_super) {
         }
       }
     }
-    return Numeric.prototype.get.call(this, object, property);
+    return Numeric.prototype.get.call(this, null, path, continuation);
   };
 
   Intrinsic.prototype.validate = function(node) {
@@ -24094,7 +24097,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.update = function(node, x, y, full) {
-    var id, prop, properties;
+    var id, prop, properties, style, _ref;
     if (!this.objects) {
       return;
     }
@@ -24122,7 +24125,13 @@ Intrinsic = (function(_super) {
               this.set(id, prop, node.offsetHeight);
               break;
             default:
-              this.set(id, prop, this.get(id, prop));
+              style = this.getIntrinsicProperty(prop);
+              console.error(prop, this.properties[prop]);
+              if ((_ref = this.properties[style]) != null ? _ref.matcher : void 0) {
+                this.set(id, prop, this.getStyle(node, style));
+              } else {
+                this.set(id, prop, this.get(node, prop));
+              }
           }
         }
       }
@@ -25144,6 +25153,7 @@ Queries = (function() {
     this.unobserve(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
       if (path.charAt(0) !== this.engine.RIGHT) {
+        debugger;
         this.engine.provide(['remove', this.engine.getContinuation(path)]);
       }
     }
@@ -25452,7 +25462,7 @@ Mutations = (function() {
   };
 
   Mutations.prototype.onChildList = function(target, mutation) {
-    var added, allAdded, allChanged, allRemoved, attribute, changed, changedTags, child, firstNext, firstPrev, id, index, kls, next, node, parent, prev, prop, removed, tag, update, value, values, _base, _i, _j, _k, _l, _len, _len1, _len10, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _s;
+    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, removed, tag, update, value, values, _base, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _s, _t;
     added = [];
     removed = [];
     _ref = mutation.addedNodes;
@@ -25510,6 +25520,8 @@ Mutations = (function() {
     this.engine.queries.match(target, '>', void 0, changedTags);
     allAdded = [];
     allRemoved = [];
+    allMoved = [];
+    moved = [];
     for (_l = 0, _len3 = added.length; _l < _len3; _l++) {
       child = added[_l];
       this.engine.queries.match(child, '!>', void 0, target);
@@ -25521,7 +25533,7 @@ Mutations = (function() {
       allRemoved.push(child);
       allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'));
     }
-    allChanged = allAdded.concat(allRemoved);
+    allChanged = allAdded.concat(allRemoved, allMoved);
     update = {};
     for (_n = 0, _len5 = allChanged.length; _n < _len5; _n++) {
       node = allChanged[_n];
@@ -25588,8 +25600,18 @@ Mutations = (function() {
     }
     for (_s = 0, _len10 = allRemoved.length; _s < _len10; _s++) {
       removed = allRemoved[_s];
-      if (id = this.engine.identity.find(removed)) {
-        ((_base = this.engine.queries).removed || (_base.removed = [])).push(id);
+      if (allAdded.indexOf(removed) === -1) {
+        if (id = this.engine.identity.find(removed)) {
+          ((_base = this.engine.queries).removed || (_base.removed = [])).push(id);
+        }
+      }
+    }
+    if (this.engine.queries.removed) {
+      for (_t = 0, _len11 = allAdded.length; _t < _len11; _t++) {
+        added = allAdded[_t];
+        if ((j = this.engine.queries.removed.indexOf(this.engine.identity.find(added))) > -1) {
+          this.engine.queries.removed.splice(j, 1);
+        }
       }
     }
     return this;

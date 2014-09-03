@@ -236,6 +236,7 @@ class Queries
 
     if !result || result.length == undefined
       unless path.charAt(0) == @engine.RIGHT
+        debugger
         @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 

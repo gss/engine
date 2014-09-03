@@ -196,7 +196,13 @@ class Intrinsic extends Numeric
             when "height", "intrinsic-height"
               @set id, prop, node.offsetHeight
             else
-              @set id, prop, @get(id, prop)
+              style = @getIntrinsicProperty(prop)
+              console.error(prop, @properties[prop])
+              if @properties[style]?.matcher
+                @set id, prop, @getStyle(node, style)
+              else
+                @set id, prop, @get(node, prop)
+
     return
 
   @condition: ->

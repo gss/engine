@@ -328,6 +328,8 @@ Workflow.prototype =
               priority = position
       position++
     if !merged
+      if !domain
+        debugger
       @domains.splice(priority, 0, domain)
       @problems.splice(priority, 0, problems)
 
@@ -338,6 +340,7 @@ Workflow.prototype =
       @apply(solution) 
 
     return unless @problems[@index + 1]
+
      
     @optimize()
     while (domain = @domains[++@index]) != undefined

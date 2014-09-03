@@ -85,6 +85,8 @@ class Mutations
     @engine.queries.match(target, '>', undefined, changedTags)
     allAdded = []
     allRemoved = []
+    allMoved = []
+    moved = []
 
     for child in added
       @engine.queries.match(child, '!>', undefined, target)
@@ -93,7 +95,7 @@ class Mutations
     for child in removed
       allRemoved.push(child)
       allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'))
-    allChanged = allAdded.concat(allRemoved)
+    allChanged = allAdded.concat(allRemoved, allMoved)
 
     # Generate map of qualifiers to invalidate (to re-query native selectors)
     update = {}
@@ -139,8 +141,14 @@ class Mutations
 
     # Clean removed elements by id
     for removed in allRemoved
-      if id = @engine.identity.find(removed)
-        (@engine.queries.removed ||= []).push(id)
+      if allAdded.indexOf(removed) == -1
+        if id = @engine.identity.find(removed)
+          (@engine.queries.removed ||= []).push(id)
+
+    if @engine.queries.removed
+      for added in allAdded
+        if (j = @engine.queries.removed.indexOf(@engine.identity.find(added))) > -1
+          @engine.queries.removed.splice(j, 1)
     @
 
   index: (update, type, value) ->
