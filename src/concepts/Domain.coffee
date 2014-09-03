@@ -486,7 +486,6 @@ class Domain::Methods
     command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
       console.error(continuation, contd, scoped, scope)
       if !continuation && contd
-        debugger
         return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value
 

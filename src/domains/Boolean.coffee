@@ -29,7 +29,6 @@ for property, value of Boolean::Methods::
   do (property, value) ->
     Boolean::Methods::[property] = (a, b) ->
       if a? && b?
-        debugger
         if typeof a != 'object' && typeof b != 'object'
           return value.call(@, a, b)
         else

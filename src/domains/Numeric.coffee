@@ -47,7 +47,6 @@ class Numeric::Methods extends Domain::Methods
 
   get: 
     command: (operation, continuation, scope, meta, object, path, contd, scoped) ->
-      debugger
       path = @getPath(object, path)
 
       domain = @getVariableDomain(operation, true)

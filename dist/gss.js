@@ -19295,7 +19295,7 @@ Engine = (function(_super) {
     if ((_ref1 = this.pairs) != null) {
       _ref1.onBeforeSolve();
     }
-    if ((solution == null) && providing) {
+    if (providing) {
       while (provided = this.providing) {
         this.providing = null;
         if ((_ref2 = args[0]) != null ? _ref2.index : void 0) {
@@ -19308,8 +19308,6 @@ Engine = (function(_super) {
         }
         this.Workflow(provided);
       }
-    }
-    if (providing) {
       this.providing = void 0;
     }
     if (name) {
@@ -19392,7 +19390,6 @@ Engine = (function(_super) {
       if (!this.hasOwnProperty('providing')) {
         (_base = this.engine).providing || (_base.providing = []);
       }
-      debugger;
       (this.providing || (this.providing = [])).push(Array.prototype.slice.call(arguments, 0));
     } else {
       return this.Workflow.apply(this, arguments);
@@ -19400,7 +19397,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var locals, other, others, path, problem, remove, removes, result, url, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
+    var locals, other, others, path, problem, providing, remove, removes, result, url, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1;
     if (domain && !domain.solve && domain.postMessage) {
       domain.postMessage(this.clone(problems));
       (workflow.busy || (workflow.busy = [])).push(domain.url);
@@ -19416,13 +19413,16 @@ Engine = (function(_super) {
       problems = problem;
     }
     if (domain) {
-      this.providing = null;
+      if (this.providing === void 0) {
+        this.providing = null;
+        providing = true;
+      }
       this.console.start(problems, domain.displayName);
-      result = domain.solve(problems) || this.providing || void 0;
+      result = domain.solve(problems) || void 0;
       if (result && result.postMessage) {
         (workflow.busy || (workflow.busy = [])).push(result.url);
       } else {
-        if (this.providing && this.providing !== result) {
+        if (providing && this.providing) {
           workflow.merge(this.Workflow(this.frame || true, this.providing));
           workflow.optimize();
         }
@@ -19430,7 +19430,9 @@ Engine = (function(_super) {
           result = result[0];
         }
       }
-      this.providing = void 0;
+      if (providing) {
+        this.providing = void 0;
+      }
       this.console.end();
     } else {
       others = [];
@@ -22143,7 +22145,6 @@ Domain.prototype.Methods = (function() {
     command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
       console.error(continuation, contd, scoped, scope);
       if (!continuation && contd) {
-        debugger;
         return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
       }
       return value;
@@ -23427,7 +23428,6 @@ Numeric.prototype.Methods = (function(_super) {
 
   Methods.prototype.get = {
     command: function(operation, continuation, scope, meta, object, path, contd, scoped) {
-      debugger;
       var clone, domain;
       path = this.getPath(object, path);
       domain = this.getVariableDomain(operation, true);
@@ -23631,7 +23631,6 @@ _ref1 = Boolean.prototype.Methods.prototype;
 _fn = function(property, value) {
   return Boolean.prototype.Methods.prototype[property] = function(a, b) {
     if ((a != null) && (b != null)) {
-      debugger;
       if (typeof a !== 'object' && typeof b !== 'object') {
         return value.call(this, a, b);
       } else {

@@ -193,14 +193,13 @@ class Engine extends Domain.Events
     @queries?.onBeforeSolve()
     @pairs?.onBeforeSolve()
 
-    if !solution? && providing
+    if providing
       while provided = @providing
         @providing = null
         if args[0]?.index
           provided.index ?= args[0].index
           provided.parent ?= args[0].parent
         @Workflow(provided)
-    if providing
       @providing = undefined
 
     if name
@@ -278,7 +277,6 @@ class Engine extends Domain.Events
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
-      debugger
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
     else
@@ -296,20 +294,22 @@ class Engine extends Domain.Events
       problems = problem
 
     if domain
-      @providing = null
+      if @providing == undefined
+        @providing = null
+        providing = true
       @console.start(problems, domain.displayName)
-      result = domain.solve(problems) || @providing || undefined
+      result = domain.solve(problems) || undefined
       if result && result.postMessage
         (workflow.busy ||= []).push(result.url)
       else
-        if @providing && @providing != result
+        if providing && @providing
           workflow.merge(@Workflow(@frame || true, @providing))
           workflow.optimize()
 
         if result?.length == 1
           result = result[0]
-
-      @providing = undefined
+      if providing
+        @providing = undefined
       @console.end()
 
     # Broadcast operations without specific domain (e.g. remove)
