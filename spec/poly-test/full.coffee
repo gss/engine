@@ -64,7 +64,7 @@ HTML = """
 
       main {
         // Bind things to scroll position
-        ::[top] == ::scope[scroll-top] + (header)[intrinsic-y];
+        ::[top] == ::scope[scroll-top];// + (header)[intrinsic-y];
         ::[width] == (aside)[intrinsic-width];
         ::[left] == (header)[right];
 
@@ -135,5 +135,24 @@ describe 'Full page tests', ->
     window.$engine = engine = new GSS(container)
     container.innerHTML = HTML
     engine.then (solution) ->
-      console.log(solution)
-      done()
+      expect(solution['li-width']).to.eql((640 - 16) / 3)
+      expect(solution['$aside[x]']).to.eql(640 / 4 + 100)
+
+      li = engine.$first('ul li:last-child')
+      clone = li.cloneNode()
+      clone.id = 'li4'
+      clone.innerHTML = '4'
+      console.info(777)
+      li.parentNode.appendChild(clone)
+      engine.then (solution) ->
+        expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
+        li = engine.$first('ul li:first-child')
+        li.parentNode.removeChild(li)
+        engine.then (solution) ->
+          expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
+          expect(solution['$li2[x]']).to.eql(0)
+          expect(solution['$li1[x]']).to.eql(null)
+          engine.scope.style.width = '1280px'
+          engine.then (solution) ->
+            expect(Math.round solution['li-width']).to.eql(Math.round((1280 - 16) / 3))
+            done()

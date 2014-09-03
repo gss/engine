@@ -306,7 +306,6 @@ class Queries
     #  noop = true unless result && result.keys
     #  old = undefined
     # Clean refs of nodes that dont match anymore
-    debugger if @engine.getContinuation(path) == 'style$2↓.a$a2↑!+'
     if old
       if old.length != undefined
         removed = undefined
@@ -377,7 +376,6 @@ class Queries
           @chain item, undefined, result, path
     else
 
-      debugger if @engine.getContinuation(path) == 'style$2↓.a$a2↑!+'
       delete @[path]
 
     if removed = @engine.workflow.queries?[path]?[3]

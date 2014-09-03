@@ -67,7 +67,6 @@ class Intrinsic extends Numeric
 
   solve: ->
     Numeric::solve.apply(@, arguments)
-    debugger
     @each @scope, @update
 
   get: (object, property, continuation) ->
@@ -80,12 +79,16 @@ class Intrinsic extends Numeric
     else 
       if (j = path.indexOf('[')) > -1
         id = path.substring(0, j)
-        prop = path.substring(j + 1, path.length - 1)
+        property = path.substring(j + 1, path.length - 1)
+        object ||= @identity.solve(path.substring(0, j))
+
         if (prop = @properties[property])?
           if prop.axiom
             return prop.call(@, object, continuation)
           else if typeof prop != 'function'
             return prop
+          else if !prop.matcher && property.indexOf('intrinsic') == -1
+            return prop.call(@, object, continuation)
     return Numeric::get.apply(@, arguments)
 
 

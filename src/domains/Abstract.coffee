@@ -36,6 +36,8 @@ class Abstract::Methods
           unless prop.matcher
             return prop.call(@, object, @getContinuation(continuation || contd || ''))
       getter = ['get', id, property, @getContinuation(continuation || contd || '')]
+      if getter[3] == "style$3↓ul li$li4↓:last"
+        debugger
       if scope && scope != @scope
         getter.push(@identity.provide(scope))
       return getter

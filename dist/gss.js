@@ -19768,27 +19768,28 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getVariableDomain = function(operation, force) {
-    var cmd, constraint, d, domain, index, path, prefix, property, scope, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
+    var cmd, constraint, d, domain, index, path, prefix, property, scope, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (operation.domain && !force) {
       return operation.domain;
     }
     _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
     path = this.getPath(scope, property);
-    if (scope && property && (((_ref1 = this.intrinsic) != null ? _ref1.properties[path] : void 0) != null)) {
+    console.log(path, property, scope, 8888888, (_ref1 = this.intrinsic) != null ? _ref1.properties[property] : void 0);
+    if (scope && property && (((_ref2 = this.intrinsic) != null ? _ref2.properties[path] : void 0) != null)) {
       domain = this.intrinsic;
     } else {
-      _ref2 = this.domains;
-      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-        d = _ref2[_i];
+      _ref3 = this.domains;
+      for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+        d = _ref3[_i];
         if (d.values.hasOwnProperty(path)) {
           domain = d;
           break;
         }
         if (d.substituted) {
-          _ref3 = d.substituted;
-          for (_j = 0, _len1 = _ref3.length; _j < _len1; _j++) {
-            constraint = _ref3[_j];
-            if ((_ref4 = constraint.substitutions) != null ? _ref4[path] : void 0) {
+          _ref4 = d.substituted;
+          for (_j = 0, _len1 = _ref4.length; _j < _len1; _j++) {
+            constraint = _ref4[_j];
+            if ((_ref5 = constraint.substitutions) != null ? _ref5[path] : void 0) {
               domain = d;
               break;
             }
@@ -20065,7 +20066,6 @@ Rules = (function() {
       var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2;
       (_base = operation.parent).uid || (_base.uid = '@' + (this.methods.uid = ((_base1 = this.methods).uid || (_base1.uid = 0)) + 1));
       path = continuation + operation.parent.uid;
-      debugger;
       id = scope._gss_id;
       watchers = (_base2 = this.queries.watchers)[id] || (_base2[id] = []);
       if (!watchers.length || this.indexOfTriplet(watchers, operation.parent, continuation, scope) === -1) {
@@ -20076,7 +20076,6 @@ Rules = (function() {
       console.info('branch dammit', continuation, scope, [old, condition]);
       if (!!old !== !!condition || (old === void 0 && old !== condition)) {
         if (old !== void 0) {
-          debugger;
           this.queries.clean(path, continuation, operation.parent, scope);
         }
         this.queries[path] = condition;
@@ -23241,7 +23240,7 @@ Workflow.prototype = {
     }
   },
   merge: function(problems, domain, reverse) {
-    var cmd, cmds, exported, index, merged, other, position, priority, problem, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
+    var cmd, cmds, exported, index, merged, other, position, priority, problem, _i, _j, _k, _len, _len1, _len2, _ref;
     if (domain === void 0) {
       _ref = problems.domains;
       for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
@@ -23250,7 +23249,6 @@ Workflow.prototype = {
       }
       return this;
     }
-    console.log('merge', problems, domain);
     merged = void 0;
     priority = this.domains.length;
     position = this.index + 1;
@@ -23289,9 +23287,6 @@ Workflow.prototype = {
         }
       }
       position++;
-    }
-    if ((problems != null ? (_ref1 = problems[0]) != null ? _ref1[0] : void 0 : void 0) === '/') {
-      debugger;
     }
     if (!merged) {
       this.domains.splice(priority, 0, domain);
@@ -23523,6 +23518,9 @@ Abstract.prototype.Methods = (function() {
         }
       }
       getter = ['get', id, property, this.getContinuation(continuation || contd || '')];
+      if (getter[3] === "style$3↓ul li$li4↓:last") {
+        debugger;
+      }
       if (scope && scope !== this.scope) {
         getter.push(this.identity.provide(scope));
       }
@@ -23952,7 +23950,6 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.solve = function() {
     Numeric.prototype.solve.apply(this, arguments);
-    debugger;
     return this.each(this.scope, this.update);
   };
 
@@ -23968,12 +23965,15 @@ Intrinsic = (function(_super) {
     } else {
       if ((j = path.indexOf('[')) > -1) {
         id = path.substring(0, j);
-        prop = path.substring(j + 1, path.length - 1);
+        property = path.substring(j + 1, path.length - 1);
+        object || (object = this.identity.solve(path.substring(0, j)));
         if ((prop = this.properties[property]) != null) {
           if (prop.axiom) {
             return prop.call(this, object, continuation);
           } else if (typeof prop !== 'function') {
             return prop;
+          } else if (!prop.matcher && property.indexOf('intrinsic') === -1) {
+            return prop.call(this, object, continuation);
           }
         }
       }
@@ -24266,7 +24266,7 @@ Document = (function(_super) {
     if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
       this.scope.addEventListener('DOMContentLoaded', this);
     } else if (this.running) {
-      this.compile();
+      this.events.compile.call(this);
     }
     this.scope.addEventListener('scroll', this, true);
     if (typeof window !== "undefined" && window !== null) {
@@ -24295,6 +24295,7 @@ Document = (function(_super) {
       id = e.target && this.identity.provide(e.target) || e;
       console.log('scroll', e);
       return this.engine.solve(id + ' scrolled', function() {
+        debugger;
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
       });
@@ -24312,12 +24313,12 @@ Document = (function(_super) {
     },
     DOMContentLoaded: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
-      return this.compile();
+      if (!this.running) {
+        return this.engine.compile();
+      }
     },
     compile: function() {
-      this.engine.compiling = true;
-      this.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
-      return delete this.engine.compiling;
+      return this.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -25224,9 +25225,6 @@ Queries = (function() {
       old = this.get(this.engine.getCanonicalPath(path));
     }
     isCollection = result && result.length !== void 0;
-    if (this.engine.getContinuation(path) === 'style$2↓.a$a2↑!+') {
-      debugger;
-    }
     if (old) {
       if (old.length !== void 0) {
         removed = void 0;
@@ -25309,9 +25307,6 @@ Queries = (function() {
         }
       }
     } else {
-      if (this.engine.getContinuation(path) === 'style$2↓.a$a2↑!+') {
-        debugger;
-      }
       delete this[path];
     }
     if (removed = (_ref1 = this.engine.workflow.queries) != null ? (_ref2 = _ref1[path]) != null ? _ref2[3] : void 0 : void 0) {
@@ -25427,6 +25422,9 @@ Mutations = (function() {
 
   Mutations.prototype.solve = function(mutations) {
     var result;
+    if (!this.engine.engine.running) {
+      return this.engine.engine.compile(true);
+    }
     result = this.engine.engine.solve('mutations', function() {
       var mutation, qualified, _i, _len;
       this.engine.workflow.queries = void 0;

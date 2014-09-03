@@ -180,8 +180,11 @@ class Conventions
     [cmd, scope, property] = variable = operation
 
     path = @getPath(scope, property)
+    console.log(path, property, scope, 8888888, @intrinsic?.properties[property])
     if scope && property && @intrinsic?.properties[path]?
       domain = @intrinsic
+    #else if scope && property && @intrinsic?.properties[property] && !@intrinsic.properties[property].matcher
+    #  domain = @intrinsic
     else
       for d in @domains
         if d.values.hasOwnProperty(path)

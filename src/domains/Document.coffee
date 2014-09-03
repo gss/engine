@@ -30,7 +30,7 @@ class Document extends Abstract
     if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
       @scope.addEventListener 'DOMContentLoaded', @
     else if @running
-      @compile()
+      @events.compile.call(@)
 
     @scope.addEventListener 'scroll', @, true
     if window?
@@ -49,6 +49,7 @@ class Document extends Abstract
       id = e.target && @identity.provide(e.target) || e
       console.log('scroll', e)
       @engine.solve id + ' scrolled', ->
+        debugger
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
 
@@ -62,16 +63,14 @@ class Document extends Abstract
     # Observe stylesheets in dom
     DOMContentLoaded: ->
       @scope.removeEventListener 'DOMContentLoaded', @
-      @compile()
+      @engine.compile() unless @running
 
     # Observe and parse stylesheets
     compile: ->
-      @engine.compiling = true
       @engine.solve 'Document', 'stylesheets', [
         ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
         ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
       ]
-      delete @engine.compiling
 
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @

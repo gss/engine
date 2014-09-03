@@ -99,7 +99,6 @@ class Rules
     update: (operation, continuation, scope, meta, ascender, ascending) ->
       operation.parent.uid ||= '@' + (@methods.uid = (@methods.uid ||= 0) + 1)
       path = continuation + operation.parent.uid
-      debugger
       id = scope._gss_id
       watchers = @queries.watchers[id] ||= []
       if !watchers.length || @indexOfTriplet(watchers, operation.parent, continuation, scope) == -1
@@ -112,7 +111,6 @@ class Rules
       console.info('branch dammit', continuation, scope, [old, condition])
       if !!old != !!condition || (old == undefined && old != condition)
         unless old == undefined
-          debugger
           @queries.clean(path, continuation, operation.parent, scope)
         @queries[path] = condition
 

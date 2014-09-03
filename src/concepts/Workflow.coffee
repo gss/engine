@@ -298,7 +298,6 @@ Workflow.prototype =
       for domain, index in problems.domains
         @merge problems.problems[index], domain
       return @
-    console.log('merge', problems, domain)
     merged = undefined
     priority = @domains.length
     position = @index + 1
@@ -325,10 +324,9 @@ Workflow.prototype =
           if ((other.priority < domain.priority) || 
               (other.priority == domain.priority && other.MAYBE && !domain.MAYBE)) && 
               (!other.frame || other.frame == domain.frame)
+            #if priority == @domains.length
             priority = position
       position++
-    if problems?[0]?[0] == '/'
-      debugger
     if !merged
       @domains.splice(priority, 0, domain)
       @problems.splice(priority, 0, problems)

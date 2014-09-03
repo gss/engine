@@ -350,7 +350,32 @@ describe 'End - to - End', ->
                       expect(engine.values).to.eql {}
 
                       done()
-
+    describe 'intrinsic properties', ->
+      it 'should bind to scrolling', ->
+        engine.once 'solve', (e) ->
+          expect(stringify engine.values).to.eql stringify
+            "#floater[x]": 0
+          done()
+        container.innerHTML =  """
+          <style>
+            #scroller {
+              height: 50px;
+              width: 10px
+              overflow: hidden;
+            }
+            #scroller:before {
+              content: "";
+              display: block;
+              height: 100px;
+              width: 10px
+            }
+          </style>
+          <style type="text/gss"> 
+            #floater[x] == #scroller[scroll-top]
+          </style>
+          <div class="a" id="scroller"></div>
+          <div class="b" id="floater"></div>
+        """
     describe 'css binding', ->
       describe 'simple', ->
         describe 'numerical properties', ->
