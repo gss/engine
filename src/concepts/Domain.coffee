@@ -150,6 +150,8 @@ class Domain
   # Set key-value pair or merge object
   set: (object, property, value, meta) ->
     @setup()
+    console.log('set', object, property, value)
+    debugger
 
     path = @engine.getPath(object, property)
     old = @values[path]
@@ -191,17 +193,18 @@ class Domain
     operation
 
   callback: (domain, path, value, meta) ->
-    if watchers = domain.watchers?[path]
-      for watcher, index in watchers by 3
-        break unless watcher
-        if watcher.domain != domain || !value?
-          # Re-evaluate expression
-          @Update([@sanitize(@getRootOperation(watcher, domain))])
-        else
-          if watcher.parent.domain == domain
-            domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+    unless meta == true
+      if watchers = domain.watchers?[path]
+        for watcher, index in watchers by 3
+          break unless watcher
+          if watcher.domain != domain || !value?
+            # Re-evaluate expression
+            @update([@sanitize(@getRootOperation(watcher, domain))])
           else
-            @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
+            if watcher.parent.domain == domain
+              domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
+            else
+              @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
     
     return if domain.immutable
 
@@ -209,19 +212,24 @@ class Domain
       for url, worker of @workers
         if values = worker.values
           if values.hasOwnProperty(path)
-            @Update(worker, [['value', value, path]])
+            @update(worker, [['value', value, path]])
 
     if exports = @updating?.exports?[path]
       for domain in exports
-        @Update(domain, [['value', value, path]])
+        @update(domain, [['value', value, path]])
 
     if variable = @variables[path]
+      frame = undefined
+      for constraint in variable.constraints
+        if frame = constraint.domain.frame
+          break
       for op in variable.operations
         if !watchers || watchers.indexOf(op) == -1
           if value == null
-            while op.domain == @
+            while op.domain == domain
               op = op.parent
-          @Update(@sanitize(@getRootOperation(op)))
+          if op && op.domain != domain 
+            @update(@sanitize(@getRootOperation(op)))
 
     return
 
@@ -280,6 +288,7 @@ class Domain
     if typeof (name = constraint[0]) == 'string'
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
+    constraint.domain = @
     @constraints.push(constraint)
     @constrained = true
     return
@@ -316,6 +325,7 @@ class Domain
   declare: (name, operation) ->
     unless variable = @variables[name]
       variable = @variables[name] = @variable(name)
+
     if @nullified && @nullified[name]
       delete @nullified[name]
     (@added ||= {})[name] = variable
@@ -372,18 +382,20 @@ class Domain
 
       if @constraints.length == 0
         if (index = @engine.domains.indexOf(@)) > -1
+          debugger
           @engine.domains.splice(index, 1)
 
 
     @constrained = undefined
     result = {}
     for path, value of solution
-      unless @nullified?[path]
+      if !@nullified?[path]
         result[path] = value
-        @values[path] = value
+
+    @merge result, true
+
     if @nullified
       for path, variable of @nullified
-        #@solver._externalParametricVars.delete(variable)
         result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]

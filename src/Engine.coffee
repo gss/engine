@@ -179,7 +179,7 @@ class Engine extends Domain.Events
       if name = source || @displayName
         @console.start(reason || args[0], name)
     unless old = @updating
-      @engine.updating = new @Update
+      @engine.updating = new @update
 
     if @providing == undefined
       @providing = null
@@ -199,7 +199,7 @@ class Engine extends Domain.Events
         if args[0]?.index
           provided.index ?= args[0].index
           provided.parent ?= args[0].parent
-        @Update(provided)
+        @update(provided)
       @providing = undefined
 
     if name
@@ -209,7 +209,7 @@ class Engine extends Domain.Events
     if workflow.domains.length
       if old
         if old != workflow
-          old.merge(workflow)
+          old.push(workflow)
       if !old || !workflow.busy?.length
         workflow.each @resolve, @
       if workflow.busy?.length
@@ -232,6 +232,7 @@ class Engine extends Domain.Events
 
     @queries?.onSolve()
     #@pairs?.onSolve()
+    debugger
 
     @solved.merge solution
     
@@ -254,7 +255,7 @@ class Engine extends Domain.Events
     @updating = undefined
     
 
-    @console.info('Solution\t   ', @updated, solution, JSON.stringify(solution), @solved.values)
+    @console.info('Solution\t   ', @updated, solution, @solved.values)
 
     # Trigger events on engine and scope node
     @triggerEvent('solve', solution, @updated)
@@ -280,7 +281,7 @@ class Engine extends Domain.Events
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
     else
-      return @Update.apply(@, arguments)
+      return @update.apply(@, arguments)
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
@@ -303,7 +304,7 @@ class Engine extends Domain.Events
         (workflow.busy ||= []).push(result.url)
       else
         if providing && @providing
-          workflow.merge(@Update(@frame || true, @providing))
+          workflow.push(@update(@frame || true, @providing))
           workflow.optimize()
 
         if result?.length == 1
@@ -333,11 +334,11 @@ class Engine extends Domain.Events
               locals.push(path)
         if locals.length
           locals.unshift 'remove'
-          workflow.merge([locals], other, true)
+          workflow.push([locals], other, true)
         if others.length
-          workflow.merge(others, other)
+          workflow.push(others, other)
       for url, worker of @workers
-        workflow.merge problems, worker
+        workflow.push problems, worker
     return result
 
   # Initialize new worker and subscribe engine to its events
@@ -368,7 +369,7 @@ class Engine extends Domain.Events
         for property, method of domain::Methods::
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
-    @Update = Engine::Update.compile(@)
+    @update = Engine::Update.compile(@)
     @mutations?.connect()
 
   # Comile user provided features specific to this engine

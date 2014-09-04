@@ -60,7 +60,7 @@ class Numeric::Methods extends Domain::Methods
           clone.parent = operation.parent
           clone.index = operation.index
           clone.domain = domain
-          @Update([clone])
+          @update([clone])
           return
       if scoped
         scoped = @engine.identity.solve(scoped)

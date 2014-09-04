@@ -1,6 +1,6 @@
 # Queue and group expressions by domain
 
-Updateer = (engine) ->
+Updater = (engine) ->
   Update = (domain, problem) ->
     if @ instanceof Update
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
@@ -30,24 +30,24 @@ Updateer = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            workload = @Update(d, arg)
+            workload = @update(d, arg)
             break
 
       if workflow && workflow != workload
-        workflow.merge(workload)
+        workflow.push(workload)
       else
         workflow = workload
     if !workflow
       if typeof arg[0] == 'string'
         arg = [arg]
       foreign = true
-      workflow = new @Update [domain != true && domain || null], [arg]
+      workflow = new @update [domain != true && domain || null], [arg]
     if typeof problem[0] == 'string'
       workflow.wrap(problem, @)
     if start || foreign
       if @updating
         if @updating != workflow
-          return @updating.merge(workflow)
+          return @updating.push(workflow)
       else
         return workflow.each @resolve, @engine
 
@@ -58,8 +58,8 @@ Updateer = (engine) ->
   Update::engine = engine if engine
   return Update
 
-Update = Updateer()
-Update.compile = Updateer
+Update = Updater()
+Update.compile = Updater
 Update.prototype =
   substitute: (parent, operation, solution) ->
     if parent == operation
@@ -102,6 +102,19 @@ Update.prototype =
           p = p.parent
     return
 
+  merge: (from, to) ->
+    domain = @domains[from]
+    return if domain.frame
+    other = @domains[to]
+    @problems[to].push.apply(@problems[to], domain.export())
+    @problems[to].push.apply(@problems[to], @problems[from])
+    @domains.splice(from, 1)
+    @problems.splice(from, 1)
+    for constraint in domain.constraints by -1
+      domain.unconstrain(constraint)
+    @engine.domains.splice @engine.domains.indexOf(domain), 1
+    return true
+
   # Group expressions
   wrap: (problem) -> 
     bubbled = undefined
@@ -128,26 +141,20 @@ Update.prototype =
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
                     if !other.MAYBE
+                      debugger
                       if index < n
-                        exps.push.apply(exps, domain.export())
-                        exps.push.apply(exps, probs)
-                        @domains.splice(n, 1)
-                        @problems.splice(n, 1)
-                        for constraint in domain.constraints by -1
-                          domain.unconstrain(constraint)
-                        @engine.domains.splice @engine.domains.indexOf(domain), 1
+                        if @merge n, index
+                          probs.splice(j, 1)
                       else
-                        probs.push.apply(probs, other.export())
-                        probs.push.apply(probs, exps)
-                        @domains.splice(index, 1)
-                        @problems.splice(index, 1)
-                        for constraint in other.constraints by -1
-                          other.unconstrain(constraint)
-                        @engine.domains.splice @engine.domains.indexOf(other), 1
+                        if @merge index, n
+                          break
+                        else
+                          exps.splice(--i, 1)
                         other = domain
                         i = j + 1
                         exps = @problems[n]
-                    break
+
+                      break
                   else if !other.MAYBE
                     @problems[i].push.apply(@problems[i], @problems[n])
                     @domains.splice(n, 1)
@@ -163,7 +170,7 @@ Update.prototype =
         # Force operation domain
         if other
           opdomain = @engine.getOperationDomain(problem, other)
-        if opdomain && opdomain.displayName != other.displayName
+        if opdomain && (opdomain.displayName != other.displayName)
           if (index = @domains.indexOf(opdomain)) == -1
             index = @domains.push(opdomain) - 1
             @problems[index] = [problem]
@@ -176,8 +183,9 @@ Update.prototype =
           unless strong
             exps.splice(--i, 1)
         else unless bubbled
-          bubbled = true
-          exps[i - 1] = problem
+          if problem.indexOf(exps[i - 1]) > -1
+            bubbled = true
+            exps[i - 1] = problem
 
         if other
           for domain, counter in @domains
@@ -242,7 +250,7 @@ Update.prototype =
                 unless probs.unwrapped
                   @problems[i].splice(p--, 1)
                   probs.unwrapped = @unwrap(probs, @domains[j], [], @problems[j])
-                  @engine.Update(probs.unwrapped)
+                  @engine.update(probs.unwrapped)
                 break
               prob = prob.parent
     return
@@ -293,10 +301,10 @@ Update.prototype =
 
 
   # Merge source workflow into target workflow
-  merge: (problems, domain, reverse) ->
+  push: (problems, domain, reverse) ->
     if domain == undefined
       for domain, index in problems.domains
-        @merge problems.problems[index], domain
+        @push problems.problems[index], domain
       return @
     merged = undefined
     priority = @domains.length
@@ -336,6 +344,7 @@ Update.prototype =
     return @
 
   each: (callback, bind, solution) ->
+    console.log('each', !!callback, bind, solution)
     if solution
       @apply(solution) 
 
@@ -352,7 +361,7 @@ Update.prototype =
 
       if result
         if result.push
-          @engine.Update(result)
+          @engine.update(result)
         else
           @apply(result)
           solution = @apply(result, solution || {})
