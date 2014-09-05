@@ -250,7 +250,52 @@ describe 'Domain', ->
           result: 0
         done()
 
-  describe 'framed domains', ->
+  describe 'framed domains', (done) ->
+    it 'should not merge expressions of a framed domain in worker', ->
+      window.$engine = engine =  new GSS true
+      problem = [
+        ['framed', 
+          ['>=',
+              ['get', 'a']
+              1
+            ]
+        ]
+
+        ['==',
+          ['get', 'b']
+          2
+        ]
+
+        ['==',
+          ['get', 'b']
+          ['get', 'a']
+          'strong'
+        ]
+      ]
+      engine.solve problem, (solution) ->
+        expect(solution).to.eql
+          a: 1
+          b: 1
+        engine.solve ['>=', ['get', 'a', '', 'something'], 3], (solution) ->
+          expect(solution).to.eql
+            a: 3
+            b: 3
+          
+          engine.solve ['>=', ['get', 'b'], 4], (solution) ->
+            expect(solution).to.eql {}
+
+            engine.solve ['>=', ['get', 'c'], ['*', 2, ['get', 'b']]], (solution) ->
+              expect(solution).to.eql 
+                c: 6
+
+              engine.solve ['remove', 'something'], (solution) ->
+                expect(solution).to.eql 
+                  a: 1
+                  b: 1
+                  c: 2
+                done()
+
+
     it 'should not merge expressions of a framed domain', ->
       window.$engine = engine =  new GSS
       problem = [
