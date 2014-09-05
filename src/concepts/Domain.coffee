@@ -267,24 +267,33 @@ class Domain
 
   reconstrain: (other, constraint) ->
     if @compare(other.operation, constraint.operation)
+      index = @constraints.indexOf(other)
+      stack = undefined
+
       @unconstrain(other)
+
+      stack = @constraints.splice(index)
+      if stack.length
+        for constraint in stack
+          @removeConstraint constraint
+        return stack
 
 
   constrain: (constraint) ->
     if constraint.paths
-
-      replaced = undefined
+      stack = undefined
       for path in constraint.paths
         if path[0] == 'value'
           for other, i in @constraints by -1
             unless other == constraint
-              if @reconstrain other, constraint
-                replaced = i
+              if stack = @reconstrain other, constraint
+                break
+
       unless replaced?
         for other, i in @substituted by -1
           unless other == constraint
-            if @reconstrain other, constraint
-              replaced = i
+            if stack = @reconstrain other, constraint
+              break
 
       for path in constraint.paths
         if typeof path == 'string'
@@ -308,6 +317,11 @@ class Domain
     @constrained = true
     
     @addConstraint(constraint)
+
+    if stack
+      @constraints.push.apply @constraints, stack
+      for constraint in stack
+        @addConstraint constraint
 
   unconstrain: (constraint, continuation) ->
     for path in constraint.paths

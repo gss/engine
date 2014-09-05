@@ -332,36 +332,54 @@ describe 'Domain', ->
         a: 1
         b: 2
         c: 3
-      expect(engine.domains[2].constraints.length).to.eql(1)
-      expect(engine.domains[3].constraints.length).to.eql(1)
-      expect(engine.domains[4].constraints.length).to.eql(1)
+      A = engine.domains[2]
+      B = engine.domains[3]
+      C = engine.domains[4]
+      expect(A.constraints.length).to.eql(1)
+      expect(B.constraints.length).to.eql(1)
+      expect(C.constraints.length).to.eql(1)
 
       expect(engine.solve ['==', ['get', 'a', '', 'aa'], -1]).to.eql
         a: -1
         c: 1
-      expect(engine.domains[2].constraints.length).to.eql(2)
-      expect(engine.domains[3].constraints.length).to.eql(1)
-      expect(engine.domains[4].constraints.length).to.eql(1)
+      expect(A.constraints.length).to.eql(2)
+      expect(B.constraints.length).to.eql(1)
+      expect(C.constraints.length).to.eql(1)
 
       expect(engine.solve ['==', ['get', 'b', '', 'bb'], -2]).to.eql
         b: -2
         c: -3
-      expect(engine.domains[2].constraints.length).to.eql(2)
-      expect(engine.domains[3].constraints.length).to.eql(2)
-      expect(engine.domains[4].constraints.length).to.eql(1)
+      expect(A.constraints.length).to.eql(2)
+      expect(B.constraints.length).to.eql(2)
+      expect(C.constraints.length).to.eql(1)
 
       expect(engine.solve ['==', ['get', 'c', '', 'cc'], 10]).to.eql
         c: 10
 
-      expect(engine.domains[2].constraints.length).to.eql(2)
-      expect(engine.domains[3].constraints.length).to.eql(2)
-      expect(engine.domains[4].constraints.length).to.eql(2)
+      expect(A.constraints.length).to.eql(2)
+      expect(B.constraints.length).to.eql(2)
+      expect(C.constraints.length).to.eql(2)
 
       expect(engine.solve ['remove', 'aa']).to.eql
         a: 1
-      expect(engine.domains[2].constraints.length).to.eql(1)
-      expect(engine.domains[3].constraints.length).to.eql(2)
-      expect(engine.domains[4].constraints.length).to.eql(2)
+      expect(A.constraints.length).to.eql(1)
+      expect(B.constraints.length).to.eql(2)
+      expect(C.constraints.length).to.eql(2)
+
+      expect(engine.solve ['remove', 'cc']).to.eql
+        c: -1
+
+      expect(A.constraints.length).to.eql(1)
+      expect(B.constraints.length).to.eql(2)
+      expect(C.constraints.length).to.eql(1)
+
+      expect(engine.solve ['remove', 'bb']).to.eql
+        c: 3
+        b: 2
+
+      expect(A.constraints.length).to.eql(1)
+      expect(B.constraints.length).to.eql(1)
+      expect(C.constraints.length).to.eql(1)
 
 
 
