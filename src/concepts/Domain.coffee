@@ -151,7 +151,6 @@ class Domain
   set: (object, property, value, meta) ->
     @setup()
     console.log('set', object, property, value)
-    debugger
 
     path = @engine.getPath(object, property)
     old = @values[path]
@@ -207,6 +206,7 @@ class Domain
               @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
     
     return if domain.immutable
+    debugger
 
     if @workers
       for url, worker of @workers
@@ -228,8 +228,14 @@ class Domain
           if value == null
             while op.domain == domain
               op = op.parent
-          if op && op.domain != domain 
-            @update(@sanitize(@getRootOperation(op)))
+          if op && op.domain != domain
+            if frame
+              d = op.domain
+              op.domain = domain
+              domain.expressions.ascend op, undefined, value, undefined, undefined, op.index
+              op.domain = d
+            else
+              @update(@sanitize(@getRootOperation(op)))
 
     return
 
@@ -266,12 +272,19 @@ class Domain
 
   constrain: (constraint) ->
     if constraint.paths
+
+      replaced = undefined
       for path in constraint.paths
         if path[0] == 'value'
-          for other in @constraints by -1
-            @reconstrain other, constraint
-      for other in @substituted by -1
-        @reconstrain other, constraint
+          for other, i in @constraints by -1
+            unless other == constraint
+              if @reconstrain other, constraint
+                replaced = i
+      unless replaced?
+        for other, i in @substituted by -1
+          unless other == constraint
+            if @reconstrain other, constraint
+              replaced = i
 
       for path in constraint.paths
         if typeof path == 'string'
@@ -283,6 +296,8 @@ class Domain
               (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
         else if path.name
+          if @nullified
+            delete @nullified[path.name]
           length = (path.constraints ||= []).push(constraint)
 
     if typeof (name = constraint[0]) == 'string'
@@ -291,7 +306,8 @@ class Domain
     constraint.domain = @
     @constraints.push(constraint)
     @constrained = true
-    return
+    
+    @addConstraint(constraint)
 
   unconstrain: (constraint, continuation) ->
     for path in constraint.paths
@@ -320,10 +336,12 @@ class Domain
 
     @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
-    return
+    @removeConstraint(constraint)
+
 
   declare: (name, operation) ->
     unless variable = @variables[name]
+      debugger
       variable = @variables[name] = @variable(name)
 
     if @nullified && @nullified[name]
@@ -382,7 +400,6 @@ class Domain
 
       if @constraints.length == 0
         if (index = @engine.domains.indexOf(@)) > -1
-          debugger
           @engine.domains.splice(index, 1)
 
 
@@ -400,6 +417,8 @@ class Domain
         if @values.hasOwnProperty(path)
           delete @values[path]
         @nullify(variable)
+        debugger
+        console.log('nullify', path)
         delete @variables[path]
 
 
@@ -429,8 +448,6 @@ class Domain
         for constraint in constraints by -1
           if @isConstraint(constraint)
             @unconstrain(constraint, path)
-          #else if @isVariable(constraint)
-          #  @undeclare(constraint)
     return
 
   # Schedule execution of expressions to the next tick, buffer input

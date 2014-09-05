@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-04) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-05) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19352,7 +19352,6 @@ Engine = (function(_super) {
     if ((_ref2 = this.queries) != null) {
       _ref2.onSolve();
     }
-    debugger;
     this.solved.merge(solution);
     effects = {};
     effects = this.updating.each(this.resolve, this, effects);
@@ -21631,7 +21630,6 @@ Domain = (function() {
     var old, path;
     this.setup();
     console.log('set', object, property, value);
-    debugger;
     path = this.engine.getPath(object, property);
     old = this.values[path];
     if (old === value) {
@@ -21696,7 +21694,7 @@ Domain = (function() {
   };
 
   Domain.prototype.callback = function(domain, path, value, meta) {
-    var constraint, exports, frame, index, op, url, values, variable, watcher, watchers, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var constraint, d, exports, frame, index, op, url, values, variable, watcher, watchers, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (meta !== true) {
       if (watchers = (_ref = domain.watchers) != null ? _ref[path] : void 0) {
         for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
@@ -21719,6 +21717,7 @@ Domain = (function() {
     if (domain.immutable) {
       return;
     }
+    debugger;
     if (this.workers) {
       _ref1 = this.workers;
       for (url in _ref1) {
@@ -21755,7 +21754,14 @@ Domain = (function() {
             }
           }
           if (op && op.domain !== domain) {
-            this.update(this.sanitize(this.getRootOperation(op)));
+            if (frame) {
+              d = op.domain;
+              op.domain = domain;
+              domain.expressions.ascend(op, void 0, value, void 0, void 0, op.index);
+              op.domain = d;
+            } else {
+              this.update(this.sanitize(this.getRootOperation(op)));
+            }
           }
         }
       }
@@ -21817,23 +21823,34 @@ Domain = (function() {
   };
 
   Domain.prototype.constrain = function(constraint) {
-    var bits, length, name, other, path, _base, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
+    var bits, i, length, name, other, path, replaced, _base, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
     if (constraint.paths) {
+      replaced = void 0;
       _ref = constraint.paths;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         path = _ref[_i];
         if (path[0] === 'value') {
           _ref1 = this.constraints;
-          for (_j = _ref1.length - 1; _j >= 0; _j += -1) {
-            other = _ref1[_j];
-            this.reconstrain(other, constraint);
+          for (i = _j = _ref1.length - 1; _j >= 0; i = _j += -1) {
+            other = _ref1[i];
+            if (other !== constraint) {
+              if (this.reconstrain(other, constraint)) {
+                replaced = i;
+              }
+            }
           }
         }
       }
-      _ref2 = this.substituted;
-      for (_k = _ref2.length - 1; _k >= 0; _k += -1) {
-        other = _ref2[_k];
-        this.reconstrain(other, constraint);
+      if (replaced == null) {
+        _ref2 = this.substituted;
+        for (i = _k = _ref2.length - 1; _k >= 0; i = _k += -1) {
+          other = _ref2[i];
+          if (other !== constraint) {
+            if (this.reconstrain(other, constraint)) {
+              replaced = i;
+            }
+          }
+        }
       }
       _ref3 = constraint.paths;
       for (_l = 0, _len1 = _ref3.length; _l < _len1; _l++) {
@@ -21849,6 +21866,9 @@ Domain = (function() {
           }
           this.substituted.push(constraint);
         } else if (path.name) {
+          if (this.nullified) {
+            delete this.nullified[path.name];
+          }
           length = (path.constraints || (path.constraints = [])).push(constraint);
         }
       }
@@ -21862,6 +21882,7 @@ Domain = (function() {
     constraint.domain = this;
     this.constraints.push(constraint);
     this.constrained = true;
+    return this.addConstraint(constraint);
   };
 
   Domain.prototype.unconstrain = function(constraint, continuation) {
@@ -21908,11 +21929,13 @@ Domain = (function() {
     }
     this.constrained = true;
     this.constraints.splice(this.constraints.indexOf(constraint), 1);
+    return this.removeConstraint(constraint);
   };
 
   Domain.prototype.declare = function(name, operation) {
     var ops, variable;
     if (!(variable = this.variables[name])) {
+      debugger;
       variable = this.variables[name] = this.variable(name);
     }
     if (this.nullified && this.nullified[name]) {
@@ -21996,7 +22019,6 @@ Domain = (function() {
       }
       if (this.constraints.length === 0) {
         if ((index = this.engine.domains.indexOf(this)) > -1) {
-          debugger;
           this.engine.domains.splice(index, 1);
         }
       }
@@ -22019,6 +22041,8 @@ Domain = (function() {
           delete this.values[path];
         }
         this.nullify(variable);
+        debugger;
+        console.log('nullify', path);
         delete this.variables[path];
       }
       this.nullified = void 0;
@@ -22896,6 +22920,7 @@ Updater = function(engine) {
     }
     if (typeof problem[0] === 'string') {
       workflow.wrap(problem, this);
+      workflow.compact();
     }
     if (start || foreign) {
       if (this.updating) {
@@ -23039,9 +23064,7 @@ Update.prototype = {
                           probs.splice(j, 1);
                         }
                       } else {
-                        if (this.merge(index, n)) {
-                          break;
-                        } else {
+                        if (!this.merge(index, n)) {
                           exps.splice(--i, 1);
                         }
                         other = domain;
@@ -23737,25 +23760,21 @@ Linear = (function(_super) {
     return this.apply(this.solver._changed);
   };
 
-  Linear.prototype.constrain = function(constraint) {
-    if (!Linear.__super__.constrain.apply(this, arguments)) {
-      return this.solver.addConstraint(constraint);
-    }
+  Linear.prototype.addConstraint = function(constraint) {
+    return this.solver.addConstraint(constraint);
   };
 
-  Linear.prototype.unconstrain = function(constraint) {
-    this.solver.removeConstraint(constraint);
-    return Linear.__super__.unconstrain.apply(this, arguments);
+  Linear.prototype.removeConstraint = function(constraint) {
+    return this.solver.removeConstraint(constraint);
   };
 
   Linear.prototype.undeclare = function(variable) {
     var cei;
-    if (!Linear.__super__.undeclare.apply(this, arguments)) {
-      if (variable.editing) {
-        if (cei = this.solver._editVarMap.get(variable)) {
-          this.solver.removeColumn(cei.editMinus);
-          return this.solver._editVarMap["delete"](variable);
-        }
+    Linear.__super__.undeclare.apply(this, arguments);
+    if (variable.editing) {
+      if (cei = this.solver._editVarMap.get(variable)) {
+        this.solver.removeColumn(cei.editMinus);
+        return this.solver._editVarMap["delete"](variable);
       }
     }
   };
@@ -24530,13 +24549,13 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var contd, item, parent, pdef, solution, _base, _i, _len, _ref, _ref1, _ref2;
+    var contd, item, parent, pdef, solution, _i, _len, _ref, _ref1, _ref2;
     if (result != null) {
       if (parent = operation.parent) {
         pdef = parent.def;
       }
       if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document)) {
-        if (parent && (typeof (_base = this.engine).isCollection === "function" ? _base.isCollection(result) : void 0)) {
+        if (parent && this.engine.isCollection(result)) {
           this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
@@ -24581,7 +24600,7 @@ Expressions = (function() {
         solution.domain = operation.domain;
         solution.index = operation.index;
         parent[operation.index] = solution;
-        this.engine.provide(solution);
+        this.engine.engine.provide(solution);
         return;
       } else {
         return this.engine.provide(result);

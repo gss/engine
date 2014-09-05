@@ -275,11 +275,96 @@ describe 'Domain', ->
       expect(engine.solve(problem)).to.eql
         a: 1
         b: 1
+      expect(engine.domains[2].constraints.length).to.eql(1)
+      expect(engine.domains[3].constraints.length).to.eql(2)
+
       
 
-      expect(engine.solve ['>=', ['get', 'a'], 3]).to.eql
+      expect(engine.solve ['>=', ['get', 'a', '', 'something'], 3]).to.eql
         a: 3
         b: 3
+      expect(engine.domains[2].constraints.length).to.eql(2)
+      expect(engine.domains[3].constraints.length).to.eql(2)
+
+
+      expect(engine.solve ['>=', ['get', 'b'], 4]).to.eql {}
+      expect(engine.domains[2].constraints.length).to.eql(2)
+      expect(engine.domains[3].constraints.length).to.eql(3)
+
+
+      expect(engine.solve ['>=', ['get', 'c'], ['*', 2, ['get', 'b']]]).to.eql
+        c: 6
+      expect(engine.domains[2].constraints.length).to.eql(2)
+      expect(engine.domains[3].constraints.length).to.eql(4)
+
+
+      expect(engine.solve ['remove', 'something']).to.eql
+        a: 1
+        b: 1
+        c: 2
+      expect(engine.domains[2].constraints.length).to.eql(1)
+      expect(engine.domains[3].constraints.length).to.eql(4)
+
+
+    it 'should be able to export multiple framed variables into one domain', ->
+      window.$engine = engine =  new GSS
+      problem = [
+        ['framed', 
+          ['>=',
+              ['get', 'a']
+              1
+            ]
+        ]
+
+        ['framed', 
+          ['>=',
+              ['get', 'b']
+              2
+            ]
+        ]
+
+        ['==',
+          ['get', 'c']
+          ['+', ['get', 'a'], ['get', 'b']]
+        ]
+      ]
+      expect(engine.solve problem).to.eql
+        a: 1
+        b: 2
+        c: 3
+      expect(engine.domains[2].constraints.length).to.eql(1)
+      expect(engine.domains[3].constraints.length).to.eql(1)
+      expect(engine.domains[4].constraints.length).to.eql(1)
+
+      expect(engine.solve ['==', ['get', 'a', '', 'aa'], -1]).to.eql
+        a: -1
+        c: 1
+      expect(engine.domains[2].constraints.length).to.eql(2)
+      expect(engine.domains[3].constraints.length).to.eql(1)
+      expect(engine.domains[4].constraints.length).to.eql(1)
+
+      expect(engine.solve ['==', ['get', 'b', '', 'bb'], -2]).to.eql
+        b: -2
+        c: -3
+      expect(engine.domains[2].constraints.length).to.eql(2)
+      expect(engine.domains[3].constraints.length).to.eql(2)
+      expect(engine.domains[4].constraints.length).to.eql(1)
+
+      expect(engine.solve ['==', ['get', 'c', '', 'cc'], 10]).to.eql
+        c: 10
+
+      expect(engine.domains[2].constraints.length).to.eql(2)
+      expect(engine.domains[3].constraints.length).to.eql(2)
+      expect(engine.domains[4].constraints.length).to.eql(2)
+
+      expect(engine.solve ['remove', 'aa']).to.eql
+        a: 1
+      expect(engine.domains[2].constraints.length).to.eql(1)
+      expect(engine.domains[3].constraints.length).to.eql(2)
+      expect(engine.domains[4].constraints.length).to.eql(2)
+
+
+
 
 
   describe 'variable graphs', ->

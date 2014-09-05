@@ -232,7 +232,6 @@ class Engine extends Domain.Events
 
     @queries?.onSolve()
     #@pairs?.onSolve()
-    debugger
 
     @solved.merge solution
     

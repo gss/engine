@@ -44,6 +44,7 @@ Updater = (engine) ->
       workflow = new @update [domain != true && domain || null], [arg]
     if typeof problem[0] == 'string'
       workflow.wrap(problem, @)
+      workflow.compact()
     if start || foreign
       if @updating
         if @updating != workflow
@@ -146,10 +147,9 @@ Update.prototype =
                         if @merge n, index
                           probs.splice(j, 1)
                       else
-                        if @merge index, n
-                          break
-                        else
+                        unless @merge index, n
                           exps.splice(--i, 1)
+
                         other = domain
                         i = j + 1
                         exps = @problems[n]

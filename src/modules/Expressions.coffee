@@ -148,7 +148,7 @@ class Expressions
         pdef = parent.def
       if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document)
         # For each node in collection, recurse to a parent with id appended to continuation key
-        if parent && @engine.isCollection?(result)
+        if parent && @engine.isCollection(result)
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             contd = @engine.getAscendingContinuation(continuation, item)
@@ -197,7 +197,7 @@ class Expressions
         solution.domain    = operation.domain
         solution.index     = operation.index
         parent[operation.index] = solution
-        @engine.provide solution
+        @engine.engine.provide solution
         return
       else
         return @engine.provide result

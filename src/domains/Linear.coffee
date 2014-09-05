@@ -37,20 +37,18 @@ class Linear extends Domain
       @solver.resolve()
     return @apply(@solver._changed)
 
-  constrain: (constraint) ->
-    unless super
-      @solver.addConstraint(constraint)
+  addConstraint: (constraint) ->
+    @solver.addConstraint(constraint)
 
-  unconstrain: (constraint) ->
+  removeConstraint: (constraint) ->
     @solver.removeConstraint(constraint)
-    super
 
   undeclare: (variable) ->
-    unless super
-      if variable.editing
-        if cei = @solver._editVarMap.get(variable)
-          @solver.removeColumn(cei.editMinus)
-          @solver._editVarMap.delete(variable)
+    super
+    if variable.editing
+      if cei = @solver._editVarMap.get(variable)
+        @solver.removeColumn(cei.editMinus)
+        @solver._editVarMap.delete(variable)
 
   edit: (variable, strength, weight, continuation) ->
     constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
