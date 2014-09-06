@@ -214,21 +214,23 @@ class Engine extends Domain.Events
         workflow.each @resolve, @
       if workflow.busy?.length
         return workflow
-    onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
-    if @engine == @ && (!workflow.problems[workflow.index + 1] || onlyRemoving)
-      return @onSolve(null, onlyRemoving)
 
-  onSolve: (update, onlyRemoving) ->
+    onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
+    restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
+    if @engine == @ && (!workflow.problems[workflow.index + 1] || restyled)
+      return @onSolve(null, restyled)
+
+  onSolve: (update, restyled) ->
     # Apply styles
     if solution = update || @updating.solution
       @applier?.solve(solution)
-    else if !@updating.reflown && !onlyRemoving
+    else if !@updating.reflown && !restyled
       return
     if @intrinsic
       scope = @updating.reflown || @scope
       @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
-
+    debugger
 
     @queries?.onSolve()
     #@pairs?.onSolve()
@@ -241,6 +243,7 @@ class Engine extends Domain.Events
     effects = @updating.each(@resolve, @, effects)
     if @updating.busy?.length
       return effects
+
     if effects && Object.keys(effects).length
       return @onSolve(effects)
 
@@ -248,7 +251,8 @@ class Engine extends Domain.Events
     # Fire up solved event if we've had remove commands that 
     # didnt cause any reactions
     if (!solution || @updating.problems[@updating.index + 1]) &&
-        (@updating.problems.length != 1 || @updating.domains[0] != null)
+        (@updating.problems.length != 1 || @updating.domains[0] != null) &&
+        !@engine.restyled
       return 
     @updated = @updating
     @updating = undefined

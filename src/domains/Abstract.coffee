@@ -36,16 +36,26 @@ class Abstract::Methods
           unless prop.matcher
             return prop.call(@, object, @getContinuation(continuation || contd || ''))
       getter = ['get', id, property, @getContinuation(continuation || contd || '')]
-      if getter[3] == "style$3↓ul li$li4↓:last"
-        debugger
       if scope && scope != @scope
         getter.push(@identity.provide(scope))
       return getter
 
   set:
+    onAnalyze: (operation) ->
+      parent = operation.parent
+      closest = undefined
+      while parent
+        if parent.name == 'rule'
+          farthest = parent
+          closest ||= parent   
+        parent = parent.parent
+      if farthest
+        operation.sourceIndex = farthest.assignments = (farthest.assignments || 0) + 1
+        (closest.properties ||= []).push operation.sourceIndex
+
     command: (operation, continuation, scope, meta, property, value) ->
       if @intrinsic
-        @intrinsic.restyle scope, property, value
+        @intrinsic.restyle scope, property, value, continuation, operation
       else
         @assumed.set scope, property, value
       return

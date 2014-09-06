@@ -149,7 +149,7 @@ class Expressions
       if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document)
         # For each node in collection, recurse to a parent with id appended to continuation key
         if parent && @engine.isCollection(result)
-          @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation
+          @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             contd = @engine.getAscendingContinuation(continuation, item)
             @solve operation.parent, contd, scope, meta, operation.index, item
@@ -245,6 +245,7 @@ class Expressions
       
     operation.def = def ||= {noop: true}
     operation.domain = @engine
+    def.onAnalyze?(operation)
 
     for child, index in operation
       if child instanceof Array
@@ -275,6 +276,8 @@ class Expressions
       func = def.command
     operation.offset ?= def.offset if def.offset
 
+
+
     # Command may resolve to method, which will be called on the first argument
     if typeof func == 'string'
       operation.method = func
@@ -286,15 +289,22 @@ class Expressions
   # Serialize operation to a string with arguments, but without context
   serialize: (operation, otherdef, group) ->
     def = operation.def
-    prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.def.noop && operation.name) || ''
-    suffix = def.suffix || (otherdef && otherdef.suffix) || ''
+    prefix = def.prefix || otherdef?.prefix || (operation.def.noop && operation.name) || ''
+    suffix = def.suffix || otherdef?.suffix || ''
     separator = operation.def.separator
-    
+
     after = before = ''
     for index in [1 ... operation.length]
       if op = operation[index]
         if typeof op != 'object'
-          after += op
+          if operation.def.binary && after && !binary
+            after = op + after
+            binary = true
+          else if binary
+            if operation.def.quote
+              after += '"' + op + '"' #todo escape
+          else
+            after += op
         else if op.key && group != false
           if (group && (groupper = @engine.methods[group]))
             if (op.def.group == group)

@@ -49,7 +49,7 @@ class Rules
       @queries.remove(result, contd, operation.parent, scope, true)
       return true
 
-  # Conditionals
+  # CSS rule
   
   "rule":
     bound: 1
@@ -66,12 +66,18 @@ class Rules
         @engine.provide result
         return true
 
+    onAnalyze: (operation) ->
+      parent = operation.parent || operation
+      while parent?.parent      
+        parent = parent.parent
+      operation.sourceIndex = parent.rules = (parent.rules || 0) + 1
+
   ### Conditional structure 
 
   Evaluates one of two branches
   chosen by truthiness of condition.
 
-  Invisible to solver, 
+  Structurally invisible to solver, 
   it leaves trail in continuation path
   ###
 
@@ -104,8 +110,6 @@ class Rules
       if !watchers.length || @indexOfTriplet(watchers, operation.parent, continuation, scope) == -1
         watchers.push operation.parent, continuation, scope
 
-
-
       condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
       old = @queries[path]
       console.info('branch dammit', continuation, scope, [old, condition])
@@ -115,7 +119,7 @@ class Rules
         @queries[path] = condition
 
         index = condition && 2 || 3
-        @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + @engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation
+        @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + @engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
         
         if branch = operation.parent[index]
           result = @document.solve(branch, path, scope, meta)
@@ -170,7 +174,7 @@ class Rules
         else if !operation
           continuation = @getContinuation(node.tagName.toLowerCase(), node)
         else
-          continuation = node._continuation = @getContinuation(continuation || '', null,  @engine.DOWN)
+          continuation = node._continuation = @getContinuation(continuation || '', null,  @engine.DESCEND)
         if node.getAttribute('scoped')?
           scope = node.parentNode
 

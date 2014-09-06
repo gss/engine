@@ -9,7 +9,7 @@ class Pairs
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
-      return @engine.RIGHT
+      return @engine.PAIR
     else
       #(@dirty ||= {})[left] = true
       return false
@@ -45,26 +45,26 @@ class Pairs
     
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
-    if continuation.charAt(continuation.length - 1) == @engine.RIGHT
+    if continuation.charAt(continuation.length - 1) == @engine.PAIR
       return if continuation.length == 1
       parent = operation
       while parent = parent.parent
         break if parent.def.noop
       # Found right side
-      if continuation.charAt(0) == @engine.RIGHT
+      if continuation.charAt(0) == @engine.PAIR
         return @onRight(operation, continuation, scope)
       # Found left side, rewrite continuation
       else if operation.def.serialized
         prev = -1
-        while (index = continuation.indexOf(@engine.RIGHT, prev + 1)) > -1
+        while (index = continuation.indexOf(@engine.PAIR, prev + 1)) > -1
           if result = @getSolution(operation, continuation.substring(prev || 0, index), scope, true)
             return result
           prev = index 
         return @onLeft(operation, continuation, scope)
     # Fetch saved result if operation path mathes continuation canonical path
-    else if continuation.lastIndexOf(@engine.RIGHT) <= 0
+    else if continuation.lastIndexOf(@engine.PAIR) <= 0
       contd = @engine.getCanonicalPath(continuation, true) 
-      if contd.charAt(0) == @engine.RIGHT
+      if contd.charAt(0) == @engine.PAIR
         contd = contd.substring(1)
       if contd == operation.path
         if id = continuation.match(@TrailingIDRegExp)
@@ -151,7 +151,7 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        @engine.document.solve operation.parent, contd + @engine.RIGHT, scope, operation.index, pair[1]
+        @engine.document.solve operation.parent, contd + @engine.PAIR, scope, operation.index, pair[1]
       
     for contd in cleaned
       @engine.queries.clean(contd)
@@ -178,14 +178,14 @@ class Pairs
           if others.indexOf(right) > -1
             rights.splice(index, 1)
       for right in rights
-        @engine.queries.unobserve(@engine.scope._gss_id, @engine.RIGHT, null, right.substring(1))
+        @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))
         delete @engine.queries[right]
 
 
   set: (path, result) ->
     if pairs = @paths?[path]
       (@dirty ||= {})[path] = true
-    else if path.charAt(0) == @engine.RIGHT
+    else if path.charAt(0) == @engine.PAIR
       path = @engine.getCanonicalPath(path)
       for left, watchers of @paths
         if watchers.indexOf(path) > -1

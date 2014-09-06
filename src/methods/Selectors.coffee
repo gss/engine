@@ -249,7 +249,7 @@ class Selectors
 
   '::this':
     hidden: true
-    mark: 'UP'
+    mark: 'ASCEND'
     command: (operation, continuation, scope, meta, node) ->
       return node || scope
 
@@ -270,25 +270,35 @@ class Selectors
 
   '$attribute':
     lookup: true
-    group: '$query'
-    type: 'qualifier'
+    #type: 'qualifier'
     prefix: '['
     suffix: ']'
-    serialize: -> (operation, args) ->
-      name = operation.name
-      return (args[1]) + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"'
 
-  '[=]': (node, attribute, value, operator) ->
-    return node if node.getAttribute(attribute) == value
+  '[=]': 
+    binary: true
+    quote: true
+    group: '$query'
+    command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
+      return node if node.getAttribute(attribute) == value
 
-  '[*=]': (node, attribute, value, operator) ->
-    return node if  node.getAttribute(attribute)?.indexOf(value) > -1
+  '[*=]': 
+    binary: true
+    quote: true
+    group: '$query'
+    command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
+      return node if  node.getAttribute(attribute)?.indexOf(value) > -1
   
-  '[|=]': (node, attribute, value, operator) ->
-    return node if  node.getAttribute(attribute)?
+  '[|=]': 
+    binary: true
+    quote: true
+    group: '$query'
+    command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
+      return node if  node.getAttribute(attribute)?
   
-  '[]': (node, attribute, value, operator) ->
-    return node if  node.getAttribute(attribute)?
+  '[]': 
+    group: '$query'
+    command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
+      return node if  node.getAttribute(attribute)?
 
 
 
@@ -355,7 +365,7 @@ class Selectors
 # Set up custom trigger for all selector operations
 # to filter out old elements from collections
 for property, command of Selectors::
-  if typeof command == 'object' && command.serialized != false
+  if (typeof command == 'object' && command.serialized != false) || command.serialized
     command.before = 'onBeforeQuery'
     command.after = 'onQuery'
     command.init = 'onSelector'

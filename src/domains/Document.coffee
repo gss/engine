@@ -65,6 +65,7 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
+      debugger
       @engine.solve 'Document', 'stylesheets', [
         ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
         ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]

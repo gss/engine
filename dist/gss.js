@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-06) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19242,7 +19242,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, solution, source, workflow, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
+    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, restyled, solution, source, workflow, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -19328,18 +19328,19 @@ Engine = (function(_super) {
       }
     }
     onlyRemoving = workflow.problems.length === 1 && workflow.domains[0] === null;
-    if (this.engine === this && (!workflow.problems[workflow.index + 1] || onlyRemoving)) {
-      return this.onSolve(null, onlyRemoving);
+    restyled = onlyRemoving || (this.restyled && !old && !workflow.problems.length);
+    if (this.engine === this && (!workflow.problems[workflow.index + 1] || restyled)) {
+      return this.onSolve(null, restyled);
     }
   };
 
-  Engine.prototype.onSolve = function(update, onlyRemoving) {
+  Engine.prototype.onSolve = function(update, restyled) {
     var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
     if (solution = update || this.updating.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
       }
-    } else if (!this.updating.reflown && !onlyRemoving) {
+    } else if (!this.updating.reflown && !restyled) {
       return;
     }
     if (this.intrinsic) {
@@ -19349,6 +19350,7 @@ Engine = (function(_super) {
         _ref1.each(scope, this.intrinsic.update);
       }
     }
+    debugger;
     if ((_ref2 = this.queries) != null) {
       _ref2.onSolve();
     }
@@ -19361,7 +19363,7 @@ Engine = (function(_super) {
     if (effects && Object.keys(effects).length) {
       return this.onSolve(effects);
     }
-    if ((!solution || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null)) {
+    if ((!solution || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null) && !this.engine.restyled) {
       return;
     }
     this.updated = this.updating;
@@ -19586,11 +19588,11 @@ var Conventions;
 Conventions = (function() {
   function Conventions() {}
 
-  Conventions.prototype.UP = '↑';
+  Conventions.prototype.ASCEND = '↑';
 
-  Conventions.prototype.RIGHT = '→';
+  Conventions.prototype.PAIR = '→';
 
-  Conventions.prototype.DOWN = '↓';
+  Conventions.prototype.DESCEND = '↓';
 
   /* 
     <!-- Example of document -->
@@ -19627,7 +19629,7 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getPossibleContinuations = function(path) {
-    return [path, path + this.UP, path + this.RIGHT, path + this.DOWN];
+    return [path, path + this.ASCEND, path + this.PAIR, path + this.DESCEND];
   };
 
   Conventions.prototype.getPath = function(id, property) {
@@ -19668,24 +19670,64 @@ Conventions = (function() {
     }
   };
 
+  Conventions.prototype.getOperationSelectors = function(operation) {
+    var base, bit, index, parent, results, selectors, _i, _len, _ref;
+    parent = operation;
+    results = [];
+    while (parent) {
+      if (parent.name === 'rule') {
+        selectors = parent[1].path;
+        if (selectors.indexOf(',') > -1) {
+          if (results.length) {
+            base = results.slice();
+            results.length = 0;
+            _ref = selectors.split(',');
+            for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+              bit = _ref[index];
+              results.push.apply(results, base.map(function(selector) {
+                if (selector.charAt(0) !== " ") {
+                  selector = " " + selector;
+                }
+                return bit + selector;
+              }));
+            }
+          } else {
+            results = selectors.split(',');
+          }
+        } else if (results.length) {
+          results = results.map(function(selector) {
+            if (selector.charAt(0) !== " ") {
+              selector = " " + selector;
+            }
+            return selectors + selector;
+          });
+        } else {
+          results.push(selectors);
+        }
+      }
+      parent = parent.parent;
+    }
+    return results;
+  };
+
   Conventions.prototype.getCanonicalPath = function(continuation, compact) {
     var bits, last;
-    bits = this.getContinuation(continuation).split(this.DOWN);
+    bits = this.getContinuation(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
     last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '');
     if (compact) {
       return last;
     }
-    return bits.join(this.DOWN);
+    return bits.join(this.DESCEND);
   };
 
   Conventions.prototype.CanonicalizeRegExp = /\$[^↑]+(?:↑|$)/g;
 
   Conventions.prototype.getScopePath = function(continuation) {
     var bits;
-    bits = continuation.split(this.DOWN);
+    bits = continuation.split(this.DESCEND);
     bits[bits.length - 1] = "";
-    return bits.join(this.DOWN);
+    return bits.join(this.DESCEND);
   };
 
   Conventions.prototype.getOperationSolution = function(operation, continuation, scope) {
@@ -19695,13 +19737,13 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getAscendingContinuation = function(continuation, item) {
-    return this.engine.getContinuation(continuation, item, this.engine.UP);
+    return this.engine.getContinuation(continuation, item, this.engine.ASCEND);
   };
 
   Conventions.prototype.getDescendingContinuation = function(operation, continuation, ascender) {
     var mark;
     if (ascender != null) {
-      mark = operation.def.rule && ascender === 1 && this.engine.DOWN || this.engine.RIGHT;
+      mark = operation.def.rule && ascender === 1 && this.engine.DESCEND || this.engine.PAIR;
       if (mark) {
         return this.engine.getContinuation(continuation, null, mark);
       } else {
@@ -20024,6 +20066,14 @@ Rules = (function() {
         this.engine.provide(result);
         return true;
       }
+    },
+    onAnalyze: function(operation) {
+      var parent;
+      parent = operation.parent || operation;
+      while (parent != null ? parent.parent : void 0) {
+        parent = parent.parent;
+      }
+      return operation.sourceIndex = parent.rules = (parent.rules || 0) + 1;
     }
   };
 
@@ -20032,7 +20082,7 @@ Rules = (function() {
   Evaluates one of two branches
   chosen by truthiness of condition.
   
-  Invisible to solver, 
+  Structurally invisible to solver, 
   it leaves trail in continuation path
   */
 
@@ -20081,7 +20131,7 @@ Rules = (function() {
         }
         this.queries[path] = condition;
         index = condition && 2 || 3;
-        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DOWN, operation.parent[index], 'font-weight: normal; color: #999', continuation);
+        this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, path, scope, meta);
         }
@@ -20153,7 +20203,7 @@ Rules = (function() {
         } else if (!operation) {
           continuation = this.getContinuation(node.tagName.toLowerCase(), node);
         } else {
-          continuation = node._continuation = this.getContinuation(continuation || '', null, this.engine.DOWN);
+          continuation = node._continuation = this.getContinuation(continuation || '', null, this.engine.DESCEND);
         }
         if (node.getAttribute('scoped') != null) {
           scope = node.parentNode;
@@ -20509,7 +20559,7 @@ Selectors = (function() {
 
   Selectors.prototype['::this'] = {
     hidden: true,
-    mark: 'UP',
+    mark: 'ASCEND',
     command: function(operation, continuation, scope, meta, node) {
       return node || scope;
     }
@@ -20532,41 +20582,50 @@ Selectors = (function() {
 
   Selectors.prototype['$attribute'] = {
     lookup: true,
-    group: '$query',
-    type: 'qualifier',
     prefix: '[',
-    suffix: ']',
-    serialize: function() {
-      return function(operation, args) {
-        var name;
-        name = operation.name;
-        return args[1] + name.substring(1, name.length - 1) + '"' + (args[2] || '') + '"';
-      };
+    suffix: ']'
+  };
+
+  Selectors.prototype['[=]'] = {
+    binary: true,
+    quote: true,
+    group: '$query',
+    command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
+      if (node.getAttribute(attribute) === value) {
+        return node;
+      }
     }
   };
 
-  Selectors.prototype['[=]'] = function(node, attribute, value, operator) {
-    if (node.getAttribute(attribute) === value) {
-      return node;
+  Selectors.prototype['[*=]'] = {
+    binary: true,
+    quote: true,
+    group: '$query',
+    command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
+      var _ref;
+      if (((_ref = node.getAttribute(attribute)) != null ? _ref.indexOf(value) : void 0) > -1) {
+        return node;
+      }
     }
   };
 
-  Selectors.prototype['[*=]'] = function(node, attribute, value, operator) {
-    var _ref;
-    if (((_ref = node.getAttribute(attribute)) != null ? _ref.indexOf(value) : void 0) > -1) {
-      return node;
+  Selectors.prototype['[|=]'] = {
+    binary: true,
+    quote: true,
+    group: '$query',
+    command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
+      if (node.getAttribute(attribute) != null) {
+        return node;
+      }
     }
   };
 
-  Selectors.prototype['[|=]'] = function(node, attribute, value, operator) {
-    if (node.getAttribute(attribute) != null) {
-      return node;
-    }
-  };
-
-  Selectors.prototype['[]'] = function(node, attribute, value, operator) {
-    if (node.getAttribute(attribute) != null) {
-      return node;
+  Selectors.prototype['[]'] = {
+    group: '$query',
+    command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
+      if (node.getAttribute(attribute) != null) {
+        return node;
+      }
     }
   };
 
@@ -20668,7 +20727,7 @@ Selectors = (function() {
 _ref = Selectors.prototype;
 for (property in _ref) {
   command = _ref[property];
-  if (typeof command === 'object' && command.serialized !== false) {
+  if ((typeof command === 'object' && command.serialized !== false) || command.serialized) {
     command.before = 'onBeforeQuery';
     command.after = 'onQuery';
     command.init = 'onSelector';
@@ -21180,59 +21239,7 @@ module.exports = Units;
 
 });
 require.register("gss/lib/methods/Variables.js", function(exports, require, module){
-var Variables;
 
-Variables = (function() {
-  function Variables() {}
-
-  Variables.prototype.get = {
-    command: function(operation, continuation, scope, meta, object, property) {
-      var id;
-      if (typeof object === 'string') {
-        id = object;
-      } else if (object.absolute === 'window' || object === document) {
-        id = '::window';
-      } else if (object.nodeType) {
-        id = this.identity.provide(object);
-      }
-      if (!property) {
-        id = '';
-        property = object;
-        object = void 0;
-      }
-      return ['get', id, property, this.getContinuation(continuation || '')];
-    }
-  };
-
-  Variables.prototype.set = {
-    command: function() {
-      var object;
-      object = this.intrinsic || this.assumed;
-      return object.set.apply(object, arguments);
-    }
-  };
-
-  Variables.prototype.suggest = {
-    command: function() {
-      return this.assumed.set.apply(this.assumed, arguments);
-    }
-  };
-
-  Variables.prototype.got = function(value) {
-    return value;
-  };
-
-  Variables.prototype.value = function(value) {
-    return value;
-  };
-
-  return Variables;
-
-})();
-
-Variables.prototype.got.hidden = true;
-
-module.exports = Variables;
 
 });
 require.register("gss/lib/concepts/Console.js", function(exports, require, module){
@@ -21629,7 +21636,6 @@ Domain = (function() {
   Domain.prototype.set = function(object, property, value, meta) {
     var old, path;
     this.setup();
-    console.log('set', object, property, value);
     path = this.engine.getPath(object, property);
     old = this.values[path];
     if (old === value) {
@@ -21717,7 +21723,6 @@ Domain = (function() {
     if (domain.immutable) {
       return;
     }
-    debugger;
     if (this.workers) {
       _ref1 = this.workers;
       for (url in _ref1) {
@@ -21955,7 +21960,6 @@ Domain = (function() {
   Domain.prototype.declare = function(name, operation) {
     var ops, variable;
     if (!(variable = this.variables[name])) {
-      debugger;
       variable = this.variables[name] = this.variable(name);
     }
     if (this.nullified && this.nullified[name]) {
@@ -22061,8 +22065,6 @@ Domain = (function() {
           delete this.values[path];
         }
         this.nullify(variable);
-        debugger;
-        console.log('nullify', path);
         delete this.variables[path];
       }
       this.nullified = void 0;
@@ -23591,9 +23593,6 @@ Abstract.prototype.Methods = (function() {
         }
       }
       getter = ['get', id, property, this.getContinuation(continuation || contd || '')];
-      if (getter[3] === "style$3↓ul li$li4↓:last") {
-        debugger;
-      }
       if (scope && scope !== this.scope) {
         getter.push(this.identity.provide(scope));
       }
@@ -23602,9 +23601,25 @@ Abstract.prototype.Methods = (function() {
   };
 
   Methods.prototype.set = {
+    onAnalyze: function(operation) {
+      var closest, farthest, parent;
+      parent = operation.parent;
+      closest = void 0;
+      while (parent) {
+        if (parent.name === 'rule') {
+          farthest = parent;
+          closest || (closest = parent);
+        }
+        parent = parent.parent;
+      }
+      if (farthest) {
+        operation.sourceIndex = farthest.assignments = (farthest.assignments || 0) + 1;
+        return (closest.properties || (closest.properties = [])).push(operation.sourceIndex);
+      }
+    },
     command: function(operation, continuation, scope, meta, property, value) {
       if (this.intrinsic) {
-        this.intrinsic.restyle(scope, property, value);
+        this.intrinsic.restyle(scope, property, value, continuation, operation);
       } else {
         this.assumed.set(scope, property, value);
       }
@@ -23992,8 +24007,8 @@ Intrinsic = (function(_super) {
     return old;
   };
 
-  Intrinsic.prototype.restyle = function(element, property, value) {
-    var camel, prop;
+  Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
+    var bits, camel, id, j, prop, stylesheet, _ref;
     if (value == null) {
       value = '';
     }
@@ -24027,7 +24042,81 @@ Intrinsic = (function(_super) {
         element.style.position = '';
       }
     }
+    if (continuation) {
+      bits = continuation.split(this.DESCEND);
+      if ((j = bits[0].lastIndexOf('$')) > -1) {
+        id = bits[0].substring(j);
+        if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
+          if (this.rule(stylesheet, operation, continuation, element, property, value)) {
+            return;
+          }
+        }
+      }
+    }
     return element.style[camel] = value;
+  };
+
+  Intrinsic.prototype.rule = function(stylesheet, operation, continuation, element, property, value) {
+    var body, dump, index, item, meta, needle, other, position, rule, rules, selectors, _base, _i, _j, _k, _len, _len1, _len2, _name, _ref, _ref1, _ref2, _ref3;
+    if (!((_ref = (dump = stylesheet.nextSibling)) != null ? _ref.meta : void 0)) {
+      dump = document.createElement('STYLE');
+      dump.meta = [];
+      stylesheet.parentNode.insertBefore(dump, stylesheet.nextSibling);
+    }
+    this.engine.restyled = true;
+    rule = operation;
+    while (rule = rule.parent) {
+      if (rule.name === 'rule') {
+        break;
+      }
+    }
+    if (!rule) {
+      return;
+    }
+    debugger;
+    needle = operation.sourceIndex;
+    _ref1 = rule.properties;
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      other = _ref1[_i];
+      if (other !== needle) {
+        if ((_ref2 = dump.meta[other]) != null ? _ref2.length : void 0) {
+          needle = other;
+          break;
+        }
+      }
+    }
+    meta = ((_base = dump.meta)[_name = operation.sourceIndex] || (_base[_name] = []));
+    if (meta.indexOf(continuation) > -1) {
+      return;
+    }
+    if (meta.push(continuation) > 1) {
+      return;
+    }
+    position = 0;
+    _ref3 = dump.meta;
+    for (index = _j = 0, _len1 = _ref3.length; _j < _len1; index = ++_j) {
+      item = _ref3[index];
+      if (index >= needle) {
+        break;
+      }
+      if (item != null ? item.length : void 0) {
+        position++;
+      }
+    }
+    rules = dump.sheet.rules || dump.sheet.cssRules;
+    for (_k = 0, _len2 = rules.length; _k < _len2; _k++) {
+      rule = rules[_k];
+      position -= rule.style.length - 1;
+    }
+    if (needle !== operation.sourceIndex) {
+      rule = rules[position];
+      rule.style[property] = value;
+    } else {
+      selectors = this.getOperationSelectors(operation).join(', ');
+      body = property + ':' + value;
+      index = dump.sheet.insertRule(selectors + "{" + body + "}", position);
+    }
+    return true;
   };
 
   Intrinsic.prototype.solve = function() {
@@ -24402,6 +24491,7 @@ Document = (function(_super) {
       }
     },
     compile: function() {
+      debugger;
       return this.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     },
     destroy: function() {
@@ -24576,7 +24666,7 @@ Expressions = (function() {
       }
       if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document)) {
         if (parent && this.engine.isCollection(result)) {
-          this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.UP, operation.parent, 'font-weight: normal; color: #999', continuation);
+          this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation);
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             contd = this.engine.getAscendingContinuation(continuation, item);
@@ -24680,6 +24770,9 @@ Expressions = (function() {
       noop: true
     });
     operation.domain = this.engine;
+    if (typeof def.onAnalyze === "function") {
+      def.onAnalyze(operation);
+    }
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       child = operation[index];
       if (child instanceof Array) {
@@ -24721,16 +24814,25 @@ Expressions = (function() {
   };
 
   Expressions.prototype.serialize = function(operation, otherdef, group) {
-    var after, before, def, groupper, index, op, prefix, separator, suffix, tail, _i, _ref;
+    var after, before, binary, def, groupper, index, op, prefix, separator, suffix, tail, _i, _ref;
     def = operation.def;
-    prefix = def.prefix || (otherdef && otherdef.prefix) || (operation.def.noop && operation.name) || '';
-    suffix = def.suffix || (otherdef && otherdef.suffix) || '';
+    prefix = def.prefix || (otherdef != null ? otherdef.prefix : void 0) || (operation.def.noop && operation.name) || '';
+    suffix = def.suffix || (otherdef != null ? otherdef.suffix : void 0) || '';
     separator = operation.def.separator;
     after = before = '';
     for (index = _i = 1, _ref = operation.length; 1 <= _ref ? _i < _ref : _i > _ref; index = 1 <= _ref ? ++_i : --_i) {
       if (op = operation[index]) {
         if (typeof op !== 'object') {
-          after += op;
+          if (operation.def.binary && after && !binary) {
+            after = op + after;
+            binary = true;
+          } else if (binary) {
+            if (operation.def.quote) {
+              after += '"' + op + '"';
+            }
+          } else {
+            after += op;
+          }
         } else if (op.key && group !== false) {
           if (group && (groupper = this.engine.methods[group])) {
             if (op.def.group === group) {
@@ -25224,8 +25326,7 @@ Queries = (function() {
     }
     this.unobserve(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
-      if (path.charAt(0) !== this.engine.RIGHT) {
-        debugger;
+      if (path.charAt(0) !== this.engine.PAIR) {
         this.engine.provide(['remove', this.engine.getContinuation(path)]);
       }
     }
@@ -25233,11 +25334,11 @@ Queries = (function() {
   };
 
   Queries.prototype.fetch = function(node, args, operation, continuation, scope) {
-    var query, _ref;
+    var query, _ref, _ref1;
     node || (node = this.engine.getContext(args, operation, scope, node));
-    if (this.engine.updating.queries) {
+    if ((_ref = this.engine.updating) != null ? _ref.queries : void 0) {
       query = this.engine.getQueryPath(operation, node);
-      return (_ref = this.engine.updating.queries[query]) != null ? _ref[0] : void 0;
+      return (_ref1 = this.engine.updating.queries[query]) != null ? _ref1[0] : void 0;
     }
   };
 
@@ -25255,7 +25356,7 @@ Queries = (function() {
   Queries.prototype.updateOperationCollection = function(operation, path, scope, added, removed, strict) {
     var collection, oppath;
     oppath = this.engine.getCanonicalPath(path);
-    if (path === oppath || this.engine.RIGHT + oppath === path) {
+    if (path === oppath || this.engine.PAIR + oppath === path) {
       return;
     }
     collection = this.get(oppath);
@@ -25776,7 +25877,7 @@ Pairs = (function() {
     parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
-      return this.engine.RIGHT;
+      return this.engine.PAIR;
     } else {
       return false;
     }
@@ -25820,7 +25921,7 @@ Pairs = (function() {
 
   Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
     var contd, id, index, parent, prev, result;
-    if (continuation.charAt(continuation.length - 1) === this.engine.RIGHT) {
+    if (continuation.charAt(continuation.length - 1) === this.engine.PAIR) {
       if (continuation.length === 1) {
         return;
       }
@@ -25830,11 +25931,11 @@ Pairs = (function() {
           break;
         }
       }
-      if (continuation.charAt(0) === this.engine.RIGHT) {
+      if (continuation.charAt(0) === this.engine.PAIR) {
         return this.onRight(operation, continuation, scope);
       } else if (operation.def.serialized) {
         prev = -1;
-        while ((index = continuation.indexOf(this.engine.RIGHT, prev + 1)) > -1) {
+        while ((index = continuation.indexOf(this.engine.PAIR, prev + 1)) > -1) {
           if (result = this.getSolution(operation, continuation.substring(prev || 0, index), scope, true)) {
             return result;
           }
@@ -25842,9 +25943,9 @@ Pairs = (function() {
         }
         return this.onLeft(operation, continuation, scope);
       }
-    } else if (continuation.lastIndexOf(this.engine.RIGHT) <= 0) {
+    } else if (continuation.lastIndexOf(this.engine.PAIR) <= 0) {
       contd = this.engine.getCanonicalPath(continuation, true);
-      if (contd.charAt(0) === this.engine.RIGHT) {
+      if (contd.charAt(0) === this.engine.PAIR) {
         contd = contd.substring(1);
       }
       if (contd === operation.path) {
@@ -25947,7 +26048,7 @@ Pairs = (function() {
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
-        this.engine.document.solve(operation.parent, contd + this.engine.RIGHT, scope, operation.index, pair[1]);
+        this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, operation.index, pair[1]);
       }
     }
     for (_n = 0, _len4 = cleaned.length; _n < _len4; _n++) {
@@ -25989,7 +26090,7 @@ Pairs = (function() {
       _results = [];
       for (_k = 0, _len1 = rights.length; _k < _len1; _k++) {
         right = rights[_k];
-        this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.RIGHT, null, right.substring(1));
+        this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.PAIR, null, right.substring(1));
         _results.push(delete this.engine.queries[right]);
       }
       return _results;
@@ -26000,7 +26101,7 @@ Pairs = (function() {
     var left, pairs, watchers, _ref, _ref1, _results;
     if (pairs = (_ref = this.paths) != null ? _ref[path] : void 0) {
       return (this.dirty || (this.dirty = {}))[path] = true;
-    } else if (path.charAt(0) === this.engine.RIGHT) {
+    } else if (path.charAt(0) === this.engine.PAIR) {
       path = this.engine.getCanonicalPath(path);
       _ref1 = this.paths;
       _results = [];

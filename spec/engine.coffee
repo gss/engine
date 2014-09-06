@@ -375,8 +375,8 @@ describe 'GSS engine', ->
       it 'Runs commands from sourceNode', (done) ->
         listener = (e) ->        
           expect(engine.updated.getProblems()).to.eql [
-              [['==', ['get','$box1','x','style$style1↓.box$box1'], 100]]
-              [['==', ['get','$box2','x','style$style1↓.box$box2'], 100]]
+              [['==', ['get','$box1','x','style[type*="text/gss"]$style1↓.box$box1'], 100]]
+              [['==', ['get','$box2','x','style[type*="text/gss"]$style1↓.box$box2'], 100]]
             ]
           container.removeEventListener 'solved', listener
           done()

@@ -82,23 +82,26 @@ describe 'End - to - End', ->
   # Vanilla CSS + CCSS
   # ===========================================================
   
-  xdescribe 'Vanilla CSS', ->  
+  describe 'Vanilla CSS', ->  
+    getSource = (style) ->
+      Array.prototype.slice.call(style.sheet.rules).map (rule) ->
+        return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2')
+      .join('\n')
     
     describe 'just CSS', ->
       engine = null
     
       it 'should dump', (done) ->
-        engine = GSS(container)
         container.innerHTML =  """
           <style type="text/gss" scoped>
             #css-only-dump {
               height: 100px;
             }
           </style>
+          <div id="css-only-dump"></div>
           """
         listener = (e) ->
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal "#css-only-dump{height:100px;}"
+          expect(getSource(engine.$tag('style')[1])).to.equal "#css-only-dump{height:100px;}"
           done()
         engine.once 'solve', listener    
     
@@ -106,7 +109,6 @@ describe 'End - to - End', ->
       engine = null
     
       it 'should dump', (done) ->
-        engine = GSS(container)
         container.innerHTML =  """
           <div id="css-simple-dump"></div>
           <style type="text/gss" scoped>
@@ -116,9 +118,9 @@ describe 'End - to - End', ->
             }
           </style>
           """
-        listener = (e) ->           
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal "#css-simple-dump{height:100px;}"
+        listener = (e) ->    
+          console.error(engine.$tag('style'))       
+          expect(getSource(engine.$tag('style')[1])).to.equal "#css-simple-dump{height:100px;}"
           done()
         engine.once 'solve', listener
     
@@ -126,13 +128,23 @@ describe 'End - to - End', ->
       engine = null
     
       it 'should dump', (done) ->
-        engine = GSS(container)
         container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
           <style type="text/gss" scoped>
             .outer, .outie {
               #css-inner-dump-1 {
                 width: == 100;
                 height: 100px;
+                z-index: 5;
               }
               .innie-outie {
                 #css-inner-dump-2 {
@@ -146,8 +158,10 @@ describe 'End - to - End', ->
           </style>
           """
         engine.once 'solve', ->
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal ".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;}.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}"
+          expect(getSource(engine.$tag('style')[1])).to.equal """
+            .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+            .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
+            """
           done()
   
   
@@ -239,7 +253,36 @@ describe 'End - to - End', ->
             "md2": 71 / 4
           done()
     describe 'simpliest order dependent selectors', ->
-      it 'should compute values', (done) ->                        
+      it 'should work in global scope', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss">             
+              (.a:first)[left] == 111;              
+              (.a:last)[left] == 222;
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div> 
+            <div id="a3" class="a"></div> 
+        """
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[x]": 111,
+            "$a3[x]": 222,
+          console.error('111')
+
+          container.appendChild(engine.$id('a1'))
+          engine.once 'solve', ->
+            console.error('222')
+          
+            expect(engine.values).to.eql
+              "$a2[x]": 111,
+              "$a1[x]": 222,
+
+            container.innerHTML = ""
+            engine.once 'solve', ->
+              expect(engine.values).to.eql {}
+              done()
+
+      it 'should work in a css rule', (done) ->                        
         container.innerHTML =  """
             <style type="text/gss">                            
               .a {

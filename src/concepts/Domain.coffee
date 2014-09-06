@@ -150,7 +150,6 @@ class Domain
   # Set key-value pair or merge object
   set: (object, property, value, meta) ->
     @setup()
-    console.log('set', object, property, value)
 
     path = @engine.getPath(object, property)
     old = @values[path]
@@ -206,7 +205,6 @@ class Domain
               @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
     
     return if domain.immutable
-    debugger
 
     if @workers
       for url, worker of @workers
@@ -355,7 +353,6 @@ class Domain
 
   declare: (name, operation) ->
     unless variable = @variables[name]
-      debugger
       variable = @variables[name] = @variable(name)
 
     if @nullified && @nullified[name]
@@ -431,8 +428,6 @@ class Domain
         if @values.hasOwnProperty(path)
           delete @values[path]
         @nullify(variable)
-        debugger
-        console.log('nullify', path)
         delete @variables[path]
 
 

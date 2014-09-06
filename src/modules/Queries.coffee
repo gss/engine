@@ -235,8 +235,7 @@ class Queries
     @unobserve(@engine.scope._gss_id, path)
 
     if !result || result.length == undefined
-      unless path.charAt(0) == @engine.RIGHT
-        debugger
+      unless path.charAt(0) == @engine.PAIR
         @engine.provide(['remove', @engine.getContinuation(path)])
     return true
 
@@ -244,7 +243,7 @@ class Queries
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    if @engine.updating.queries# && node != scope
+    if @engine.updating?.queries# && node != scope
       query = @engine.getQueryPath(operation, node)
       return @engine.updating.queries[query]?[0]
 
@@ -259,7 +258,7 @@ class Queries
   # Combine nodes from multiple selector paths
   updateOperationCollection: (operation, path, scope, added, removed, strict) ->
     oppath = @engine.getCanonicalPath(path)
-    return if path == oppath || @engine.RIGHT + oppath == path
+    return if path == oppath || @engine.PAIR + oppath == path
     collection = @get(oppath)
     return if removed && removed == collection
     if removed

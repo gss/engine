@@ -14,16 +14,14 @@ class Conventions
 # **↑ Referencing**, e.g. to jump to results of dom query,
 # or to figure out which element in that collection 
 # called this function
-  UP:    '↑'
+  ASCEND:    '↑'
 
-# **→ Linking**, that allows lazy evaluation, by making arguments
-# depend on previously resolved arguments,
-# e.g. for plural binding or to generate unique argument signature
-  RIGHT: '→'
+# **→ Linking**, to pair up elements in arguments
+  PAIR: '→'
 
 # **↓ Nesting**, as a way for expressions to own side effects,
 # e.g. to remove stylesheet, css rule or conditional branch
-  DOWN:  '↓'
+  DESCEND:  '↓'
 
 # ### Example 
 # 
@@ -65,7 +63,7 @@ class Conventions
   # When cleaning a path, also clean forks, rules and pairs
   # This is a little bit of necessary evil.
   getPossibleContinuations: (path) ->
-    [path, path + @UP, path + @RIGHT, path + @DOWN]
+    [path, path + @ASCEND, path + @PAIR, path + @DESCEND]
 
   # Return computed path for id and property e.g. $id[property]
   getPath: (id, property) ->
@@ -99,33 +97,69 @@ class Conventions
     else
       return operation.key
 
+  getOperationSelectors: (operation) ->
+    parent = operation
+    results = []
+    while parent
+      if parent.name == 'rule'
+        selectors = parent[1].path
+        if selectors.indexOf(',') > -1
+          if results.length
+            base = results.slice()
+            results.length = 0
+            for bit, index in selectors.split(',')
+              results.push.apply(results, base.map((selector) ->
+                unless selector.charAt(0) == " "
+                  selector = " " + selector 
+                return bit + selector
+              ))
+          else 
+            results = selectors.split(',')
+        else if results.length
+          results = results.map (selector) ->
+            unless selector.charAt(0) == " "
+              selector = " " + selector 
+            return selectors + selector
+        else 
+          results.push selectors
+
+
+      parent = parent.parent
+
+    return results
+
+
+
+
+
+
   # Remove all fork marks from a path. 
   # Allows multiple selector paths have shared destination 
   getCanonicalPath: (continuation, compact) ->
-    bits = @getContinuation(continuation).split(@DOWN);
+    bits = @getContinuation(continuation).split(@DESCEND);
     last = bits[bits.length - 1]
     last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')
     return last if compact
-    return bits.join(@DOWN)
+    return bits.join(@DESCEND)
   CanonicalizeRegExp: /\$[^↑]+(?:↑|$)/g
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)
   getScopePath: (continuation) ->
-    bits = continuation.split(@DOWN)
+    bits = continuation.split(@DESCEND)
     bits[bits.length - 1] = ""
-    return bits.join(@DOWN)
+    return bits.join(@DESCEND)
 
   getOperationSolution: (operation, continuation, scope) ->
     if operation.def.serialized && !operation.def.hidden
       return @pairs.getSolution(operation, continuation, scope)
 
   getAscendingContinuation: (continuation, item) ->
-    return @engine.getContinuation(continuation, item, @engine.UP)
+    return @engine.getContinuation(continuation, item, @engine.ASCEND)
 
   getDescendingContinuation: (operation, continuation, ascender) ->
     if ascender?
-      mark = operation.def.rule && ascender == 1 && @engine.DOWN || @engine.RIGHT
+      mark = operation.def.rule && ascender == 1 && @engine.DESCEND || @engine.PAIR
       if mark
         return @engine.getContinuation(continuation, null, mark)
       else
