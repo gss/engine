@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-06) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -24047,76 +24046,13 @@ Intrinsic = (function(_super) {
       if ((j = bits[0].lastIndexOf('$')) > -1) {
         id = bits[0].substring(j);
         if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
-          if (this.rule(stylesheet, operation, continuation, element, property, value)) {
+          if (this.stylesheets.solve(stylesheet, operation, this.getContinuation(continuation), element, property, value)) {
             return;
           }
         }
       }
     }
     return element.style[camel] = value;
-  };
-
-  Intrinsic.prototype.rule = function(stylesheet, operation, continuation, element, property, value) {
-    var body, dump, index, item, meta, needle, other, position, rule, rules, selectors, _base, _i, _j, _k, _len, _len1, _len2, _name, _ref, _ref1, _ref2, _ref3;
-    if (!((_ref = (dump = stylesheet.nextSibling)) != null ? _ref.meta : void 0)) {
-      dump = document.createElement('STYLE');
-      dump.meta = [];
-      stylesheet.parentNode.insertBefore(dump, stylesheet.nextSibling);
-    }
-    this.engine.restyled = true;
-    rule = operation;
-    while (rule = rule.parent) {
-      if (rule.name === 'rule') {
-        break;
-      }
-    }
-    if (!rule) {
-      return;
-    }
-    debugger;
-    needle = operation.sourceIndex;
-    _ref1 = rule.properties;
-    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-      other = _ref1[_i];
-      if (other !== needle) {
-        if ((_ref2 = dump.meta[other]) != null ? _ref2.length : void 0) {
-          needle = other;
-          break;
-        }
-      }
-    }
-    meta = ((_base = dump.meta)[_name = operation.sourceIndex] || (_base[_name] = []));
-    if (meta.indexOf(continuation) > -1) {
-      return;
-    }
-    if (meta.push(continuation) > 1) {
-      return;
-    }
-    position = 0;
-    _ref3 = dump.meta;
-    for (index = _j = 0, _len1 = _ref3.length; _j < _len1; index = ++_j) {
-      item = _ref3[index];
-      if (index >= needle) {
-        break;
-      }
-      if (item != null ? item.length : void 0) {
-        position++;
-      }
-    }
-    rules = dump.sheet.rules || dump.sheet.cssRules;
-    for (_k = 0, _len2 = rules.length; _k < _len2; _k++) {
-      rule = rules[_k];
-      position -= rule.style.length - 1;
-    }
-    if (needle !== operation.sourceIndex) {
-      rule = rules[position];
-      rule.style[property] = value;
-    } else {
-      selectors = this.getOperationSelectors(operation).join(', ');
-      body = property + ':' + value;
-      index = dump.sheet.insertRule(selectors + "{" + body + "}", position);
-    }
-    return true;
   };
 
   Intrinsic.prototype.solve = function() {
@@ -24427,16 +24363,19 @@ Document = (function(_super) {
 
   Document.prototype.Positions = require('../modules/Positions');
 
+  Document.prototype.Stylesheet = require('../modules/Stylesheets');
+
   Document.prototype.helps = true;
 
   function Document() {
-    var _base, _base1, _base2, _base3, _base4, _base5;
+    var _base, _base1, _base2, _base3, _base4, _base5, _base6;
     (_base = this.engine).positions || (_base.positions = new this.Positions(this));
-    (_base1 = this.engine).applier || (_base1.applier = this.engine.positions);
-    (_base2 = this.engine).scope || (_base2.scope = document);
-    (_base3 = this.engine).queries || (_base3.queries = new this.Queries(this));
-    (_base4 = this.engine).pairs || (_base4.pairs = new this.Pairs(this));
-    (_base5 = this.engine).mutations || (_base5.mutations = new this.Mutations(this));
+    (_base1 = this.engine).stylesheets || (_base1.stylesheets = new this.Stylesheet(this));
+    (_base2 = this.engine).applier || (_base2.applier = this.engine.positions);
+    (_base3 = this.engine).scope || (_base3.scope = document);
+    (_base4 = this.engine).queries || (_base4.queries = new this.Queries(this));
+    (_base5 = this.engine).pairs || (_base5.pairs = new this.Pairs(this));
+    (_base6 = this.engine).mutations || (_base6.mutations = new this.Mutations(this));
     this.engine.all = this.engine.scope.getElementsByTagName('*');
     if (this.scope.nodeType === 9 && ['complete', 'interactive', 'loaded'].indexOf(this.scope.readyState) === -1) {
       this.scope.addEventListener('DOMContentLoaded', this);
@@ -25298,7 +25237,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
-    var parent, result, _ref;
+    var parent, result, _ref, _ref1;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -25320,6 +25259,9 @@ Queries = (function() {
       this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, true);
     }
     this.engine.solved.remove(path);
+    if ((_ref1 = this.engine.stylesheets) != null) {
+      _ref1.clean(path, this['style[type*="text/gss"]']);
+    }
     this.set(path, void 0);
     if (this.qualified) {
       this.unobserve(this.qualified, path, true);
@@ -26138,6 +26080,140 @@ Pairs = (function() {
 })();
 
 module.exports = Pairs;
+
+});
+require.register("gss/lib/modules/Stylesheets.js", function(exports, require, module){
+var Stylesheet;
+
+Stylesheet = (function() {
+  function Stylesheet(engine) {
+    this.engine = engine;
+  }
+
+  Stylesheet.prototype.getRule = function(operation) {
+    var rule;
+    rule = operation;
+    while (rule = rule.parent) {
+      if (rule.name === 'rule') {
+        return rule;
+      }
+    }
+  };
+
+  Stylesheet.prototype.getStylesheet = function(stylesheet) {
+    var dump, _ref;
+    if (!((_ref = (dump = stylesheet.nextSibling)) != null ? _ref.meta : void 0)) {
+      dump = document.createElement('STYLE');
+      dump.meta = [];
+      return stylesheet.parentNode.insertBefore(dump, stylesheet.nextSibling);
+    }
+  };
+
+  Stylesheet.prototype.getOperation = function(operation, meta, rule) {
+    var needle, other, _i, _len, _ref, _ref1;
+    needle = operation.sourceIndex;
+    _ref = rule.properties;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      other = _ref[_i];
+      if (other !== needle) {
+        if ((_ref1 = meta[other]) != null ? _ref1.length : void 0) {
+          needle = other;
+          break;
+        }
+      }
+    }
+    return needle;
+  };
+
+  Stylesheet.prototype.watch = function(meta, continuation, operation) {
+    var _name;
+    meta = (meta[_name = operation.sourceIndex] || (meta[_name] = []));
+    if (meta.indexOf(continuation) > -1) {
+      return;
+    }
+    if (meta.push(continuation) > 1) {
+      return;
+    }
+    (meta[continuation] || (meta[continuation] = [])).push(operation.sourceIndex);
+    return true;
+  };
+
+  Stylesheet.prototype.solve = function(stylesheet, operation, continuation, element, property, value) {
+    var dump, rule;
+    if (rule = this.getRule(operation)) {
+      dump = this.getStylesheet(stylesheet);
+      if (this.watch(dump.meta, continuation, operation)) {
+        if (this.update(operation, property, value, dump, rule)) {
+          this.engine.engine.restyled = true;
+        }
+      }
+      return true;
+    }
+  };
+
+  Stylesheet.prototype.update = function(operation, property, value, dump, rule) {
+    var body, index, item, needle, other, position, rules, selectors, _i, _j, _len, _len1, _ref;
+    needle = this.getOperation(operation, dump.meta, rule);
+    position = 0;
+    _ref = dump.meta;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+      item = _ref[index];
+      if (index >= needle) {
+        break;
+      }
+      if (item != null ? item.length : void 0) {
+        position++;
+      }
+    }
+    rules = dump.sheet.rules || dump.sheet.cssRules;
+    for (_j = 0, _len1 = rules.length; _j < _len1; _j++) {
+      other = rules[_j];
+      position -= other.style.length - 1;
+    }
+    if (needle !== operation.sourceIndex) {
+      rule = rules[position];
+      rule.style[property] = value;
+    } else {
+      selectors = this.engine.getOperationSelectors(operation).join(', ');
+      body = property + ':' + value;
+      index = dump.sheet.insertRule(selectors + "{" + body + "}", position);
+    }
+    return true;
+  };
+
+  Stylesheet.prototype.remove = function(index, continuation, stylesheet, meta) {
+    var watchers;
+    watchers = meta[index];
+    watchers.splice(watchers.indexOf(continuation), 1);
+    if (!watchers.length) {
+      delete meta[index];
+      return console.log('lawl', index);
+    }
+  };
+
+  Stylesheet.prototype.clean = function(continuation, stylesheets) {
+    debugger;
+    var index, meta, operations, stylesheet, _i, _len, _ref, _results;
+    _results = [];
+    for (_i = 0, _len = stylesheets.length; _i < _len; _i++) {
+      stylesheet = stylesheets[_i];
+      if (meta = (_ref = stylesheet.nextSibling) != null ? _ref.meta : void 0) {
+        if (operations = meta[continuation]) {
+          while ((index = operations.pop()) != null) {
+            this.remove(index, continuation, stylesheet, meta);
+          }
+        }
+      }
+      _results.push(console.error('removeafdsdf', stylesheets, continuation, meta, stylesheet, stylesheet.nextSibling));
+    }
+    return _results;
+  };
+
+  return Stylesheet;
+
+})();
+
+module.exports = Stylesheet;
 
 });
 require.register("gss/lib/properties/Axioms.js", function(exports, require, module){
@@ -31836,6 +31912,7 @@ module.exports = {
     "lib/modules/Queries.js", 
     "lib/modules/Mutations.js", 
     "lib/modules/Pairs.js", 
+    "lib/modules/Stylesheets.js", 
 
     "lib/properties/Axioms.js",
     "lib/properties/Dimensions.js", 

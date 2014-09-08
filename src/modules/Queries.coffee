@@ -225,6 +225,7 @@ class Queries
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation, scope, undefined, true
     @engine.solved.remove(path)
+    @engine.stylesheets?.clean(path, @['style[type*="text/gss"]'])
 
     @set path, undefined
 
@@ -302,9 +303,6 @@ class Queries
 
     isCollection = result && result.length != undefined
 
-    #if old == result || (old == undefined && @removed)
-    #  noop = true unless result && result.keys
-    #  old = undefined
     # Clean refs of nodes that dont match anymore
     if old
       if old.length != undefined
@@ -429,6 +427,7 @@ class Queries
         @qualified.splice(index, 0, operation, continuation, scope)
     @
 
+  # Compare position of two nodes to sort collection in DOM order
   comparePosition: (a, b) ->
     return a.compareDocumentPosition?(b) ?
           (a != b && a.contains(b) && 16) +

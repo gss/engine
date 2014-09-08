@@ -47,6 +47,7 @@
     "lib/modules/Queries.js", 
     "lib/modules/Mutations.js", 
     "lib/modules/Pairs.js", 
+    "lib/modules/Stylesheets.js", 
 
     "lib/properties/Axioms.js",
     "lib/properties/Dimensions.js", 

@@ -91,7 +91,7 @@ describe 'End - to - End', ->
     describe 'just CSS', ->
       engine = null
     
-      it 'should dump', (done) ->
+      it 'should dump and clean', (done) ->
         container.innerHTML =  """
           <style type="text/gss" scoped>
             #css-only-dump {
@@ -100,10 +100,15 @@ describe 'End - to - End', ->
           </style>
           <div id="css-only-dump"></div>
           """
-        listener = (e) ->
+        engine.once 'solve', (e) ->
           expect(getSource(engine.$tag('style')[1])).to.equal "#css-only-dump{height:100px;}"
-          done()
-        engine.once 'solve', listener    
+
+          dumper = engine.$id('css-only-dump')
+          dumper.parentNode.removeChild(dumper)
+          engine.once 'solve', (e) ->
+            expect(getSource(engine.$tag('style')[1])).to.equal ""
+            
+            done()   
     
     describe 'CSS + CCSS', ->
       engine = null

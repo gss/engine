@@ -69,62 +69,12 @@ class Intrinsic extends Numeric
       if (j = bits[0].lastIndexOf('$')) > -1
         id = bits[0].substring(j)
         if (stylesheet = @identity[id])?.tagName == 'STYLE'
-          if @rule stylesheet, operation, continuation, element, property, value
+          if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
             return
 
     element.style[camel] = value
 
-  rule: (stylesheet, operation, continuation, element, property, value) ->
-    unless (dump = stylesheet.nextSibling)?.meta
-      dump = document.createElement('STYLE')
-      dump.meta = []
-      stylesheet.parentNode.insertBefore(dump, stylesheet.nextSibling)
-    @engine.restyled = true
-    rule = operation
-    while rule = rule.parent
-      if rule.name == 'rule'
-        break
-    return unless rule
 
-    # Group properties
-    debugger
-    needle = operation.sourceIndex
-    for other in rule.properties
-      if other != needle
-        if dump.meta[other]?.length
-          needle = other
-          break
-
-
-    meta = (dump.meta[operation.sourceIndex] ||= [])
-    if meta.indexOf(continuation) > -1
-      return
-    if meta.push(continuation) > 1
-      return
-
-
-    position = 0
-    for item, index in dump.meta
-      break if index >= needle
-      if item?.length
-        position++
-
-    rules = dump.sheet.rules || dump.sheet.cssRules
-    for rule in rules
-      position -= (rule.style.length - 1)
-
-
-
-
-    if needle != operation.sourceIndex
-      rule = rules[position]
-      rule.style[property] = value
-    else
-      selectors = @getOperationSelectors(operation).join(', ')
-      body = property + ':' + value
-      index = dump.sheet.insertRule(selectors + "{" + body + "}", position)
-
-    return true
 
   solve: ->
     Numeric::solve.apply(@, arguments)
