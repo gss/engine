@@ -49,8 +49,6 @@ Updater = (engine) ->
           update.push(effects)
         else
           update = effects
-      else
-        debugger
       effects = undefined
 
     # Handle broadcasted commands (e.g. remove)

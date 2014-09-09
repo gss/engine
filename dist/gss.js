@@ -19463,7 +19463,6 @@ Engine = (function(_super) {
       return this.updating.each(this.resolve, this, solution) || this.onSolve();
     }
     if (this.providing !== void 0) {
-      debugger;
       if (!this.hasOwnProperty('providing')) {
         (_base = this.engine).providing || (_base.providing = []);
       }
@@ -19569,6 +19568,7 @@ Engine = (function(_super) {
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
     return this.solve = function(commands) {
+      console.log('send');
       _this.worker.postMessage(_this.clone(commands));
       return _this.worker;
     };
@@ -20499,7 +20499,6 @@ Selectors = (function() {
     if (id == null) {
       id = node;
     }
-    debugger;
     if (!node.getElementById || !(found = this.all[id]) || isFinite(parseInt(id))) {
       return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
     }
@@ -23017,8 +23016,6 @@ Updater = function(engine) {
         } else {
           update = effects;
         }
-      } else {
-        debugger;
       }
       effects = void 0;
     }
@@ -25374,7 +25371,6 @@ Queries = (function() {
   };
 
   Queries.prototype.updateOperationCollection = function(operation, path, scope, added, removed, strict) {
-    debugger;
     var add, collection, oppath, remove, _i, _j, _len, _len1;
     oppath = this.engine.getCanonicalPath(path);
     if (path === oppath || this.engine.PAIR + oppath === path) {

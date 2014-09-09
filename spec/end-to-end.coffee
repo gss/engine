@@ -2297,9 +2297,53 @@ describe 'End - to - End', ->
             </style>
           """
     ###
+
       
+      
+    describe "new VFL input", ->
+      it 'should work', (done) ->
+        container.innerHTML = """
+        <div id="boxA" class="box"></div>
+        <div id="boxB" class="box"></div>
+        <div id="box2" class="box"></div>
+        <div id="box3"></div>
+        <div id="container"></div>
+
+        <style type="text/gss">
+          #container[width] == 300;
+          #container[left] == 0;
+          [gap] >= 0;
+
+          @h |- (.box)-10-... - (#box2) (#box3)-| gap([gap]) in(#container) {
+ 
+            width: == &:next[width]; // replacement for chain-width()
+           
+            top: == ::window[top]; // replacement for chain-top(::window[top])
+          }
+        </style>
+        """
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql 
+            "$box2[width]": 70
+            "$box2[x]": 160
+            "$box2[y]": 0
+            "$box3[width]": 70
+            "$box3[x]": 230
+            "$box3[y]": 0
+            "$boxA[width]": 70
+            "$boxA[x]": 0
+            "$boxA[y]": 0
+            "$boxB[width]": 70
+            "$boxB[x]": 80
+            "$boxB[y]": 0
+            "$container[width]": 300
+            "$container[x]": 0
+            "gap": 0
+          done()
+          console.log(arguments)
+
     describe "new VFL output", ->
-      it 'should work', ->
+      it 'should work', (done) ->
         container.innerHTML = """
         <div id="boxA" class="box"></div>
         <div id="boxB" class="box"></div>
@@ -2329,8 +2373,26 @@ describe 'End - to - End', ->
           }
         </style>
         """
-        engine.once 'solve', ->
-          console.log(arguments)
+        console.profile(1)
+        engine.once 'solve', (solution) ->
+          console.profileEnd(1)
+          expect(solution).to.eql 
+            "$box2[width]": 70
+            "$box2[x]": 160
+            "$box2[y]": 0
+            "$box3[width]": 70
+            "$box3[x]": 230
+            "$box3[y]": 0
+            "$boxA[width]": 70
+            "$boxA[x]": 0
+            "$boxA[y]": 0
+            "$boxB[width]": 70
+            "$boxB[x]": 80
+            "$boxB[y]": 0
+            "$container[width]": 300
+            "$container[x]": 0
+            "gap": 0
+          done()
         
     describe '[::] VFLs II', ->
   

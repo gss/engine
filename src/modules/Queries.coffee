@@ -272,7 +272,6 @@ class Queries
 
   # Combine nodes from multiple selector paths
   updateOperationCollection: (operation, path, scope, added, removed, strict) ->
-    debugger
     oppath = @engine.getCanonicalPath(path)
     if path == oppath || @engine.PAIR + oppath == path
       if operation

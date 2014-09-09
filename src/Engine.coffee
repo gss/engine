@@ -277,7 +277,6 @@ class Engine extends Domain.Events
     if !solution.push
       return @updating.each(@resolve, @, solution) || @onSolve()
     if @providing != undefined
-      debugger
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
@@ -352,6 +351,7 @@ class Engine extends Domain.Events
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
+      console.log('send')
       @worker.postMessage(@clone(commands))
       return @worker
 
