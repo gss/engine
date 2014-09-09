@@ -227,20 +227,48 @@ describe 'End - to - End', ->
             [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
             """
 
-          el = engine.$class("innie-outie")[1]
-          el.setAttribute('class', 'innie-outie-zzz')
+          A = engine.$class("innie-outie")[0]
+          B = engine.$class("innie-outie")[1]
+
+          B.setAttribute('class', 'innie-outie-zzz')
           engine.once 'solve', ->
             expect(getSource(engine.$tag('style')[1])).to.equal """
               [matches~=".innie-outie!>*"]{height:200px;}
               """
-            el.setAttribute('class', 'innie-outie')
+            B.setAttribute('class', 'innie-outie')
 
             engine.once 'solve', ->
               expect(getSource(engine.$tag('style')[1])).to.equal """
                 [matches~=".innie-outie!>*"]{height:200px;}
                 [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
                 """
-              done()
+              A.setAttribute('class', 'innie-outie-zzz')
+
+              engine.once 'solve', ->
+                expect(getSource(engine.$tag('style')[1])).to.equal """
+                  [matches~=".innie-outie!>*"]{height:200px;}
+                  [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+                  """
+                B.setAttribute('class', 'innie-outie-zzz')
+
+                engine.once 'solve', ->
+                  expect(getSource(engine.$tag('style')[1])).to.equal ""
+
+                  A.setAttribute('class', 'innie-outie')
+
+
+                  engine.once 'solve', ->
+                    expect(getSource(engine.$tag('style')[1])).to.equal """
+                      [matches~=".innie-outie!>*"]{height:200px;}
+                      """
+                    B.setAttribute('class', 'innie-outie')
+
+                    engine.once 'solve', ->
+                      expect(getSource(engine.$tag('style')[1])).to.equal """
+                        [matches~=".innie-outie!>*"]{height:200px;}
+                        [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+                        """
+                      done()
 
     xdescribe 'conditional', ->
       it 'should dump', (done) ->

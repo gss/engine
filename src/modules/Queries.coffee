@@ -51,10 +51,15 @@ class Queries
     @
 
   addMatch: (node, continuation) ->
-    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(' ', @engine.DOWN))
+    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DOWN))
   
   removeMatch: (node, continuation) ->
-    node.setAttribute('matches', (node.getAttribute('matches') || '').replace(' ' + continuation.replace(' ', @engine.DOWN), ''))
+    console.error(matches, path, 6666, node, [continuation], node.getAttribute('matches'))
+    if matches = node.getAttribute('matches')
+      path = ' ' + continuation.replace(/\s+/, @engine.DOWN)
+      if matches.indexOf(path) > -1
+        console.error('REMOVING', path, matches)
+        node.setAttribute('matches', matches.replace(path,''))
 
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
@@ -272,13 +277,14 @@ class Queries
     debugger
     oppath = @engine.getCanonicalPath(path)
     if path == oppath || @engine.PAIR + oppath == path
-      #if operation.bound && (operation.path != operation.key)
-      #if added
-      #  if added.length != undefined
-      #    for add in added
-      #      @addMatch(add, path) 
-      #  else
-      #    @addMatch(added, path) 
+      if operation
+        if operation.bound && (operation.path != operation.key)
+          if added
+            if added.length != undefined
+              for add in added
+                @addMatch(add, path) 
+            else
+              @addMatch(added, path) 
       if removed
         if removed.length != undefined
           for remove in removed

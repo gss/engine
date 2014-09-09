@@ -25065,11 +25065,19 @@ Queries = (function() {
   };
 
   Queries.prototype.addMatch = function(node, continuation) {
-    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(' ', this.engine.DOWN));
+    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.engine.DOWN));
   };
 
   Queries.prototype.removeMatch = function(node, continuation) {
-    return node.setAttribute('matches', (node.getAttribute('matches') || '').replace(' ' + continuation.replace(' ', this.engine.DOWN), ''));
+    var matches, path;
+    console.error(matches, path, 6666, node, [continuation], node.getAttribute('matches'));
+    if (matches = node.getAttribute('matches')) {
+      path = ' ' + continuation.replace(/\s+/, this.engine.DOWN);
+      if (matches.indexOf(path) > -1) {
+        console.error('REMOVING', path, matches);
+        return node.setAttribute('matches', matches.replace(path, ''));
+      }
+    }
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
@@ -25330,13 +25338,27 @@ Queries = (function() {
 
   Queries.prototype.updateOperationCollection = function(operation, path, scope, added, removed, strict) {
     debugger;
-    var collection, oppath, remove, _i, _len;
+    var add, collection, oppath, remove, _i, _j, _len, _len1;
     oppath = this.engine.getCanonicalPath(path);
     if (path === oppath || this.engine.PAIR + oppath === path) {
+      if (operation) {
+        if (operation.bound && (operation.path !== operation.key)) {
+          if (added) {
+            if (added.length !== void 0) {
+              for (_i = 0, _len = added.length; _i < _len; _i++) {
+                add = added[_i];
+                this.addMatch(add, path);
+              }
+            } else {
+              this.addMatch(added, path);
+            }
+          }
+        }
+      }
       if (removed) {
         if (removed.length !== void 0) {
-          for (_i = 0, _len = removed.length; _i < _len; _i++) {
-            remove = removed[_i];
+          for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
+            remove = removed[_j];
             this.removeMatch(remove, path);
           }
         } else {
