@@ -19678,7 +19678,7 @@ Conventions = (function() {
     while (parent) {
       if (parent.name === 'rule') {
         selectors = parent[1].path;
-        custom = selectors !== parent[1].key;
+        custom = selectors !== parent[1].groupped;
         if (results != null ? results.length : void 0) {
           base = results.slice();
           results.length = 0;
@@ -24546,7 +24546,7 @@ Expressions = (function() {
             context = scope;
           } else if (command = this.engine.methods[method]) {
             func = this.engine[command.displayName];
-            if (operation.def.scoped) {
+            if (operation.def.scoped && operation.bound) {
               args.unshift(scope);
             }
           }
@@ -24901,6 +24901,9 @@ Positions = (function() {
       return;
     }
     if (!(element = this.engine.identity[id])) {
+      if (id.indexOf('"') > -1) {
+        return;
+      }
       if (!(element = this.engine.getElementById(this.engine.scope, id.substring(1)))) {
         return;
       }
@@ -25327,14 +25330,16 @@ Queries = (function() {
 
   Queries.prototype.updateOperationCollection = function(operation, path, scope, added, removed, strict) {
     debugger;
-    var collection, oppath;
+    var collection, oppath, remove, _i, _len;
     oppath = this.engine.getCanonicalPath(path);
     if (path === oppath || this.engine.PAIR + oppath === path) {
-      if (operation.bound && (operation.path !== operation.key)) {
-        if (added) {
-          this.addMatch(added, path);
-        }
-        if (removed) {
+      if (removed) {
+        if (removed.length !== void 0) {
+          for (_i = 0, _len = removed.length; _i < _len; _i++) {
+            remove = removed[_i];
+            this.removeMatch(remove, path);
+          }
+        } else {
           this.removeMatch(removed, path);
         }
       }
@@ -25345,10 +25350,10 @@ Queries = (function() {
       return;
     }
     if (removed) {
-      this.each('remove', removed, oppath, operation, scope, rule || true, strict);
+      this.each('remove', removed, oppath, operation, scope, true, strict);
     }
     if (added) {
-      return this.each('add', added, oppath, operation, scope, rule || true);
+      return this.each('add', added, oppath, operation, scope, true);
     }
   };
 

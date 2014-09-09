@@ -82,7 +82,7 @@ class Expressions
             context = scope
           else if command = @engine.methods[method]
             func = @engine[command.displayName]
-            if operation.def.scoped
+            if operation.def.scoped && operation.bound
               args.unshift scope
 
     unless func

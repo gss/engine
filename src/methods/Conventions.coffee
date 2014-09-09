@@ -103,7 +103,7 @@ class Conventions
     while parent
       if parent.name == 'rule'
         selectors = parent[1].path
-        custom = (selectors != parent[1].key)
+        custom = (selectors != parent[1].groupped)
 
         if results?.length
           base = results.slice()

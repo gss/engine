@@ -272,19 +272,29 @@ class Queries
     debugger
     oppath = @engine.getCanonicalPath(path)
     if path == oppath || @engine.PAIR + oppath == path
-      if operation.bound && (operation.path != operation.key)
-        @addMatch(added, path) if added
-        @removeMatch(removed, path) if removed
+      #if operation.bound && (operation.path != operation.key)
+      #if added
+      #  if added.length != undefined
+      #    for add in added
+      #      @addMatch(add, path) 
+      #  else
+      #    @addMatch(added, path) 
+      if removed
+        if removed.length != undefined
+          for remove in removed
+            @removeMatch(remove, path)
+        else
+          @removeMatch(removed, path)
       return 
 
     collection = @get(oppath)
     return if removed && removed == collection
 
     if removed
-      @each 'remove', removed, oppath, operation, scope, rule || true, strict
+      @each 'remove', removed, oppath, operation, scope, true, strict
     
     if added
-      @each 'add', added, oppath, operation, scope, rule || true
+      @each 'add', added, oppath, operation, scope, true
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result, continuation, operation, scope, manual, strict) ->
