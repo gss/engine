@@ -225,7 +225,7 @@ class Expressions
       operation.parent ?= parent
       operation.index ?= parent.indexOf(operation)
       if parent.bound || parent.def?.bound == operation.index
-        operation.bound = true
+        operation.bound = parent
 
     # Handle commands that refer other commands (e.g. [$combinator, node, >])
     operation.arity = operation.length - 1

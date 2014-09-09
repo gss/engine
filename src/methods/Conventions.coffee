@@ -99,35 +99,40 @@ class Conventions
 
   getOperationSelectors: (operation) ->
     parent = operation
-    results = []
+    results = wrapped = custom = undefined
     while parent
       if parent.name == 'rule'
         selectors = parent[1].path
-        if selectors.indexOf(',') > -1
-          if results.length
-            base = results.slice()
-            results.length = 0
-            for bit, index in selectors.split(',')
-              results.push.apply(results, base.map((selector) ->
-                unless selector.charAt(0) == " "
-                  selector = " " + selector 
-                return bit + selector
-              ))
-          else 
-            results = selectors.split(',')
-        else if results.length
-          results = results.map (selector) ->
-            unless selector.charAt(0) == " "
-              selector = " " + selector 
-            return selectors + selector
+        custom = (selectors != parent[1].key)
+
+        if results?.length
+          base = results.slice()
+          results.length = 0
+          for bit, index in selectors.split(',')
+            results.push.apply(results, base.map((selector) ->
+              unless selector.charAt(0) == ' '
+                selector = ' ' + selector
+              if wrapped
+                return selector.substring(0, 12) + bit + selector.substring(12)
+              else if custom
+                bit = @getCustomSelector(bit)
+
+              return bit + selector
+            , @))
         else 
-          results.push selectors
-
-
+          results = selectors.split(',')
+          if custom
+            results = results.map @getCustomSelector, @
+        if custom
+          wrapped = true
       parent = parent.parent
 
     return results
 
+  getCustomSelector: (selector) ->
+    return '[matches~="' + selector.replace(@CustomizeRegExp, @DESCEND) + '"]'
+
+  CustomizeRegExp: /\s+/g
 
 
 

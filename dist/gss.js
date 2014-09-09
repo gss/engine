@@ -19672,44 +19672,51 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getOperationSelectors = function(operation) {
-    var base, bit, index, parent, results, selectors, _i, _len, _ref;
+    var base, bit, custom, index, parent, results, selectors, wrapped, _i, _len, _ref;
     parent = operation;
-    results = [];
+    results = wrapped = custom = void 0;
     while (parent) {
       if (parent.name === 'rule') {
         selectors = parent[1].path;
-        if (selectors.indexOf(',') > -1) {
-          if (results.length) {
-            base = results.slice();
-            results.length = 0;
-            _ref = selectors.split(',');
-            for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
-              bit = _ref[index];
-              results.push.apply(results, base.map(function(selector) {
-                if (selector.charAt(0) !== " ") {
-                  selector = " " + selector;
-                }
-                return bit + selector;
-              }));
-            }
-          } else {
-            results = selectors.split(',');
+        custom = selectors !== parent[1].key;
+        if (results != null ? results.length : void 0) {
+          base = results.slice();
+          results.length = 0;
+          _ref = selectors.split(',');
+          for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+            bit = _ref[index];
+            results.push.apply(results, base.map(function(selector) {
+              if (selector.charAt(0) !== ' ') {
+                selector = ' ' + selector;
+              }
+              if (wrapped) {
+                return selector.substring(0, 12) + bit + selector.substring(12);
+              } else if (custom) {
+                bit = this.getCustomSelector(bit);
+              }
+              return bit + selector;
+            }, this));
           }
-        } else if (results.length) {
-          results = results.map(function(selector) {
-            if (selector.charAt(0) !== " ") {
-              selector = " " + selector;
-            }
-            return selectors + selector;
-          });
         } else {
-          results.push(selectors);
+          results = selectors.split(',');
+          if (custom) {
+            results = results.map(this.getCustomSelector, this);
+          }
+        }
+        if (custom) {
+          wrapped = true;
         }
       }
       parent = parent.parent;
     }
     return results;
   };
+
+  Conventions.prototype.getCustomSelector = function(selector) {
+    return '[matches~="' + selector.replace(this.CustomizeRegExp, this.DESCEND) + '"]';
+  };
+
+  Conventions.prototype.CustomizeRegExp = /\s+/g;
 
   Conventions.prototype.getCanonicalPath = function(continuation, compact) {
     var bits, last;
@@ -20104,6 +20111,7 @@ Rules = (function() {
         }
       }
       if (operation.index === 1 && !ascender) {
+        debugger;
         if (!(condition = operation.condition)) {
           condition = this.clone(operation);
           condition.parent = operation.parent;
@@ -20418,6 +20426,7 @@ Selectors = (function() {
     if (id == null) {
       id = node;
     }
+    debugger;
     if (!node.getElementById || !(found = this.all[id]) || isFinite(parseInt(id))) {
       return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
     }
@@ -24687,7 +24696,7 @@ Expressions = (function() {
         operation.index = parent.indexOf(operation);
       }
       if (parent.bound || ((_ref = parent.def) != null ? _ref.bound : void 0) === operation.index) {
-        operation.bound = true;
+        operation.bound = parent;
       }
     }
     operation.arity = operation.length - 1;
@@ -25052,6 +25061,14 @@ Queries = (function() {
     return this;
   };
 
+  Queries.prototype.addMatch = function(node, continuation) {
+    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(' ', this.engine.DOWN));
+  };
+
+  Queries.prototype.removeMatch = function(node, continuation) {
+    return node.setAttribute('matches', (node.getAttribute('matches') || '').replace(' ' + continuation.replace(' ', this.engine.DOWN), ''));
+  };
+
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
     var collection, copy, el, index, keys, update, _base, _base1, _i, _len;
     collection = this.get(continuation);
@@ -25060,6 +25077,9 @@ Queries = (function() {
       update[1] = (copy = collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0) || null;
     }
     if (collection) {
+      if ((key != null ? key.name : void 0) === 'rule') {
+        node.setAttributes('matches', (node.getAttribute('matches') || '') + ' ' + continuation);
+      }
       if (!collection.keys) {
         return;
       }
@@ -25076,6 +25096,9 @@ Queries = (function() {
       }
       collection.splice(index, 0, node);
       keys.splice(index - 1, 0, key);
+      if ((key != null ? key.name : void 0) === 'rule') {
+        this.addMatch(node, continuation);
+      }
       return true;
     } else {
       (collection.duplicates || (collection.duplicates = [])).push(node);
@@ -25206,6 +25229,7 @@ Queries = (function() {
           }
         }
         collection.splice(index, 1);
+        this.removeMatch(node, continuation);
         if (keys) {
           keys.splice(index, 1);
         }
@@ -25302,9 +25326,18 @@ Queries = (function() {
   };
 
   Queries.prototype.updateOperationCollection = function(operation, path, scope, added, removed, strict) {
+    debugger;
     var collection, oppath;
     oppath = this.engine.getCanonicalPath(path);
     if (path === oppath || this.engine.PAIR + oppath === path) {
+      if (operation.bound && (operation.path !== operation.key)) {
+        if (added) {
+          this.addMatch(added, path);
+        }
+        if (removed) {
+          this.removeMatch(removed, path);
+        }
+      }
       return;
     }
     collection = this.get(oppath);
@@ -25312,10 +25345,10 @@ Queries = (function() {
       return;
     }
     if (removed) {
-      this.each('remove', removed, oppath, operation, scope, true, strict);
+      this.each('remove', removed, oppath, operation, scope, rule || true, strict);
     }
     if (added) {
-      return this.each('add', added, oppath, operation, scope, true);
+      return this.each('add', added, oppath, operation, scope, rule || true);
     }
   };
 
@@ -26092,23 +26125,23 @@ module.exports = Pairs;
 
 });
 require.register("gss/lib/modules/Stylesheets.js", function(exports, require, module){
-var Stylesheet;
+var Stylesheets;
 
-Stylesheet = (function() {
-  function Stylesheet(engine) {
+Stylesheets = (function() {
+  function Stylesheets(engine) {
     this.engine = engine;
     this.watchers = {};
     this.sheets = {};
   }
 
-  Stylesheet.prototype.compile = function() {
+  Stylesheets.prototype.compile = function() {
     this.engine.engine.solve('Document', 'stylesheets', [['eval', ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']], ['load', ['$attribute', ['$tag', 'link'], '*=', 'type', 'text/gss']]]);
     this.inline = this.engine.queries['style[type*="text/gss"]'];
     this.remote = this.engine.queries['link[type*="text/gss"]'];
     return this.collections = [this.inline, this.remote];
   };
 
-  Stylesheet.prototype.getRule = function(operation) {
+  Stylesheets.prototype.getRule = function(operation) {
     var rule;
     rule = operation;
     while (rule = rule.parent) {
@@ -26118,7 +26151,7 @@ Stylesheet = (function() {
     }
   };
 
-  Stylesheet.prototype.getStylesheet = function(stylesheet) {
+  Stylesheets.prototype.getStylesheet = function(stylesheet) {
     var sheet;
     if (!(sheet = this.sheets[stylesheet._gss_id])) {
       sheet = this.sheets[stylesheet._gss_id] = document.createElement('STYLE');
@@ -26127,12 +26160,12 @@ Stylesheet = (function() {
     return sheet;
   };
 
-  Stylesheet.prototype.getWatchers = function(stylesheet) {
+  Stylesheets.prototype.getWatchers = function(stylesheet) {
     var _base, _name;
     return (_base = this.watchers)[_name = stylesheet._gss_id] || (_base[_name] = []);
   };
 
-  Stylesheet.prototype.getOperation = function(operation, watchers, rule) {
+  Stylesheets.prototype.getOperation = function(operation, watchers, rule) {
     var needle, other, _i, _len, _ref, _ref1;
     needle = operation.sourceIndex;
     _ref = rule.properties;
@@ -26148,11 +26181,11 @@ Stylesheet = (function() {
     return needle;
   };
 
-  Stylesheet.prototype.getSelector = function(operation) {
+  Stylesheets.prototype.getSelector = function(operation) {
     return this.engine.getOperationSelectors(operation).join(', ');
   };
 
-  Stylesheet.prototype.solve = function(stylesheet, operation, continuation, element, property, value) {
+  Stylesheets.prototype.solve = function(stylesheet, operation, continuation, element, property, value) {
     var rule;
     if (rule = this.getRule(operation)) {
       if (this.watch(operation, continuation, stylesheet)) {
@@ -26164,7 +26197,7 @@ Stylesheet = (function() {
     }
   };
 
-  Stylesheet.prototype.update = function(operation, property, value, stylesheet, rule) {
+  Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
     var body, index, item, needle, other, position, rules, selectors, sheet, watchers, _i, _j, _len, _len1;
     watchers = this.getWatchers(stylesheet);
     sheet = this.getStylesheet(stylesheet).sheet;
@@ -26198,7 +26231,7 @@ Stylesheet = (function() {
     return true;
   };
 
-  Stylesheet.prototype.watch = function(operation, continuation, stylesheet) {
+  Stylesheets.prototype.watch = function(operation, continuation, stylesheet) {
     var meta, watchers, _name;
     watchers = this.getWatchers(stylesheet);
     meta = (watchers[_name = operation.sourceIndex] || (watchers[_name] = []));
@@ -26209,7 +26242,7 @@ Stylesheet = (function() {
     return meta.push(continuation) === 1;
   };
 
-  Stylesheet.prototype.unwatch = function(operation, continuation, stylesheet, watchers) {
+  Stylesheets.prototype.unwatch = function(operation, continuation, stylesheet, watchers) {
     var index, meta, observers;
     if (watchers == null) {
       watchers = this.getWatchers(stylesheet);
@@ -26224,13 +26257,12 @@ Stylesheet = (function() {
     }
     if (!meta.length) {
       delete watchers[index];
-      debugger;
       this.update(operation, operation[1], '', stylesheet, this.getRule(operation));
       return console.log('lawl', index);
     }
   };
 
-  Stylesheet.prototype.remove = function(continuation, stylesheets) {
+  Stylesheets.prototype.remove = function(continuation, stylesheets) {
     var collection, operation, operations, stylesheet, watchers, _i, _j, _k, _len, _len1, _ref;
     if (this.collections) {
       _ref = this.collections;
@@ -26244,7 +26276,7 @@ Stylesheet = (function() {
                 operation = operations[_k];
                 this.unwatch(operation, continuation, stylesheet, watchers);
               }
-              console.error('removeafdsdf', stylesheets, continuation, meta, stylesheet, stylesheet.nextSibling);
+              console.error('removeafdsdf', stylesheets, continuation, watchers.length, stylesheet, stylesheet.nextSibling);
             }
           }
         }
@@ -26252,11 +26284,11 @@ Stylesheet = (function() {
     }
   };
 
-  return Stylesheet;
+  return Stylesheets;
 
 })();
 
-module.exports = Stylesheet;
+module.exports = Stylesheets;
 
 });
 require.register("gss/lib/properties/Axioms.js", function(exports, require, module){

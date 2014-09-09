@@ -94,6 +94,7 @@ class Rules
           arg.shift()
 
       if operation.index == 1 && !ascender
+        debugger
         unless condition = operation.condition 
           condition = @clone operation
           condition.parent = operation.parent

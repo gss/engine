@@ -50,6 +50,12 @@ class Queries
       @ascending = undefined
     @
 
+  addMatch: (node, continuation) ->
+    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(' ', @engine.DOWN))
+  
+  removeMatch: (node, continuation) ->
+    node.setAttribute('matches', (node.getAttribute('matches') || '').replace(' ' + continuation.replace(' ', @engine.DOWN), ''))
+
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key) ->
@@ -59,6 +65,8 @@ class Queries
       update[1] = (copy = collection?.slice?()) || null
 
     if collection
+      if key?.name == 'rule'
+        node.setAttributes('matches', (node.getAttribute('matches') || '') + ' ' + continuation)
       return unless collection.keys
     else
       @[continuation] = collection = []
@@ -69,6 +77,8 @@ class Queries
         break unless @comparePosition(el, node) == 4
       collection.splice(index, 0, node)
       keys.splice(index - 1, 0, key)
+      if key?.name == 'rule'
+        @addMatch(node, continuation)
       return true
     else
       (collection.duplicates ||= []).push(node)
@@ -174,6 +184,7 @@ class Queries
             keys.splice(duplicate + length, 1)
             return false
         collection.splice(index, 1)
+        @removeMatch(node, continuation)
         if keys
           keys.splice(index, 1)
         @chain collection[index - 1], node, collection.slice(), continuation
@@ -258,14 +269,22 @@ class Queries
 
   # Combine nodes from multiple selector paths
   updateOperationCollection: (operation, path, scope, added, removed, strict) ->
+    debugger
     oppath = @engine.getCanonicalPath(path)
-    return if path == oppath || @engine.PAIR + oppath == path
+    if path == oppath || @engine.PAIR + oppath == path
+      if operation.bound && (operation.path != operation.key)
+        @addMatch(added, path) if added
+        @removeMatch(removed, path) if removed
+      return 
+
     collection = @get(oppath)
     return if removed && removed == collection
+
     if removed
-      @each 'remove', removed, oppath, operation, scope, true, strict
+      @each 'remove', removed, oppath, operation, scope, rule || true, strict
+    
     if added
-      @each 'add', added, oppath, operation, scope, true
+      @each 'add', added, oppath, operation, scope, rule || true
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result, continuation, operation, scope, manual, strict) ->

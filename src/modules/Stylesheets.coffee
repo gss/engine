@@ -1,4 +1,6 @@
-class Stylesheet
+# Find, parse, watch and transform stylesheets
+
+class Stylesheets
   constructor: (@engine) ->
     @watchers = {}
     @sheets = {}
@@ -101,7 +103,6 @@ class Stylesheet
 
     unless meta.length
       delete watchers[index]
-      debugger
       @update operation, operation[1], '', stylesheet, @getRule(operation)
       console.log('lawl', index)
 
@@ -114,7 +115,7 @@ class Stylesheet
               for operation in operations by -1
                 @unwatch(operation, continuation, stylesheet, watchers)
 
-              console.error('removeafdsdf', stylesheets, continuation, meta, stylesheet, stylesheet.nextSibling)
+              console.error('removeafdsdf', stylesheets, continuation, watchers.length, stylesheet, stylesheet.nextSibling)
     return
 
-module.exports = Stylesheet
+module.exports = Stylesheets

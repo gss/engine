@@ -178,7 +178,7 @@ describe 'End - to - End', ->
             .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
             """
 
-          el = engine.$class("innie-outie")[0]
+          el = engine.$class("innie-outie")[1]
           el.setAttribute('class', 'innie-outie-zzz')
           console.log(123)
 
@@ -186,8 +186,101 @@ describe 'End - to - End', ->
             expect(getSource(engine.$tag('style')[1])).to.equal """
               .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
               """
-            done()
-  
+            el.setAttribute('class', 'innie-outie')
+
+            engine.once 'solve', ->
+              expect(getSource(engine.$tag('style')[1])).to.equal """
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+                .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
+                """
+
+              done()
+
+    describe 'custom selectors', ->
+      it 'should dump', (done) ->
+        container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
+          <style type="text/gss" scoped>
+              .innie-outie {
+                !> * {
+                  height: 200px;
+
+                  #css-inner-dump-2 {
+                    z-index: -1;
+                  }
+                }
+              }
+          </style>
+          """
+        engine.once 'solve', ->
+          expect(getSource(engine.$tag('style')[1])).to.equal """
+            [matches~=".innie-outie!>*"]{height:200px;}
+            [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+            """
+
+          el = engine.$class("innie-outie")[1]
+          el.setAttribute('class', 'innie-outie-zzz')
+          engine.once 'solve', ->
+            expect(getSource(engine.$tag('style')[1])).to.equal """
+              [matches~=".innie-outie!>*"]{height:200px;}
+              """
+            el.setAttribute('class', 'innie-outie')
+
+            engine.once 'solve', ->
+              expect(getSource(engine.$tag('style')[1])).to.equal """
+                [matches~=".innie-outie!>*"]{height:200px;}
+                [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+                """
+              done()
+
+    xdescribe 'conditional', ->
+      it 'should dump', (done) ->
+        container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
+          <style type="text/gss" scoped>
+            .outer, .outie {
+              @if A > 0 {
+                .innie-outie {
+                  #css-inner-dump-2 {
+                    height: 200px;
+                  }
+                }
+              }
+              
+              #css-inner-dump-1 {
+                z-index: 5;
+
+                @if B > 0 {
+                  height: 200px;
+                }
+              }
+            }
+          </style>
+          """
+        engine.once 'solve', ->
+          expect(getSource(engine.$tag('style')[1])).to.equal """
+            .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+            """
+
+
   
   # CCSS
   # ===========================================================      
