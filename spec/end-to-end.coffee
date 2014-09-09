@@ -2150,13 +2150,13 @@ describe 'End - to - End', ->
   # VFL
   # ===========================================================
   
-  xdescribe "VFL", ->
+  describe "VFL", ->
   
     describe 'simple VFL', ->
   
       it 'should compute values', (done) ->
-        listen = (e) ->     
-          expect(engine.vars).to.eql
+        listen = (solution) ->     
+          expect(solution).to.eql
             "$s1[x]":100
             "$s1[width]":10
             "$s2[width]":10
@@ -2170,7 +2170,7 @@ describe 'End - to - End', ->
             <style type="text/gss">
           
             #s1[x] == 100;
-            @horizontal [#s1(==10)]-[#s2(==10)] gap(100);
+            @horizontal (#s1(==10))-(#s2(==10)) gap(100);
           
             </style>
           """
@@ -2179,8 +2179,8 @@ describe 'End - to - End', ->
     describe '[::] VFLs', ->
   
       it 'should compute', (done) ->
-        listen = (e) ->     
-          expect(engine.vars).to.eql      
+        listen = (solution) ->     
+          expect(solution).to.eql      
             "$s1[x]": 20,
             "$container[x]": 10,
             "$s2[x]": 20,
@@ -2196,7 +2196,7 @@ describe 'End - to - End', ->
             <style type="text/gss">                        
                       
               .section {
-                @horizontal |-[::this]-| gap(10) in(#container);
+                @horizontal |-(::this)-| gap(10) in(#container);
               }
             
               #container {
@@ -2222,11 +2222,13 @@ describe 'End - to - End', ->
                 width: == 100;
                 x: == 0;
               }
-              @h |[.a][.b]| in(.cont) chain-width;             
+              @h |(.a)(.b)| in(.cont) {
+                &[width] == &:next[width];
+              }            
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql 
             "$cont1[width]": 100
             "$cont2[width]": 100
             "$cont1[x]": 0            
@@ -2253,12 +2255,14 @@ describe 'End - to - End', ->
               .cont {
                 width: == 100;
                 x: == 0;
-                @h |[.a][.b]| in(::) chain-width;
+                @h |(.a)(.b)| in(::) {
+                  &[width] == &:next[width];
+                }
               }                           
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solved', (solution) ->
+          expect(solution).to.eql 
             "$cont1[width]": 100
             "$cont1[x]": 0            
             "$a1[x]": 0
@@ -2274,8 +2278,8 @@ describe 'End - to - End', ->
     describe 'Implicit VFL', ->
   
       it 'should compute', (done) ->
-        engine.once 'solve', (e) ->
-          expect(engine.vars).to.eql      
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql      
             "$s1[x]": 0,
             "$s2[x]": 60,
             "$s1[width]": 50,
@@ -2292,7 +2296,7 @@ describe 'End - to - End', ->
                 width: == 50;
               }                        
               
-              @h .implicit gap(10);
+              @h (.implicit)-10-...;
   
             </style>
           """
@@ -2331,8 +2335,8 @@ describe 'End - to - End', ->
     describe '[::] VFLs II', ->
   
       it 'should compute', (done) ->
-        engine.once 'solve', (e) ->     
-          expect(engine.vars).to.eql      
+        engine.once 'solve', (solution) ->     
+          expect(solution).to.eql      
             "$s1[x]": 20,
             "$container[x]": 10,
             "$s2[x]": 20,
@@ -2352,7 +2356,7 @@ describe 'End - to - End', ->
               } 
                      
               .section {
-                @horizontal |-[::this]-| gap(10) in(#container);
+                @horizontal |-(::this)-| gap(10) in(#container);
               }                                           
   
             </style>
@@ -2361,8 +2365,8 @@ describe 'End - to - End', ->
     describe '<points>', ->
   
       it 'should compute', (done) ->
-        engine.once 'solve', (e) ->
-          expect(engine.vars).to.eql                  
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql                  
             "$container[x]": 10,
             "$container[width]": 100,
             "right-edge": 200,
@@ -2384,12 +2388,12 @@ describe 'End - to - End', ->
               
               [right-edge] == 200;
               
-              @h <#container[center-x]>-[#s1]-<[right-edge]> [#s2] < 1000 + 1 > gap(10);     
+              @h <#container[center-x]>-(#s1)-<[right-edge]> (#s2) < 1000 + 1 > gap(10);     
   
             </style>
           """ 
     
-    xdescribe 'VFLs w/ missing elements', ->
+    describe 'VFLs w/ missing elements', ->
   
       it 'should compute', (done) ->
     
@@ -2397,7 +2401,7 @@ describe 'End - to - End', ->
             <div id="here"></div>
             <div id="container"></div>
             <style type="text/gss">                        
-              @h |-10-[#here]-[#gone]-[#gone2]-[#gone3]-10-|
+              @h |-10-(#here)-(#gone)-(#gone2)-(#gone3)-10-|
                 in(#container)
                 chain-height([but_height] !strong)
                 chain-center-y(#top-nav[center-y]) 
