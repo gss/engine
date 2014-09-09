@@ -107,7 +107,7 @@ describe 'End - to - End', ->
           dumper.parentNode.removeChild(dumper)
           engine.once 'solve', (e) ->
             expect(getSource(engine.$tag('style')[1])).to.equal ""
-            
+
             done()   
     
     describe 'CSS + CCSS', ->
@@ -115,19 +115,32 @@ describe 'End - to - End', ->
     
       it 'should dump', (done) ->
         container.innerHTML =  """
-          <div id="css-simple-dump"></div>
+          <div class="css-simple-dump"></div>
           <style type="text/gss" scoped>
-            #css-simple-dump {
+            .css-simple-dump {
               width: == 100;
               height: 100px;
             }
           </style>
           """
-        listener = (e) ->    
-          console.error(engine.$tag('style'))       
-          expect(getSource(engine.$tag('style')[1])).to.equal "#css-simple-dump{height:100px;}"
-          done()
-        engine.once 'solve', listener
+        engine.once 'solve', (e) ->   
+          expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+
+          dump = engine.$class('css-simple-dump')[0]
+          clone = dump.cloneNode()
+          dump.parentNode.appendChild(clone)
+
+          engine.once 'solve', (e) ->  
+            expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+            dump.parentNode.removeChild(dump)
+
+            engine.once 'solve', (e) ->  
+              expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+              clone.parentNode.removeChild(clone)
+
+              engine.once 'solve', (e) ->  
+                expect(getSource(engine.$tag('style')[1])).to.equal ""
+                done()
     
     describe 'nested', ->
       engine = null
@@ -158,16 +171,22 @@ describe 'End - to - End', ->
               }
             }
           </style>
-          <style type="text/gss" scoped>
-            [x] == 500;
-          </style>
           """
         engine.once 'solve', ->
           expect(getSource(engine.$tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
             .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
             """
-          done()
+
+          el = engine.$class("innie-outie")[0]
+          el.setAttribute('class', 'innie-outie-zzz')
+          console.log(123)
+
+          engine.once 'solve', ->
+            expect(getSource(engine.$tag('style')[1])).to.equal """
+              .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+              """
+            done()
   
   
   # CCSS

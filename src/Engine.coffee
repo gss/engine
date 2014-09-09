@@ -279,6 +279,7 @@ class Engine extends Domain.Events
     if !solution.push
       return @updating.each(@resolve, @, solution) || @onSolve()
     if @providing != undefined
+      debugger
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))

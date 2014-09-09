@@ -56,7 +56,7 @@ class Rules
 
     # Set rule body scope to a found element
     solve: (operation, continuation, scope, meta, ascender, ascending) ->
-      if operation.index == 2 && !ascender
+      if operation.index == 2 && !ascender && ascending?
         @expressions.solve operation, continuation, ascending, operation
         return false
 

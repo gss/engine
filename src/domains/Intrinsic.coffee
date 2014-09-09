@@ -73,6 +73,7 @@ class Intrinsic extends Numeric
             return
 
     element.style[camel] = value
+    return
 
 
 

@@ -12,7 +12,7 @@ class Document extends Abstract
 
   Queries:    require('../modules/Queries')
   Pairs:      require('../modules/Pairs')
-  
+
   Mutations:  require('../modules/Mutations')
   Positions:  require('../modules/Positions')
   Stylesheet: require('../modules/Stylesheets')
@@ -68,12 +68,8 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
-      debugger
-      @engine.solve 'Document', 'stylesheets', [
-        ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
-        ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
-      ]
-
+      @stylesheets.compile()
+      
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @
       @scope.removeEventListener 'scroll', @

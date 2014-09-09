@@ -225,7 +225,7 @@ class Queries
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation, scope, undefined, true
     @engine.solved.remove(path)
-    @engine.stylesheets?.clean(path, @['style[type*="text/gss"]'])
+    @engine.stylesheets?.remove(path, @['style[type*="text/gss"]'])
 
     @set path, undefined
 
@@ -280,7 +280,7 @@ class Queries
       return @[method] result, continuation, operation, scope, manual, strict
 
   # Filter out known nodes from DOM collections
-  update: (node, args, result, operation, continuation, scope) ->
+  update: (node, args, result = undefined, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)

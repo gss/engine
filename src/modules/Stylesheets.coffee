@@ -1,5 +1,17 @@
 class Stylesheet
   constructor: (@engine) ->
+    @watchers = {}
+    @sheets = {}
+
+  compile: ->
+    @engine.engine.solve 'Document', 'stylesheets', [
+      ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
+      ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
+    ]
+    @inline = @engine.queries['style[type*="text/gss"]']
+    @remote = @engine.queries['link[type*="text/gss"]']
+    @collections = [@inline, @remote]
+
 
   getRule: (operation) ->
     rule = operation
@@ -9,76 +21,100 @@ class Stylesheet
     return
 
   getStylesheet: (stylesheet) ->
-    unless (dump = stylesheet.nextSibling)?.meta
-      dump = document.createElement('STYLE')
-      dump.meta = []
-      stylesheet.parentNode.insertBefore(dump, stylesheet.nextSibling)
+    unless sheet = @sheets[stylesheet._gss_id]
+      sheet = @sheets[stylesheet._gss_id]= document.createElement('STYLE')
+      stylesheet.parentNode.insertBefore(sheet, stylesheet.nextSibling)
+    return sheet
 
-  getOperation: (operation, meta, rule) ->
+  getWatchers: (stylesheet) ->
+    return @watchers[stylesheet._gss_id] ||= []
+
+  getOperation: (operation, watchers, rule) ->
     needle = operation.sourceIndex
     for other in rule.properties
       if other != needle
-        if meta[other]?.length
+        if watchers[other]?.length
           needle = other
           break
     return needle
 
-  watch: (meta, continuation, operation) ->
-    meta = (meta[operation.sourceIndex] ||= [])
-    if meta.indexOf(continuation) > -1
-      return
-    if meta.push(continuation) > 1
-      return
-    (meta[continuation] ||= []).push(operation.sourceIndex)
-    return true
+  getSelector: (operation) ->
+    return @engine.getOperationSelectors(operation).join(', ')
 
   # dump style into native stylesheet rule
   solve: (stylesheet, operation, continuation, element, property, value) ->
     if rule = @getRule(operation)
-      dump = @getStylesheet(stylesheet)
-      if @watch dump.meta, continuation, operation
-        if @update operation, property, value, dump, rule
+      if @watch operation, continuation, stylesheet
+        if @update operation, property, value, stylesheet, rule
           @engine.engine.restyled = true
 
       return true
 
-  update: (operation, property, value, dump, rule) ->
-    needle = @getOperation(operation, dump.meta, rule)
+  update: (operation, property, value, stylesheet, rule) ->
+    watchers = @getWatchers(stylesheet)
+    sheet = @getStylesheet(stylesheet).sheet
+    needle = @getOperation(operation, watchers, rule)
     position = 0
-    for item, index in dump.meta
+    for item, index in watchers
       break if index >= needle
       if item?.length
         position++
 
-    rules = dump.sheet.rules || dump.sheet.cssRules
+    rules = sheet.rules || sheet.cssRules
     for other in rules
       position -= (other.style.length - 1)
 
-    if needle != operation.sourceIndex
+    if needle != operation.sourceIndex || value == ''
       rule = rules[position]
       rule.style[property] = value
+
+      if rule.style.length == 0
+        sheet.deleteRule(position)
     else
-      selectors = @engine.getOperationSelectors(operation).join(', ')
       body = property + ':' + value
-      index = dump.sheet.insertRule(selectors + "{" + body + "}", position)
+      selectors = @getSelector(operation)
+      index = sheet.insertRule(selectors + "{" + body + "}", position)
     return true
 
-  remove: (index, continuation, stylesheet, meta) ->
-    watchers = meta[index]
-    watchers.splice watchers.indexOf(continuation), 1
-    unless watchers.length
-      delete meta[index]
+  watch: (operation, continuation, stylesheet) ->
+    watchers = @getWatchers(stylesheet)
+
+    meta = (watchers[operation.sourceIndex] ||= [])
+    if meta.indexOf(continuation) > -1
+      return
+    (watchers[continuation] ||= []).push(operation)
+    return meta.push(continuation) == 1
+
+  unwatch: (operation, continuation, stylesheet, watchers) ->
+    watchers ?= @getWatchers(stylesheet)
+
+    index = operation.sourceIndex
+
+    meta = watchers[index]
+    meta.splice meta.indexOf(continuation), 1
+
+    observers = watchers[continuation]
+    observers.splice observers.indexOf(operation), 1
+
+    unless observers.length
+      delete watchers[continuation]
+
+    unless meta.length
+      delete watchers[index]
+      debugger
+      @update operation, operation[1], '', stylesheet, @getRule(operation)
       console.log('lawl', index)
 
-  clean: (continuation, stylesheets) ->
-    debugger
-    for stylesheet in stylesheets
-      if meta = stylesheet.nextSibling?.meta
-        if operations = meta[continuation]
-          while (index = operations.pop())?
-            @remove(index, continuation, stylesheet, meta)
+  remove: (continuation, stylesheets) ->
+    if @collections
+      for collection in @collections
+        for stylesheet in collection
+          if watchers = @getWatchers(stylesheet)
+            if operations = watchers[continuation]
+              for operation in operations by -1
+                @unwatch(operation, continuation, stylesheet, watchers)
 
-      console.error('removeafdsdf', stylesheets, continuation, meta, stylesheet, stylesheet.nextSibling)
-
+              console.error('removeafdsdf', stylesheets, continuation, meta, stylesheet, stylesheet.nextSibling)
+    return
 
 module.exports = Stylesheet

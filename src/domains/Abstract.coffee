@@ -14,6 +14,7 @@ class Abstract::Methods
 
   get:
     command: (operation, continuation, scope, meta, object, property, contd) ->
+      debugger
       if typeof object == 'string'
         id = object
 

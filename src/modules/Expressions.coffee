@@ -82,6 +82,8 @@ class Expressions
             context = scope
           else if command = @engine.methods[method]
             func = @engine[command.displayName]
+            if operation.def.scoped
+              args.unshift scope
 
     unless func
       throw new Error("Couldn't find method: #{operation.method}")
