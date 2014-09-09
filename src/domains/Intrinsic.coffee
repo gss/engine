@@ -110,38 +110,8 @@ class Intrinsic extends Numeric
   # scheduled for reflow, reflow shared parent element of both elements 
   validate: (node) ->
     return unless subscribers = @objects
-    reflown = undefined
-    while node
-      if node == @scope
-        if @engine.updating.reflown
-          reflown = @getCommonParent(reflown, @engine.updating)
-        else
-          reflown = @scope
-        break
-      if node == @engine.updating.reflown
-        break 
-      if id = node._gss_id
-        if properties = subscribers[id]
-          reflown = node
-      node = node.parentNode
-    @engine.updating.reflown = reflown
 
-  # Decide common parent for all mutated nodes
-  getCommonParent: (a, b) ->
-    aps = []
-    bps = []
-    ap = a
-    bp = b
-    while ap && bp
-      aps.push ap
-      bps.push bp
-      ap = ap.parentNode
-      bp = bp.parentNode
-      if bps.indexOf(ap) > -1
-        return ap
-      if aps.indexOf(bp) > -1
-        return bp
-    return
+    @engine.updating.reflown = @scope
 
   verify: (object, property, continuation) ->
     path = @getPath(object, property)

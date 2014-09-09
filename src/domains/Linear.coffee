@@ -94,12 +94,10 @@ class Linear::Methods extends Domain::Methods
       else
         absolute = @getPath(object, property)
         variable = @declare(absolute, operation)
-        console.log(variable, 'lol', variable.constraints)
         if variable.constraints
           for constrain in variable.constraints
             if constrain.domain && constrain.domain.frame && constrain.domain.frame != @frame
               delete @added[absolute]
-              console.log('ret value lol', variable.value)
               return variable.value 
       return [variable, path || (property && object) || '']
 

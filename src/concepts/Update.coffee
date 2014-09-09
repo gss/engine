@@ -1,26 +1,36 @@
-# Queue and group expressions by domain
+# Schedule, group, sort expressions by domain, graph and worker
+# Then evaluate it asynchronously, in order. Re-evaluate side-effects.
 
 Updater = (engine) ->
   Update = (domain, problem) ->
+    # Handle constructor invocation
     if @ instanceof Update
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
       @problems = problem && (domain.push && problem || [problem]) || []
       return
+
+    # Handle invokation without specified domain
     if arguments.length == 1
       problem = domain
       domain = undefined
       start = true
+
+
+    # Process arguments
     for arg, index in problem
       continue unless arg?.push
       arg.parent ?= problem
       arg.index  ?= index
       offset = 0
+
+      # Analyze variable
       if arg[0] == 'get'
         vardomain = @getVariableDomain(arg)
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
-        workload = new Update vardomain, [arg]
+        effects = new Update vardomain, [arg]
       else
+        # Handle framed expressions
         for a in arg
           if a?.push
             if arg[0] == 'framed'
@@ -30,29 +40,41 @@ Updater = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            workload = @update(d, arg)
+            effects = @update(d, arg)
             break
 
-      if workflow && workflow != workload
-        workflow.push(workload)
+      # Merge updates
+      if effects
+        if update && update != effects
+          update.push(effects)
+        else
+          update = effects
       else
-        workflow = workload
-    if !workflow
+        debugger
+      effects = undefined
+
+    # Handle broadcasted commands (e.g. remove)
+    if !update
       if typeof arg[0] == 'string'
         arg = [arg]
       foreign = true
-      workflow = new @update [domain != true && domain || null], [arg]
+      update = new @update [domain != true && domain || null], [arg]
+
+    # Replace arguments updates with parent function update
     if typeof problem[0] == 'string'
-      workflow.wrap(problem, @)
-      workflow.compact()
+      update.wrap(problem, @)
+      update.compact()
+
+    # Unroll recursion, solve problems
     if start || foreign
       if @updating
-        if @updating != workflow
-          return @updating.push(workflow)
+        if @updating != update
+          return @updating.push(update)
       else
-        return workflow.each @resolve, @engine
+        return update.each @resolve, @engine
 
-    return workflow
+    return update
+
   if @prototype
     for property, value of @prototype 
       Update::[property] = value
@@ -131,7 +153,11 @@ Update.prototype =
         k = l = j
         while (next = problem[++k]) != undefined
           if next && next.push
-            break
+            for problems in @problems
+              if (m = problems.indexOf(next)) > -1
+                break
+            if m > -1
+              break
         continue if next
         while (previous = problem[--l]) != undefined
           if previous && previous.push && exps.indexOf(previous) == -1
@@ -142,7 +168,6 @@ Update.prototype =
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
                     if !other.MAYBE
-                      debugger
                       if index < n
                         if @merge n, index
                           probs.splice(j, 1)
@@ -224,7 +249,7 @@ Update.prototype =
         (variables ||= []).push.apply(variables, arg.variables)
     target.variables = variables
 
-  # Last minute changes to workflow before execution
+  # Last minute changes to update before execution
   optimize: ->
     @compact()
 
@@ -300,7 +325,7 @@ Update.prototype =
 
 
 
-  # Merge source workflow into target workflow
+  # Merge source update into target update
   push: (problems, domain, reverse) ->
     if domain == undefined
       for domain, index in problems.domains
@@ -336,15 +361,12 @@ Update.prototype =
               priority = position
       position++
     if !merged
-      if !domain
-        debugger
       @domains.splice(priority, 0, domain)
       @problems.splice(priority, 0, problems)
 
     return @
 
   each: (callback, bind, solution) ->
-    console.log('each', !!callback, bind, solution)
     if solution
       @apply(solution) 
 
@@ -359,7 +381,7 @@ Update.prototype =
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         return result
 
-      if result
+      if result && result.onerror == undefined
         if result.push
           @engine.update(result)
         else

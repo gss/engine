@@ -242,12 +242,19 @@ describe 'Domain', ->
             ['get', 'a'],
             1]
         ]
+        ['=='
+          ['get', 'b']
+          ['+',
+            1000,
+            1]
+        ]
       ]
 
       engine.solve problem, (solution) ->
         expect(solution).to.eql 
           a: -1
           result: 0
+          b: 1001
         done()
 
   describe 'framed domains', (done) ->
@@ -461,7 +468,6 @@ describe 'Domain', ->
         c: 2
         a: 1
       console.log(1)
-      debugger
       expect(engine.solve [
         ['remove', 'my_tracker_path']
       ]).to.eql

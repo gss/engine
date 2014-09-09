@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-09) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-10) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19255,7 +19255,6 @@ Engine = (function(_super) {
         value = _ref[property];
         values[property] = value;
       }
-      console.log('msg', e);
       if (this.updating) {
         this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
         if (this.updating.busy.length) {
@@ -19426,7 +19425,6 @@ Engine = (function(_super) {
         _ref1.each(scope, this.intrinsic.update);
       }
     }
-    debugger;
     if ((_ref2 = this.queries) != null) {
       _ref2.onSolve();
     }
@@ -20187,7 +20185,6 @@ Rules = (function() {
         }
       }
       if (operation.index === 1 && !ascender) {
-        debugger;
         if (!(condition = operation.condition)) {
           condition = this.clone(operation);
           condition.parent = operation.parent;
@@ -22967,7 +22964,7 @@ var Update, Updater;
 Updater = function(engine) {
   var Update, property, value, _ref;
   Update = function(domain, problem) {
-    var a, arg, d, foreign, index, offset, start, vardomain, workflow, workload, _base, _i, _j, _len, _len1;
+    var a, arg, d, effects, foreign, index, offset, start, update, vardomain, _base, _i, _j, _len, _len1;
     if (this instanceof Update) {
       this.domains = domain && (domain.push && domain || [domain]) || [];
       this.problems = problem && (domain.push && problem || [problem]) || [];
@@ -22995,7 +22992,7 @@ Updater = function(engine) {
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;
         }
-        workload = new Update(vardomain, [arg]);
+        effects = new Update(vardomain, [arg]);
       } else {
         for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
           a = arg[_j];
@@ -23009,38 +23006,43 @@ Updater = function(engine) {
             } else {
               d = domain || true;
             }
-            workload = this.update(d, arg);
+            effects = this.update(d, arg);
             break;
           }
         }
       }
-      if (workflow && workflow !== workload) {
-        workflow.push(workload);
+      if (effects) {
+        if (update && update !== effects) {
+          update.push(effects);
+        } else {
+          update = effects;
+        }
       } else {
-        workflow = workload;
+        debugger;
       }
+      effects = void 0;
     }
-    if (!workflow) {
+    if (!update) {
       if (typeof arg[0] === 'string') {
         arg = [arg];
       }
       foreign = true;
-      workflow = new this.update([domain !== true && domain || null], [arg]);
+      update = new this.update([domain !== true && domain || null], [arg]);
     }
     if (typeof problem[0] === 'string') {
-      workflow.wrap(problem, this);
-      workflow.compact();
+      update.wrap(problem, this);
+      update.compact();
     }
     if (start || foreign) {
       if (this.updating) {
-        if (this.updating !== workflow) {
-          return this.updating.push(workflow);
+        if (this.updating !== update) {
+          return this.updating.push(update);
         }
       } else {
-        return workflow.each(this.resolve, this.engine);
+        return update.each(this.resolve, this.engine);
       }
     }
-    return workflow;
+    return update;
   };
   if (this.prototype) {
     _ref = this.prototype;
@@ -23134,7 +23136,7 @@ Update.prototype = {
     return true;
   },
   wrap: function(problem) {
-    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, n, next, opdomain, other, previous, problems, probs, strong, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1, _ref2;
+    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, opdomain, other, previous, problems, probs, strong, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _n, _ref, _ref1, _ref2, _ref3;
     bubbled = void 0;
     _ref = this.domains;
     for (index = _i = _ref.length - 1; _i >= 0; index = _i += -1) {
@@ -23148,7 +23150,16 @@ Update.prototype = {
         k = l = j;
         while ((next = problem[++k]) !== void 0) {
           if (next && next.push) {
-            break;
+            _ref1 = this.problems;
+            for (_j = 0, _len = _ref1.length; _j < _len; _j++) {
+              problems = _ref1[_j];
+              if ((m = problems.indexOf(next)) > -1) {
+                break;
+              }
+            }
+            if (m > -1) {
+              break;
+            }
           }
         }
         if (next) {
@@ -23156,9 +23167,9 @@ Update.prototype = {
         }
         while ((previous = problem[--l]) !== void 0) {
           if (previous && previous.push && exps.indexOf(previous) === -1) {
-            _ref1 = this.domains;
-            for (n = _j = _ref1.length - 1; _j >= 0; n = _j += -1) {
-              domain = _ref1[n];
+            _ref2 = this.domains;
+            for (n = _k = _ref2.length - 1; _k >= 0; n = _k += -1) {
+              domain = _ref2[n];
               if (n === index) {
                 continue;
               }
@@ -23167,7 +23178,6 @@ Update.prototype = {
                 if (domain !== other && domain.priority < 0 && other.priority < 0) {
                   if (!domain.MAYBE) {
                     if (!other.MAYBE) {
-                      debugger;
                       if (index < n) {
                         if (this.merge(n, index)) {
                           probs.splice(j, 1);
@@ -23211,8 +23221,8 @@ Update.prototype = {
             this.problems[index].push(problem);
           }
           strong = exp.domain && !exp.domain.MAYBE;
-          for (_k = 0, _len = exp.length; _k < _len; _k++) {
-            arg = exp[_k];
+          for (_l = 0, _len1 = exp.length; _l < _len1; _l++) {
+            arg = exp[_l];
             if (arg.domain && !arg.domain.MAYBE) {
               strong = true;
             }
@@ -23227,14 +23237,14 @@ Update.prototype = {
           }
         }
         if (other) {
-          _ref2 = this.domains;
-          for (counter = _l = 0, _len1 = _ref2.length; _l < _len1; counter = ++_l) {
-            domain = _ref2[counter];
+          _ref3 = this.domains;
+          for (counter = _m = 0, _len2 = _ref3.length; _m < _len2; counter = ++_m) {
+            domain = _ref3[counter];
             if (domain !== other || bubbled) {
               if ((other.MAYBE && domain.MAYBE) || domain.displayName === other.displayName) {
                 problems = this.problems[counter];
-                for (_m = 0, _len2 = problem.length; _m < _len2; _m++) {
-                  arg = problem[_m];
+                for (_n = 0, _len3 = problem.length; _n < _len3; _n++) {
+                  arg = problem[_n];
                   if ((j = problems.indexOf(arg)) > -1) {
                     problems.splice(j, 1);
                   }
@@ -23449,9 +23459,6 @@ Update.prototype = {
       position++;
     }
     if (!merged) {
-      if (!domain) {
-        debugger;
-      }
       this.domains.splice(priority, 0, domain);
       this.problems.splice(priority, 0, problems);
     }
@@ -23459,7 +23466,6 @@ Update.prototype = {
   },
   each: function(callback, bind, solution) {
     var domain, result, _ref, _ref1;
-    console.log('each', !!callback, bind, solution);
     if (solution) {
       this.apply(solution);
     }
@@ -23472,7 +23478,7 @@ Update.prototype = {
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         return result;
       }
-      if (result) {
+      if (result && result.onerror === void 0) {
         if (result.push) {
           this.engine.update(result);
         } else {
@@ -23659,7 +23665,6 @@ Abstract.prototype.Methods = (function() {
 
   Methods.prototype.get = {
     command: function(operation, continuation, scope, meta, object, property, contd) {
-      debugger;
       var getter, id, prop;
       if (typeof object === 'string') {
         id = object;
@@ -23970,14 +23975,12 @@ Linear.prototype.Methods = (function(_super) {
       } else {
         absolute = this.getPath(object, property);
         variable = this.declare(absolute, operation);
-        console.log(variable, 'lol', variable.constraints);
         if (variable.constraints) {
           _ref2 = variable.constraints;
           for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
             constrain = _ref2[_i];
             if (constrain.domain && constrain.domain.frame && constrain.domain.frame !== this.frame) {
               delete this.added[absolute];
-              console.log('ret value lol', variable.value);
               return variable.value;
             }
           }
@@ -24178,51 +24181,11 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.validate = function(node) {
-    var id, properties, reflown, subscribers;
+    var subscribers;
     if (!(subscribers = this.objects)) {
       return;
     }
-    reflown = void 0;
-    while (node) {
-      if (node === this.scope) {
-        if (this.engine.updating.reflown) {
-          reflown = this.getCommonParent(reflown, this.engine.updating);
-        } else {
-          reflown = this.scope;
-        }
-        break;
-      }
-      if (node === this.engine.updating.reflown) {
-        break;
-      }
-      if (id = node._gss_id) {
-        if (properties = subscribers[id]) {
-          reflown = node;
-        }
-      }
-      node = node.parentNode;
-    }
-    return this.engine.updating.reflown = reflown;
-  };
-
-  Intrinsic.prototype.getCommonParent = function(a, b) {
-    var ap, aps, bp, bps;
-    aps = [];
-    bps = [];
-    ap = a;
-    bp = b;
-    while (ap && bp) {
-      aps.push(ap);
-      bps.push(bp);
-      ap = ap.parentNode;
-      bp = bp.parentNode;
-      if (bps.indexOf(ap) > -1) {
-        return ap;
-      }
-      if (aps.indexOf(bp) > -1) {
-        return bp;
-      }
-    }
+    return this.engine.updating.reflown = this.scope;
   };
 
   Intrinsic.prototype.verify = function(object, property, continuation) {
@@ -25146,11 +25109,9 @@ Queries = (function() {
 
   Queries.prototype.removeMatch = function(node, continuation) {
     var matches, path;
-    console.error(matches, path, 6666, node, [continuation], node.getAttribute('matches'));
     if (matches = node.getAttribute('matches')) {
       path = ' ' + continuation.replace(/\s+/, this.engine.DOWN);
       if (matches.indexOf(path) > -1) {
-        console.error('REMOVING', path, matches);
         return node.setAttribute('matches', matches.replace(path, ''));
       }
     }

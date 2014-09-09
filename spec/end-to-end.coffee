@@ -30,40 +30,6 @@ describe 'End - to - End', ->
     
 
 
-  describe "new VFL output", ->
-    it 'should work', ->
-      container.innerHTML = """
-      <div id="boxA" class="box"></div>
-      <div id="boxB" class="box"></div>
-      <div id="box2" class="box"></div>
-      <div id="box3"></div>
-      <div id="container"></div>
-
-      <style type="text/gss">
-        #container[width] == 300;
-        #container[left] == 0;
-        [gap] >= 0;
-
-        #container[left] + [gap] == (.box:first)[left];
-         
-        .box {
-          &[right] + 10 == (&:next)[left];
-        }
-
-        (.box:last)[right] + [gap] == (#box2)[left];
-         
-        #box2[right] == #box3[left];
-        #box3[right] + [gap] == #container[right];
-         
-        .box, #box2, #box3 {
-          &[width] == (&:next)[width];
-          &[top] == ::window[top];
-        }
-      </style>
-      """
-      engine.once 'solve', ->
-        console.log(arguments)
-      
   
   # Config
   # ===========================================================
@@ -2332,6 +2298,40 @@ describe 'End - to - End', ->
           """
     ###
       
+    describe "new VFL output", ->
+      it 'should work', ->
+        container.innerHTML = """
+        <div id="boxA" class="box"></div>
+        <div id="boxB" class="box"></div>
+        <div id="box2" class="box"></div>
+        <div id="box3"></div>
+        <div id="container"></div>
+
+        <style type="text/gss">
+          #container[width] == 300;
+          #container[left] == 0;
+          [gap] >= 0;
+
+          #container[left] + [gap] == (.box:first)[left];
+           
+          .box {
+            &[right] + 10 == (&:next)[left];
+          }
+
+          (.box:last)[right] + [gap] == (#box2)[left];
+           
+          #box2[right] == #box3[left];
+          #box3[right] + [gap] == #container[right];
+           
+          .box, #box2, #box3 {
+            &[width] == (&:next)[width];
+            &[top] == ::window[top];
+          }
+        </style>
+        """
+        engine.once 'solve', ->
+          console.log(arguments)
+        
     describe '[::] VFLs II', ->
   
       it 'should compute', (done) ->

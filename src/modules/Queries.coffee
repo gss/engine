@@ -54,11 +54,9 @@ class Queries
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DOWN))
   
   removeMatch: (node, continuation) ->
-    console.error(matches, path, 6666, node, [continuation], node.getAttribute('matches'))
     if matches = node.getAttribute('matches')
       path = ' ' + continuation.replace(/\s+/, @engine.DOWN)
       if matches.indexOf(path) > -1
-        console.error('REMOVING', path, matches)
         node.setAttribute('matches', matches.replace(path,''))
 
   # Manually add element to collection, handle dups

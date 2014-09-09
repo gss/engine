@@ -100,7 +100,6 @@ class Engine extends Domain.Events
       values = e.target.values ||= {}
       for property, value of e.data
         values[property] = value
-      console.log('msg', e)
       if @updating
         @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
         if @updating.busy.length
@@ -230,7 +229,6 @@ class Engine extends Domain.Events
       scope = @updating.reflown || @scope
       @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
-    debugger
 
     @queries?.onSolve()
     #@pairs?.onSolve()
