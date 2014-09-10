@@ -114,7 +114,6 @@ class Rules
       old = @queries[path]
       if !!old != !!condition || (old == undefined && old != condition)
         unless old == undefined
-          debugger
           @queries.clean(path, continuation, operation.parent, scope)
         @queries[path] = condition
 
@@ -169,7 +168,6 @@ class Rules
         if nodeType = node.getAttribute('type')
           type = nodeType
         source ||= node.textContent || node 
-        debugger
         if (nodeContinuation = node._continuation)?
           @queries.clean(nodeContinuation)
           continuation = nodeContinuation

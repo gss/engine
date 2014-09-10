@@ -51,11 +51,16 @@ class Queries
     @
 
   addMatch: (node, continuation) ->
-    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DOWN))
+    if (index = continuation.indexOf(@engine.DESCEND)) > -1
+      continuation = continuation.substring(index + 1)
+    continuation = continuation.replace(/\s+/, @engine.DESCEND)
+    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
   
   removeMatch: (node, continuation) ->
     if matches = node.getAttribute('matches')
-      path = ' ' + continuation.replace(/\s+/, @engine.DOWN)
+      if (index = continuation.indexOf(@engine.DESCEND)) > -1
+        continuation = continuation.substring(index + 1)
+      path = ' ' + continuation.replace(/\s+/, @engine.DESCEND)
       if matches.indexOf(path) > -1
         node.setAttribute('matches', matches.replace(path,''))
 
@@ -68,8 +73,6 @@ class Queries
       update[1] = (copy = collection?.slice?()) || null
 
     if collection
-      if key?.name == 'rule'
-        node.setAttributes('matches', (node.getAttribute('matches') || '') + ' ' + continuation)
       return unless collection.keys
     else
       @[continuation] = collection = []
@@ -80,7 +83,7 @@ class Queries
         break unless @comparePosition(el, node) == 4
       collection.splice(index, 0, node)
       keys.splice(index - 1, 0, key)
-      if key?.name == 'rule'
+      if operation.parent.name == 'rule'
         @addMatch(node, continuation)
       return true
     else

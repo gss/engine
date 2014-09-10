@@ -20216,7 +20216,6 @@ Rules = (function() {
       old = this.queries[path];
       if (!!old !== !!condition || (old === void 0 && old !== condition)) {
         if (old !== void 0) {
-          debugger;
           this.queries.clean(path, continuation, operation.parent, scope);
         }
         this.queries[path] = condition;
@@ -20289,7 +20288,6 @@ Rules = (function() {
           type = nodeType;
         }
         source || (source = node.textContent || node);
-        debugger;
         if ((nodeContinuation = node._continuation) != null) {
           this.queries.clean(nodeContinuation);
           continuation = nodeContinuation;
@@ -24189,7 +24187,6 @@ Intrinsic = (function(_super) {
     }
     if (continuation) {
       bits = continuation.split(this.DESCEND);
-      debugger;
       if ((j = bits[0].lastIndexOf('$')) > -1) {
         id = bits[0].substring(j);
         if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
@@ -25160,13 +25157,21 @@ Queries = (function() {
   };
 
   Queries.prototype.addMatch = function(node, continuation) {
-    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.engine.DOWN));
+    var index;
+    if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
+      continuation = continuation.substring(index + 1);
+    }
+    continuation = continuation.replace(/\s+/, this.engine.DESCEND);
+    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.engine.DESCEND));
   };
 
   Queries.prototype.removeMatch = function(node, continuation) {
-    var matches, path;
+    var index, matches, path;
     if (matches = node.getAttribute('matches')) {
-      path = ' ' + continuation.replace(/\s+/, this.engine.DOWN);
+      if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
+        continuation = continuation.substring(index + 1);
+      }
+      path = ' ' + continuation.replace(/\s+/, this.engine.DESCEND);
       if (matches.indexOf(path) > -1) {
         return node.setAttribute('matches', matches.replace(path, ''));
       }
@@ -25181,9 +25186,6 @@ Queries = (function() {
       update[1] = (copy = collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0) || null;
     }
     if (collection) {
-      if ((key != null ? key.name : void 0) === 'rule') {
-        node.setAttributes('matches', (node.getAttribute('matches') || '') + ' ' + continuation);
-      }
       if (!collection.keys) {
         return;
       }
@@ -25200,7 +25202,7 @@ Queries = (function() {
       }
       collection.splice(index, 0, node);
       keys.splice(index - 1, 0, key);
-      if ((key != null ? key.name : void 0) === 'rule') {
+      if (operation.parent.name === 'rule') {
         this.addMatch(node, continuation);
       }
       return true;
@@ -26319,19 +26321,25 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
-    var body, dump, index, item, needle, other, position, rules, selectors, sheet, watchers, _i, _j, _len, _len1;
+    var body, dump, index, item, needle, op, operations, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _len1;
     watchers = this.getWatchers(stylesheet);
     dump = this.getStylesheet(stylesheet);
     sheet = dump.sheet;
     needle = this.getOperation(operation, watchers, rule);
-    position = 0;
+    previous = [];
     for (index = _i = 0, _len = watchers.length; _i < _len; index = ++_i) {
       item = watchers[index];
       if (index >= needle) {
         break;
       }
-      if (item != null ? item.length : void 0) {
-        position++;
+      if (operations = watchers[index]) {
+        for (_j = 0, _len1 = operations.length; _j < _len1; _j++) {
+          op = operations[_j];
+          other = this.getRule(op);
+          if (previous.indexOf(other) > -1) {
+            previous.push(other);
+          }
+        }
       }
     }
     if (!sheet) {
@@ -26341,20 +26349,16 @@ Stylesheets = (function() {
       return;
     }
     rules = sheet.rules || sheet.cssRules;
-    for (_j = 0, _len1 = rules.length; _j < _len1; _j++) {
-      other = rules[_j];
-      position -= other.style.length - 1;
-    }
     if (needle !== operation.sourceIndex || value === '') {
-      rule = rules[position];
+      rule = rules[previous.length];
       rule.style[property] = value;
       if (rule.style.length === 0) {
-        sheet.deleteRule(position);
+        sheet.deleteRule(previous.length);
       }
     } else {
       body = property + ':' + value;
       selectors = this.getSelector(operation);
-      index = sheet.insertRule(selectors + "{" + body + "}", position);
+      index = sheet.insertRule(selectors + "{" + body + "}", previous.length);
     }
     return true;
   };
