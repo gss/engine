@@ -66,7 +66,6 @@ class Intrinsic extends Numeric
 
     if continuation
       bits = continuation.split(@DESCEND)
-      debugger
       if (j = bits[0].lastIndexOf('$')) > -1
         id = bits[0].substring(j)
         if (stylesheet = @identity[id])?.tagName == 'STYLE'

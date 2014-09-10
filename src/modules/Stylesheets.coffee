@@ -57,29 +57,31 @@ class Stylesheets
     dump = @getStylesheet(stylesheet)
     sheet = dump.sheet
     needle = @getOperation(operation, watchers, rule)
-    position = 0
+    previous = []
     for item, index in watchers
       break if index >= needle
-      if item?.length
-        position++
+      if operations = watchers[index]
+        for op in operations
+          other = @getRule(op)
+          if previous.indexOf(other) > -1
+            previous.push(other)
     unless sheet
       if dump.parentNode
         dump.parentNode.removeChild(dump)
       return 
     rules = sheet.rules || sheet.cssRules
-    for other in rules
-      position -= (other.style.length - 1)
+    
 
     if needle != operation.sourceIndex || value == ''
-      rule = rules[position]
+      rule = rules[previous.length]
       rule.style[property] = value
 
       if rule.style.length == 0
-        sheet.deleteRule(position)
+        sheet.deleteRule(previous.length)
     else
       body = property + ':' + value
       selectors = @getSelector(operation)
-      index = sheet.insertRule(selectors + "{" + body + "}", position)
+      index = sheet.insertRule(selectors + "{" + body + "}", previous.length)
     return true
 
   watch: (operation, continuation, stylesheet) ->
