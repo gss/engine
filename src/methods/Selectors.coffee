@@ -349,6 +349,7 @@ class Selectors
 
   ':last':
     relative: true
+    singular: true
     command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
@@ -357,6 +358,7 @@ class Selectors
 
   ':first':
     relative: true
+    singular: true
     command: (operation, continuation, scope, meta, node) ->
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path

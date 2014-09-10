@@ -42,16 +42,16 @@ class Abstract::Methods
 
   set:
     onAnalyze: (operation) ->
-      parent = operation.parent
-      closest = undefined
-      while parent
+      parent = operation
+      rule = undefined
+      while parent = parent.parent
         if parent.name == 'rule'
-          farthest = parent
-          closest ||= parent   
-        parent = parent.parent
-      if farthest
-        operation.sourceIndex = farthest.assignments = (farthest.assignments || 0) + 1
-        (closest.properties ||= []).push operation.sourceIndex
+          rule ||= parent   
+        break unless parent.parent
+      if parent
+        operation.sourceIndex = parent.assignments = (parent.assignments || 0) + 1
+      if rule
+        (rule.properties ||= []).push operation.sourceIndex
 
     command: (operation, continuation, scope, meta, property, value) ->
       if @intrinsic

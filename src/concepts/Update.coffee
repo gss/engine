@@ -350,6 +350,8 @@ Update.prototype =
                   cmds.unshift problem
                 else
                   cmds.push problem
+            if problem[0] == '>'
+              debugger
           merged = true
           break
         else if other && domain

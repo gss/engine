@@ -66,6 +66,7 @@ class Intrinsic extends Numeric
 
     if continuation
       bits = continuation.split(@DESCEND)
+      debugger
       if (j = bits[0].lastIndexOf('$')) > -1
         id = bits[0].substring(j)
         if (stylesheet = @identity[id])?.tagName == 'STYLE'
@@ -78,12 +79,13 @@ class Intrinsic extends Numeric
 
 
   solve: ->
+    @console.row('measure')
     Numeric::solve.apply(@, arguments)
     @each @scope, @update
 
   get: (object, property, continuation) ->
     path = @getPath(object, property)
-      
+
     if (prop = @properties[path])?
       if typeof prop == 'function'
         return prop.call(@, object, continuation)
@@ -178,7 +180,7 @@ class Intrinsic extends Numeric
             when "height", "intrinsic-height"
               @set id, prop, node.offsetHeight
             else
-              style = @getIntrinsicProperty(prop)
+              style = @getIntrinsicProperty(prop) || prop
               if @properties[style]?.matcher
                 @set id, prop, @getStyle(node, style)
               else

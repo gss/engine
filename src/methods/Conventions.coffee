@@ -249,6 +249,8 @@ class Conventions
         #else
         domain = @linear.maybe()
     if variable && !force
+      if variable.domain && variable.domain != domain
+        debugger
       variable.domain = domain
     return domain
 

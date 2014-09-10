@@ -19941,6 +19941,9 @@ Conventions = (function() {
       }
     }
     if (variable && !force) {
+      if (variable.domain && variable.domain !== domain) {
+        debugger;
+      }
       variable.domain = domain;
     }
     return domain;
@@ -20211,9 +20214,9 @@ Rules = (function() {
       }
       condition = ascending && (typeof ascending !== 'object' || ascending.length !== 0);
       old = this.queries[path];
-      console.info('branch dammit', continuation, scope, [old, condition]);
       if (!!old !== !!condition || (old === void 0 && old !== condition)) {
         if (old !== void 0) {
+          debugger;
           this.queries.clean(path, continuation, operation.parent, scope);
         }
         this.queries[path] = condition;
@@ -20227,7 +20230,9 @@ Rules = (function() {
     },
     capture: function(result, operation, continuation, scope, meta) {
       if (operation.index === 1) {
-        this.document.methods["if"].update.call(this.document, operation.parent[1], this.getContinuation(continuation), scope, meta, void 0, result);
+        if (continuation != null) {
+          this.document.methods["if"].update.call(this.document, operation.parent[1], this.getContinuation(continuation, null, this.DESCEND), scope, meta, void 0, result);
+        }
         return true;
       } else {
         if (typeof result === 'object' && !result.nodeType && !this.isCollection(result)) {
@@ -20785,6 +20790,7 @@ Selectors = (function() {
 
   Selectors.prototype[':last'] = {
     relative: true,
+    singular: true,
     command: function(operation, continuation, scope, meta, node) {
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
@@ -20798,6 +20804,7 @@ Selectors = (function() {
 
   Selectors.prototype[':first'] = {
     relative: true,
+    singular: true,
     command: function(operation, continuation, scope, meta, node) {
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
@@ -21798,6 +21805,7 @@ Domain = (function() {
             break;
           }
           if (watcher.domain !== domain || (value == null)) {
+            this.console.info('re-evaluate', watcher);
             this.update([this.sanitize(this.getRootOperation(watcher, domain))]);
           } else {
             if (watcher.parent.domain === domain) {
@@ -23451,6 +23459,9 @@ Update.prototype = {
                 }
               }
             }
+            if (problem[0] === '>') {
+              debugger;
+            }
           }
           merged = true;
           break;
@@ -23735,19 +23746,22 @@ Abstract.prototype.Methods = (function() {
 
   Methods.prototype.set = {
     onAnalyze: function(operation) {
-      var closest, farthest, parent;
-      parent = operation.parent;
-      closest = void 0;
-      while (parent) {
+      var parent, rule;
+      parent = operation;
+      rule = void 0;
+      while (parent = parent.parent) {
         if (parent.name === 'rule') {
-          farthest = parent;
-          closest || (closest = parent);
+          rule || (rule = parent);
         }
-        parent = parent.parent;
+        if (!parent.parent) {
+          break;
+        }
       }
-      if (farthest) {
-        operation.sourceIndex = farthest.assignments = (farthest.assignments || 0) + 1;
-        return (closest.properties || (closest.properties = [])).push(operation.sourceIndex);
+      if (parent) {
+        operation.sourceIndex = parent.assignments = (parent.assignments || 0) + 1;
+      }
+      if (rule) {
+        return (rule.properties || (rule.properties = [])).push(operation.sourceIndex);
       }
     },
     command: function(operation, continuation, scope, meta, property, value) {
@@ -24175,6 +24189,7 @@ Intrinsic = (function(_super) {
     }
     if (continuation) {
       bits = continuation.split(this.DESCEND);
+      debugger;
       if ((j = bits[0].lastIndexOf('$')) > -1) {
         id = bits[0].substring(j);
         if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
@@ -24188,6 +24203,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.solve = function() {
+    this.console.row('measure');
     Numeric.prototype.solve.apply(this, arguments);
     return this.each(this.scope, this.update);
   };
@@ -24317,7 +24333,7 @@ Intrinsic = (function(_super) {
               this.set(id, prop, node.offsetHeight);
               break;
             default:
-              style = this.getIntrinsicProperty(prop);
+              style = this.getIntrinsicProperty(prop) || prop;
               if ((_ref = this.properties[style]) != null ? _ref.matcher : void 0) {
                 this.set(id, prop, this.getStyle(node, style));
               } else {

@@ -112,9 +112,9 @@ class Rules
 
       condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
       old = @queries[path]
-      console.info('branch dammit', continuation, scope, [old, condition])
       if !!old != !!condition || (old == undefined && old != condition)
         unless old == undefined
+          debugger
           @queries.clean(path, continuation, operation.parent, scope)
         @queries[path] = condition
 
@@ -129,7 +129,8 @@ class Rules
     capture: (result, operation, continuation, scope, meta) ->
       # Condition result bubbled up, pick a branch
       if operation.index == 1
-        @document.methods.if.update.call(@document, operation.parent[1], @getContinuation(continuation), scope, meta, undefined, result)
+        if continuation?
+          @document.methods.if.update.call(@document, operation.parent[1], @getContinuation(continuation, null, @DESCEND), scope, meta, undefined, result)
         return true
       else
       # Capture commands bubbled up from branches

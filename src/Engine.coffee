@@ -19,7 +19,7 @@ class Engine extends Domain.Events
   Method:      require('./concepts/Method')
   Property:    require('./concepts/Property')
   Console:     require('./concepts/Console')
-  Update:    require('./concepts/Update')
+  Update:      require('./concepts/Update')
   
   Properties:  require('./properties/Axioms')
 
