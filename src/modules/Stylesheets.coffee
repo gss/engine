@@ -63,7 +63,7 @@ class Stylesheets
       if operations = watchers[index]
         for op in operations
           other = @getRule(op)
-          if previous.indexOf(other) > -1
+          if previous.indexOf(other) == -1
             previous.push(other)
     unless sheet
       if dump.parentNode
