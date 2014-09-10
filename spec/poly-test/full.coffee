@@ -33,7 +33,7 @@ HTML = """
       [left-margin] == (main)[right];
 
       // global condition with nested rules
-      @if ::scope[scroll-top] > 0 {
+      @if (main)[top] > 50 {
         main {
           background: blue;
         }
