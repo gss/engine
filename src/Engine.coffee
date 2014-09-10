@@ -97,6 +97,7 @@ class Engine extends Domain.Events
   events:
     # Receieve message from worker
     message: (e) ->
+      debugger unless @updating
       values = e.target.values ||= {}
       for property, value of e.data
         values[property] = value
@@ -353,7 +354,6 @@ class Engine extends Domain.Events
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
-      console.log('send')
       @worker.postMessage(@clone(commands))
       return @worker
 
@@ -400,6 +400,7 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
+    debugger if e.data?[0] != '=='
     engine = Engine.messenger ||= Engine()
     assumed = engine.assumed.toObject()
     solution = engine.solve(e.data)

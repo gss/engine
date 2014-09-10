@@ -53,10 +53,10 @@ Updater = (engine) ->
 
     # Handle broadcasted commands (e.g. remove)
     if !update
-      if typeof arg[0] == 'string'
-        arg = [arg]
+      if typeof problem[0] == 'string'
+        problem = [problem]
       foreign = true
-      update = new @update [domain != true && domain || null], [arg]
+      update = new @update [domain != true && domain || null], [problem]
 
     # Replace arguments updates with parent function update
     if typeof problem[0] == 'string'

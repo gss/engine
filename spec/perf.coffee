@@ -8,6 +8,7 @@ expect = chai.expect
 assert = chai.assert
 
 describe 'Perf', ->
+  this.timeout(15000)
   scope = null
   engine = null
 
@@ -41,10 +42,14 @@ describe 'Perf', ->
         console.profileEnd('100 at once')
         #console.profileEnd(123)
         console.timeStamp(123)
-        done()
+        console.error(778)
+        scope.innerHTML = ""
+        engine.then ->
+          debugger
+          done()
 
       engine.solve [
-        ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'],'x']]
+        ['==', ['get', ['$class','box'], 'width', 'perf-test-1'], ['get', ['$class','box'],'x']]
       ]
       
 
@@ -55,10 +60,10 @@ describe 'Perf', ->
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
 
-      #console.profile('100 intrinsics at once')
       engine.once 'solve', ->     
-        #console.profileEnd('100 intrinsics at once')
-        done()
+        scope.innerHTML = ""
+        engine.then ->
+          done()
         
       engine.solve [
           ['==', ['get', ['$class','box'], 'width'], ['get', ['$class','box'], 'intrinsic-width']]
@@ -74,7 +79,7 @@ describe 'Perf', ->
       
       # first one here otherwise, nothing to solve
       scope.insertAdjacentHTML 'beforeend', """
-          <div class='box' style="position: absolute" id='gen-35346#{count}'>One</div>
+          <div class='box' id='gen-35346#{count}'>One</div>
         """    
       console.profile('100 serially')  
       listener = (e) ->       
@@ -83,7 +88,9 @@ describe 'Perf', ->
         if count is 100
           engine.removeEventListener 'solve', listener
           console.profileEnd('100 serially')
-          done()
+          scope.innerHTML = ""
+          engine.then ->
+            done()
         else
           scope.insertAdjacentHTML 'beforeend', """
             <div class='box' id='gen-35346#{count}'>One</div>
@@ -114,7 +121,9 @@ describe 'Perf', ->
         if count is 100
           engine.removeEventListener 'solve', listener
           console.profileEnd('100 intrinsics serially')
-          done()
+          scope.innerHTML = ""
+          engine.then ->
+            done()
           
       engine.addEventListener 'solve', listener
 

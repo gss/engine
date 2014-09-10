@@ -366,7 +366,7 @@ describe 'GSS commands', ->
           count++
           if count is 1
             el = engine.$id('box1')
-            engine.intrinsic.restyle el, "width", "1110px"
+            el.setAttribute('style', "width:1110px")
             
           else if count is 2     
             chai.expect(engine.updated.getProblems()).to.eql [

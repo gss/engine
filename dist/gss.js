@@ -19249,6 +19249,9 @@ Engine = (function(_super) {
   Engine.prototype.events = {
     message: function(e) {
       var property, value, values, _base, _ref;
+      if (!this.updating) {
+        debugger;
+      }
       values = (_base = e.target).values || (_base.values = {});
       _ref = e.data;
       for (property in _ref) {
@@ -19570,7 +19573,6 @@ Engine = (function(_super) {
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
     return this.solve = function(commands) {
-      console.log('send');
       _this.worker.postMessage(_this.clone(commands));
       return _this.worker;
     };
@@ -19637,13 +19639,16 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    var assumed, engine, property, solution, value, _ref;
+    var assumed, engine, property, solution, value, _ref, _ref1;
+    if (((_ref = e.data) != null ? _ref[0] : void 0) !== '==') {
+      debugger;
+    }
     engine = Engine.messenger || (Engine.messenger = Engine());
     assumed = engine.assumed.toObject();
     solution = engine.solve(e.data);
-    _ref = engine.inputs;
-    for (property in _ref) {
-      value = _ref[property];
+    _ref1 = engine.inputs;
+    for (property in _ref1) {
+      value = _ref1[property];
       if ((value != null) || (solution[property] == null)) {
         solution[property] = value;
       }
@@ -23033,11 +23038,11 @@ Updater = function(engine) {
       effects = void 0;
     }
     if (!update) {
-      if (typeof arg[0] === 'string') {
-        arg = [arg];
+      if (typeof problem[0] === 'string') {
+        problem = [problem];
       }
       foreign = true;
-      update = new this.update([domain !== true && domain || null], [arg]);
+      update = new this.update([domain !== true && domain || null], [problem]);
     }
     if (typeof problem[0] === 'string') {
       update.wrap(problem, this);
@@ -24151,7 +24156,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, id, j, prop, stylesheet, _ref;
+    var bits, camel, id, j, path, prop, stylesheet, _ref;
     if (value == null) {
       value = '';
     }
@@ -24195,6 +24200,10 @@ Intrinsic = (function(_super) {
           }
         }
       }
+    }
+    path = this.getPath(element, 'intrinsic-' + property);
+    if (this.watchers[path]) {
+      return;
     }
     element.style[camel] = value;
   };

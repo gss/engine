@@ -72,6 +72,9 @@ class Intrinsic extends Numeric
           if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
             return
 
+    path = @getPath(element, 'intrinsic-' + property)
+    if @watchers[path]
+      return
     element.style[camel] = value
     return
 
