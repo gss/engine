@@ -83,6 +83,7 @@ class Intrinsic extends Numeric
 
   get: (object, property, continuation) ->
     path = @getPath(object, property)
+      
     if (prop = @properties[path])?
       if typeof prop == 'function'
         return prop.call(@, object, continuation)

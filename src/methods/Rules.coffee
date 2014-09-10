@@ -81,7 +81,7 @@ class Rules
   it leaves trail in continuation path
   ###
 
-  "if":
+  'if':
     # Resolve all values in first argument
     primitive: 1
 
@@ -95,7 +95,7 @@ class Rules
 
       if operation.index == 1 && !ascender
         unless condition = operation.condition 
-          condition = @clone operation
+          operation.condition = condition = @clone operation
           condition.parent = operation.parent
           condition.index = operation.index
           condition.domain = operation.domain
@@ -168,6 +168,7 @@ class Rules
         if nodeType = node.getAttribute('type')
           type = nodeType
         source ||= node.textContent || node 
+        debugger
         if (nodeContinuation = node._continuation)?
           @queries.clean(nodeContinuation)
           continuation = nodeContinuation

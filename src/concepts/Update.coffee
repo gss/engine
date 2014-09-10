@@ -397,6 +397,28 @@ Update.prototype =
       @solution = solution = result
     return solution
 
+  remove: (continuation, problem) ->
+    if problem
+      if (problem[0] == 'value' && problem[2] == continuation) || 
+         (problem[0] == 'get'   && problem[3] == continuation)
+        return true
+      else for arg in problem
+        if arg?.push
+          if @remove continuation, arg
+            return true
+    else
+      index = @index
+      spliced = false
+      while problems = @problems[index++]
+        for problem, i in problems by -1
+          if @remove continuation, problem
+            problems.splice(i, 1)
+            if !problems.length
+              spliced = true
+      if spliced
+        @compact()
+
+
 
 
   getProblems: (callback, bind) ->

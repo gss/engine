@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-10) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19538,6 +19537,8 @@ Engine = (function(_super) {
             }
             if (other.paths[path]) {
               locals.push(path);
+            } else if (other.observers[path]) {
+              other.remove(path);
             }
           }
         }
@@ -19835,14 +19836,17 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getOperationPath = function(operation, continuation, scope) {
+    var path;
     if (continuation != null) {
       if (operation.def.serialized && !operation.def.hidden) {
-        return continuation + (operation.key || operation.path);
+        path = continuation + (operation.key || operation.path);
+      } else {
+        path = continuation;
       }
-      return continuation;
     } else {
-      return operation.path;
+      path = operation.path;
     }
+    return path;
   };
 
   Conventions.prototype.getContext = function(args, operation, scope, node) {
@@ -20169,7 +20173,7 @@ Rules = (function() {
   */
 
 
-  Rules.prototype["if"] = {
+  Rules.prototype['if'] = {
     primitive: 1,
     cleaning: true,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
@@ -20186,7 +20190,7 @@ Rules = (function() {
       }
       if (operation.index === 1 && !ascender) {
         if (!(condition = operation.condition)) {
-          condition = this.clone(operation);
+          operation.condition = condition = this.clone(operation);
           condition.parent = operation.parent;
           condition.index = operation.index;
           condition.domain = operation.domain;
@@ -20279,6 +20283,7 @@ Rules = (function() {
           type = nodeType;
         }
         source || (source = node.textContent || node);
+        debugger;
         if ((nodeContinuation = node._continuation) != null) {
           this.queries.clean(nodeContinuation);
           continuation = nodeContinuation;
@@ -23502,6 +23507,40 @@ Update.prototype = {
     }
     return solution;
   },
+  remove: function(continuation, problem) {
+    var arg, i, index, problems, spliced, _i, _j, _len;
+    if (problem) {
+      if ((problem[0] === 'value' && problem[2] === continuation) || (problem[0] === 'get' && problem[3] === continuation)) {
+        return true;
+      } else {
+        for (_i = 0, _len = problem.length; _i < _len; _i++) {
+          arg = problem[_i];
+          if (arg != null ? arg.push : void 0) {
+            if (this.remove(continuation, arg)) {
+              return true;
+            }
+          }
+        }
+      }
+    } else {
+      index = this.index;
+      spliced = false;
+      while (problems = this.problems[index++]) {
+        for (i = _j = problems.length - 1; _j >= 0; i = _j += -1) {
+          problem = problems[i];
+          if (this.remove(continuation, problem)) {
+            problems.splice(i, 1);
+            if (!problems.length) {
+              spliced = true;
+            }
+          }
+        }
+      }
+      if (spliced) {
+        return this.compact();
+      }
+    }
+  },
   getProblems: function(callback, bind) {
     return GSS.clone(this.problems);
   },
@@ -25312,7 +25351,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
-    var parent, result, _ref, _ref1;
+    var contd, parent, result, _ref, _ref1, _ref2;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -25321,14 +25360,12 @@ Queries = (function() {
     }
     result = this.get(path);
     if ((result = this.get(path, void 0, true)) !== void 0) {
-      if (result) {
-        if (parent = operation != null ? operation.parent : void 0) {
-          if ((_ref = parent.def.release) != null) {
-            _ref.call(this.engine, result, operation, continuation, scope);
-          }
+      if (parent = operation != null ? operation.parent : void 0) {
+        if ((_ref = parent.def.release) != null) {
+          _ref.call(this.engine, result, operation, continuation, scope);
         }
-        this.each('remove', result, path, operation);
       }
+      this.each('remove', result, path, operation);
     }
     if (scope && operation.def.cleaning) {
       this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, true);
@@ -25344,7 +25381,11 @@ Queries = (function() {
     this.unobserve(this.engine.scope._gss_id, path);
     if (!result || result.length === void 0) {
       if (path.charAt(0) !== this.engine.PAIR) {
-        this.engine.provide(['remove', this.engine.getContinuation(path)]);
+        contd = this.engine.getContinuation(path);
+        if ((_ref2 = this.engine.updating) != null) {
+          _ref2.remove(contd);
+        }
+        this.engine.provide(['remove', contd]);
       }
     }
     return true;
@@ -26258,9 +26299,10 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
-    var body, index, item, needle, other, position, rules, selectors, sheet, watchers, _i, _j, _len, _len1;
+    var body, dump, index, item, needle, other, position, rules, selectors, sheet, watchers, _i, _j, _len, _len1;
     watchers = this.getWatchers(stylesheet);
-    sheet = this.getStylesheet(stylesheet).sheet;
+    dump = this.getStylesheet(stylesheet);
+    sheet = dump.sheet;
     needle = this.getOperation(operation, watchers, rule);
     position = 0;
     for (index = _i = 0, _len = watchers.length; _i < _len; index = ++_i) {
@@ -26271,6 +26313,12 @@ Stylesheets = (function() {
       if (item != null ? item.length : void 0) {
         position++;
       }
+    }
+    if (!sheet) {
+      if (dump.parentNode) {
+        dump.parentNode.removeChild(dump);
+      }
+      return;
     }
     rules = sheet.rules || sheet.cssRules;
     for (_j = 0, _len1 = rules.length; _j < _len1; _j++) {

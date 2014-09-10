@@ -174,10 +174,12 @@ class Conventions
   getOperationPath: (operation, continuation, scope) ->
     if continuation?
       if operation.def.serialized && !operation.def.hidden
-        return continuation + (operation.key || operation.path)
-      return continuation
+        path = continuation + (operation.key || operation.path)
+      else
+        path = continuation
     else
-      return operation.path
+      path = operation.path
+    return path
 
   # Return element that is used as a context for given DOM operation
   getContext: (args, operation, scope, node) ->

@@ -33,18 +33,14 @@ HTML = """
       [left-margin] == (main)[right];
 
       // global condition with nested rules
-      @if (#main)[top] > 50 {
+      @if ::scope[scroll-top] > 50 {
         main {
-          background: red;
-        }
-      } @else {
-        main {
-          background: yellow;
+          background: blue;
         }
       }
       header {
         ::[left] == 0;
-        //// condition inside css rule
+        // condition inside css rule
         @if (::scope[intrinsic-width] > ::scope[intrinsic-height]) {
           ::[width] == ::scope[intrinsic-width] / 4;
         } @else {
@@ -121,38 +117,47 @@ remove = (el) ->
 
 
 describe 'Full page tests', -> 
+  for type, index in ['With worker', 'Without worker']
+    do (type, index) ->
+      describe type, ->
+        it 'should kompute', (done) ->
+          container = document.createElement('div')
+          container.style.height = '640px'
+          container.style.width = '640px'
+          container.style.position = 'absolute'
+          container.style.overflow = 'auto'
+          container.style.left = 0
+          container.style.top = 0
+          window.$engine = engine = new GSS(container, index == 0)
+          $('#fixtures').appendChild container
 
-  it 'should kompute', (done) ->
-    container = document.createElement('div')
-    container.style.height = '480px'
-    container.style.width = '640px'
-    container.style.position = 'absolute'
-    container.style.overflow = 'auto'
-    container.style.left = 0
-    container.style.top = 0
-    $('#fixtures').appendChild container
-
-    window.$engine = engine = new GSS(container)
-    container.innerHTML = HTML
-    engine.then (solution) ->
-      expect(solution['li-width']).to.eql((640 - 16) / 3)
-      expect(solution['$aside[x]']).to.eql(640 / 4 + 100)
-
-      li = engine.$first('ul li:last-child')
-      clone = li.cloneNode()
-      clone.id = 'li4'
-      clone.innerHTML = '4'
-      
-      li.parentNode.appendChild(clone)
-      engine.then (solution) ->
-        expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
-        li = engine.$first('ul li:first-child')
-        li.parentNode.removeChild(li)
-        engine.then (solution) ->
-          expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
-          expect(solution['$li2[x]']).to.eql(0)
-          expect(solution['$li1[x]']).to.eql(null)
-          engine.scope.style.width = '1280px'
+          container.innerHTML = HTML
           engine.then (solution) ->
-            expect(Math.round solution['li-width']).to.eql(Math.round((1280 - 16) / 3))
-            done()
+            expect(solution['li-width']).to.eql((640 - 16) / 3)
+            expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
+            expect(solution['$header[width]']).to.eql(Math.round(640 / 2))
+
+            li = engine.$first('ul li:last-child')
+            clone = li.cloneNode()
+            clone.id = 'li4'
+            clone.innerHTML = '4'
+            
+            li.parentNode.appendChild(clone)
+            engine.then (solution) ->
+              expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
+              li = engine.$first('ul li:first-child')
+              li.parentNode.removeChild(li)
+              engine.then (solution) ->
+                expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
+                expect(solution['$li2[x]']).to.eql(0)
+                expect(solution['$li1[x]']).to.eql(null)
+                engine.scope.style.width = '1280px'
+                engine.scope.style.height = '960px'
+                console.error(78787879)
+
+                engine.then (solution) ->
+                  expect(Math.round solution['li-width']).to.eql(Math.round((1280 - 16) / 3))
+                  expect(solution['$header[width]']).to.eql(Math.round(1280 / 4))
+                  #container.innerHTML = ""
+                  #engine.then (solution) ->
+                  #  done()

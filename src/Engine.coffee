@@ -333,6 +333,8 @@ class Engine extends Domain.Events
             continue if index == 0
             if other.paths[path]
               locals.push(path)
+            else if other.observers[path]
+              other.remove(path)
         if locals.length
           locals.unshift 'remove'
           workflow.push([locals], other, true)

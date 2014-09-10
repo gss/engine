@@ -40,7 +40,7 @@ describe 'Nested Rules', ->
         container.innerHTML =  ""
         if old = container._gss_id && GSS(container)
           old.destroy()
-        engine = new GSS(container)
+        window.$engine = engine = new GSS(container)
 
         engine.once 'solve', ->        
           expect(stringify engine.updated.getProblems()).to.eql stringify [[

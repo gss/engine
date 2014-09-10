@@ -54,14 +54,18 @@ class Stylesheets
 
   update: (operation, property, value, stylesheet, rule) ->
     watchers = @getWatchers(stylesheet)
-    sheet = @getStylesheet(stylesheet).sheet
+    dump = @getStylesheet(stylesheet)
+    sheet = dump.sheet
     needle = @getOperation(operation, watchers, rule)
     position = 0
     for item, index in watchers
       break if index >= needle
       if item?.length
         position++
-
+    unless sheet
+      if dump.parentNode
+        dump.parentNode.removeChild(dump)
+      return 
     rules = sheet.rules || sheet.cssRules
     for other in rules
       position -= (other.style.length - 1)

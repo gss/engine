@@ -230,11 +230,10 @@ class Queries
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
-      if result
-        if parent = operation?.parent
-          parent.def.release?.call(@engine, result, operation, continuation, scope)
+      if parent = operation?.parent
+        parent.def.release?.call(@engine, result, operation, continuation, scope)
 
-        @each 'remove', result, path, operation
+      @each 'remove', result, path, operation
 
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation, scope, undefined, true
@@ -251,7 +250,9 @@ class Queries
 
     if !result || result.length == undefined
       unless path.charAt(0) == @engine.PAIR
-        @engine.provide(['remove', @engine.getContinuation(path)])
+        contd = @engine.getContinuation(path)
+        @engine.updating?.remove(contd)
+        @engine.provide(['remove', contd])
     return true
 
   # If a query selects element from some other node than current scope

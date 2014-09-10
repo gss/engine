@@ -271,7 +271,7 @@ describe 'End - to - End', ->
                         [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
                         """
                       done()
-    xdescribe 'conditional', ->
+    describe 'conditional', ->
       it 'should dump', (done) ->
         container.innerHTML =  """
           <div class="outer">

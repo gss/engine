@@ -405,7 +405,7 @@ describe 'GSS engine', ->
       engine1 = null
     
       it 'without GSS rules style tag', ->
-        engine1 = GSS(container)
+        window.$engine = engine1 = GSS(container)
         expect(engine1.scope).to.be.equal container
     
       it 'after receives GSS style tag', (done) ->
