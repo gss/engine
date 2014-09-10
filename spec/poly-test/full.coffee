@@ -151,13 +151,13 @@ describe 'Full page tests', ->
                 expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
                 expect(solution['$li2[x]']).to.eql(0)
                 expect(solution['$li1[x]']).to.eql(null)
-                engine.scope.style.width = '1280px'
+                engine.scope.style.width = '1024px'
                 engine.scope.style.height = '960px'
                 console.error(78787879)
 
                 engine.then (solution) ->
-                  expect(Math.round solution['li-width']).to.eql(Math.round((1280 - 16) / 3))
-                  expect(solution['$header[width]']).to.eql(Math.round(1280 / 4))
+                  expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
+                  expect(solution['$header[width]']).to.eql(1024 / 4)
                   #container.innerHTML = ""
                   #engine.then (solution) ->
                   #  done()

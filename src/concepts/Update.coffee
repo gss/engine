@@ -345,10 +345,11 @@ Update.prototype =
                     exported = true
                     break
             unless exported
-              if reverse
-                cmds.unshift problem
-              else
-                cmds.push problem
+              unless cmds.indexOf(problem) > -1
+                if reverse
+                  cmds.unshift problem
+                else
+                  cmds.push problem
           merged = true
           break
         else if other && domain

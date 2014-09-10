@@ -523,6 +523,7 @@ class Domain::Methods
   value: 
     command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
       if !continuation && contd
+        console.error(meta, value, contd)
         return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value
 

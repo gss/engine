@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-10) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22294,6 +22295,7 @@ Domain.prototype.Methods = (function() {
   Methods.prototype.value = {
     command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
       if (!continuation && contd) {
+        console.error(meta, value, contd);
         return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
       }
       return value;
@@ -23441,10 +23443,12 @@ Update.prototype = {
               }
             }
             if (!exported) {
-              if (reverse) {
-                cmds.unshift(problem);
-              } else {
-                cmds.push(problem);
+              if (!(cmds.indexOf(problem) > -1)) {
+                if (reverse) {
+                  cmds.unshift(problem);
+                } else {
+                  cmds.push(problem);
+                }
               }
             }
           }
