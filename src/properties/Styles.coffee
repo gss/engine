@@ -151,6 +151,6 @@ class Styles
 
     if index % 2
       for i in [1 ... 3] by 2 
-        ((Styles::['border-radius'] ||= {'pad'})[side] ||= {'pad'})[sides[i + 1]] = ['Length', 'none']
+        ((Styles::['border-radius'] ||= [{'pad'}])[0][side] ||= {'pad'})[sides[i + 1]] = ['Length', 'none']
 
 module.exports = Styles

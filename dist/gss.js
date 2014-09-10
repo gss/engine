@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-10) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-11) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -27076,9 +27076,11 @@ Styles = (function() {
     }
     if (index % 2) {
       for (i = _k = 1; _k < 3; i = _k += 2) {
-        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = {
-          'pad': 'pad'
-        })))[side] || (_base4[side] = {
+        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = [
+          {
+            'pad': 'pad'
+          }
+        ]))[0])[side] || (_base4[side] = {
           'pad': 'pad'
         }))[sides[i + 1]] = ['Length', 'none'];
       }

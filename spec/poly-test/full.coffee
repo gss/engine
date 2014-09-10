@@ -1,4 +1,5 @@
-HTML = """
+DEMOS = 
+  GSS1: """
     <style scoped>
       header {
         background: orange;
@@ -101,7 +102,103 @@ HTML = """
     </main>
     <aside id="aside"></aside>
     <footer id="footer"></footer>
-"""
+  """
+  PROFILE_CARD: """
+    <style>
+
+      #profile-card-demo {
+        background-color: hsl(3, 18%, 43%);
+      }
+
+      #profile-card-demo * {
+        -webkit-backface-visibility: hidden;
+        margin: 0px;
+        padding: 0px;
+        outline: none;
+      }
+
+      #background {
+        background-color: hsl(3, 18%, 43%);
+        position: absolute;
+        top: 0px;
+        bottom: 0px;
+        right: 0px;
+        left: 0px;
+        background-image: url('assets/cover.jpg');
+        background-size: cover;
+        background-position: 50% 50%;
+        opacity: .7;
+        -webkit-filter: blur(5px) contrast(.7);
+      }
+
+      #cover {
+        background-image: url('assets/cover.jpg');
+        background-size: cover;
+        background-position: 50% 50%;
+      }
+
+      #avatar {
+        background-image: url('assets/avatar.jpg');
+        background-size: cover;
+        background-position: 50% 50%;
+        border: 10px solid hsl(39, 40%, 90%);
+        box-shadow: 0 1px 1px hsla(0,0%,0%,.5);
+      }
+
+      #profile-card-demo h1 {
+        color: white;
+        text-shadow: 0 1px 1px hsla(0,0%,0%,.5);
+        font-size: 40px;
+        line-height: 1.5em;
+        font-family: "adelle",georgia,serif;
+        font-style: normal;
+        font-weight: 400;
+      }
+
+      #profile-card-demo button {
+        color: hsl(3, 18%, 43%);
+        background-color: hsl(39, 40%, 90%);
+        text-shadow: 0 1px hsla(3, 18%, 100%, .5);
+        font-family: "proxima-nova-soft",helvetica,sans-serif;
+        font-style: normal;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform:uppercase;
+        letter-spacing:.1em;
+        border: none;  
+      }
+
+      #profile-card-demo button.primary {
+        background-color: #e38f71;
+        color: white;
+        text-shadow: 0 -1px hsla(3, 18%, 43%, .5);
+      }
+
+      #profile-card-demo #profile-card, .card {
+        background-color: hsl(39, 40%, 90%);
+        border: 1px solid hsla(0,0%,100%,.6);
+        box-shadow: 0 5px 8px hsla(0,0%,0%,.3);  
+      }
+    </style>
+    <style type="text/gss">
+
+      #avatar {
+        height: == 160 !require;
+        width: == ::[height];
+        border-radius: == ::[height] / 2;        
+      }
+
+    </style>
+    <div id="background"></div>
+    <div id="profile-card"></div>
+    <div id="cover"></div>
+    <div id="avatar"></div>
+    <h1 id="name">Dan Daniels</h1>
+    <button id="follow" class="primary">Follow</button>
+    <button id="following">Following</button>
+    <button id="followers">Followers</button>
+    <button id="message">Message</button>
+  """
 assert = chai.assert
 expect = chai.expect
 
@@ -122,7 +219,7 @@ describe 'Full page tests', ->
   for type, index in ['With worker', 'Without worker']
     do (type, index) ->
       describe type, ->
-        it 'should kompute', (done) ->
+        it 'gss1 demo', (done) ->
           container = document.createElement('div')
           container.style.height = '640px'
           container.style.width = '640px'
@@ -133,7 +230,7 @@ describe 'Full page tests', ->
           window.$engine = engine = new GSS(container, index == 0)
           $('#fixtures').appendChild container
 
-          container.innerHTML = HTML
+          container.innerHTML = DEMOS.GSS1
           engine.then (solution) ->
             expect(solution['li-width']).to.eql((640 - 16) / 3)
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
@@ -159,6 +256,48 @@ describe 'Full page tests', ->
                 engine.then (solution) ->
                   expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
                   expect(solution['$header[width]']).to.eql(1024 / 4)
-                  #container.innerHTML = ""
-                  #engine.then (solution) ->
-                  #  done()
+                  container.innerHTML = ""
+                  engine.then (solution) ->
+                    done()
+
+        it 'profile card', (done) ->
+          container = document.createElement('div')
+          container.id = 'profile-card-demo'
+          container.style.height = '640px'
+          container.style.width = '640px'
+          container.style.position = 'absolute'
+          container.style.overflow = 'auto'
+          container.style.left = 0
+          container.style.top = 0
+          window.$engine = engine = new GSS(container, index == 0)
+          $('#fixtures').appendChild container
+
+          container.innerHTML = DEMOS.PROFILE_CARD
+          engine.then (solution) ->
+            expect(solution['li-width']).to.eql((640 - 16) / 3)
+            expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
+            expect(solution['$header[width]']).to.eql(Math.round(640 / 2))
+
+            li = engine.$first('ul li:last-child')
+            clone = li.cloneNode()
+            clone.id = 'li4'
+            clone.innerHTML = '4'
+            
+            li.parentNode.appendChild(clone)
+            engine.then (solution) ->
+              expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
+              li = engine.$first('ul li:first-child')
+              li.parentNode.removeChild(li)
+              engine.then (solution) ->
+                expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
+                expect(solution['$li2[x]']).to.eql(0)
+                expect(solution['$li1[x]']).to.eql(null)
+                engine.scope.style.width = '1024px'
+                engine.scope.style.height = '960px'
+
+                engine.then (solution) ->
+                  expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
+                  expect(solution['$header[width]']).to.eql(1024 / 4)
+                  container.innerHTML = ""
+                  engine.then (solution) ->
+                    done()

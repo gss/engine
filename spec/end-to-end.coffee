@@ -2356,6 +2356,11 @@ describe 'End - to - End', ->
           #container[left] == 0;
           [gap] >= 0;
 
+          .box, #box2, #box3 {
+            &[width] == (&:next)[width];
+            &[top] == ::window[top];
+          }
+          
           #container[left] + [gap] == (.box:first)[left];
            
           .box {
@@ -2367,10 +2372,6 @@ describe 'End - to - End', ->
           #box2[right] == #box3[left];
           #box3[right] + [gap] == #container[right];
            
-          .box, #box2, #box3 {
-            &[width] == (&:next)[width];
-            &[top] == ::window[top];
-          }
         </style>
         """
         console.profile(1)
