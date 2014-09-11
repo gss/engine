@@ -286,7 +286,7 @@ describe 'End - to - End', ->
           </div>
           <style type="text/gss" scoped>
             .outer, .outie {
-              @if A > 0 {
+              @if [A] > 0 {
                 .innie-outie {
                   #css-inner-dump-2 {
                     height: 200px;
@@ -297,7 +297,7 @@ describe 'End - to - End', ->
               #css-inner-dump-1 {
                 z-index: 5;
 
-                @if B > 0 {
+                @if [B] > 0 {
                   height: 200px;
                 }
               }
@@ -306,8 +306,15 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', ->
           expect(getSource(engine.$tag('style')[1])).to.equal """
-            .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+            .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
             """
+          engine.solve
+            A: 1
+          , ->
+            expect(getSource(engine.$tag('style')[1])).to.equal """
+              .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+              """
+            done()
 
 
   

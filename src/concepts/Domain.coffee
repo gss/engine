@@ -288,7 +288,7 @@ class Domain
               if stack = @reconstrain other, constraint
                 break
 
-      unless replaced?
+      unless stack?
         for other, i in @substituted by -1
           unless other == constraint
             if stack = @reconstrain other, constraint

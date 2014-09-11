@@ -178,8 +178,9 @@ class Rules
         if node.getAttribute('scoped')?
           scope = node.parentNode
 
-      rules = @['_' + type](source)
-      @engine.engine.solve(@clone(rules), continuation, scope)
+      rules = @clone @['_' + type](source)
+      console.error(rules, source)
+      @engine.engine.solve(rules, continuation, scope)
 
       return
 

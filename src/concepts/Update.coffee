@@ -379,6 +379,8 @@ Update.prototype =
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
+      console.info JSON.stringify(result)
+
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         return result
 

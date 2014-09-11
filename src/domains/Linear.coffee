@@ -23,6 +23,7 @@ class Linear extends Domain
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
       c.debug = true
+      c.Strength.require = c.Strength.required
 
   provide: (result) ->
     @constrain(result)
@@ -102,6 +103,7 @@ class Linear::Methods extends Domain::Methods
       return [variable, path || (property && object) || '']
 
   strength: (strength, deflt = 'medium') ->
+    console.error(strength, 'jeez', strength && c.Strength[strength])
     return strength && c.Strength[strength] || c.Strength[deflt]
 
   weight: (weight) ->

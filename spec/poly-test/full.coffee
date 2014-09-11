@@ -124,6 +124,7 @@ DEMOS =
         bottom: 0px;
         right: 0px;
         left: 0px;
+        z-index: -1;
         background-image: url('assets/cover.jpg');
         background-size: cover;
         background-position: 50% 50%;
@@ -132,6 +133,7 @@ DEMOS =
       }
 
       #cover {
+        background-color: #ccc;
         background-image: url('assets/cover.jpg');
         background-size: cover;
         background-position: 50% 50%;
@@ -182,26 +184,91 @@ DEMOS =
     </style>
     <style type="text/gss">
       /* vars */
-      [gap] == 20 !require;
-      [flex-gap] >= [gap] * 2 !require;
-      [radius] == 10 !require;
-      [outer-radius] == [radius] * 2 !require;
+      [gap] == 20 !required;
+      [flex-gap] >= [gap] * 2 !required;
+      [radius] == 10 !required;
+      [outer-radius] == [radius] * 2 !required;
+
+      /* scope-as-window for tests */
+      ::scope[left] == 0;
+      ::scope[top] == 0;
+      ::scope[width] == ::scope[intrinsic-width] !require;
+      ::scope[height] == ::scope[intrinsic-height] !require;
 
       /* elements */
       #profile-card {      
         width: == ::scope[intrinsic-width] - 480;            
-        height: == ::scope[intrinsic-height] - 480;
+        height: == ::scope[intrinsic-height] - 350;
         center-x: == ::scope[center-x];
         center-y: == ::scope[center-y];        
         border-radius: == [outer-radius];
       }
 
       #avatar {
-        height: == 160 !require;
+        height: == 160 !required;
         width: == ::[height];
         border-radius: == ::[height] / 2;        
       }
 
+      #name {
+        height: == ::[intrinsic-height] !required;
+        width: == ::[intrinsic-width] !required;
+      }
+
+      #cover {
+        border-radius: == [radius];
+      }
+
+      button {
+        width: == ::[intrinsic-width] !required;
+        height: == ::[intrinsic-height] !required;        
+        padding: == [gap];
+        padding-top: == [gap] / 2;
+        padding-bottom: == [gap] / 2;
+        border-radius: == [radius];
+      }
+      
+      
+
+@h |~-~(#name)~-~| in(#cover) gap([gap]*2) !strong;
+
+/* landscape profile-card */
+@if #profile-card[width] >= #profile-card[height] {
+
+  @v |
+      -
+      (#avatar)
+      -
+      (#name)
+      -
+     |
+    in(#cover)
+    gap([gap]) outer-gap([flex-gap]) {
+      center-x: == #cover[center-x];
+  }
+
+  @h |-10-(#cover)-10-|
+    in(#profile-card);
+
+  @v |
+      -10-
+      (#cover)
+      -
+      (#follow)
+      -
+     |
+    in(#profile-card)
+    gap([gap]);
+
+  #follow[center-x] == #profile-card[center-x];
+
+  @h |-(#message)~-~(#follow)~-~(#following)-(#followers)-|
+    in(#profile-card)
+    gap([gap])
+    !strong {
+      &[top] == &:next[top];
+    }
+}
     </style>
     <div id="background"></div>
     <div id="profile-card"></div>
@@ -265,7 +332,7 @@ describe 'Full page tests', ->
                 expect(solution['$li2[x]']).to.eql(0)
                 expect(solution['$li1[x]']).to.eql(null)
                 engine.scope.style.width = '1024px'
-                engine.scope.style.height = '960px'
+                engine.scope.style.height = '1024px'
 
                 engine.then (solution) ->
                   expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
@@ -277,8 +344,8 @@ describe 'Full page tests', ->
         it 'profile card', (done) ->
           container = document.createElement('div')
           container.id = 'profile-card-demo'
-          container.style.height = '640px'
-          container.style.width = '640px'
+          container.style.height = '768px'
+          container.style.width = '1024px'
           container.style.position = 'absolute'
           container.style.overflow = 'auto'
           container.style.left = 0
@@ -288,4 +355,4 @@ describe 'Full page tests', ->
 
           container.innerHTML = DEMOS.PROFILE_CARD
           engine.then (solution) ->
-            
+            container.style.width = '1536px'

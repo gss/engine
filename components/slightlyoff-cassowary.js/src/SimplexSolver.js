@@ -687,7 +687,6 @@ c.SimplexSolver = c.inherit({
         this._markerVars.set(cn, dummyVar);
         c.trace && c.traceprint("Adding dummyVar == d" + this._dummyCounter);
       } else {
-
         // cn is a non-required equality. Add a positive and a negative error
         // variable, making the resulting constraint
         //       expr = eplus - eminus

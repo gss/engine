@@ -219,7 +219,8 @@ class Conventions
     if operation.domain && !force
       return operation.domain
     [cmd, scope, property] = variable = operation
-
+    if @getPath(scope, property) == '$name[width]'
+      debugger
     path = @getPath(scope, property)
     
     if scope && property && @intrinsic?.properties[path]?
