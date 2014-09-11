@@ -151,7 +151,7 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        @engine.document.solve operation.parent, contd + @engine.PAIR, scope, operation.index, pair[1]
+        @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
       
     for contd in cleaned
       @engine.queries.clean(contd)

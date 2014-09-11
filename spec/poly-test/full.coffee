@@ -228,24 +228,13 @@ DEMOS =
         border-radius: == [radius];
       }
       
-      
+
 
 @h |~-~(#name)~-~| in(#cover) gap([gap]*2) !strong;
 
 /* landscape profile-card */
-@if #profile-card[width] >= #profile-card[height] {
 
-  @v |
-      -
-      (#avatar)
-      -
-      (#name)
-      -
-     |
-    in(#cover)
-    gap([gap]) outer-gap([flex-gap]) {
-      center-x: == #cover[center-x];
-  }
+  
 
   @h |-10-(#cover)-10-|
     in(#profile-card);
@@ -261,13 +250,29 @@ DEMOS =
     gap([gap]);
 
   #follow[center-x] == #profile-card[center-x];
-
   @h |-(#message)~-~(#follow)~-~(#following)-(#followers)-|
     in(#profile-card)
     gap([gap])
     !strong {
       &[top] == &:next[top];
     }
+
+
+@if #profile-card[width] >= #profile-card[height] {
+
+
+
+  @v |
+      -
+      (#avatar)
+      -
+      (#name)
+      -
+     |
+    in(#cover)
+    gap([gap]) outer-gap([flex-gap]) {
+      center-x: == #cover[center-x];
+  }
 }
     </style>
     <div id="background"></div>
@@ -354,5 +359,5 @@ describe 'Full page tests', ->
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
-          engine.then (solution) ->
-            container.style.width = '1536px'
+          #engine.then (solution) ->
+          #  container.style.width = '1536px'

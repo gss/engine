@@ -19985,7 +19985,7 @@ Conventions = (function() {
     var bits, last;
     bits = this.getContinuation(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '');
+    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '').replace(/@[0-9]+/g, '');
     if (compact) {
       return last;
     }
@@ -20394,7 +20394,7 @@ Rules = (function() {
       }
     },
     update: function(operation, continuation, scope, meta, ascender, ascending) {
-      var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2;
+      var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2, _ref;
       (_base = operation.parent).uid || (_base.uid = '@' + (this.methods.uid = ((_base1 = this.methods).uid || (_base1.uid = 0)) + 1));
       path = continuation + operation.parent.uid;
       id = scope._gss_id;
@@ -20413,6 +20413,11 @@ Rules = (function() {
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, path, scope, meta);
+          debugger;
+          console.error(777777);
+          if ((_ref = this.pairs) != null) {
+            _ref.onBeforeSolve();
+          }
         }
         return this.console.groupEnd(path);
       }
@@ -23307,12 +23312,14 @@ Update.prototype = {
       _ref1 = this.problems;
       for (index = _i = 0, _len = _ref1.length; _i < _len; index = ++_i) {
         problems = _ref1[index];
-        p = parent;
-        while (p) {
-          if ((i = problems.indexOf(p)) > -1) {
-            this.substitute(problems[i], operation, solution);
+        if (index >= this.index) {
+          p = parent;
+          while (p) {
+            if ((i = problems.indexOf(p)) > -1) {
+              this.substitute(problems[i], operation, solution);
+            }
+            p = p.parent;
           }
-          p = p.parent;
         }
       }
     }
@@ -26353,7 +26360,7 @@ Pairs = (function() {
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
-        this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, operation.index, pair[1]);
+        this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
       }
     }
     for (_n = 0, _len4 = cleaned.length; _n < _len4; _n++) {

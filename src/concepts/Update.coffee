@@ -116,11 +116,12 @@ Update.prototype =
     # Update queued constraint that was not evaluated yet
     else
       for problems, index in @problems
-        p = parent
-        while p
-          if (i = problems.indexOf(p)) > -1
-            @substitute(problems[i], operation, solution)
-          p = p.parent
+        if index >= @index
+          p = parent
+          while p
+            if (i = problems.indexOf(p)) > -1
+              @substitute(problems[i], operation, solution)
+            p = p.parent
     return
 
   merge: (from, to) ->
