@@ -104,7 +104,7 @@ class Rules
         return false
 
     update: (operation, continuation, scope, meta, ascender, ascending) ->
-      operation.parent.uid ||= '@' + (@methods.uid = (@methods.uid ||= 0) + 1)
+      operation.parent.uid ||= '@' + (@engine.methods.uid = (@engine.methods.uid ||= 0) + 1)
       path = continuation + operation.parent.uid
       id = scope._gss_id
       watchers = @queries.watchers[id] ||= []
@@ -113,16 +113,18 @@ class Rules
 
       condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
       old = @queries[path]
+      index = condition && 2 || 3
       if !!old != !!condition || (old == undefined && old != condition)
         unless old == undefined
           @queries.clean(path, continuation, operation.parent, scope)
+          path = continuation + operation.parent.uid
         @queries[path] = condition
 
-        index = condition && 2 || 3
+
         @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + @engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
         
         if branch = operation.parent[index]
-          result = @document.solve(branch, path, scope, meta)
+          result = @document.solve(branch, @getContinuation(path, null, @DESCEND), scope, meta)
           debugger
           console.error(777777)
         @console.groupEnd(path)

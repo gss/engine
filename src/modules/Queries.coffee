@@ -259,6 +259,9 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
+        if contd =='style[type*="text/gss"]$1↓#profile-card↓@1#avatar,#name,#follow,#message,#following,#followers$avatar↓#profile-card'
+          debugger
+
         @engine.provide(['remove', contd])
     return true
 
@@ -397,6 +400,8 @@ class Queries
     return added
 
   set: (path, result) ->
+    if path == 'style[type*="text/gss"]$1↓#profile-card↓#cover'
+      debugger
     if @engine.updating
       update = (@engine.updating.queries ||= {})[path] ||= []
       if update[1] == undefined 

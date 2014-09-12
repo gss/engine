@@ -143,7 +143,7 @@ class Conventions
   getCanonicalPath: (continuation, compact) ->
     bits = @getContinuation(continuation).split(@DESCEND);
     last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')
+    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')#.replace(/@[0-9]+/g, '')
     return last if compact
     return bits.join(@DESCEND)
   CanonicalizeRegExp: /\$[^↑]+(?:↑|$)/g

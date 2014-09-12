@@ -193,6 +193,7 @@ class Engine extends Domain.Events
     @queries?.onBeforeSolve()
     @pairs?.onBeforeSolve()
 
+
     if providing
       while provided = @providing
         @providing = null
@@ -321,9 +322,10 @@ class Engine extends Domain.Events
       @console.end()
 
     # Broadcast operations without specific domain (e.g. remove)
-    else  
+    else
       others = []
       removes = []
+      
       if problems[0] == 'remove'
         removes.push problems
       else
