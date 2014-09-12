@@ -243,6 +243,7 @@ class Queries
 
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation, scope, undefined, true
+    
     @engine.solved.remove(path)
     @engine.stylesheets?.remove(path, @['style[type*="text/gss"]'])
 
@@ -359,7 +360,18 @@ class Queries
         if !result
           removed = old
         @clean(path)
-      else return
+      else if continuation.charAt(0) == @engine.PAIR
+
+        # Subscribe node to the query
+        if id = @engine.identity.provide(node)
+          watchers = @watchers[id] ||= []
+          if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+            watchers.push(operation, continuation, scope)
+            
+        debugger
+        return old
+      else
+        return
 
     # Register newly found nodes
     if isCollection
@@ -400,8 +412,6 @@ class Queries
     return added
 
   set: (path, result) ->
-    if path == 'style[type*="text/gss"]$1↓#profile-card↓#cover'
-      debugger
     if @engine.updating
       update = (@engine.updating.queries ||= {})[path] ||= []
       if update[1] == undefined 

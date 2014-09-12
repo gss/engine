@@ -11,7 +11,7 @@ class Pairs
       @lefts.push parent, left, scope
       return @engine.PAIR
     else
-      #(@dirty ||= {})[left] = true
+      (@dirty ||= {})[left] = true
       return false
 
   getTopmostOperation: (operation) ->
@@ -63,7 +63,7 @@ class Pairs
         return @onLeft(operation, continuation, scope)
     # Fetch saved result if operation path mathes continuation canonical path
     else if continuation.lastIndexOf(@engine.PAIR) <= 0
-      contd = @engine.getCanonicalPath(continuation, true).replace(/@[0-9]+/g, '')
+      contd = @engine.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
       if contd.charAt(0) == @engine.PAIR
         contd = contd.substring(1)
       if contd == operation.path
@@ -83,14 +83,14 @@ class Pairs
     @repairing = true
     if dirty
       for property, value of dirty
-        unless @engine.updating.paired?[property]
-          if pairs = @paths[property]
-            for pair, index in pairs by 3
-              @solve property, pair, pairs[index + 1], pairs[index + 2]
+        #unless @engine.updating.paired?[property]
+        if pairs = @paths[property]
+          for pair, index in pairs by 3
+            @solve property, pair, pairs[index + 1], pairs[index + 2]
     for property, value of dirty
       (@engine.updating.paired ||= {})[property] = value
     delete @repairing
-    
+      
 
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
@@ -135,6 +135,7 @@ class Pairs
 
     cleaned = []
     for pair in removed
+      continue if !pair[0] || !pair[1]
       contd = left
       unless leftOld.single
         contd += @engine.identity.provide(pair[0])
@@ -158,6 +159,8 @@ class Pairs
       
     for contd in cleaned
       @engine.queries.clean(contd)
+      if contd.indexOf('#name') > -1
+        debugger
 
 
     cleaning = true
@@ -171,18 +174,33 @@ class Pairs
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left, right)
 
   clean: (left) ->  
+
     if pairs = @paths?[left]
       rights = []
 
       for op, index in pairs by 3
         rights.push(op)
-      for left, others of @paths
-        for index, right in rights by -1
-          if others.indexOf(right) > -1
-            rights.splice(index, 1)
+      # clean right part if nobody else is subscribed
+      for prefix, others of @paths
+        if others != pairs
+          for right, index in rights by -1
+            if others.indexOf(right) > -1
+              rights.splice(index, 1)
+      # clean left parts
+      for operation in pairs by 3
+        if pairs.indexOf(others[index - 1]) > -1
+          pairs.splice(index - 1, 3)
+
       for right in rights
         @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))
         delete @engine.queries[right]
+      delete @paths[left]
+    index = 0
+    while contd = @lefts[index + 1]
+      if contd == left
+        @lefts.splice(index, 3)
+      else
+        index += 3
 
 
   set: (path, result) ->

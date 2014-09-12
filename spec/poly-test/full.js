@@ -90,7 +90,11 @@ describe('Full page tests', function() {
           container.style.top = 0;
           window.$engine = engine = new GSS(container, index === 0);
           $('#fixtures').appendChild(container);
-          return container.innerHTML = DEMOS.PROFILE_CARD;
+          container.innerHTML = DEMOS.PROFILE_CARD;
+          return engine.then(function(solution) {
+            container.style.height = '1024px';
+            return container.style.width = '768px';
+          });
         });
       });
     })(type, index));

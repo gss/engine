@@ -227,7 +227,7 @@ class Conventions
       domain = @intrinsic
     else
       for d in @domains
-        if d.values.hasOwnProperty(path)
+        if d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path])
           domain = d
           break
         if d.substituted
@@ -248,8 +248,6 @@ class Conventions
         #else
         domain = @linear.maybe()
     if variable && !force
-      if variable.domain && variable.domain != domain
-        debugger
       variable.domain = domain
     return domain
 

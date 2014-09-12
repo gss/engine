@@ -153,8 +153,6 @@ class Domain
 
     path = @engine.getPath(object, property)
     old = @values[path]
-    if path == 'gap' && value != 20
-      debugger
     return if old == value
 
     if value?
@@ -414,6 +412,7 @@ class Domain
 
       if @constraints.length == 0
         if (index = @engine.domains.indexOf(@)) > -1
+          
           @engine.domains.splice(index, 1)
 
 

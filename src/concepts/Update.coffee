@@ -128,10 +128,7 @@ Update.prototype =
     domain = @domains[from]
     return if domain.frame
     other = @domains[to]
-    console.error('merge', @problems[from].slice(), @problems[to].slice(), 'removed', domain.constraints.slice(), '->', other.constraints.slice(), @index, from, to, @problems[to].length)
     
-    if domain.values['$following[height]']
-      debugger
     @problems[to].push.apply(@problems[to], domain.export())
     @problems[to].push.apply(@problems[to], @problems[from])
     @domains.splice(from, 1)
@@ -372,15 +369,8 @@ Update.prototype =
             if priority == @domains.length
               priority = position
       position++
-    if @ == @engine.updating
-      console.log('push', problems.slice(), merged && cmds.length)
-      if merged && cmds.length == 24
-        debugger
     if !merged
       @domains.splice(priority, 0, domain)
-      for problem in problems
-        if @problems.indexOf(problem) > -1
-          debugger
       @problems.splice(priority, 0, problems)
 
     return @

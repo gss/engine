@@ -97,7 +97,6 @@ class Engine extends Domain.Events
   events:
     # Receieve message from worker
     message: (e) ->
-      debugger unless @updating
       values = e.target.values ||= {}
       for property, value of e.data
         values[property] = value
