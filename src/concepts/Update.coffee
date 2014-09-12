@@ -128,13 +128,18 @@ Update.prototype =
     domain = @domains[from]
     return if domain.frame
     other = @domains[to]
+    console.error('merge', @problems[from].slice(), @problems[to].slice(), 'removed', domain.constraints.slice(), '->', other.constraints.slice(), @index, from, to, @problems[to].length)
+    
+    if domain.values['$following[height]']
+      debugger
     @problems[to].push.apply(@problems[to], domain.export())
     @problems[to].push.apply(@problems[to], @problems[from])
     @domains.splice(from, 1)
     @problems.splice(from, 1)
     for constraint in domain.constraints by -1
       domain.unconstrain(constraint)
-    @engine.domains.splice @engine.domains.indexOf(domain), 1
+    if (i = @engine.domains.indexOf(domain)) > -1
+      @engine.domains.splice i, 1
     return true
 
   # Group expressions
@@ -143,6 +148,7 @@ Update.prototype =
     for other, index in @domains by -1
       exps = @problems[index]
       i = 0
+      break if index == @index
       while exp = exps[i++]
         # If this domain contains argument of given expression
         continue unless  (j = problem.indexOf(exp)) > -1
@@ -162,14 +168,16 @@ Update.prototype =
           if previous && previous.push && exps.indexOf(previous) == -1
             for domain, n in @domains by -1
               continue if n == index 
+              break if n == @index 
               probs = @problems[n]
               if (j = probs.indexOf(previous)) > -1
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
                     if !other.MAYBE
-                      if index < n
+                      #debugger
+                      if index < n || other.constraints?.length > domain.constraints?.length
                         if @merge n, index
-                          probs.splice(j, 1)
+                          1#probs.splice(j, 1)
                       else
                         unless @merge index, n
                           exps.splice(--i, 1)
@@ -282,24 +290,25 @@ Update.prototype =
 
   # Merge connected graphs 
   connect: ->
-    connected = undefined
-    for domain, i in @domains by -1
+    connected = breaking = undefined
+    i = @domains.length
+    while domain = @domains[--i]
       break if i == @index
       problems = @problems[i]
       @setVariables(problems, null, domain)
       if vars = problems.variables
         for other, j in @domains by -1
-          break if j == i
+          break if j == i || domain != @domains[i]
           if (variables = @problems[j].variables) && domain.displayName == @domains[j].displayName
             for variable in variables
               if vars.indexOf(variable) > -1
                 if domain.frame == other.frame
-                  problems.push.apply(problems, @problems[j])
-                  @setVariables(@problems[j], null, domain)
-                  @problems.splice(j, 1)
-                  @domains.splice(j, 1)
-                  if @index >= j
-                    --@index
+                  if domain != @domains[i]
+                    debugger
+                  if other.constraints?.length > domain.constraints?.length
+                    @merge i, j--
+                  else
+                    @merge j, i
                   connected = true
                   break
                 else
@@ -346,13 +355,16 @@ Update.prototype =
                     exported = true
                     break
             unless exported
-              unless cmds.indexOf(problem) > -1
+              copy = undefined
+              for cmd in cmds
+                if (cmd == problem) || (cmd.parent && cmd.parent == problem.parent && cmd.index == problem.index)
+                  copy = true
+
+              unless copy
                 if reverse
                   cmds.unshift problem
                 else
                   cmds.push problem
-            if problem[0] == '>'
-              debugger
           merged = true
           break
         else if other && domain
@@ -362,8 +374,15 @@ Update.prototype =
             if priority == @domains.length
               priority = position
       position++
+    if @ == @engine.updating
+      console.log('push', problems.slice(), merged && cmds.length)
+      if merged && cmds.length == 24
+        debugger
     if !merged
       @domains.splice(priority, 0, domain)
+      for problem in problems
+        if @problems.indexOf(problem) > -1
+          debugger
       @problems.splice(priority, 0, problems)
 
     return @

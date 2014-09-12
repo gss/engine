@@ -153,6 +153,8 @@ class Domain
 
     path = @engine.getPath(object, property)
     old = @values[path]
+    if path == 'gap' && value != 20
+      debugger
     return if old == value
 
     if value?
