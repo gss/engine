@@ -83,9 +83,12 @@ class Pairs
     @repairing = true
     if dirty
       for property, value of dirty
-        if pairs = @paths[property]
-          for pair, index in pairs by 3
-            @solve property, pair, pairs[index + 1], pairs[index + 2]
+        unless @engine.updating.paired?[property]
+          if pairs = @paths[property]
+            for pair, index in pairs by 3
+              @solve property, pair, pairs[index + 1], pairs[index + 2]
+    for property, value of dirty
+      (@engine.updating.paired ||= {})[property] = value
     delete @repairing
     
 

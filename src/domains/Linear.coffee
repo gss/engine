@@ -103,7 +103,6 @@ class Linear::Methods extends Domain::Methods
       return [variable, path || (property && object) || '']
 
   strength: (strength, deflt = 'medium') ->
-    console.error(strength, 'jeez', strength && c.Strength[strength])
     return strength && c.Strength[strength] || c.Strength[deflt]
 
   weight: (weight) ->

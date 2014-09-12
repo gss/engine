@@ -80,9 +80,10 @@ class Intrinsic extends Numeric
 
 
   solve: ->
-    @console.row('measure')
     Numeric::solve.apply(@, arguments)
-    @each @scope, @update
+    if arguments.length < 3
+      @console.row('measure')
+      @each @scope, @update
 
   get: (object, property, continuation) ->
     path = @getPath(object, property)

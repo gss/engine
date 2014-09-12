@@ -50,6 +50,7 @@ class Queries
       @ascending = undefined
     @
 
+
   addMatch: (node, continuation) ->
     if (index = continuation.indexOf(@engine.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
@@ -134,7 +135,9 @@ class Queries
           if parent.path == path
             matched = true
           parent = parent.parent
-        continue unless matched
+        unless matched
+          index += 3
+          continue 
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       if !quick
@@ -251,6 +254,7 @@ class Queries
 
     @unobserve(@engine.scope._gss_id, path)
 
+    console.error(path)
     if !result || result.length == undefined
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)

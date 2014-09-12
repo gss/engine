@@ -19595,7 +19595,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(update, restyled) {
-    var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
+    var effects, scope, solution, _ref, _ref1, _ref2, _ref3, _ref4;
     if (solution = update || this.updating.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
@@ -19614,9 +19614,13 @@ Engine = (function(_super) {
       _ref2.onSolve();
     }
     this.solved.merge(solution);
+    if ((_ref3 = this.pairs) != null) {
+      _ref3.onBeforeSolve();
+    }
+    this.updating.queries = void 0;
     effects = {};
     effects = this.updating.each(this.resolve, this, effects);
-    if ((_ref3 = this.updating.busy) != null ? _ref3.length : void 0) {
+    if ((_ref4 = this.updating.busy) != null ? _ref4.length : void 0) {
       return effects;
     }
     if (effects && Object.keys(effects).length) {
@@ -20391,7 +20395,7 @@ Rules = (function() {
       }
     },
     update: function(operation, continuation, scope, meta, ascender, ascending) {
-      var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2, _ref, _ref1;
+      var branch, condition, id, index, old, path, result, watchers, _base, _base1, _base2;
       (_base = operation.parent).uid || (_base.uid = '@' + (this.methods.uid = ((_base1 = this.methods).uid || (_base1.uid = 0)) + 1));
       path = continuation + operation.parent.uid;
       id = scope._gss_id;
@@ -20412,12 +20416,6 @@ Rules = (function() {
           result = this.document.solve(branch, path, scope, meta);
           debugger;
           console.error(777777);
-          if ((_ref = this.pairs) != null) {
-            _ref.onBeforeSolve();
-          }
-          if ((_ref1 = this.queries) != null) {
-            _ref1.onBeforeSolve();
-          }
         }
         return this.console.groupEnd(path);
       }
@@ -23582,9 +23580,6 @@ Update.prototype = {
               variable = variables[_j];
               if (vars.indexOf(variable) > -1) {
                 if (domain.frame === other.frame) {
-                  if (domain !== this.domains[i]) {
-                    debugger;
-                  }
                   if (((_ref1 = other.constraints) != null ? _ref1.length : void 0) > ((_ref2 = domain.constraints) != null ? _ref2.length : void 0)) {
                     this.merge(i, j--);
                   } else {
@@ -23632,6 +23627,9 @@ Update.prototype = {
   },
   push: function(problems, domain, reverse) {
     var cmd, cmds, copy, exported, index, merged, other, position, priority, problem, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref;
+    if ((problems != null ? typeof problems.toString === "function" ? problems.toString().indexOf('#name→#cover') : void 0 : void 0) > -1) {
+      debugger;
+    }
     if (domain === void 0) {
       _ref = problems.domains;
       for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
@@ -24277,7 +24275,6 @@ Linear.prototype.Methods = (function(_super) {
     if (deflt == null) {
       deflt = 'medium';
     }
-    console.error(strength, 'jeez', strength && c.Strength[strength]);
     return strength && c.Strength[strength] || c.Strength[deflt];
   };
 
@@ -24436,9 +24433,11 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.solve = function() {
-    this.console.row('measure');
     Numeric.prototype.solve.apply(this, arguments);
-    return this.each(this.scope, this.update);
+    if (arguments.length < 3) {
+      this.console.row('measure');
+      return this.each(this.scope, this.update);
+    }
   };
 
   Intrinsic.prototype.get = function(object, property, continuation) {
@@ -25505,6 +25504,7 @@ Queries = (function() {
           parent = parent.parent;
         }
         if (!matched) {
+          index += 3;
           continue;
         }
       }
@@ -25637,6 +25637,7 @@ Queries = (function() {
       this.unobserve(this.qualified, path, true);
     }
     this.unobserve(this.engine.scope._gss_id, path);
+    console.error(path);
     if (!result || result.length === void 0) {
       if (path.charAt(0) !== this.engine.PAIR) {
         contd = this.engine.getContinuation(path);
@@ -26304,20 +26305,26 @@ Pairs = (function() {
   Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_]+)[↓↑→]?$/i;
 
   Pairs.prototype.onBeforeSolve = function() {
-    var dirty, index, pair, pairs, property, value, _i, _len;
+    var dirty, index, pair, pairs, property, value, _base, _i, _len, _ref;
     dirty = this.dirty;
     delete this.dirty;
     this.repairing = true;
     if (dirty) {
       for (property in dirty) {
         value = dirty[property];
-        if (pairs = this.paths[property]) {
-          for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
-            pair = pairs[index];
-            this.solve(property, pair, pairs[index + 1], pairs[index + 2]);
+        if (!((_ref = this.engine.updating.paired) != null ? _ref[property] : void 0)) {
+          if (pairs = this.paths[property]) {
+            for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
+              pair = pairs[index];
+              this.solve(property, pair, pairs[index + 1], pairs[index + 2]);
+            }
           }
         }
       }
+    }
+    for (property in dirty) {
+      value = dirty[property];
+      ((_base = this.engine.updating).paired || (_base.paired = {}))[property] = value;
     }
     return delete this.repairing;
   };

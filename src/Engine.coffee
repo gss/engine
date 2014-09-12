@@ -217,6 +217,8 @@ class Engine extends Domain.Events
 
     onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
     restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
+    
+
     if @engine == @ && (!workflow.problems[workflow.index + 1] || restyled)
       return @onSolve(null, restyled)
 
@@ -226,16 +228,19 @@ class Engine extends Domain.Events
       @applier?.solve(solution)
     else if !@updating.reflown && !restyled
       return
+
     if @intrinsic
       scope = @updating.reflown || @scope
       @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
 
     @queries?.onSolve()
-    #@pairs?.onSolve()
 
     @solved.merge solution
-    
+
+    @pairs?.onBeforeSolve()
+    @updating.queries = undefined
+
     # Launch another pass here if solutions caused effects
     # Effects are processed separately, then merged with found solution
     effects = {}

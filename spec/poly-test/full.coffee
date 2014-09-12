@@ -1,11 +1,6 @@
 DEMOS = 
   GSS1: """
     <style scoped>
-      * { 
-        box-sizing: border-box;
-        -webkit-box-sizing: border-box;
-        -moz-box-sizing: border-box;
-      }
       header {
         background: orange;
         height: 50px;
@@ -110,6 +105,11 @@ DEMOS =
   """
   PROFILE_CARD: """
     <style>
+      #profile-card-demo * { 
+        box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+      }
 
       #profile-card-demo {
         background-color: hsl(3, 18%, 43%);
@@ -234,20 +234,10 @@ DEMOS =
       }
       
 
-
 @h |~-~(#name)~-~| in(#cover) gap([gap]*2) !strong;
 
 /* landscape profile-card */
-
-  
 @if #profile-card[width] >= #profile-card[height] {
-
-  @h |-(#message)~-~(#follow)~-~(#following)-(#followers)-|
-    in(#profile-card)
-    gap([gap])
-    !strong {
-      &[top] == &:next[top];
-    }
 
   @v |
       -
@@ -276,7 +266,41 @@ DEMOS =
 
   #follow[center-x] == #profile-card[center-x];
 
+  @h |-(#message)~-~(#follow)~-~(#following)-(#followers)-|
+    in(#profile-card)
+    gap([gap])
+    !strong {
+      &[top] == &:next[top];
+    }
 }
+
+/* portrait profile-card */
+@else {
+  @v |
+      -
+      (#avatar)
+      -
+      (#name)
+      -
+      (#follow)
+      -
+      (#message)
+      -
+      (#following)
+      -
+      (#followers)
+      -
+     |
+    in(#cover)
+    gap([gap])
+    outer-gap([flex-gap]) {
+      center-x: == #profile-card[center-x];
+  }
+
+  @h |-10-(#cover)-10-| in(#profile-card);
+  @v |-10-(#cover)-10-| in(#profile-card);
+}
+
     </style>
     <div id="background"></div>
     <div id="profile-card"></div>
@@ -362,5 +386,5 @@ describe 'Full page tests', ->
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
-          engine.then (solution) ->
-            container.style.width = '1536px'
+          #engine.then (solution) ->
+          #  container.style.height = '1200px'
