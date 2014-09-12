@@ -52,15 +52,16 @@ class Intrinsic extends Numeric
       value = prop.toString(value)
 
     if property == 'left' || property == 'top'
+      debugger if element.id == 'message'
       if element.style[camel] == ''
-        if value?
-          element.style.positioned = (element.style.positioned || 0) + 1
+        if value? && value != ''
+          element.positioned = (element.positioned || 0) + 1
       else 
-        if !value?
-          element.style.positioned = (element.style.positioned || 0) - 1
-      if element.style.positioned == 1
+        if !value? || value == ''
+          element.positioned = (element.positioned || 0) - 1
+      if element.positioned == 1
         element.style.position = 'absolute'
-      else if element.style.positioned == 0
+      else if element.positioned == 0
         element.style.position = ''
 
     if continuation

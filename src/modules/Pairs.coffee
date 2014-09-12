@@ -63,7 +63,7 @@ class Pairs
         return @onLeft(operation, continuation, scope)
     # Fetch saved result if operation path mathes continuation canonical path
     else if continuation.lastIndexOf(@engine.PAIR) <= 0
-      contd = @engine.getCanonicalPath(continuation, true) 
+      contd = @engine.getCanonicalPath(continuation, true).replace(/@[0-9]+/g, '')
       if contd.charAt(0) == @engine.PAIR
         contd = contd.substring(1)
       if contd == operation.path

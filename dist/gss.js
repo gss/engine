@@ -19989,7 +19989,7 @@ Conventions = (function() {
     var bits, last;
     bits = this.getContinuation(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '').replace(/@[0-9]+/g, '');
+    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '');
     if (compact) {
       return last;
     }
@@ -20701,6 +20701,9 @@ Selectors = (function() {
     var found;
     if (id == null) {
       id = node;
+    }
+    if (id === 'follow') {
+      debugger;
     }
     if (!node.getElementById || !(found = this.all[id]) || isFinite(parseInt(id))) {
       return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
@@ -23627,9 +23630,6 @@ Update.prototype = {
   },
   push: function(problems, domain, reverse) {
     var cmd, cmds, copy, exported, index, merged, other, position, priority, problem, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref;
-    if ((problems != null ? typeof problems.toString === "function" ? problems.toString().indexOf('#name→#cover') : void 0 : void 0) > -1) {
-      debugger;
-    }
     if (domain === void 0) {
       _ref = problems.domains;
       for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
@@ -24399,18 +24399,21 @@ Intrinsic = (function(_super) {
       value = prop.toString(value);
     }
     if (property === 'left' || property === 'top') {
+      if (element.id === 'message') {
+        debugger;
+      }
       if (element.style[camel] === '') {
-        if (value != null) {
-          element.style.positioned = (element.style.positioned || 0) + 1;
+        if ((value != null) && value !== '') {
+          element.positioned = (element.positioned || 0) + 1;
         }
       } else {
-        if (value == null) {
-          element.style.positioned = (element.style.positioned || 0) - 1;
+        if ((value == null) || value === '') {
+          element.positioned = (element.positioned || 0) - 1;
         }
       }
-      if (element.style.positioned === 1) {
+      if (element.positioned === 1) {
         element.style.position = 'absolute';
-      } else if (element.style.positioned === 0) {
+      } else if (element.positioned === 0) {
         element.style.position = '';
       }
     }
@@ -26288,7 +26291,7 @@ Pairs = (function() {
         return this.onLeft(operation, continuation, scope);
       }
     } else if (continuation.lastIndexOf(this.engine.PAIR) <= 0) {
-      contd = this.engine.getCanonicalPath(continuation, true);
+      contd = this.engine.getCanonicalPath(continuation, true).replace(/@[0-9]+/g, '');
       if (contd.charAt(0) === this.engine.PAIR) {
         contd = contd.substring(1);
       }

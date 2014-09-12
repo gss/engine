@@ -333,8 +333,6 @@ Update.prototype =
 
   # Merge source update into target update
   push: (problems, domain, reverse) ->
-    if (problems?.toString?().indexOf('#name→#cover') > -1)
-      debugger
     if domain == undefined
       for domain, index in problems.domains
         @push problems.problems[index], domain
