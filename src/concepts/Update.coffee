@@ -171,7 +171,6 @@ Update.prototype =
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
                     if !other.MAYBE
-                      #debugger
                       if index < n || other.constraints?.length > domain.constraints?.length
                         if @merge n, index
                           1#probs.splice(j, 1)

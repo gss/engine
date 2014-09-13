@@ -260,8 +260,6 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
-        if contd =='style[type*="text/gss"]$1↓#profile-card↓@1#avatar,#name,#follow,#message,#following,#followers$avatar↓#profile-card'
-          debugger
 
         @engine.provide(['remove', contd])
     return true
@@ -368,7 +366,6 @@ class Queries
           if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
             watchers.push(operation, continuation, scope)
             
-        debugger
         return old
       else
         return

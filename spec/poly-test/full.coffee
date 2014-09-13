@@ -262,7 +262,7 @@ DEMOS =
       -
      |
     in(#profile-card)
-    gap([gap]);
+    gap([gap]) !strong;
 
   #follow[center-x] == #profile-card[center-x];
 
@@ -293,7 +293,7 @@ DEMOS =
      |
     in(#cover)
     gap([gap])
-    outer-gap([flex-gap]) {
+    outer-gap([flex-gap]) !strong {
       center-x: == #profile-card[center-x];
   }
 
@@ -376,7 +376,7 @@ describe 'Full page tests', ->
         it 'profile card', (done) ->
           container = document.createElement('div')
           container.id = 'profile-card-demo'
-          container.style.height = '768px'
+          container.style.height = '668px'
           container.style.width = '1024px'
           container.style.position = 'absolute'
           container.style.overflow = 'auto'
@@ -386,6 +386,3 @@ describe 'Full page tests', ->
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
-          engine.then (solution) ->
-            container.style.height = '1024px'
-            container.style.width = '768px'

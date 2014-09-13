@@ -134,8 +134,6 @@ class Selectors
   # But numeric ids need workaround: Keys are set, but not values
   # So we fall back to querySelect 
   'getElementById': (node, id = node) ->
-    if id == 'follow'
-      debugger
     if !node.getElementById || !(found = @all[id]) || isFinite(parseInt(id))
       return (node.nodeType && node || @scope).querySelector('[id="' + id + '"]')
     return found

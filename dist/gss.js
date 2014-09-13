@@ -20406,7 +20406,6 @@ Rules = (function() {
           this.queries.clean(this.getContinuation(path), continuation, operation.parent, scope);
         }
         this.queries[path] = condition;
-        debugger;
         if (!d && (d = this.pairs.dirty)) {
           this.pairs.onBeforeSolve();
           this.updating.paired = void 0;
@@ -20415,8 +20414,6 @@ Rules = (function() {
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, this.getContinuation(path, null, this.DESCEND), scope, meta);
-          debugger;
-          console.error(777777);
           this.updating.paired = void 0;
           if ((_ref = this.pairs) != null) {
             _ref.onBeforeSolve();
@@ -20709,9 +20706,6 @@ Selectors = (function() {
     var found;
     if (id == null) {
       id = node;
-    }
-    if (id === 'follow') {
-      debugger;
     }
     if (!node.getElementById || !(found = this.all[id]) || isFinite(parseInt(id))) {
       return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
@@ -22008,7 +22002,6 @@ Domain = (function() {
             break;
           }
           if (watcher.domain !== domain || (value == null)) {
-            this.console.info('re-evaluate', watcher);
             this.update([this.sanitize(this.getRootOperation(watcher, domain))]);
           } else {
             if (watcher.parent.domain === domain) {
@@ -22506,7 +22499,6 @@ Domain.prototype.Methods = (function() {
   Methods.prototype.value = {
     command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
       if (!continuation && contd) {
-        console.error(meta, value, contd);
         return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
       }
       return value;
@@ -25633,9 +25625,6 @@ Queries = (function() {
         if ((_ref2 = this.engine.updating) != null) {
           _ref2.remove(contd);
         }
-        if (contd === 'style[type*="text/gss"]$1↓#profile-card↓@1#avatar,#name,#follow,#message,#following,#followers$avatar↓#profile-card') {
-          debugger;
-        }
         this.engine.provide(['remove', contd]);
       }
     }
@@ -25770,7 +25759,6 @@ Queries = (function() {
             watchers.push(operation, continuation, scope);
           }
         }
-        debugger;
         return old;
       } else {
         return;
@@ -26407,9 +26395,6 @@ Pairs = (function() {
     for (_n = 0, _len4 = cleaned.length; _n < _len4; _n++) {
       contd = cleaned[_n];
       this.engine.queries.clean(contd);
-      if (contd.indexOf('#name') > -1) {
-        debugger;
-      }
     }
     cleaning = true;
     for (_o = 0, _len5 = leftNew.length; _o < _len5; _o++) {

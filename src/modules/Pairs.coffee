@@ -159,8 +159,6 @@ class Pairs
       
     for contd in cleaned
       @engine.queries.clean(contd)
-      if contd.indexOf('#name') > -1
-        debugger
 
 
     cleaning = true

@@ -197,7 +197,6 @@ class Domain
           break unless watcher
           if watcher.domain != domain || !value?
             # Re-evaluate expression
-            @console.info('re-evaluate', watcher)
             @update([@sanitize(@getRootOperation(watcher, domain))])
           else
             if watcher.parent.domain == domain
@@ -525,7 +524,6 @@ class Domain::Methods
   value: 
     command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
       if !continuation && contd
-        console.error(meta, value, contd)
         return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value
 

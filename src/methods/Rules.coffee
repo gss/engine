@@ -120,7 +120,6 @@ class Rules
         unless old == undefined
           @queries.clean(@getContinuation(path) , continuation, operation.parent, scope)
         @queries[path] = condition
-        debugger
         if !d && (d = @pairs.dirty)
           @pairs.onBeforeSolve()
           @updating.paired = undefined
@@ -133,8 +132,6 @@ class Rules
         
         if branch = operation.parent[index]
           result = @document.solve(branch, @getContinuation(path, null,  @DESCEND), scope, meta)
-          debugger
-          console.error(777777)
           @updating.paired = undefined
           @pairs?.onBeforeSolve()
           @queries?.onBeforeSolve()
