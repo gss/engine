@@ -89,7 +89,12 @@ describe('Full page tests', function() {
           container.style.top = 0;
           window.$engine = engine = new GSS(container, index === 0);
           $('#fixtures').appendChild(container);
-          return container.innerHTML = DEMOS.PROFILE_CARD;
+          container.innerHTML = DEMOS.PROFILE_CARD;
+          return engine.then(function() {
+            console.error(8923748273894);
+            container.style.height = '768px';
+            return container.style.width = '1224px';
+          });
         });
       });
     })(type, index));

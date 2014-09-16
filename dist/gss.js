@@ -19442,7 +19442,6 @@ Engine = (function(_super) {
           console.error(e.target.url, 888, this.updating.busy.indexOf(e.target.url), this.updating.busy.length);
           this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
           if (!this.updating.busy.length) {
-            debugger;
             return this.updating.each(this, this.resolve, e.data) || this.onSolve();
           } else {
             return this.updating.apply(e.data);
@@ -19486,7 +19485,6 @@ Engine = (function(_super) {
         if (parent) {
           parent.splice(index, 1);
         } else {
-          debugger;
           return [];
         }
       }
@@ -19837,6 +19835,9 @@ if (!self.window && self.onmessage !== void 0) {
     var assumed, engine, property, solution, value, _ref;
     engine = Engine.messenger || (Engine.messenger = Engine());
     assumed = engine.assumed.toObject();
+    if (e.data.toString().indexOf('remove') > -1) {
+      debugger;
+    }
     solution = engine.solve(e.data) || {};
     _ref = engine.inputs;
     for (property in _ref) {
@@ -19845,6 +19846,9 @@ if (!self.window && self.onmessage !== void 0) {
         solution[property] = value;
       }
     }
+    console.error(engine.domains.map(function(e) {
+      return e.constraints.length;
+    }));
     return postMessage(solution);
   });
 }
@@ -20100,9 +20104,6 @@ Conventions = (function() {
     }
     _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
     path = this.getPath(scope, property);
-    if (path === "flex-gap") {
-      debugger;
-    }
     if (scope && property && (((_ref1 = this.intrinsic) != null ? _ref1.properties[path] : void 0) != null)) {
       domain = this.intrinsic;
     } else if (scope && property && ((_ref2 = this.intrinsic) != null ? _ref2.properties[property] : void 0) && !this.intrinsic.properties[property].matcher) {
@@ -22328,9 +22329,6 @@ Domain = (function() {
 
   Domain.prototype.apply = function(solution) {
     var constraint, group, groups, index, path, result, separated, value, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-    if (solution['flex-gap'] && solution['flex-gap'] !== 40) {
-      debugger;
-    }
     if (this.constrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
@@ -23188,7 +23186,7 @@ var Update, Updater;
 Updater = function(engine) {
   var Update, property, value, _ref;
   Update = function(domain, problem) {
-    var a, arg, d, effects, foreign, index, offset, start, update, vardomain, _base, _i, _j, _len, _len1;
+    var a, arg, d, effects, foreign, index, offset, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
     if (this instanceof Update) {
       this.domains = domain && (domain.push && domain || [domain]) || [];
       this.problems = problem && (domain.push && problem || [problem]) || [];
@@ -23218,6 +23216,7 @@ Updater = function(engine) {
         }
         effects = new Update(vardomain, [arg]);
       } else {
+        stringy = true;
         for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
           a = arg[_j];
           if (a != null ? a.push : void 0) {
@@ -23232,7 +23231,12 @@ Updater = function(engine) {
             }
             effects = this.update(d, arg);
             break;
+          } else if (typeof a !== 'string') {
+            stringy = false;
           }
+        }
+        if (!effects && typeof (arg != null ? arg[0] : void 0) === 'string' && stringy) {
+          effects = new this.update([null], [arg]);
         }
       }
       if (effects) {
@@ -23470,7 +23474,7 @@ Update.prototype = {
           _ref5 = this.domains;
           for (counter = _m = 0, _len2 = _ref5.length; _m < _len2; counter = ++_m) {
             domain = _ref5[counter];
-            if (domain !== other || bubbled) {
+            if (domain && (domain !== other || bubbled)) {
               if ((other.MAYBE && domain.MAYBE) || domain.displayName === other.displayName) {
                 problems = this.problems[counter];
                 for (_n = 0, _len3 = problem.length; _n < _len3; _n++) {
@@ -23649,7 +23653,7 @@ Update.prototype = {
     position = this.index + 1;
     while ((other = this.domains[position]) !== void 0) {
       if (other || !domain) {
-        if (other === domain) {
+        if (other === domain || (domain && !(domain != null ? domain.solve : void 0) && other.url === domain.url)) {
           cmds = this.problems[position];
           for (_j = 0, _len1 = problems.length; _j < _len1; _j++) {
             problem = problems[_j];
@@ -23674,7 +23678,7 @@ Update.prototype = {
                 }
               }
               if (!copy) {
-                if (reverse) {
+                if (reverse || (domain && !domain.solve && other.url === domain.url)) {
                   cmds.unshift(problem);
                 } else {
                   cmds.push(problem);

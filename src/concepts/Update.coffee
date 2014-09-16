@@ -31,6 +31,7 @@ Updater = (engine) ->
         effects = new Update vardomain, [arg]
       else
         # Handle framed expressions
+        stringy = true
         for a in arg
           if a?.push
             if arg[0] == 'framed'
@@ -42,6 +43,10 @@ Updater = (engine) ->
               d = domain || true
             effects = @update(d, arg)
             break
+          else if typeof a != 'string'
+            stringy = false
+        if !effects && typeof arg?[0] == 'string' && stringy
+          effects = new @update([null], [arg])
 
       # Merge updates
       if effects
@@ -164,7 +169,7 @@ Update.prototype =
         while (previous = problem[--l]) != undefined
           if previous && previous.push && exps.indexOf(previous) == -1
             for domain, n in @domains by -1
-              continue if n == index 
+              continue if n == index
               break if n == @index
               probs = @problems[n]
               if (j = probs.indexOf(previous)) > -1
@@ -216,7 +221,7 @@ Update.prototype =
 
         if other
           for domain, counter in @domains
-            if domain != other || bubbled
+            if domain && (domain != other || bubbled)
               if (other.MAYBE && domain.MAYBE) || domain.displayName == other.displayName
                 problems = @problems[counter]
                 for arg in problem
@@ -337,7 +342,7 @@ Update.prototype =
     position = @index + 1
     while (other = @domains[position]) != undefined
       if other || !domain
-        if other == domain
+        if other == domain || (domain && !domain?.solve && other.url == domain.url)
           cmds = @problems[position]
           for problem in problems
             exported = undefined
@@ -354,7 +359,7 @@ Update.prototype =
                   copy = true
 
               unless copy
-                if reverse
+                if reverse || (domain && !domain.solve && other.url == domain.url)
                   cmds.unshift problem
                 else
                   cmds.push problem

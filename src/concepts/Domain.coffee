@@ -394,8 +394,6 @@ class Domain
 
 
   apply: (solution) ->
-    if solution['flex-gap'] && solution['flex-gap'] != 40
-      debugger
     if @constrained
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length

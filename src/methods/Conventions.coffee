@@ -220,8 +220,6 @@ class Conventions
       return operation.domain
     [cmd, scope, property] = variable = operation
     path = @getPath(scope, property)
-    if path == "flex-gap"
-      debugger
     if scope && property && @intrinsic?.properties[path]?
       domain = @intrinsic
     else if scope && property && @intrinsic?.properties[property] && !@intrinsic.properties[property].matcher

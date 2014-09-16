@@ -385,3 +385,7 @@ describe 'Full page tests', ->
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
+          engine.then ->
+            console.error(8923748273894)
+            container.style.height = '768px'
+            container.style.width = '1224px'

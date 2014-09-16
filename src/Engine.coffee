@@ -105,7 +105,6 @@ class Engine extends Domain.Events
           console.error(e.target.url, 888, @updating.busy.indexOf(e.target.url), @updating.busy.length)
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
           unless @updating.busy.length
-            debugger
             return @updating.each(@, @resolve, e.data) || @onSolve()
           else
             return @updating.apply(e.data)
@@ -142,7 +141,6 @@ class Engine extends Domain.Events
         if parent
           parent.splice(index, 1)
         else
-          debugger
           return []
       if path && @assumed[path] != expressions[1]
         (result ||= {})[path] = expressions[1]
@@ -332,6 +330,7 @@ class Engine extends Domain.Events
 
     # Broadcast operations without specific domain (e.g. remove)
     else
+
       others = []
       removes = []
       
@@ -418,10 +417,14 @@ if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     engine = Engine.messenger ||= Engine()
     assumed = engine.assumed.toObject()
+    if (e.data.toString().indexOf('remove') > -1)
+      debugger
     solution = engine.solve(e.data) || {}
     for property, value of engine.inputs
       if value? || !solution[property]?
         solution[property] = value
+    console.error(engine.domains.map((e) -> e.constraints.length))
+
     postMessage(solution)
 
 module.exports = @GSS = Engine
