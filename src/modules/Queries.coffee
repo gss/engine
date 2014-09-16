@@ -471,11 +471,12 @@ class Queries
 
   # Compare position of two nodes to sort collection in DOM order
   comparePosition: (a, b) ->
+    sourceIndex = 
+      if a.sourceIndex >= 0 && b.sourceIndex >= 0
+        (a.sourceIndex < b.sourceIndex && 4) + 
+        (a.sourceIndex > b.sourceIndex && 2)
+      else
+        1
     return a.compareDocumentPosition?(b) ?
-          (a != b && a.contains(b) && 16) +
-          (a != b && b.contains(a) && 8) +
-          if a.sourceIndex >= 0 && b.sourceIndex >= 0
-            (a.sourceIndex < b.sourceIndex && 4) + (a.sourceIndex > b.sourceIndex && 2)
-          else
-            1
+          (a != b && a.contains(b) && 16) + (a != b && b.contains(a) && 8) + sourceIndex
 module.exports = Queries
