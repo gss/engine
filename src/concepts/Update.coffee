@@ -235,6 +235,7 @@ Update.prototype =
   unwrap: (problems, domain, result = []) ->
     if problems[0] == 'get'
       problems.exported = true
+      debugger
       problems.parent = undefined
       result.push(problems)
       exports = (@exports ||= {})[@engine.getPath(problems[1], problems[2])] ||= []

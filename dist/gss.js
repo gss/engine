@@ -20148,10 +20148,13 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getWorkerURL = (function() {
-    var scripts, src;
+    var scripts, src, _ref;
     if (typeof document !== "undefined" && document !== null) {
       scripts = document.getElementsByTagName('script');
       src = scripts[scripts.length - 1].src;
+      if (((_ref = location.search) != null ? _ref.indexOf('log=0') : void 0) > -1) {
+        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0';
+      }
     }
     return function(url) {
       return typeof url === 'string' && url || src;
@@ -23499,6 +23502,7 @@ Update.prototype = {
     }
     if (problems[0] === 'get') {
       problems.exported = true;
+      debugger;
       problems.parent = void 0;
       result.push(problems);
       exports = (_base = (this.exports || (this.exports = {})))[_name = this.engine.getPath(problems[1], problems[2])] || (_base[_name] = []);

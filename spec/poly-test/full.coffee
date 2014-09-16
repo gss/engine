@@ -344,33 +344,34 @@ describe 'Full page tests', ->
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.GSS1
+          debugger
           engine.then (solution) ->
             expect(solution['li-width']).to.eql((640 - 16) / 3)
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
             expect(solution['$header[width]']).to.eql(Math.round(640 / 2))
-
-            li = engine.$first('ul li:last-child')
-            clone = li.cloneNode()
-            clone.id = 'li4'
-            clone.innerHTML = '4'
-            
-            li.parentNode.appendChild(clone)
-            engine.then (solution) ->
-              expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
-              li = engine.$first('ul li:first-child')
-              li.parentNode.removeChild(li)
-              engine.then (solution) ->
-                expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
-                expect(solution['$li2[x]']).to.eql(0)
-                expect(solution['$li1[x]']).to.eql(null)
-                engine.scope.style.width = '1024px'
-
-                engine.then (solution) ->
-                  expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
-                  expect(solution['$header[width]']).to.eql(1024 / 4)
-                  container.innerHTML = ""
-                  engine.then (solution) ->
-                    done()
+#
+            #li = engine.$first('ul li:last-child')
+            #clone = li.cloneNode()
+            #clone.id = 'li4'
+            #clone.innerHTML = '4'
+            #
+            #li.parentNode.appendChild(clone)
+            #engine.then (solution) ->
+            #  expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
+            #  li = engine.$first('ul li:first-child')
+            #  li.parentNode.removeChild(li)
+            #  engine.then (solution) ->
+            #    expect(Math.round solution['li-width']).to.eql((640 - 16) / 3)
+            #    expect(solution['$li2[x]']).to.eql(0)
+            #    expect(solution['$li1[x]']).to.eql(null)
+            #    engine.scope.style.width = '1024px'
+#
+            #    engine.then (solution) ->
+            #      expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
+            #      expect(solution['$header[width]']).to.eql(1024 / 4)
+            #      container.innerHTML = ""
+            #      engine.then (solution) ->
+            #        done()
 
         it 'profile card', (done) ->
           container = document.createElement('div')
@@ -381,11 +382,41 @@ describe 'Full page tests', ->
           container.style.overflow = 'auto'
           container.style.left = 0
           container.style.top = 0
+
           window.$engine = engine = new GSS(container, index == 0)
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.PROFILE_CARD
-          engine.then ->
-            console.error(8923748273894)
+
+          engine.then (solution) ->
+            expect(solution['flex-gap']).to.eql 95
+            expect(solution['flex-gap']).to.eql 95
+            expect(solution['$follow[x]']).to.eql 329.5
+            expect(solution['$follow[y]']).to.eql 540
+
             container.style.height = '768px'
-            container.style.width = '1224px'
+            container.style.width = '1124px'
+
+            engine.then (solution) ->
+              expect(solution['$follow[x]']).to.eql 435
+              expect(solution['$follow[y]']).to.eql 537
+              container.style.height = '1024px'
+              container.style.width = '768px'
+
+
+              engine.then (solution) ->
+                expect(solution['flex-gap']).to.eql 95
+                expect(solution['flex-gap']).to.eql 95
+                expect(solution['$follow[x]']).to.eql 329.5
+                expect(solution['$follow[y]']).to.eql 540
+
+                container.style.height = '768px'
+                container.style.width = '1124px'
+                
+                engine.then (solution) ->
+                  expect(solution['$follow[x]']).to.eql 435
+                  expect(solution['$follow[y]']).to.eql 537
+
+                  container.innerHTML = ""
+                  engine.then (solution) ->
+                    done()

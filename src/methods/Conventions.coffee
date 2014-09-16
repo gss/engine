@@ -255,6 +255,8 @@ class Conventions
     if document?
       scripts = document.getElementsByTagName('script')
       src = scripts[scripts.length - 1].src
+      if location.search?.indexOf('log=0') > -1
+        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
     return (url) ->
       return typeof url == 'string' && url || src
 

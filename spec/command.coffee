@@ -110,10 +110,7 @@ describe 'GSS commands', ->
         engine.then (solution) ->
 
           expect(engine.updated.getProblems()).to.eql [
-            [
-              ['remove', '.box$34222']
-              ['remove', '.box$34222→#box1']
-            ]
+            ['remove', '.box$34222', '.box$34222→#box1']
             [['remove', '.box$34222→#box1']]
           ]
 
@@ -131,12 +128,7 @@ describe 'GSS commands', ->
             engine.then (solution) ->
 
               expect(engine.updated.getProblems()).to.eql [
-                [
-                  ['remove', '.box$box1']
-                  ['remove', '.box$box1→#box1']
-                  ['remove', '.box$35346→#box1']
-                  ['remove', '.box$34222→#box1']
-                ],
+                ['remove', '.box$box1', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']
                 [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]
               ]
               scope.appendChild(box1)
@@ -199,7 +191,7 @@ describe 'GSS commands', ->
 
         engine.once 'solve', ->
           chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
-            [["remove",".box$12322"]],
+            ["remove",".box$12322"],
             [["remove",".box$12322"]]
           ]
           done()
@@ -313,7 +305,7 @@ describe 'GSS commands', ->
             res.parentNode.removeChild res
           else if count is 2
             chai.expect(engine.updated.getProblems()).to.eql [
-              [['remove', '.box$34222']]
+              ['remove', '.box$34222']
               [['remove', '.box$34222']]
             ]
             engine.removeEventListener 'solve', listener
@@ -341,7 +333,7 @@ describe 'GSS commands', ->
 
           else if count is 2
             chai.expect(engine.updated.getProblems()).to.eql [
-                [['remove', '.box$34222']]
+                ['remove', '.box$34222']
                 [['remove', '.box$34222']]
               ]
             engine.removeEventListener 'solve', listener
