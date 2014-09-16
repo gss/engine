@@ -399,7 +399,7 @@ if document?
         if next.nodeType == 1
           (nodes ||= []).push(next)
           break
-      return nodes;
+      return nodes
     Selectors::['$~'][1] = (node) ->
       nodes = undefined
       while node = node.nextSibling

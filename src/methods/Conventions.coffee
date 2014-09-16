@@ -141,7 +141,7 @@ class Conventions
   # Remove all fork marks from a path. 
   # Allows multiple selector paths have shared destination 
   getCanonicalPath: (continuation, compact) ->
-    bits = @getContinuation(continuation).split(@DESCEND);
+    bits = @getContinuation(continuation).split(@DESCEND)
     last = bits[bits.length - 1]
     last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')#.replace(/@[0-9]+/g, '')
     return last if compact
@@ -188,7 +188,7 @@ class Conventions
       return args[index]
     if !operation.bound
       return @scope
-    return scope;
+    return scope
 
   # Return name of intrinsic property used in property path 
   getIntrinsicProperty: (path) ->

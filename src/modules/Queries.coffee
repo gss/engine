@@ -475,8 +475,7 @@ class Queries
           (a != b && a.contains(b) && 16) +
           (a != b && b.contains(a) && 8) +
           if a.sourceIndex >= 0 && b.sourceIndex >= 0
-            (a.sourceIndex < b.sourceIndex && 4) + 
-            (a.sourceIndex > b.sourceIndex && 2)
+            (a.sourceIndex < b.sourceIndex && 4) + (a.sourceIndex > b.sourceIndex && 2)
           else
             1
 module.exports = Queries

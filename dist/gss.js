@@ -21320,7 +21320,7 @@ Types = (function() {
   Types.prototype.Integer = function(obj) {
     var parsed;
     parsed = parseInt(obj);
-    if (parsed === parsed && String(parsed) == obj) {
+    if (String(parsed) === String(obj)) {
       return parsed;
     }
   };
@@ -24558,7 +24558,7 @@ Intrinsic = (function(_super) {
     value = node.style[property] || this.getComputedStyle(node)[property];
     if (value) {
       num = parseFloat(value);
-      if (num == value || (num + 'px') === value) {
+      if (String(num) === String(value) || (num + 'px') === value) {
         return num;
       }
     }

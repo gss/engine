@@ -7,9 +7,9 @@ class Finite extends Domain
   Wrapper: require('../concepts/Wrapper')
 
   constructor: ->
-  	super
-  	#@solver = new FD.Space
-  	
+    super
+    #@solver = new FD.Space
+    
 class Finite::Methods extends Domain::Methods
 
   value: (value) ->

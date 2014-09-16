@@ -8,7 +8,7 @@ class Types
   # Integer value (e.g. z-index: 1)
   Integer: (obj) ->
     parsed = parseInt(obj)
-    if parsed == parsed && `String(parsed) == obj`
+    if String(parsed) == String(obj)
       return parsed
 
   # Style-specific unquoted word 
