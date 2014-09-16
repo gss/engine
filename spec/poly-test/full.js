@@ -65,7 +65,6 @@ describe('Full page tests', function() {
                 expect(solution['$li2[x]']).to.eql(0);
                 expect(solution['$li1[x]']).to.eql(null);
                 engine.scope.style.width = '1024px';
-                engine.scope.style.height = '1024px';
                 return engine.then(function(solution) {
                   expect(Math.round(solution['li-width'])).to.eql(Math.round((1024 - 16) / 3));
                   expect(solution['$header[width]']).to.eql(1024 / 4);
@@ -82,8 +81,8 @@ describe('Full page tests', function() {
           var container, engine;
           container = document.createElement('div');
           container.id = 'profile-card-demo';
-          container.style.height = '668px';
-          container.style.width = '1024px';
+          container.style.height = '1024px';
+          container.style.width = '768px';
           container.style.position = 'absolute';
           container.style.overflow = 'auto';
           container.style.left = 0;

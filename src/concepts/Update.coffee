@@ -165,26 +165,25 @@ Update.prototype =
           if previous && previous.push && exps.indexOf(previous) == -1
             for domain, n in @domains by -1
               continue if n == index 
-              break if n == @index 
+              break if n == @index
               probs = @problems[n]
               if (j = probs.indexOf(previous)) > -1
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
-                    if !other.MAYBE
-                      if index < n || other.constraints?.length > domain.constraints?.length
-                        if @merge n, index
-                          1#probs.splice(j, 1)
-                      else
-                        unless @merge index, n
-                          exps.splice(--i, 1)
+                    if index < n || other.constraints?.length > domain.constraints?.length
+                      if @merge n, index
+                        1#probs.splice(j, 1)
+                    else
+                      unless @merge index, n
+                        exps.splice(--i, 1)
 
-                        other = domain
-                        i = j + 1
-                        exps = @problems[n]
+                      other = domain
+                      i = j + 1
+                      exps = @problems[n]
 
-                      break
+                    break
                   else if !other.MAYBE
-                    @problems[i].push.apply(@problems[i], @problems[n])
+                    @problems[index].push.apply(@problems[index], @problems[n])
                     @domains.splice(n, 1)
                     @problems.splice(n, 1)
                     continue

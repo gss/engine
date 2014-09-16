@@ -364,7 +364,6 @@ describe 'Full page tests', ->
                 expect(solution['$li2[x]']).to.eql(0)
                 expect(solution['$li1[x]']).to.eql(null)
                 engine.scope.style.width = '1024px'
-                engine.scope.style.height = '1024px'
 
                 engine.then (solution) ->
                   expect(Math.round solution['li-width']).to.eql(Math.round((1024 - 16) / 3))
@@ -376,8 +375,8 @@ describe 'Full page tests', ->
         it 'profile card', (done) ->
           container = document.createElement('div')
           container.id = 'profile-card-demo'
-          container.style.height = '668px'
-          container.style.width = '1024px'
+          container.style.height = '1024px'
+          container.style.width = '768px'
           container.style.position = 'absolute'
           container.style.overflow = 'auto'
           container.style.left = 0

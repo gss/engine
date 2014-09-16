@@ -101,9 +101,14 @@ class Engine extends Domain.Events
       for property, value of e.data
         values[property] = value
       if @updating
-        @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
         if @updating.busy.length
-          return @updating.apply(e.data)
+          console.error(e.target.url, 888, @updating.busy.indexOf(e.target.url), @updating.busy.length)
+          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+          unless @updating.busy.length
+            debugger
+            return @updating.each(@, @resolve, e.data) || @onSolve()
+          else
+            return @updating.apply(e.data)
 
       @provide e.data
 
@@ -134,7 +139,11 @@ class Engine extends Domain.Events
       # Updates for substituted variables
       else if !expressions[3]
         path = expressions[2]
-        parent.splice(index, 1)
+        if parent
+          parent.splice(index, 1)
+        else
+          debugger
+          return []
       if path && @assumed[path] != expressions[1]
         (result ||= {})[path] = expressions[1]
     unless start
@@ -265,19 +274,20 @@ class Engine extends Domain.Events
     @console.info('Solution\t   ', @updated, solution, @solved.values)
 
     # Trigger events on engine and scope node
-    @triggerEvent('solve', solution, @updated)
+    @triggerEvent('solve', @updated.solution, @updated)
     if @scope
-      @dispatchEvent(@scope, 'solve', solution, @updated)
+      @dispatchEvent(@scope, 'solve', @updated.solution, @updated)
 
     # Legacy events
-    @triggerEvent('solved', solution, @updated)
+    @triggerEvent('solved', @updated.solution, @updated)
     if @scope
-      @dispatchEvent(@scope, 'solved', solution, @updated)
+      @dispatchEvent(@scope, 'solved', @updated.solution, @updated)
 
-    return solution
+    return @updated.solution
 
   # Accept solution from a solver and resolve it to verify
   provide: (solution) ->
+    console.log('provide', solution)
     if solution.operation
       return @engine.updating.provide solution
     if !solution.push
@@ -406,10 +416,9 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
-    debugger if e.data?[0] != '=='
     engine = Engine.messenger ||= Engine()
     assumed = engine.assumed.toObject()
-    solution = engine.solve(e.data)
+    solution = engine.solve(e.data) || {}
     for property, value of engine.inputs
       if value? || !solution[property]?
         solution[property] = value

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-13) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19438,9 +19438,15 @@ Engine = (function(_super) {
         values[property] = value;
       }
       if (this.updating) {
-        this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
         if (this.updating.busy.length) {
-          return this.updating.apply(e.data);
+          console.error(e.target.url, 888, this.updating.busy.indexOf(e.target.url), this.updating.busy.length);
+          this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
+          if (!this.updating.busy.length) {
+            debugger;
+            return this.updating.each(this, this.resolve, e.data) || this.onSolve();
+          } else {
+            return this.updating.apply(e.data);
+          }
         }
       }
       return this.provide(e.data);
@@ -19477,7 +19483,12 @@ Engine = (function(_super) {
         path = this.getPath(exp[1], exp[2]);
       } else if (!expressions[3]) {
         path = expressions[2];
-        parent.splice(index, 1);
+        if (parent) {
+          parent.splice(index, 1);
+        } else {
+          debugger;
+          return [];
+        }
       }
       if (path && this.assumed[path] !== expressions[1]) {
         (result || (result = {}))[path] = expressions[1];
@@ -19629,19 +19640,20 @@ Engine = (function(_super) {
     this.updated = this.updating;
     this.updating = void 0;
     this.console.info('Solution\t   ', this.updated, solution, this.solved.values);
-    this.triggerEvent('solve', solution, this.updated);
+    this.triggerEvent('solve', this.updated.solution, this.updated);
     if (this.scope) {
-      this.dispatchEvent(this.scope, 'solve', solution, this.updated);
+      this.dispatchEvent(this.scope, 'solve', this.updated.solution, this.updated);
     }
-    this.triggerEvent('solved', solution, this.updated);
+    this.triggerEvent('solved', this.updated.solution, this.updated);
     if (this.scope) {
-      this.dispatchEvent(this.scope, 'solved', solution, this.updated);
+      this.dispatchEvent(this.scope, 'solved', this.updated.solution, this.updated);
     }
-    return solution;
+    return this.updated.solution;
   };
 
   Engine.prototype.provide = function(solution) {
     var _base;
+    console.log('provide', solution);
     if (solution.operation) {
       return this.engine.updating.provide(solution);
     }
@@ -19822,16 +19834,13 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    var assumed, engine, property, solution, value, _ref, _ref1;
-    if (((_ref = e.data) != null ? _ref[0] : void 0) !== '==') {
-      debugger;
-    }
+    var assumed, engine, property, solution, value, _ref;
     engine = Engine.messenger || (Engine.messenger = Engine());
     assumed = engine.assumed.toObject();
-    solution = engine.solve(e.data);
-    _ref1 = engine.inputs;
-    for (property in _ref1) {
-      value = _ref1[property];
+    solution = engine.solve(e.data) || {};
+    _ref = engine.inputs;
+    for (property in _ref) {
+      value = _ref[property];
       if ((value != null) || (solution[property] == null)) {
         solution[property] = value;
       }
@@ -20091,6 +20100,9 @@ Conventions = (function() {
     }
     _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
     path = this.getPath(scope, property);
+    if (path === "flex-gap") {
+      debugger;
+    }
     if (scope && property && (((_ref1 = this.intrinsic) != null ? _ref1.properties[path] : void 0) != null)) {
       domain = this.intrinsic;
     } else if (scope && property && ((_ref2 = this.intrinsic) != null ? _ref2.properties[property] : void 0) && !this.intrinsic.properties[property].matcher) {
@@ -22316,6 +22328,9 @@ Domain = (function() {
 
   Domain.prototype.apply = function(solution) {
     var constraint, group, groups, index, path, result, separated, value, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    if (solution['flex-gap'] && solution['flex-gap'] !== 40) {
+      debugger;
+    }
     if (this.constrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
@@ -23394,23 +23409,21 @@ Update.prototype = {
               if ((j = probs.indexOf(previous)) > -1) {
                 if (domain !== other && domain.priority < 0 && other.priority < 0) {
                   if (!domain.MAYBE) {
-                    if (!other.MAYBE) {
-                      if (index < n || ((_ref3 = other.constraints) != null ? _ref3.length : void 0) > ((_ref4 = domain.constraints) != null ? _ref4.length : void 0)) {
-                        if (this.merge(n, index)) {
-                          1;
-                        }
-                      } else {
-                        if (!this.merge(index, n)) {
-                          exps.splice(--i, 1);
-                        }
-                        other = domain;
-                        i = j + 1;
-                        exps = this.problems[n];
+                    if (index < n || ((_ref3 = other.constraints) != null ? _ref3.length : void 0) > ((_ref4 = domain.constraints) != null ? _ref4.length : void 0)) {
+                      if (this.merge(n, index)) {
+                        1;
                       }
-                      break;
+                    } else {
+                      if (!this.merge(index, n)) {
+                        exps.splice(--i, 1);
+                      }
+                      other = domain;
+                      i = j + 1;
+                      exps = this.problems[n];
                     }
+                    break;
                   } else if (!other.MAYBE) {
-                    this.problems[i].push.apply(this.problems[i], this.problems[n]);
+                    this.problems[index].push.apply(this.problems[index], this.problems[n]);
                     this.domains.splice(n, 1);
                     this.problems.splice(n, 1);
                     continue;
