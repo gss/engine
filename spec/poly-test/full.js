@@ -48,9 +48,35 @@ describe('Full page tests', function() {
           container.innerHTML = DEMOS.GSS1;
           debugger;
           return engine.then(function(solution) {
+            var clone, li;
             expect(solution['li-width']).to.eql((640 - 16) / 3);
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100);
-            return expect(solution['$header[width]']).to.eql(Math.round(640 / 2));
+            expect(solution['$header[width]']).to.eql(Math.round(640 / 2));
+            li = engine.$first('ul li:last-child');
+            clone = li.cloneNode();
+            clone.id = 'li4';
+            clone.innerHTML = '4';
+            li.parentNode.appendChild(clone);
+            return engine.then(function(solution) {
+              expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4);
+              li = engine.$first('ul li:first-child');
+              li.parentNode.removeChild(li);
+              console.error('remove');
+              return engine.then(function(solution) {
+                expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 3);
+                expect(solution['$li2[x]']).to.eql(0);
+                expect(solution['$li1[x]']).to.eql(null);
+                engine.scope.style.width = '1024px';
+                return engine.then(function(solution) {
+                  expect(Math.round(solution['li-width'])).to.eql(Math.round((1024 - 16) / 3));
+                  expect(solution['$header[width]']).to.eql(1024 / 4);
+                  container.innerHTML = "";
+                  return engine.then(function(solution) {
+                    return done();
+                  });
+                });
+              });
+            });
           });
         });
         return it('profile card', function(done) {

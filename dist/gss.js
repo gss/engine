@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19442,7 +19441,7 @@ Engine = (function(_super) {
           console.error(e.target.url, 888, this.updating.busy.indexOf(e.target.url), this.updating.busy.length);
           this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
           if (!this.updating.busy.length) {
-            return this.updating.each(this, this.resolve, e.data) || this.onSolve();
+            return this.updating.each(this.resolve, this, e.data) || this.onSolve();
           } else {
             return this.updating.apply(e.data);
           }
@@ -19678,7 +19677,6 @@ Engine = (function(_super) {
     if ((index = (_ref = workflow.imports) != null ? _ref.indexOf(domain) : void 0) > -1) {
       finish = index;
       imports = [];
-      debugger;
       while (property = workflow.imports[++finish]) {
         if (typeof property !== 'string') {
           break;
@@ -19736,8 +19734,12 @@ Engine = (function(_super) {
     } else {
       others = [];
       removes = [];
+      debugger;
       if (problems[0] === 'remove') {
         removes.push(problems);
+        if (problems.length > 2) {
+          debugger;
+        }
       } else {
         for (_k = 0, _len2 = problems.length; _k < _len2; _k++) {
           problem = problems[_k];
@@ -19773,6 +19775,9 @@ Engine = (function(_super) {
         if (others.length) {
           workflow.push(others, other);
         }
+      }
+      if (typeof problems[0] === 'string') {
+        problems = [problems];
       }
       _ref4 = this.workers;
       for (url in _ref4) {
@@ -21585,7 +21590,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
+      this.level = 0 != null ? 0 : parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
     }
   }
 

@@ -105,7 +105,7 @@ class Engine extends Domain.Events
           console.error(e.target.url, 888, @updating.busy.indexOf(e.target.url), @updating.busy.length)
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
           unless @updating.busy.length
-            return @updating.each(@, @resolve, e.data) || @onSolve()
+            return @updating.each(@resolve, @, e.data) || @onSolve()
           else
             return @updating.apply(e.data)
 
@@ -306,7 +306,6 @@ class Engine extends Domain.Events
     if (index = workflow.imports?.indexOf(domain)) > -1
       finish = index
       imports = []
-      debugger
       while property = workflow.imports[++finish]
         break unless typeof property == 'string'
         if imports.indexOf(property) == -1
@@ -353,9 +352,11 @@ class Engine extends Domain.Events
 
       others = []
       removes = []
-      
+      debugger
       if problems[0] == 'remove'
         removes.push problems
+        if problems.length > 2
+          debugger
       else
         for problem in problems
           if problem[0] == 'remove'
@@ -376,6 +377,8 @@ class Engine extends Domain.Events
           workflow.push([locals], other, true)
         if others.length
           workflow.push(others, other)
+      if typeof problems[0] == 'string'
+        problems = [problems]
       for url, worker of @workers
         workflow.push problems, worker
     return result
