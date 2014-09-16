@@ -303,12 +303,32 @@ class Engine extends Domain.Events
       domain.postMessage(@clone problems)
       (workflow.busy ||= []).push(domain.url)
       return
+    if (index = workflow.imports?.indexOf(domain)) > -1
+      finish = index
+      imports = []
+      debugger
+      while property = workflow.imports[++finish]
+        break unless typeof property == 'string'
+        if imports.indexOf(property) == -1
+          imports.push(property)
+      workflow.imports.splice(index, finish - index + 1)
+
+      for property in imports
+        if @intrinsic.values.hasOwnProperty(property)
+          value = @intrinsic.values[property]
+        else if workflow.solution?.hasOwnProperty(property)
+          value = workflow.solution[property]
+        else
+          value = @solution?[property]
+
+        if value?
+          problems.push ['value', value, property]
+
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
     if problems instanceof Array && problems.length == 1 && problem instanceof Array
       problems = problem
-
     if domain
       if @providing == undefined
         @providing = null
@@ -417,8 +437,6 @@ if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     engine = Engine.messenger ||= Engine()
     assumed = engine.assumed.toObject()
-    if (e.data.toString().indexOf('remove') > -1)
-      debugger
     solution = engine.solve(e.data) || {}
     for property, value of engine.inputs
       if value? || !solution[property]?

@@ -238,8 +238,14 @@ Update.prototype =
       debugger
       problems.parent = undefined
       result.push(problems)
-      exports = (@exports ||= {})[@engine.getPath(problems[1], problems[2])] ||= []
+      path = @engine.getPath(problems[1], problems[2])
+      exports = (@exports ||= {})[path] ||= []
       exports.push domain
+      imports = (@imports ||= [])
+      index = imports.indexOf(domain)
+      if index == -1
+        index = imports.push(domain) - 1
+      imports.splice(index + 1, 0, path)
     else
       problems.domain = domain
       for problem in problems

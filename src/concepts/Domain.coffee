@@ -204,6 +204,8 @@ class Domain
             else
               @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
     
+    if path == '$1[intrinsic-width]'
+      debugger
     return if domain.immutable
 
     if @workers
@@ -211,10 +213,6 @@ class Domain
         if values = worker.values
           if values.hasOwnProperty(path)
             @update(worker, [['value', value, path]])
-
-    if exports = @updating?.exports?[path]
-      for domain in exports
-        @update(domain, [['value', value, path]])
 
     if variable = @variables[path]
       frame = undefined
