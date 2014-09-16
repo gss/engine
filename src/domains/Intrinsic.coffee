@@ -72,7 +72,7 @@ class Intrinsic extends Numeric
             return
 
     path = @getPath(element, 'intrinsic-' + property)
-    if @watchers[path]
+    if @watchers?[path]
       return
     element.style[camel] = value
     return

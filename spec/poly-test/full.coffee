@@ -329,6 +329,13 @@ remove = (el) ->
 
 
 describe 'Full page tests', -> 
+  engine = container = null
+
+  afterEach ->
+    debugger
+    remove(container)
+    engine.destroy()
+
   for type, index in ['With worker', 'Without worker']
     do (type, index) ->
       describe type, ->
@@ -389,10 +396,10 @@ describe 'Full page tests', ->
           container.innerHTML = DEMOS.PROFILE_CARD
 
           engine.then (solution) ->
-            expect(solution['flex-gap']).to.eql 95
-            expect(solution['flex-gap']).to.eql 95
-            expect(solution['$follow[x]']).to.eql 329.5
             expect(solution['$follow[y]']).to.eql 540
+            expect(solution['$follow[x]']).to.eql 329.5
+            expect(solution['flex-gap']).to.eql 95
+            expect(solution['flex-gap']).to.eql 95
 
             container.style.height = '768px'
             container.style.width = '1124px'

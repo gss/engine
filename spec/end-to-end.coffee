@@ -2226,8 +2226,6 @@ describe 'End - to - End', ->
             <div id="b2" class="b"></div>            
             <style type="text/gss">                            
               .cont {
-                width: == 100;
-                x: == 0;
                 @h |(.a)(.b)| in(::) {
                   &[width] == &:next[width];
                 }

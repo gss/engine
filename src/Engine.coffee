@@ -102,8 +102,8 @@ class Engine extends Domain.Events
         values[property] = value
       if @updating
         if @updating.busy.length
-          console.error(e.target.url, 888, @updating.busy.indexOf(e.target.url), @updating.busy.length)
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+          @updating.solutions[@updating.solutions.indexOf(e.target)] = e.data
           unless @updating.busy.length
             return @updating.each(@resolve, @, e.data) || @onSolve()
           else
@@ -241,8 +241,6 @@ class Engine extends Domain.Events
       @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
 
-    @queries?.onSolve()
-
     @solved.merge solution
 
     @pairs?.onBeforeSolve()
@@ -285,7 +283,6 @@ class Engine extends Domain.Events
 
   # Accept solution from a solver and resolve it to verify
   provide: (solution) ->
-    console.log('provide', solution)
     if solution.operation
       return @engine.updating.provide solution
     if !solution.push
@@ -310,7 +307,7 @@ class Engine extends Domain.Events
         break unless typeof property == 'string'
         if imports.indexOf(property) == -1
           imports.push(property)
-      workflow.imports.splice(index, finish - index + 1)
+      workflow.imports.splice(index, finish - index)
 
       for property in imports
         if @intrinsic.values.hasOwnProperty(property)
@@ -352,11 +349,8 @@ class Engine extends Domain.Events
 
       others = []
       removes = []
-      debugger
       if problems[0] == 'remove'
         removes.push problems
-        if problems.length > 2
-          debugger
       else
         for problem in problems
           if problem[0] == 'remove'
@@ -444,7 +438,6 @@ if !self.window && self.onmessage != undefined
     for property, value of engine.inputs
       if value? || !solution[property]?
         solution[property] = value
-    console.error(engine.domains.map((e) -> e.constraints.length))
 
     postMessage(solution)
 

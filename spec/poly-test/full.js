@@ -27,7 +27,13 @@ remove = function(el) {
 };
 
 describe('Full page tests', function() {
-  var index, type, _i, _len, _ref, _results;
+  var container, engine, index, type, _i, _len, _ref, _results;
+  engine = container = null;
+  afterEach(function() {
+    debugger;
+    remove(container);
+    return engine.destroy();
+  });
   _ref = ['With worker', 'Without worker'];
   _results = [];
   for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
@@ -35,7 +41,6 @@ describe('Full page tests', function() {
     _results.push((function(type, index) {
       return describe(type, function() {
         it('gss1 demo', function(done) {
-          var container, engine;
           container = document.createElement('div');
           container.style.height = '640px';
           container.style.width = '640px';
@@ -80,7 +85,6 @@ describe('Full page tests', function() {
           });
         });
         return it('profile card', function(done) {
-          var container, engine;
           container = document.createElement('div');
           container.id = 'profile-card-demo';
           container.style.height = '1024px';
@@ -93,10 +97,10 @@ describe('Full page tests', function() {
           $('#fixtures').appendChild(container);
           container.innerHTML = DEMOS.PROFILE_CARD;
           return engine.then(function(solution) {
-            expect(solution['flex-gap']).to.eql(95);
-            expect(solution['flex-gap']).to.eql(95);
-            expect(solution['$follow[x]']).to.eql(329.5);
             expect(solution['$follow[y]']).to.eql(540);
+            expect(solution['$follow[x]']).to.eql(329.5);
+            expect(solution['flex-gap']).to.eql(95);
+            expect(solution['flex-gap']).to.eql(95);
             container.style.height = '768px';
             container.style.width = '1124px';
             return engine.then(function(solution) {

@@ -72,6 +72,14 @@ class Rules
         parent = parent.parent
       operation.sourceIndex = parent.rules = (parent.rules || 0) + 1
 
+  "scoped":
+    # Set rule body scope to a found element
+    solve: (operation, continuation, scope, meta, ascender, ascending) ->
+      if operation.index == 2 && !ascender && ascending?
+        @expressions.solve operation, continuation, ascending, operation
+        return false
+    
+
   ### Conditional structure 
 
   Evaluates one of two branches

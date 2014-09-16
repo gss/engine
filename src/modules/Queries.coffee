@@ -16,16 +16,6 @@ class Queries
     @watchers = {}
     @qualified = []
 
-  onSolve: ->
-    if @removed
-      for id in @removed
-        @remove id
-      @removed = undefined
-
-    if @removing
-      for node in @removing
-        delete node._gss_id
-
   onBeforeSolve: ->
     # Update all DOM queries that matched mutations
     index = 0

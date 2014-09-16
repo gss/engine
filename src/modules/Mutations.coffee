@@ -38,6 +38,9 @@ class Mutations
 
         @intrinsic.validate(mutation.target)
       return
+
+    unless @engine.scope.parentNode
+      @engine.destroy()
     return result
 
   onChildList: (target, mutation) ->

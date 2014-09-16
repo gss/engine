@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-17) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19438,8 +19439,8 @@ Engine = (function(_super) {
       }
       if (this.updating) {
         if (this.updating.busy.length) {
-          console.error(e.target.url, 888, this.updating.busy.indexOf(e.target.url), this.updating.busy.length);
           this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
+          this.updating.solutions[this.updating.solutions.indexOf(e.target)] = e.data;
           if (!this.updating.busy.length) {
             return this.updating.each(this.resolve, this, e.data) || this.onSolve();
           } else {
@@ -19600,7 +19601,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(update, restyled) {
-    var effects, scope, solution, _ref, _ref1, _ref2, _ref3, _ref4;
+    var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
     if (solution = update || this.updating.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
@@ -19615,17 +19616,14 @@ Engine = (function(_super) {
         _ref1.each(scope, this.intrinsic.update);
       }
     }
-    if ((_ref2 = this.queries) != null) {
-      _ref2.onSolve();
-    }
     this.solved.merge(solution);
-    if ((_ref3 = this.pairs) != null) {
-      _ref3.onBeforeSolve();
+    if ((_ref2 = this.pairs) != null) {
+      _ref2.onBeforeSolve();
     }
     this.updating.queries = void 0;
     effects = {};
     effects = this.updating.each(this.resolve, this, effects);
-    if ((_ref4 = this.updating.busy) != null ? _ref4.length : void 0) {
+    if ((_ref3 = this.updating.busy) != null ? _ref3.length : void 0) {
       return effects;
     }
     if (effects && Object.keys(effects).length) {
@@ -19650,7 +19648,6 @@ Engine = (function(_super) {
 
   Engine.prototype.provide = function(solution) {
     var _base;
-    console.log('provide', solution);
     if (solution.operation) {
       return this.engine.updating.provide(solution);
     }
@@ -19685,7 +19682,7 @@ Engine = (function(_super) {
           imports.push(property);
         }
       }
-      workflow.imports.splice(index, finish - index + 1);
+      workflow.imports.splice(index, finish - index);
       for (_i = 0, _len = imports.length; _i < _len; _i++) {
         property = imports[_i];
         if (this.intrinsic.values.hasOwnProperty(property)) {
@@ -19734,12 +19731,8 @@ Engine = (function(_super) {
     } else {
       others = [];
       removes = [];
-      debugger;
       if (problems[0] === 'remove') {
         removes.push(problems);
-        if (problems.length > 2) {
-          debugger;
-        }
       } else {
         for (_k = 0, _len2 = problems.length; _k < _len2; _k++) {
           problem = problems[_k];
@@ -19875,9 +19868,6 @@ if (!self.window && self.onmessage !== void 0) {
         solution[property] = value;
       }
     }
-    console.error(engine.domains.map(function(e) {
-      return e.constraints.length;
-    }));
     return postMessage(solution);
   });
 }
@@ -20394,6 +20384,15 @@ Rules = (function() {
         parent = parent.parent;
       }
       return operation.sourceIndex = parent.rules = (parent.rules || 0) + 1;
+    }
+  };
+
+  Rules.prototype["scoped"] = {
+    solve: function(operation, continuation, scope, meta, ascender, ascending) {
+      if (operation.index === 2 && !ascender && (ascending != null)) {
+        this.expressions.solve(operation, continuation, ascending, operation);
+        return false;
+      }
     }
   };
 
@@ -22058,9 +22057,6 @@ Domain = (function() {
         }
       }
     }
-    if (path === '$1[intrinsic-width]') {
-      debugger;
-    }
     if (domain.immutable) {
       return;
     }
@@ -23528,7 +23524,6 @@ Update.prototype = {
     }
     if (problems[0] === 'get') {
       problems.exported = true;
-      debugger;
       problems.parent = void 0;
       result.push(problems);
       path = this.engine.getPath(problems[1], problems[2]);
@@ -23752,7 +23747,6 @@ Update.prototype = {
     this.optimize();
     while ((domain = this.domains[++this.index]) !== void 0) {
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
-      console.info(JSON.stringify(result));
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         return result;
       }
@@ -24415,7 +24409,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, id, j, path, prop, stylesheet, _ref;
+    var bits, camel, id, j, path, prop, stylesheet, _ref, _ref1;
     if (value == null) {
       value = '';
     }
@@ -24461,7 +24455,7 @@ Intrinsic = (function(_super) {
       }
     }
     path = this.getPath(element, 'intrinsic-' + property);
-    if (this.watchers[path]) {
+    if ((_ref1 = this.watchers) != null ? _ref1[path] : void 0) {
       return;
     }
     element.style[camel] = value;
@@ -25374,27 +25368,6 @@ Queries = (function() {
     this.qualified = [];
   }
 
-  Queries.prototype.onSolve = function() {
-    var id, node, _i, _j, _len, _len1, _ref, _ref1, _results;
-    if (this.removed) {
-      _ref = this.removed;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        id = _ref[_i];
-        this.remove(id);
-      }
-      this.removed = void 0;
-    }
-    if (this.removing) {
-      _ref1 = this.removing;
-      _results = [];
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        node = _ref1[_j];
-        _results.push(delete node._gss_id);
-      }
-      return _results;
-    }
-  };
-
   Queries.prototype.onBeforeSolve = function() {
     var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1, _ref2;
     index = 0;
@@ -26018,6 +25991,9 @@ Mutations = (function() {
         this.intrinsic.validate(mutation.target);
       }
     });
+    if (!this.engine.scope.parentNode) {
+      this.engine.destroy();
+    }
     return result;
   };
 

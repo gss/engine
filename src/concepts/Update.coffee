@@ -235,7 +235,6 @@ Update.prototype =
   unwrap: (problems, domain, result = []) ->
     if problems[0] == 'get'
       problems.exported = true
-      debugger
       problems.parent = undefined
       result.push(problems)
       path = @engine.getPath(problems[1], problems[2])
@@ -396,8 +395,6 @@ Update.prototype =
     while (domain = @domains[++@index]) != undefined
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
-
-      console.info JSON.stringify(result)
 
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         return result
