@@ -46,7 +46,14 @@ class Events
     detail = {engine: @}
     for prop, value of data
       detail[prop] = value
-    element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
+
+    params = {detail,bubbles,cancelable}
+    CustomEvent = window.CustomEvent || (event, params) ->
+      evt = document.createEvent("CustomEvent")
+      evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail)
+      return evt
+
+    element.dispatchEvent new CustomEvent(type, params)
 
   # Catch-all event listener 
   handleEvent: (e) ->

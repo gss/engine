@@ -200,7 +200,6 @@ class Rules
           scope = node.parentNode
 
       rules = @clone @['_' + type](source)
-      console.error(rules, source)
       @engine.engine.solve(rules, continuation, scope)
 
       return

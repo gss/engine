@@ -33,16 +33,8 @@ describe 'Perf', ->
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
       #console.profile(123)
-      console.profile('100 at once')
-
-      console.timeStamp(321)
 
       engine.once 'solve', ->
-        console.timeStamp(123)
-        console.profileEnd('100 at once')
-        #console.profileEnd(123)
-        console.timeStamp(123)
-        console.error(778)
         scope.innerHTML = ""
         engine.then ->
           debugger

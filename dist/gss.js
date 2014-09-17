@@ -20543,7 +20543,6 @@ Rules = (function() {
         }
       }
       rules = this.clone(this['_' + type](source));
-      console.error(rules, source);
       this.engine.engine.solve(rules, continuation, scope);
     }
   };
@@ -20747,14 +20746,10 @@ Selectors = (function() {
   };
 
   Selectors.prototype['getElementById'] = function(node, id) {
-    var found;
     if (id == null) {
       id = node;
     }
-    if (!node.getElementById || !(found = this.all[id]) || isFinite(parseInt(id))) {
-      return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
-    }
-    return found;
+    return (node.nodeType && node || this.scope).querySelector('[id="' + id + '"]');
   };
 
   Selectors.prototype['$virtual'] = {
@@ -22632,7 +22627,7 @@ Events = (function() {
   };
 
   Events.prototype.dispatchEvent = function(element, type, data, bubbles, cancelable) {
-    var detail, prop, value;
+    var CustomEvent, detail, params, prop, value;
     if (!this.scope) {
       return;
     }
@@ -22643,11 +22638,18 @@ Events = (function() {
       value = data[prop];
       detail[prop] = value;
     }
-    return element.dispatchEvent(new CustomEvent(type, {
+    params = {
       detail: detail,
       bubbles: bubbles,
       cancelable: cancelable
-    }));
+    };
+    CustomEvent = window.CustomEvent || function(event, params) {
+      var evt;
+      evt = document.createEvent("CustomEvent");
+      evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
+      return evt;
+    };
+    return element.dispatchEvent(new CustomEvent(type, params));
   };
 
   Events.prototype.handleEvent = function(e) {
@@ -24175,10 +24177,24 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.setup = function() {
+    var set;
     Domain.prototype.setup.apply(this, arguments);
     if (!this.hasOwnProperty('solver')) {
       this.solver = new c.SimplexSolver();
       this.solver.autoSolve = false;
+      this.solver._store = [];
+      set = c.HashTable.prototype.set;
+      c.HashTable.prototype.set = function() {
+        var property, store;
+        if (!this._store.push) {
+          store = this._store;
+          this._store = [];
+          for (property in store) {
+            this._store[property] = store[property];
+          }
+        }
+        return set.apply(this, arguments);
+      };
       c.debug = true;
       return c.Strength.require = c.Strength.required;
     }
@@ -25645,7 +25661,6 @@ Queries = (function() {
       this.unobserve(this.qualified, path, true);
     }
     this.unobserve(this.engine.scope._gss_id, path);
-    console.error(path);
     if (!result || result.length === void 0) {
       if (path.charAt(0) !== this.engine.PAIR) {
         contd = this.engine.getContinuation(path);
@@ -25999,7 +26014,7 @@ Mutations = (function() {
   };
 
   Mutations.prototype.onChildList = function(target, mutation) {
-    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, removed, tag, update, value, values, _base, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _s, _t;
+    var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, removed, tag, update, value, values, _base, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _s, _t, _u, _v;
     added = [];
     removed = [];
     _ref = mutation.addedNodes;
@@ -26063,25 +26078,33 @@ Mutations = (function() {
       child = added[_l];
       this.engine.queries.match(child, '!>', void 0, target);
       allAdded.push(child);
-      allAdded.push.apply(allAdded, child.getElementsByTagName('*'));
+      _ref2 = child.getElementsByTagName('*');
+      for (_m = 0, _len4 = _ref2.length; _m < _len4; _m++) {
+        el = _ref2[_m];
+        allAdded.push(el);
+      }
     }
-    for (_m = 0, _len4 = removed.length; _m < _len4; _m++) {
-      child = removed[_m];
+    for (_n = 0, _len5 = removed.length; _n < _len5; _n++) {
+      child = removed[_n];
       allRemoved.push(child);
-      allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'));
+      _ref3 = child.getElementsByTagName('*');
+      for (_o = 0, _len6 = _ref3.length; _o < _len6; _o++) {
+        el = _ref3[_o];
+        allRemoved.push(el);
+      }
     }
     allChanged = allAdded.concat(allRemoved, allMoved);
     update = {};
-    for (_n = 0, _len5 = allChanged.length; _n < _len5; _n++) {
-      node = allChanged[_n];
-      _ref2 = node.attributes;
-      for (_o = 0, _len6 = _ref2.length; _o < _len6; _o++) {
-        attribute = _ref2[_o];
+    for (_p = 0, _len7 = allChanged.length; _p < _len7; _p++) {
+      node = allChanged[_p];
+      _ref4 = node.attributes;
+      for (_q = 0, _len8 = _ref4.length; _q < _len8; _q++) {
+        attribute = _ref4[_q];
         switch (attribute.name) {
           case 'class':
-            _ref3 = node.classList;
-            for (_p = 0, _len7 = _ref3.length; _p < _len7; _p++) {
-              kls = _ref3[_p];
+            _ref5 = node.classList;
+            for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
+              kls = _ref5[_r];
               this.index(update, ' $class', kls);
             }
             break;
@@ -26113,14 +26136,14 @@ Mutations = (function() {
     parent = target;
     while (parent) {
       this.engine.queries.match(parent, ' ', void 0, allChanged);
-      for (_q = 0, _len8 = allChanged.length; _q < _len8; _q++) {
-        child = allChanged[_q];
+      for (_s = 0, _len10 = allChanged.length; _s < _len10; _s++) {
+        child = allChanged[_s];
         this.engine.queries.match(child, '!', void 0, parent);
       }
       for (prop in update) {
         values = update[prop];
-        for (_r = 0, _len9 = values.length; _r < _len9; _r++) {
-          value = values[_r];
+        for (_t = 0, _len11 = values.length; _t < _len11; _t++) {
+          value = values[_t];
           if (prop.charAt(1) === '$') {
             this.engine.queries.match(parent, prop, value);
           } else {
@@ -26135,8 +26158,8 @@ Mutations = (function() {
         break;
       }
     }
-    for (_s = 0, _len10 = allRemoved.length; _s < _len10; _s++) {
-      removed = allRemoved[_s];
+    for (_u = 0, _len12 = allRemoved.length; _u < _len12; _u++) {
+      removed = allRemoved[_u];
       if (allAdded.indexOf(removed) === -1) {
         if (id = this.engine.identity.find(removed)) {
           ((_base = this.engine.queries).removed || (_base.removed = [])).push(id);
@@ -26144,8 +26167,8 @@ Mutations = (function() {
       }
     }
     if (this.engine.queries.removed) {
-      for (_t = 0, _len11 = allAdded.length; _t < _len11; _t++) {
-        added = allAdded[_t];
+      for (_v = 0, _len13 = allAdded.length; _v < _len13; _v++) {
+        added = allAdded[_v];
         if ((j = this.engine.queries.removed.indexOf(this.engine.identity.find(added))) > -1) {
           this.engine.queries.removed.splice(j, 1);
         }
@@ -26671,8 +26694,7 @@ Stylesheets = (function() {
     }
     if (!meta.length) {
       delete watchers[index];
-      this.update(operation, operation[1], '', stylesheet, this.getRule(operation));
-      return console.log('lawl', index);
+      return this.update(operation, operation[1], '', stylesheet, this.getRule(operation));
     }
   };
 
@@ -26690,7 +26712,6 @@ Stylesheets = (function() {
                 operation = operations[_k];
                 this.unwatch(operation, continuation, stylesheet, watchers);
               }
-              console.error('removeafdsdf', stylesheets, continuation, watchers.length, stylesheet, stylesheet.nextSibling);
             }
           }
         }
@@ -31851,6 +31872,7 @@ require.register("gss/vendor/MutationObserver.js", function(exports, require, mo
 
     addListeners_: function(node) {
       var options = this.options;
+      
       if (options.attributes)
         node.addEventListener('DOMAttrModified', this, true);
 
@@ -32117,10 +32139,8 @@ require.register("gss/vendor/MutationObserver.classList.js", function(exports, r
 
 var attrModifiedWorks = false;
 var listener = function(e){ 
-  console.log(e[0].attributeName)
   if (e[0].attributeName != 'class')
     return
-  console.error('no need for shim')
   // unshim if browser supports classList + MutationObserver
   delete HTMLElement.prototype.classList
 };

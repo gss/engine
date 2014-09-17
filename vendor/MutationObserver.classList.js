@@ -1,10 +1,8 @@
 
 var attrModifiedWorks = false;
 var listener = function(e){ 
-  console.log(e[0].attributeName)
   if (e[0].attributeName != 'class')
     return
-  console.error('no need for shim')
   // unshim if browser supports classList + MutationObserver
   delete HTMLElement.prototype.classList
 };

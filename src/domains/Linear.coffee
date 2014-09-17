@@ -22,6 +22,16 @@ class Linear extends Domain
     unless @hasOwnProperty('solver')
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
+      @solver._store = []
+      set = c.HashTable.prototype.set
+      c.HashTable.prototype.set = ->
+        if !@_store.push
+          store = @_store
+          @_store = []
+          for property of store
+            @_store[property] = store[property]
+
+        return set.apply(@, arguments)
       c.debug = true
       c.Strength.require = c.Strength.required
 

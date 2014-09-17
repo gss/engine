@@ -245,7 +245,6 @@ class Queries
 
     @unobserve(@engine.scope._gss_id, path)
 
-    console.error(path)
     if !result || result.length == undefined
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)

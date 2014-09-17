@@ -94,10 +94,12 @@ class Mutations
     for child in added
       @engine.queries.match(child, '!>', undefined, target)
       allAdded.push(child)
-      allAdded.push.apply(allAdded, child.getElementsByTagName('*'))
+      for el in child.getElementsByTagName('*')
+        allAdded.push(el)
     for child in removed
       allRemoved.push(child)
-      allRemoved.push.apply(allRemoved, child.getElementsByTagName('*'))
+      for el in child.getElementsByTagName('*')
+        allRemoved.push(el)
     allChanged = allAdded.concat(allRemoved, allMoved)
 
     # Generate map of qualifiers to invalidate (to re-query native selectors)

@@ -110,7 +110,6 @@ class Stylesheets
     unless meta.length
       delete watchers[index]
       @update operation, operation[1], '', stylesheet, @getRule(operation)
-      console.log('lawl', index)
 
   remove: (continuation, stylesheets) ->
     if @collections
@@ -120,8 +119,6 @@ class Stylesheets
             if operations = watchers[continuation]
               for operation in operations by -1
                 @unwatch(operation, continuation, stylesheet, watchers)
-
-              console.error('removeafdsdf', stylesheets, continuation, watchers.length, stylesheet, stylesheet.nextSibling)
     return
 
 module.exports = Stylesheets

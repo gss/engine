@@ -182,7 +182,6 @@ describe 'End - to - End', ->
 
           el = engine.$class("innie-outie")[1]
           el.setAttribute('class', 'innie-outie-zzz')
-          console.log(123)
 
           engine.once 'solve', ->
             expect(getSource(engine.$tag('style')[1])).to.equal """
@@ -420,11 +419,9 @@ describe 'End - to - End', ->
           expect(engine.values).to.eql
             "$a1[x]": 111,
             "$a3[x]": 222,
-          console.error('111')
 
           container.appendChild(engine.$id('a1'))
           engine.once 'solve', ->
-            console.error('222')
           
             expect(engine.values).to.eql
               "$a2[x]": 111,
@@ -450,11 +447,9 @@ describe 'End - to - End', ->
           expect(engine.values).to.eql
             "$a1[x]": 111,
             "$a2[x]": 666
-          console.error('111')
 
           container.appendChild(engine.$id('a1'))
           engine.once 'solve', ->
-            console.error('222')
           
             expect(engine.values).to.eql
               "$a1[x]": 666,
@@ -490,16 +485,14 @@ describe 'End - to - End', ->
             "$a3[x]": 200,
           a3 = engine.$id('a3')
           a3.parentNode.removeChild(a3)
-          console.log('remove a3')
           engine.once 'solve', ->
             expect(engine.values).to.eql
               "$a1[width]": 100,
               "$a2[width]": 100,
               "$a1[x]": 0,
               "$a2[x]": 100,
-            debugger
             engine.scope.appendChild(a3)
-            console.info('add a3')
+
             engine.once 'solve', ->
               expect(engine.values).to.eql
                 "$a1[width]": 100,
@@ -508,19 +501,16 @@ describe 'End - to - End', ->
                 "$a1[x]": 0,
                 "$a2[x]": 100,
                 "$a3[x]": 200,
-              debugger
               a1 = engine.$id('a1')
               a1.parentNode.removeChild(a1)
-              console.info('remove a1')
+
               engine.once 'solve', ->
                 expect(engine.values).to.eql
                   "$a2[width]": 100,
                   "$a3[width]": 100,
                   "$a2[x]": 0,
                   "$a3[x]": 100,
-                debugger
                 engine.scope.appendChild(a1)
-                console.info('add a1')
 
                 engine.once 'solve', ->
                   expect(engine.values).to.eql
@@ -532,7 +522,6 @@ describe 'End - to - End', ->
                     "$a1[x]": 200,
                   a3 = engine.$id('a3')
                   a3.parentNode.removeChild(a3)
-                  console.info('remove a3')
                   engine.once 'solve', ->
                     expect(engine.values).to.eql
                       "$a1[width]": 100,
@@ -557,10 +546,6 @@ describe 'End - to - End', ->
 
             done()
 
-          console.log('now please scroll', engine.$id('scroller'))
-          engine.$id('scroller').onscroll = ->
-            console.error(123)
-          debugger
           engine.$id('scroller').scrollTop = 20
         container.innerHTML =  """
           <style>
@@ -630,7 +615,7 @@ describe 'End - to - End', ->
                 <div class="b" id="b1"></div>
               """
 
-          it 'should simplify non-linear equasions to linear', (done) ->                                 
+          xit 'should simplify non-linear equasions to linear', (done) ->                                 
             count = 0
             listener = (e) ->
               if ++count == 1
@@ -668,7 +653,7 @@ describe 'End - to - End', ->
                 <div class="b" id="b1"></div>
               """
 
-          it 'should detect non-linearity deep in expression', (done) ->                                 
+          xit 'should detect non-linearity deep in expression', (done) ->                                 
             count = 0
             listener = (e) ->
               if ++count == 1
@@ -779,7 +764,6 @@ describe 'End - to - End', ->
             "$b2[x]": 100
             "$b3[x]": 100
           b3 = engine.$id('b3')
-          console.info('remove b3')
           b3.parentNode.removeChild(b3)
 
           engine.once 'solve', (e) ->
@@ -790,17 +774,13 @@ describe 'End - to - End', ->
               "$b1[x]": 100
               "$b2[x]": 100
             b2 = engine.$id('b2')
-            console.info('remove b2')
             b2.parentNode.removeChild(b2)
-            debugger
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
                 "$a1[x]": 100
                 "$b1[x]": 100
-              console.info('add b2')
               engine.scope.appendChild(b2)
-              debugger
               engine.once 'solve', (e) ->
                 expect(engine.values).to.eql 
                   "x": 100
@@ -809,28 +789,22 @@ describe 'End - to - End', ->
                   "$b1[x]": 100
                   "$b2[x]": 100
                 a1 = engine.$id('a1')
-                console.info('remove a1')
                 a1.parentNode.removeChild(a1)
-                debugger
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql 
                     "x": 100
                     "$a2[x]": 100
                     "$b1[x]": 100
                     "$b2[x]": 100
-                  debugger
                   b2 = engine.$id('b2')
-                  console.info('remove b2')
                   b2.parentNode.removeChild(b2)
                   engine.once 'solve', (e) ->
                     expect(engine.values).to.eql 
                       "x": 100
                       "$a2[x]": 100
                       "$b1[x]": 100
-                    console.info('add a1 && b2')
                     engine.scope.insertBefore(a1, engine.$id('b1'))
                     engine.scope.appendChild(b2)
-                    debugger
                     engine.once 'solve', (e) ->
                       expect(engine.values).to.eql 
                         "x": 100
@@ -877,7 +851,6 @@ describe 'End - to - End', ->
             "$a3[x]": 200,
           a3 = engine.$id('a3')
           a3.parentNode.removeChild(a3)
-          console.log('remove a3')
           engine.once 'solve', ->
             expect(engine.values).to.eql
               "$a1[width]": 100,
@@ -885,7 +858,6 @@ describe 'End - to - End', ->
               "$a1[x]": 0,
               "$a2[x]": 100,
             engine.scope.appendChild(a3)
-            console.info('add a3')
             engine.once 'solve', ->
               expect(engine.values).to.eql
                 "$a1[width]": 100,
@@ -896,8 +868,6 @@ describe 'End - to - End', ->
                 "$a3[x]": 200,
               a1 = engine.$id('a1')
               a1.parentNode.removeChild(a1)
-              window.zzzz = true
-              console.info('remove a1')
               engine.once 'solve', ->
                 expect(engine.values).to.eql
                   "$a2[width]": 100,
@@ -905,7 +875,6 @@ describe 'End - to - End', ->
                   "$a2[x]": 0,
                   "$a3[x]": 100,
                 engine.scope.appendChild(a1)
-                console.info('add a1')
 
                 engine.once 'solve', ->
                   expect(engine.values).to.eql
@@ -917,7 +886,7 @@ describe 'End - to - End', ->
                     "$a1[x]": 200,
                   a3 = engine.$id('a3')
                   a3.parentNode.removeChild(a3)
-                  console.info('remove a3')
+
                   engine.once 'solve', ->
                     expect(engine.values).to.eql
                       "$a1[width]": 100,
@@ -957,7 +926,7 @@ describe 'End - to - End', ->
             "$a3[x]": 200,
           a3 = engine.$id('a3')
           a3.parentNode.removeChild(a3)
-          console.log('remove a3')
+
           engine.once 'solve', ->
             expect(engine.values).to.eql
               "$a1[width]": 100,
@@ -965,8 +934,7 @@ describe 'End - to - End', ->
               "$a1[x]": 0,
               "$a2[x]": 100,
             engine.scope.appendChild(a3)
-            console.info('add a3')
-            window.zzzz = true
+
             engine.once 'solve', ->
               expect(engine.values).to.eql
                 "$a1[width]": 100,
@@ -977,7 +945,7 @@ describe 'End - to - End', ->
                 "$a3[x]": 200,
               a1 = engine.$id('a1')
               a1.parentNode.removeChild(a1)
-              console.info('remove a1')
+
               engine.once 'solve', ->
                 expect(engine.values).to.eql
                   "$a2[width]": 100,
@@ -985,7 +953,6 @@ describe 'End - to - End', ->
                   "$a2[x]": 0,
                   "$a3[x]": 100,
                 engine.scope.appendChild(a1)
-                console.info('add a1')
 
                 engine.once 'solve', ->
                   expect(engine.values).to.eql
@@ -997,7 +964,7 @@ describe 'End - to - End', ->
                     "$a1[x]": 200,
                   a3 = engine.$id('a3')
                   a3.parentNode.removeChild(a3)
-                  console.info('remove a3')
+
                   engine.once 'solve', ->
                     expect(engine.values).to.eql
                       "$a1[width]": 100,
@@ -1035,9 +1002,8 @@ describe 'End - to - End', ->
             "$b1[x]": 100
             "$b2[x]": 100
           b3 = engine.$id('b3')
-          console.info('remove b3')
+
           b3.parentNode.removeChild(b3)
-          debugger
 
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
@@ -1045,8 +1011,6 @@ describe 'End - to - End', ->
               "$a1[x]": 100
               "$b1[x]": 100
             engine.scope.appendChild(b3)
-            console.info('add b3')
-            debugger
 
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
@@ -1093,14 +1057,14 @@ describe 'End - to - End', ->
             "$b2[x]": 100
           b3 = engine.$id('b3')
           b3.parentNode.removeChild(b3)
-          console.error('remove b3')
+
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
               "x": 100
               "$a1[x]": 100
               "$b1[x]": 100
             engine.scope.appendChild(b3)
-            console.error('add b3')
+
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
@@ -1108,7 +1072,7 @@ describe 'End - to - End', ->
                 "$a2[x]": 100
                 "$b1[x]": 100
                 "$b2[x]": 100
-              console.error('remove a1')
+
               a1 = engine.$id('a1')
               a1.parentNode.removeChild(a1)
               engine.once 'solve', (e) ->
@@ -1210,7 +1174,7 @@ describe 'End - to - End', ->
           a4 = a3.cloneNode()
           a4.id = 'a4'
           a3.parentNode.appendChild(a4)
-          console.error('add a4')
+
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
               "x": 100
@@ -1224,7 +1188,7 @@ describe 'End - to - End', ->
               "$b4[x]": 100
             a1 = engine.$id('a1')
             a1.parentNode.removeChild(a1)
-            console.error('remove a1')
+
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
@@ -1236,7 +1200,7 @@ describe 'End - to - End', ->
                 "$b3[x]": 100
                 "$b4[x]": 100
               b4 = engine.$id('b4')
-              console.error('delete b4')
+
               b4.parentNode.removeChild(b4)
               engine.once 'solve', (e) ->
                 expect(engine.values).to.eql 
@@ -1248,7 +1212,6 @@ describe 'End - to - End', ->
                   "$b2[x]": 100
                   "$b3[x]": 100
 
-                console.error('delete b3')
                 b3 = engine.$id('b3')
                 b3.parentNode.removeChild(b3)
 
@@ -1262,7 +1225,6 @@ describe 'End - to - End', ->
                   a2 = engine.$id('a2')
                   a2.parentNode.removeChild(a2)
 
-                  console.error('delete a2')
                   engine.once 'solve', (e) ->
                     expect(engine.values).to.eql 
                       "x": 100
@@ -1274,7 +1236,6 @@ describe 'End - to - End', ->
                     while divs[0]
                       divs[0].parentNode.removeChild(divs[0])
 
-                    console.error('delete all')
                     engine.once 'solve', (e) ->
                       expect(engine.values).to.eql 
                         "x": 100
@@ -1325,7 +1286,6 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solve', (e) ->
-          console.log((JSON.parse JSON.stringify engine.values), 44, [engine.$id('sugar1').style.cssText, engine.$id('sugar2').style.cssText])
           expect(engine.values).to.eql 
             "$sugar1[x]": 5
             "$sugar1[y]": 5
@@ -2345,7 +2305,6 @@ describe 'End - to - End', ->
             "$container[x]": 0
             "gap": 0
           done()
-          console.log(arguments)
 
     describe "new VFL output", ->
       it 'should work', (done) ->

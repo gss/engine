@@ -352,6 +352,7 @@
 
     addListeners_: function(node) {
       var options = this.options;
+      
       if (options.attributes)
         node.addEventListener('DOMAttrModified', this, true);
 

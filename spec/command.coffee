@@ -329,8 +329,7 @@ describe 'GSS commands', ->
                 [['==', ['get','$34222','x','.box$34222'], 100]]
               ]
             el = engine.$id('34222')
-            el.classList.remove('box')
-
+            el.setAttribute('class',  '')
           else if count is 2
             chai.expect(engine.updated.getProblems()).to.eql [
                 ['remove', '.box$34222']
@@ -514,7 +513,6 @@ describe 'GSS commands', ->
         scope.innerHTML = """
           <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
         """
-        console.log(scope, 6)
     
     
     describe "Chain", ->

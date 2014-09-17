@@ -101,8 +101,7 @@ describe "GSS.View", ->
         
       engine.once 'solved', ->
         expect(engine.values['$floater[y]']).to.eql 20
-        debugger
-        engine.intrinsic.restyle(engine.$id('pusher'), 'padding-top', '11px') 
+        engine.$id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;') 
 
         engine.once 'solved', ->  
           expect(engine.values['$floater[y]']).to.eql 31        
