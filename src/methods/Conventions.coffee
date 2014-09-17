@@ -80,6 +80,7 @@ class Conventions
   # (yes, if it's a collection of objects or empty array)
   isCollection: (object) ->
     if object && object.length != undefined && !object.substring && !object.nodeType
+      return true if object.isCollection
       switch typeof object[0]
         when "object"
           return object[0].nodeType

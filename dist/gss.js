@@ -19943,6 +19943,9 @@ Conventions = (function() {
 
   Conventions.prototype.isCollection = function(object) {
     if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      if (object.isCollection) {
+        return true;
+      }
       switch (typeof object[0]) {
         case "object":
           return object[0].nodeType;
@@ -21001,7 +21004,6 @@ Selectors = (function() {
   Selectors.prototype[':next'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
-      debugger;
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
@@ -25846,6 +25848,7 @@ Queries = (function() {
         child = result[_j];
         if (!old || Array.prototype.indexOf.call(old, child) === -1) {
           (added || (added = [])).push(child);
+          added.isCollection = true;
         }
       }
       if (result && result.item) {
@@ -25874,6 +25877,9 @@ Queries = (function() {
     group[1] || (group[1] = old);
     if (result === old) {
       return;
+    }
+    if (result != null ? result.push : void 0) {
+      result.isCollection = true;
     }
     this.set(path, result);
     return added;

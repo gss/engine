@@ -368,6 +368,7 @@ class Queries
       for child in result
         if !old || Array.prototype.indexOf.call(old, child) == -1  
           (added ||= []).push child
+          added.isCollection = true
 
       # Snapshot live node list for future reference
       if result && result.item
@@ -395,6 +396,9 @@ class Queries
     group[1] ||= old
 
     return if result == old
+
+    if result?.push
+      result.isCollection = true
     
     @set path, result
 

@@ -1486,13 +1486,14 @@ describe 'End - to - End', ->
         <div id="b1" class="b"></div>
         <div id="b2" class="b"></div>
         <style type="text/gss">
-          .a, "z", .b {
+          "c", .a, "z", .b {
             &:next[x] == 10;
           }
         </style>
       """
       engine.then (solution) ->
         expect(solution).to.eql
+          "$a1[x]": 10
           "$a2[x]": 10
           "$\"z\"[x]": 10
           "$b1[x]": 10
@@ -1505,7 +1506,7 @@ describe 'End - to - End', ->
 
         engine.then (solution) ->
           expect(solution).to.eql
-            '$"z"[x]': null
+            '$a1[x]': null
             "$a2[x]": null
 
           for item in lefts by -1
