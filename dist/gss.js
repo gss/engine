@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-17) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20347,7 +20346,8 @@ Rules = (function() {
       debugger;
       var contd, _base;
       contd = this.getScopePath(continuation) + operation.parent.path;
-      this.queries.add(result, contd, operation.parent, scope, true);
+      this.queries.add(result, contd, operation.parent, scope, operation.index);
+      console.info('add', operation.index, operation);
       (_base = this.queries).ascending || (_base.ascending = []);
       if (this.engine.indexOfTriplet(this.queries.ascending, operation.parent, contd, scope) === -1) {
         this.queries.ascending.push(operation.parent, contd, scope);
@@ -20357,7 +20357,9 @@ Rules = (function() {
     release: function(result, operation, continuation, scope) {
       var contd;
       contd = this.getScopePath(continuation) + operation.parent.path;
-      this.queries.remove(result, contd, operation.parent, scope, true);
+      console.error('remove', operation.index, operation);
+      debugger;
+      this.queries.remove(result, contd, operation.parent, scope, operation.index);
       return true;
     }
   };
@@ -20366,7 +20368,6 @@ Rules = (function() {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
       if (operation.index === 2 && !ascender && (ascending != null)) {
-        debugger;
         this.expressions.solve(operation, continuation, ascending, operation);
         return false;
       }
@@ -25490,12 +25491,12 @@ Queries = (function() {
     if (collection.indexOf(node) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
-        if (!this.comparePosition(el, node)) {
+        if (!this.comparePosition(el, node, operation[collection.keys[index]], operation[key])) {
           break;
         }
       }
       collection.splice(index, 0, node);
-      keys.splice(index - 1, 0, key);
+      keys.splice(index, 0, key);
       if (operation.parent.name === 'rule') {
         this.addMatch(node, continuation);
       }
@@ -25610,7 +25611,9 @@ Queries = (function() {
             keys.splice(length + index, 1);
             return false;
           } else {
-            duplicate = index;
+            if (duplicate == null) {
+              duplicate = index;
+            }
           }
         }
       }
@@ -25642,7 +25645,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, manual, strict) {
-    var collection, node, removed, _base, _base1, _base2;
+    var collection, node, parent, removed, _base, _base1, _base2, _ref;
     if (typeof id === 'object') {
       node = id;
       id = this.engine.identity.provide(id);
@@ -25650,8 +25653,13 @@ Queries = (function() {
       node = this.engine.identity[id];
     }
     if (continuation) {
+      if (parent = operation != null ? operation.parent : void 0) {
+        if ((_ref = parent.def.release) != null) {
+          _ref.call(this.engine, node, operation, continuation, scope);
+        }
+      }
       collection = this.get(continuation);
-      if ((collection != null ? collection.length : void 0) !== void 0) {
+      if (collection && this.engine.isCollection(collection)) {
         (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       }
       removed = this.removeFromCollection(node, continuation, operation, scope, manual);
@@ -25668,7 +25676,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind) {
-    var contd, parent, result, _ref, _ref1, _ref2;
+    var contd, result, _ref, _ref1;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -25677,19 +25685,14 @@ Queries = (function() {
     }
     result = this.get(path);
     if ((result = this.get(path, void 0, true)) !== void 0) {
-      if (parent = operation != null ? operation.parent : void 0) {
-        if ((_ref = parent.def.release) != null) {
-          _ref.call(this.engine, result, operation, continuation, scope);
-        }
-      }
       this.each('remove', result, path, operation);
     }
     if (scope && operation.def.cleaning) {
       this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, true);
     }
     this.engine.solved.remove(path);
-    if ((_ref1 = this.engine.stylesheets) != null) {
-      _ref1.remove(path, this['style[type*="text/gss"]']);
+    if ((_ref = this.engine.stylesheets) != null) {
+      _ref.remove(path, this['style[type*="text/gss"]']);
     }
     this.set(path, void 0);
     if (this.qualified) {
@@ -25699,8 +25702,8 @@ Queries = (function() {
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.PAIR) {
         contd = this.engine.getContinuation(path);
-        if ((_ref2 = this.engine.updating) != null) {
-          _ref2.remove(contd);
+        if ((_ref1 = this.engine.updating) != null) {
+          _ref1.remove(contd);
         }
         this.engine.provide(['remove', contd]);
       }
@@ -25977,16 +25980,14 @@ Queries = (function() {
     return this;
   };
 
-  Queries.prototype.comparePosition = function(a, b) {
+  Queries.prototype.comparePosition = function(a, b, op1, op2) {
     if (!(a.nodeType && b.nodeType)) {
-      return true;
+      return op1.index < op2.index;
     }
     if (a.compareDocumentPosition) {
       return a.compareDocumentPosition(b) & 4;
     }
-    if (a.sourceIndex >= 0 && b.sourceIndex >= 0) {
-      return a.sourceIndex < b.sourceIndex;
-    }
+    return a.sourceIndex < b.sourceIndex;
   };
 
   return Queries;

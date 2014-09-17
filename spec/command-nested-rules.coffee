@@ -481,16 +481,16 @@ describe 'Nested Rules', ->
                 vessel0.parentNode.removeChild(vessel0)
 
                 engine.once 'solve', ->
-                  expect(box1.style.top).to.eql('')
-                  expect(box2.style.top).to.eql('')
-                  expect(box3.style.top).to.eql('100px')
-                  expect(box4.style.top).to.eql('')
                   expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
                   expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
                   expect(stringify(engine.updated.getProblems())).to.eql stringify([
                     ['remove',  "#box1!>,>div$vessel0↑ :first-child$box2", "#box1!>,>div$vessel0", ">$vessel0↑div", ">$vessel0"]
                     [['remove',  "#box1!>,>div$vessel0↑ :first-child$box2"]]
                   ])
+                  expect(box1.style.top).to.eql('')
+                  expect(box2.style.top).to.eql('')
+                  expect(box3.style.top).to.eql('100px')
+                  expect(box4.style.top).to.eql('')
                   box3.parentNode.removeChild(box3)
 
                   engine.once 'solve', ->

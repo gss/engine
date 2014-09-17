@@ -73,9 +73,9 @@ class Queries
 
     if collection.indexOf(node) == -1
       for el, index in collection
-        break unless @comparePosition(el, node)
+        break unless @comparePosition(el, node, operation[collection.keys[index]], operation[key])
       collection.splice(index, 0, node)
-      keys.splice(index - 1, 0, key)
+      keys.splice(index, 0, key)
       if operation.parent.name == 'rule'
         @addMatch(node, continuation)
       return true
@@ -170,7 +170,7 @@ class Queries
             keys.splice(length + index, 1)
             return false
           else
-            duplicate = index
+            duplicate ?= index
 
     if operation && length && manual
       ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
@@ -184,6 +184,7 @@ class Queries
             keys[index] = keys[duplicate + length]
             keys.splice(duplicate + length, 1)
             return false
+
         collection.splice(index, 1)
         @removeMatch(node, continuation)
         if keys
@@ -195,7 +196,6 @@ class Queries
 
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, manual, strict) ->
-    
     if typeof id == 'object'
       node = id
       id = @engine.identity.provide(id)
@@ -203,8 +203,12 @@ class Queries
       node = @engine.identity[id]
 
     if continuation
+
+      if parent = operation?.parent
+        parent.def.release?.call(@engine, node, operation, continuation, scope)
+        
       collection = @get(continuation)
-      if collection?.length != undefined
+      if collection && @engine.isCollection(collection)
         ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
 
@@ -228,9 +232,6 @@ class Queries
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
-      if parent = operation?.parent
-        parent.def.release?.call(@engine, result, operation, continuation, scope)
-
       @each 'remove', result, path, operation
 
     if scope && operation.def.cleaning
@@ -471,11 +472,10 @@ class Queries
     @
 
   # Compare position of two nodes to sort collection in DOM order
-  comparePosition: (a, b) ->
-    return true unless a.nodeType && b.nodeType 
-
+  comparePosition: (a, b, op1, op2) ->
+    unless a.nodeType && b.nodeType 
+      return op1.index < op2.index
     if a.compareDocumentPosition
       return a.compareDocumentPosition(b) & 4
-    if a.sourceIndex >= 0 && b.sourceIndex >= 0
-      return a.sourceIndex < b.sourceIndex
+    return a.sourceIndex < b.sourceIndex
 module.exports = Queries

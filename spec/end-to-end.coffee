@@ -1497,7 +1497,25 @@ describe 'End - to - End', ->
           "$\"z\"[x]": 10
           "$b1[x]": 10
           "$b2[x]": 10
-        done()
+
+        lefts = 
+          for item in engine.$class('a') by -1
+            item.parentNode.removeChild(item)
+            item
+
+        engine.then (solution) ->
+          expect(solution).to.eql
+            '$"z"[x]': null
+            "$a2[x]": null
+
+          for item in lefts by -1
+            engine.scope.insertBefore(item, engine.$id('b2'))
+
+          engine.then (solution) ->
+            expect(solution).to.eql
+              '$"z"[x]': 10
+              "$a2[x]": 10
+              done()
 
 
 
