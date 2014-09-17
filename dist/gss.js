@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-17) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20331,7 +20332,6 @@ Rules = (function() {
     after: 'onQuery',
     init: 'onSelector',
     command: function(operation, continuation, scope, meta) {
-      debugger;
       var contd, index;
       contd = this.getScopePath(continuation) + operation.path;
       if (this.queries.ascending) {
@@ -20343,11 +20343,9 @@ Rules = (function() {
       return this.queries[contd];
     },
     capture: function(result, operation, continuation, scope, meta, ascender) {
-      debugger;
       var contd, _base;
       contd = this.getScopePath(continuation) + operation.parent.path;
       this.queries.add(result, contd, operation.parent, scope, operation.index);
-      console.info('add', operation.index, operation);
       (_base = this.queries).ascending || (_base.ascending = []);
       if (this.engine.indexOfTriplet(this.queries.ascending, operation.parent, contd, scope) === -1) {
         this.queries.ascending.push(operation.parent, contd, scope);
@@ -20357,8 +20355,6 @@ Rules = (function() {
     release: function(result, operation, continuation, scope) {
       var contd;
       contd = this.getScopePath(continuation) + operation.parent.path;
-      console.error('remove', operation.index, operation);
-      debugger;
       this.queries.remove(result, contd, operation.parent, scope, operation.index);
       return true;
     }

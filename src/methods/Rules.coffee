@@ -23,7 +23,6 @@ class Rules
 
     # Return deduplicated collection of all found elements
     command: (operation, continuation, scope, meta) ->
-      debugger 
       contd = @getScopePath(continuation) + operation.path
 
       if @queries.ascending
@@ -36,10 +35,8 @@ class Rules
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope, meta, ascender) ->
-      debugger 
       contd = @getScopePath(continuation) + operation.parent.path
       @queries.add(result, contd, operation.parent, scope, operation.index)
-      console.info('add', operation.index, operation)
       @queries.ascending ||= []
       if @engine.indexOfTriplet(@queries.ascending, operation.parent, contd, scope) == -1
         @queries.ascending.push(operation.parent, contd, scope)
@@ -49,8 +46,6 @@ class Rules
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
       contd = @getScopePath(continuation) + operation.parent.path
-      console.error('remove', operation.index, operation, )
-      debugger
       @queries.remove(result, contd, operation.parent, scope, operation.index)
       return true
 

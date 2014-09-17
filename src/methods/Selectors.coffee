@@ -333,7 +333,6 @@ class Selectors
   ':next':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      debugger
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
