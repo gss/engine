@@ -57,7 +57,6 @@ class Conventions
     if path
       path = path.replace(/[→↓↑]$/, '')
     return '' if !path && !value
-    return value if typeof value == 'string'
     return path + (value && @identity.provide(value) || '') + suffix
 
   # When cleaning a path, also clean forks, rules and pairs

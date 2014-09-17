@@ -1463,16 +1463,44 @@ describe 'End - to - End', ->
               "mast"[bottom] == 100;
               "mast"[left] == 10;
               "mast"[right] == 20;
+              &"mast"[z] == 1;
             }
           </style>
           """
         engine.once 'solve', (e) ->
           expect((engine.values)).to.eql 
-            '$ship"mast"[height]': 100
-            '$ship"mast"[x]': 10
-            '$ship"mast"[width]': 10
-            '$ship"mast"[y]': 0
+            '$"mast"[height]': 100
+            '$"mast"[x]': 10
+            '$"mast"[width]': 10
+            '$"mast"[y]': 0
+            '$ship"mast"[z]': 1
           done()
+
+    it 'in comma', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+        <div id="a1" class="a"></div>
+        <div id="a2" class="a"></div>
+        <div id="b1" class="b"></div>
+        <div id="b2" class="b"></div>
+        <style type="text/gss">
+          .a, "z", .b {
+            &:next[x] == 10;
+          }
+        </style>
+      """
+      engine.then (solution) ->
+        expect(solution).to.eql
+          "$a2[x]": 10
+          "$\"z\"[x]": 10
+          "$b1[x]": 10
+          "$b2[x]": 10
+        done()
+
+
+
   
   
   # VGL
@@ -2005,11 +2033,11 @@ describe 'End - to - End', ->
         engine.once 'solve', listen
     
   
-    xdescribe 'top level @if @else w/ nested VFLs', ->
+    describe 'top level @if @else w/ nested VFLs', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->             
-          expect(engine.vars).to.eql
+          expect(engine.values).to.eql
             "Wwin":100
             "$s1[x]":50
             "$s1[width]":1
@@ -2026,14 +2054,14 @@ describe 'End - to - End', ->
             @if [Wwin] > 960 {
                         
               #s1[x] == 100;
-              @horizontal [#s1(==10)]-[#s2(==10)] gap(100);
+              @horizontal (#s1(==10))-(#s2(==10)) gap(100);
 
             }
 
             @else {
   
               #s1[x] == 50;
-              @horizontal [#s1(==1)]-[#s2(==1)] gap(5);
+              @horizontal (#s1(==1))-(#s2(==1)) gap(5);
   
             }
             </style>

@@ -137,8 +137,11 @@ class Selectors
     return (node.nodeType && node || @scope).querySelector('[id="' + id + '"]')
 
   '$virtual':
-    serialized: false
-    command: (operation, continuation, scope, meta, value) ->
+    prefix: '"'
+    suffix: '"'
+    1: (value) ->
+      return '$"' + value + '"'
+    2: (scope, value) ->
       return @identity.provide(scope) + '"' + value + '"'
 
   # Filters
@@ -330,6 +333,7 @@ class Selectors
   ':next':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
+      debugger
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)

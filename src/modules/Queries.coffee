@@ -42,12 +42,14 @@ class Queries
 
 
   addMatch: (node, continuation) ->
+    return unless node.nodeType
     if (index = continuation.indexOf(@engine.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
     continuation = continuation.replace(/\s+/, @engine.DESCEND)
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
   
   removeMatch: (node, continuation) ->
+    return unless node.nodeType
     if matches = node.getAttribute('matches')
       if (index = continuation.indexOf(@engine.DESCEND)) > -1
         continuation = continuation.substring(index + 1)
@@ -71,7 +73,7 @@ class Queries
 
     if collection.indexOf(node) == -1
       for el, index in collection
-        break unless @comparePosition(el, node) == 4
+        break unless @comparePosition(el, node)
       collection.splice(index, 0, node)
       keys.splice(index - 1, 0, key)
       if operation.parent.name == 'rule'
@@ -93,7 +95,7 @@ class Queries
       if old && (updated = @engine.updating.queries?[operation]?[3])
         if updated.length != undefined
           if result
-            if result.length == undefined
+            if !@engine.isCollection(result)
               result = [result]
             else
               result = Array.prototype.slice.call(result)
@@ -245,7 +247,7 @@ class Queries
 
     @unobserve(@engine.scope._gss_id, path)
 
-    if !result || result.length == undefined
+    if !result || !@engine.isCollection(result)
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
@@ -276,13 +278,13 @@ class Queries
       if operation
         if operation.bound && (operation.path != operation.key)
           if added
-            if added.length != undefined
+            if @engine.isCollection(added)
               for add in added
                 @addMatch(add, path) 
             else
               @addMatch(added, path) 
       if removed
-        if removed.length != undefined
+        if @engine.isCollection(removed)
           for remove in removed
             @removeMatch(remove, path)
         else
@@ -300,7 +302,7 @@ class Queries
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result, continuation, operation, scope, manual, strict) ->
-    if result.length != undefined
+    if @engine.isCollection(result)
       copy = result.slice()
       returned = undefined
       for child in copy
@@ -332,11 +334,11 @@ class Queries
     if !old? && (result && result.length == 0) && continuation
       old = @get(@engine.getCanonicalPath(path))
 
-    isCollection = result && result.length != undefined
+    isCollection = @engine.isCollection(result)
 
     # Clean refs of nodes that dont match anymore
     if old
-      if old.length != undefined
+      if @engine.isCollection(old)
         removed = undefined
         old = old.slice()
         for child in old
@@ -408,7 +410,7 @@ class Queries
     if result
       @[path] = result
 
-      if result.length != undefined
+      if @engine.isCollection(result)
         for item, index in result
           @chain result[index - 1], item, result, path
         if item
@@ -470,12 +472,10 @@ class Queries
 
   # Compare position of two nodes to sort collection in DOM order
   comparePosition: (a, b) ->
-    sourceIndex = 
-      if a.sourceIndex >= 0 && b.sourceIndex >= 0
-        (a.sourceIndex < b.sourceIndex && 4) + 
-        (a.sourceIndex > b.sourceIndex && 2)
-      else
-        1
-    return a.compareDocumentPosition?(b) ?
-          (a != b && a.contains(b) && 16) + (a != b && b.contains(a) && 8) + sourceIndex
+    return true unless a.nodeType && b.nodeType 
+
+    if a.compareDocumentPosition
+      return a.compareDocumentPosition(b) & 4
+    if a.sourceIndex >= 0 && b.sourceIndex >= 0
+      return a.sourceIndex < b.sourceIndex
 module.exports = Queries

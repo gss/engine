@@ -23,15 +23,22 @@ class Linear extends Domain
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
       @solver._store = []
-      set = c.HashTable.prototype.set
-      c.HashTable.prototype.set = ->
-        if !@_store.push
-          store = @_store
-          @_store = []
-          for property of store
-            @_store[property] = store[property]
 
-        return set.apply(@, arguments)
+      # Phantom js doesnt enforce order of numerical keys in plain objects. Use arrays
+      unless c.isUnordered?
+        obj = {9: 1, 10: 1}
+        for property of obj
+          break
+        if c.isUnordered = (property == 10)
+          set = c.HashTable.prototype.set
+          c.HashTable.prototype.set = ->
+            if !@_store.push
+              store = @_store
+              @_store = []
+              for property of store
+                @_store[property] = store[property]
+
+            return set.apply(@, arguments)
       c.debug = true
       c.Strength.require = c.Strength.required
 

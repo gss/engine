@@ -154,7 +154,7 @@ class Expressions
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
           for item in result
             contd = @engine.getAscendingContinuation(continuation, item)
-            @solve operation.parent, contd, scope, meta, operation.index, item
+            @ascend operation, contd, item, scope, meta, operation.index
 
           @engine.console.groupEnd()
           return
@@ -310,12 +310,18 @@ class Expressions
         else if op.key && group != false
           if (group && (groupper = @engine.methods[group]))
             if (op.def.group == group)
-              if tail = op.tail ||= (groupper.condition(op) && op)
-                operation.groupped = groupper.promise(op, operation)
-                tail.head = operation
-                operation.tail = tail
-                before += (before && separator || '') + op.groupped || op.key
-              else continue
+              following = index
+              next = undefined
+              while next = operation[++following]
+                if next.def && next.def.group != group
+                  break
+              unless next
+                if tail = op.tail ||= (groupper.condition(op) && op)
+                  operation.groupped = groupper.promise(op, operation)
+                  tail.head = operation
+                  operation.tail = tail
+                  before += (before && separator || '') + op.groupped || op.key
+                else continue
             else
               group = false 
               continue

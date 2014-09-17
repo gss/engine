@@ -19919,9 +19919,6 @@ Conventions = (function() {
     if (!path && !value) {
       return '';
     }
-    if (typeof value === 'string') {
-      return value;
-    }
     return path + (value && this.identity.provide(value) || '') + suffix;
   };
 
@@ -20335,6 +20332,7 @@ Rules = (function() {
     after: 'onQuery',
     init: 'onSelector',
     command: function(operation, continuation, scope, meta) {
+      debugger;
       var contd, index;
       contd = this.getScopePath(continuation) + operation.path;
       if (this.queries.ascending) {
@@ -20346,6 +20344,7 @@ Rules = (function() {
       return this.queries[contd];
     },
     capture: function(result, operation, continuation, scope, meta, ascender) {
+      debugger;
       var contd, _base;
       contd = this.getScopePath(continuation) + operation.parent.path;
       this.queries.add(result, contd, operation.parent, scope, true);
@@ -20367,12 +20366,13 @@ Rules = (function() {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
       if (operation.index === 2 && !ascender && (ascending != null)) {
+        debugger;
         this.expressions.solve(operation, continuation, ascending, operation);
         return false;
       }
     },
     capture: function(result, parent, continuation, scope) {
-      if (!result.nodeType && !this.isCollection(result)) {
+      if (!result.nodeType && !this.isCollection(result) && typeof result !== 'string') {
         this.engine.provide(result);
         return true;
       }
@@ -20543,6 +20543,7 @@ Rules = (function() {
         }
       }
       rules = this.clone(this['_' + type](source));
+      console.log(1, rules);
       this.engine.engine.solve(rules, continuation, scope);
     }
   };
@@ -20753,8 +20754,12 @@ Selectors = (function() {
   };
 
   Selectors.prototype['$virtual'] = {
-    serialized: false,
-    command: function(operation, continuation, scope, meta, value) {
+    prefix: '"',
+    suffix: '"',
+    1: function(value) {
+      return '$"' + value + '"';
+    },
+    2: function(scope, value) {
       return this.identity.provide(scope) + '"' + value + '"';
     }
   };
@@ -20999,6 +21004,7 @@ Selectors = (function() {
   Selectors.prototype[':next'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
+      debugger;
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
@@ -21584,7 +21590,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = 0 != null ? 0 : parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
+      this.level = parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
     }
   }
 
@@ -24177,24 +24183,35 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.setup = function() {
-    var set;
+    var obj, property, set;
     Domain.prototype.setup.apply(this, arguments);
     if (!this.hasOwnProperty('solver')) {
       this.solver = new c.SimplexSolver();
       this.solver.autoSolve = false;
       this.solver._store = [];
-      set = c.HashTable.prototype.set;
-      c.HashTable.prototype.set = function() {
-        var property, store;
-        if (!this._store.push) {
-          store = this._store;
-          this._store = [];
-          for (property in store) {
-            this._store[property] = store[property];
-          }
+      if (c.isUnordered == null) {
+        obj = {
+          9: 1,
+          10: 1
+        };
+        for (property in obj) {
+          break;
         }
-        return set.apply(this, arguments);
-      };
+        if (c.isUnordered = property === 10) {
+          set = c.HashTable.prototype.set;
+          c.HashTable.prototype.set = function() {
+            var store;
+            if (!this._store.push) {
+              store = this._store;
+              this._store = [];
+              for (property in store) {
+                this._store[property] = store[property];
+              }
+            }
+            return set.apply(this, arguments);
+          };
+        }
+      }
       c.debug = true;
       return c.Strength.require = c.Strength.required;
     }
@@ -24996,7 +25013,7 @@ Expressions = (function() {
           for (_i = 0, _len = result.length; _i < _len; _i++) {
             item = result[_i];
             contd = this.engine.getAscendingContinuation(continuation, item);
-            this.solve(operation.parent, contd, scope, meta, operation.index, item);
+            this.ascend(operation, contd, item, scope, meta, operation.index);
           }
           this.engine.console.groupEnd();
           return;
@@ -25140,7 +25157,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.serialize = function(operation, otherdef, group) {
-    var after, before, binary, def, groupper, index, op, prefix, separator, suffix, tail, _i, _ref;
+    var after, before, binary, def, following, groupper, index, next, op, prefix, separator, suffix, tail, _i, _ref;
     def = operation.def;
     prefix = def.prefix || (otherdef != null ? otherdef.prefix : void 0) || (operation.def.noop && operation.name) || '';
     suffix = def.suffix || (otherdef != null ? otherdef.suffix : void 0) || '';
@@ -25162,13 +25179,22 @@ Expressions = (function() {
         } else if (op.key && group !== false) {
           if (group && (groupper = this.engine.methods[group])) {
             if (op.def.group === group) {
-              if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
-                operation.groupped = groupper.promise(op, operation);
-                tail.head = operation;
-                operation.tail = tail;
-                before += (before && separator || '') + op.groupped || op.key;
-              } else {
-                continue;
+              following = index;
+              next = void 0;
+              while (next = operation[++following]) {
+                if (next.def && next.def.group !== group) {
+                  break;
+                }
+              }
+              if (!next) {
+                if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
+                  operation.groupped = groupper.promise(op, operation);
+                  tail.head = operation;
+                  operation.tail = tail;
+                  before += (before && separator || '') + op.groupped || op.key;
+                } else {
+                  continue;
+                }
               }
             } else {
               group = false;
@@ -25204,6 +25230,9 @@ Identity = (function() {
 
   Identity.prototype.provide = function(object, generate) {
     var id;
+    if (typeof object === 'string') {
+      return object;
+    }
     if (!(id = object._gss_id)) {
       if (object === document) {
         id = "::document";
@@ -25417,6 +25446,9 @@ Queries = (function() {
 
   Queries.prototype.addMatch = function(node, continuation) {
     var index;
+    if (!node.nodeType) {
+      return;
+    }
     if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
       continuation = continuation.substring(index + 1);
     }
@@ -25426,6 +25458,9 @@ Queries = (function() {
 
   Queries.prototype.removeMatch = function(node, continuation) {
     var index, matches, path;
+    if (!node.nodeType) {
+      return;
+    }
     if (matches = node.getAttribute('matches')) {
       if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
         continuation = continuation.substring(index + 1);
@@ -25455,7 +25490,7 @@ Queries = (function() {
     if (collection.indexOf(node) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
-        if (this.comparePosition(el, node) !== 4) {
+        if (!this.comparePosition(el, node)) {
           break;
         }
       }
@@ -25480,7 +25515,7 @@ Queries = (function() {
       if (old && (updated = (_ref = this.engine.updating.queries) != null ? (_ref1 = _ref[operation]) != null ? _ref1[3] : void 0 : void 0)) {
         if (updated.length !== void 0) {
           if (result) {
-            if (result.length === void 0) {
+            if (!this.engine.isCollection(result)) {
               result = [result];
             } else {
               result = Array.prototype.slice.call(result);
@@ -25661,7 +25696,7 @@ Queries = (function() {
       this.unobserve(this.qualified, path, true);
     }
     this.unobserve(this.engine.scope._gss_id, path);
-    if (!result || result.length === void 0) {
+    if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.PAIR) {
         contd = this.engine.getContinuation(path);
         if ((_ref2 = this.engine.updating) != null) {
@@ -25700,7 +25735,7 @@ Queries = (function() {
       if (operation) {
         if (operation.bound && (operation.path !== operation.key)) {
           if (added) {
-            if (added.length !== void 0) {
+            if (this.engine.isCollection(added)) {
               for (_i = 0, _len = added.length; _i < _len; _i++) {
                 add = added[_i];
                 this.addMatch(add, path);
@@ -25712,7 +25747,7 @@ Queries = (function() {
         }
       }
       if (removed) {
-        if (removed.length !== void 0) {
+        if (this.engine.isCollection(removed)) {
           for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
             remove = removed[_j];
             this.removeMatch(remove, path);
@@ -25737,7 +25772,7 @@ Queries = (function() {
 
   Queries.prototype.each = function(method, result, continuation, operation, scope, manual, strict) {
     var child, copy, returned, _i, _len;
-    if (result.length !== void 0) {
+    if (this.engine.isCollection(result)) {
       copy = result.slice();
       returned = void 0;
       for (_i = 0, _len = copy.length; _i < _len; _i++) {
@@ -25777,9 +25812,9 @@ Queries = (function() {
     if ((old == null) && (result && result.length === 0) && continuation) {
       old = this.get(this.engine.getCanonicalPath(path));
     }
-    isCollection = result && result.length !== void 0;
+    isCollection = this.engine.isCollection(result);
     if (old) {
-      if (old.length !== void 0) {
+      if (this.engine.isCollection(old)) {
         removed = void 0;
         old = old.slice();
         for (_i = 0, _len = old.length; _i < _len; _i++) {
@@ -25858,7 +25893,7 @@ Queries = (function() {
     }
     if (result) {
       this[path] = result;
-      if (result.length !== void 0) {
+      if (this.engine.isCollection(result)) {
         for (index = _i = 0, _len = result.length; _i < _len; index = ++_i) {
           item = result[index];
           this.chain(result[index - 1], item, result, path);
@@ -25943,9 +25978,15 @@ Queries = (function() {
   };
 
   Queries.prototype.comparePosition = function(a, b) {
-    var sourceIndex, _ref;
-    sourceIndex = a.sourceIndex >= 0 && b.sourceIndex >= 0 ? (a.sourceIndex < b.sourceIndex && 4) + (a.sourceIndex > b.sourceIndex && 2) : 1;
-    return (_ref = typeof a.compareDocumentPosition === "function" ? a.compareDocumentPosition(b) : void 0) != null ? _ref : (a !== b && a.contains(b) && 16) + (a !== b && b.contains(a) && 8) + sourceIndex;
+    if (!(a.nodeType && b.nodeType)) {
+      return true;
+    }
+    if (a.compareDocumentPosition) {
+      return a.compareDocumentPosition(b) & 4;
+    }
+    if (a.sourceIndex >= 0 && b.sourceIndex >= 0) {
+      return a.sourceIndex < b.sourceIndex;
+    }
   };
 
   return Queries;
