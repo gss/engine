@@ -48,14 +48,14 @@ class Document extends Abstract
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
       @engine.solve id + ' resized', ->
-        @intrinsic.get(id, "width")
-        @intrinsic.get(id, "height")
+        @intrinsic.verify(id, "width")
+        @intrinsic.verify(id, "height")
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
       @engine.solve id + ' scrolled', ->
-        @intrinsic.get(id, "scroll-top")
-        @intrinsic.get(id, "scroll-left")
+        @intrinsic.verify(id, "scroll-top")
+        @intrinsic.verify(id, "scroll-left")
 
     solve: ->
       if @scope.nodeType == 9
