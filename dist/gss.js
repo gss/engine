@@ -25455,7 +25455,6 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identity.provide(e.target) || e;
-      debugger;
       if (e.target && this.updating) {
         if (this.updating.resizing) {
           return this.updating.resizing = 'scheduled';

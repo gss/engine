@@ -39,7 +39,6 @@ class Document extends Abstract
 
 
     @scope.addEventListener 'scroll', @engine, true
-    debugger
     if window?
       window.addEventListener 'resize', @engine
 
@@ -48,7 +47,6 @@ class Document extends Abstract
   events:
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      debugger
       if e.target && @updating
         if @updating.resizing
           return @updating.resizing = 'scheduled'

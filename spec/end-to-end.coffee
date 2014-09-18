@@ -1480,16 +1480,19 @@ describe 'End - to - End', ->
       container.style.width = '400px'
       container.style.height = '100px'
       container.innerHTML = """
+
         <div id="box" class="box foo" onclick="this.classList.toggle('bar'); this.classList.toggle('foo');"></div>
     
         <style type="text/gss">
           [col-gap] == 16;
+          ::scope[size] == ::scope[intrinsic-size];
+          ::scope[left] == 0;
         
           @h |("col-1...8")-[col-gap]-...| in(::scope) !require {
             width: == [col-width] !require;
           }
           
-          .box {        
+          .box {          
             @v |(&)| in(::window);
             &.bar {
               @h |(&)| in("col-6");
