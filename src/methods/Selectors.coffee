@@ -141,8 +141,6 @@ class Selectors
     suffix: '"'
     virtual: true
     1: (value) ->
-      if value == 'col-3'
-        debugger
       return '"' + value + '"'
     2: (scope, value) ->
       return @identity.provide(scope) + '"' + value + '"'
