@@ -35,7 +35,11 @@ class Expressions
       result = @engine.getOperationSolution(operation, continuation, scope)
       switch typeof result
         when 'string'
-          continuation = result
+          debugger
+          if operation.def.virtual && result.charAt(0) != @engine.PAIR
+            return result
+          else
+            continuation = result
         when 'object'
           return result
         when 'boolean'
@@ -57,6 +61,7 @@ class Expressions
 
       continuation = @engine.getOperationPath(operation, continuation, scope)
 
+    debugger if continuation == '"mast""mast"'
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
 

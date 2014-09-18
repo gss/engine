@@ -516,8 +516,6 @@ class Domain
       EngineDomain::displayName = name
       EngineDomain.displayName  = name
       unless engine.prototype
-        if name.toLowerCase() == 'document'
-          debugger
         engine[name.toLowerCase()] = new engine[name]
     @
 

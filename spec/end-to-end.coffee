@@ -1465,6 +1465,7 @@ describe 'End - to - End', ->
               "mast"[right] == 20;
               &"mast"[z] == 1;
             }
+            #ship[height] == "mast"[height];
           </style>
           """
         engine.once 'solve', (e) ->
@@ -1473,6 +1474,7 @@ describe 'End - to - End', ->
             '"mast"[x]': 10
             '"mast"[width]': 10
             '"mast"[y]': 0
+            '$ship[height]': 100
             '$ship"mast"[z]': 1
           done()
     it 'in VFL', (done) ->
