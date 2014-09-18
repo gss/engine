@@ -32,7 +32,7 @@ class Document extends Abstract
     
     if @scope.nodeType == 9 && ['complete', 'loaded'].indexOf(@scope.readyState) == -1
       @scope.addEventListener 'DOMContentLoaded', @
-      @scope.addEventListener 'onLoad', @
+      window.addEventListener 'load', @
     else if @running
       @events.compile.call(@)
 
@@ -48,14 +48,14 @@ class Document extends Abstract
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
       @engine.solve id + ' resized', ->
-        @intrinsic.verify(id, "width")
-        @intrinsic.verify(id, "height")
+        @intrinsic.get(id, "width")
+        @intrinsic.get(id, "height")
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
       @engine.solve id + ' scrolled', ->
-        @intrinsic.verify(id, "scroll-top")
-        @intrinsic.verify(id, "scroll-left")
+        @intrinsic.get(id, "scroll-top")
+        @intrinsic.get(id, "scroll-left")
 
     solve: ->
       if @scope.nodeType == 9
@@ -72,7 +72,8 @@ class Document extends Abstract
     # Observe stylesheets in dom
     DOMContentLoaded: ->
       @scope.removeEventListener 'DOMContentLoaded', @
-      @engine.compile() unless @running
+      window.removeEventListener 'load', @
+      @engine.compile() if @running == undefined
     
     onLoad: ->
       @DOMContentLoaded()

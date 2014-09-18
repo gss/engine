@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-18) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -25422,7 +25423,7 @@ Document = (function(_super) {
     this.engine.all = this.engine.scope.getElementsByTagName('*');
     if (this.scope.nodeType === 9 && ['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
       this.scope.addEventListener('DOMContentLoaded', this);
-      this.scope.addEventListener('onLoad', this);
+      window.addEventListener('load', this);
     } else if (this.running) {
       this.events.compile.call(this);
     }
@@ -25441,8 +25442,8 @@ Document = (function(_super) {
       }
       id = e.target && this.identity.provide(e.target) || e;
       return this.engine.solve(id + ' resized', function() {
-        this.intrinsic.verify(id, "width");
-        return this.intrinsic.verify(id, "height");
+        this.intrinsic.get(id, "width");
+        return this.intrinsic.get(id, "height");
       });
     },
     scroll: function(e) {
@@ -25452,8 +25453,8 @@ Document = (function(_super) {
       }
       id = e.target && this.identity.provide(e.target) || e;
       return this.engine.solve(id + ' scrolled', function() {
-        this.intrinsic.verify(id, "scroll-top");
-        return this.intrinsic.verify(id, "scroll-left");
+        this.intrinsic.get(id, "scroll-top");
+        return this.intrinsic.get(id, "scroll-left");
       });
     },
     solve: function() {
@@ -25476,7 +25477,8 @@ Document = (function(_super) {
     },
     DOMContentLoaded: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
-      if (!this.running) {
+      window.removeEventListener('load', this);
+      if (this.running === void 0) {
         return this.engine.compile();
       }
     },
@@ -26725,7 +26727,7 @@ Mutations = (function() {
         this.intrinsic.validate(mutation.target);
       }
     });
-    if (!this.engine.scope.parentNode) {
+    if (!this.engine.scope.parentNode && this.engine.scope.nodeType === 1) {
       this.engine.destroy();
     }
     return result;

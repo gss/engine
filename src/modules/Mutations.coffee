@@ -39,7 +39,7 @@ class Mutations
         @intrinsic.validate(mutation.target)
       return
 
-    unless @engine.scope.parentNode
+    if !@engine.scope.parentNode && @engine.scope.nodeType == 1
       @engine.destroy()
     return result
 
