@@ -8434,13 +8434,12 @@ parse = function(source) {
 };
 
 vflHook = function(name, terms, commands) {
-  var i, nestedCommand, newCommands, o, prefix, ruleSet, s, selector, _i, _j, _len, _len1, _ref, _ref1;
+  var i, nestedCommand, newCommands, o, prefix, ruleSet, s, selector, _i, _j, _len, _len1, _ref, _ref1, _ref2;
   if (commands == null) {
     commands = [];
   }
   newCommands = [];
   o = vfl.parse("@" + name + " " + terms);
-  console.log('VFL', o.statements)
   _ref = o.statements;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     s = _ref[_i];
@@ -8458,7 +8457,9 @@ vflHook = function(name, terms, commands) {
       }
       if (selector.indexOf("&") !== 0) {
         if (selector.indexOf("::") !== 0) {
-          prefix += "::scope ";
+          if (selector.indexOf('"') !== 0) {
+            prefix += "::scope ";
+          }
         }
       }
       ruleSet += prefix + selector;
@@ -8470,6 +8471,9 @@ vflHook = function(name, terms, commands) {
     nestedCommand = parse(ruleSet).commands[0];
     nestedCommand[2] = commands;
     newCommands.push(nestedCommand);
+    if (typeof window !== "undefined" && window !== null ? (_ref2 = window.GSS) != null ? _ref2.console : void 0 : void 0) {
+      window.GSS.console.row('@' + name, o.statements.concat([ruleSet]), terms);
+    }
   }
   return {
     commands: newCommands
@@ -21004,12 +21008,14 @@ Rules = (function() {
   Rules.prototype["rule"] = {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
+      debugger;
       if (operation.index === 2 && !ascender && (ascending != null)) {
         this.expressions.solve(operation, continuation, ascending, operation);
         return false;
       }
     },
     capture: function(result, parent, continuation, scope) {
+      debugger;
       if (!result.nodeType && !this.isCollection(result) && typeof result !== 'string') {
         this.engine.provide(result);
         return true;
@@ -26508,10 +26514,12 @@ Queries = (function() {
         }
         this.clean(path);
       } else if (continuation.charAt(0) === this.engine.PAIR) {
-        if (id = this.engine.identity.provide(node)) {
-          watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
-          if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
-            watchers.push(operation, continuation, scope);
+        if (!operation.def.capture) {
+          if (id = this.engine.identity.provide(node)) {
+            watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
+            if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
+              watchers.push(operation, continuation, scope);
+            }
           }
         }
         return old;
@@ -26540,10 +26548,12 @@ Queries = (function() {
         this.updateOperationCollection(operation, path, scope, added, removed, true);
       }
     }
-    if (id = this.engine.identity.provide(node)) {
-      watchers = (_base2 = this.watchers)[id] || (_base2[id] = []);
-      if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
-        watchers.push(operation, continuation, scope);
+    if (!operation.def.capture) {
+      if (id = this.engine.identity.provide(node)) {
+        watchers = (_base2 = this.watchers)[id] || (_base2[id] = []);
+        if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
+          watchers.push(operation, continuation, scope);
+        }
       }
     }
     if (query) {
@@ -33072,8 +33082,8 @@ module.exports = {
   "name": "error-reporter",
   "description": "Provide source code context when reporting errors.",
   "author": "Paul Young",
-  "repo": "the-gss/error-reporter",
-  "version": "0.1.3",
+  "repo": "gss/error-reporter",
+  "version": "0.1.4",
   "json": [
     "component.json"
   ],
@@ -33089,8 +33099,8 @@ module.exports = {
   "name": "error-reporter",
   "description": "Provide source code context when reporting errors.",
   "author": "Paul Young",
-  "repo": "the-gss/error-reporter",
-  "version": "0.1.3",
+  "repo": "gss/error-reporter",
+  "version": "0.1.4",
   "json": [
     "component.json"
   ],
@@ -33108,7 +33118,7 @@ module.exports = {
   "description": "Constraint Cascading Style Sheets compiler",
   "author": "Dan Tocchini <d4@thegrid.io>",
   "repo": "gss/ccss-compiler",
-  "version": "1.1.1-beta",
+  "version": "1.1.2-beta",
   "json": [
     "component.json"
   ],

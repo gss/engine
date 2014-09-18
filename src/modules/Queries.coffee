@@ -355,10 +355,11 @@ class Queries
       else if continuation.charAt(0) == @engine.PAIR
 
         # Subscribe node to the query
-        if id = @engine.identity.provide(node)
-          watchers = @watchers[id] ||= []
-          if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
-            watchers.push(operation, continuation, scope)
+        unless operation.def.capture
+          if id = @engine.identity.provide(node)
+            watchers = @watchers[id] ||= []
+            if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+              watchers.push(operation, continuation, scope)
             
         return old
       else
@@ -383,11 +384,12 @@ class Queries
       if added || removed
         @updateOperationCollection operation, path, scope, added, removed, true
 
-    # Subscribe node to the query
-    if id = @engine.identity.provide(node)
-      watchers = @watchers[id] ||= []
-      if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
-        watchers.push(operation, continuation, scope)
+    unless operation.def.capture
+      # Subscribe node to the query
+      if id = @engine.identity.provide(node)
+        watchers = @watchers[id] ||= []
+        if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+          watchers.push(operation, continuation, scope)
     
     #return if noop
       
