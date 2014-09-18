@@ -90,9 +90,11 @@ class Intrinsic extends Numeric
 
     if (prop = @properties[path])?
       if typeof prop == 'function'
-        return prop.call(@, object, continuation)
+        value = prop.call(@, object, continuation)
       else
-        return prop
+        value = prop
+      @set null, path, value
+      return value
     else 
       if (j = path.indexOf('[')) > -1
         id = path.substring(0, j)

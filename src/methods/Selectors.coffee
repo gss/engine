@@ -267,8 +267,10 @@ class Selectors
       return @scope
 
   # Return abstract reference to window
-  '::window': ->
-    return '::window' 
+  '::window': 
+    hidden: true
+    command: ->
+      return '::window' 
 
 
   '$attribute':
@@ -334,7 +336,6 @@ class Selectors
   ':next':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      debugger
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)

@@ -14,14 +14,14 @@ class Conventions
 # **↑ Referencing**, e.g. to jump to results of dom query,
 # or to figure out which element in that collection 
 # called this function
-  ASCEND:    '↑'
+  ASCEND: String.fromCharCode(8593)
 
 # **→ Linking**, to pair up elements in arguments
-  PAIR: '→'
+  PAIR: String.fromCharCode(8594)
 
 # **↓ Nesting**, as a way for expressions to own side effects,
 # e.g. to remove stylesheet, css rule or conditional branch
-  DESCEND:  '↓'
+  DESCEND: String.fromCharCode(8595)
 
 # ### Example 
 # 
@@ -55,9 +55,15 @@ class Conventions
   # Removes trailing delimeter.
   getContinuation: (path, value, suffix = '') ->
     if path
-      path = path.replace(/[→↓↑]$/, '')
+      path = path.replace(@TrimContinuationRegExp, '')
     return '' if !path && !value
     return path + (value && @identity.provide(value) || '') + suffix
+
+  TrimContinuationRegExp: new RegExp("[" + 
+    Conventions::ASCEND + 
+    Conventions::DESCEND +
+    Conventions::PAIR +
+  "]$")
 
   # When cleaning a path, also clean forks, rules and pairs
   # This is a little bit of necessary evil.
@@ -146,7 +152,7 @@ class Conventions
     last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')#.replace(/@[0-9]+/g, '')
     return last if compact
     return bits.join(@DESCEND)
-  CanonicalizeRegExp: /\$[^↑]+(?:↑|$)/g
+  CanonicalizeRegExp: new RegExp("\\$[^" + Conventions::ASCEND + "]+(?:" + Conventions::ASCEND + "|$)", "g")
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)

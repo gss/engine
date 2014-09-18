@@ -36,6 +36,8 @@ class Document extends Abstract
     else if @running
       @events.compile.call(@)
 
+
+
     @scope.addEventListener 'scroll', @, true
     if window?
       window.addEventListener 'resize', @
