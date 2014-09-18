@@ -193,7 +193,7 @@ class Conventions
     if (args.length != index && (args[index]?.nodeType))
       return args[index]
     if !operation.bound
-      if operation.def.virtual || (operation.def.serialized && operation[1].def && args[index]?)
+      if (operation.def.serialized && operation[1].def && args[index]?)
         return args[index]
       return @scope
     return scope

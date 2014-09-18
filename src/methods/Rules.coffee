@@ -132,6 +132,7 @@ class Rules
         if !d && (d = @pairs.dirty)
           @pairs.onBeforeSolve()
           @updating.paired = undefined
+          @updating.queried = @updating.queries
           @updating.queries = undefined
 
 

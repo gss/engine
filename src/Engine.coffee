@@ -244,6 +244,7 @@ class Engine extends Domain.Events
     @solved.merge solution
 
     @pairs?.onBeforeSolve()
+    @updating.queried = @updating.queries
     @updating.queries = undefined
 
     # Launch another pass here if solutions caused effects

@@ -20257,6 +20257,7 @@ Engine = (function(_super) {
     if ((_ref2 = this.pairs) != null) {
       _ref2.onBeforeSolve();
     }
+    this.updating.queried = this.updating.queries;
     this.updating.queries = void 0;
     effects = {};
     effects = this.updating.each(this.resolve, this, effects);
@@ -20716,7 +20717,7 @@ Conventions = (function() {
       return args[index];
     }
     if (!operation.bound) {
-      if (operation.def.virtual || (operation.def.serialized && operation[1].def && (args[index] != null))) {
+      if (operation.def.serialized && operation[1].def && (args[index] != null)) {
         return args[index];
       }
       return this.scope;
@@ -21008,14 +21009,12 @@ Rules = (function() {
   Rules.prototype["rule"] = {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
-      debugger;
       if (operation.index === 2 && !ascender && (ascending != null)) {
         this.expressions.solve(operation, continuation, ascending, operation);
         return false;
       }
     },
     capture: function(result, parent, continuation, scope) {
-      debugger;
       if (!result.nodeType && !this.isCollection(result) && typeof result !== 'string') {
         this.engine.provide(result);
         return true;
@@ -21097,6 +21096,7 @@ Rules = (function() {
         if (!d && (d = this.pairs.dirty)) {
           this.pairs.onBeforeSolve();
           this.updating.paired = void 0;
+          this.updating.queried = this.updating.queries;
           this.updating.queries = void 0;
         }
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
@@ -21402,6 +21402,9 @@ Selectors = (function() {
     suffix: '"',
     virtual: true,
     1: function(value) {
+      if (value === 'col-3') {
+        debugger;
+      }
       return '"' + value + '"';
     },
     2: function(scope, value) {
@@ -25441,7 +25444,6 @@ Document = (function(_super) {
       this.events.compile.call(this);
     }
     this.scope.addEventListener('scroll', this.engine, true);
-    debugger;
     if (typeof window !== "undefined" && window !== null) {
       window.addEventListener('resize', this.engine);
     }
