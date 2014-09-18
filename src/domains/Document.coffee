@@ -38,22 +38,33 @@ class Document extends Abstract
 
 
 
-    @scope.addEventListener 'scroll', @, true
+    @scope.addEventListener 'scroll', @engine, true
+    debugger
     if window?
-      window.addEventListener 'resize', @
+      window.addEventListener 'resize', @engine
 
     super
 
   events:
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      @engine.solve id + ' resized', ->
+      debugger
+      if e.target && @updating
+        if @updating.resizing
+          return @updating.resizing = 'scheduled'
+        @updating.resizing = 'computing'
+        @once 'solve', ->
+          if @updated.resizing == 'scheduled'
+            @document.events.resize.call(@)
+
+
+      @solve id + ' resized', ->
         @intrinsic.verify(id, "width")
         @intrinsic.verify(id, "height")
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      @engine.solve id + ' scrolled', ->
+      @solve id + ' scrolled', ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
 
@@ -86,7 +97,7 @@ class Document extends Abstract
       @scope.removeEventListener 'DOMContentLoaded', @
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
-      @engine.events.destroy.apply(@, arguments)
+      @events.destroy.apply(@, arguments)
 
   @condition: ->
     @scope?  

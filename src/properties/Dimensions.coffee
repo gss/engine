@@ -10,6 +10,16 @@ class Dimensions
     height: ->
       return window.innerHeight
 
+    #right: '::window[width]'
+    #bottom: '::window[height]'
+    #
+    #center:
+    #  x: ->
+    #    return window.innerWidth / 2
+    #
+    #  y: ->
+    #    return window.innerHeight / 2
+
     scroll:
 
       left: ->

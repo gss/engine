@@ -4,7 +4,7 @@
 </head>
 <body>
 <script src="../../dist/gss.js"></script>  
-<script>GSS.document = new GSS(document)
+<script>GSS.document = new GSS(document, true)
 </script>  
 
 
@@ -108,7 +108,7 @@
       /* elements */
       #profile-card {      
         width: == ::window[width] - 480;            
-        height: == ::window[height] - 350;
+        height: == ::window[height] - 250;
         center-x: == ::window[center-x];
         center-y: == ::window[center-y];        
         border-radius: == [outer-radius];
@@ -127,7 +127,6 @@
 
       #cover {
         border-radius: == [radius];
-        x: >= 0;
       }
 
       button {
@@ -203,8 +202,8 @@
       center-x: == #profile-card[center-x];
   }
 
-  @h |-10-(#cover)-10-| in(#profile-card);
-  @v |-10-(#cover)-10-| in(#profile-card);
+  @h |-10-(#cover)-10-| in(#profile-card) !strong;
+  @v |-10-(#cover)-10-| in(#profile-card) !strong;
 }
 
     </style>

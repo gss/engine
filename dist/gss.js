@@ -8440,6 +8440,7 @@ vflHook = function(name, terms, commands) {
   }
   newCommands = [];
   o = vfl.parse("@" + name + " " + terms);
+  console.log('VFL', o.statements)
   _ref = o.statements;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     s = _ref[_i];
@@ -23163,6 +23164,9 @@ Domain = (function() {
       EngineDomain.prototype.displayName = name;
       EngineDomain.displayName = name;
       if (!engine.prototype) {
+        if (name.toLowerCase() === 'document') {
+          debugger;
+        }
         engine[name.toLowerCase()] = new engine[name];
       }
     }
@@ -25430,9 +25434,10 @@ Document = (function(_super) {
     } else if (this.running) {
       this.events.compile.call(this);
     }
-    this.scope.addEventListener('scroll', this, true);
+    this.scope.addEventListener('scroll', this.engine, true);
+    debugger;
     if (typeof window !== "undefined" && window !== null) {
-      window.addEventListener('resize', this);
+      window.addEventListener('resize', this.engine);
     }
     Document.__super__.constructor.apply(this, arguments);
   }
@@ -25444,7 +25449,19 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identity.provide(e.target) || e;
-      return this.engine.solve(id + ' resized', function() {
+      debugger;
+      if (e.target && this.updating) {
+        if (this.updating.resizing) {
+          return this.updating.resizing = 'scheduled';
+        }
+        this.updating.resizing = 'computing';
+        this.once('solve', function() {
+          if (this.updated.resizing === 'scheduled') {
+            return this.document.events.resize.call(this);
+          }
+        });
+      }
+      return this.solve(id + ' resized', function() {
         this.intrinsic.verify(id, "width");
         return this.intrinsic.verify(id, "height");
       });
@@ -25455,7 +25472,7 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identity.provide(e.target) || e;
-      return this.engine.solve(id + ' scrolled', function() {
+      return this.solve(id + ' scrolled', function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
       });
@@ -25495,7 +25512,7 @@ Document = (function(_super) {
       this.scope.removeEventListener('DOMContentLoaded', this);
       this.scope.removeEventListener('scroll', this);
       window.removeEventListener('resize', this);
-      return this.engine.events.destroy.apply(this, arguments);
+      return this.events.destroy.apply(this, arguments);
     }
   };
 

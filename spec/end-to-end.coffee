@@ -1476,6 +1476,37 @@ describe 'End - to - End', ->
             '$ship"mast"[z]': 1
           done()
 
+    it 'in VFL', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+        [col-gap] == 16;
+        
+        <div id="box" class="box foo" onclick="this.classList.toggle('bar'); this.classList.toggle('foo');"></div>
+    
+        <style type="text/gss">
+          @h |("col-1...8")-[col-gap]-...| in(::scope) !require {
+            width: == [col-width] !require;
+          }
+          
+          .box {        
+            @v |(&)| in(::window);
+            &.bar {
+              @h |(&)| in("col-6");
+            }
+            &.foo {
+              @h |(&)| in("col-3");
+            }
+          }
+        </style>
+        
+      """
+      engine.then (solution) ->
+        expect(solution).to.eql
+          "$box1": 100
+        done()
+
     it 'in comma', (done) ->
       engine = window.$engine = GSS(container)
       container.style.width = '400px'
@@ -2281,16 +2312,15 @@ describe 'End - to - End', ->
             </style>
           """
     
-    ### TODO
     describe 'Implicit VFL w/ containment', ->
   
       it 'should compute', (done) ->
         engine.once 'solve', (e) ->
           console.log JSON.stringify engine.vars
-          expect(engine.vars).to.eql      
+          expect(engine.values).to.eql      
             "$s1[x]": 10,
             "$container[x]": 0,
-            "$s2[x]": 40,
+            "$s2[x]": 50,
             "$container[width]": 90,
             "$s1[width]": 30,
             "$s2[width]": 30     
@@ -2301,7 +2331,9 @@ describe 'End - to - End', ->
             <div id="container"></div>
             <style type="text/gss">                        
                       
-              @h .implicit gap(10) in(#container);
+              @h |-(.implicit)-10-...-| outer-gap(10) in(#container) {
+                &[width] == &:next[width];
+              }
             
               #container {
                 x: == 0;
@@ -2310,7 +2342,6 @@ describe 'End - to - End', ->
   
             </style>
           """
-    ###
 
       
       
