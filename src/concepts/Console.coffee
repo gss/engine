@@ -5,7 +5,7 @@ Native = require '../methods/Native'
 class Console
   constructor: (@level) ->
     @level ?= parseFloat(window?.location?.href.match(/log=\d/)?[0] || 1)
-    if window.phantom?
+    if !Console.bind
       @level = 0
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
