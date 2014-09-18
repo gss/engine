@@ -22232,6 +22232,9 @@ Console = (function() {
     if (this.level == null) {
       this.level = parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
     }
+    if (window.phantom != null) {
+      this.level = 0;
+    }
   }
 
   Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
