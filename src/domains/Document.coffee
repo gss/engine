@@ -30,8 +30,9 @@ class Document extends Abstract
     @engine.all           = @engine.scope.getElementsByTagName('*')
 
     
-    if @scope.nodeType == 9 && ['complete', 'interactive', 'loaded'].indexOf(@scope.readyState) == -1
+    if @scope.nodeType == 9 && ['complete', 'loaded'].indexOf(@scope.readyState) == -1
       @scope.addEventListener 'DOMContentLoaded', @
+      @scope.addEventListener 'onLoad', @
     else if @running
       @events.compile.call(@)
 
@@ -55,6 +56,11 @@ class Document extends Abstract
         @intrinsic.verify(id, "scroll-left")
 
     solve: ->
+      if @scope.nodeType == 9
+        html = @scope.body.parentNode
+        klass = html.className
+        if klass.indexOf('gss-ready') == -1
+          html.className = (klass && klass + ' ' || '') + 'gss-ready' 
       # Unreference removed elements
       if @removed
         for id in @removed
@@ -65,6 +71,9 @@ class Document extends Abstract
     DOMContentLoaded: ->
       @scope.removeEventListener 'DOMContentLoaded', @
       @engine.compile() unless @running
+    
+    onLoad: ->
+      @DOMContentLoaded()
 
     # Observe and parse stylesheets
     compile: ->
