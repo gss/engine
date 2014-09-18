@@ -4,7 +4,7 @@ class Identity
   # Get or generate uid for a given object.
   provide: (object, generate) ->
     if typeof object == 'string'
-      return object
+      return '$' + object
     unless id = object._gss_id
       if object == document
         id = "::document"

@@ -1469,10 +1469,10 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', (e) ->
           expect((engine.values)).to.eql 
-            '$"mast"[height]': 100
-            '$"mast"[x]': 10
-            '$"mast"[width]': 10
-            '$"mast"[y]': 0
+            '"mast"[height]': 100
+            '"mast"[x]': 10
+            '"mast"[width]': 10
+            '"mast"[y]': 0
             '$ship"mast"[z]': 1
           done()
 
@@ -1495,7 +1495,7 @@ describe 'End - to - End', ->
         expect(solution).to.eql
           "$a1[x]": 10
           "$a2[x]": 10
-          "$\"z\"[x]": 10
+          "\"z\"[x]": 10
           "$b1[x]": 10
           "$b2[x]": 10
 
@@ -1514,7 +1514,7 @@ describe 'End - to - End', ->
 
           engine.then (solution) ->
             expect(solution).to.eql
-              '$"z"[x]': 10
+              '$a1[x]': 10
               "$a2[x]": 10
               done()
 

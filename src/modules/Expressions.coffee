@@ -179,7 +179,7 @@ class Expressions
               return @engine.provide result
 
           else if parent && (ascender? || 
-              (result.nodeType && 
+              ((result.nodeType || operation.def.serialized) && 
               (!operation.def.hidden || parent.tail == parent)))
             if operation.def.mark
               continuation = @engine.getContinuation(continuation, null, @engine[operation.def.mark])

@@ -76,6 +76,8 @@ class Queries
         break unless @comparePosition(el, node, operation[collection.keys[index]], operation[key])
       collection.splice(index, 0, node)
       keys.splice(index, 0, key)
+      @chain collection[index - 1], node, continuation
+      @chain node, collection[index + 1], continuation
       if operation.parent.name == 'rule'
         @addMatch(node, continuation)
       return true
@@ -189,8 +191,8 @@ class Queries
         @removeMatch(node, continuation)
         if keys
           keys.splice(index, 1)
-        @chain collection[index - 1], node, collection.slice(), continuation
-        @chain node, collection[index], collection.slice(), continuation
+        @chain collection[index - 1], node, continuation
+        @chain node, collection[index], continuation
         return true
 
 
@@ -264,7 +266,7 @@ class Queries
       query = @engine.getQueryPath(operation, node)
       return @engine.updating.queries[query]?[0]
 
-  chain: (left, right, collection, continuation) ->
+  chain: (left, right, continuation) ->
     if left
       @match(left, '$pseudo', 'last', undefined, continuation)
       @match(left, '$pseudo', 'next', undefined, continuation)
@@ -417,9 +419,9 @@ class Queries
 
       if @engine.isCollection(result)
         for item, index in result
-          @chain result[index - 1], item, result, path
+          @chain result[index - 1], item, path
         if item
-          @chain item, undefined, result, path
+          @chain item, undefined, path
     else
 
       delete @[path]
@@ -437,7 +439,7 @@ class Queries
 
   # Check if a node observes this qualifier or combinator
   match: (node, group, qualifier, changed, continuation) ->
-    return unless id = node._gss_id
+    return unless id = @engine.identity.provide(node)
     return unless watchers = @watchers[id]
     if continuation
       path = @engine.getCanonicalPath(continuation)
@@ -477,8 +479,22 @@ class Queries
 
   # Compare position of two nodes to sort collection in DOM order
   comparePosition: (a, b, op1, op2) ->
-    unless a.nodeType && b.nodeType 
-      return op1.index < op2.index
+    if op1 != op2
+      if op1.index > op2.index
+        left = op2
+        right = op1
+      else
+        left = op1
+        right = op2
+
+      index = left.index
+      while next = op1.parent[++index]
+        break if next == right
+        if next[0] == '$virtual'
+          return op1.index < op2.index
+
+      unless a.nodeType && b.nodeType 
+        return op1.index < op2.index
     if a.compareDocumentPosition
       return a.compareDocumentPosition(b) & 4
     return a.sourceIndex < b.sourceIndex

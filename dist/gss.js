@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-17) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-18) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20077,6 +20077,9 @@ Conventions = (function() {
       return args[index];
     }
     if (!operation.bound) {
+      if (operation.def.virtual || (operation.def.serialized && operation[1].def && (args[index] != null))) {
+        return args[index];
+      }
       return this.scope;
     }
     return scope;
@@ -20756,8 +20759,9 @@ Selectors = (function() {
   Selectors.prototype['$virtual'] = {
     prefix: '"',
     suffix: '"',
+    virtual: true,
     1: function(value) {
-      return '$"' + value + '"';
+      return '"' + value + '"';
     },
     2: function(scope, value) {
       return this.identity.provide(scope) + '"' + value + '"';
@@ -21004,6 +21008,7 @@ Selectors = (function() {
   Selectors.prototype[':next'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
+      debugger;
       var collection, index, path;
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
@@ -25030,7 +25035,7 @@ Expressions = (function() {
               }
               return this.engine.provide(result);
             }
-          } else if (parent && ((ascender != null) || (result.nodeType && (!operation.def.hidden || parent.tail === parent)))) {
+          } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
             if (operation.def.mark) {
               continuation = this.engine.getContinuation(continuation, null, this.engine[operation.def.mark]);
             }
@@ -25230,7 +25235,7 @@ Identity = (function() {
   Identity.prototype.provide = function(object, generate) {
     var id;
     if (typeof object === 'string') {
-      return object;
+      return '$' + object;
     }
     if (!(id = object._gss_id)) {
       if (object === document) {
@@ -25495,6 +25500,8 @@ Queries = (function() {
       }
       collection.splice(index, 0, node);
       keys.splice(index, 0, key);
+      this.chain(collection[index - 1], node, continuation);
+      this.chain(node, collection[index + 1], continuation);
       if (operation.parent.name === 'rule') {
         this.addMatch(node, continuation);
       }
@@ -25635,8 +25642,8 @@ Queries = (function() {
         if (keys) {
           keys.splice(index, 1);
         }
-        this.chain(collection[index - 1], node, collection.slice(), continuation);
-        this.chain(node, collection[index], collection.slice(), continuation);
+        this.chain(collection[index - 1], node, continuation);
+        this.chain(node, collection[index], continuation);
         return true;
       }
     }
@@ -25718,7 +25725,7 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.chain = function(left, right, collection, continuation) {
+  Queries.prototype.chain = function(left, right, continuation) {
     if (left) {
       this.match(left, '$pseudo', 'last', void 0, continuation);
       this.match(left, '$pseudo', 'next', void 0, continuation);
@@ -25901,10 +25908,10 @@ Queries = (function() {
       if (this.engine.isCollection(result)) {
         for (index = _i = 0, _len = result.length; _i < _len; index = ++_i) {
           item = result[index];
-          this.chain(result[index - 1], item, result, path);
+          this.chain(result[index - 1], item, path);
         }
         if (item) {
-          this.chain(item, void 0, result, path);
+          this.chain(item, void 0, path);
         }
       }
     } else {
@@ -25926,7 +25933,7 @@ Queries = (function() {
 
   Queries.prototype.match = function(node, group, qualifier, changed, continuation) {
     var change, contd, groupped, id, index, operation, path, scope, watchers, _i, _j, _len, _len1;
-    if (!(id = node._gss_id)) {
+    if (!(id = this.engine.identity.provide(node))) {
       return;
     }
     if (!(watchers = this.watchers[id])) {
@@ -25983,8 +25990,27 @@ Queries = (function() {
   };
 
   Queries.prototype.comparePosition = function(a, b, op1, op2) {
-    if (!(a.nodeType && b.nodeType)) {
-      return op1.index < op2.index;
+    var index, left, next, right;
+    if (op1 !== op2) {
+      if (op1.index > op2.index) {
+        left = op2;
+        right = op1;
+      } else {
+        left = op1;
+        right = op2;
+      }
+      index = left.index;
+      while (next = op1.parent[++index]) {
+        if (next === right) {
+          break;
+        }
+        if (next[0] === '$virtual') {
+          return op1.index < op2.index;
+        }
+      }
+      if (!(a.nodeType && b.nodeType)) {
+        return op1.index < op2.index;
+      }
     }
     if (a.compareDocumentPosition) {
       return a.compareDocumentPosition(b) & 4;
