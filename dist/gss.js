@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-18) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-19) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21101,6 +21101,7 @@ Rules = (function() {
         }
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
+          debugger;
           result = this.document.solve(branch, this.getContinuation(path, null, this.DESCEND), scope, meta);
           this.updating.paired = void 0;
           if ((_ref = this.pairs) != null) {
@@ -25092,7 +25093,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, id, j, path, prop, stylesheet, _ref, _ref1;
+    var bits, camel, first, id, j, path, prop, stylesheet, _ref, _ref1;
     if (value == null) {
       value = '';
     }
@@ -25127,9 +25128,11 @@ Intrinsic = (function(_super) {
       }
     }
     if (continuation) {
+      debugger;
       bits = continuation.split(this.DESCEND);
-      if ((j = bits[0].lastIndexOf('$')) > -1) {
-        id = bits[0].substring(j);
+      first = bits.shift();
+      if ((j = first.lastIndexOf('$')) > -1) {
+        id = first.substring(j);
         if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
           if (this.stylesheets.solve(stylesheet, operation, this.getContinuation(continuation), element, property, value)) {
             return;
@@ -25564,7 +25567,6 @@ Expressions = (function() {
       result = this.engine.getOperationSolution(operation, continuation, scope);
       switch (typeof result) {
         case 'string':
-          debugger;
           if (operation.def.virtual && result.charAt(0) !== this.engine.PAIR) {
             return result;
           } else {
@@ -25589,9 +25591,6 @@ Expressions = (function() {
     } else {
       result = this.execute(operation, continuation, scope, args);
       continuation = this.engine.getOperationPath(operation, continuation, scope);
-    }
-    if (continuation === '"mast""mast"') {
-      debugger;
     }
     return this.ascend(operation, continuation, result, scope, meta, ascender);
   };

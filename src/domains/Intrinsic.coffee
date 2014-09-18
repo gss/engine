@@ -64,10 +64,15 @@ class Intrinsic extends Numeric
         element.style.position = ''
 
     if continuation
+      debugger
       bits = continuation.split(@DESCEND)
-      if (j = bits[0].lastIndexOf('$')) > -1
-        id = bits[0].substring(j)
+      first = bits.shift()
+      if (j = first.lastIndexOf('$')) > -1
+        id = first.substring(j)
         if (stylesheet = @identity[id])?.tagName == 'STYLE'
+          #for bit in bits
+          #  if bit.indexOf('@')
+          
           if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
             return
 

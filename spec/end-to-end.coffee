@@ -1483,7 +1483,7 @@ describe 'End - to - End', ->
       container.style.height = '100px'
       container.innerHTML = """
 
-        <div id="box" class="box foo" onclick="this.classList.toggle('bar'); this.classList.toggle('foo');"></div>
+        <div id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></div>
     
         <style type="text/gss">
           [col-gap] == 16;
@@ -1507,6 +1507,14 @@ describe 'End - to - End', ->
         
       """
       engine.then (solution) ->
+        expect(solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
+
+        engine.$id('box').click()
+
+        engine.then (solution) ->
+          expect(solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
+          done()
+
 
 
     it 'in comma', (done) ->
@@ -1958,15 +1966,13 @@ describe 'End - to - End', ->
     
   
     
-    ###
     describe 'TODO!!!! contextual @if @else with vanilla CSS', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 19
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
           
           expect(window.getComputedStyle(document.querySelector("#box1"),null).getPropertyValue("color")).to.equal "rgb(20,30,40)"
           expect(window.getComputedStyle(document.querySelector("#box2"),null).getPropertyValue("color")).to.equal "rgb(50,50,50)"          
@@ -1981,7 +1987,7 @@ describe 'End - to - End', ->
               #box2[width] == 19;
           
               .box {
-                @if ::[width] < 10 {
+                @if ::scope[intrinsic-width] < 10 {
                   color: rgb(20,30,40);
                 }
                 @else {
@@ -1992,22 +1998,19 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solve', listen
-    ###
     
-    ###
-    describe 'TODO!!!! contextual @if @else inner nesting', ->
+    describe 'contextual @if @else inner nesting', ->
       
       # This one will require some serious surgery...
       
       it 'should compute values', (done) ->
         listen = (e) ->
           # TODO
-          expect(engine.vars).to.eql 
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 19
             "$inside2[height]": 20
           done()          
-          engine.off 'solve', listen                    
     
         container.innerHTML =  """
             <div id="box1" class="box">
@@ -2042,13 +2045,11 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solve', listen
-    ###
   
     describe 'top level @if @else w/ complex queries', ->
   
       it 'should be ok', (done) ->
         listen = (e) ->     
-          debugger
           expect(engine.values).to.be.ok
           done()          
       
@@ -2119,7 +2120,6 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', listen    
   
-    ###
     describe '@if @else w/ dynamic VFLs', ->
       it 'should compute values', (done) ->     
         container.innerHTML =  """
@@ -2137,14 +2137,14 @@ describe 'End - to - End', ->
                 y: >= 0;
               }                 
               @if #container[width] > 960 {            
-                @vertical .section;     
+                @vertical (.section)...;     
               } @else {
-                @horizontal .section;     
+                @horizontal (.section)...;     
               }
             </style>
           """
         engine.once 'solve', (e) ->     
-          expect(engine.vars).to.eql
+          expect(engine.values).to.eql
             "$container[width]": 100,
             "$s1[height]": 100,
             "$s2[height]": 100,
@@ -2155,7 +2155,6 @@ describe 'End - to - End', ->
             "$s1[y]": 0,
             "$s2[y]": 0          
           done()
-    ###
   
   
   
