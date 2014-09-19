@@ -99,7 +99,7 @@ class Conventions
       if continuation.nodeType
         return @identity.provide(continuation) + ' ' + operation.path
       else
-        return continuation + operation.key
+        return continuation + (operation.key || operation.path)
     else
       return operation.key
 
@@ -149,20 +149,35 @@ class Conventions
   getCanonicalPath: (continuation, compact) ->
     bits = @getContinuation(continuation).split(@DESCEND)
     last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '')#.replace(/@[0-9]+/g, '')
+    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '$1')
     return last if compact
     return bits.join(@DESCEND)
-  CanonicalizeRegExp: new RegExp("\\$[^" + Conventions::ASCEND + "]+(?:" + Conventions::ASCEND + "|$)", "g")
+  CanonicalizeRegExp: new RegExp("" +
+    "([^" + Conventions::PAIR + "])" +
+    "\\$[^" + Conventions::ASCEND + "]+" +
+    "(?:" + Conventions::ASCEND + "|$)", "g")
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)
-  getScopePath: (continuation) ->
+  getScopePath: (scope, continuation) ->
     bits = continuation.split(@DESCEND)
+    if scope && @scope != scope
+      id = @identity.provide(scope)
+      prev = bits[bits.length - 2]
+      # Ugh
+      if prev && prev.substring(prev.length - id.length) != id
+        last = bits[bits.length - 1]
+        if (index = last.indexOf(id + @ASCEND)) > -1
+          bits.splice(bits.length - 1, 0, last.substring(0, index + id.length))
     bits[bits.length - 1] = ""
-    return bits.join(@DESCEND)
+    path = bits.join(@DESCEND)
+    if continuation.charAt(0) == @PAIR
+      path = @PAIR + path
+    return path
+    
 
   getOperationSolution: (operation, continuation, scope) ->
-    if operation.def.serialized && !operation.def.hidden
+    if operation.def.serialized && (!operation.def.hidden || operation.parent.def.serialized)
       return @pairs.getSolution(operation, continuation, scope)
 
   getAscendingContinuation: (continuation, item) ->

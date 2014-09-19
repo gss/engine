@@ -1477,6 +1477,7 @@ describe 'End - to - End', ->
             '$ship[height]': 100
             '$ship"mast"[z]': 1
           done()
+
     it 'in VFL', (done) ->
       engine = window.$engine = GSS(container)
       container.style.width = '400px'
@@ -2218,6 +2219,40 @@ describe 'End - to - End', ->
             </style>
           """
         engine.once 'solve', listen  
+
+      describe 'with selector', ->
+        it 'should compute', (done) ->
+          listen = (solution) ->     
+            expect(solution).to.eql      
+              "$container[x]": 10,
+              "$container[width]": 100
+              "p11": 80
+              "p12": 80
+              "p13": 80
+              "p21": 80
+              "p22": 80
+              "p23": 80
+            done()          
+      
+          container.innerHTML =  """
+              <div id="s1" class="section"><p id="p11"><p id="p12"><p id="p13"></div>
+              <div id="s2" class="section"><p id="p21"><p id="p22"><p id="p23"></div>
+              <h1 id="h1"></h1>
+              <div id="container"></div>
+              <style type="text/gss">                        
+                        
+                .section {
+                  @h |(:: p + p, #h1)| gap(10) in(#container);
+                }
+              
+                #container {
+                  x: == 10;
+                  width: == 100;
+                }
+              </style>       
+          """                 
+    
+
     
     describe 'plural selectors I', ->  
       it 'should compute values', (done) ->                                 

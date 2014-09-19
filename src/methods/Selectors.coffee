@@ -29,7 +29,7 @@ class Selectors
     return @queries.update(node, args, result, operation, continuation, scope)
 
    # Walk through commands in selector to make a dictionary used by Observer
-  onSelector: (operation, parent) ->
+  onSelector: (operation, parent, def) ->
     prefix = ((parent && operation.name != ' ') || 
               (operation[0] != '$combinator' && typeof operation[1] != 'object')) && 
               ' ' || ''
@@ -46,11 +46,6 @@ class Selectors
         index = (operation[2] || operation[1])
     return unless group
     (((parent || operation)[group] ||= {})[index] ||= []).push operation
-
-  # Remove element by id globally or optionallly from collection
-  # remove: (id, continuation, operation, scope) ->
-  #   @queries.remove(id, continuation, operation, scope)
-  #   return
 
   # Selector commands
 
@@ -77,8 +72,10 @@ class Selectors
       unless global = tail.arity == 1 && tail.length == 2
         shortcut.splice(1, 0, tail[1])
       op = head
-      while op
-        @onSelector op, shortcut
+      while op?.push
+        if op[1] == 'this'
+          debugger
+        @onSelector op, shortcut, op.def
         break if op == tail
         op = op[1]
       if (tail.parent == operation)

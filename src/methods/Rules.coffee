@@ -24,8 +24,7 @@ class Rules
 
     # Return deduplicated collection of all found elements
     command: (operation, continuation, scope, meta) ->
-      contd = @getScopePath(continuation) + operation.path
-
+      contd = @getScopePath(scope, continuation) + operation.path
       if @queries.ascending
         index = @engine.indexOfTriplet(@queries.ascending, operation, contd, scope) == -1
         if index > -1
@@ -36,8 +35,8 @@ class Rules
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope, meta, ascender) ->
-      contd = @getScopePath(continuation) + operation.parent.path
-      @queries.add(result, contd, operation.parent, scope, operation.index)
+      contd = @getScopePath(scope, continuation) + operation.parent.path
+      @queries.add(result, contd, operation.parent, scope, operation)
       @queries.ascending ||= []
       if @engine.indexOfTriplet(@queries.ascending, operation.parent, contd, scope) == -1
         @queries.ascending.push(operation.parent, contd, scope)
@@ -46,8 +45,8 @@ class Rules
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
-      contd = @getScopePath(continuation) + operation.parent.path
-      @queries.remove(result, contd, operation.parent, scope, operation.index)
+      contd = @getScopePath(scope, continuation) + operation.parent.path
+      @queries.remove(result, contd, operation.parent, scope, operation)
       return true
 
   # CSS rule

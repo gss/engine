@@ -185,6 +185,9 @@ class Expressions
               ((result.nodeType || operation.def.serialized) && 
               (!operation.def.hidden || parent.tail == parent)))
             if operation.def.mark
+              if continuation.charAt(continuation.length - 1) == @engine.PAIR
+                if scope != @engine.scope
+                  continuation += @engine.identity.provide(scope)
               continuation = @engine.getContinuation(continuation, null, @engine[operation.def.mark])
             @solve parent, continuation, scope, meta, operation.index, result
             return
@@ -256,6 +259,10 @@ class Expressions
       if child instanceof Array
         @analyze(child, operation)
 
+    if mark = operation.def.mark || operation.marked
+      if !parent.def.capture && parent.def.serialized
+        parent.marked = mark
+
     return if def.noop
 
     if def.serialized
@@ -316,7 +323,8 @@ class Expressions
               following = index
               next = undefined
               while next = operation[++following]
-                if next.def && next.def.group != group
+                if next.def && (next.def.group != group || next.marked != op.marked)
+                  group = false
                   break
               unless next
                 if tail = op.tail ||= (groupper.condition(op) && op)

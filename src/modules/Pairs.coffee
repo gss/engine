@@ -5,10 +5,12 @@ class Pairs
 
 
   onLeft: (operation, continuation, scope) ->
+    console.error('onLeft', arguments)
     left = @engine.getCanonicalPath(continuation)
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
+      contd = @engine.PAIR
       return @engine.PAIR
     else
       (@dirty ||= {})[left] = true
@@ -23,12 +25,13 @@ class Pairs
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, continuation, scope, left, right) ->
+    console.error('onRight', arguments)
     right = @engine.getCanonicalPath(continuation.substring(0, continuation.length - 1))
     parent = @getTopmostOperation(operation)
-    if (index = @lefts.indexOf(parent)) > -1
-      left = @lefts[index + 1]
-      #@lefts.splice(index, 3)
-      @watch(operation, continuation, scope, left, right)
+    for op, index in @lefts by 3
+      if op == parent && @lefts[index + 2] == scope
+        left = @lefts[index + 1]
+        @watch(operation, continuation, scope, left, right)
     return unless left
 
     left = @engine.getCanonicalPath(left)
@@ -91,18 +94,31 @@ class Pairs
       (@engine.updating.paired ||= {})[property] = value
     delete @repairing
       
+  match: (collection, node, scope) ->
+    if (index = collection.indexOf(node)) > -1
+      if collection.scopes[index] == scope
+        return true
+      index = -1
+      if dups = collection.duplicates
+        while (index = dups.indexOf(node, index + 1)) > -1
+          if collection.scopes[index + collection.length] == scope
+            return true
 
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
     leftUpdate = @engine.updating.queries?[left]
     rightUpdate = @engine.updating.queries?[right]
 
+    collections = [
+      @engine.queries.get(left)
+      @engine.queries.get(right)
+    ]
     values = [
-      leftUpdate?[0] ? @engine.queries.get(left)
-      if leftUpdate then leftUpdate[1] else @engine.queries.get(left)
+      leftUpdate?[0] ? collections[0]
+      if leftUpdate then leftUpdate[1] else collections[0]
 
-      rightUpdate?[0] ? @engine.queries.get(right)
-      if rightUpdate then rightUpdate[1] else @engine.queries.get(right)
+      rightUpdate?[0] ? collections[1]
+      if rightUpdate then rightUpdate[1] else collections[1]
     ]
 
     sorted = values.slice().sort (a, b) -> 
@@ -114,10 +130,27 @@ class Pairs
       unless value?.push
         values[index] = sorted[0].map && (sorted[0].map -> value) || [value]
         values[index].single = true
+      else if value?.keys
+        values[index] = values[index].slice()
       else
         values[index] ||= []
 
+      #values[index]
+
     [leftNew, leftOld, rightNew, rightOld] = values
+
+    if collections[0]?.keys && !leftNew.single
+      for element, index in leftNew by -1
+        if !@match(collections[0], element, scope)
+          leftNew.splice(index, 1)
+
+    if collections[1]?.keys && !rightNew.single
+      for element, index in rightNew by -1
+        if !@match(collections[1], element, scope)
+          rightNew.splice(index, 1)
+
+
+
 
     removed = []
     added = []

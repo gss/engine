@@ -60,6 +60,7 @@ class Queries
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key) ->
+    console.error(key, 777)
     collection = @get(continuation)
     update = (@engine.updating.queries ||= {})[continuation] ||= []
     if update[1] == undefined 
@@ -69,13 +70,19 @@ class Queries
       return unless collection.keys
     else
       @[continuation] = collection = []
+    if continuation == 'style[type*="text/gss"]$2↓::this p+p,#h1'
+      debugger
     keys = collection.keys ||= []
+    paths = collection.paths ||= []
+    scopes = collection.scopes ||= []
 
     if collection.indexOf(node) == -1
       for el, index in collection
-        break unless @comparePosition(el, node, operation[collection.keys[index]], operation[key])
+        break unless @comparePosition(el, node, keys[index], key)
       collection.splice(index, 0, node)
       keys.splice(index, 0, key)
+      paths.splice(index, 0, continuation)
+      scopes.splice(index, 0, scope)
       @chain collection[index - 1], node, continuation
       @chain node, collection[index + 1], continuation
       if operation.parent.name == 'rule'
@@ -84,6 +91,8 @@ class Queries
     else
       (collection.duplicates ||= []).push(node)
       keys.push(key)
+      paths.push(continuation)
+      scopes.push(scope)
       return
 
       
@@ -143,8 +152,6 @@ class Queries
   removeFromNode: (id, continuation, operation, scope, strict) ->
     collection = @get(continuation)
 
-    @engine.pairs.remove(id, continuation)
-
     # Remove all watchers that match continuation path
     ref = continuation + (collection?.length? && id || '')
     @unobserve(id, ref)
@@ -161,6 +168,8 @@ class Queries
     return unless collection = @get(continuation)
     length = collection.length
     keys = collection.keys
+    paths = collection.paths
+    scopes = collection.scopes
     duplicate = null
 
     # Dont remove it if element matches more than one selector
@@ -170,6 +179,8 @@ class Queries
           if (keys[length + index] == manual)
             duplicates.splice(index, 1)
             keys.splice(length + index, 1)
+            paths.splice(length + index, 1)
+            scopes.splice(length + index, 1)
             return false
           else
             duplicate ?= index
@@ -183,14 +194,20 @@ class Queries
           return false unless keys[index] == manual
           if duplicate?
             duplicates.splice(duplicate, 1)
+            paths[index] = paths[duplicate + length]
+            paths.splice(duplicate + length, 1)
             keys[index] = keys[duplicate + length]
             keys.splice(duplicate + length, 1)
+            scopes[index] = scopes[duplicate + length]
+            scopes.splice(duplicate + length, 1)
             return false
 
         collection.splice(index, 1)
         @removeMatch(node, continuation)
         if keys
           keys.splice(index, 1)
+          paths.splice(index, 1)
+          scopes.splice(index, 1)
         @chain collection[index - 1], node, continuation
         @chain node, collection[index], continuation
         return true
@@ -213,6 +230,8 @@ class Queries
       if collection && @engine.isCollection(collection)
         ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
       removed = @removeFromCollection(node, continuation, operation, scope, manual)
+
+      @engine.pairs.remove(id, continuation)
 
       unless removed == false
         @removeFromNode(id, continuation, operation, scope, strict)
@@ -237,7 +256,7 @@ class Queries
       @each 'remove', result, path, operation
 
     if scope && operation.def.cleaning
-      @remove @engine.identity.find(scope), path, operation, scope, undefined, true
+      @remove @engine.identity.find(scope), path, operation, scope, undefined, operation
     
     @engine.solved.remove(path)
     @engine.stylesheets?.remove(path, @['style[type*="text/gss"]'])
@@ -298,10 +317,10 @@ class Queries
     return if removed && removed == collection
 
     if removed
-      @each 'remove', removed, oppath, operation, scope, true, strict
+      @each 'remove', removed, oppath, operation, scope, operation, strict
     
     if added
-      @each 'add', added, oppath, operation, scope, true
+      @each 'add', added, oppath, operation, scope, operation
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result, continuation, operation, scope, manual, strict) ->

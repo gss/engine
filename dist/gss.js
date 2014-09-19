@@ -8471,10 +8471,10 @@ vflHook = function(name, terms, commands) {
     nestedCommand = parse(ruleSet).commands[0];
     nestedCommand[2] = commands;
     newCommands.push(nestedCommand);
+  }
     if (typeof window !== "undefined" && window !== null ? (_ref2 = window.GSS) != null ? _ref2.console : void 0 : void 0) {
       window.GSS.console.row('@' + name, o.statements.concat([ruleSet]), terms);
     }
-  }
   return {
     commands: newCommands
   };
@@ -20600,7 +20600,7 @@ Conventions = (function() {
       if (continuation.nodeType) {
         return this.identity.provide(continuation) + ' ' + operation.path;
       } else {
-        return continuation + operation.key;
+        return continuation + (operation.key || operation.path);
       }
     } else {
       return operation.key;
@@ -20658,24 +20658,38 @@ Conventions = (function() {
     var bits, last;
     bits = this.getContinuation(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '');
+    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '$1');
     if (compact) {
       return last;
     }
     return bits.join(this.DESCEND);
   };
 
-  Conventions.prototype.CanonicalizeRegExp = new RegExp("\\$[^" + Conventions.prototype.ASCEND + "]+(?:" + Conventions.prototype.ASCEND + "|$)", "g");
+  Conventions.prototype.CanonicalizeRegExp = new RegExp("" + "([^" + Conventions.prototype.PAIR + "])" + "\\$[^" + Conventions.prototype.ASCEND + "]+" + "(?:" + Conventions.prototype.ASCEND + "|$)", "g");
 
-  Conventions.prototype.getScopePath = function(continuation) {
-    var bits;
+  Conventions.prototype.getScopePath = function(scope, continuation) {
+    var bits, id, index, last, path, prev;
     bits = continuation.split(this.DESCEND);
+    if (scope && this.scope !== scope) {
+      id = this.identity.provide(scope);
+      prev = bits[bits.length - 2];
+      if (prev && prev.substring(prev.length - id.length) !== id) {
+        last = bits[bits.length - 1];
+        if ((index = last.indexOf(id + this.ASCEND)) > -1) {
+          bits.splice(bits.length - 1, 0, last.substring(0, index + id.length));
+        }
+      }
+    }
     bits[bits.length - 1] = "";
-    return bits.join(this.DESCEND);
+    path = bits.join(this.DESCEND);
+    if (continuation.charAt(0) === this.PAIR) {
+      path = this.PAIR + path;
+    }
+    return path;
   };
 
   Conventions.prototype.getOperationSolution = function(operation, continuation, scope) {
-    if (operation.def.serialized && !operation.def.hidden) {
+    if (operation.def.serialized && (!operation.def.hidden || operation.parent.def.serialized)) {
       return this.pairs.getSolution(operation, continuation, scope);
     }
   };
@@ -20979,7 +20993,7 @@ Rules = (function() {
     init: 'onSelector',
     command: function(operation, continuation, scope, meta) {
       var contd, index;
-      contd = this.getScopePath(continuation) + operation.path;
+      contd = this.getScopePath(scope, continuation) + operation.path;
       if (this.queries.ascending) {
         index = this.engine.indexOfTriplet(this.queries.ascending, operation, contd, scope) === -1;
         if (index > -1) {
@@ -20990,8 +21004,8 @@ Rules = (function() {
     },
     capture: function(result, operation, continuation, scope, meta, ascender) {
       var contd, _base;
-      contd = this.getScopePath(continuation) + operation.parent.path;
-      this.queries.add(result, contd, operation.parent, scope, operation.index);
+      contd = this.getScopePath(scope, continuation) + operation.parent.path;
+      this.queries.add(result, contd, operation.parent, scope, operation);
       (_base = this.queries).ascending || (_base.ascending = []);
       if (this.engine.indexOfTriplet(this.queries.ascending, operation.parent, contd, scope) === -1) {
         this.queries.ascending.push(operation.parent, contd, scope);
@@ -21000,8 +21014,8 @@ Rules = (function() {
     },
     release: function(result, operation, continuation, scope) {
       var contd;
-      contd = this.getScopePath(continuation) + operation.parent.path;
-      this.queries.remove(result, contd, operation.parent, scope, operation.index);
+      contd = this.getScopePath(scope, continuation) + operation.parent.path;
+      this.queries.remove(result, contd, operation.parent, scope, operation);
       return true;
     }
   };
@@ -21265,7 +21279,7 @@ Selectors = (function() {
     return this.queries.update(node, args, result, operation, continuation, scope);
   };
 
-  Selectors.prototype.onSelector = function(operation, parent) {
+  Selectors.prototype.onSelector = function(operation, parent, def) {
     var group, index, prefix, _base, _base1;
     prefix = ((parent && operation.name !== ' ') || (operation[0] !== '$combinator' && typeof operation[1] !== 'object')) && ' ' || '';
     switch (operation[0]) {
@@ -21321,8 +21335,11 @@ Selectors = (function() {
         shortcut.splice(1, 0, tail[1]);
       }
       op = head;
-      while (op) {
-        this.onSelector(op, shortcut);
+      while (op != null ? op.push : void 0) {
+        if (op[1] === 'this') {
+          debugger;
+        }
+        this.onSelector(op, shortcut, op.def);
         if (op === tail) {
           break;
         }
@@ -25715,6 +25732,11 @@ Expressions = (function() {
             }
           } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
             if (operation.def.mark) {
+              if (continuation.charAt(continuation.length - 1) === this.engine.PAIR) {
+                if (scope !== this.engine.scope) {
+                  continuation += this.engine.identity.provide(scope);
+                }
+              }
               continuation = this.engine.getContinuation(continuation, null, this.engine[operation.def.mark]);
             }
             this.solve(parent, continuation, scope, meta, operation.index, result);
@@ -25754,7 +25776,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.analyze = function(operation, parent) {
-    var child, def, func, index, otherdef, _i, _len, _ref;
+    var child, def, func, index, mark, otherdef, _i, _len, _ref;
     if (typeof operation[0] === 'string') {
       operation.name = operation[0];
     }
@@ -25802,6 +25824,11 @@ Expressions = (function() {
       child = operation[index];
       if (child instanceof Array) {
         this.analyze(child, operation);
+      }
+    }
+    if (mark = operation.def.mark || operation.marked) {
+      if (!parent.def.capture && parent.def.serialized) {
+        parent.marked = mark;
       }
     }
     if (def.noop) {
@@ -25864,7 +25891,8 @@ Expressions = (function() {
               following = index;
               next = void 0;
               while (next = operation[++following]) {
-                if (next.def && next.def.group !== group) {
+                if (next.def && (next.def.group !== group || next.marked !== op.marked)) {
+                  group = false;
                   break;
                 }
               }
@@ -26155,7 +26183,8 @@ Queries = (function() {
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key) {
-    var collection, copy, el, index, keys, update, _base, _base1, _i, _len;
+    var collection, copy, el, index, keys, paths, scopes, update, _base, _base1, _i, _len;
+    console.error(key, 777);
     collection = this.get(continuation);
     update = (_base = ((_base1 = this.engine.updating).queries || (_base1.queries = {})))[continuation] || (_base[continuation] = []);
     if (update[1] === void 0) {
@@ -26168,16 +26197,23 @@ Queries = (function() {
     } else {
       this[continuation] = collection = [];
     }
+    if (continuation === 'style[type*="text/gss"]$2↓::this p+p,#h1') {
+      debugger;
+    }
     keys = collection.keys || (collection.keys = []);
+    paths = collection.paths || (collection.paths = []);
+    scopes = collection.scopes || (collection.scopes = []);
     if (collection.indexOf(node) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
-        if (!this.comparePosition(el, node, operation[collection.keys[index]], operation[key])) {
+        if (!this.comparePosition(el, node, keys[index], key)) {
           break;
         }
       }
       collection.splice(index, 0, node);
       keys.splice(index, 0, key);
+      paths.splice(index, 0, continuation);
+      scopes.splice(index, 0, scope);
       this.chain(collection[index - 1], node, continuation);
       this.chain(node, collection[index + 1], continuation);
       if (operation.parent.name === 'rule') {
@@ -26187,6 +26223,8 @@ Queries = (function() {
     } else {
       (collection.duplicates || (collection.duplicates = [])).push(node);
       keys.push(key);
+      paths.push(continuation);
+      scopes.push(scope);
       return;
     }
     return collection;
@@ -26265,7 +26303,6 @@ Queries = (function() {
   Queries.prototype.removeFromNode = function(id, continuation, operation, scope, strict) {
     var collection, ref, result;
     collection = this.get(continuation);
-    this.engine.pairs.remove(id, continuation);
     ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
     this.unobserve(id, ref);
     if (strict || ((result = this.get(continuation)) == null)) {
@@ -26278,12 +26315,14 @@ Queries = (function() {
   };
 
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, manual) {
-    var collection, dup, duplicate, duplicates, index, keys, length, _base, _base1, _base2, _i, _len;
+    var collection, dup, duplicate, duplicates, index, keys, length, paths, scopes, _base, _base1, _base2, _i, _len;
     if (!(collection = this.get(continuation))) {
       return;
     }
     length = collection.length;
     keys = collection.keys;
+    paths = collection.paths;
+    scopes = collection.scopes;
     duplicate = null;
     if ((duplicates = collection.duplicates)) {
       for (index = _i = 0, _len = duplicates.length; _i < _len; index = ++_i) {
@@ -26292,6 +26331,8 @@ Queries = (function() {
           if (keys[length + index] === manual) {
             duplicates.splice(index, 1);
             keys.splice(length + index, 1);
+            paths.splice(length + index, 1);
+            scopes.splice(length + index, 1);
             return false;
           } else {
             if (duplicate == null) {
@@ -26310,8 +26351,12 @@ Queries = (function() {
           }
           if (duplicate != null) {
             duplicates.splice(duplicate, 1);
+            paths[index] = paths[duplicate + length];
+            paths.splice(duplicate + length, 1);
             keys[index] = keys[duplicate + length];
             keys.splice(duplicate + length, 1);
+            scopes[index] = scopes[duplicate + length];
+            scopes.splice(duplicate + length, 1);
             return false;
           }
         }
@@ -26319,6 +26364,8 @@ Queries = (function() {
         this.removeMatch(node, continuation);
         if (keys) {
           keys.splice(index, 1);
+          paths.splice(index, 1);
+          scopes.splice(index, 1);
         }
         this.chain(collection[index - 1], node, continuation);
         this.chain(node, collection[index], continuation);
@@ -26346,6 +26393,7 @@ Queries = (function() {
         (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       }
       removed = this.removeFromCollection(node, continuation, operation, scope, manual);
+      this.engine.pairs.remove(id, continuation);
       if (removed !== false) {
         this.removeFromNode(id, continuation, operation, scope, strict);
       }
@@ -26371,7 +26419,7 @@ Queries = (function() {
       this.each('remove', result, path, operation);
     }
     if (scope && operation.def.cleaning) {
-      this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, true);
+      this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, operation);
     }
     this.engine.solved.remove(path);
     if ((_ref = this.engine.stylesheets) != null) {
@@ -26449,10 +26497,10 @@ Queries = (function() {
       return;
     }
     if (removed) {
-      this.each('remove', removed, oppath, operation, scope, true, strict);
+      this.each('remove', removed, oppath, operation, scope, operation, strict);
     }
     if (added) {
-      return this.each('add', added, oppath, operation, scope, true);
+      return this.each('add', added, oppath, operation, scope, operation);
     }
   };
 
@@ -27011,11 +27059,13 @@ Pairs = (function() {
   }
 
   Pairs.prototype.onLeft = function(operation, continuation, scope) {
-    var left, parent;
+    var contd, left, parent;
+    console.error('onLeft', arguments);
     left = this.engine.getCanonicalPath(continuation);
     parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
+      contd = this.engine.PAIR;
       return this.engine.PAIR;
     } else {
       (this.dirty || (this.dirty = {}))[left] = true;
@@ -27031,12 +27081,17 @@ Pairs = (function() {
   };
 
   Pairs.prototype.onRight = function(operation, continuation, scope, left, right) {
-    var index, pairs, parent, pushed, _base;
+    var index, op, pairs, parent, pushed, _base, _i, _len, _ref;
+    console.error('onRight', arguments);
     right = this.engine.getCanonicalPath(continuation.substring(0, continuation.length - 1));
     parent = this.getTopmostOperation(operation);
-    if ((index = this.lefts.indexOf(parent)) > -1) {
-      left = this.lefts[index + 1];
-      this.watch(operation, continuation, scope, left, right);
+    _ref = this.lefts;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = _i += 3) {
+      op = _ref[index];
+      if (op === parent && this.lefts[index + 2] === scope) {
+        left = this.lefts[index + 1];
+        this.watch(operation, continuation, scope, left, right);
+      }
     }
     if (!left) {
       return;
@@ -27123,11 +27178,29 @@ Pairs = (function() {
     return delete this.repairing;
   };
 
+  Pairs.prototype.match = function(collection, node, scope) {
+    var dups, index;
+    if ((index = collection.indexOf(node)) > -1) {
+      if (collection.scopes[index] === scope) {
+        return true;
+      }
+      index = -1;
+      if (dups = collection.duplicates) {
+        while ((index = dups.indexOf(node, index + 1)) > -1) {
+          if (collection.scopes[index + collection.length] === scope) {
+            return true;
+          }
+        }
+      }
+    }
+  };
+
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var added, cleaned, cleaning, contd, el, index, leftNew, leftOld, leftUpdate, object, padded, pair, removed, rightNew, rightOld, rightUpdate, sorted, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var added, cleaned, cleaning, collections, contd, el, element, index, leftNew, leftOld, leftUpdate, object, padded, pair, removed, rightNew, rightOld, rightUpdate, sorted, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _p, _q, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
     leftUpdate = (_ref = this.engine.updating.queries) != null ? _ref[left] : void 0;
     rightUpdate = (_ref1 = this.engine.updating.queries) != null ? _ref1[right] : void 0;
-    values = [(_ref2 = leftUpdate != null ? leftUpdate[0] : void 0) != null ? _ref2 : this.engine.queries.get(left), leftUpdate ? leftUpdate[1] : this.engine.queries.get(left), (_ref3 = rightUpdate != null ? rightUpdate[0] : void 0) != null ? _ref3 : this.engine.queries.get(right), rightUpdate ? rightUpdate[1] : this.engine.queries.get(right)];
+    collections = [this.engine.queries.get(left), this.engine.queries.get(right)];
+    values = [(_ref2 = leftUpdate != null ? leftUpdate[0] : void 0) != null ? _ref2 : collections[0], leftUpdate ? leftUpdate[1] : collections[0], (_ref3 = rightUpdate != null ? rightUpdate[0] : void 0) != null ? _ref3 : collections[1], rightUpdate ? rightUpdate[1] : collections[1]];
     sorted = values.slice().sort(function(a, b) {
       var _ref4, _ref5;
       return ((_ref4 = (b != null ? b.push : void 0) && b.length) != null ? _ref4 : -1) - ((_ref5 = (a != null ? a.push : void 0) && a.length) != null ? _ref5 : -1);
@@ -27141,14 +27214,32 @@ Pairs = (function() {
           return value;
         })) || [value];
         values[index].single = true;
+      } else if (value != null ? value.keys : void 0) {
+        values[index] = values[index].slice();
       } else {
         values[index] || (values[index] = []);
       }
     }
     leftNew = values[0], leftOld = values[1], rightNew = values[2], rightOld = values[3];
+    if (((_ref4 = collections[0]) != null ? _ref4.keys : void 0) && !leftNew.single) {
+      for (index = _j = leftNew.length - 1; _j >= 0; index = _j += -1) {
+        element = leftNew[index];
+        if (!this.match(collections[0], element, scope)) {
+          leftNew.splice(index, 1);
+        }
+      }
+    }
+    if (((_ref5 = collections[1]) != null ? _ref5.keys : void 0) && !rightNew.single) {
+      for (index = _k = rightNew.length - 1; _k >= 0; index = _k += -1) {
+        element = rightNew[index];
+        if (!this.match(collections[1], element, scope)) {
+          rightNew.splice(index, 1);
+        }
+      }
+    }
     removed = [];
     added = [];
-    for (index = _j = 0, _len1 = leftOld.length; _j < _len1; index = ++_j) {
+    for (index = _l = 0, _len1 = leftOld.length; _l < _len1; index = ++_l) {
       object = leftOld[index];
       if (leftNew[index] !== object || rightOld[index] !== rightNew[index]) {
         if (rightOld && rightOld[index]) {
@@ -27160,15 +27251,15 @@ Pairs = (function() {
       }
     }
     if (leftOld.length < leftNew.length) {
-      for (index = _k = _ref4 = leftOld.length, _ref5 = leftNew.length; _ref4 <= _ref5 ? _k < _ref5 : _k > _ref5; index = _ref4 <= _ref5 ? ++_k : --_k) {
+      for (index = _m = _ref6 = leftOld.length, _ref7 = leftNew.length; _ref6 <= _ref7 ? _m < _ref7 : _m > _ref7; index = _ref6 <= _ref7 ? ++_m : --_m) {
         if (rightNew[index]) {
           added.push([leftNew[index], rightNew[index]]);
         }
       }
     }
     cleaned = [];
-    for (_l = 0, _len2 = removed.length; _l < _len2; _l++) {
-      pair = removed[_l];
+    for (_n = 0, _len2 = removed.length; _n < _len2; _n++) {
+      pair = removed[_n];
       if (!pair[0] || !pair[1]) {
         continue;
       }
@@ -27182,8 +27273,8 @@ Pairs = (function() {
       }
       cleaned.push(contd);
     }
-    for (_m = 0, _len3 = added.length; _m < _len3; _m++) {
-      pair = added[_m];
+    for (_o = 0, _len3 = added.length; _o < _len3; _o++) {
+      pair = added[_o];
       contd = left;
       if (!leftNew.single) {
         contd += this.engine.identity.provide(pair[0]);
@@ -27198,13 +27289,13 @@ Pairs = (function() {
         this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
       }
     }
-    for (_n = 0, _len4 = cleaned.length; _n < _len4; _n++) {
-      contd = cleaned[_n];
+    for (_p = 0, _len4 = cleaned.length; _p < _len4; _p++) {
+      contd = cleaned[_p];
       this.engine.queries.clean(contd);
     }
     cleaning = true;
-    for (_o = 0, _len5 = leftNew.length; _o < _len5; _o++) {
-      el = leftNew[_o];
+    for (_q = 0, _len5 = leftNew.length; _q < _len5; _q++) {
+      el = leftNew[_q];
       if (el) {
         cleaning = false;
         break;
