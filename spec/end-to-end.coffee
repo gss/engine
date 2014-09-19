@@ -2405,7 +2405,53 @@ describe 'End - to - End', ->
           """
 
       
-      
+    describe "context-specific VFL", ->
+      it 'should work', (done) ->
+        container.innerHTML = """
+        <article id="article1">
+          <div class="media"></div>
+          <h2 class="title" id="title1"><span style="display:inline-block; height: 20px; width: 10px"></span></h2>
+          <p class="desc" id="desc1"><span style="display:inline-block; height: 40px; width: 10px"></span></p>
+        </article>
+
+        <style type="text/gss">
+          #container[width] == 300;
+          #container[left] == 0;
+
+          article {
+            @v |
+                -1-
+                (& .title)
+                -2-
+                (& .desc)
+                -3-
+                | 
+                in(&) {
+                  height: == ::[intrinsic-height];
+            }
+          }
+
+        </style>
+        """
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql 
+            "$box2[width]": 70
+            "$box2[x]": 160
+            "$box2[y]": 0
+            "$box3[width]": 70
+            "$box3[x]": 230
+            "$box3[y]": 0
+            "$boxA[width]": 70
+            "$boxA[x]": 0
+            "$boxA[y]": 0
+            "$boxB[width]": 70
+            "$boxB[x]": 80
+            "$boxB[y]": 0
+            "$container[width]": 300
+            "$container[x]": 0
+            "gap": 0
+          done()
+
     describe "new VFL input", ->
       it 'should work', (done) ->
         container.innerHTML = """

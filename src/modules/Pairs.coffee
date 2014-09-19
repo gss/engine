@@ -10,6 +10,8 @@ class Pairs
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
+      if left == " .title"
+        debugger
       contd = @engine.PAIR
       return @engine.PAIR
     else
@@ -188,6 +190,7 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
+        debugger
         @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
       
     for contd in cleaned

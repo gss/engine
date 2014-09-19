@@ -70,12 +70,13 @@ class Queries
       return unless collection.keys
     else
       @[continuation] = collection = []
-
+      if continuation == 'style[type*="text/gss"]$2↓article .title'
+        debugger
     keys = collection.keys ||= []
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
 
-    if collection.indexOf(node) == -1
+    if (index = collection.indexOf(node)) == -1
       for el, index in collection
         break unless @comparePosition(el, node, keys[index], key)
       collection.splice(index, 0, node)
@@ -88,6 +89,7 @@ class Queries
         @addMatch(node, continuation)
       return true
     else
+      #if scopes[index] != scope# || paths[index] != path
       (collection.duplicates ||= []).push(node)
       keys.push(key)
       paths.push(contd)
@@ -101,20 +103,6 @@ class Queries
   get: (operation, continuation, old) ->
     if typeof operation == 'string'
       result = @[operation]
-      # Return stuff that was removed this tick when cleaning up
-      if old && (updated = @engine.updating.queries?[operation]?[3])
-        if updated.length != undefined
-          if result
-            if !@engine.isCollection(result)
-              result = [result]
-            else
-              result = Array.prototype.slice.call(result)
-            for upd in updated
-              if result.indexOf(upd) == -1
-                result.push(upd)
-          else
-            result ||= updated
-
       if typeof result == 'string'
         return @[result]
       return result
@@ -436,6 +424,7 @@ class Queries
           update[1] = update[1].slice()
 
     if result
+
       @[path] = result
 
       if @engine.isCollection(result)
@@ -446,13 +435,6 @@ class Queries
     else
 
       delete @[path]
-
-    if removed = @engine.updating.queries?[path]?[3]
-      for item in removed
-        @match(item, '$pseudo', 'next', undefined, path)
-        @match(item, '$pseudo', 'first', undefined, path)
-        @match(item, '$pseudo', 'previous', undefined, path)
-        @match(item, '$pseudo', 'last', undefined, path)
 
     @engine.pairs?.set(path, result)
 

@@ -1,7 +1,7 @@
 # Objects dont need to reference to other objects physically
 # because the link can be inferred from conventions and structure.
 
-# Dynamic systems need to be able to clean up side effects.
+# Dynamic systems need to be able to clean  side effects.
 # Instead of remembering effects explicitly, we generate 
 # unique tracking labels with special delimeters.
 # Uniquely structured cache key enables bottom-up evaluation 

@@ -73,14 +73,17 @@ class Selectors
         shortcut.splice(1, 0, tail[1])
       op = head
       while op?.push
-        if op[1] == 'this'
-          debugger
         @onSelector op, shortcut, op.def
         break if op == tail
         op = op[1]
-      if (tail.parent == operation)
-        unless global
+      unless global
+        if (tail.parent == operation)
           shortcut.splice(1, 0, tail[1])
+      debugger
+      if shortcut.length > 2
+        if operation.marked
+          shortcut.path = shortcut.key = head.path
+
       return shortcut
 
     # Add * to a combinator at the end of native selector (e.g. `+` transforms to `+ *`)

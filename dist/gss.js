@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-19) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-20) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21341,18 +21341,21 @@ Selectors = (function() {
       }
       op = head;
       while (op != null ? op.push : void 0) {
-        if (op[1] === 'this') {
-          debugger;
-        }
         this.onSelector(op, shortcut, op.def);
         if (op === tail) {
           break;
         }
         op = op[1];
       }
-      if (tail.parent === operation) {
-        if (!global) {
+      if (!global) {
+        if (tail.parent === operation) {
           shortcut.splice(1, 0, tail[1]);
+        }
+      }
+      debugger;
+      if (shortcut.length > 2) {
+        if (operation.marked) {
+          shortcut.path = shortcut.key = head.path;
         }
       }
       return shortcut;
@@ -25736,12 +25739,7 @@ Expressions = (function() {
               return this.engine.provide(result);
             }
           } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
-            if (operation.def.mark) {
-              if (continuation.charAt(continuation.length - 1) === this.engine.PAIR) {
-                if (scope !== this.engine.scope) {
-                  continuation += this.engine.identity.provide(scope);
-                }
-              }
+            if (operation.def.mark && continuation !== this.engine.PAIR) {
               continuation = this.engine.getContinuation(continuation, null, this.engine[operation.def.mark]);
             }
             this.solve(parent, continuation, scope, meta, operation.index, result);
@@ -25831,9 +25829,11 @@ Expressions = (function() {
         this.analyze(child, operation);
       }
     }
-    if (mark = operation.def.mark || operation.marked) {
-      if (!parent.def.capture && parent.def.serialized) {
-        parent.marked = mark;
+    if (parent) {
+      if (mark = operation.def.mark || operation.marked) {
+        if (!parent.def.capture && parent.def.serialized) {
+          parent.marked = mark;
+        }
       }
     }
     if (def.noop) {
@@ -26201,11 +26201,14 @@ Queries = (function() {
       }
     } else {
       this[continuation] = collection = [];
+      if (continuation === 'style[type*="text/gss"]$2↓article .title') {
+        debugger;
+      }
     }
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
-    if (collection.indexOf(node) === -1) {
+    if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
         if (!this.comparePosition(el, node, keys[index], key)) {
@@ -26233,28 +26236,9 @@ Queries = (function() {
   };
 
   Queries.prototype.get = function(operation, continuation, old) {
-    var result, upd, updated, _i, _len, _ref, _ref1;
+    var result;
     if (typeof operation === 'string') {
       result = this[operation];
-      if (old && (updated = (_ref = this.engine.updating.queries) != null ? (_ref1 = _ref[operation]) != null ? _ref1[3] : void 0 : void 0)) {
-        if (updated.length !== void 0) {
-          if (result) {
-            if (!this.engine.isCollection(result)) {
-              result = [result];
-            } else {
-              result = Array.prototype.slice.call(result);
-            }
-            for (_i = 0, _len = updated.length; _i < _len; _i++) {
-              upd = updated[_i];
-              if (result.indexOf(upd) === -1) {
-                result.push(upd);
-              }
-            }
-          } else {
-            result || (result = updated);
-          }
-        }
-      }
       if (typeof result === 'string') {
         return this[result];
       }
@@ -26625,7 +26609,7 @@ Queries = (function() {
   };
 
   Queries.prototype.set = function(path, result) {
-    var index, item, removed, update, _base, _base1, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var index, item, update, _base, _base1, _i, _len, _ref, _ref1;
     if (this.engine.updating) {
       update = (_base = ((_base1 = this.engine.updating).queries || (_base1.queries = {})))[path] || (_base[path] = []);
       if (update[1] === void 0) {
@@ -26649,17 +26633,8 @@ Queries = (function() {
     } else {
       delete this[path];
     }
-    if (removed = (_ref1 = this.engine.updating.queries) != null ? (_ref2 = _ref1[path]) != null ? _ref2[3] : void 0 : void 0) {
-      for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
-        item = removed[_j];
-        this.match(item, '$pseudo', 'next', void 0, path);
-        this.match(item, '$pseudo', 'first', void 0, path);
-        this.match(item, '$pseudo', 'previous', void 0, path);
-        this.match(item, '$pseudo', 'last', void 0, path);
-      }
-    }
-    if ((_ref3 = this.engine.pairs) != null) {
-      _ref3.set(path, result);
+    if ((_ref1 = this.engine.pairs) != null) {
+      _ref1.set(path, result);
     }
   };
 
@@ -27067,6 +27042,9 @@ Pairs = (function() {
     parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
+      if (left === " .title") {
+        debugger;
+      }
       contd = this.engine.PAIR;
       return this.engine.PAIR;
     } else {
@@ -27288,6 +27266,7 @@ Pairs = (function() {
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
+        debugger;
         this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
       }
     }
