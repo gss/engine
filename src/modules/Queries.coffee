@@ -175,13 +175,14 @@ class Queries
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
         if dup == node
-          if (keys[length + index] == manual)
+          if (keys[length + index] == manual && scopes[length + index] == scope) && contd == paths[length + index]
             duplicates.splice(index, 1)
             keys.splice(length + index, 1)
             paths.splice(length + index, 1)
             scopes.splice(length + index, 1)
             return false
           else
+            debugger
             duplicate ?= index
 
     if operation && length && manual
@@ -190,7 +191,7 @@ class Queries
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
         if keys
-          return false unless keys[index] == manual
+          return false unless keys[index] == manual && scopes[index] == scope && paths[index]
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -252,10 +253,10 @@ class Queries
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
-      @each 'remove', result, path, operation
+      @each 'remove', result, path, operation, scope, undefined, undefined, continuation
 
     if scope && operation.def.cleaning
-      @remove @engine.identity.find(scope), path, operation, scope, undefined, operation
+      @remove @engine.identity.find(scope), path, operation, scope, operation
     
     @engine.solved.remove(path)
     @engine.stylesheets?.remove(path, @['style[type*="text/gss"]'])
@@ -370,7 +371,7 @@ class Queries
       else if result != old
         if !result
           removed = old
-        @clean(path, undefined, operation)
+        @clean(path, undefined, operation, scope)
       else if continuation.charAt(0) == @engine.PAIR
 
         # Subscribe node to the query

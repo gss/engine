@@ -26330,13 +26330,14 @@ Queries = (function() {
       for (index = _i = 0, _len = duplicates.length; _i < _len; index = ++_i) {
         dup = duplicates[index];
         if (dup === node) {
-          if (keys[length + index] === manual) {
+          if ((keys[length + index] === manual && scopes[length + index] === scope) && contd === paths[length + index]) {
             duplicates.splice(index, 1);
             keys.splice(length + index, 1);
             paths.splice(length + index, 1);
             scopes.splice(length + index, 1);
             return false;
           } else {
+            debugger;
             if (duplicate == null) {
               duplicate = index;
             }
@@ -26348,7 +26349,7 @@ Queries = (function() {
       (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
       if ((index = collection.indexOf(node)) > -1) {
         if (keys) {
-          if (keys[index] !== manual) {
+          if (!(keys[index] === manual && scopes[index] === scope && paths[index])) {
             return false;
           }
           if (duplicate != null) {
@@ -26418,10 +26419,10 @@ Queries = (function() {
     }
     result = this.get(path);
     if ((result = this.get(path, void 0, true)) !== void 0) {
-      this.each('remove', result, path, operation);
+      this.each('remove', result, path, operation, scope, void 0, void 0, continuation);
     }
     if (scope && operation.def.cleaning) {
-      this.remove(this.engine.identity.find(scope), path, operation, scope, void 0, operation);
+      this.remove(this.engine.identity.find(scope), path, operation, scope, operation);
     }
     this.engine.solved.remove(path);
     if ((_ref = this.engine.stylesheets) != null) {
@@ -26567,7 +26568,7 @@ Queries = (function() {
         if (!result) {
           removed = old;
         }
-        this.clean(path, void 0, operation);
+        this.clean(path, void 0, operation, scope);
       } else if (continuation.charAt(0) === this.engine.PAIR) {
         if (id = this.engine.identity.provide(node)) {
           watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
