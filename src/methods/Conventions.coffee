@@ -160,6 +160,7 @@ class Conventions
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)
   getScopePath: (scope, continuation) ->
+    return '' unless continuation
     bits = continuation.split(@DESCEND)
     if scope && @scope != scope
       id = @identity.provide(scope)

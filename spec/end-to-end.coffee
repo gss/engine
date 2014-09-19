@@ -2222,27 +2222,53 @@ describe 'End - to - End', ->
 
       describe 'with selector', ->
         it 'should compute', (done) ->
-          listen = (solution) ->     
+          engine.then (solution) ->     
             expect(solution).to.eql      
               "$container[x]": 10,
               "$container[width]": 100
-              "p11": 80
-              "p12": 80
-              "p13": 80
-              "p21": 80
-              "p22": 80
-              "p23": 80
-            done()          
+              "$p12[x]": 20
+              "$p13[x]": 20
+              "$p22[x]": 20
+              "$p23[x]": 20
+              "$h1[x]":  20
+              "$p12[width]": 80
+              "$p13[width]": 80
+              "$p22[width]": 80
+              "$p23[width]": 80
+              "$h1[width]":  80
+
+            p12 = engine.$id('p12')
+            p12.parentNode.removeChild(p12)
+
+            engine.then (solution) ->  
+              expect(solution).to.eql  
+                "$p12[x]": null
+                "$p12[width]": null
+
+              h1 = engine.$id('h1')
+              h1.parentNode.removeChild(h1)
+              engine.then (solution) ->  
+                expect(solution).to.eql  
+                  "$h1[x]": null
+                  "$h1[width]": null
+
+
+
+                done()          
       
           container.innerHTML =  """
-              <div id="s1" class="section"><p id="p11"><p id="p12"><p id="p13"></div>
-              <div id="s2" class="section"><p id="p21"><p id="p22"><p id="p23"></div>
+              <div id="s1" class="section">
+                <p id="p11"><p id="p12"><p id="p13">
+              </div>
+              <div id="s2" class="section">
+                <p id="p21"><p id="p22"><p id="p23">
+              </div>
               <h1 id="h1"></h1>
               <div id="container"></div>
               <style type="text/gss">                        
                         
                 .section {
-                  @h |(:: p + p, #h1)| gap(10) in(#container);
+                  @h |-(:: p + p, #h1)-| gap(10) in(#container);
                 }
               
                 #container {

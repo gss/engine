@@ -36,7 +36,8 @@ class Rules
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope, meta, ascender) ->
       contd = @getScopePath(scope, continuation) + operation.parent.path
-      @queries.add(result, contd, operation.parent, scope, operation)
+      console.error('add', continuation, contd)
+      @queries.add(result, contd, operation.parent, scope, operation, continuation)
       @queries.ascending ||= []
       if @engine.indexOfTriplet(@queries.ascending, operation.parent, contd, scope) == -1
         @queries.ascending.push(operation.parent, contd, scope)
@@ -45,8 +46,9 @@ class Rules
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
+      console.error('release', result, operation)
       contd = @getScopePath(scope, continuation) + operation.parent.path
-      @queries.remove(result, contd, operation.parent, scope, operation)
+      @queries.remove(result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
 
   # CSS rule
