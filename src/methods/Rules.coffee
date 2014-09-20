@@ -137,13 +137,9 @@ class Rules
           @updating.queried = @updating.queries
           @updating.queries = undefined
 
-
-    
-
         @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + @engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
         
         if branch = operation.parent[index]
-          debugger
           result = @document.solve(branch, @getContinuation(path, null,  @DESCEND), scope, meta)
           @updating.paired = undefined
           @pairs?.onBeforeSolve()

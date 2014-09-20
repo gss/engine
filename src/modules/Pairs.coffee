@@ -10,8 +10,6 @@ class Pairs
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
-      if left == " .title"
-        debugger
       contd = @engine.PAIR
       return @engine.PAIR
     else
@@ -50,13 +48,14 @@ class Pairs
     
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
-    if continuation.charAt(continuation.length - 1) == @engine.PAIR
-      return if continuation.length == 1
+    last = continuation.lastIndexOf(@engine.PAIR)
+    if last > 0
       parent = operation
       while parent = parent.parent
         break if parent.def.noop
       # Found right side
-      if continuation.charAt(0) == @engine.PAIR
+      first = continuation.indexOf(@engine.PAIR) 
+      if first == 0 && last == continuation.length - 1
         return @onRight(operation, continuation, scope)
       # Found left side, rewrite continuation
       else if operation.def.serialized
@@ -65,13 +64,20 @@ class Pairs
           if result = @getSolution(operation, continuation.substring(prev || 0, index), scope, true)
             return result
           prev = index 
-        return @onLeft(operation, continuation, scope)
+        if first == continuation.length - 1
+          return @onLeft(operation, continuation, scope)
     # Fetch saved result if operation path mathes continuation canonical path
-    else if continuation.lastIndexOf(@engine.PAIR) <= 0
+    else
+      return if continuation.length == 1
       contd = @engine.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
       if contd.charAt(0) == @engine.PAIR
         contd = contd.substring(1)
-      if contd == operation.path
+      if operation.path.substring(0, 6) == '::this'
+        if (i = contd.lastIndexOf('::this')) > -1
+          relative = contd.substring(i)
+        else
+          relative = '::this' + contd
+      if contd == operation.path || relative == operation.path
         if id = continuation.match(@TrailingIDRegExp)
           return @engine.identity[id[1]]
         else
@@ -122,10 +128,10 @@ class Pairs
       @engine.queries.get(right)
     ]
     values = [
-      leftUpdate?[0] ? collections[0]
+      leftUpdate?[0]?.nodeType && leftUpdate[0] || collections[0]
       if leftUpdate then leftUpdate[1] else collections[0]
 
-      rightUpdate?[0] ? collections[1]
+      rightUpdate?[0]?.nodeType && rightUpdate[0] || collections[1]
       if rightUpdate then rightUpdate[1] else collections[1]
     ]
 
@@ -154,11 +160,10 @@ class Pairs
           leftNew.splice(index, 1)
 
     if collections[1]?.keys && !rightNew.single
+      debugger
       for element, index in rightNew by -1
         if !@match(collections[1], element, scope)
           rightNew.splice(index, 1)
-
-
 
 
     removed = []
@@ -197,7 +202,6 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        debugger
         @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
       
     for contd in cleaned
@@ -212,7 +216,7 @@ class Pairs
     if cleaning
       @clean(left)
 
-    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left, right)
+    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + @engine.PAIR + right)
 
   clean: (left) ->  
 
@@ -234,6 +238,8 @@ class Pairs
 
       for right in rights
         @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))
+        if right == '→"mast"'
+          debugger
         delete @engine.queries[right]
       delete @paths[left]
     index = 0

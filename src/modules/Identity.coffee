@@ -14,8 +14,6 @@ class Identity
       unless generate == false
         object._gss_id = id ||= 
           "$" + (object.id || ++Identity.uid)
-        if object._gss_id == '$3'
-          debugger
       @[id] = object
     return id
 

@@ -21121,7 +21121,6 @@ Rules = (function() {
         }
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
-          debugger;
           result = this.document.solve(branch, this.getContinuation(path, null, this.DESCEND), scope, meta);
           this.updating.paired = void 0;
           if ((_ref = this.pairs) != null) {
@@ -25586,7 +25585,7 @@ Expressions = (function() {
       }
     }
     if (operation.tail) {
-      operation = this.skip(operation, ascender);
+      operation = this.skip(operation, ascender, continuation);
     }
     if (continuation && operation.path && operation.def.serialized) {
       result = this.engine.getOperationSolution(operation, continuation, scope);
@@ -25596,6 +25595,7 @@ Expressions = (function() {
             return result;
           } else {
             continuation = result;
+            result = void 0;
           }
           break;
         case 'object':
@@ -25604,18 +25604,22 @@ Expressions = (function() {
           return;
       }
     }
-    args = this.descend(operation, continuation, scope, meta, ascender, ascending);
-    if (args === false) {
-      return;
-    }
-    if (operation.name && !operation.def.hidden) {
-      this.engine.console.row(operation, args, continuation || "");
-    }
-    if (operation.def.noop) {
-      result = args;
+    if (result === void 0) {
+      args = this.descend(operation, continuation, scope, meta, ascender, ascending);
+      if (args === false) {
+        return;
+      }
+      if (operation.name && !operation.def.hidden) {
+        this.engine.console.row(operation, args, continuation || "");
+      }
+      if (operation.def.noop) {
+        result = args;
+      } else {
+        result = this.execute(operation, continuation, scope, args);
+        continuation = this.engine.getOperationPath(operation, continuation, scope);
+      }
     } else {
-      result = this.execute(operation, continuation, scope, args);
-      continuation = this.engine.getOperationPath(operation, continuation, scope);
+      debugger;
     }
     return this.ascend(operation, continuation, result, scope, meta, ascender);
   };
@@ -25769,9 +25773,9 @@ Expressions = (function() {
     return result;
   };
 
-  Expressions.prototype.skip = function(operation, ascender) {
+  Expressions.prototype.skip = function(operation, ascender, continuation) {
     var _base;
-    if (operation.tail.path === operation.tail.key || (ascender != null)) {
+    if (operation.tail.path === operation.tail.key || (ascender != null) || (continuation && continuation.lastIndexOf(this.engine.PAIR) !== continuation.indexOf(this.engine.PAIR))) {
       return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.methods[operation.def.group].perform.call(this.engine, operation));
     } else {
       return operation.tail[1];
@@ -25956,9 +25960,6 @@ Identity = (function() {
       }
       if (generate !== false) {
         object._gss_id = id || (id = "$" + (object.id || ++Identity.uid));
-        if (object._gss_id === '$3') {
-          debugger;
-        }
       }
       this[id] = object;
     }
@@ -26204,6 +26205,9 @@ Queries = (function() {
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
+    if (continuation === 'style[type*="text/gss"]$2↓article$article1↑::this .title') {
+      debugger;
+    }
     if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
@@ -26235,9 +26239,6 @@ Queries = (function() {
     var result;
     if (typeof operation === 'string') {
       result = this[operation];
-      if (typeof result === 'string') {
-        return this[result];
-      }
       return result;
     }
   };
@@ -26372,7 +26373,7 @@ Queries = (function() {
       ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
       this.unobserve(id, ref);
       if (recursion !== continuation) {
-        this.updateCollections(operation, continuation, scope, void 0, node, continuation, continuation);
+        this.updateCollections(operation, continuation, scope, recursion, node, continuation, continuation);
         if (removed === false) {
           debugger;
         }
@@ -26644,14 +26645,18 @@ Queries = (function() {
   };
 
   Queries.prototype.set = function(path, result) {
-    var _ref;
+    var old, _base, _base1, _base2, _ref, _ref1;
+    old = this[path];
+    if (result == null) {
+      (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[path] || (_base1[path] = [])))[1] || (_base[1] = (_ref = old && old.slice && old.slice() || old) != null ? _ref : null);
+    }
     if (result) {
       this[path] = result;
     } else {
       delete this[path];
     }
-    if ((_ref = this.engine.pairs) != null) {
-      _ref.set(path, result);
+    if ((_ref1 = this.engine.pairs) != null) {
+      _ref1.set(path, result);
     }
   };
 
@@ -27059,9 +27064,6 @@ Pairs = (function() {
     parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
-      if (left === " .title") {
-        debugger;
-      }
       contd = this.engine.PAIR;
       return this.engine.PAIR;
     } else {
@@ -27112,18 +27114,17 @@ Pairs = (function() {
   };
 
   Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
-    var contd, id, index, parent, prev, result;
-    if (continuation.charAt(continuation.length - 1) === this.engine.PAIR) {
-      if (continuation.length === 1) {
-        return;
-      }
+    var contd, first, i, id, index, last, parent, prev, relative, result;
+    last = continuation.lastIndexOf(this.engine.PAIR);
+    if (last > 0) {
       parent = operation;
       while (parent = parent.parent) {
         if (parent.def.noop) {
           break;
         }
       }
-      if (continuation.charAt(0) === this.engine.PAIR) {
+      first = continuation.indexOf(this.engine.PAIR);
+      if (first === 0 && last === continuation.length - 1) {
         return this.onRight(operation, continuation, scope);
       } else if (operation.def.serialized) {
         prev = -1;
@@ -27133,14 +27134,26 @@ Pairs = (function() {
           }
           prev = index;
         }
-        return this.onLeft(operation, continuation, scope);
+        if (first === continuation.length - 1) {
+          return this.onLeft(operation, continuation, scope);
+        }
       }
-    } else if (continuation.lastIndexOf(this.engine.PAIR) <= 0) {
+    } else {
+      if (continuation.length === 1) {
+        return;
+      }
       contd = this.engine.getCanonicalPath(continuation, true);
       if (contd.charAt(0) === this.engine.PAIR) {
         contd = contd.substring(1);
       }
-      if (contd === operation.path) {
+      if (operation.path.substring(0, 6) === '::this') {
+        if ((i = contd.lastIndexOf('::this')) > -1) {
+          relative = contd.substring(i);
+        } else {
+          relative = '::this' + contd;
+        }
+      }
+      if (contd === operation.path || relative === operation.path) {
         if (id = continuation.match(this.TrailingIDRegExp)) {
           return this.engine.identity[id[1]];
         } else {
@@ -27205,7 +27218,7 @@ Pairs = (function() {
     leftUpdate = (_ref = this.engine.updating.queries) != null ? _ref[left] : void 0;
     rightUpdate = (_ref1 = this.engine.updating.queries) != null ? _ref1[right] : void 0;
     collections = [this.engine.queries.get(left), this.engine.queries.get(right)];
-    values = [(_ref2 = leftUpdate != null ? leftUpdate[0] : void 0) != null ? _ref2 : collections[0], leftUpdate ? leftUpdate[1] : collections[0], (_ref3 = rightUpdate != null ? rightUpdate[0] : void 0) != null ? _ref3 : collections[1], rightUpdate ? rightUpdate[1] : collections[1]];
+    values = [(leftUpdate != null ? (_ref2 = leftUpdate[0]) != null ? _ref2.nodeType : void 0 : void 0) && leftUpdate[0] || collections[0], leftUpdate ? leftUpdate[1] : collections[0], (rightUpdate != null ? (_ref3 = rightUpdate[0]) != null ? _ref3.nodeType : void 0 : void 0) && rightUpdate[0] || collections[1], rightUpdate ? rightUpdate[1] : collections[1]];
     I = Math.max(this.count(values[0]), this.count(values[1]));
     J = Math.max(this.count(values[2]), this.count(values[3]));
     padded = void 0;
@@ -27237,6 +27250,7 @@ Pairs = (function() {
       }
     }
     if (((_ref5 = collections[1]) != null ? _ref5.keys : void 0) && !rightNew.single) {
+      debugger;
       for (index = _l = rightNew.length - 1; _l >= 0; index = _l += -1) {
         element = rightNew[index];
         if (!this.match(collections[1], element, scope)) {
@@ -27293,7 +27307,6 @@ Pairs = (function() {
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
-        debugger;
         this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
       }
     }
@@ -27312,7 +27325,7 @@ Pairs = (function() {
     if (cleaning) {
       this.clean(left);
     }
-    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left, right);
+    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + this.engine.PAIR + right);
   };
 
   Pairs.prototype.clean = function(left) {
@@ -27344,6 +27357,9 @@ Pairs = (function() {
       for (_l = 0, _len2 = rights.length; _l < _len2; _l++) {
         right = rights[_l];
         this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.PAIR, null, right.substring(1));
+        if (right === '→"mast"') {
+          debugger;
+        }
         delete this.engine.queries[right];
       }
       delete this.paths[left];

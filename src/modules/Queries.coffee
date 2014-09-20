@@ -72,6 +72,8 @@ class Queries
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
 
+    if continuation == 'style[type*="text/gss"]$2↓article$article1↑::this .title'
+      debugger
     if (index = collection.indexOf(node)) == -1
       for el, index in collection
         break unless @comparePosition(el, node, keys[index], key)
@@ -99,8 +101,6 @@ class Queries
   get: (operation, continuation, old) ->
     if typeof operation == 'string'
       result = @[operation]
-      if typeof result == 'string'
-        return @[result]
       return result
 
   # Remove observers from element
@@ -208,7 +208,7 @@ class Queries
       @unobserve(id, ref)
 
       if recursion != continuation
-        @updateCollections operation, continuation, scope, undefined, node, continuation, continuation
+        @updateCollections operation, continuation, scope, recursion, node, continuation, continuation
         if  removed == false
           debugger
         if @engine.isCollection(collection) && removed != false
@@ -440,7 +440,9 @@ class Queries
     return added
 
   set: (path, result) ->
-
+    old = @[path]
+    if !result?
+      ((@engine.updating.queries ||= {})[path] ||= [])[1] ||= old && old.slice && old.slice() || old ? null
     if result
       @[path] = result
     else

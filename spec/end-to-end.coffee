@@ -2414,15 +2414,29 @@ describe 'End - to - End', ->
     describe "context-specific VFL", ->
       it 'should work', (done) ->
         container.innerHTML = """
+        <style>
+          article *{
+            padding: 0;
+            margin: 0
+          }
+        </style>
         <article id="article1">
           <div class="media"></div>
-          <h2 class="title" id="title1"><span style="display:inline-block; height: 20px; width: 10px"></span></h2>
-          <p class="desc" id="desc1"><span style="display:inline-block; height: 40px; width: 10px"></span></p>
+          <h2 class="title" id="title1"><span style="display:block; height: 20px; width: 10px"></span></h2>
+          <p class="desc" id="desc1"><span style="display:block; height: 40px; width: 10px"></span></p>
+        </article>
+        <article id="article2">
+          <div class="media"></div>
+          <h2 class="title" id="title2"><span style="display:block; height: 10px; width: 10px"></span></h2>
+          <p class="desc" id="desc2"><span style="display:block; height: 30px; width: 10px"></span></p>
         </article>
 
         <style type="text/gss">
-          #container[width] == 300;
-          #container[left] == 0;
+          ::scope[width] == 300;
+          ::scope[left] == 0;
+          ::scope[top] == 0;
+
+          @v |(article)... in(::scope);
 
           article {
             @v |
@@ -2439,24 +2453,61 @@ describe 'End - to - End', ->
 
         </style>
         """
-        engine.once 'solve', (solution) ->
+        engine.then (solution) ->
           expect(solution).to.eql 
-            "$box2[width]": 70
-            "$box2[x]": 160
-            "$box2[y]": 0
-            "$box3[width]": 70
-            "$box3[x]": 230
-            "$box3[y]": 0
-            "$boxA[width]": 70
-            "$boxA[x]": 0
-            "$boxA[y]": 0
-            "$boxB[width]": 70
-            "$boxB[x]": 80
-            "$boxB[y]": 0
-            "$container[width]": 300
-            "$container[x]": 0
-            "gap": 0
-          done()
+             "$article1[height]": 66
+             "$article1[y]": 0
+
+             "$desc1[height]": 40
+             "$title1[height]": 20
+
+             "$title1[y]": 1
+             "$desc1[y]": 23
+
+             "$article2[height]": 46
+             "$article2[y]": 66
+             "$desc2[height]": 30
+             "$desc2[y]": 13 + 66
+             "$title2[height]": 10
+             "$title2[y]": 1 + 66
+
+             "$1[width]": 300
+             "$1[x]": 0
+             "$1[y]": 0
+          article = engine.$id('article1')
+          engine.scope.appendChild(article)
+
+          engine.then (solution) ->
+            expect(solution).to.eql 
+              "$article1[y]": 46
+ 
+              "$title1[y]": 1 + 46
+              "$desc1[y]": 23 + 46
+ 
+              "$article2[y]": 0
+              "$desc2[y]": 13
+              "$title2[y]": 1
+              # fixme: rearramge removes
+              "$article2[height]": 46
+
+            article = engine.$id('article2')
+            engine.scope.appendChild(article)
+            engine.then (solution) ->
+              expect(solution).to.eql 
+
+               "$article1[height]": 66
+               "$article1[y]": 0
+                
+               "$title1[y]": 1
+               "$desc1[y]": 23
+
+               "$article2[height]": 46
+               "$article2[y]": 66
+               "$desc2[height]": 30
+               "$desc2[y]": 13 + 66
+               "$title2[height]": 10
+               "$title2[y]": 1 + 66
+              done()
 
     describe "new VFL input", ->
       it 'should work', (done) ->

@@ -28,7 +28,7 @@ class Expressions
 
     # Use a shortcut operation when possible (e.g. native dom query)
     if operation.tail
-      operation = @skip(operation, ascender)
+      operation = @skip(operation, ascender, continuation)
 
     # Let engine modify continuation or return cached result
     if continuation && operation.path && operation.def.serialized
@@ -39,27 +39,31 @@ class Expressions
             return result
           else
             continuation = result
+            result = undefined
         when 'object'
-          return result
+          return result 
+          
         when 'boolean'
           return
 
-    # Recursively solve arguments, stop on undefined
-    args = @descend(operation, continuation, scope, meta, ascender, ascending)
+    if result == undefined
+      # Recursively solve arguments, stop on undefined
+      args = @descend(operation, continuation, scope, meta, ascender, ascending)
 
-    return if args == false
+      return if args == false
 
-    if operation.name && !operation.def.hidden
-      @engine.console.row(operation, args, continuation || "")
+      if operation.name && !operation.def.hidden
+        @engine.console.row(operation, args, continuation || "")
 
-    # Execute function and log it in continuation path
-    if operation.def.noop
-      result = args
+      # Execute function and log it in continuation path
+      if operation.def.noop
+        result = args
+      else
+        result = @execute(operation, continuation, scope, args)
+
+        continuation = @engine.getOperationPath(operation, continuation, scope)
     else
-      result = @execute(operation, continuation, scope, args)
-
-      continuation = @engine.getOperationPath(operation, continuation, scope)
-
+      debugger
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
 
@@ -211,8 +215,9 @@ class Expressions
     return result
 
   # Advance to a groupped shortcut operation
-  skip: (operation, ascender) ->
-    if (operation.tail.path == operation.tail.key || ascender?)
+  skip: (operation, ascender, continuation) ->
+    if (operation.tail.path == operation.tail.key || ascender? || 
+        (continuation && continuation.lastIndexOf(@engine.PAIR) != continuation.indexOf(@engine.PAIR)))
       return operation.tail.shortcut ||= 
         @engine.methods[operation.def.group].perform.call(@engine, operation)
     else
