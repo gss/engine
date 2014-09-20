@@ -26379,9 +26379,6 @@ Queries = (function() {
           this.clean(continuation + id);
         }
       }
-      if (collection && !collection.length) {
-        this.set(continuation, void 0);
-      }
     } else if (node) {
       this.unobserve(id, true);
     }
@@ -26420,9 +26417,6 @@ Queries = (function() {
         contd = this.engine.getContinuation(path);
         if ((_ref2 = this.engine.updating) != null) {
           _ref2.remove(contd);
-        }
-        if (contd === "#box1!>,>div$group1↑::this :first-child") {
-          debugger;
         }
         this.engine.provide(['remove', contd]);
       }
@@ -26485,7 +26479,7 @@ Queries = (function() {
   };
 
   Queries.prototype.updateCollection = function(operation, path, scope, added, removed, recursion, contd) {
-    var collection, i, index, node, sorted, updated, _i, _len, _ref, _ref1, _results,
+    var collection, i, index, node, sorted, updated, _i, _len, _ref, _ref1,
       _this = this;
     if (removed) {
       this.each('remove', removed, path, operation, scope, operation, recursion, contd);
@@ -26504,7 +26498,6 @@ Queries = (function() {
         return !_this.comparePosition(a, b, collection.keys[i], collection.keys[j]);
       });
       updated = void 0;
-      _results = [];
       for (index = _i = 0, _len = sorted.length; _i < _len; index = ++_i) {
         node = sorted[index];
         if (node !== collection[index]) {
@@ -26513,8 +26506,6 @@ Queries = (function() {
             updated.keys = collection.keys.slice();
             updated.paths = collection.paths.slice();
             updated.scopes = collection.scopes.slice();
-            updated.duplicates = collection.duplicates;
-            updated.isCollection = true;
             updated[index] = node;
           }
           i = collection.indexOf(node);
@@ -26523,12 +26514,16 @@ Queries = (function() {
           updated.paths[index] = collection.paths[i];
           updated.scopes[index] = collection.scopes[i];
           this.chain(sorted[index - 1], node, path);
-          _results.push(this.chain(node, sorted[index + 1], path));
-        } else {
-          _results.push(void 0);
+          this.chain(node, sorted[index + 1], path);
         }
       }
-      return _results;
+      if (updated) {
+        collection.splice();
+        collection.push.apply(collection, updated);
+        collection.keys = updated.keys;
+        collection.paths = updated.keys;
+        return collection.scopes = updated.keys;
+      }
     }
   };
 

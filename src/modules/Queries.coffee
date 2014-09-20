@@ -214,9 +214,6 @@ class Queries
         if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
 
-      if collection && !collection.length
-        this.set continuation, undefined 
-
     else if node
       # Detach queries attached to an element when removing element by id
       @unobserve(id, true)
@@ -252,8 +249,6 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
-        if contd == "#box1!>,>div$group1↑::this :first-child"
-          debugger
         @engine.provide(['remove', contd])
     return true
 
@@ -323,8 +318,6 @@ class Queries
             updated.keys = collection.keys.slice()
             updated.paths = collection.paths.slice()
             updated.scopes = collection.scopes.slice()
-            updated.duplicates = collection.duplicates
-            updated.isCollection = true
             updated[index] = node
           i = collection.indexOf(node)
           updated[index] = node
@@ -334,6 +327,13 @@ class Queries
 
           @chain sorted[index - 1], node, path
           @chain node, sorted[index + 1], path
+
+      if updated
+        collection.splice()
+        collection.push.apply(collection, updated)
+        collection.keys = updated.keys
+        collection.paths = updated.keys
+        collection.scopes = updated.keys
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result = undefined, continuation, operation, scope, needle, recursion) ->

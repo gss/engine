@@ -527,7 +527,7 @@ describe 'Nested Rules', ->
                         group1.parentNode.removeChild(group1)
                         engine.once 'solve', ->
                           expect(stringify(engine.updated.getProblems())).to.eql stringify([
-                            ['remove', "#box1!>,>div$group1↑::this :first-child", "#box1!>,>div$group1", ">$group1↑div", ">$group1"]
+                            ['remove', "#box1!>,>div$group1", ">$group1↑div", ">$group1"]
                           ])
                           window.zzzz = true
                           console.log('append vessel0')
