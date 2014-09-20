@@ -766,6 +766,7 @@ describe 'End - to - End', ->
             "$b3[x]": 100
           b3 = engine.$id('b3')
           b3.parentNode.removeChild(b3)
+          console.log(1)
 
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
@@ -774,8 +775,10 @@ describe 'End - to - End', ->
               "$a2[x]": 100
               "$b1[x]": 100
               "$b2[x]": 100
+
             b2 = engine.$id('b2')
             b2.parentNode.removeChild(b2)
+            console.log(1)
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
@@ -791,6 +794,8 @@ describe 'End - to - End', ->
                   "$b2[x]": 100
                 a1 = engine.$id('a1')
                 a1.parentNode.removeChild(a1)
+                console.log(1)
+                debugger
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql 
                     "x": 100

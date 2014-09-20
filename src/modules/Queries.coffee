@@ -86,7 +86,6 @@ class Queries
     else
       #if scopes[index] != scope# || paths[index] != path
       (collection.duplicates ||= []).push(node)
-      debugger
       keys.push(key)
       paths.push(contd)
       scopes.push(scope)
@@ -151,7 +150,6 @@ class Queries
             scopes.splice(length + index, 1)
             return false
           else
-            debugger
             duplicate ?= index
 
     if operation && length && needle
@@ -208,9 +206,10 @@ class Queries
       ref = continuation + (collection?.length? && id || '')
       @unobserve(id, ref)
 
-      if recursion != continuation && @engine.isCollection(collection) 
+      if recursion != continuation
         @updateCollections operation, continuation, scope, undefined, node, continuation, continuation
-        @clean(continuation + id)
+        if @engine.isCollection(collection) 
+          @clean(continuation + id)
 
       if collection && !collection.length
         this.set continuation, undefined 
@@ -250,8 +249,6 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
-        if contd == ".group .vessel$vessel1↓ .box:last-child$box4"
-          debugger
         @engine.provide(['remove', contd])
     return true
 
@@ -304,11 +301,9 @@ class Queries
       @each 'add', added, path, operation, scope, operation, contd
 
     if (collection = @[path])?.keys
-      debugger
       sorted = collection.slice().sort (a, b) =>
         i = collection.indexOf(a)
         j = collection.indexOf(b)
-        debugger
         return !@comparePosition(a, b, collection.keys[i], collection.keys[j])
       
 
@@ -436,8 +431,6 @@ class Queries
     return added
 
   set: (path, result) ->
-    if path == 'style[type*="text/gss"]$2↓.a$a2↑!+.a'
-      debugger
     if result
       @[path] = result
     else

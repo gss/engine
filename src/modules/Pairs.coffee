@@ -106,6 +106,12 @@ class Pairs
           if collection.scopes[index + collection.length] == scope
             return true
 
+  count: (value) ->
+    if value?.push 
+      value.length 
+    else
+      value? && 1 || 0
+
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
     leftUpdate = @engine.updating.queries?[left]
@@ -123,12 +129,8 @@ class Pairs
       if rightUpdate then rightUpdate[1] else collections[1]
     ]
 
-    I = Math.max(
-                 if values[0]?.push then values[0].length else values[0] && 1 || 1, 
-                 if values[1]?.push then values[1].length else values[1] && 1 || 1)
-    J = Math.max(
-                 if values[2]?.push then values[2].length else values[2] && 1 || 1, 
-                 if values[3]?.push then values[3].length else values[3] && 1 || 1)
+    I = Math.max(@count(values[0]), @count(values[1]))
+    J = Math.max(@count(values[2]), @count(values[3]))
 
 
     padded = undefined
