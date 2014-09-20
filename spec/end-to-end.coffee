@@ -420,6 +420,7 @@ describe 'End - to - End', ->
             "$a1[x]": 111,
             "$a3[x]": 222,
 
+          debugger
           container.appendChild(engine.$id('a1'))
           engine.once 'solve', ->
           

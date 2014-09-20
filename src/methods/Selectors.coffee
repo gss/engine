@@ -79,7 +79,6 @@ class Selectors
       unless global
         if (tail.parent == operation)
           shortcut.splice(1, 0, tail[1])
-      debugger
       if shortcut.length > 2
         if operation.marked
           shortcut.path = shortcut.key = head.path

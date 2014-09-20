@@ -60,18 +60,13 @@ class Queries
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key, contd) ->
-    console.error(key, 777, node)
-    collection = @get(continuation)
+    collection = @[continuation] ||= []
+    if !collection.push
+      return
     update = (@engine.updating.queries ||= {})[continuation] ||= []
     if update[1] == undefined 
       update[1] = (copy = collection?.slice?()) || null
 
-    if collection
-      return unless collection.keys
-    else
-      @[continuation] = collection = []
-      if continuation == 'style[type*="text/gss"]$2↓article .title'
-        debugger
     keys = collection.keys ||= []
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
@@ -91,6 +86,7 @@ class Queries
     else
       #if scopes[index] != scope# || paths[index] != path
       (collection.duplicates ||= []).push(node)
+      debugger
       keys.push(key)
       paths.push(contd)
       scopes.push(scope)
@@ -135,23 +131,8 @@ class Queries
     if !watchers.length && watchers == @watchers[id]
       delete @watchers[id] 
 
-  # Detach everything related to continuation from specific element
-  removeFromNode: (id, continuation, operation, scope, strict) ->
-    collection = @get(continuation)
-
-    # Remove all watchers that match continuation path
-    ref = continuation + (collection?.length? && id || '')
-    @unobserve(id, ref)
-
-    return if strict || !(result = @get(continuation))? 
-
-    @updateOperationCollection operation, continuation, scope, undefined, @engine.identity[id], true
-    
-    if result.length?
-      @clean(continuation + id)
-
-  # Remove element from collection manually
-  removeFromCollection: (node, continuation, operation, scope, manual, contd) ->
+  # Remove element from collection needlely
+  removeFromCollection: (node, continuation, operation, scope, needle, contd) ->
     return unless collection = @get(continuation)
     length = collection.length
     keys = collection.keys
@@ -163,7 +144,7 @@ class Queries
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
         if dup == node
-          if (keys[length + index] == manual && scopes[length + index] == scope) && contd == paths[length + index]
+          if (keys[length + index] == needle && scopes[length + index] == scope) && contd == paths[length + index]
             duplicates.splice(index, 1)
             keys.splice(length + index, 1)
             paths.splice(length + index, 1)
@@ -173,13 +154,13 @@ class Queries
             debugger
             duplicate ?= index
 
-    if operation && length && manual
+    if operation && length && needle
       ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
         if keys
-          return false unless keys[index] == manual && scopes[index] == scope && paths[index]
+          return false unless keys[index] == needle && scopes[index] == scope# && paths[index]
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -202,7 +183,7 @@ class Queries
 
 
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope, manual, strict, contd) ->
+  remove: (id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
       node = id
       id = @engine.identity.provide(id)
@@ -217,12 +198,19 @@ class Queries
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
         ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
-      removed = @removeFromCollection(node, continuation, operation, scope, manual, contd)
+      removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
 
       @engine.pairs.remove(id, continuation)
 
-      unless removed == false
-        @removeFromNode(id, continuation, operation, scope, strict)
+      collection = @get(continuation)
+
+      # Remove all watchers that match continuation path
+      ref = continuation + (collection?.length? && id || '')
+      @unobserve(id, ref)
+
+      if recursion != continuation && @engine.isCollection(collection) 
+        @updateCollections operation, continuation, scope, undefined, node, continuation, continuation
+        @clean(continuation + id)
 
       if collection && !collection.length
         this.set continuation, undefined 
@@ -247,7 +235,8 @@ class Queries
       @remove @engine.identity.find(scope), path, operation, scope, operation
     
     @engine.solved.remove(path)
-    @engine.stylesheets?.remove(path, @['style[type*="text/gss"]'])
+    @engine.stylesheets?.remove(path)
+    @engine.stylesheets?.remove(path)
 
     @set path, undefined
 
@@ -261,7 +250,8 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
-
+        if contd == ".group .vessel$vessel1↓ .box:last-child$box4"
+          debugger
         @engine.provide(['remove', contd])
     return true
 
@@ -281,10 +271,11 @@ class Queries
       @match(right, '$pseudo', 'previous', undefined, continuation)
       @match(right, '$pseudo', 'first', undefined, continuation)
 
-  # Combine nodes from multiple selector paths
-  updateOperationCollection: (operation, path, scope, added, removed, strict, contd) ->
+  updateCollections: (operation, path, scope, added, removed, recursion, contd) ->
+    
     oppath = @engine.getCanonicalPath(path)
     if path == oppath || @engine.PAIR + oppath == path
+      
       if operation
         if operation.bound && (operation.path != operation.key)
           if added
@@ -299,28 +290,58 @@ class Queries
             @removeMatch(remove, path)
         else
           @removeMatch(removed, path)
-      return 
 
-    collection = @get(oppath)
-    return if removed && removed == collection
-
+    else if recursion != oppath
+      @updateCollection operation, oppath, scope, added, removed, oppath, contd
+    @updateCollection operation, path, scope, added, removed, recursion, contd
+    
+  # Combine nodes from multiple selector paths
+  updateCollection: (operation, path, scope, added, removed, recursion, contd) ->
     if removed
-      @each 'remove', removed, oppath, operation, scope, operation, strict, contd
+      @each 'remove', removed, path, operation, scope, operation, recursion, contd
     
     if added
-      @each 'add', added, oppath, operation, scope, operation, contd
+      @each 'add', added, path, operation, scope, operation, contd
+
+    if (collection = @[path])?.keys
+      debugger
+      sorted = collection.slice().sort (a, b) =>
+        i = collection.indexOf(a)
+        j = collection.indexOf(b)
+        debugger
+        return !@comparePosition(a, b, collection.keys[i], collection.keys[j])
+      
+
+      updated = undefined
+      for node, index in sorted
+        if node != collection[index]
+          if !updated
+            @[path] = updated = collection.slice()
+            updated.keys = collection.keys.slice()
+            updated.paths = collection.paths.slice()
+            updated.scopes = collection.scopes.slice()
+            updated.duplicates = collection.duplicates
+            updated[index] = node
+          i = collection.indexOf(node)
+          updated[index] = node
+          updated.keys[index] = collection.keys[i]
+          updated.paths[index] = collection.paths[i]
+          updated.scopes[index] = collection.scopes[i]
+
+          @chain sorted[index - 1], node, path
+          @chain node, sorted[index + 1], path
 
   # Perform method over each node in nodelist, or against given node
-  each: (method, result = undefined, continuation, operation, scope, manual, strict) ->
+  each: (method, result = undefined, continuation, operation, scope, needle, recursion) ->
     if @engine.isCollection(result)
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] child, continuation, operation, scope, manual, strict
+        if @[method] child, continuation, operation, scope, needle, recursion
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] result, continuation, operation, scope, manual, strict
+      return @[method] result, continuation, operation, scope, needle, recursion
 
   # Filter out known nodes from DOM collections
   update: (node, args, result = undefined, operation, continuation, scope) ->
@@ -347,6 +368,7 @@ class Queries
 
     isCollection = @engine.isCollection(result)
 
+
     # Clean refs of nodes that dont match anymore
     if old
       if @engine.isCollection(old)
@@ -354,7 +376,6 @@ class Queries
         old = old.slice()
         for child in old
           if !result || Array.prototype.indexOf.call(result, child) == -1
-            @remove child, path, operation, scope
             (removed ||= []).push child
       else if result != old
         if !result
@@ -374,6 +395,7 @@ class Queries
 
     # Register newly found nodes
     if isCollection
+      @[path] ||= []
       added = undefined
       for child in result
         if !old || Array.prototype.indexOf.call(old, child) == -1  
@@ -387,9 +409,9 @@ class Queries
       added = result 
       removed = old
 
-    unless added == removed
-      if added || removed
-        @updateOperationCollection operation, path, scope, added, removed, true, continuation
+    @updateCollections(operation, path, scope, added, removed, undefined, continuation)
+        
+    @
 
     #unless operation.def.capture
       # Subscribe node to the query
@@ -408,34 +430,18 @@ class Queries
 
     return if result == old
 
-    if result?.push
-      result.isCollection = true
-    
-    @set path, result
+    unless result?.push
+      @set path, result
 
     return added
 
   set: (path, result) ->
-    if @engine.updating
-      update = (@engine.updating.queries ||= {})[path] ||= []
-      if update[1] == undefined 
-        update[1] = @[path] || null
-        if update[1]?.length
-          update[1] = update[1].slice()
-
+    if path == 'style[type*="text/gss"]$2↓.a$a2↑!+.a'
+      debugger
     if result
-
       @[path] = result
-
-      if @engine.isCollection(result)
-        for item, index in result
-          @chain result[index - 1], item, path
-        if item
-          @chain item, undefined, path
     else
-
       delete @[path]
-
     @engine.pairs?.set(path, result)
 
     return

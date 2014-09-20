@@ -123,21 +123,26 @@ class Pairs
       if rightUpdate then rightUpdate[1] else collections[1]
     ]
 
-    sorted = values.slice().sort (a, b) -> 
-      (b?.push && b.length ? -1) - (a?.push && a.length ? -1)
-    sorted[0] ||= []
+    I = Math.max(
+                 if values[0]?.push then values[0].length else values[0] && 1 || 1, 
+                 if values[1]?.push then values[1].length else values[1] && 1 || 1)
+    J = Math.max(
+                 if values[2]?.push then values[2].length else values[2] && 1 || 1, 
+                 if values[3]?.push then values[3].length else values[3] && 1 || 1)
+
 
     padded = undefined
     for value, index in values
       unless value?.push
-        values[index] = sorted[0].map && (sorted[0].map -> value) || [value]
+        length = if index > 1 then I else J
+        values[index] = [0...length].map -> value
+        
         values[index].single = true
       else if value?.keys
         values[index] = values[index].slice()
       else
         values[index] ||= []
 
-      #values[index]
 
     [leftNew, leftOld, rightNew, rightOld] = values
 
