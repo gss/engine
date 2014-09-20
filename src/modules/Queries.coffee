@@ -49,7 +49,7 @@ class Queries
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
   
   removeMatch: (node, continuation) ->
-    return unless node.nodeType
+    return unless node.nodeType == 1
     if matches = node.getAttribute('matches')
       if (index = continuation.indexOf(@engine.DESCEND)) > -1
         continuation = continuation.substring(index + 1)
@@ -287,6 +287,7 @@ class Queries
 
     else if recursion != oppath
       @updateCollection operation, oppath, scope, added, removed, oppath, contd
+
     @updateCollection operation, path, scope, added, removed, recursion, contd
     
   # Combine nodes from multiple selector paths

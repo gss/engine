@@ -53,7 +53,7 @@ class Document extends Abstract
         @updating.resizing = 'computing'
         @once 'solve', ->
           if @updated.resizing == 'scheduled'
-            @document.events.resize.call(@)
+            @triggerEvent('resize')
 
 
       @solve id + ' resized', ->

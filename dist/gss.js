@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-21) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -24408,6 +24409,8 @@ Update.prototype = {
               priority = position;
             }
           }
+        } else if (!domain) {
+          priority--;
         }
       }
       position++;
@@ -25484,7 +25487,7 @@ Document = (function(_super) {
         this.updating.resizing = 'computing';
         this.once('solve', function() {
           if (this.updated.resizing === 'scheduled') {
-            return this.document.events.resize.call(this);
+            return this.triggerEvent('resize');
           }
         });
       }
@@ -26176,7 +26179,7 @@ Queries = (function() {
 
   Queries.prototype.removeMatch = function(node, continuation) {
     var index, matches, path;
-    if (!node.nodeType) {
+    if (node.nodeType !== 1) {
       return;
     }
     if (matches = node.getAttribute('matches')) {

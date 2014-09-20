@@ -377,6 +377,8 @@ Update.prototype =
               (!other.frame || other.frame == domain.frame)
             if priority == @domains.length
               priority = position
+        else if !domain
+          priority--
       position++
     if !merged
       @domains.splice(priority, 0, domain)
