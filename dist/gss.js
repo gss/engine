@@ -21017,8 +21017,9 @@ Rules = (function() {
       return true;
     },
     release: function(result, operation, continuation, scope) {
+      debugger;
       var contd;
-      console.error('release', result, operation);
+      console.error('release', result, operation, continuation);
       contd = this.getScopePath(scope, continuation) + operation.parent.path;
       this.queries.remove(result, contd, operation.parent, scope, operation, void 0, continuation);
       return true;
@@ -26548,7 +26549,7 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, group, id, isCollection, old, path, pathed, queried, query, removed, watchers, _base, _base1, _base2, _base3, _base4, _i, _j, _len, _len1;
+    var added, child, group, id, index, isCollection, old, path, pathed, queried, query, removed, watchers, _base, _base1, _base2, _base3, _base4, _i, _j, _len, _len1, _ref;
     if (result == null) {
       result = void 0;
     }
@@ -26576,11 +26577,12 @@ Queries = (function() {
     if (old) {
       if (this.engine.isCollection(old)) {
         removed = void 0;
-        old = old.slice();
-        for (_i = 0, _len = old.length; _i < _len; _i++) {
-          child = old[_i];
-          if (!result || Array.prototype.indexOf.call(result, child) === -1) {
-            (removed || (removed = [])).push(child);
+        for (index = _i = 0, _len = old.length; _i < _len; index = ++_i) {
+          child = old[index];
+          if (!old.scopes || ((_ref = old.scopes) != null ? _ref[index] : void 0) === scope) {
+            if (!result || Array.prototype.indexOf.call(result, child) === -1) {
+              (removed || (removed = [])).push(child);
+            }
           }
         }
       } else if (result !== old) {

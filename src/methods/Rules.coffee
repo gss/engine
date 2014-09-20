@@ -46,7 +46,8 @@ class Rules
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, operation, continuation, scope) ->
-      console.error('release', result, operation)
+      debugger
+      console.error('release', result, operation, continuation)
       contd = @getScopePath(scope, continuation) + operation.parent.path
       @queries.remove(result, contd, operation.parent, scope, operation, undefined, continuation)
       return true

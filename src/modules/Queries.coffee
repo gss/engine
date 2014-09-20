@@ -377,10 +377,10 @@ class Queries
     if old
       if @engine.isCollection(old)
         removed = undefined
-        old = old.slice()
-        for child in old
-          if !result || Array.prototype.indexOf.call(result, child) == -1
-            (removed ||= []).push child
+        for child, index in old
+          if !old.scopes || old.scopes?[index] == scope
+            if !result || Array.prototype.indexOf.call(result, child) == -1
+              (removed ||= []).push child
       else if result != old
         if !result
           removed = old
