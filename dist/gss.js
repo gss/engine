@@ -21278,6 +21278,7 @@ Selectors = (function() {
   };
 
   Selectors.prototype.onQuery = function(node, args, result, operation, continuation, scope) {
+    debugger;
     if (operation.def.hidden) {
       return result;
     }
@@ -26493,7 +26494,7 @@ Queries = (function() {
         var i, j;
         i = collection.indexOf(a);
         j = collection.indexOf(b);
-        return !_this.comparePosition(a, b, collection.keys[i], collection.keys[j]);
+        return _this.comparePosition(a, b, collection.keys[i], collection.keys[j]) && -1 || 1;
       });
       updated = void 0;
       for (index = _i = 0, _len = sorted.length; _i < _len; index = ++_i) {
@@ -26778,6 +26779,7 @@ Mutations = (function() {
   };
 
   Mutations.prototype.solve = function(mutations) {
+    debugger;
     var result;
     if (!this.engine.engine.running) {
       return this.engine.engine.compile(true);

@@ -21,6 +21,7 @@ class Mutations
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
+    debugger
     return @engine.engine.compile(true) unless @engine.engine.running
 
     result = @engine.engine.solve 'mutations', ->

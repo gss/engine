@@ -25,6 +25,7 @@ class Selectors
 
   # Observe hits to DOM, subscribe elements to query 
   onQuery: (node, args, result, operation, continuation, scope) ->
+    debugger
     return result if operation.def.hidden
     return @queries.update(node, args, result, operation, continuation, scope)
 

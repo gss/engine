@@ -2479,33 +2479,26 @@ describe 'End - to - End', ->
 
           engine.then (solution) ->
             expect(solution).to.eql 
-              "$article1[y]": 46
- 
               "$title1[y]": 1 + 46
               "$desc1[y]": 23 + 46
  
               "$article2[y]": 0
+              "$article1[y]": 46
               "$desc2[y]": 13
               "$title2[y]": 1
-              # fixme: rearramge removes
-              "$article2[height]": 46
 
             article = engine.$id('article2')
             engine.scope.appendChild(article)
             engine.then (solution) ->
               expect(solution).to.eql 
 
-               "$article1[height]": 66
                "$article1[y]": 0
                 
                "$title1[y]": 1
                "$desc1[y]": 23
 
-               "$article2[height]": 46
                "$article2[y]": 66
-               "$desc2[height]": 30
                "$desc2[y]": 13 + 66
-               "$title2[height]": 10
                "$title2[y]": 1 + 66
               done()
 

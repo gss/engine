@@ -305,7 +305,7 @@ class Queries
       sorted = collection.slice().sort (a, b) =>
         i = collection.indexOf(a)
         j = collection.indexOf(b)
-        return !@comparePosition(a, b, collection.keys[i], collection.keys[j])
+        return @comparePosition(a, b, collection.keys[i], collection.keys[j]) && -1 || 1
       
 
       updated = undefined
