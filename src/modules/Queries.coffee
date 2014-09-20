@@ -72,8 +72,6 @@ class Queries
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
 
-    if continuation == 'style[type*="text/gss"]$2↓article$article1↑::this .title'
-      debugger
     if (index = collection.indexOf(node)) == -1
       for el, index in collection
         break unless @comparePosition(el, node, keys[index], key)
@@ -209,8 +207,7 @@ class Queries
 
       if recursion != continuation
         @updateCollections operation, continuation, scope, recursion, node, continuation, continuation
-        if  removed == false
-          debugger
+
         if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
 

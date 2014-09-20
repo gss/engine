@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-20) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -26205,9 +26204,6 @@ Queries = (function() {
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
-    if (continuation === 'style[type*="text/gss"]$2↓article$article1↑::this .title') {
-      debugger;
-    }
     if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
@@ -26374,9 +26370,6 @@ Queries = (function() {
       this.unobserve(id, ref);
       if (recursion !== continuation) {
         this.updateCollections(operation, continuation, scope, recursion, node, continuation, continuation);
-        if (removed === false) {
-          debugger;
-        }
         if (this.engine.isCollection(collection) && removed !== false) {
           this.clean(continuation + id);
         }
@@ -27250,7 +27243,6 @@ Pairs = (function() {
       }
     }
     if (((_ref5 = collections[1]) != null ? _ref5.keys : void 0) && !rightNew.single) {
-      debugger;
       for (index = _l = rightNew.length - 1; _l >= 0; index = _l += -1) {
         element = rightNew[index];
         if (!this.match(collections[1], element, scope)) {
@@ -27357,9 +27349,6 @@ Pairs = (function() {
       for (_l = 0, _len2 = rights.length; _l < _len2; _l++) {
         right = rights[_l];
         this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.PAIR, null, right.substring(1));
-        if (right === '→"mast"') {
-          debugger;
-        }
         delete this.engine.queries[right];
       }
       delete this.paths[left];

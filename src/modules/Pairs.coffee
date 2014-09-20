@@ -160,7 +160,6 @@ class Pairs
           leftNew.splice(index, 1)
 
     if collections[1]?.keys && !rightNew.single
-      debugger
       for element, index in rightNew by -1
         if !@match(collections[1], element, scope)
           rightNew.splice(index, 1)
@@ -238,8 +237,6 @@ class Pairs
 
       for right in rights
         @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))
-        if right == '→"mast"'
-          debugger
         delete @engine.queries[right]
       delete @paths[left]
     index = 0
