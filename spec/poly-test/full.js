@@ -30,8 +30,6 @@ describe('Full page tests', function() {
   var container, engine, index, type, _i, _len, _ref, _results;
   engine = container = null;
   afterEach(function() {
-    debugger;
-    remove(container);
     return engine.destroy();
   });
   _ref = ['With worker', 'Without worker'];

@@ -332,8 +332,7 @@ describe 'Full page tests', ->
   engine = container = null
 
   afterEach ->
-    debugger
-    remove(container)
+    #remove(container)
     engine.destroy()
 
   for type, index in ['With worker', 'Without worker']

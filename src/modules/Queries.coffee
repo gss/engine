@@ -63,6 +63,7 @@ class Queries
     collection = @[continuation] ||= []
     if !collection.push
       return
+    collection.isCollection = true
     update = (@engine.updating.queries ||= {})[continuation] ||= []
     if update[1] == undefined 
       update[1] = (copy = collection?.slice?()) || null
@@ -208,7 +209,9 @@ class Queries
 
       if recursion != continuation
         @updateCollections operation, continuation, scope, undefined, node, continuation, continuation
-        if @engine.isCollection(collection) 
+        if  removed == false
+          debugger
+        if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
 
       if collection && !collection.length
@@ -249,6 +252,8 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
+        if contd == "#box1!>,>div$group1↑::this :first-child"
+          debugger
         @engine.provide(['remove', contd])
     return true
 
@@ -297,6 +302,9 @@ class Queries
     if removed
       @each 'remove', removed, path, operation, scope, operation, recursion, contd
     
+    if (collection = @[path])?.keys && added == collection
+      return
+
     if added
       @each 'add', added, path, operation, scope, operation, contd
 
@@ -316,6 +324,7 @@ class Queries
             updated.paths = collection.paths.slice()
             updated.scopes = collection.scopes.slice()
             updated.duplicates = collection.duplicates
+            updated.isCollection = true
             updated[index] = node
           i = collection.indexOf(node)
           updated[index] = node
@@ -404,10 +413,10 @@ class Queries
       added = result 
       removed = old
 
-    @updateCollections(operation, path, scope, added, removed, undefined, continuation)
-        
-    @
+    if !added?.keys
 
+      @updateCollections(operation, path, scope, added, removed, undefined, continuation)
+        
     #unless operation.def.capture
       # Subscribe node to the query
     if id = @engine.identity.provide(node)
@@ -431,6 +440,7 @@ class Queries
     return added
 
   set: (path, result) ->
+
     if result
       @[path] = result
     else
