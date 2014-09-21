@@ -130,9 +130,7 @@ class Rules
         @queries[path] = condition
         if !d && (d = @pairs.dirty)
           @pairs.onBeforeSolve()
-          @updating.paired = undefined
-          @updating.queried = @updating.queries
-          @updating.collections = @updating.queries = undefined
+          @updating.reset()
 
         @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + @engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
         

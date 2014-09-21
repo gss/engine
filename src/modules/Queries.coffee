@@ -14,13 +14,13 @@
 class Queries
   constructor: (@engine) ->
     @watchers = {}
-    @qualified = []
+    @mutations = []
 
   onBeforeSolve: ->
     # Update all DOM queries that matched mutations
     index = 0
-    while @qualified[index]
-      watcher = @qualified.splice(0, 3)
+    while @mutations[index]
+      watcher = @mutations.splice(0, 3)
       @engine.document.solve watcher[0], watcher[1], watcher[2]
       
     # Execute all deferred selectors (e.g. comma)
@@ -70,6 +70,9 @@ class Queries
     keys = collection.keys ||= []
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
+
+
+    @snapshot collection, continuation, scope
 
     if (index = collection.indexOf(node)) == -1
       for el, index in collection
@@ -132,6 +135,24 @@ class Queries
     if !watchers.length && watchers == @watchers[id]
       delete @watchers[id] 
 
+  filterByScope: (collection, scope)->
+    return collection unless collection?.scopes
+    length = collection.length
+    result = []
+    for s, index in collection.scopes
+      if s == scope
+        if index < length
+          value = collection[index]
+        else
+          value = collection.duplicates[index - length]
+      if result.indexOf(value) == -1
+        result.push(value)
+    return result
+
+  snapshot: (collection, key, scope) ->
+    path = @engine.identity.provide(scope) + @engine.DESCEND + key
+    (@engine.updating.collections ||= {})[path] ||= @filterByScope(collection, scope)
+
   # Remove element from collection needlely
   removeFromCollection: (node, continuation, operation, scope, needle, contd) ->
     return null unless (collection = @get(continuation))?.keys
@@ -155,6 +176,7 @@ class Queries
               (keys[length + index] == needle)) &&
               scopes[length + index] == scope
 
+            @snapshot collection, continuation, scope
             duplicates.splice(index, 1)
             keys.splice(length + index, 1)
             paths.splice(length + index, 1)
@@ -173,6 +195,7 @@ class Queries
           return negative if scopes[index] != scope
           return negative if refs.indexOf(paths[index]) == -1
           return negative if keys[index] != needle
+          @snapshot collection, continuation, scope
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -259,8 +282,8 @@ class Queries
     @set path, undefined
 
     # Remove queries in queue and global watchers that match the path 
-    if @qualified
-      @unobserve(@qualified, path, true)
+    if @mutations
+      @unobserve(@mutations, path, true)
 
     @unobserve(@engine.scope._gss_id, path)
 
@@ -276,7 +299,7 @@ class Queries
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
     query = @engine.getQueryPath(operation, node)
-    return @engine.updating?.collections?[query]
+    return @engine.updating?.queries?[query]
 
   chain: (left, right, continuation) ->
     if left
@@ -437,20 +460,13 @@ class Queries
       if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         watchers.push(operation, continuation, scope)
     
-    #return if noop
-      
-    if old?.length == 0
-      debugger
     if query && !@engine.updating.collections.hasOwnProperty(query)
       @engine.updating.collections[query] = old
-      debugger
       (@engine.updating.queries ||= {})[query] = result
 
     if !@engine.updating.collections.hasOwnProperty(path)
       @engine.updating.collections[path] = old
 
-    if path == @engine.PAIR + '::this .desc'
-      debugger
 
     return if result == old
 
@@ -464,8 +480,6 @@ class Queries
     if !result? && !@engine.updating?.collections?.hasOwnProperty(path)
       (@engine.updating.collections ||= {})[path] ||= old && old.slice && old.slice() || old ? null
     if result
-      if result[0] == '"col-1"'
-        debugger
       @[path] = result
     else
       delete @[path]
@@ -504,13 +518,13 @@ class Queries
   # Check if query observes qualifier by combinator 
   qualify: (operation, continuation, scope, groupped, qualifier, fallback) ->
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
-      if @engine.indexOfTriplet(@qualified, operation, continuation, scope) == -1
+      if @engine.indexOfTriplet(@mutations, operation, continuation, scope) == -1
         length = (continuation || '').length
         # Make shorter continuation keys run before longer ones
-        for qualified, index in @qualified by 3
-          if (@qualified[index + 1] || '').length > length
+        for mutations, index in @mutations by 3
+          if (@mutations[index + 1] || '').length > length
             break
-        @qualified.splice(index, 0, operation, continuation, scope)
+        @mutations.splice(index, 0, operation, continuation, scope)
     @
 
   # Compare position of two nodes to sort collection in DOM order

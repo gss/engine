@@ -20145,7 +20145,6 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    debugger;
     var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, restyled, solution, source, workflow, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
@@ -20258,8 +20257,7 @@ Engine = (function(_super) {
     if ((_ref2 = this.pairs) != null) {
       _ref2.onBeforeSolve();
     }
-    this.updating.queried = this.updating.queries;
-    this.updating.collections = this.updating.queries = void 0;
+    this.updating.reset();
     effects = {};
     effects = this.updating.each(this.resolve, this, effects);
     if ((_ref3 = this.updating.busy) != null ? _ref3.length : void 0) {
@@ -20289,9 +20287,6 @@ Engine = (function(_super) {
     var _base;
     if (solution.operation) {
       return this.engine.updating.provide(solution);
-    }
-    if (solution[0] === '"col-1"') {
-      debugger;
     }
     if (!solution.push) {
       return this.updating.each(this.resolve, this, solution) || this.onSolve();
@@ -21116,9 +21111,7 @@ Rules = (function() {
         this.queries[path] = condition;
         if (!d && (d = this.pairs.dirty)) {
           this.pairs.onBeforeSolve();
-          this.updating.paired = void 0;
-          this.updating.queried = this.updating.queries;
-          this.updating.collections = this.updating.queries = void 0;
+          this.updating.reset();
         }
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
@@ -24432,6 +24425,18 @@ Update.prototype = {
     }
     return this;
   },
+  reset: function() {
+    var collections, mutations, queries;
+    queries = this.queries;
+    this.queries = {};
+    this.queries.previous = queries;
+    collections = this.collections;
+    this.collections = {};
+    this.collections.previous = collections;
+    mutations = this.mutations;
+    this.mutations = [];
+    return this.mutations.previous = mutations;
+  },
   each: function(callback, bind, solution) {
     var domain, result, _ref, _ref1;
     if (solution) {
@@ -25165,7 +25170,6 @@ Intrinsic = (function(_super) {
       }
     }
     if (continuation) {
-      debugger;
       bits = continuation.split(this.DESCEND);
       first = bits.shift();
       if ((j = first.lastIndexOf('$')) > -1) {
@@ -26140,14 +26144,14 @@ Queries = (function() {
   function Queries(engine) {
     this.engine = engine;
     this.watchers = {};
-    this.qualified = [];
+    this.mutations = [];
   }
 
   Queries.prototype.onBeforeSolve = function() {
     var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1;
     index = 0;
-    while (this.qualified[index]) {
-      watcher = this.qualified.splice(0, 3);
+    while (this.mutations[index]) {
+      watcher = this.mutations.splice(0, 3);
       this.engine.document.solve(watcher[0], watcher[1], watcher[2]);
     }
     index = 0;
@@ -26214,6 +26218,7 @@ Queries = (function() {
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
+    this.snapshot(collection, continuation, scope);
     if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
@@ -26298,6 +26303,36 @@ Queries = (function() {
     }
   };
 
+  Queries.prototype.filterByScope = function(collection, scope) {
+    var index, length, result, s, value, _i, _len, _ref;
+    if (!(collection != null ? collection.scopes : void 0)) {
+      return collection;
+    }
+    length = collection.length;
+    result = [];
+    _ref = collection.scopes;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+      s = _ref[index];
+      if (s === scope) {
+        if (index < length) {
+          value = collection[index];
+        } else {
+          value = collection.duplicates[index - length];
+        }
+      }
+      if (result.indexOf(value) === -1) {
+        result.push(value);
+      }
+    }
+    return result;
+  };
+
+  Queries.prototype.snapshot = function(collection, key, scope) {
+    var path, _base, _base1;
+    path = this.engine.identity.provide(scope) + this.engine.DESCEND + key;
+    return (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[path] || (_base[path] = this.filterByScope(collection, scope));
+  };
+
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, needle, contd) {
     var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _base, _base1, _i, _len, _ref;
     if (!((_ref = (collection = this.get(continuation))) != null ? _ref.keys : void 0)) {
@@ -26318,6 +26353,7 @@ Queries = (function() {
         dup = duplicates[index];
         if (dup === node) {
           if ((contd === paths[length + index] && (keys[length + index] === needle)) && scopes[length + index] === scope) {
+            this.snapshot(collection, continuation, scope);
             duplicates.splice(index, 1);
             keys.splice(length + index, 1);
             paths.splice(length + index, 1);
@@ -26345,6 +26381,7 @@ Queries = (function() {
           if (keys[index] !== needle) {
             return negative;
           }
+          this.snapshot(collection, continuation, scope);
           if (duplicate != null) {
             duplicates.splice(duplicate, 1);
             paths[index] = paths[duplicate + length];
@@ -26444,8 +26481,8 @@ Queries = (function() {
       _ref1.remove(path);
     }
     this.set(path, void 0);
-    if (this.qualified) {
-      this.unobserve(this.qualified, path, true);
+    if (this.mutations) {
+      this.unobserve(this.mutations, path, true);
     }
     this.unobserve(this.engine.scope._gss_id, path);
     if (!result || !this.engine.isCollection(result)) {
@@ -26464,7 +26501,7 @@ Queries = (function() {
     var query, _ref, _ref1;
     node || (node = this.engine.getContext(args, operation, scope, node));
     query = this.engine.getQueryPath(operation, node);
-    return (_ref = this.engine.updating) != null ? (_ref1 = _ref.collections) != null ? _ref1[query] : void 0 : void 0;
+    return (_ref = this.engine.updating) != null ? (_ref1 = _ref.queries) != null ? _ref1[query] : void 0 : void 0;
   };
 
   Queries.prototype.chain = function(left, right, continuation) {
@@ -26655,19 +26692,12 @@ Queries = (function() {
         watchers.push(operation, continuation, scope);
       }
     }
-    if ((old != null ? old.length : void 0) === 0) {
-      debugger;
-    }
     if (query && !this.engine.updating.collections.hasOwnProperty(query)) {
       this.engine.updating.collections[query] = old;
-      debugger;
       ((_base3 = this.engine.updating).queries || (_base3.queries = {}))[query] = result;
     }
     if (!this.engine.updating.collections.hasOwnProperty(path)) {
       this.engine.updating.collections[path] = old;
-    }
-    if (path === this.engine.PAIR + '::this .desc') {
-      debugger;
     }
     if (result === old) {
       return;
@@ -26685,9 +26715,6 @@ Queries = (function() {
       (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[path] || (_base[path] = (_ref2 = old && old.slice && old.slice() || old) != null ? _ref2 : null);
     }
     if (result) {
-      if (result[0] === '"col-1"') {
-        debugger;
-      }
       this[path] = result;
     } else {
       delete this[path];
@@ -26738,18 +26765,18 @@ Queries = (function() {
   };
 
   Queries.prototype.qualify = function(operation, continuation, scope, groupped, qualifier, fallback) {
-    var index, indexed, length, qualified, _i, _len, _ref;
+    var index, indexed, length, mutations, _i, _len, _ref;
     if ((indexed = groupped[qualifier]) || (fallback && groupped[fallback])) {
-      if (this.engine.indexOfTriplet(this.qualified, operation, continuation, scope) === -1) {
+      if (this.engine.indexOfTriplet(this.mutations, operation, continuation, scope) === -1) {
         length = (continuation || '').length;
-        _ref = this.qualified;
+        _ref = this.mutations;
         for (index = _i = 0, _len = _ref.length; _i < _len; index = _i += 3) {
-          qualified = _ref[index];
-          if ((this.qualified[index + 1] || '').length > length) {
+          mutations = _ref[index];
+          if ((this.mutations[index + 1] || '').length > length) {
             break;
           }
         }
-        this.qualified.splice(index, 0, operation, continuation, scope);
+        this.mutations.splice(index, 0, operation, continuation, scope);
       }
     }
     return this;
@@ -26823,13 +26850,9 @@ Mutations = (function() {
     if (!this.engine.engine.running) {
       return this.engine.engine.compile(true);
     }
-    console.error(mutations);
     result = this.engine.engine.solve('mutations', function() {
-      var mutation, qualified, _i, _len;
-      this.engine.updating.collections = void 0;
-      this.engine.updating.queries = void 0;
-      this.engine.updating.reflown = void 0;
-      qualified = this.queries.qualified = this.engine.updating.qualified = [];
+      var mutation, _i, _len;
+      this.engine.updating.reset();
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         switch (mutation.type) {
@@ -27098,7 +27121,6 @@ Pairs = (function() {
 
   Pairs.prototype.onLeft = function(operation, continuation, scope) {
     var contd, left, parent;
-    console.error('onLeft', arguments);
     left = this.engine.getCanonicalPath(continuation);
     parent = this.getTopmostOperation(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
@@ -27120,7 +27142,6 @@ Pairs = (function() {
 
   Pairs.prototype.onRight = function(operation, continuation, scope, left, right) {
     var index, op, pairs, parent, pushed, _base, _i, _len, _ref;
-    console.error('onRight', arguments);
     right = this.engine.getCanonicalPath(continuation.substring(0, continuation.length - 1));
     parent = this.getTopmostOperation(operation);
     _ref = this.lefts;
@@ -27205,7 +27226,7 @@ Pairs = (function() {
   Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_]+)[↓↑→]?$/i;
 
   Pairs.prototype.onBeforeSolve = function() {
-    var dirty, index, pair, pairs, property, value, _base, _i, _len, _ref;
+    var dirty, index, pair, pairs, property, value, _i, _len, _ref;
     dirty = this.dirty;
     delete this.dirty;
     this.repairing = true;
@@ -27219,10 +27240,6 @@ Pairs = (function() {
           }
         }
       }
-    }
-    for (property in dirty) {
-      value = dirty[property];
-      ((_base = this.engine.updating).paired || (_base.paired = {}))[property] = value;
     }
     return delete this.repairing;
   };
@@ -27252,59 +27269,40 @@ Pairs = (function() {
     }
   };
 
+  Pairs.prototype.pad = function(value, length) {
+    var i, result, _i;
+    if (!(value != null ? value.push : void 0)) {
+      result = [];
+      for (i = _i = 0; 0 <= length ? _i < length : _i > length; i = 0 <= length ? ++_i : --_i) {
+        result.push(value);
+      }
+      result.single = true;
+      return result;
+    } else if (value != null ? value.splice : void 0) {
+      return value.slice();
+    } else {
+      return value || [];
+    }
+  };
+
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var I, J, a, added, b, cleaned, cleaning, collections, contd, el, element, index, leftNew, leftOld, length, object, padded, pair, removed, rightNew, rightOld, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _results;
+    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, old, pair, removed, rightNew, rightOld, sid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
-    collections = [a, b];
-    values = [a, a, b, b];
-    if (this.engine.updating.collections.hasOwnProperty(left)) {
-      values[1] = this.engine.updating.collections[left];
-    }
-    if (this.engine.updating.collections.hasOwnProperty(right)) {
-      values[3] = this.engine.updating.collections[right];
-    }
-    I = Math.max(this.count(values[0]), this.count(values[1]));
-    J = Math.max(this.count(values[2]), this.count(values[3]));
-    padded = void 0;
-    for (index = _i = 0, _len = values.length; _i < _len; index = ++_i) {
-      value = values[index];
-      if (!(value != null ? value.push : void 0)) {
-        length = index > 1 ? I : J;
-        values[index] = (function() {
-          _results = [];
-          for (var _j = 0; 0 <= length ? _j < length : _j > length; 0 <= length ? _j++ : _j--){ _results.push(_j); }
-          return _results;
-        }).apply(this).map(function() {
-          return value;
-        });
-        values[index].single = true;
-      } else if (value != null ? value.splice : void 0) {
-        values[index] = values[index].slice();
-      } else {
-        values[index] || (values[index] = []);
-      }
-    }
-    leftNew = values[0], leftOld = values[1], rightNew = values[2], rightOld = values[3];
-    if (((_ref = collections[0]) != null ? _ref.keys : void 0) && !leftNew.single) {
-      for (index = _k = leftNew.length - 1; _k >= 0; index = _k += -1) {
-        element = leftNew[index];
-        if (!this.match(collections[0], element, scope)) {
-          leftNew.splice(index, 1);
-        }
-      }
-    }
-    if (((_ref1 = collections[1]) != null ? _ref1.keys : void 0) && !rightNew.single) {
-      for (index = _l = rightNew.length - 1; _l >= 0; index = _l += -1) {
-        element = rightNew[index];
-        if (!this.match(collections[1], element, scope)) {
-          rightNew.splice(index, 1);
-        }
-      }
-    }
+    sid = this.engine.identity.provide(scope);
+    leftOld = (old = this.engine.updating.collections[sid + this.engine.DESCEND + left]) ? old : this.engine.updating.collections.hasOwnProperty(left) ? this.engine.updating.collections[left] : this.engine.queries.filterByScope(a, scope);
+    rightOld = (old = this.engine.updating.collections[sid + this.engine.DESCEND + right]) ? old : this.engine.updating.collections.hasOwnProperty(right) ? this.engine.updating.collections[right] : this.engine.queries.filterByScope(b, scope);
+    leftNew = this.engine.queries.filterByScope(a, scope);
+    rightNew = this.engine.queries.filterByScope(b, scope);
+    I = Math.max(this.count(leftNew), this.count(rightNew));
+    J = Math.max(this.count(leftOld), this.count(rightOld));
+    leftNew = this.pad(leftNew, I);
+    leftOld = this.pad(leftOld, J);
+    rightNew = this.pad(rightNew, I);
+    rightOld = this.pad(rightOld, J);
     removed = [];
     added = [];
-    for (index = _m = 0, _len1 = leftOld.length; _m < _len1; index = ++_m) {
+    for (index = _i = 0, _len = leftOld.length; _i < _len; index = ++_i) {
       object = leftOld[index];
       if (leftNew[index] !== object || rightOld[index] !== rightNew[index]) {
         if (rightOld && rightOld[index]) {
@@ -27316,15 +27314,15 @@ Pairs = (function() {
       }
     }
     if (leftOld.length < leftNew.length) {
-      for (index = _n = _ref2 = leftOld.length, _ref3 = leftNew.length; _ref2 <= _ref3 ? _n < _ref3 : _n > _ref3; index = _ref2 <= _ref3 ? ++_n : --_n) {
+      for (index = _j = _ref = leftOld.length, _ref1 = leftNew.length; _ref <= _ref1 ? _j < _ref1 : _j > _ref1; index = _ref <= _ref1 ? ++_j : --_j) {
         if (rightNew[index]) {
           added.push([leftNew[index], rightNew[index]]);
         }
       }
     }
     cleaned = [];
-    for (_o = 0, _len2 = removed.length; _o < _len2; _o++) {
-      pair = removed[_o];
+    for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
+      pair = removed[_k];
       if (!pair[0] || !pair[1]) {
         continue;
       }
@@ -27338,8 +27336,8 @@ Pairs = (function() {
       }
       cleaned.push(contd);
     }
-    for (_p = 0, _len3 = added.length; _p < _len3; _p++) {
-      pair = added[_p];
+    for (_l = 0, _len2 = added.length; _l < _len2; _l++) {
+      pair = added[_l];
       contd = left;
       if (!leftNew.single) {
         contd += this.engine.identity.provide(pair[0]);
@@ -27354,13 +27352,13 @@ Pairs = (function() {
         this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
       }
     }
-    for (_q = 0, _len4 = cleaned.length; _q < _len4; _q++) {
-      contd = cleaned[_q];
+    for (_m = 0, _len3 = cleaned.length; _m < _len3; _m++) {
+      contd = cleaned[_m];
       this.engine.queries.clean(contd);
     }
     cleaning = true;
-    for (_r = 0, _len5 = leftNew.length; _r < _len5; _r++) {
-      el = leftNew[_r];
+    for (_n = 0, _len4 = leftNew.length; _n < _len4; _n++) {
+      el = leftNew[_n];
       if (el) {
         cleaning = false;
         break;
@@ -27369,7 +27367,6 @@ Pairs = (function() {
     if (cleaning) {
       this.clean(left);
     }
-    debugger;
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + this.engine.PAIR + right);
   };
 

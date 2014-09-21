@@ -22,12 +22,10 @@ class Mutations
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     return @engine.engine.compile(true) unless @engine.engine.running
-    console.error(mutations)
+
     result = @engine.engine.solve 'mutations', ->
-      @engine.updating.collections = undefined
-      @engine.updating.queries = undefined
-      @engine.updating.reflown = undefined
-      qualified = @queries.qualified = @engine.updating.qualified = []
+      @engine.updating.reset()
+
       for mutation in mutations
         switch mutation.type
           when "attributes"

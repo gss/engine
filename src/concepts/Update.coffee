@@ -386,6 +386,19 @@ Update.prototype =
 
     return @
 
+  reset: ->
+    queries = @queries
+    @queries = {}
+    @queries.previous = queries
+
+    collections = @collections
+    @collections = {}
+    @collections.previous = collections
+
+    mutations = @mutations
+    @mutations = []
+    @mutations.previous = mutations
+
   each: (callback, bind, solution) ->
     if solution
       @apply(solution) 

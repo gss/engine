@@ -64,7 +64,6 @@ class Intrinsic extends Numeric
         element.style.position = ''
 
     if continuation
-      debugger
       bits = continuation.split(@DESCEND)
       first = bits.shift()
       if (j = first.lastIndexOf('$')) > -1

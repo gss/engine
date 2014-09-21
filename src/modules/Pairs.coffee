@@ -5,7 +5,6 @@ class Pairs
 
 
   onLeft: (operation, continuation, scope) ->
-    console.error('onLeft', arguments)
     left = @engine.getCanonicalPath(continuation)
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
@@ -25,7 +24,6 @@ class Pairs
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, continuation, scope, left, right) ->
-    console.error('onRight', arguments)
     right = @engine.getCanonicalPath(continuation.substring(0, continuation.length - 1))
     parent = @getTopmostOperation(operation)
     for op, index in @lefts by 3
@@ -94,12 +92,9 @@ class Pairs
     @repairing = true
     if dirty
       for property, value of dirty
-        #unless @engine.updating.paired?[property]
         if pairs = @paths[property]?.slice()
           for pair, index in pairs by 3
             @solve property, pair, pairs[index + 1], pairs[index + 2]
-    for property, value of dirty
-      (@engine.updating.paired ||= {})[property] = value
     delete @repairing
       
   match: (collection, node, scope) ->
@@ -118,55 +113,53 @@ class Pairs
     else
       value? && 1 || 0
 
+  pad: (value, length) ->
+    unless value?.push
+      result = []
+      for i in [0...length]
+        result.push value
+      result.single = true
+      return result
+    else if value?.splice
+      return value.slice()
+    else
+      return value || []
+
+
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
     a = @engine.queries.get(left)
     b = @engine.queries.get(right)
-    collections = [a, b]
-    values = [a, a, b, b]
-    if @engine.updating.collections.hasOwnProperty(left)
-      values[1] = @engine.updating.collections[left]
-    if @engine.updating.collections.hasOwnProperty(right)
-      values[3] = @engine.updating.collections[right]
 
-    I = Math.max(@count(values[0]), @count(values[1]))
-    J = Math.max(@count(values[2]), @count(values[3]))
+    sid = @engine.identity.provide(scope)
 
-
-    padded = undefined
-    for value, index in values
-      unless value?.push
-        length = if index > 1 then I else J
-        values[index] = [0...length].map -> value
-        
-        values[index].single = true
-      else if value?.splice
-        values[index] = values[index].slice()
+    leftOld =
+      if old = @engine.updating.collections[sid + @engine.DESCEND + left]
+        old
+      else if @engine.updating.collections.hasOwnProperty(left)
+        @engine.updating.collections[left]
       else
-        values[index] ||= []
+        @engine.queries.filterByScope(a, scope)
 
+    rightOld =
+      if old = @engine.updating.collections[sid + @engine.DESCEND + right]
+        old
+      else if @engine.updating.collections.hasOwnProperty(right)
+        @engine.updating.collections[right]
+      else
+        @engine.queries.filterByScope(b, scope)
 
-    [leftNew, leftOld, rightNew, rightOld] = values
+    leftNew = @engine.queries.filterByScope(a, scope)
 
-    if collections[0]?.keys && !leftNew.single
-      for element, index in leftNew by -1
-        if !@match(collections[0], element, scope)
-          leftNew.splice(index, 1)
+    rightNew = @engine.queries.filterByScope(b, scope)
 
-    if collections[1]?.keys && !rightNew.single
-      for element, index in rightNew by -1
-        if !@match(collections[1], element, scope)
-          rightNew.splice(index, 1)
+    I = Math.max(@count(leftNew), @count(rightNew))
+    J = Math.max(@count(leftOld), @count(rightOld))
 
-    #if collections[0]?.keys && !leftOld.single
-    #  for element, index in leftOld by -1
-    #    if !@match(collections[0], element, scope)
-    #      leftOld.splice(index, 1)
-#
-    #if collections[1]?.keys && !rightOld.single
-    #  for element, index in rightOld by -1
-    #    if !@match(collections[1], element, scope)
-    #      rightOld.splice(index, 1)
+    leftNew = @pad leftNew, I
+    leftOld = @pad leftOld, J
+    rightNew = @pad rightNew, I
+    rightOld = @pad rightOld, J
 
 
     removed = []
@@ -219,7 +212,7 @@ class Pairs
     if cleaning
       @clean(left)
 
-    debugger
+
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + @engine.PAIR + right)
 
   clean: (left) ->  
