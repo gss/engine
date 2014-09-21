@@ -20145,6 +20145,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
+    debugger;
     var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, restyled, solution, source, workflow, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
@@ -20258,7 +20259,7 @@ Engine = (function(_super) {
       _ref2.onBeforeSolve();
     }
     this.updating.queried = this.updating.queries;
-    this.updating.queries = void 0;
+    this.updating.collections = this.updating.queries = void 0;
     effects = {};
     effects = this.updating.each(this.resolve, this, effects);
     if ((_ref3 = this.updating.busy) != null ? _ref3.length : void 0) {
@@ -20288,6 +20289,9 @@ Engine = (function(_super) {
     var _base;
     if (solution.operation) {
       return this.engine.updating.provide(solution);
+    }
+    if (solution[0] === '"col-1"') {
+      debugger;
     }
     if (!solution.push) {
       return this.updating.each(this.resolve, this, solution) || this.onSolve();
@@ -21114,7 +21118,7 @@ Rules = (function() {
           this.pairs.onBeforeSolve();
           this.updating.paired = void 0;
           this.updating.queried = this.updating.queries;
-          this.updating.queries = void 0;
+          this.updating.collections = this.updating.queries = void 0;
         }
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
@@ -26140,7 +26144,7 @@ Queries = (function() {
   }
 
   Queries.prototype.onBeforeSolve = function() {
-    var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1, _ref2;
+    var collection, contd, i, index, item, old, watcher, _i, _ref, _ref1;
     index = 0;
     while (this.qualified[index]) {
       watcher = this.qualified.splice(0, 3);
@@ -26151,8 +26155,9 @@ Queries = (function() {
       while (this.ascending[index]) {
         contd = this.ascending[index + 1];
         collection = this[contd];
-        if (old = (_ref = this.engine.updating) != null ? (_ref1 = _ref.queries) != null ? (_ref2 = _ref1[contd]) != null ? _ref2[1] : void 0 : void 0 : void 0) {
+        if (old = (_ref = this.engine.updating) != null ? (_ref1 = _ref.collections) != null ? _ref1[contd] : void 0 : void 0) {
           collection = collection.slice();
+          collection.isCollection = true;
           for (i = _i = collection.length - 1; _i >= 0; i = _i += -1) {
             item = collection[i];
             if (old.indexOf(item) > -1) {
@@ -26199,16 +26204,13 @@ Queries = (function() {
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
-    var collection, copy, dup, duplicates, el, index, keys, paths, scopes, update, _base, _base1, _i, _j, _len, _len1;
+    var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1;
     collection = this[continuation] || (this[continuation] = []);
     if (!collection.push) {
       return;
     }
     collection.isCollection = true;
-    update = (_base = ((_base1 = this.engine.updating).queries || (_base1.queries = {})))[continuation] || (_base[continuation] = []);
-    if (update[1] === void 0) {
-      update[1] = (copy = collection != null ? typeof collection.slice === "function" ? collection.slice() : void 0 : void 0) || null;
-    }
+    (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[continuation] || (_base[continuation] = collection.slice());
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
@@ -26297,7 +26299,7 @@ Queries = (function() {
   };
 
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _base, _base1, _base2, _i, _len, _ref;
+    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _base, _base1, _i, _len, _ref;
     if (!((_ref = (collection = this.get(continuation))) != null ? _ref.keys : void 0)) {
       return null;
     }
@@ -26330,7 +26332,7 @@ Queries = (function() {
       }
     }
     if (operation && length && (needle != null)) {
-      (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
+      (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[continuation] || (_base[continuation] = collection.slice());
       if ((index = collection.indexOf(node)) > -1) {
         if (keys) {
           negative = refs ? null : false;
@@ -26369,7 +26371,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, needle, recursion, contd) {
-    var collection, node, parent, r, ref, removed, string, _base, _base1, _base2, _ref;
+    var collection, node, parent, r, ref, removed, string, _base, _base1, _ref;
     if (needle == null) {
       needle = operation;
     }
@@ -26396,7 +26398,7 @@ Queries = (function() {
       }
       collection = this.get(continuation);
       if (collection && this.engine.isCollection(collection)) {
-        (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[continuation] || (_base1[continuation] = [])))[1] || (_base[1] = collection.slice());
+        (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[continuation] || (_base[continuation] = collection.slice());
       }
       r = removed = this.removeFromCollection(node, continuation, operation, scope, needle, contd);
       while (r === false) {
@@ -26461,10 +26463,8 @@ Queries = (function() {
   Queries.prototype.fetch = function(node, args, operation, continuation, scope) {
     var query, _ref, _ref1;
     node || (node = this.engine.getContext(args, operation, scope, node));
-    if ((_ref = this.engine.updating) != null ? _ref.queries : void 0) {
-      query = this.engine.getQueryPath(operation, node);
-      return (_ref1 = this.engine.updating.queries[query]) != null ? _ref1[0] : void 0;
-    }
+    query = this.engine.getQueryPath(operation, node);
+    return (_ref = this.engine.updating) != null ? (_ref1 = _ref.collections) != null ? _ref1[query] : void 0 : void 0;
   };
 
   Queries.prototype.chain = function(left, right, continuation) {
@@ -26581,28 +26581,20 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, group, id, index, isCollection, old, path, pathed, queried, query, removed, watchers, _base, _base1, _base2, _base3, _base4, _i, _j, _len, _len1, _ref;
+    var added, child, id, index, isCollection, old, path, query, removed, watchers, _base, _base1, _base2, _base3, _i, _j, _len, _len1, _ref;
     if (result == null) {
       result = void 0;
     }
     node || (node = this.engine.getContext(args, operation, scope, node));
     path = this.engine.getQueryPath(operation, continuation);
     old = this.get(path);
-    (_base = this.engine.updating).queries || (_base.queries = {});
-    if (pathed = this.engine.updating.queries[path]) {
-      old = pathed[1];
+    (_base = this.engine.updating).collections || (_base.collections = {});
+    if (!operation.def.relative && !operation.marked && (query = this.engine.getQueryPath(operation, node, scope)) && this.engine.updating.collections.hasOwnProperty(query)) {
+      result = this.engine.updating.queries[query];
     }
-    if (query = !operation.def.relative && !operation.marked && this.engine.getQueryPath(operation, node, scope)) {
-      if (queried = this.engine.updating.queries[query]) {
-        if (old == null) {
-          old = queried[1];
-        }
-        if (result == null) {
-          result = queried[0];
-        }
-      }
-    }
-    if ((old == null) && (result && result.length === 0) && continuation) {
+    if (this.engine.updating.collections.hasOwnProperty(path)) {
+      old = this.engine.updating.collections[path];
+    } else if ((old == null) && (result && result.length === 0) && continuation) {
       old = this.get(this.engine.getCanonicalPath(path));
     }
     isCollection = this.engine.isCollection(result);
@@ -26663,11 +26655,17 @@ Queries = (function() {
         watchers.push(operation, continuation, scope);
       }
     }
-    if (query) {
-      group = (_base3 = this.engine.updating.queries)[query] || (_base3[query] = []);
+    if ((old != null ? old.length : void 0) === 0) {
+      debugger;
     }
-    group = (_base4 = this.engine.updating.queries)[path] || (_base4[path] = group || []);
-    group[1] || (group[1] = (old != null ? old.slice() : void 0) || old);
+    if (query && !this.engine.updating.collections.hasOwnProperty(query)) {
+      this.engine.updating.collections[query] = old;
+      debugger;
+      ((_base3 = this.engine.updating).queries || (_base3.queries = {}))[query] = result;
+    }
+    if (!this.engine.updating.collections.hasOwnProperty(path)) {
+      this.engine.updating.collections[path] = old;
+    }
     if (path === this.engine.PAIR + '::this .desc') {
       debugger;
     }
@@ -26681,18 +26679,21 @@ Queries = (function() {
   };
 
   Queries.prototype.set = function(path, result) {
-    var old, _base, _base1, _base2, _ref, _ref1;
+    var old, _base, _base1, _ref, _ref1, _ref2, _ref3;
     old = this[path];
-    if (result == null) {
-      (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[path] || (_base1[path] = [])))[1] || (_base[1] = (_ref = old && old.slice && old.slice() || old) != null ? _ref : null);
+    if ((result == null) && !((_ref = this.engine.updating) != null ? (_ref1 = _ref.collections) != null ? _ref1.hasOwnProperty(path) : void 0 : void 0)) {
+      (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[path] || (_base[path] = (_ref2 = old && old.slice && old.slice() || old) != null ? _ref2 : null);
     }
     if (result) {
+      if (result[0] === '"col-1"') {
+        debugger;
+      }
       this[path] = result;
     } else {
       delete this[path];
     }
-    if ((_ref1 = this.engine.pairs) != null) {
-      _ref1.set(path, result);
+    if ((_ref3 = this.engine.pairs) != null) {
+      _ref3.set(path, result);
     }
   };
 
@@ -26825,6 +26826,7 @@ Mutations = (function() {
     console.error(mutations);
     result = this.engine.engine.solve('mutations', function() {
       var mutation, qualified, _i, _len;
+      this.engine.updating.collections = void 0;
       this.engine.updating.queries = void 0;
       this.engine.updating.reflown = void 0;
       qualified = this.queries.qualified = this.engine.updating.qualified = [];
@@ -27251,11 +27253,17 @@ Pairs = (function() {
   };
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var I, J, added, cleaned, cleaning, collections, contd, el, element, index, leftNew, leftOld, leftUpdate, length, object, padded, pair, removed, rightNew, rightOld, rightUpdate, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _results;
-    leftUpdate = (_ref = this.engine.updating.queries) != null ? _ref[left] : void 0;
-    rightUpdate = (_ref1 = this.engine.updating.queries) != null ? _ref1[right] : void 0;
-    collections = [this.engine.queries.get(left), this.engine.queries.get(right)];
-    values = [(leftUpdate != null ? (_ref2 = leftUpdate[0]) != null ? _ref2.nodeType : void 0 : void 0) && leftUpdate[0] || collections[0], leftUpdate ? leftUpdate[1] : collections[0], (rightUpdate != null ? (_ref3 = rightUpdate[0]) != null ? _ref3.nodeType : void 0 : void 0) && rightUpdate[0] || collections[1], rightUpdate ? rightUpdate[1] : collections[1]];
+    var I, J, a, added, b, cleaned, cleaning, collections, contd, el, element, index, leftNew, leftOld, length, object, padded, pair, removed, rightNew, rightOld, value, values, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _results;
+    a = this.engine.queries.get(left);
+    b = this.engine.queries.get(right);
+    collections = [a, b];
+    values = [a, a, b, b];
+    if (this.engine.updating.collections.hasOwnProperty(left)) {
+      values[1] = this.engine.updating.collections[left];
+    }
+    if (this.engine.updating.collections.hasOwnProperty(right)) {
+      values[3] = this.engine.updating.collections[right];
+    }
     I = Math.max(this.count(values[0]), this.count(values[1]));
     J = Math.max(this.count(values[2]), this.count(values[3]));
     padded = void 0;
@@ -27278,7 +27286,7 @@ Pairs = (function() {
       }
     }
     leftNew = values[0], leftOld = values[1], rightNew = values[2], rightOld = values[3];
-    if (((_ref4 = collections[0]) != null ? _ref4.keys : void 0) && !leftNew.single) {
+    if (((_ref = collections[0]) != null ? _ref.keys : void 0) && !leftNew.single) {
       for (index = _k = leftNew.length - 1; _k >= 0; index = _k += -1) {
         element = leftNew[index];
         if (!this.match(collections[0], element, scope)) {
@@ -27286,7 +27294,7 @@ Pairs = (function() {
         }
       }
     }
-    if (((_ref5 = collections[1]) != null ? _ref5.keys : void 0) && !rightNew.single) {
+    if (((_ref1 = collections[1]) != null ? _ref1.keys : void 0) && !rightNew.single) {
       for (index = _l = rightNew.length - 1; _l >= 0; index = _l += -1) {
         element = rightNew[index];
         if (!this.match(collections[1], element, scope)) {
@@ -27308,7 +27316,7 @@ Pairs = (function() {
       }
     }
     if (leftOld.length < leftNew.length) {
-      for (index = _n = _ref6 = leftOld.length, _ref7 = leftNew.length; _ref6 <= _ref7 ? _n < _ref7 : _n > _ref7; index = _ref6 <= _ref7 ? ++_n : --_n) {
+      for (index = _n = _ref2 = leftOld.length, _ref3 = leftNew.length; _ref2 <= _ref3 ? _n < _ref3 : _n > _ref3; index = _ref2 <= _ref3 ? ++_n : --_n) {
         if (rightNew[index]) {
           added.push([leftNew[index], rightNew[index]]);
         }

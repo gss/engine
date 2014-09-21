@@ -155,6 +155,7 @@ class Engine extends Domain.Events
       @provide expressions
 
   solve: () ->
+    debugger
     if typeof arguments[0] == 'string'
       if typeof arguments[1] == 'string'
         source = arguments[0]
@@ -245,7 +246,7 @@ class Engine extends Domain.Events
 
     @pairs?.onBeforeSolve()
     @updating.queried = @updating.queries
-    @updating.queries = undefined
+    @updating.collections = @updating.queries = undefined
 
     # Launch another pass here if solutions caused effects
     # Effects are processed separately, then merged with found solution
@@ -286,6 +287,8 @@ class Engine extends Domain.Events
   provide: (solution) ->
     if solution.operation
       return @engine.updating.provide solution
+    if solution[0] == '"col-1"'
+      debugger
     if !solution.push
       return @updating.each(@resolve, @, solution) || @onSolve()
     if @providing != undefined

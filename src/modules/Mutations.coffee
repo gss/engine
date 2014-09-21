@@ -24,6 +24,7 @@ class Mutations
     return @engine.engine.compile(true) unless @engine.engine.running
     console.error(mutations)
     result = @engine.engine.solve 'mutations', ->
+      @engine.updating.collections = undefined
       @engine.updating.queries = undefined
       @engine.updating.reflown = undefined
       qualified = @queries.qualified = @engine.updating.qualified = []

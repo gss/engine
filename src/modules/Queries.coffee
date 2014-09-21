@@ -29,8 +29,9 @@ class Queries
       while @ascending[index]
         contd = @ascending[index + 1]
         collection = @[contd]
-        if old = @engine.updating?.queries?[contd]?[1]
+        if old = @engine.updating?.collections?[contd]
           collection = collection.slice()
+          collection.isCollection = true
           for item, i in collection by -1
             if old.indexOf(item) > -1
               collection.splice(i, 1)
@@ -64,9 +65,7 @@ class Queries
     if !collection.push
       return
     collection.isCollection = true
-    update = (@engine.updating.queries ||= {})[continuation] ||= []
-    if update[1] == undefined 
-      update[1] = (copy = collection?.slice?()) || null
+    (@engine.updating.collections ||= {})[continuation] ||= collection.slice()
 
     keys = collection.keys ||= []
     paths = collection.paths ||= []
@@ -165,7 +164,7 @@ class Queries
             duplicate ?= index
 
     if operation && length && needle?
-      ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
+      (@engine.updating.collections ||= {})[continuation] ||= collection.slice()
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
@@ -217,7 +216,7 @@ class Queries
         
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
-        ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
+        (@engine.updating.collections ||= {})[continuation] ||= collection.slice()
       r = removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
       while r == false
         r = @removeFromCollection(node, continuation, operation, scope, false, contd)
@@ -276,9 +275,8 @@ class Queries
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    if @engine.updating?.queries# && node != scope
-      query = @engine.getQueryPath(operation, node)
-      return @engine.updating.queries[query]?[0]
+    query = @engine.getQueryPath(operation, node)
+    return @engine.updating?.collections?[query]
 
   chain: (left, right, continuation) ->
     if left
@@ -364,25 +362,23 @@ class Queries
 
   # Filter out known nodes from DOM collections
   update: (node, args, result = undefined, operation, continuation, scope) ->
-    
     node ||= @engine.getContext(args, operation, scope, node)
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
 
-    @engine.updating.queries ||= {}
+    @engine.updating.collections ||= {}
 
     # Normalize query to reuse results
 
     
-    if pathed = @engine.updating.queries[path]
-      old = pathed[1]
 
-    if query = !operation.def.relative && !operation.marked && @engine.getQueryPath(operation, node, scope)
-      if queried = @engine.updating.queries[query]
-        old ?= queried[1]
-        result ?= queried[0]
-
-    if !old? && (result && result.length == 0) && continuation
+    if !operation.def.relative && !operation.marked && 
+            (query = @engine.getQueryPath(operation, node, scope)) && 
+            @engine.updating.collections.hasOwnProperty(query)
+      result = @engine.updating.queries[query]
+    if @engine.updating.collections.hasOwnProperty(path)
+      old = @engine.updating.collections[path]
+    else if !old? && (result && result.length == 0) && continuation
       old = @get(@engine.getCanonicalPath(path))
 
     isCollection = @engine.isCollection(result)
@@ -443,10 +439,15 @@ class Queries
     
     #return if noop
       
-    group = @engine.updating.queries[query] ||= [] if query
-    group = @engine.updating.queries[path] ||= group || []
+    if old?.length == 0
+      debugger
+    if query && !@engine.updating.collections.hasOwnProperty(query)
+      @engine.updating.collections[query] = old
+      debugger
+      (@engine.updating.queries ||= {})[query] = result
 
-    group[1] ||= old?.slice() || old
+    if !@engine.updating.collections.hasOwnProperty(path)
+      @engine.updating.collections[path] = old
 
     if path == @engine.PAIR + '::this .desc'
       debugger
@@ -460,9 +461,11 @@ class Queries
 
   set: (path, result) ->
     old = @[path]
-    if !result?
-      ((@engine.updating.queries ||= {})[path] ||= [])[1] ||= old && old.slice && old.slice() || old ? null
+    if !result? && !@engine.updating?.collections?.hasOwnProperty(path)
+      (@engine.updating.collections ||= {})[path] ||= old && old.slice && old.slice() || old ? null
     if result
+      if result[0] == '"col-1"'
+        debugger
       @[path] = result
     else
       delete @[path]

@@ -120,20 +120,14 @@ class Pairs
 
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
-    leftUpdate = @engine.updating.queries?[left]
-    rightUpdate = @engine.updating.queries?[right]
-
-    collections = [
-      @engine.queries.get(left)
-      @engine.queries.get(right)
-    ]
-    values = [
-      leftUpdate?[0]?.nodeType && leftUpdate[0] || collections[0]
-      if leftUpdate then leftUpdate[1] else collections[0]
-
-      rightUpdate?[0]?.nodeType && rightUpdate[0] || collections[1]
-      if rightUpdate then rightUpdate[1] else collections[1]
-    ]
+    a = @engine.queries.get(left)
+    b = @engine.queries.get(right)
+    collections = [a, b]
+    values = [a, a, b, b]
+    if @engine.updating.collections.hasOwnProperty(left)
+      values[1] = @engine.updating.collections[left]
+    if @engine.updating.collections.hasOwnProperty(right)
+      values[3] = @engine.updating.collections[right]
 
     I = Math.max(@count(values[0]), @count(values[1]))
     J = Math.max(@count(values[2]), @count(values[3]))
