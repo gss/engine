@@ -36,7 +36,6 @@ class Rules
     # Duplicates are stored separately, they dont trigger callbacks
     capture: (result, operation, continuation, scope, meta, ascender) ->
       contd = @getScopePath(scope, continuation) + operation.parent.path
-      console.error('add', continuation, contd)
       @queries.add(result, contd, operation.parent, scope, operation, continuation)
       @queries.ascending ||= []
       if @engine.indexOfTriplet(@queries.ascending, operation.parent, contd, scope) == -1

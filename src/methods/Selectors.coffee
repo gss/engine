@@ -182,6 +182,7 @@ class Selectors
   '$>':
     group: '$query'
     1: (node) -> 
+      debugger
       return node.children
 
   # Parent element

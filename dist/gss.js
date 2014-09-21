@@ -21008,7 +21008,6 @@ Rules = (function() {
     capture: function(result, operation, continuation, scope, meta, ascender) {
       var contd, _base;
       contd = this.getScopePath(scope, continuation) + operation.parent.path;
-      console.error('add', continuation, contd);
       this.queries.add(result, contd, operation.parent, scope, operation, continuation);
       (_base = this.queries).ascending || (_base.ascending = []);
       if (this.engine.indexOfTriplet(this.queries.ascending, operation.parent, contd, scope) === -1) {
@@ -21477,6 +21476,7 @@ Selectors = (function() {
   Selectors.prototype['$>'] = {
     group: '$query',
     1: function(node) {
+      debugger;
       return node.children;
     }
   };
@@ -26199,7 +26199,10 @@ Queries = (function() {
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
-    var collection, copy, el, index, keys, paths, scopes, update, _base, _base1, _i, _len;
+    var collection, copy, dup, duplicates, el, index, keys, paths, scopes, update, _base, _base1, _i, _j, _len, _len1;
+    if (continuation === '') {
+      debugger;
+    }
     collection = this[continuation] || (this[continuation] = []);
     if (!collection.push) {
       return;
@@ -26230,7 +26233,16 @@ Queries = (function() {
       }
       return true;
     } else {
-      (collection.duplicates || (collection.duplicates = [])).push(node);
+      duplicates = (collection.duplicates || (collection.duplicates = []));
+      for (index = _j = 0, _len1 = duplicates.length; _j < _len1; index = ++_j) {
+        dup = duplicates[index];
+        if (dup === node) {
+          if (keys[index] === key && scopes[index] === scope && paths[index] === contd) {
+            return;
+          }
+        }
+      }
+      duplicates.push(node);
       keys.push(key);
       paths.push(contd);
       scopes.push(scope);
@@ -26247,8 +26259,8 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.unobserve = function(id, continuation, quick, path) {
-    var contd, index, matched, parent, refs, subscope, watcher, watchers;
+  Queries.prototype.unobserve = function(id, continuation, quick, path, contd) {
+    var index, matched, parent, query, refs, subscope, watcher, watchers;
     if (continuation !== true) {
       refs = this.engine.getPossibleContinuations(continuation);
     }
@@ -26257,8 +26269,8 @@ Queries = (function() {
       return;
     }
     while (watcher = watchers[index]) {
-      contd = watchers[index + 1];
-      if (refs && refs.indexOf(contd) === -1) {
+      query = watchers[index + 1];
+      if (refs && refs.indexOf(query) === -1) {
         index += 3;
         continue;
       }
@@ -26279,7 +26291,7 @@ Queries = (function() {
       subscope = watchers[index + 2];
       watchers.splice(index, 3);
       if (!quick) {
-        this.clean(watcher, contd, watcher, subscope, true, continuation);
+        this.clean(watcher, query, watcher, subscope, true, contd != null ? contd : query);
       }
     }
     if (!watchers.length && watchers === this.watchers[id]) {
@@ -26288,16 +26300,18 @@ Queries = (function() {
   };
 
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _base, _base1, _base2, _i, _len;
-    if (!(collection = this.get(continuation))) {
-      return;
+    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _base, _base1, _base2, _i, _len, _ref;
+    if (!((_ref = (collection = this.get(continuation))) != null ? _ref.keys : void 0)) {
+      return null;
     }
     length = collection.length;
     keys = collection.keys;
     paths = collection.paths;
     scopes = collection.scopes;
     duplicate = null;
-    if (needle === false) {
+    if (contd == null) {
+      refs = [void 0];
+    } else {
       refs = this.engine.getPossibleContinuations(contd);
     }
     if ((duplicates = collection.duplicates)) {
@@ -26326,17 +26340,11 @@ Queries = (function() {
           if (scopes[index] !== scope) {
             return negative;
           }
-          if (refs) {
-            if (refs.indexOf(paths[index]) > -1) {
-              return negative;
-            }
-          } else {
-            if (keys[index] !== needle) {
-              return negative;
-            }
+          if (refs.indexOf(paths[index]) === -1) {
+            return negative;
           }
-          if (refs) {
-            debugger;
+          if (keys[index] !== needle) {
+            return negative;
           }
           if (duplicate != null) {
             duplicates.splice(duplicate, 1);
@@ -26364,7 +26372,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, needle, recursion, contd) {
-    var collection, node, parent, r, ref, removed, _base, _base1, _base2, _ref;
+    var collection, node, parent, r, ref, removed, string, _base, _base1, _base2, _ref;
     if (needle == null) {
       needle = operation;
     }
@@ -26378,9 +26386,15 @@ Queries = (function() {
       node = this.engine.identity[id];
     }
     if (continuation) {
+      collection = this.get(continuation);
       if (parent = operation != null ? operation.parent : void 0) {
+        if (this.engine.isCollection(collection)) {
+          string = continuation + id;
+        } else {
+          string = continuation;
+        }
         if ((_ref = parent.def.release) != null) {
-          _ref.call(this.engine, node, operation, contd, scope);
+          _ref.call(this.engine, node, operation, string, scope);
         }
       }
       collection = this.get(continuation);
@@ -26392,11 +26406,15 @@ Queries = (function() {
         r = this.removeFromCollection(node, continuation, operation, scope, false, contd);
       }
       this.engine.pairs.remove(id, continuation);
-      collection = this.get(continuation);
       ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
-      this.unobserve(id, ref);
+      this.unobserve(id, ref, void 0, void 0, contd);
       if (recursion !== continuation) {
-        this.updateCollections(operation, continuation, scope, recursion, node, continuation, continuation);
+        if (removed !== false && (removed !== null || !(parent != null ? parent.def.release : void 0))) {
+          if (!removed) {
+            debugger;
+          }
+          this.updateCollections(operation, continuation, scope, recursion, node, continuation, contd);
+        }
         if (this.engine.isCollection(collection) && removed !== false) {
           this.clean(continuation + id);
         }
@@ -26495,24 +26513,21 @@ Queries = (function() {
         }
       }
     } else if (recursion !== oppath) {
-      this.updateCollection(operation, oppath, scope, added, removed, oppath, contd);
+      this.updateCollection(operation, oppath, scope, added, removed, oppath, path);
     }
-    return this.updateCollection(operation, path, scope, added, removed, recursion, contd);
+    return this.updateCollection(operation, path, scope, added, removed, recursion, contd || '');
   };
 
   Queries.prototype.updateCollection = function(operation, path, scope, added, removed, recursion, contd) {
-    var collection, i, index, node, sorted, updated, _i, _len, _ref, _ref1, _results,
+    var collection, i, index, node, sorted, updated, _i, _len, _ref, _results,
       _this = this;
     if (removed) {
       this.each('remove', removed, path, operation, scope, operation, recursion, contd);
     }
-    if (((_ref = (collection = this[path])) != null ? _ref.keys : void 0) && added === collection) {
-      return;
-    }
     if (added) {
       this.each('add', added, path, operation, scope, operation, contd);
     }
-    if ((_ref1 = (collection = this[path])) != null ? _ref1.keys : void 0) {
+    if ((_ref = (collection = this[path])) != null ? _ref.keys : void 0) {
       sorted = collection.slice().sort(function(a, b) {
         var i, j;
         i = collection.indexOf(a);
@@ -26642,7 +26657,9 @@ Queries = (function() {
       added = result;
       removed = old;
     }
-    if (!(added != null ? added.keys : void 0)) {
+    if (result != null ? result.keys : void 0) {
+      this.updateCollections(operation, path, scope, void 0, void 0, void 0, continuation);
+    } else {
       this.updateCollections(operation, path, scope, added, removed, void 0, continuation);
     }
     if (id = this.engine.identity.provide(node)) {
@@ -26669,6 +26686,9 @@ Queries = (function() {
   Queries.prototype.set = function(path, result) {
     var old, _base, _base1, _base2, _ref, _ref1;
     old = this[path];
+    if (path === '') {
+      debugger;
+    }
     if (result == null) {
       (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[path] || (_base1[path] = [])))[1] || (_base[1] = (_ref = old && old.slice && old.slice() || old) != null ? _ref : null);
     }

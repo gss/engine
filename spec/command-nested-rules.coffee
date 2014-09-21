@@ -436,6 +436,7 @@ describe 'Nested Rules', ->
           console.error('box1.remove()')
           box1.parentNode.removeChild(box1)
           engine.once 'solve', ->
+
             expect(stringify(engine.updated.getProblems())).to.eql stringify([
               ['remove', "#box1!>,>div$vessel0↑::this :first-child$box1", "#box1!>", "#box1"]
               [['remove',  "#box1!>,>div$vessel0↑::this :first-child$box1"]]
@@ -481,6 +482,7 @@ describe 'Nested Rules', ->
                 vessel0.parentNode.removeChild(vessel0)
 
                 engine.once 'solve', ->
+                  expect(engine.queries['>'].length).to.eql(2)
                   expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
                   expect(engine.queries['#box1!>,>div'].slice()).to.eql([box0, group1])
                   expect(stringify(engine.updated.getProblems())).to.eql stringify([

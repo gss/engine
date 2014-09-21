@@ -60,6 +60,8 @@ class Queries
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key, contd) ->
+    if continuation == ''
+      debugger
     collection = @[continuation] ||= []
     if !collection.push
       return
@@ -85,8 +87,12 @@ class Queries
         @addMatch(node, continuation)
       return true
     else
-      #if scopes[index] != scope# || paths[index] != path
-      (collection.duplicates ||= []).push(node)
+      duplicates = (collection.duplicates ||= [])
+      for dup, index in duplicates
+        if dup == node
+          if keys[index] == key && scopes[index] == scope && paths[index] == contd
+            return
+      duplicates.push(node)
       keys.push(key)
       paths.push(contd)
       scopes.push(scope)
@@ -102,14 +108,14 @@ class Queries
       return result
 
   # Remove observers from element
-  unobserve: (id, continuation, quick, path) ->
+  unobserve: (id, continuation, quick, path, contd) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
-      contd = watchers[index + 1]
-      if refs && refs.indexOf(contd) == -1
+      query = watchers[index + 1]
+      if refs && refs.indexOf(query) == -1
         index += 3
         continue
       if path
@@ -125,21 +131,24 @@ class Queries
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       if !quick
-        @clean(watcher, contd, watcher, subscope, true, continuation)
+        @clean(watcher, query, watcher, subscope, true, contd ? query)
     if !watchers.length && watchers == @watchers[id]
       delete @watchers[id] 
 
   # Remove element from collection needlely
   removeFromCollection: (node, continuation, operation, scope, needle, contd) ->
-    return unless collection = @get(continuation)
+    return null unless (collection = @get(continuation))?.keys
     length = collection.length
     keys = collection.keys
     paths = collection.paths
     scopes = collection.scopes
     duplicate = null
 
-    if needle == false
+    if !contd?
+      refs = [undefined]
+    else
       refs = @engine.getPossibleContinuations(contd)
+
 
     # Dont remove it if element matches more than one selector
     if (duplicates = collection.duplicates)
@@ -165,12 +174,8 @@ class Queries
         if keys
           negative = if refs then null else false
           return negative if scopes[index] != scope
-          if refs
-            return negative if refs.indexOf(paths[index]) > -1
-          else
-            return negative if keys[index] != needle
-          if refs
-            debugger
+          return negative if refs.indexOf(paths[index]) == -1
+          return negative if keys[index] != needle
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -192,6 +197,7 @@ class Queries
         return true
 
 
+
   # Remove observers and cached node lists
   remove: (id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
@@ -202,8 +208,14 @@ class Queries
 
     if continuation
 
+      collection = @get(continuation)
+
       if parent = operation?.parent
-        parent.def.release?.call(@engine, node, operation, contd, scope)
+        if @engine.isCollection(collection)
+          string = continuation + id
+        else
+          string = continuation
+        parent.def.release?.call(@engine, node, operation, string, scope)
         
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
@@ -214,15 +226,15 @@ class Queries
         
       @engine.pairs.remove(id, continuation)
 
-      collection = @get(continuation)
-
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
-      @unobserve(id, ref)
+      @unobserve(id, ref, undefined, undefined, contd)
 
       if recursion != continuation
-        @updateCollections operation, continuation, scope, recursion, node, continuation, continuation
-
+        if removed != false && (removed != null || !parent?.def.release)
+          if !removed
+            debugger
+          @updateCollections operation, continuation, scope, recursion, node, continuation, contd
         if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
 
@@ -301,17 +313,14 @@ class Queries
           @removeMatch(removed, path)
 
     else if recursion != oppath
-      @updateCollection operation, oppath, scope, added, removed, oppath, contd
+      @updateCollection operation, oppath, scope, added, removed, oppath, path
 
-    @updateCollection operation, path, scope, added, removed, recursion, contd
+    @updateCollection operation, path, scope, added, removed, recursion, contd || ''
     
   # Combine nodes from multiple selector paths
   updateCollection: (operation, path, scope, added, removed, recursion, contd) ->
     if removed
       @each 'remove', removed, path, operation, scope, operation, recursion, contd
-    
-    if (collection = @[path])?.keys && added == collection
-      return
 
     if added
       @each 'add', added, path, operation, scope, operation, contd
@@ -423,9 +432,11 @@ class Queries
       added = result 
       removed = old
 
-    if !added?.keys
+    if result?.keys
+      @updateCollections(operation, path, scope, undefined, undefined, undefined, continuation)
+    else
       @updateCollections(operation, path, scope, added, removed, undefined, continuation)
-        
+      
     #unless operation.def.capture
       # Subscribe node to the query
     if id = @engine.identity.provide(node)
@@ -450,6 +461,8 @@ class Queries
 
   set: (path, result) ->
     old = @[path]
+    if path == ''
+      debugger
     if !result?
       ((@engine.updating.queries ||= {})[path] ||= [])[1] ||= old && old.slice && old.slice() || old ? null
     if result

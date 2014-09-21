@@ -2453,31 +2453,33 @@ describe 'End - to - End', ->
 
         </style>
         """
+
         engine.then (solution) ->
-          expect(solution).to.eql 
-             "$article1[height]": 66
-             "$article1[y]": 0
+          expectation = 
+            "$article1[height]": 66
+            "$article1[y]": 0
 
-             "$desc1[height]": 40
-             "$title1[height]": 20
+            "$desc1[height]": 40
+            "$title1[height]": 20
 
-             "$title1[y]": 1
-             "$desc1[y]": 23
+            "$title1[y]": 1
+            "$desc1[y]": 23
 
-             "$article2[height]": 46
-             "$article2[y]": 66
-             "$desc2[height]": 30
-             "$desc2[y]": 13 + 66
-             "$title2[height]": 10
-             "$title2[y]": 1 + 66
+            "$article2[height]": 46
+            "$article2[y]": 66
+            "$desc2[height]": 30
+            "$desc2[y]": 13 + 66
+            "$title2[height]": 10
+            "$title2[y]": 1 + 66
+          expectation["#{container._gss_id}[width]"] = 300
+          expectation["#{container._gss_id}[x]"] = 0
+          expectation["#{container._gss_id}[y]"] = 0
 
-             "$1[width]": 300
-             "$1[x]": 0
-             "$1[y]": 0
+          expect(solution).to.eql expectation
+
           article = engine.$id('article1')
           engine.scope.appendChild(article)
 
-          debugger
           engine.then (solution) ->
             expect(solution).to.eql 
               "$title1[y]": 1 + 46
@@ -2490,7 +2492,7 @@ describe 'End - to - End', ->
 
             article = engine.$id('article2')
             engine.scope.appendChild(article)
-            debugger
+
             engine.then (solution) ->
               expect(solution).to.eql 
 
@@ -2503,10 +2505,9 @@ describe 'End - to - End', ->
                "$desc2[y]": 13 + 66
                "$title2[y]": 1 + 66
 
-              debugger
               engine.scope.innerHTML = ""
               engine.then ->
-                debugger
+                done()
     describe "new VFL input", ->
       it 'should work', (done) ->
         container.innerHTML = """
