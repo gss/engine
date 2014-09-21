@@ -60,8 +60,6 @@ class Queries
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key, contd) ->
-    if continuation == ''
-      debugger
     collection = @[continuation] ||= []
     if !collection.push
       return
@@ -232,8 +230,6 @@ class Queries
 
       if recursion != continuation
         if removed != false && (removed != null || !parent?.def.release)
-          if !removed
-            debugger
           @updateCollections operation, continuation, scope, recursion, node, continuation, contd
         if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
@@ -381,7 +377,7 @@ class Queries
     if pathed = @engine.updating.queries[path]
       old = pathed[1]
 
-    if query = !operation.def.relative && @engine.getQueryPath(operation, node, scope)
+    if query = !operation.def.relative && !operation.marked && @engine.getQueryPath(operation, node, scope)
       if queried = @engine.updating.queries[query]
         old ?= queried[1]
         result ?= queried[0]
@@ -395,6 +391,7 @@ class Queries
     # Clean refs of nodes that dont match anymore
     if old
       if @engine.isCollection(old)
+        old = old.slice()
         removed = undefined
         for child, index in old
           if !old.scopes || old.scopes?[index] == scope
@@ -449,8 +446,10 @@ class Queries
     group = @engine.updating.queries[query] ||= [] if query
     group = @engine.updating.queries[path] ||= group || []
 
-    group[0] ||= result
-    group[1] ||= old
+    group[1] ||= old?.slice() || old
+
+    if path == @engine.PAIR + '::this .desc'
+      debugger
 
     return if result == old
 
@@ -461,8 +460,6 @@ class Queries
 
   set: (path, result) ->
     old = @[path]
-    if path == ''
-      debugger
     if !result?
       ((@engine.updating.queries ||= {})[path] ||= [])[1] ||= old && old.slice && old.slice() || old ? null
     if result

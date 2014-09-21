@@ -146,7 +146,7 @@ class Pairs
         values[index] = [0...length].map -> value
         
         values[index].single = true
-      else if value?.keys
+      else if value?.splice
         values[index] = values[index].slice()
       else
         values[index] ||= []
@@ -163,6 +163,16 @@ class Pairs
       for element, index in rightNew by -1
         if !@match(collections[1], element, scope)
           rightNew.splice(index, 1)
+
+    #if collections[0]?.keys && !leftOld.single
+    #  for element, index in leftOld by -1
+    #    if !@match(collections[0], element, scope)
+    #      leftOld.splice(index, 1)
+#
+    #if collections[1]?.keys && !rightOld.single
+    #  for element, index in rightOld by -1
+    #    if !@match(collections[1], element, scope)
+    #      rightOld.splice(index, 1)
 
 
     removed = []
@@ -215,6 +225,7 @@ class Pairs
     if cleaning
       @clean(left)
 
+    debugger
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + @engine.PAIR + right)
 
   clean: (left) ->  

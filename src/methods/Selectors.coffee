@@ -81,6 +81,7 @@ class Selectors
           shortcut.splice(1, 0, tail[1])
       if shortcut.length > 2
         if operation.marked
+          shortcut.marked = operation.marked
           shortcut.path = shortcut.key = head.path
 
       return shortcut
@@ -182,7 +183,6 @@ class Selectors
   '$>':
     group: '$query'
     1: (node) -> 
-      debugger
       return node.children
 
   # Parent element

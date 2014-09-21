@@ -21351,6 +21351,7 @@ Selectors = (function() {
       }
       if (shortcut.length > 2) {
         if (operation.marked) {
+          shortcut.marked = operation.marked;
           shortcut.path = shortcut.key = head.path;
         }
       }
@@ -21476,7 +21477,6 @@ Selectors = (function() {
   Selectors.prototype['$>'] = {
     group: '$query',
     1: function(node) {
-      debugger;
       return node.children;
     }
   };
@@ -26200,9 +26200,6 @@ Queries = (function() {
 
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
     var collection, copy, dup, duplicates, el, index, keys, paths, scopes, update, _base, _base1, _i, _j, _len, _len1;
-    if (continuation === '') {
-      debugger;
-    }
     collection = this[continuation] || (this[continuation] = []);
     if (!collection.push) {
       return;
@@ -26410,9 +26407,6 @@ Queries = (function() {
       this.unobserve(id, ref, void 0, void 0, contd);
       if (recursion !== continuation) {
         if (removed !== false && (removed !== null || !(parent != null ? parent.def.release : void 0))) {
-          if (!removed) {
-            debugger;
-          }
           this.updateCollections(operation, continuation, scope, recursion, node, continuation, contd);
         }
         if (this.engine.isCollection(collection) && removed !== false) {
@@ -26598,7 +26592,7 @@ Queries = (function() {
     if (pathed = this.engine.updating.queries[path]) {
       old = pathed[1];
     }
-    if (query = !operation.def.relative && this.engine.getQueryPath(operation, node, scope)) {
+    if (query = !operation.def.relative && !operation.marked && this.engine.getQueryPath(operation, node, scope)) {
       if (queried = this.engine.updating.queries[query]) {
         if (old == null) {
           old = queried[1];
@@ -26614,6 +26608,7 @@ Queries = (function() {
     isCollection = this.engine.isCollection(result);
     if (old) {
       if (this.engine.isCollection(old)) {
+        old = old.slice();
         removed = void 0;
         for (index = _i = 0, _len = old.length; _i < _len; index = ++_i) {
           child = old[index];
@@ -26672,8 +26667,10 @@ Queries = (function() {
       group = (_base3 = this.engine.updating.queries)[query] || (_base3[query] = []);
     }
     group = (_base4 = this.engine.updating.queries)[path] || (_base4[path] = group || []);
-    group[0] || (group[0] = result);
-    group[1] || (group[1] = old);
+    group[1] || (group[1] = (old != null ? old.slice() : void 0) || old);
+    if (path === this.engine.PAIR + '::this .desc') {
+      debugger;
+    }
     if (result === old) {
       return;
     }
@@ -26686,9 +26683,6 @@ Queries = (function() {
   Queries.prototype.set = function(path, result) {
     var old, _base, _base1, _base2, _ref, _ref1;
     old = this[path];
-    if (path === '') {
-      debugger;
-    }
     if (result == null) {
       (_base = ((_base1 = ((_base2 = this.engine.updating).queries || (_base2.queries = {})))[path] || (_base1[path] = [])))[1] || (_base[1] = (_ref = old && old.slice && old.slice() || old) != null ? _ref : null);
     }
@@ -27277,7 +27271,7 @@ Pairs = (function() {
           return value;
         });
         values[index].single = true;
-      } else if (value != null ? value.keys : void 0) {
+      } else if (value != null ? value.splice : void 0) {
         values[index] = values[index].slice();
       } else {
         values[index] || (values[index] = []);
@@ -27367,6 +27361,7 @@ Pairs = (function() {
     if (cleaning) {
       this.clean(left);
     }
+    debugger;
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + this.engine.PAIR + right);
   };
 

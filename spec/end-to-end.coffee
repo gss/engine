@@ -2505,9 +2505,21 @@ describe 'End - to - End', ->
                "$desc2[y]": 13 + 66
                "$title2[y]": 1 + 66
 
-              engine.scope.innerHTML = ""
-              engine.then ->
-                done()
+
+              title1 = engine.$id('title1')
+              title1.parentNode.removeChild(title1)
+
+              engine.then (solution) ->
+                expect(solution).to.eql
+                  '$title1[y]': 0
+                  '$article1[height]': 0
+                  '$desc1[height]': 0
+                  '$desc1[y]': 0
+                  '$article2[y]': 0
+                engine.scope.innerHTML = ""
+                engine.then ->
+                  expect(engine.values).to.eql {}
+                  done()
     describe "new VFL input", ->
       it 'should work', (done) ->
         container.innerHTML = """
