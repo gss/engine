@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-21) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21017,9 +21016,7 @@ Rules = (function() {
       return true;
     },
     release: function(result, operation, continuation, scope) {
-      debugger;
       var contd;
-      console.error('release', result, operation, continuation);
       contd = this.getScopePath(scope, continuation) + operation.parent.path;
       this.queries.remove(result, contd, operation.parent, scope, operation, void 0, continuation);
       return true;
@@ -21278,7 +21275,6 @@ Selectors = (function() {
   };
 
   Selectors.prototype.onQuery = function(node, args, result, operation, continuation, scope) {
-    debugger;
     if (operation.def.hidden) {
       return result;
     }
@@ -21711,7 +21707,10 @@ Selectors = (function() {
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
       index = collection != null ? collection.indexOf(node) : void 0;
-      if ((index == null) || index === collection.length - 1) {
+      if (index == null) {
+        return;
+      }
+      if (index === collection.length - 1) {
         return node;
       }
     }
@@ -21725,6 +21724,9 @@ Selectors = (function() {
       path = this.getContinuation(this.getCanonicalPath(continuation));
       collection = this.queries.get(path);
       index = collection != null ? collection.indexOf(node) : void 0;
+      if (index == null) {
+        return;
+      }
       if (index === 0) {
         return node;
       }
@@ -22303,12 +22305,15 @@ Console = (function() {
     a = a.name || a;
     p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
     if (typeof document !== "undefined" && document !== null) {
-      breakpoint = String(this.stringify([b, c]));
+      breakpoint = String(this.stringify([b, c])).replace(/\r?\n+|\r|\s+/g, ' ');
       if (this.breakpoint === a + breakpoint) {
         debugger;
       }
     } else {
       breakpoint = '';
+    }
+    if (typeof c === 'string') {
+      c = c.replace(/\r?\n|\r|\s+/g, ' ');
     }
     if (typeof document !== "undefined" && document !== null) {
       if (typeof b === 'object') {
@@ -25517,13 +25522,13 @@ Document = (function(_super) {
           html.className = (klass && klass + ' ' || '') + 'gss-ready';
         }
       }
-      if (this.removed) {
-        _ref = this.removed;
+      if (this.document.removed) {
+        _ref = this.document.removed;
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           id = _ref[_i];
           this.identity.unset(id);
         }
-        return this.removed = void 0;
+        return this.document.removed = void 0;
       }
     },
     DOMContentLoaded: function() {
@@ -25621,8 +25626,6 @@ Expressions = (function() {
         result = this.execute(operation, continuation, scope, args);
         continuation = this.engine.getOperationPath(operation, continuation, scope);
       }
-    } else {
-      debugger;
     }
     return this.ascend(operation, continuation, result, scope, meta, ascender);
   };
@@ -25978,7 +25981,7 @@ Identity = (function() {
   };
 
   Identity.prototype.unset = function(object) {
-    return delete this[id];
+    return delete this[object._gss_id];
   };
 
   Identity.prototype.find = function(object) {
@@ -26478,7 +26481,7 @@ Queries = (function() {
   };
 
   Queries.prototype.updateCollection = function(operation, path, scope, added, removed, recursion, contd) {
-    var collection, i, index, node, sorted, updated, _i, _len, _ref, _ref1,
+    var collection, i, index, node, sorted, updated, _i, _len, _ref, _ref1, _results,
       _this = this;
     if (removed) {
       this.each('remove', removed, path, operation, scope, operation, recursion, contd);
@@ -26497,14 +26500,20 @@ Queries = (function() {
         return _this.comparePosition(a, b, collection.keys[i], collection.keys[j]) && -1 || 1;
       });
       updated = void 0;
+      _results = [];
       for (index = _i = 0, _len = sorted.length; _i < _len; index = ++_i) {
         node = sorted[index];
         if (node !== collection[index]) {
           if (!updated) {
-            this[path] = updated = collection.slice();
+            updated = collection.slice();
+            if (this[path]) {
+              this[path] = updated;
+            }
             updated.keys = collection.keys.slice();
             updated.paths = collection.paths.slice();
             updated.scopes = collection.scopes.slice();
+            updated.duplicates = collection.duplicates;
+            updated.isCollection = collection.isCollection;
             updated[index] = node;
           }
           i = collection.indexOf(node);
@@ -26513,16 +26522,12 @@ Queries = (function() {
           updated.paths[index] = collection.paths[i];
           updated.scopes[index] = collection.scopes[i];
           this.chain(sorted[index - 1], node, path);
-          this.chain(node, sorted[index + 1], path);
+          _results.push(this.chain(node, sorted[index + 1], path));
+        } else {
+          _results.push(void 0);
         }
       }
-      if (updated) {
-        collection.splice();
-        collection.push.apply(collection, updated);
-        collection.keys = updated.keys;
-        collection.paths = updated.keys;
-        return collection.scopes = updated.keys;
-      }
+      return _results;
     }
   };
 
@@ -26779,11 +26784,11 @@ Mutations = (function() {
   };
 
   Mutations.prototype.solve = function(mutations) {
-    debugger;
     var result;
     if (!this.engine.engine.running) {
       return this.engine.engine.compile(true);
     }
+    console.error(mutations);
     result = this.engine.engine.solve('mutations', function() {
       var mutation, qualified, _i, _len;
       this.engine.updating.queries = void 0;
@@ -26959,15 +26964,15 @@ Mutations = (function() {
       removed = allRemoved[_u];
       if (allAdded.indexOf(removed) === -1) {
         if (id = this.engine.identity.find(removed)) {
-          ((_base = this.engine.queries).removed || (_base.removed = [])).push(id);
+          ((_base = this.engine).removed || (_base.removed = [])).push(id);
         }
       }
     }
-    if (this.engine.queries.removed) {
+    if (this.engine.removed) {
       for (_v = 0, _len13 = allAdded.length; _v < _len13; _v++) {
         added = allAdded[_v];
-        if ((j = this.engine.queries.removed.indexOf(this.engine.identity.find(added))) > -1) {
-          this.engine.queries.removed.splice(j, 1);
+        if ((j = this.engine.removed.indexOf(this.engine.identity.find(added))) > -1) {
+          this.engine.removed.splice(j, 1);
         }
       }
     }
@@ -27164,14 +27169,14 @@ Pairs = (function() {
   Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_]+)[↓↑→]?$/i;
 
   Pairs.prototype.onBeforeSolve = function() {
-    var dirty, index, pair, pairs, property, value, _base, _i, _len;
+    var dirty, index, pair, pairs, property, value, _base, _i, _len, _ref;
     dirty = this.dirty;
     delete this.dirty;
     this.repairing = true;
     if (dirty) {
       for (property in dirty) {
         value = dirty[property];
-        if (pairs = this.paths[property]) {
+        if (pairs = (_ref = this.paths[property]) != null ? _ref.slice() : void 0) {
           for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
             pair = pairs[index];
             this.solve(property, pair, pairs[index + 1], pairs[index + 2]);
@@ -27326,7 +27331,8 @@ Pairs = (function() {
   };
 
   Pairs.prototype.clean = function(left) {
-    var contd, index, op, operation, others, pairs, prefix, right, rights, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1, _results;
+    debugger;
+    var contd, index, op, others, pairs, prefix, right, rights, _i, _j, _k, _len, _len1, _ref, _ref1, _results;
     if (pairs = (_ref = this.paths) != null ? _ref[left] : void 0) {
       rights = [];
       for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
@@ -27345,14 +27351,8 @@ Pairs = (function() {
           }
         }
       }
-      for (_k = 0, _len1 = pairs.length; _k < _len1; _k += 3) {
-        operation = pairs[_k];
-        if (pairs.indexOf(others[index - 1]) > -1) {
-          pairs.splice(index - 1, 3);
-        }
-      }
-      for (_l = 0, _len2 = rights.length; _l < _len2; _l++) {
-        right = rights[_l];
+      for (_k = 0, _len1 = rights.length; _k < _len1; _k++) {
+        right = rights[_k];
         this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.PAIR, null, right.substring(1));
         delete this.engine.queries[right];
       }

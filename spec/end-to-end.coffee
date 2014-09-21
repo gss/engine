@@ -2477,6 +2477,7 @@ describe 'End - to - End', ->
           article = engine.$id('article1')
           engine.scope.appendChild(article)
 
+          debugger
           engine.then (solution) ->
             expect(solution).to.eql 
               "$title1[y]": 1 + 46
@@ -2489,6 +2490,7 @@ describe 'End - to - End', ->
 
             article = engine.$id('article2')
             engine.scope.appendChild(article)
+            debugger
             engine.then (solution) ->
               expect(solution).to.eql 
 
@@ -2500,8 +2502,11 @@ describe 'End - to - End', ->
                "$article2[y]": 66
                "$desc2[y]": 13 + 66
                "$title2[y]": 1 + 66
-              done()
 
+              debugger
+              engine.scope.innerHTML = ""
+              engine.then ->
+                debugger
     describe "new VFL input", ->
       it 'should work', (done) ->
         container.innerHTML = """

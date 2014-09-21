@@ -34,11 +34,13 @@ class Console
     a = a.name || a
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
     if document?
-      breakpoint = String @stringify([b,c])
+      breakpoint = String(@stringify([b,c])).replace /\r?\n+|\r|\s+/g, ' '
       if @breakpoint == a + breakpoint
         debugger
     else 
       breakpoint = ''
+    if typeof c == 'string'
+      c = c.replace /\r?\n|\r|\s+/g, ' '
     if document?
       if typeof b == 'object'
         @log('%c%s%c%s%c%s%O%c\t\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint, '', p1, b, 'color: #999', c || "")

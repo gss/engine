@@ -21,9 +21,8 @@ class Mutations
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
-    debugger
     return @engine.engine.compile(true) unless @engine.engine.running
-
+    console.error(mutations)
     result = @engine.engine.solve 'mutations', ->
       @engine.updating.queries = undefined
       @engine.updating.reflown = undefined
@@ -149,12 +148,12 @@ class Mutations
     for removed in allRemoved
       if allAdded.indexOf(removed) == -1
         if id = @engine.identity.find(removed)
-          (@engine.queries.removed ||= []).push(id)
+          (@engine.removed ||= []).push(id)
 
-    if @engine.queries.removed
+    if @engine.removed
       for added in allAdded
-        if (j = @engine.queries.removed.indexOf(@engine.identity.find(added))) > -1
-          @engine.queries.removed.splice(j, 1)
+        if (j = @engine.removed.indexOf(@engine.identity.find(added))) > -1
+          @engine.removed.splice(j, 1)
     @
 
   index: (update, type, value) ->

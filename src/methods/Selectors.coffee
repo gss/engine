@@ -25,7 +25,6 @@ class Selectors
 
   # Observe hits to DOM, subscribe elements to query 
   onQuery: (node, args, result, operation, continuation, scope) ->
-    debugger
     return result if operation.def.hidden
     return @queries.update(node, args, result, operation, continuation, scope)
 
@@ -358,7 +357,8 @@ class Selectors
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
-      return node if !index? || index == collection.length - 1
+      return if !index?
+      return node if index == collection.length - 1
 
   ':first':
     relative: true
@@ -367,6 +367,7 @@ class Selectors
       path = @getContinuation(@getCanonicalPath(continuation))
       collection = @queries.get path
       index = collection?.indexOf(node)
+      return if !index?
       return node if index == 0
       
 # Set up custom trigger for all selector operations

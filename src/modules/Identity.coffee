@@ -24,7 +24,7 @@ class Identity
     return @[id]
 
   unset: (object) ->
-    delete @[id]
+    delete @[object._gss_id]
 
   # Get id if given object has one
   find: (object) ->

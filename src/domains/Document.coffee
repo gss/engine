@@ -73,10 +73,10 @@ class Document extends Abstract
         if klass.indexOf('gss-ready') == -1
           html.className = (klass && klass + ' ' || '') + 'gss-ready' 
       # Unreference removed elements
-      if @removed
-        for id in @removed
+      if @document.removed
+        for id in @document.removed
           @identity.unset(id)
-        @removed = undefined
+        @document.removed = undefined
 
     # Observe stylesheets in dom
     DOMContentLoaded: ->

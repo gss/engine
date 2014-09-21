@@ -95,7 +95,7 @@ class Pairs
     if dirty
       for property, value of dirty
         #unless @engine.updating.paired?[property]
-        if pairs = @paths[property]
+        if pairs = @paths[property]?.slice()
           for pair, index in pairs by 3
             @solve property, pair, pairs[index + 1], pairs[index + 2]
     for property, value of dirty
@@ -218,7 +218,6 @@ class Pairs
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + @engine.PAIR + right)
 
   clean: (left) ->  
-
     if pairs = @paths?[left]
       rights = []
 
@@ -230,10 +229,6 @@ class Pairs
           for right, index in rights by -1
             if others.indexOf(right) > -1
               rights.splice(index, 1)
-      # clean left parts
-      for operation in pairs by 3
-        if pairs.indexOf(others[index - 1]) > -1
-          pairs.splice(index - 1, 3)
 
       for right in rights
         @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))

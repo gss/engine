@@ -62,8 +62,6 @@ class Expressions
         result = @execute(operation, continuation, scope, args)
 
         continuation = @engine.getOperationPath(operation, continuation, scope)
-    else
-      debugger
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
 

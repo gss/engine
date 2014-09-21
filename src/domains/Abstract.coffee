@@ -35,7 +35,11 @@ class Abstract::Methods
         if prop = @properties[property]
           unless prop.matcher
             return prop.call(@, object, @getContinuation(continuation || contd || ''))
+      
+
+
       getter = ['get', id, property, @getContinuation(continuation || contd || '')]
+      
       if scope && scope != @scope
         getter.push(@identity.provide(scope))
       return getter

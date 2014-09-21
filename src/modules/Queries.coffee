@@ -312,10 +312,14 @@ class Queries
       for node, index in sorted
         if node != collection[index]
           if !updated
-            @[path] = updated = collection.slice()
+            updated = collection.slice()
+            if @[path]
+              @[path] = updated
             updated.keys = collection.keys.slice()
             updated.paths = collection.paths.slice()
             updated.scopes = collection.scopes.slice()
+            updated.duplicates = collection.duplicates
+            updated.isCollection = collection.isCollection
             updated[index] = node
           i = collection.indexOf(node)
           updated[index] = node
@@ -325,13 +329,6 @@ class Queries
 
           @chain sorted[index - 1], node, path
           @chain node, sorted[index + 1], path
-
-      if updated
-        collection.splice()
-        collection.push.apply(collection, updated)
-        collection.keys = updated.keys
-        collection.paths = updated.keys
-        collection.scopes = updated.keys
 
   # Perform method over each node in nodelist, or against given node
   each: (method, result = undefined, continuation, operation, scope, needle, recursion) ->
