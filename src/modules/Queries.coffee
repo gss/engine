@@ -125,7 +125,7 @@ class Queries
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       if !quick
-        @clean(watcher, contd, watcher, subscope, true)
+        @clean(watcher, contd, watcher, subscope, true, continuation)
     if !watchers.length && watchers == @watchers[id]
       delete @watchers[id] 
 
@@ -138,11 +138,17 @@ class Queries
     scopes = collection.scopes
     duplicate = null
 
+    if needle == false
+      refs = @engine.getPossibleContinuations(contd)
+
     # Dont remove it if element matches more than one selector
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
         if dup == node
-          if (keys[length + index] == needle && scopes[length + index] == scope) && contd == paths[length + index]
+          if (contd == paths[length + index] &&
+              (keys[length + index] == needle)) &&
+              scopes[length + index] == scope
+
             duplicates.splice(index, 1)
             keys.splice(length + index, 1)
             paths.splice(length + index, 1)
@@ -151,13 +157,20 @@ class Queries
           else
             duplicate ?= index
 
-    if operation && length && needle
+    if operation && length && needle?
       ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
         if keys
-          return false unless keys[index] == needle && scopes[index] == scope# && paths[index]
+          negative = if refs then null else false
+          return negative if scopes[index] != scope
+          if refs
+            return negative if refs.indexOf(paths[index]) > -1
+          else
+            return negative if keys[index] != needle
+          if refs
+            debugger
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -190,13 +203,15 @@ class Queries
     if continuation
 
       if parent = operation?.parent
-        parent.def.release?.call(@engine, node, operation, continuation, scope)
+        parent.def.release?.call(@engine, node, operation, contd, scope)
         
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
         ((@engine.updating.queries ||= {})[continuation] ||= [])[1] ||= collection.slice()
-      removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
-
+      r = removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
+      while r == false
+        r = @removeFromCollection(node, continuation, operation, scope, false, contd)
+        
       @engine.pairs.remove(id, continuation)
 
       collection = @get(continuation)
@@ -218,17 +233,17 @@ class Queries
     return removed
 
 
-  clean: (path, continuation, operation, scope, bind) ->
+  clean: (path, continuation, operation, scope, bind, contd) ->
     if path.def
       path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
-      @each 'remove', result, path, operation, scope, undefined, undefined, continuation
+      @each 'remove', result, path, operation, scope, operation, undefined, contd
 
     if scope && operation.def.cleaning
-      @remove @engine.identity.find(scope), path, operation, scope, operation
+      @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     @engine.solved.remove(path)
     @engine.stylesheets?.remove(path)
@@ -331,16 +346,16 @@ class Queries
           @chain node, sorted[index + 1], path
 
   # Perform method over each node in nodelist, or against given node
-  each: (method, result = undefined, continuation, operation, scope, needle, recursion) ->
+  each: (method, result = undefined, continuation, operation, scope, needle, recursion, contd) ->
     if @engine.isCollection(result)
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] child, continuation, operation, scope, needle, recursion
+        if @[method] child, continuation, operation, scope, needle, recursion, contd
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] result, continuation, operation, scope, needle, recursion
+      return @[method] result, continuation, operation, scope, needle, recursion, contd
 
   # Filter out known nodes from DOM collections
   update: (node, args, result = undefined, operation, continuation, scope) ->
@@ -409,7 +424,6 @@ class Queries
       removed = old
 
     if !added?.keys
-
       @updateCollections(operation, path, scope, added, removed, undefined, continuation)
         
     #unless operation.def.capture
