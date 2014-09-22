@@ -1,16 +1,16 @@
 DEMOS = 
   SCOPING: """
-    <div class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
+    <div id="box1" class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
       this.classList.toggle('w-virtual');">
-      <div class="innie"></div>
+      <div class="innie" id="innie1" ></div>
     </div>
-    <div class="box wo-virtual" onclick="this.classList.toggle('wo-virtual');
+    <div id="box2" class="box wo-virtual" onclick="this.classList.toggle('wo-virtual');
       this.classList.toggle('w-virtual');">
-      <div class="innie"></div>
+      <div class="innie" id="innie2" ></div>
     </div>
-    <div class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
+    <div id="box3" class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
       this.classList.toggle('w-virtual');">
-      <div class="innie"></div>
+      <div class="innie" id="innie3" ></div>
     </div>
     
     <style>
@@ -410,7 +410,6 @@ describe 'Full page tests', ->
   engine = container = null
 
   afterEach ->
-    debugger
     remove(container)
     engine.destroy()
 
@@ -431,9 +430,65 @@ describe 'Full page tests', ->
 
           container.innerHTML = DEMOS.SCOPING
           engine.then (solution) ->
-            expect(solution['li-width']).to.eql((640 - 16) / 3)
-            expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
-            expect(solution['$header[width]']).to.eql(Math.round(640 / 2))
+            expectation = 
+              "$1[height]": 1000
+              "$1[intrinsic-height]": 1000
+              "$1[intrinsic-width]": 1000
+              "$1[width]": 1000
+              "$1[x]": 0
+              "$1[y]": 0
+              "$box1'zone'[height]": 260
+              "$box1'zone'[width]": 760
+              "$box1'zone'[x]": 120
+              "$box1'zone'[y]": 30
+              "$box1[height]": 300
+              "$box1[width]": 800
+              "$box1[x]": 100
+              "$box1[y]": 10
+              "$box2[height]": 300
+              "$box2[width]": 760
+              "$box2[x]": 120
+              "$box2[y]": 330
+              '$box3"zone"[height]': 260
+              '$box3"zone"[width]': 680
+              '$box3"zone"[x]': 160
+              '$box3"zone"[y]': 670
+              "$box3[height]": 300
+              "$box3[width]": 720
+              "$box3[x]": 140
+              "$box3[y]": 650
+              "$innie1[height]": 260
+              "$innie1[width]": 760
+              "$innie1[x]": 120
+              "$innie1[y]": 30
+              "$innie2[height]": 260
+              "$innie2[width]": 720
+              "$innie2[x]": 140
+              "$innie2[y]": 350
+              "$innie3[height]": 260
+              "$innie3[width]": 680
+              "$innie3[x]": 160
+              "$innie3[y]": 670
+            for expect, value in expectation
+              assert(engine.values[expect]).to.eql value
+
+            engine.$id('box1').onclick()
+            engine.then (solution) ->
+              expect(solution['$box1"zone"[height]']).to.eql null
+              expect(solution['$box1"zone"[width]']).to.eql null
+              expect(solution['$box1"zone"[x]']).to.eql null
+              expect(solution['$box1"zone"[y]']).to.eql null
+              engine.$id('box1').onclick()
+              engine.then (solution) ->
+                expect(solution['$box1"zone"[height]']).to.eql 260
+                expect(solution['$box1"zone"[width]']).to.eql 760
+                expect(solution['$box1"zone"[x]']).to.eql 120
+                expect(solution['$box1"zone"[y]']).to.eql 30
+                engine.scope.innerHTML = ""
+                engine.then (solution) ->
+                  expect(engine.values).to.eql {}
+                  done()
+
 
 
       describe type, ->

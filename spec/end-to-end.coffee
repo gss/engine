@@ -2528,12 +2528,15 @@ describe 'End - to - End', ->
               title1.parentNode.removeChild(title1)
 
               engine.then (solution) ->
+                expect(solution[''])
                 expect(solution).to.eql
-                  '$title1[y]': 0
-                  '$article1[height]': 0
-                  '$desc1[height]': 0
-                  '$desc1[y]': 0
-                  '$article2[y]': 0
+                  "$article1[height]": 0
+                  "$article2[y]": 0
+                  "$desc1[y]": -43
+                  "$desc2[y]": 13
+                  "$title1[height]": null
+                  "$title1[y]": null
+                  "$title2[y]": 1
                 engine.scope.innerHTML = ""
                 engine.then ->
                   expect(engine.values).to.eql {}
