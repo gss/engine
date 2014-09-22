@@ -262,6 +262,7 @@ class Domain
           return unless b[a.length] == a[a.length]
       else
         return if typeof b == 'object'
+    
     return true
 
   reconstrain: (other, constraint) ->
@@ -271,11 +272,11 @@ class Domain
 
       @unconstrain(other)
 
-      stack = @constraints.splice(index)
-      if stack.length
-        for constraint in stack
-          @removeConstraint constraint
-        return stack
+      #stack = @constraints.splice(index)
+      #if stack.length
+      #  for constraint in stack
+      #    @removeConstraint constraint
+      #  return stack
 
 
   constrain: (constraint) ->
@@ -317,10 +318,10 @@ class Domain
     
     @addConstraint(constraint)
 
-    if stack
-      @constraints.push.apply @constraints, stack
-      for constraint in stack
-        @addConstraint constraint
+    #if stack
+    #  @constraints.push.apply @constraints, stack
+    #  for constraint in stack
+    #    @addConstraint constraint
 
   unconstrain: (constraint, continuation) ->
     for path in constraint.paths
