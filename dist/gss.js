@@ -26208,9 +26208,6 @@ Queries = (function() {
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
     var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1;
     collection = this[continuation] || (this[continuation] = []);
-    if ((continuation != null ? continuation.indexOf('$2↓style') : void 0) > -1) {
-      debugger;
-    }
     if (!collection.push) {
       return;
     }
@@ -26304,8 +26301,8 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.filterByScope = function(collection, scope) {
-    var index, length, result, s, value, _i, _len, _ref;
+  Queries.prototype.filterByScope = function(collection, scope, operation) {
+    var index, k, length, result, s, value, _i, _len, _ref, _ref1;
     if (!(collection != null ? collection.scopes : void 0)) {
       return collection;
     }
@@ -26314,7 +26311,7 @@ Queries = (function() {
     _ref = collection.scopes;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       s = _ref[index];
-      if (s === scope) {
+      if (s === scope && !operation || ((k = (_ref1 = collection.keys) != null ? _ref1[index] : void 0) === operation || k.parent === operation)) {
         if (index < length) {
           value = collection[index];
         } else {
@@ -26574,9 +26571,6 @@ Queries = (function() {
     if (added) {
       this.each('add', added, path, operation, scope, operation, contd);
     }
-    if ((path != null ? path.indexOf('$2↓style') : void 0) > -1) {
-      debugger;
-    }
     if ((_ref = (collection = this[path])) != null ? _ref.keys : void 0) {
       sorted = collection.slice().sort(function(a, b) {
         var i, j;
@@ -26644,7 +26638,6 @@ Queries = (function() {
     node || (node = this.engine.getContext(args, operation, scope, node));
     path = this.engine.getQueryPath(operation, continuation);
     old = this.get(path);
-    debugger;
     if (!operation.def.relative && !operation.marked && (query = this.engine.getQueryPath(operation, node, scope)) && ((_ref = this.engine.updating.queries) != null ? _ref.hasOwnProperty(query) : void 0)) {
       result = this.engine.updating.queries[query];
     }
@@ -27384,7 +27377,7 @@ Pairs = (function() {
     if (cleaning) {
       this.clean(left);
     }
-    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + this.engine.PAIR + right);
+    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity.provide(scope) + left + right);
   };
 
   Pairs.prototype.clean = function(left) {

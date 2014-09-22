@@ -63,8 +63,6 @@ class Queries
   add: (node, continuation, operation, scope, key, contd) ->
     collection = @[continuation] ||= []
 
-    if (continuation?.indexOf('$2↓style') > -1)
-      debugger
     if !collection.push
       return
     collection.isCollection = true
@@ -138,12 +136,12 @@ class Queries
     if !watchers.length && watchers == @watchers[id]
       delete @watchers[id] 
 
-  filterByScope: (collection, scope)->
+  filterByScope: (collection, scope, operation)->
     return collection unless collection?.scopes
     length = collection.length
     result = []
     for s, index in collection.scopes
-      if s == scope
+      if s == scope && !operation || ((k = collection.keys?[index]) == operation || k.parent == operation)
         if index < length
           value = collection[index]
         else
@@ -358,8 +356,6 @@ class Queries
     if added
       @each 'add', added, path, operation, scope, operation, contd
 
-    if (path?.indexOf('$2↓style') > -1)
-      debugger
     if (collection = @[path])?.keys
       sorted = collection.slice().sort (a, b) =>
         i = collection.indexOf(a)
@@ -408,7 +404,6 @@ class Queries
     old = @get(path)
 
     # Normalize query to reuse results
-    debugger
     if !operation.def.relative && !operation.marked && 
             (query = @engine.getQueryPath(operation, node, scope)) && 
             @engine.updating.queries?.hasOwnProperty(query)

@@ -211,7 +211,7 @@ class Pairs
 
 
 
-    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + @engine.PAIR + right)
+    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.provide(scope) + left + right)
 
   clean: (left) ->  
     if pairs = @paths?[left]
