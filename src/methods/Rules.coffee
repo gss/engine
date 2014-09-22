@@ -103,11 +103,10 @@ class Rules
           arg.shift()
 
       if operation.index == 1 && !ascender
-        unless condition = operation.condition 
-          operation.condition = condition = @clone operation
-          condition.parent = operation.parent
-          condition.index = operation.index
-          condition.domain = operation.domain
+        condition = @clone operation
+        condition.parent = operation.parent
+        condition.index = operation.index
+        condition.domain = operation.domain
         @solved.solve condition, continuation, scope
         return false
 

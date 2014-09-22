@@ -261,7 +261,7 @@ class Expressions
 
     if parent
       if mark = operation.def.mark || operation.marked
-        if !parent.def.capture && parent.def.serialized
+        if parent && !parent.def.capture
           parent.marked = mark
 
     return if def.noop

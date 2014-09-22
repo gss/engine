@@ -1981,8 +1981,21 @@ describe 'End - to - End', ->
             "$box1[width]": 9
             "$box2[width]": 19
           
-          expect(window.getComputedStyle(document.querySelector("#box1"),null).getPropertyValue("color")).to.equal "rgb(20,30,40)"
-          expect(window.getComputedStyle(document.querySelector("#box2"),null).getPropertyValue("color")).to.equal "rgb(50,50,50)"          
+          expect(window.getComputedStyle(engine.$id("box1"),null).
+            getPropertyValue("z-index")).to.equal "auto"
+          expect(window.getComputedStyle(engine.$id("box2"),null).
+            getPropertyValue("z-index")).to.equal "auto"
+
+          expect(window.getComputedStyle(engine.$id("box1"),null).
+            getPropertyValue("margin-top")).to.equal "0px"
+          expect(window.getComputedStyle(engine.$id("box2"),null).
+            getPropertyValue("margin-top")).to.equal "0px" 
+          expect(window.getComputedStyle(engine.$id("box1"),null).
+            getPropertyValue("padding-top")).to.equal "1px"
+          expect(window.getComputedStyle(engine.$id("box2"),null).
+            getPropertyValue("padding-top")).to.equal "1px"     
+          expect(engine.$id("box1").style.zIndex).to.eql '1'
+          expect(engine.$id("box2").style.zIndex).to.eql '2'     
           done()          
     
         container.innerHTML =  """
@@ -1995,10 +2008,16 @@ describe 'End - to - End', ->
           
               .box {
                 @if ::scope[intrinsic-width] < 10 {
-                  color: rgb(20,30,40);
+                  margin-top: 1px;
+                }
+                @if ::scope[intrinsic-width] > 10 {
+                  padding-top: 1px;
+                }
+                @if ::[width] < 10 {
+                  z-index: 1;
                 }
                 @else {
-                  color: rgb(50,50,50);
+                  z-index: 2;
                 }
               }
           

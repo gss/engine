@@ -69,11 +69,14 @@ class Intrinsic extends Numeric
       if (j = first.lastIndexOf('$')) > -1
         id = first.substring(j)
         if (stylesheet = @identity[id])?.tagName == 'STYLE'
-          #for bit in bits
-          #  if bit.indexOf('@')
-          
-          if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
-            return
+          parent = operation
+          while parent = parent.parent
+            if parent[0] == 'if' && parent[1].marked
+              shared = false
+              break
+          if shared != false
+            if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
+              return
 
     path = @getPath(element, 'intrinsic-' + property)
     if @watchers?[path]

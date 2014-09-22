@@ -81,6 +81,7 @@ class Stylesheets
     else
       body = property + ':' + value
       selectors = @getSelector(operation)
+      console.error(body, selectors)
       index = sheet.insertRule(selectors + "{" + body + "}", previous.length)
     return true
 

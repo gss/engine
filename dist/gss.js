@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-21) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-22) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21081,12 +21081,10 @@ Rules = (function() {
         }
       }
       if (operation.index === 1 && !ascender) {
-        if (!(condition = operation.condition)) {
-          operation.condition = condition = this.clone(operation);
-          condition.parent = operation.parent;
-          condition.index = operation.index;
-          condition.domain = operation.domain;
-        }
+        condition = this.clone(operation);
+        condition.parent = operation.parent;
+        condition.index = operation.index;
+        condition.domain = operation.domain;
         this.solved.solve(condition, continuation, scope);
         return false;
       }
@@ -24805,6 +24803,7 @@ Boolean.prototype.Methods = (function() {
   };
 
   Methods.prototype["<"] = function(a, b) {
+    debugger;
     return a < b;
   };
 
@@ -25135,7 +25134,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, first, id, j, path, prop, stylesheet, _ref, _ref1;
+    var bits, camel, first, id, j, parent, path, prop, shared, stylesheet, _ref, _ref1;
     if (value == null) {
       value = '';
     }
@@ -25175,8 +25174,17 @@ Intrinsic = (function(_super) {
       if ((j = first.lastIndexOf('$')) > -1) {
         id = first.substring(j);
         if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
-          if (this.stylesheets.solve(stylesheet, operation, this.getContinuation(continuation), element, property, value)) {
-            return;
+          parent = operation;
+          while (parent = parent.parent) {
+            if (parent[0] === 'if' && parent[1].marked) {
+              shared = false;
+              break;
+            }
+          }
+          if (shared !== false) {
+            if (this.stylesheets.solve(stylesheet, operation, this.getContinuation(continuation), element, property, value)) {
+              return;
+            }
           }
         }
       }
@@ -25850,7 +25858,7 @@ Expressions = (function() {
     }
     if (parent) {
       if (mark = operation.def.mark || operation.marked) {
-        if (!parent.def.capture && parent.def.serialized) {
+        if (parent && !parent.def.capture) {
           parent.marked = mark;
         }
       }
@@ -27563,6 +27571,7 @@ Stylesheets = (function() {
     } else {
       body = property + ':' + value;
       selectors = this.getSelector(operation);
+      console.error(body, selectors);
       index = sheet.insertRule(selectors + "{" + body + "}", previous.length);
     }
     return true;
