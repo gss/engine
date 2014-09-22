@@ -24793,7 +24793,6 @@ Boolean.prototype.Methods = (function() {
   };
 
   Methods.prototype["<"] = function(a, b) {
-    debugger;
     return a < b;
   };
 
@@ -27299,7 +27298,6 @@ Pairs = (function() {
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
     sid = this.engine.identity.provide(scope);
-    debugger;
     leftOld = this.engine.updating.collections.hasOwnProperty(left) ? this.engine.queries.filterByScope(this.engine.updating.collections[left], scope) : this.engine.queries.filterByScope(a, scope);
     rightOld = this.engine.updating.collections.hasOwnProperty(right) ? this.engine.queries.filterByScope(this.engine.updating.collections[right], scope) : this.engine.queries.filterByScope(b, scope);
     leftNew = this.engine.queries.filterByScope(a, scope);
@@ -27573,7 +27571,6 @@ Stylesheets = (function() {
     } else {
       body = property + ':' + value;
       selectors = this.getSelector(operation);
-      console.error(body, selectors);
       index = sheet.insertRule(selectors + "{" + body + "}", previous.length);
     }
     return true;

@@ -18,7 +18,6 @@ class Boolean::Methods
     return a >= b
 
   "<": (a, b) ->
-    debugger
     return a < b
 
   ">": (a, b) ->

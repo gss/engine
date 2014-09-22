@@ -132,7 +132,7 @@ class Pairs
     b = @engine.queries.get(right)
 
     sid = @engine.identity.provide(scope)
-    debugger
+
     leftOld =
       if @engine.updating.collections.hasOwnProperty(left)
         @engine.queries.filterByScope(@engine.updating.collections[left], scope)
