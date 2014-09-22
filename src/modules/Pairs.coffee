@@ -231,11 +231,12 @@ class Pairs
             if other == pairs[index] && (others != pairs || scope != others[i + 2])
               cleaning.splice(j, 1)
 
+
       for index in cleaning
-        right = pairs[index]
-        @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))
         delete @engine.queries[right]
       for index in rights by -1
+        right = pairs[index]
+        @engine.queries.unobserve(scope._gss_id, @engine.PAIR, null, right.substring(1), undefined, scope)
         pairs.splice(index, 3)
       if !pairs.length
         delete @paths[left]

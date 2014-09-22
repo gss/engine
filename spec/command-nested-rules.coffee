@@ -169,7 +169,6 @@ describe 'Nested Rules', ->
               "$box0[width]": null
             expect(all.header0.style.width).to.eql ''
             expect(all.box0.style.width).to.eql ''
-            debugger
             done()
         engine.solve(rules)
 

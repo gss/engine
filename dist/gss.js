@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-22) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -25589,9 +25588,6 @@ Expressions = (function() {
     if (!operation.def) {
       this.analyze(operation);
     }
-    if ((continuation != null ? continuation.indexOf('"$$') : void 0) > -1) {
-      debugger;
-    }
     if (meta !== operation && (solve = (_ref = operation.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.solve : void 0 : void 0)) {
       solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
       if (solved === false) {
@@ -26266,8 +26262,8 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.unobserve = function(id, continuation, quick, path, contd) {
-    var index, matched, parent, query, refs, subscope, watcher, watchers;
+  Queries.prototype.unobserve = function(id, continuation, quick, path, contd, scope) {
+    var index, matched, parent, query, refs, subscope, watcher, watchers, _ref;
     if (continuation !== true) {
       refs = this.engine.getPossibleContinuations(continuation);
     }
@@ -26277,7 +26273,7 @@ Queries = (function() {
     }
     while (watcher = watchers[index]) {
       query = watchers[index + 1];
-      if (refs && refs.indexOf(query) === -1) {
+      if (refs && (refs.indexOf(query) === -1 || (scope && scope !== watchers[index + 2]))) {
         index += 3;
         continue;
       }
@@ -26285,8 +26281,9 @@ Queries = (function() {
         parent = watcher;
         matched = false;
         while (parent) {
-          if (parent.path === path) {
+          if (parent.path === path || (((_ref = parent.path) != null ? _ref.substring(0, 6) : void 0) === '::this' && '::this' + path === parent.path)) {
             matched = true;
+            break;
           }
           parent = parent.parent;
         }
@@ -26346,10 +26343,10 @@ Queries = (function() {
       if (collection.scopes) {
         c.scopes = collection.scopes.slice();
       }
-      collection = c;
-      if (key === '::this .innie') {
-        debugger;
+      if (collection.keys) {
+        c.keys = collection.keys.slice();
       }
+      collection = c;
     }
     return collections[key] = collection;
   };
@@ -26440,7 +26437,11 @@ Queries = (function() {
       node = id;
       id = this.engine.identity.provide(id);
     } else {
-      node = this.engine.identity[id];
+      if (id.indexOf('"') > -1) {
+        node = id;
+      } else {
+        node = this.engine.identity[id];
+      }
     }
     if (continuation) {
       collection = this.get(continuation);
@@ -26480,7 +26481,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, contd) {
-    var result, _ref, _ref1, _ref2;
+    var result, s, shared, _i, _len, _ref, _ref1, _ref2, _ref3;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -26501,7 +26502,22 @@ Queries = (function() {
     if ((_ref1 = this.engine.stylesheets) != null) {
       _ref1.remove(path);
     }
-    this.set(path, void 0);
+    shared = false;
+    if (this.engine.isCollection(result)) {
+      if (result.scopes) {
+        _ref2 = result.scopes;
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          s = _ref2[_i];
+          if (s !== scope) {
+            shared = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!shared) {
+      this.set(path, void 0);
+    }
     if (this.mutations) {
       this.unobserve(this.mutations, path, true);
     }
@@ -26509,8 +26525,8 @@ Queries = (function() {
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.PAIR) {
         contd = this.engine.getContinuation(path);
-        if ((_ref2 = this.engine.updating) != null) {
-          _ref2.remove(contd);
+        if ((_ref3 = this.engine.updating) != null) {
+          _ref3.remove(contd);
         }
         this.engine.provide(['remove', contd]);
       }
@@ -27416,12 +27432,12 @@ Pairs = (function() {
       }
       for (_l = 0, _len2 = cleaning.length; _l < _len2; _l++) {
         index = cleaning[_l];
-        right = pairs[index];
-        this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.PAIR, null, right.substring(1));
         delete this.engine.queries[right];
       }
       for (_m = rights.length - 1; _m >= 0; _m += -1) {
         index = rights[_m];
+        right = pairs[index];
+        this.engine.queries.unobserve(scope._gss_id, this.engine.PAIR, null, right.substring(1), void 0, scope);
         pairs.splice(index, 3);
       }
       if (!pairs.length) {

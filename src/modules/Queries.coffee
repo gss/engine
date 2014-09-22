@@ -108,22 +108,23 @@ class Queries
       return result
 
   # Remove observers from element
-  unobserve: (id, continuation, quick, path, contd) ->
+  unobserve: (id, continuation, quick, path, contd, scope) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
       query = watchers[index + 1]
-      if refs && refs.indexOf(query) == -1
+      if refs && (refs.indexOf(query) == -1 || (scope && scope != watchers[index + 2]))
         index += 3
         continue
       if path
         parent = watcher
         matched = false
         while parent
-          if parent.path == path
+          if parent.path == path || (parent.path?.substring(0, 6) == '::this' && '::this' + path == parent.path)
             matched = true
+            break
           parent = parent.parent
         unless matched
           index += 3
@@ -160,11 +161,11 @@ class Queries
         c.duplicates = collection.duplicates.slice()
       if collection.scopes
         c.scopes = collection.scopes.slice()
+      if collection.keys
+        c.keys = collection.keys.slice()
 
       collection = c
-      if key == '::this .innie'
-        debugger
-
+      
     collections[key] = collection
     
 
@@ -239,7 +240,10 @@ class Queries
       node = id
       id = @engine.identity.provide(id)
     else
-      node = @engine.identity[id]
+      if id.indexOf('"') > -1
+        node = id
+      else
+        node = @engine.identity[id]
 
     if continuation
 
@@ -294,7 +298,16 @@ class Queries
     @engine.stylesheets?.remove(path)
     @engine.stylesheets?.remove(path)
 
-    @set path, undefined
+    shared = false
+    if @engine.isCollection(result)
+      if result.scopes
+        for s in result.scopes
+          if s != scope
+            shared = true
+            break
+
+    if !shared
+      @set path, undefined
 
     # Remove queries in queue and global watchers that match the path 
     if @mutations
