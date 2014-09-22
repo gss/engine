@@ -267,6 +267,8 @@ class Queries
 
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
+      if recursion == false
+        contd = ref
       @unobserve(id, ref, undefined, undefined, contd)
 
       if recursion != continuation
@@ -289,7 +291,7 @@ class Queries
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
-      @each 'remove', result, path, operation, scope, operation, undefined, contd
+      @each 'remove', result, path, operation, scope, operation, false, contd
 
     if scope && operation.def.cleaning
       @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
@@ -301,12 +303,14 @@ class Queries
     shared = false
     if @engine.isCollection(result)
       if result.scopes
-        for s in result.scopes
-          if s != scope
+        for s, i in result.scopes
+          if s != scope || (operation && result.keys[i] != operation)
             shared = true
             break
 
     if !shared
+      if path.charAt(0) == @engine.PAIR
+        debugger
       @set path, undefined
 
     # Remove queries in queue and global watchers that match the path 
@@ -319,6 +323,8 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
+        if contd == 'style[type*="text/gss"]$2↓article::this .title$title2→::this .desc$desc2'
+          debugger
         @engine.provide(['remove', contd])
     return true
 
@@ -503,6 +509,8 @@ class Queries
     if result
       @[path] = result
     else
+      if path == 'style[type*="text/gss"]$2↓article$article2↑::this .title'
+        debugger
       delete @[path]
     @engine.pairs?.set(path, result)
 

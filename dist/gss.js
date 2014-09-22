@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-22) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-23) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -26466,6 +26466,9 @@ Queries = (function() {
       }
       this.engine.pairs.remove(id, continuation);
       ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
+      if (recursion === false) {
+        contd = ref;
+      }
       this.unobserve(id, ref, void 0, void 0, contd);
       if (recursion !== continuation) {
         if (removed !== false && (removed !== null || !(parent != null ? parent.def.release : void 0))) {
@@ -26482,7 +26485,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, contd) {
-    var result, s, shared, _i, _len, _ref, _ref1, _ref2, _ref3;
+    var i, result, s, shared, _i, _len, _ref, _ref1, _ref2, _ref3;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -26491,7 +26494,7 @@ Queries = (function() {
     }
     result = this.get(path);
     if ((result = this.get(path, void 0, true)) !== void 0) {
-      this.each('remove', result, path, operation, scope, operation, void 0, contd);
+      this.each('remove', result, path, operation, scope, operation, false, contd);
     }
     if (scope && operation.def.cleaning) {
       this.remove(this.engine.identity.find(scope), path, operation, scope, operation, void 0, contd);
@@ -26507,9 +26510,9 @@ Queries = (function() {
     if (this.engine.isCollection(result)) {
       if (result.scopes) {
         _ref2 = result.scopes;
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          s = _ref2[_i];
-          if (s !== scope) {
+        for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
+          s = _ref2[i];
+          if (s !== scope || (operation && result.keys[i] !== operation)) {
             shared = true;
             break;
           }
@@ -26517,6 +26520,9 @@ Queries = (function() {
       }
     }
     if (!shared) {
+      if (path.charAt(0) === this.engine.PAIR) {
+        debugger;
+      }
       this.set(path, void 0);
     }
     if (this.mutations) {
@@ -26528,6 +26534,9 @@ Queries = (function() {
         contd = this.engine.getContinuation(path);
         if ((_ref3 = this.engine.updating) != null) {
           _ref3.remove(contd);
+        }
+        if (contd === 'style[type*="text/gss"]$2↓article::this .title$title2→::this .desc$desc2') {
+          debugger;
         }
         this.engine.provide(['remove', contd]);
       }
@@ -26751,6 +26760,9 @@ Queries = (function() {
     if (result) {
       this[path] = result;
     } else {
+      if (path === 'style[type*="text/gss"]$2↓article$article2↑::this .title') {
+        debugger;
+      }
       delete this[path];
     }
     if ((_ref = this.engine.pairs) != null) {
