@@ -17,6 +17,9 @@ class Expressions
     # Analyze operation once
     unless operation.def
       @analyze(operation)
+
+    if continuation?.indexOf('"$$') > -1
+      debugger
     
     # Use custom argument evaluator of parent operation if it has one
     if meta != operation && (solve = operation.parent?.def?.solve)

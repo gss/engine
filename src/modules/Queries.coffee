@@ -66,7 +66,6 @@ class Queries
     if !collection.push
       return
     collection.isCollection = true
-    (@engine.updating.collections ||= {})[continuation] ||= collection.slice()
 
     keys = collection.keys ||= []
     paths = collection.paths ||= []
@@ -141,7 +140,7 @@ class Queries
     length = collection.length
     result = []
     for s, index in collection.scopes
-      if s == scope && !operation || ((k = collection.keys?[index]) == operation || k.parent == operation)
+      if s == scope && (!operation || (k = collection.keys?[index]) == operation || k.parent == operation)
         if index < length
           value = collection[index]
         else
@@ -158,11 +157,13 @@ class Queries
       if collection.isCollection
         c.isCollection = true
       if collection.duplicates
-        c.duplicates = collection.duplicates?.slice()
+        c.duplicates = collection.duplicates.slice()
       if collection.scopes
-        c.scopes = collection.scopes?.slice()
+        c.scopes = collection.scopes.slice()
 
       collection = c
+      if key == '::this .innie'
+        debugger
 
     collections[key] = collection
     

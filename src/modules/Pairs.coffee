@@ -77,13 +77,15 @@ class Pairs
           relative = '::this' + contd
       if contd == operation.path || relative == operation.path
         if id = continuation.match(@TrailingIDRegExp)
+          if id[1].indexOf('"') > -1
+            return id[1]
           return @engine.identity[id[1]]
         else
           return @engine.queries[continuation]
       
     return
 
-  TrailingIDRegExp: /(\$[a-z0-9-_]+)[↓↑→]?$/i
+  TrailingIDRegExp: /(\$[a-z0-9-_"]+)[↓↑→]?$/i
 
 
   onBeforeSolve: () ->
@@ -145,7 +147,7 @@ class Pairs
       else
         @engine.queries.filterByScope(b, scope)
 
-    leftNew = @engine.queries.filterByScope(a, scope)
+    leftNew = @engine.queries.filterByScope(a, scope, operation)
 
     rightNew = @engine.queries.filterByScope(b, scope)
 
@@ -206,36 +208,44 @@ class Pairs
         cleaning = false
         break
     if cleaning
-      @clean(left)
-
+      @clean(left, scope)
 
 
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.provide(scope) + left + right)
 
-  clean: (left) ->  
+  clean: (left, scope) ->  
     if pairs = @paths?[left]
       rights = []
 
       for op, index in pairs by 3
-        rights.push(op)
+        if pairs[index + 2] == scope
+          rights.push(index)
+
+      cleaning = rights.slice()
+
       # clean right part if nobody else is subscribed
       for prefix, others of @paths
-        if others != pairs
-          for right, index in rights by -1
-            if others.indexOf(right) > -1
-              rights.splice(index, 1)
+        for other, i in others
+          for index, j in cleaning by -1
+            if other == pairs[index] && (others != pairs || scope != others[i + 2])
+              cleaning.splice(j, 1)
 
-      for right in rights
+      for index in cleaning
+        right = pairs[index]
         @engine.queries.unobserve(@engine.scope._gss_id, @engine.PAIR, null, right.substring(1))
         delete @engine.queries[right]
-      delete @paths[left]
+      for index in rights by -1
+        pairs.splice(index, 3)
+      if !pairs.length
+        delete @paths[left]
     index = 0
     while contd = @lefts[index + 1]
-      if contd == left
+      if contd == left && @lefts[index + 2] == scope
         @lefts.splice(index, 3)
       else
         index += 3
+    @
 
 
   set: (path, result) ->

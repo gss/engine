@@ -1,4 +1,82 @@
 DEMOS = 
+  SCOPING: """
+    <div class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
+      this.classList.toggle('w-virtual');">
+      <div class="innie"></div>
+    </div>
+    <div class="box wo-virtual" onclick="this.classList.toggle('wo-virtual');
+      this.classList.toggle('w-virtual');">
+      <div class="innie"></div>
+    </div>
+    <div class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
+      this.classList.toggle('w-virtual');">
+      <div class="innie"></div>
+    </div>
+    
+    <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    .box {
+      background-color: hsl(220,50%,50%);
+    }    
+    .wo-virtual .innie {
+      background-color: hsl(360,100%,50%);
+    }
+    .w-virtual .innie {
+      background-color: hsl(180,100%,50%);
+    }
+    .w-virtual:after {
+      content: 'W/ SCOPED VIRTUAL';
+      font-size: 40px;
+      top: 32px;
+      left: 32px;
+      position:absolute;
+    }
+    .wo-virtual:after {
+      content: 'W/O VIRTUAL';
+      font-size: 40px;
+      top: 32px;
+      left: 32px;
+      position:absolute;
+    }
+    
+    </style>
+    <style type="text/gss">
+
+    
+    ::scope[left] == 0;
+    ::scope[top] == 0;
+    ::scope[height] == ::scope[intrinsic-height];
+    ::scope[width] == ::scope[intrinsic-width];
+
+    .box.w-virtual {
+      @h |-(&"zone")-| in(&) gap(20);
+      @v |-(&"zone")-| in(&) gap(20);
+      @h |(& .innie)| in(&"zone");
+      @v |(& .innie)| in(&"zone");
+    }
+    .box.wo-virtual {
+      @h |-(& .innie)-| in(&) gap(20);
+      @v |-(& .innie)-| in(&) gap(20);
+    }
+
+    @v |-10-(.box)-20-... in(::scope) {
+            
+      @h |~100~(&)~100~| in(::scope);
+      
+      &[x] + 20 == &:next[x];
+      &[right] - 20 == &:next[right];
+      
+      height: == 300;
+      
+    }
+
+    </style>
+
+  """,
+
   GSS1: """
     <style scoped>
       header {
@@ -338,6 +416,26 @@ describe 'Full page tests', ->
 
   for type, index in ['With worker', 'Without worker']
     do (type, index) ->
+
+      describe type, ->
+        it 'scoping', (done) ->
+          container = document.createElement('div')
+          container.style.height = '1000px'
+          container.style.width = '1000px'
+          container.style.position = 'absolute'
+          container.style.overflow = 'auto'
+          container.style.left = 0
+          container.style.top = 0
+          window.$engine = engine = new GSS(container, index == 0)
+          $('#fixtures').appendChild container
+
+          container.innerHTML = DEMOS.SCOPING
+          engine.then (solution) ->
+            expect(solution['li-width']).to.eql((640 - 16) / 3)
+            expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
+            expect(solution['$header[width]']).to.eql(Math.round(640 / 2))
+
+
       describe type, ->
         it 'gss1 demo', (done) ->
           container = document.createElement('div')
@@ -351,7 +449,6 @@ describe 'Full page tests', ->
           $('#fixtures').appendChild container
 
           container.innerHTML = DEMOS.GSS1
-          debugger
           engine.then (solution) ->
             expect(solution['li-width']).to.eql((640 - 16) / 3)
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)

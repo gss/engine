@@ -25589,6 +25589,9 @@ Expressions = (function() {
     if (!operation.def) {
       this.analyze(operation);
     }
+    if ((continuation != null ? continuation.indexOf('"$$') : void 0) > -1) {
+      debugger;
+    }
     if (meta !== operation && (solve = (_ref = operation.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.solve : void 0 : void 0)) {
       solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
       if (solved === false) {
@@ -25962,7 +25965,11 @@ Identity = (function() {
   Identity.prototype.provide = function(object, generate) {
     var id;
     if (typeof object === 'string') {
-      return '$' + object;
+      if (object.charAt(0) !== '$') {
+        return '$' + object;
+      } else {
+        return object;
+      }
     }
     if (!(id = object._gss_id)) {
       if (object === document) {
@@ -26205,13 +26212,12 @@ Queries = (function() {
   };
 
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
-    var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1;
+    var collection, dup, duplicates, el, index, keys, paths, scopes, _i, _j, _len, _len1;
     collection = this[continuation] || (this[continuation] = []);
     if (!collection.push) {
       return;
     }
     collection.isCollection = true;
-    (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[continuation] || (_base[continuation] = collection.slice());
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
@@ -26310,7 +26316,7 @@ Queries = (function() {
     _ref = collection.scopes;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       s = _ref[index];
-      if (s === scope && !operation || ((k = (_ref1 = collection.keys) != null ? _ref1[index] : void 0) === operation || k.parent === operation)) {
+      if (s === scope && (!operation || (k = (_ref1 = collection.keys) != null ? _ref1[index] : void 0) === operation || k.parent === operation)) {
         if (index < length) {
           value = collection[index];
         } else {
@@ -26325,7 +26331,7 @@ Queries = (function() {
   };
 
   Queries.prototype.snapshot = function(key, collection) {
-    var c, collections, _base, _ref, _ref1;
+    var c, collections, _base;
     if ((collections = (_base = this.engine.updating).collections || (_base.collections = {})).hasOwnProperty(key)) {
       return;
     }
@@ -26335,12 +26341,15 @@ Queries = (function() {
         c.isCollection = true;
       }
       if (collection.duplicates) {
-        c.duplicates = (_ref = collection.duplicates) != null ? _ref.slice() : void 0;
+        c.duplicates = collection.duplicates.slice();
       }
       if (collection.scopes) {
-        c.scopes = (_ref1 = collection.scopes) != null ? _ref1.slice() : void 0;
+        c.scopes = collection.scopes.slice();
       }
       collection = c;
+      if (key === '::this .innie') {
+        debugger;
+      }
     }
     return collections[key] = collection;
   };
@@ -27223,6 +27232,9 @@ Pairs = (function() {
       }
       if (contd === operation.path || relative === operation.path) {
         if (id = continuation.match(this.TrailingIDRegExp)) {
+          if (id[1].indexOf('"') > -1) {
+            return id[1];
+          }
           return this.engine.identity[id[1]];
         } else {
           return this.engine.queries[continuation];
@@ -27231,7 +27243,7 @@ Pairs = (function() {
     }
   };
 
-  Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_]+)[↓↑→]?$/i;
+  Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_"]+)[↓↑→]?$/i;
 
   Pairs.prototype.onBeforeSolve = function() {
     var dirty, index, pair, pairs, property, value, _i, _len, _ref;
@@ -27300,7 +27312,7 @@ Pairs = (function() {
     sid = this.engine.identity.provide(scope);
     leftOld = this.engine.updating.collections.hasOwnProperty(left) ? this.engine.queries.filterByScope(this.engine.updating.collections[left], scope) : this.engine.queries.filterByScope(a, scope);
     rightOld = this.engine.updating.collections.hasOwnProperty(right) ? this.engine.queries.filterByScope(this.engine.updating.collections[right], scope) : this.engine.queries.filterByScope(b, scope);
-    leftNew = this.engine.queries.filterByScope(a, scope);
+    leftNew = this.engine.queries.filterByScope(a, scope, operation);
     rightNew = this.engine.queries.filterByScope(b, scope);
     I = Math.max(this.count(leftNew), this.count(rightNew));
     J = Math.max(this.count(leftOld), this.count(rightOld));
@@ -27373,48 +27385,58 @@ Pairs = (function() {
       }
     }
     if (cleaning) {
-      this.clean(left);
+      this.clean(left, scope);
     }
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity.provide(scope) + left + right);
   };
 
-  Pairs.prototype.clean = function(left) {
-    var contd, index, op, others, pairs, prefix, right, rights, _i, _j, _k, _len, _len1, _ref, _ref1, _results;
+  Pairs.prototype.clean = function(left, scope) {
+    var cleaning, contd, i, index, j, op, other, others, pairs, prefix, right, rights, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1;
     if (pairs = (_ref = this.paths) != null ? _ref[left] : void 0) {
       rights = [];
       for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
         op = pairs[index];
-        rights.push(op);
+        if (pairs[index + 2] === scope) {
+          rights.push(index);
+        }
       }
+      cleaning = rights.slice();
       _ref1 = this.paths;
       for (prefix in _ref1) {
         others = _ref1[prefix];
-        if (others !== pairs) {
-          for (index = _j = rights.length - 1; _j >= 0; index = _j += -1) {
-            right = rights[index];
-            if (others.indexOf(right) > -1) {
-              rights.splice(index, 1);
+        for (i = _j = 0, _len1 = others.length; _j < _len1; i = ++_j) {
+          other = others[i];
+          for (j = _k = cleaning.length - 1; _k >= 0; j = _k += -1) {
+            index = cleaning[j];
+            if (other === pairs[index] && (others !== pairs || scope !== others[i + 2])) {
+              cleaning.splice(j, 1);
             }
           }
         }
       }
-      for (_k = 0, _len1 = rights.length; _k < _len1; _k++) {
-        right = rights[_k];
+      for (_l = 0, _len2 = cleaning.length; _l < _len2; _l++) {
+        index = cleaning[_l];
+        right = pairs[index];
         this.engine.queries.unobserve(this.engine.scope._gss_id, this.engine.PAIR, null, right.substring(1));
         delete this.engine.queries[right];
       }
-      delete this.paths[left];
-    }
-    index = 0;
-    _results = [];
-    while (contd = this.lefts[index + 1]) {
-      if (contd === left) {
-        _results.push(this.lefts.splice(index, 3));
-      } else {
-        _results.push(index += 3);
+      for (_m = rights.length - 1; _m >= 0; _m += -1) {
+        index = rights[_m];
+        pairs.splice(index, 3);
+      }
+      if (!pairs.length) {
+        delete this.paths[left];
       }
     }
-    return _results;
+    index = 0;
+    while (contd = this.lefts[index + 1]) {
+      if (contd === left && this.lefts[index + 2] === scope) {
+        this.lefts.splice(index, 3);
+      } else {
+        index += 3;
+      }
+    }
+    return this;
   };
 
   Pairs.prototype.set = function(path, result) {
