@@ -132,20 +132,16 @@ class Pairs
     b = @engine.queries.get(right)
 
     sid = @engine.identity.provide(scope)
-
+    debugger
     leftOld =
-      if old = @engine.updating.collections[sid + @engine.DESCEND + left]
-        old
-      else if @engine.updating.collections.hasOwnProperty(left)
-        @engine.updating.collections[left]
+      if @engine.updating.collections.hasOwnProperty(left)
+        @engine.queries.filterByScope(@engine.updating.collections[left], scope)
       else
         @engine.queries.filterByScope(a, scope)
 
     rightOld =
-      if old = @engine.updating.collections[sid + @engine.DESCEND + right]
-        old
-      else if @engine.updating.collections.hasOwnProperty(right)
-        @engine.updating.collections[right]
+      if @engine.updating.collections.hasOwnProperty(right)
+        @engine.queries.filterByScope(@engine.updating.collections[right], scope)
       else
         @engine.queries.filterByScope(b, scope)
 
@@ -211,6 +207,8 @@ class Pairs
         break
     if cleaning
       @clean(left)
+
+
 
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], left + @engine.PAIR + right)

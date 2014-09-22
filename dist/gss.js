@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-22) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21421,8 +21422,15 @@ Selectors = (function() {
     1: function(value) {
       return '"' + value + '"';
     },
-    2: function(scope, value) {
-      return this.identity.provide(scope) + '"' + value + '"';
+    command: function(o, c, s, m, scope, value) {
+      var collection;
+      if ((c != null ? c.charAt(0) : void 0) === this.PAIR) {
+        collection = [this.identity.provide(scope) + '"' + value + '"'];
+        collection.isCollection = true;
+        return collection;
+      } else {
+        return this.identity.provide(scope) + '"' + value + '"';
+      }
     }
   };
 
@@ -26200,6 +26208,9 @@ Queries = (function() {
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
     var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1;
     collection = this[continuation] || (this[continuation] = []);
+    if ((continuation != null ? continuation.indexOf('$2↓style') : void 0) > -1) {
+      debugger;
+    }
     if (!collection.push) {
       return;
     }
@@ -26208,7 +26219,7 @@ Queries = (function() {
     keys = collection.keys || (collection.keys = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
-    this.snapshot(collection, continuation, scope);
+    this.snapshot(continuation, collection);
     if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
         el = collection[index];
@@ -26309,22 +26320,37 @@ Queries = (function() {
         } else {
           value = collection.duplicates[index - length];
         }
-      }
-      if (result.indexOf(value) === -1) {
-        result.push(value);
+        if (result.indexOf(value) === -1) {
+          result.push(value);
+        }
       }
     }
     return result;
   };
 
-  Queries.prototype.snapshot = function(collection, key, scope) {
-    var path, _base, _base1;
-    path = this.engine.identity.provide(scope) + this.engine.DESCEND + key;
-    return (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[path] || (_base[path] = this.filterByScope(collection, scope));
+  Queries.prototype.snapshot = function(key, collection) {
+    var c, collections, _base, _ref, _ref1;
+    if ((collections = (_base = this.engine.updating).collections || (_base.collections = {})).hasOwnProperty(key)) {
+      return;
+    }
+    if (collection != null ? collection.push : void 0) {
+      c = collection.slice();
+      if (collection.isCollection) {
+        c.isCollection = true;
+      }
+      if (collection.duplicates) {
+        c.duplicates = (_ref = collection.duplicates) != null ? _ref.slice() : void 0;
+      }
+      if (collection.scopes) {
+        c.scopes = (_ref1 = collection.scopes) != null ? _ref1.slice() : void 0;
+      }
+      collection = c;
+    }
+    return collections[key] = collection;
   };
 
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _base, _base1, _i, _len, _ref;
+    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _i, _len, _ref;
     if (!((_ref = (collection = this.get(continuation))) != null ? _ref.keys : void 0)) {
       return null;
     }
@@ -26343,7 +26369,7 @@ Queries = (function() {
         dup = duplicates[index];
         if (dup === node) {
           if ((contd === paths[length + index] && (keys[length + index] === needle)) && scopes[length + index] === scope) {
-            this.snapshot(collection, continuation, scope);
+            this.snapshot(continuation, collection);
             duplicates.splice(index, 1);
             keys.splice(length + index, 1);
             paths.splice(length + index, 1);
@@ -26358,7 +26384,7 @@ Queries = (function() {
       }
     }
     if (operation && length && (needle != null)) {
-      (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[continuation] || (_base[continuation] = collection.slice());
+      this.snapshot(continuation, collection);
       if ((index = collection.indexOf(node)) > -1) {
         if (keys) {
           negative = refs ? null : false;
@@ -26371,7 +26397,7 @@ Queries = (function() {
           if (keys[index] !== needle) {
             return negative;
           }
-          this.snapshot(collection, continuation, scope);
+          this.snapshot(continuation, collection);
           if (duplicate != null) {
             duplicates.splice(duplicate, 1);
             paths[index] = paths[duplicate + length];
@@ -26398,7 +26424,7 @@ Queries = (function() {
   };
 
   Queries.prototype.remove = function(id, continuation, operation, scope, needle, recursion, contd) {
-    var collection, node, parent, r, ref, removed, string, _base, _base1, _ref;
+    var collection, node, parent, r, ref, removed, string, _ref;
     if (needle == null) {
       needle = operation;
     }
@@ -26425,7 +26451,7 @@ Queries = (function() {
       }
       collection = this.get(continuation);
       if (collection && this.engine.isCollection(collection)) {
-        (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[continuation] || (_base[continuation] = collection.slice());
+        this.snapshot(continuation, collection);
       }
       r = removed = this.removeFromCollection(node, continuation, operation, scope, needle, contd);
       while (r === false) {
@@ -26548,6 +26574,9 @@ Queries = (function() {
     if (added) {
       this.each('add', added, path, operation, scope, operation, contd);
     }
+    if ((path != null ? path.indexOf('$2↓style') : void 0) > -1) {
+      debugger;
+    }
     if ((_ref = (collection = this[path])) != null ? _ref.keys : void 0) {
       sorted = collection.slice().sort(function(a, b) {
         var i, j;
@@ -26608,18 +26637,18 @@ Queries = (function() {
   };
 
   Queries.prototype.update = function(node, args, result, operation, continuation, scope) {
-    var added, child, id, index, isCollection, old, path, query, removed, watchers, _base, _base1, _base2, _base3, _i, _j, _len, _len1, _ref;
+    var added, child, id, index, isCollection, old, path, query, removed, watchers, _base, _base1, _base2, _i, _j, _len, _len1, _ref, _ref1, _ref2;
     if (result == null) {
       result = void 0;
     }
     node || (node = this.engine.getContext(args, operation, scope, node));
     path = this.engine.getQueryPath(operation, continuation);
     old = this.get(path);
-    (_base = this.engine.updating).collections || (_base.collections = {});
-    if (!operation.def.relative && !operation.marked && (query = this.engine.getQueryPath(operation, node, scope)) && this.engine.updating.collections.hasOwnProperty(query)) {
+    debugger;
+    if (!operation.def.relative && !operation.marked && (query = this.engine.getQueryPath(operation, node, scope)) && ((_ref = this.engine.updating.queries) != null ? _ref.hasOwnProperty(query) : void 0)) {
       result = this.engine.updating.queries[query];
     }
-    if (this.engine.updating.collections.hasOwnProperty(path)) {
+    if ((_ref1 = this.engine.updating.collections) != null ? _ref1.hasOwnProperty(path) : void 0) {
       old = this.engine.updating.collections[path];
     } else if ((old == null) && (result && result.length === 0) && continuation) {
       old = this.get(this.engine.getCanonicalPath(path));
@@ -26627,11 +26656,10 @@ Queries = (function() {
     isCollection = this.engine.isCollection(result);
     if (old) {
       if (this.engine.isCollection(old)) {
-        old = old.slice();
         removed = void 0;
         for (index = _i = 0, _len = old.length; _i < _len; index = ++_i) {
           child = old[index];
-          if (!old.scopes || ((_ref = old.scopes) != null ? _ref[index] : void 0) === scope) {
+          if (!old.scopes || ((_ref2 = old.scopes) != null ? _ref2[index] : void 0) === scope) {
             if (!result || Array.prototype.indexOf.call(result, child) === -1) {
               (removed || (removed = [])).push(child);
             }
@@ -26644,7 +26672,7 @@ Queries = (function() {
         this.clean(path, void 0, operation, scope);
       } else if (continuation.charAt(0) === this.engine.PAIR) {
         if (id = this.engine.identity.provide(node)) {
-          watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
+          watchers = (_base = this.watchers)[id] || (_base[id] = []);
           if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
             watchers.push(operation, continuation, scope);
           }
@@ -26677,18 +26705,16 @@ Queries = (function() {
       this.updateCollections(operation, path, scope, added, removed, void 0, continuation);
     }
     if (id = this.engine.identity.provide(node)) {
-      watchers = (_base2 = this.watchers)[id] || (_base2[id] = []);
+      watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
       if (this.engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
         watchers.push(operation, continuation, scope);
       }
     }
-    if (query && !this.engine.updating.collections.hasOwnProperty(query)) {
-      this.engine.updating.collections[query] = old;
-      ((_base3 = this.engine.updating).queries || (_base3.queries = {}))[query] = result;
+    if (query) {
+      this.snapshot(query, old);
+      ((_base2 = this.engine.updating).queries || (_base2.queries = {}))[query] = result;
     }
-    if (!this.engine.updating.collections.hasOwnProperty(path)) {
-      this.engine.updating.collections[path] = old;
-    }
+    this.snapshot(path, old);
     if (result === old) {
       return;
     }
@@ -26699,18 +26725,18 @@ Queries = (function() {
   };
 
   Queries.prototype.set = function(path, result) {
-    var old, _base, _base1, _ref, _ref1, _ref2, _ref3;
+    var old, _ref;
     old = this[path];
-    if ((result == null) && !((_ref = this.engine.updating) != null ? (_ref1 = _ref.collections) != null ? _ref1.hasOwnProperty(path) : void 0 : void 0)) {
-      (_base = ((_base1 = this.engine.updating).collections || (_base1.collections = {})))[path] || (_base[path] = (_ref2 = old && old.slice && old.slice() || old) != null ? _ref2 : null);
+    if (result == null) {
+      this.snapshot(path, old);
     }
     if (result) {
       this[path] = result;
     } else {
       delete this[path];
     }
-    if ((_ref3 = this.engine.pairs) != null) {
-      _ref3.set(path, result);
+    if ((_ref = this.engine.pairs) != null) {
+      _ref.set(path, result);
     }
   };
 
@@ -27276,12 +27302,13 @@ Pairs = (function() {
   };
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, old, pair, removed, rightNew, rightOld, sid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
+    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, pair, removed, rightNew, rightOld, sid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
     sid = this.engine.identity.provide(scope);
-    leftOld = (old = this.engine.updating.collections[sid + this.engine.DESCEND + left]) ? old : this.engine.updating.collections.hasOwnProperty(left) ? this.engine.updating.collections[left] : this.engine.queries.filterByScope(a, scope);
-    rightOld = (old = this.engine.updating.collections[sid + this.engine.DESCEND + right]) ? old : this.engine.updating.collections.hasOwnProperty(right) ? this.engine.updating.collections[right] : this.engine.queries.filterByScope(b, scope);
+    debugger;
+    leftOld = this.engine.updating.collections.hasOwnProperty(left) ? this.engine.queries.filterByScope(this.engine.updating.collections[left], scope) : this.engine.queries.filterByScope(a, scope);
+    rightOld = this.engine.updating.collections.hasOwnProperty(right) ? this.engine.queries.filterByScope(this.engine.updating.collections[right], scope) : this.engine.queries.filterByScope(b, scope);
     leftNew = this.engine.queries.filterByScope(a, scope);
     rightNew = this.engine.queries.filterByScope(b, scope);
     I = Math.max(this.count(leftNew), this.count(rightNew));

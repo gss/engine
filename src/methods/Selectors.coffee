@@ -142,8 +142,13 @@ class Selectors
     virtual: true
     1: (value) ->
       return '"' + value + '"'
-    2: (scope, value) ->
-      return @identity.provide(scope) + '"' + value + '"'
+    command: (o,c,s,m, scope, value) ->
+      if c?.charAt(0) == @PAIR
+        collection = [@identity.provide(scope) + '"' + value + '"']
+        collection.isCollection = true
+        collection
+      else
+        @identity.provide(scope) + '"' + value + '"'
 
   # Filters
 

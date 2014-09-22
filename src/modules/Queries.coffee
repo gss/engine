@@ -62,6 +62,9 @@ class Queries
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key, contd) ->
     collection = @[continuation] ||= []
+
+    if (continuation?.indexOf('$2↓style') > -1)
+      debugger
     if !collection.push
       return
     collection.isCollection = true
@@ -72,7 +75,7 @@ class Queries
     scopes = collection.scopes ||= []
 
 
-    @snapshot collection, continuation, scope
+    @snapshot continuation, collection
 
     if (index = collection.indexOf(node)) == -1
       for el, index in collection
@@ -145,13 +148,26 @@ class Queries
           value = collection[index]
         else
           value = collection.duplicates[index - length]
-      if result.indexOf(value) == -1
-        result.push(value)
+        if result.indexOf(value) == -1
+          result.push(value)
     return result
 
-  snapshot: (collection, key, scope) ->
-    path = @engine.identity.provide(scope) + @engine.DESCEND + key
-    (@engine.updating.collections ||= {})[path] ||= @filterByScope(collection, scope)
+  snapshot: (key, collection) ->
+    return if (collections = @engine.updating.collections ||= {}).hasOwnProperty key
+
+    if collection?.push
+      c = collection.slice()
+      if collection.isCollection
+        c.isCollection = true
+      if collection.duplicates
+        c.duplicates = collection.duplicates?.slice()
+      if collection.scopes
+        c.scopes = collection.scopes?.slice()
+
+      collection = c
+
+    collections[key] = collection
+    
 
   # Remove element from collection needlely
   removeFromCollection: (node, continuation, operation, scope, needle, contd) ->
@@ -176,7 +192,7 @@ class Queries
               (keys[length + index] == needle)) &&
               scopes[length + index] == scope
 
-            @snapshot collection, continuation, scope
+            @snapshot continuation, collection
             duplicates.splice(index, 1)
             keys.splice(length + index, 1)
             paths.splice(length + index, 1)
@@ -186,7 +202,7 @@ class Queries
             duplicate ?= index
 
     if operation && length && needle?
-      (@engine.updating.collections ||= {})[continuation] ||= collection.slice()
+      @snapshot continuation, collection
 
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
@@ -195,7 +211,7 @@ class Queries
           return negative if scopes[index] != scope
           return negative if refs.indexOf(paths[index]) == -1
           return negative if keys[index] != needle
-          @snapshot collection, continuation, scope
+          @snapshot continuation, collection
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -239,7 +255,7 @@ class Queries
         
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
-        (@engine.updating.collections ||= {})[continuation] ||= collection.slice()
+        @snapshot continuation, collection
       r = removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
       while r == false
         r = @removeFromCollection(node, continuation, operation, scope, false, contd)
@@ -342,6 +358,8 @@ class Queries
     if added
       @each 'add', added, path, operation, scope, operation, contd
 
+    if (path?.indexOf('$2↓style') > -1)
+      debugger
     if (collection = @[path])?.keys
       sorted = collection.slice().sort (a, b) =>
         i = collection.indexOf(a)
@@ -389,17 +407,13 @@ class Queries
     path = @engine.getQueryPath(operation, continuation)
     old = @get(path)
 
-    @engine.updating.collections ||= {}
-
     # Normalize query to reuse results
-
-    
-
+    debugger
     if !operation.def.relative && !operation.marked && 
             (query = @engine.getQueryPath(operation, node, scope)) && 
-            @engine.updating.collections.hasOwnProperty(query)
+            @engine.updating.queries?.hasOwnProperty(query)
       result = @engine.updating.queries[query]
-    if @engine.updating.collections.hasOwnProperty(path)
+    if @engine.updating.collections?.hasOwnProperty(path)
       old = @engine.updating.collections[path]
     else if !old? && (result && result.length == 0) && continuation
       old = @get(@engine.getCanonicalPath(path))
@@ -410,7 +424,6 @@ class Queries
     # Clean refs of nodes that dont match anymore
     if old
       if @engine.isCollection(old)
-        old = old.slice()
         removed = undefined
         for child, index in old
           if !old.scopes || old.scopes?[index] == scope
@@ -460,12 +473,11 @@ class Queries
       if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         watchers.push(operation, continuation, scope)
     
-    if query && !@engine.updating.collections.hasOwnProperty(query)
-      @engine.updating.collections[query] = old
+    if query
+      @snapshot query, old
       (@engine.updating.queries ||= {})[query] = result
 
-    if !@engine.updating.collections.hasOwnProperty(path)
-      @engine.updating.collections[path] = old
+    @snapshot path, old
 
 
     return if result == old
@@ -477,8 +489,8 @@ class Queries
 
   set: (path, result) ->
     old = @[path]
-    if !result? && !@engine.updating?.collections?.hasOwnProperty(path)
-      (@engine.updating.collections ||= {})[path] ||= old && old.slice && old.slice() || old ? null
+    if !result?
+      @snapshot path, old
     if result
       @[path] = result
     else
