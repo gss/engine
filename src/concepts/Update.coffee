@@ -430,9 +430,23 @@ Update.prototype =
         if result.push
           @engine.update(result)
         else
-          first = @domains.indexOf(domain)
-          second = @domains.indexOf(domain)
-          #for property, value of result
+          preceeding = []
+          index = @index
+          redefined = {}
+          while previous = @domains[--index]
+            if previous && previous == domain
+              preceeding.push(index)
+          if preceeding.length > 1
+            for index in preceeding by -1
+              for property, value of result
+                if solution = @solutions[index]
+                  if solution.hasOwnProperty(property)
+                    if redefined.hasOwnProperty(property)
+                      if solution[property] != value
+                        @engine.console.error(property, 'is looping')
+                        delete result[property]
+                    else if solution[property] != value
+                      redefined[property] = value
 
           @apply(result)
           solution = @apply(result, solution || {})
