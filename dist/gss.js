@@ -20244,6 +20244,9 @@ Engine = (function(_super) {
         _ref.solve(solution);
       }
     } else if (!this.updating.reflown && !restyled) {
+      if (!this.updating.problems.length) {
+        delete this.updating;
+      }
       return;
     }
     if (this.intrinsic) {
@@ -20573,8 +20576,12 @@ Conventions = (function() {
     if (property.indexOf('[') > -1 || !id) {
       return property;
     } else {
-      if (id.nodeType) {
-        id = this.identity.provide(id);
+      if (typeof id !== 'string') {
+        if (id.nodeType) {
+          id = this.identity.provide(id);
+        } else {
+          id = id.path;
+        }
       }
       return id + '[' + property + ']';
     }
@@ -20775,14 +20782,14 @@ Conventions = (function() {
     return domain;
   };
 
-  Conventions.prototype.getVariableDomain = function(operation, force) {
+  Conventions.prototype.getVariableDomain = function(operation, force, quick) {
     var cmd, constraint, d, domain, index, path, prefix, property, scope, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (operation.domain && !force) {
       return operation.domain;
     }
     _ref = variable = operation, cmd = _ref[0], scope = _ref[1], property = _ref[2];
     path = this.getPath(scope, property);
-    if (scope && property && (((_ref1 = this.intrinsic) != null ? _ref1.properties[path] : void 0) != null)) {
+    if ((scope || path.indexOf('[') > -1) && property && (((_ref1 = this.intrinsic) != null ? _ref1.properties[path] : void 0) != null)) {
       domain = this.intrinsic;
     } else if (scope && property && ((_ref2 = this.intrinsic) != null ? _ref2.properties[property] : void 0) && !this.intrinsic.properties[property].matcher) {
       domain = this.intrinsic;
@@ -20816,7 +20823,9 @@ Conventions = (function() {
         }
       }
       if (!domain) {
-        domain = this.linear.maybe();
+        if (!quick) {
+          domain = this.linear.maybe();
+        }
       }
     }
     if (variable && !force) {
@@ -22563,7 +22572,7 @@ Domain = (function() {
       }
     } else if (strategy = this.strategy) {
       if ((object = this[strategy]).solve) {
-        result = object.solve.apply(object, arguments);
+        result = object.solve.apply(object, arguments) || {};
       } else {
         result = this[strategy].apply(this, arguments);
       }
@@ -24429,7 +24438,6 @@ Update.prototype = {
     var length, old, prop, _results;
     old = this[name];
     if (continuation) {
-      debugger;
       if (old) {
         length = continuation.length;
         _results = [];
@@ -24462,7 +24470,6 @@ Update.prototype = {
     }
     this.optimize();
     previous = this.domains[this.index];
-    debugger;
     while ((domain = this.domains[++this.index]) !== void 0) {
       if ((!previous || previous.priority < 0) && (typeof domain !== "undefined" && domain !== null ? domain.priority : void 0) > 0) {
         this.reset();
@@ -24623,7 +24630,7 @@ Numeric.prototype.Methods = (function(_super) {
     command: function(operation, continuation, scope, meta, object, path, contd, scoped) {
       var clone, domain;
       path = this.getPath(object, path);
-      domain = this.getVariableDomain(operation, true);
+      domain = this.getVariableDomain(operation, true, true);
       if (!domain || domain.priority < 0) {
         domain = this;
       } else if (domain !== this) {
@@ -24831,6 +24838,15 @@ Boolean.prototype.Methods = (function() {
 
   Methods.prototype[">"] = function(a, b) {
     return a > b;
+  };
+
+  Methods.prototype.get = function(object, property) {
+    var path;
+    path = this.engine.getPath(object, property);
+    if (this.intrinsic.properties[path]) {
+      return this.intrinsic.get(null, path);
+    }
+    return this.values[this.engine.getPath(object, property)];
   };
 
   return Methods;
@@ -25806,6 +25822,9 @@ Expressions = (function() {
           return result;
         }
       } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
+        if (!continuation && operation[0] === 'get') {
+          continuation = operation[3];
+        }
         solution = ['value', result, continuation || '', operation.toString()];
         if (operation.exported || (scope && scope !== this.engine.scope)) {
           solution.push((_ref1 = operation.exported) != null ? _ref1 : null);
@@ -26573,9 +26592,6 @@ Queries = (function() {
         contd = this.engine.getContinuation(path);
         if ((_ref3 = this.engine.updating) != null) {
           _ref3.remove(contd);
-        }
-        if (contd === 'style[type*="text/gss"]$2↓article::this .title$title2→::this .desc$desc2') {
-          debugger;
         }
         this.engine.provide(['remove', contd]);
       }

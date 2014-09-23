@@ -390,7 +390,6 @@ Update.prototype =
   cleanup: (name, continuation) ->
     old = @[name]
     if continuation
-      debugger
       if old
         length = continuation.length
         for prop of old
@@ -415,7 +414,6 @@ Update.prototype =
      
     @optimize()
     previous = @domains[@index]
-    debugger
     while (domain = @domains[++@index]) != undefined
       if ((!previous || previous.priority < 0) && domain?.priority > 0)
         @reset()

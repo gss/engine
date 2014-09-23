@@ -321,8 +321,6 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
-        if contd == 'style[type*="text/gss"]$2↓article::this .title$title2→::this .desc$desc2'
-          debugger
         @engine.provide(['remove', contd])
     return true
 
@@ -507,8 +505,6 @@ class Queries
     if result
       @[path] = result
     else
-      if path == 'style[type*="text/gss"]$2↓article$article2↑::this .title'
-        debugger
       delete @[path]
     @engine.pairs?.set(path, result)
 

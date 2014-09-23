@@ -23,6 +23,11 @@ class Boolean::Methods
   ">": (a, b) ->
     return a > b
 
+  get: (object, property) ->
+    path = @engine.getPath(object, property)
+    if @intrinsic.properties[path]
+      return @intrinsic.get(null, path)
+    return @values[@engine.getPath(object, property)]
 
 
 for property, value of Boolean::Methods::

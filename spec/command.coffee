@@ -218,7 +218,7 @@ describe 'GSS commands', ->
           [
             ['==', 
               ['get', '$12322','width','.box$12322'],
-              ['value', window.innerWidth, "", 'get,::window,width,.box$12322']
+              ['value', window.innerWidth, ".box$12322", 'get,::window,width,.box$12322']
             ]
           ]
         ]

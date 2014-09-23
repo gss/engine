@@ -78,8 +78,11 @@ class Conventions
     if property.indexOf('[') > -1 || !id
       return property
     else
-      if id.nodeType
-        id = @identity.provide(id)
+      if typeof id != 'string'
+        if id.nodeType
+          id = @identity.provide(id)
+        else 
+          id = id.path
       return id + '[' + property + ']'
 
   # Hook: Should interpreter iterate returned object?
@@ -239,12 +242,12 @@ class Conventions
     return domain
 
   # Return domain that should be used to evaluate given variable
-  getVariableDomain: (operation, force) ->
+  getVariableDomain: (operation, force, quick) ->
     if operation.domain && !force
       return operation.domain
     [cmd, scope, property] = variable = operation
     path = @getPath(scope, property)
-    if scope && property && @intrinsic?.properties[path]?
+    if (scope || path.indexOf('[') > -1) && property && @intrinsic?.properties[path]?
       domain = @intrinsic
     else if scope && property && @intrinsic?.properties[property] && !@intrinsic.properties[property].matcher
       domain = @intrinsic
@@ -269,7 +272,8 @@ class Conventions
         #if scope && property && @intrinsic?.properties[property]
         #  domain = @intrinsic.maybe()
         #else
-        domain = @linear.maybe()
+        if !quick
+          domain = @linear.maybe()
     if variable && !force
       variable.domain = domain
     return domain

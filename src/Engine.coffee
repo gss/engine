@@ -234,6 +234,8 @@ class Engine extends Domain.Events
     if solution = update || @updating.solution
       @applier?.solve(solution)
     else if !@updating.reflown && !restyled
+      if !@updating.problems.length
+        delete @updating
       return
 
     if @intrinsic

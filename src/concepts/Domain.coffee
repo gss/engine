@@ -71,7 +71,7 @@ class Domain
         @merge args
     else if strategy = @strategy
       if (object = @[strategy]).solve
-        result = object.solve.apply(object, arguments)
+        result = object.solve.apply(object, arguments) || {}
       else
         result = @[strategy].apply(@, arguments)
 
