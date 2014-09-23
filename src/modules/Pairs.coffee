@@ -149,7 +149,7 @@ class Pairs
 
     leftNew = @engine.queries.filterByScope(a, scope, operation)
 
-    rightNew = @engine.queries.filterByScope(b, scope)
+    rightNew = @engine.queries.filterByScope(b, scope, operation, true)
 
     I = Math.max(@count(leftNew), @count(rightNew))
     J = Math.max(@count(leftOld), @count(rightOld))

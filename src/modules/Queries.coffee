@@ -136,12 +136,17 @@ class Queries
     if !watchers.length && watchers == @watchers[id]
       delete @watchers[id] 
 
-  filterByScope: (collection, scope, operation)->
+  filterByScope: (collection, scope, operation, top)->
     return collection unless collection?.scopes
     length = collection.length
     result = []
+    if operation
+      operation = @engine.pairs.getTopmostOperation(operation)
     for s, index in collection.scopes
-      if s == scope && (!operation || (k = collection.keys?[index]) == operation || k.parent == operation)
+      if s == scope
+        if operation && collection.keys
+          top = @engine.pairs.getTopmostOperation(collection.keys[index])
+          continue unless top == operation
         if index < length
           value = collection[index]
         else
@@ -188,7 +193,7 @@ class Queries
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
         if dup == node
-          if (contd == paths[length + index] &&
+          if (refs.indexOf(paths[length + index]) > -1 &&
               (keys[length + index] == needle)) &&
               scopes[length + index] == scope
 
@@ -260,15 +265,15 @@ class Queries
       if collection && @engine.isCollection(collection)
         @snapshot continuation, collection
       r = removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
-      while r == false
-        r = @removeFromCollection(node, continuation, operation, scope, false, contd)
+      #while r == false
+      #  r = @removeFromCollection(node, continuation, operation, scope, false, contd)
         
       @engine.pairs.remove(id, continuation)
 
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
-      @unobserve(id, ref, undefined, undefined, contd)
-      
+      @unobserve(id, ref, undefined, undefined, ref)
+
       if recursion != continuation
         if removed != false && (removed != null || !parent?.def.release)
           @updateCollections operation, continuation, scope, recursion, node, continuation, contd
@@ -304,6 +309,7 @@ class Queries
         for s, i in result.scopes
           # fixme
           if s != scope || (operation && result.keys[i] != operation)
+            debugger
             shared = true
             break
 

@@ -26389,17 +26389,26 @@ Queries = (function() {
     }
   };
 
-  Queries.prototype.filterByScope = function(collection, scope, operation) {
-    var index, k, length, result, s, value, _i, _len, _ref, _ref1;
+  Queries.prototype.filterByScope = function(collection, scope, operation, top) {
+    var index, length, result, s, value, _i, _len, _ref;
     if (!(collection != null ? collection.scopes : void 0)) {
       return collection;
     }
     length = collection.length;
     result = [];
+    if (operation) {
+      operation = this.engine.pairs.getTopmostOperation(operation);
+    }
     _ref = collection.scopes;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       s = _ref[index];
-      if (s === scope && (!operation || (k = (_ref1 = collection.keys) != null ? _ref1[index] : void 0) === operation || k.parent === operation)) {
+      if (s === scope) {
+        if (operation && collection.keys) {
+          top = this.engine.pairs.getTopmostOperation(collection.keys[index]);
+          if (top !== operation) {
+            continue;
+          }
+        }
         if (index < length) {
           value = collection[index];
         } else {
@@ -26456,7 +26465,7 @@ Queries = (function() {
       for (index = _i = 0, _len = duplicates.length; _i < _len; index = ++_i) {
         dup = duplicates[index];
         if (dup === node) {
-          if ((contd === paths[length + index] && (keys[length + index] === needle)) && scopes[length + index] === scope) {
+          if ((refs.indexOf(paths[length + index]) > -1 && (keys[length + index] === needle)) && scopes[length + index] === scope) {
             this.snapshot(continuation, collection);
             duplicates.splice(index, 1);
             keys.splice(length + index, 1);
@@ -26546,12 +26555,9 @@ Queries = (function() {
         this.snapshot(continuation, collection);
       }
       r = removed = this.removeFromCollection(node, continuation, operation, scope, needle, contd);
-      while (r === false) {
-        r = this.removeFromCollection(node, continuation, operation, scope, false, contd);
-      }
       this.engine.pairs.remove(id, continuation);
       ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
-      this.unobserve(id, ref, void 0, void 0, contd);
+      this.unobserve(id, ref, void 0, void 0, ref);
       if (recursion !== continuation) {
         if (removed !== false && (removed !== null || !(parent != null ? parent.def.release : void 0))) {
           this.updateCollections(operation, continuation, scope, recursion, node, continuation, contd);
@@ -26595,6 +26601,7 @@ Queries = (function() {
         for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
           s = _ref2[i];
           if (s !== scope || (operation && result.keys[i] !== operation)) {
+            debugger;
             shared = true;
             break;
           }
@@ -27415,7 +27422,7 @@ Pairs = (function() {
     leftOld = this.engine.updating.collections.hasOwnProperty(left) ? this.engine.queries.filterByScope(this.engine.updating.collections[left], scope) : this.engine.queries.filterByScope(a, scope);
     rightOld = this.engine.updating.collections.hasOwnProperty(right) ? this.engine.queries.filterByScope(this.engine.updating.collections[right], scope) : this.engine.queries.filterByScope(b, scope);
     leftNew = this.engine.queries.filterByScope(a, scope, operation);
-    rightNew = this.engine.queries.filterByScope(b, scope);
+    rightNew = this.engine.queries.filterByScope(b, scope, operation, true);
     I = Math.max(this.count(leftNew), this.count(rightNew));
     J = Math.max(this.count(leftOld), this.count(rightOld));
     leftNew = this.pad(leftNew, I);
