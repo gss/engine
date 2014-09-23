@@ -275,7 +275,7 @@ class Queries
       @unobserve(id, ref, undefined, undefined, ref)
 
       if recursion != continuation
-        if removed != false && (removed != null || !parent?.def.release)
+        if (removed != null || !parent?.def.release)
           @updateCollections operation, continuation, scope, recursion, node, continuation, contd
         if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
