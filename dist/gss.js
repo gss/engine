@@ -21090,7 +21090,7 @@ Rules = (function() {
       }
     },
     update: function(operation, continuation, scope, meta, ascender, ascending) {
-      var branch, condition, d, id, index, old, path, result, watchers, _base, _base1, _base2, _ref, _ref1;
+      var branch, collections, condition, d, id, index, old, path, result, watchers, _base, _base1, _base2, _ref, _ref1;
       (_base = operation.parent).uid || (_base.uid = '@' + (this.engine.methods.uid = ((_base1 = this.engine.methods).uid || (_base1.uid = 0)) + 1));
       path = continuation + operation.parent.uid;
       id = scope._gss_id;
@@ -21110,7 +21110,11 @@ Rules = (function() {
         if (!d && (d = this.pairs.dirty)) {
           this.pairs.onBeforeSolve();
         }
-        this.updating.reset();
+        if (this.updating) {
+          collections = this.updating.collections;
+          this.updating.collections = {};
+          this.updating.previous = collections;
+        }
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, this.getContinuation(path, null, this.DESCEND), scope, meta);
@@ -22620,7 +22624,10 @@ Domain = (function() {
           id = path.substring(0, j);
           obj = (_base = this.objects)[id] || (_base[id] = {});
           prop = path.substring(j + 1, path.length - 1);
-          return delete obj[prop];
+          delete obj[prop];
+          if (Object.keys(obj).length === 0) {
+            return delete this.objects[id];
+          }
         }
       }
     }
@@ -23765,7 +23772,7 @@ Shorthand = (function() {
             }
           }
           if (operation !== 0) {
-            operation = Math.round(operation) + 'px';
+            operation = Math.floor(operation) + 'px';
           }
         }
     }
@@ -24418,20 +24425,35 @@ Update.prototype = {
     }
     return this;
   },
-  reset: function() {
-    var collections, mutations, queries;
-    queries = this.queries;
-    this.queries = {};
-    this.queries.previous = queries;
-    collections = this.collections;
-    this.collections = {};
-    this.collections.previous = collections;
-    mutations = this.mutations;
-    this.mutations = [];
-    return this.mutations.previous = mutations;
+  cleanup: function(name, continuation) {
+    var length, old, prop, _results;
+    old = this[name];
+    if (continuation) {
+      debugger;
+      if (old) {
+        length = continuation.length;
+        _results = [];
+        for (prop in old) {
+          if (prop.substring(0, length) === continuation) {
+            _results.push(delete old[prop]);
+          } else {
+            _results.push(void 0);
+          }
+        }
+        return _results;
+      }
+    } else {
+      this[name] = {};
+      return this[name].previous = old;
+    }
+  },
+  reset: function(continuation) {
+    this.cleanup('queries', continuation);
+    this.cleanup('collections', continuation);
+    return this.cleanup('mutations');
   },
   each: function(callback, bind, solution) {
-    var domain, result, _ref, _ref1;
+    var domain, previous, result, _ref, _ref1;
     if (solution) {
       this.apply(solution);
     }
@@ -24439,7 +24461,13 @@ Update.prototype = {
       return;
     }
     this.optimize();
+    previous = this.domains[this.index];
+    debugger;
     while ((domain = this.domains[++this.index]) !== void 0) {
+      if ((!previous || previous.priority < 0) && (typeof domain !== "undefined" && domain !== null ? domain.priority : void 0) > 0) {
+        this.reset();
+      }
+      previous = domain;
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         return result;
@@ -26534,9 +26562,6 @@ Queries = (function() {
       }
     }
     if (!shared) {
-      if (path.charAt(0) === this.engine.PAIR) {
-        debugger;
-      }
       this.set(path, void 0);
     }
     if (this.mutations) {
@@ -27349,7 +27374,7 @@ Pairs = (function() {
   };
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, pair, removed, rightNew, rightOld, sid, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
+    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, pair, removed, rightNew, rightOld, sid, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _ref, _ref1;
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
     sid = this.engine.identity.provide(scope);
@@ -27399,6 +27424,7 @@ Pairs = (function() {
       }
       cleaned.push(contd);
     }
+    solved = [];
     for (_l = 0, _len2 = added.length; _l < _len2; _l++) {
       pair = added[_l];
       contd = left;
@@ -27412,7 +27438,7 @@ Pairs = (function() {
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
-        this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
+        solved.push(contd);
       }
     }
     for (_m = 0, _len3 = cleaned.length; _m < _len3; _m++) {
@@ -27429,6 +27455,10 @@ Pairs = (function() {
     }
     if (cleaning) {
       this.clean(left, scope);
+    }
+    for (_o = 0, _len5 = solved.length; _o < _len5; _o++) {
+      contd = solved[_o];
+      this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
     }
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity.provide(scope) + left + right);
   };

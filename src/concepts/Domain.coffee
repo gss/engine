@@ -127,6 +127,8 @@ class Domain
           obj = @objects[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           delete obj[prop]
+          if Object.keys(obj).length == 0
+            delete @objects[id]
 
   get: (object, property) ->
     return @values[@engine.getPath(object, property)]

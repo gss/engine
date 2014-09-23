@@ -185,6 +185,7 @@ class Pairs
         contd += @engine.identity.provide(pair[1])
       cleaned.push(contd)
     
+    solved = []
     for pair in added
       contd = left
       unless leftNew.single
@@ -196,11 +197,11 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
-      
+        solved.push(contd)
+        
     for contd in cleaned
       @engine.queries.clean(contd)
-
+    
 
     cleaning = true
     for el in leftNew
@@ -210,6 +211,9 @@ class Pairs
     if cleaning
       @clean(left, scope)
 
+    for contd in solved
+      @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
+      
 
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.provide(scope) + left + right)

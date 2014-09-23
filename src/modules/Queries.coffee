@@ -309,8 +309,6 @@ class Queries
             break
 
     if !shared
-      if path.charAt(0) == @engine.PAIR
-        debugger
       @set path, undefined
 
     # Remove queries in queue and global watchers that match the path 

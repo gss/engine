@@ -290,7 +290,7 @@ class Engine extends Domain.Events
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
-      
+
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
     else

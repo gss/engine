@@ -126,10 +126,14 @@ class Rules
         d = @pairs.dirty
         unless old == undefined
           @queries.clean(@getContinuation(path) , continuation, operation.parent, scope)
+        
         @queries[path] = condition
         if !d && (d = @pairs.dirty)
           @pairs.onBeforeSolve()
-        @updating.reset()
+        if @updating
+          collections = @updating.collections
+          @updating.collections = {}
+          @updating.previous = collections
 
         @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + @engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
         

@@ -178,7 +178,7 @@ class Shorthand
             if type.displayName == '_Integer' || type.displayName == '_Float'
               return operation
           if operation != 0
-            operation = Math.round(operation) + 'px'
+            operation = Math.floor(operation) + 'px'
     return operation
 
 

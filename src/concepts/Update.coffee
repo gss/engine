@@ -386,18 +386,25 @@ Update.prototype =
 
     return @
 
-  reset: ->
-    queries = @queries
-    @queries = {}
-    @queries.previous = queries
+  # clean cache by prefix
+  cleanup: (name, continuation) ->
+    old = @[name]
+    if continuation
+      debugger
+      if old
+        length = continuation.length
+        for prop of old
+          if prop.substring(0, length) == continuation
+            delete old[prop]
+    else
+      @[name] = {}
+      @[name].previous = old
 
-    collections = @collections
-    @collections = {}
-    @collections.previous = collections
 
-    mutations = @mutations
-    @mutations = []
-    @mutations.previous = mutations
+  reset: (continuation) ->
+    @cleanup 'queries', continuation
+    @cleanup 'collections', continuation
+    @cleanup 'mutations'
 
   each: (callback, bind, solution) ->
     if solution
@@ -407,9 +414,16 @@ Update.prototype =
 
      
     @optimize()
+    previous = @domains[@index]
+    debugger
     while (domain = @domains[++@index]) != undefined
+      if ((!previous || previous.priority < 0) && domain?.priority > 0)
+        @reset()
+      previous = domain
+
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
+
 
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         return result
