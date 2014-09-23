@@ -197,7 +197,8 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        solved.push(contd)
+        @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
+      
         
     for contd in cleaned
       @engine.queries.clean(contd)
@@ -210,11 +211,6 @@ class Pairs
         break
     if cleaning
       @clean(left, scope)
-
-    for contd in solved
-      @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
-      
-
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.provide(scope) + left + right)
 

@@ -24461,7 +24461,7 @@ Update.prototype = {
     return this.cleanup('mutations');
   },
   each: function(callback, bind, solution) {
-    var domain, previous, result, _ref, _ref1;
+    var domain, first, previous, result, second, _ref, _ref1;
     if (solution) {
       this.apply(solution);
     }
@@ -24471,9 +24471,6 @@ Update.prototype = {
     this.optimize();
     previous = this.domains[this.index];
     while ((domain = this.domains[++this.index]) !== void 0) {
-      if ((!previous || previous.priority < 0) && (typeof domain !== "undefined" && domain !== null ? domain.priority : void 0) > 0) {
-        this.reset();
-      }
       previous = domain;
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
@@ -24483,6 +24480,8 @@ Update.prototype = {
         if (result.push) {
           this.engine.update(result);
         } else {
+          first = this.domains.indexOf(domain);
+          second = this.domains.indexOf(domain);
           this.apply(result);
           solution = this.apply(result, solution || {});
         }
@@ -26815,9 +26814,6 @@ Queries = (function() {
     if (result) {
       this[path] = result;
     } else {
-      if (path === 'style[type*="text/gss"]$2↓article$article2↑::this .title') {
-        debugger;
-      }
       delete this[path];
     }
     if ((_ref = this.engine.pairs) != null) {
@@ -27390,7 +27386,7 @@ Pairs = (function() {
   };
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, pair, removed, rightNew, rightOld, sid, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _o, _ref, _ref1;
+    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, pair, removed, rightNew, rightOld, sid, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
     sid = this.engine.identity.provide(scope);
@@ -27454,7 +27450,7 @@ Pairs = (function() {
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
-        solved.push(contd);
+        this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
       }
     }
     for (_m = 0, _len3 = cleaned.length; _m < _len3; _m++) {
@@ -27471,10 +27467,6 @@ Pairs = (function() {
     }
     if (cleaning) {
       this.clean(left, scope);
-    }
-    for (_o = 0, _len5 = solved.length; _o < _len5; _o++) {
-      contd = solved[_o];
-      this.engine.document.solve(operation.parent, contd + this.engine.PAIR, scope, void 0, true);
     }
     return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity.provide(scope) + left + right);
   };

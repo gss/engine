@@ -415,8 +415,8 @@ Update.prototype =
     @optimize()
     previous = @domains[@index]
     while (domain = @domains[++@index]) != undefined
-      if ((!previous || previous.priority < 0) && domain?.priority > 0)
-        @reset()
+      #if ((!previous || previous.priority < 0) && domain?.priority > 0)
+      #  @reset()
       previous = domain
 
       result = (@solutions ||= [])[@index] = 
@@ -430,6 +430,10 @@ Update.prototype =
         if result.push
           @engine.update(result)
         else
+          first = @domains.indexOf(domain)
+          second = @domains.indexOf(domain)
+          #for property, value of result
+
           @apply(result)
           solution = @apply(result, solution || {})
     @index--
@@ -440,6 +444,7 @@ Update.prototype =
     if solution && result != @solution
       for property, value of result
         solution[property] = value
+
     else unless solution
       @solution = solution = result
     return solution
