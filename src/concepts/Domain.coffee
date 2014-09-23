@@ -154,6 +154,10 @@ class Domain
     path = @engine.getPath(object, property)
     old = @values[path]
     return if old == value
+    if @changes
+      @changes[path] = value ? null
+    else if @immediate
+      @solved.set null, path, value
 
     if value?
       @values[path] = value

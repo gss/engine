@@ -20232,7 +20232,7 @@ Engine = (function(_super) {
     }
     onlyRemoving = workflow.problems.length === 1 && workflow.domains[0] === null;
     restyled = onlyRemoving || (this.restyled && !old && !workflow.problems.length);
-    if (this.engine === this && (!workflow.problems[workflow.index + 1] || restyled)) {
+    if (this.engine === this && providing && (!workflow.problems[workflow.index + 1] || restyled)) {
       return this.onSolve(null, restyled);
     }
   };
@@ -21109,8 +21109,8 @@ Rules = (function() {
         this.queries[path] = condition;
         if (!d && (d = this.pairs.dirty)) {
           this.pairs.onBeforeSolve();
-          this.updating.reset();
         }
+        this.updating.reset();
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, this.getContinuation(path, null, this.DESCEND), scope, meta);
@@ -22662,6 +22662,11 @@ Domain = (function() {
     old = this.values[path];
     if (old === value) {
       return;
+    }
+    if (this.changes) {
+      this.changes[path] = value != null ? value : null;
+    } else if (this.immediate) {
+      this.solved.set(null, path, value);
     }
     if (value != null) {
       this.values[path] = value;
@@ -25094,6 +25099,8 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.structured = true;
 
+  Intrinsic.prototype.immediate = true;
+
   Intrinsic.prototype.Types = require('../methods/Types');
 
   Intrinsic.prototype.Units = require('../methods/Units');
@@ -25186,11 +25193,16 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.solve = function() {
+    var changes;
+    this.changes = {};
     Numeric.prototype.solve.apply(this, arguments);
     if (arguments.length < 3) {
-      this.console.row('measure');
-      return this.each(this.scope, this.update);
+      this.console.row('measure', arguments[0], arguments[1]);
+      this.each(this.scope, this.update);
     }
+    changes = this.changes;
+    this.changes = void 0;
+    return changes;
   };
 
   Intrinsic.prototype.get = function(object, property, continuation) {
@@ -25234,7 +25246,9 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.verify = function(object, property, continuation) {
     var path;
     path = this.getPath(object, property);
-    return this.set(null, path, this.get(null, path, continuation));
+    if (this.values.hasOwnProperty(path)) {
+      return this.set(null, path, this.get(null, path, continuation));
+    }
   };
 
   Intrinsic.prototype.each = function(parent, callback, x, y, offsetParent, a, r, g, s) {

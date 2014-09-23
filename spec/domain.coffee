@@ -172,6 +172,7 @@ describe 'Domain', ->
         expect(solution).to.eql
           "a": 0
           "$box0[z]": -50
+          "$box1[intrinsic-width]": 50
         document.body.removeChild(el)
 
 

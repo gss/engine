@@ -12,6 +12,7 @@ Native = require('../methods/Native')
 class Intrinsic extends Numeric
   priority: 100
   structured: true
+  immediate: true
   
   Types:       require('../methods/Types')
   Units:       require('../methods/Units')
@@ -87,10 +88,14 @@ class Intrinsic extends Numeric
 
 
   solve: ->
+    @changes = {}
     Numeric::solve.apply(@, arguments)
     if arguments.length < 3
-      @console.row('measure')
+      @console.row('measure', arguments[0], arguments[1])
       @each @scope, @update
+    changes = @changes
+    @changes = undefined
+    return changes
 
   get: (object, property, continuation) ->
     path = @getPath(object, property)
@@ -129,7 +134,8 @@ class Intrinsic extends Numeric
 
   verify: (object, property, continuation) ->
     path = @getPath(object, property)
-    @set(null, path, @get(null, path, continuation))
+    if @values.hasOwnProperty(path)
+      @set(null, path, @get(null, path, continuation))
 
 
   # Iterate elements and measure intrinsic offsets

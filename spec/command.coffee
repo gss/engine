@@ -177,10 +177,13 @@ describe 'GSS commands', ->
           ]
         ]
         expect(solution).to.eql
+          "$12322[intrinsic-width]": 111
           "$12322[width]": 111
           "$12322[width]": 111
+          "$34222[intrinsic-width]": 222
           "$34222[width]": 222
           "$34222[width]": 222
+          "$35346[intrinsic-width]": 333
           "$35346[width]": 333
           "$35346[width]": 333
 

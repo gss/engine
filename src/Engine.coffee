@@ -226,7 +226,7 @@ class Engine extends Domain.Events
     restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
     
 
-    if @engine == @ && (!workflow.problems[workflow.index + 1] || restyled)
+    if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled)
       return @onSolve(null, restyled)
 
   onSolve: (update, restyled) ->
@@ -290,6 +290,7 @@ class Engine extends Domain.Events
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
+      
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
     else

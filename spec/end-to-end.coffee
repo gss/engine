@@ -539,9 +539,12 @@ describe 'End - to - End', ->
       it 'should bind to scrolling', (done) ->
         engine.once 'solve', (e) ->
           expect(stringify engine.values).to.eql stringify
+            "$scroller[scroll-top]": 0
             "$floater[x]": 0
+
           engine.once 'solve', (e) ->
             expect(stringify engine.values).to.eql stringify
+              "$scroller[scroll-top]": 20
               "$floater[x]": 20
 
             done()
@@ -1294,6 +1297,8 @@ describe 'End - to - End', ->
           expect(engine.values).to.eql 
             "$sugar1[x]": 5
             "$sugar1[y]": 5
+            "$sugar1[intrinsic-width]": 10
+            "$sugar1[intrinsic-height]": 10
             "$sugar2[width]": 10
             "$sugar2[height]": 10
             "$sugar2[x]": 0
@@ -1313,7 +1318,8 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
-            "$sync1[height]": 100            
+            "$sync1[height]": 100
+            "$sync1[intrinsic-width]": 100   
           done()
     
     # This test was the same as previous, I added a regular box sizing check
@@ -1331,7 +1337,8 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
-            "$sync1[height]": 120            
+            "$sync1[height]": 120      
+            "$sync1[intrinsic-width]": 120            
           done()
     
     
@@ -1351,6 +1358,7 @@ describe 'End - to - End', ->
         engine.once 'solve', (e) ->
           expect(engine.values).to.eql 
             "$sync1[height]": 100     
+            "$sync1[intrinsic-width]": 100 
             "$sync1[test]": 0
           # do again
           container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
@@ -1358,8 +1366,10 @@ describe 'End - to - End', ->
             expect(engine.values).to.eql 
               "$sync1[height]": 100
               "$sync1[test]": 0
+              "$sync1[intrinsic-width]": 100 
               "$async1[height]": 100
               "$async1[test]": 0
+              "$async1[intrinsic-width]": 100 
             done()
                   
 
@@ -1378,9 +1388,8 @@ describe 'End - to - End', ->
           cx = w / 2
           h = (window.innerHeight)
           cy = h / 2
-          expect(engine.values).to.eql 
-            "center-x": cx
-            "center-y": cy
+          expect(engine.values["center-x"]).to.eql cx
+          expect(engine.values["center-y"]).to.eql cy
           done()                             
         container.innerHTML =  """
             <style type="text/gss">              
@@ -1393,11 +1402,10 @@ describe 'End - to - End', ->
         engine.once 'solve', (e) ->
           w = (window.innerWidth)# - GSS.get.scrollbarWidth())
           h = (window.innerHeight)
-          expect(engine.values).to.eql 
-            "top": 0
-            "right": w
-            "bottom": h
-            "left": 0
+          expect(engine.values["top"]).to.eql 0
+          expect(engine.values["right"]).to.eql w
+          expect(engine.values["bottom"]).to.eql h
+          expect(engine.values["left"]).to.eql 0
           done()                             
         container.innerHTML =  """
             <style type="text/gss">
@@ -2489,11 +2497,8 @@ describe 'End - to - End', ->
             "$desc2[y]": 13 + 66
             "$title2[height]": 10
             "$title2[y]": 1 + 66
-          expectation["#{container._gss_id}[width]"] = 300
-          expectation["#{container._gss_id}[x]"] = 0
-          expectation["#{container._gss_id}[y]"] = 0
-
-          expect(solution).to.eql expectation
+          for prop, value of expectation
+            expect(solution[prop]).to.eql value
 
           article = engine.$id('article1')
           engine.scope.appendChild(article)
@@ -2565,6 +2570,7 @@ describe 'End - to - End', ->
         """
         engine.once 'solve', (solution) ->
           expect(solution).to.eql 
+            "::window[y]": 0
             "$box2[width]": 70
             "$box2[x]": 160
             "$box2[y]": 0
@@ -2618,6 +2624,7 @@ describe 'End - to - End', ->
         engine.once 'solve', (solution) ->
           console.profileEnd(1)
           expect(solution).to.eql 
+            "::window[y]": 0
             "$box2[width]": 70
             "$box2[x]": 160
             "$box2[y]": 0
