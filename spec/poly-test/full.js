@@ -109,10 +109,38 @@ describe('Full page tests', function() {
                 expect(solution['$box1"zone"[width]']).to.eql(760);
                 expect(solution['$box1"zone"[x]']).to.eql(120);
                 expect(solution['$box1"zone"[y]']).to.eql(30);
-                engine.scope.innerHTML = "";
+                engine.$id('box2').onclick();
                 return engine.then(function(solution) {
-                  expect(engine.values).to.eql({});
-                  return done();
+                  expect(solution['$box2"zone"[height]']).to.eql(260);
+                  expect(solution['$box2"zone"[width]']).to.eql(720);
+                  expect(solution['$box2"zone"[x]']).to.eql(140);
+                  expect(solution['$box2"zone"[y]']).to.eql(350);
+                  engine.$id('box2').onclick();
+                  return engine.then(function(solution) {
+                    expect(solution['$box2"zone"[height]']).to.eql(null);
+                    expect(solution['$box2"zone"[width]']).to.eql(null);
+                    expect(solution['$box2"zone"[x]']).to.eql(null);
+                    expect(solution['$box2"zone"[y]']).to.eql(null);
+                    engine.$id('box3').onclick();
+                    return engine.then(function(solution) {
+                      expect(solution['$box3"zone"[height]']).to.eql(null);
+                      expect(solution['$box3"zone"[width]']).to.eql(null);
+                      expect(solution['$box3"zone"[x]']).to.eql(null);
+                      expect(solution['$box3"zone"[y]']).to.eql(null);
+                      engine.$id('box3').onclick();
+                      return engine.then(function(solution) {
+                        expect(solution['$box3"zone"[height]']).to.eql(260);
+                        expect(solution['$box3"zone"[width]']).to.eql(680);
+                        expect(solution['$box3"zone"[x]']).to.eql(160);
+                        expect(solution['$box3"zone"[y]']).to.eql(670);
+                        engine.scope.innerHTML = "";
+                        return engine.then(function(solution) {
+                          expect(engine.values).to.eql({});
+                          return done();
+                        });
+                      });
+                    });
+                  });
                 });
               });
             });

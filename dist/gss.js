@@ -21127,7 +21127,6 @@ Rules = (function() {
         this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + this.engine.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
         if (branch = operation.parent[index]) {
           result = this.document.solve(branch, this.getContinuation(path, null, this.DESCEND), scope, meta);
-          this.updating.paired = void 0;
           if ((_ref = this.pairs) != null) {
             _ref.onBeforeSolve();
           }
@@ -26595,7 +26594,7 @@ Queries = (function() {
         _ref2 = result.scopes;
         for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
           s = _ref2[i];
-          if (s !== scope || (operation && result.keys[i].path !== operation.path)) {
+          if (s !== scope || (operation && result.keys[i] !== operation)) {
             shared = true;
             break;
           }

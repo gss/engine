@@ -1983,11 +1983,9 @@ describe 'End - to - End', ->
     describe 'TODO!!!! contextual @if @else with vanilla CSS', ->
   
       it 'should compute values', (done) ->
-        listen = (e) ->     
-          expect(engine.values).to.eql 
-            "$box1[width]": 9
-            "$box2[width]": 19
-          
+        listen = (e) ->
+          expect(engine.$id('box1').style.width).to.eql '9px'
+          expect(engine.$id('box2').style.width).to.eql '19px'
           expect(window.getComputedStyle(engine.$id("box1"),null).
             getPropertyValue("z-index")).to.equal "auto"
           expect(window.getComputedStyle(engine.$id("box2"),null).

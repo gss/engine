@@ -139,7 +139,6 @@ class Rules
         
         if branch = operation.parent[index]
           result = @document.solve(branch, @getContinuation(path, null,  @DESCEND), scope, meta)
-          @updating.paired = undefined
           @pairs?.onBeforeSolve()
           @queries?.onBeforeSolve()
         @console.groupEnd(path)

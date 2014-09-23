@@ -268,7 +268,7 @@ class Queries
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
       @unobserve(id, ref, undefined, undefined, contd)
-
+      
       if recursion != continuation
         if removed != false && (removed != null || !parent?.def.release)
           @updateCollections operation, continuation, scope, recursion, node, continuation, contd
@@ -303,7 +303,7 @@ class Queries
       if result.scopes
         for s, i in result.scopes
           # fixme
-          if s != scope || (operation && result.keys[i].path != operation.path)
+          if s != scope || (operation && result.keys[i] != operation)
             shared = true
             break
 
