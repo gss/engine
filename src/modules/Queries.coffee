@@ -267,8 +267,6 @@ class Queries
 
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
-      if recursion == false
-        contd = ref
       @unobserve(id, ref, undefined, undefined, contd)
 
       if recursion != continuation
@@ -304,7 +302,8 @@ class Queries
     if @engine.isCollection(result)
       if result.scopes
         for s, i in result.scopes
-          if s != scope || (operation && result.keys[i] != operation)
+          # fixme
+          if s != scope || (operation && result.keys[i].path != operation.path)
             shared = true
             break
 
