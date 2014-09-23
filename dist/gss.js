@@ -486,7 +486,7 @@ module.exports = (function() {
                   tailView
                 ];
                 if (!(headViewObj.isPoint && tailViewObj.isPoint)) {
-                  withContainer = ( headView =="|" || tailView === "|");
+                  withContainer = ( headView =="|" || tailView === "|") && !(headViewObj.isPoint || tailViewObj.isPoint);          
                   ccss = p.getLeftVar(headView, d, o, headViewObj) + " "
                     + p.getConnectionString(connection, d, o, withContainer) + " "
                     + p.getRightVar(tailView, d, o, tailViewObj)
@@ -8471,10 +8471,10 @@ vflHook = function(name, terms, commands) {
     nestedCommand = parse(ruleSet).commands[0];
     nestedCommand[2] = commands;
     newCommands.push(nestedCommand);
-  }
     if (typeof window !== "undefined" && window !== null ? (_ref2 = window.GSS) != null ? _ref2.console : void 0 : void 0) {
       window.GSS.console.row('@' + name, o.statements.concat([ruleSet]), terms);
     }
+  }
   return {
     commands: newCommands
   };
