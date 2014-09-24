@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20403,7 +20402,6 @@ Engine = (function(_super) {
           }
         }
         if (other.changes) {
-          debugger;
           _ref4 = other.changes;
           for (property in _ref4) {
             value = _ref4[property];

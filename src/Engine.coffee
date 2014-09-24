@@ -371,7 +371,6 @@ class Engine extends Domain.Events
             else if other.observers[path]
               other.remove(path)
         if other.changes
-          debugger
           for property, value of other.changes
             (result ||= {})[property] = value
           other.changes = undefined
