@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-23) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22822,52 +22822,70 @@ Domain = (function() {
     return object;
   };
 
-  Domain.prototype.compare = function(a, b, mutate) {
-    var index, value, _i, _len;
-    if (a !== b) {
-      if (typeof a === 'object') {
-        if (typeof b !== 'object') {
+  Domain.prototype.compare = function(a, b, mutation) {
+    var index, result, sub, value, _i, _len;
+    if (typeof a === 'object') {
+      if (typeof b !== 'object') {
+        return;
+      }
+      if (a[0] === 'value' && b[0] === 'value') {
+        if (mutation && this.suggest) {
+          console.error('sug', b[1], b[0]);
+          this.suggest(a.parent.suggestions[a.index], b[1], 'require');
+        }
+        if (a[3] !== b[3]) {
           return;
         }
-        if (a[0] === 'value' && b[0] === 'value') {
-          if (a[3] !== b[3]) {
-            return;
-          }
-        } else if (a[0] === 'value') {
-          return a[3] === b.toString();
-        } else if (b[0] === 'value') {
-          return b[3] === a.toString();
-        } else {
-          for (index = _i = 0, _len = a.length; _i < _len; index = ++_i) {
-            value = a[index];
-            if (!this.compare(b[index], value)) {
-              return;
-            }
-          }
-          if (b[a.length] !== a[a.length]) {
-            return;
-          }
+      } else if (a[0] === 'value') {
+        if (a[3] === b.toString()) {
+          return 'similar';
+        }
+      } else if (b[0] === 'value') {
+        if (b[3] === a.toString()) {
+          return 'similar';
         }
       } else {
-        if (typeof b === 'object') {
+        result = void 0;
+        for (index = _i = 0, _len = a.length; _i < _len; index = ++_i) {
+          value = a[index];
+          sub = this.compare(b[index], value, mutation);
+          if (sub !== true || (result == null) || result === true) {
+            result = sub != null ? sub : false;
+          } else {
+            result = false;
+          }
+        }
+        if (b[a.length] !== a[a.length]) {
           return;
         }
+        return result;
       }
+    } else {
+      if (typeof b === 'object') {
+        return;
+      }
+      return a === b;
     }
     return true;
   };
 
   Domain.prototype.reconstrain = function(other, constraint) {
-    var index, stack;
-    if (this.compare(other.operation, constraint.operation)) {
-      index = this.constraints.indexOf(other);
-      stack = void 0;
-      return this.unconstrain(other);
+    var compared;
+    if (!(other.operation && constraint.operation)) {
+      return;
+    }
+    if (compared = this.compare(other.operation, constraint.operation)) {
+      if (compared === true) {
+        this.compare(other.operation, constraint.operation, true);
+      } else {
+        this.unconstrain(other);
+      }
+      return true;
     }
   };
 
   Domain.prototype.constrain = function(constraint) {
-    var bits, i, length, name, other, path, stack, _base, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
+    var bits, i, length, name, other, path, stack, suggest, _base, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
     if (constraint.paths) {
       stack = void 0;
       _ref = constraint.paths;
@@ -22896,6 +22914,9 @@ Domain = (function() {
           }
         }
       }
+      if (stack) {
+        return;
+      }
       _ref3 = constraint.paths;
       for (_l = 0, _len1 = _ref3.length; _l < _len1; _l++) {
         path = _ref3[_l];
@@ -22909,7 +22930,12 @@ Domain = (function() {
             }
           }
           this.substituted.push(constraint);
-        } else if (path.name) {
+        } else if (this.isVariable(path)) {
+          if (path.suggest) {
+            suggest = path.suggest;
+            delete path.suggest;
+            this.suggest(path, suggest, 'require');
+          }
           if (this.nullified) {
             delete this.nullified[path.name];
           }
@@ -23009,18 +23035,20 @@ Domain = (function() {
           group = groups[_j];
           for (_k = 0, _len1 = group.length; _k < _len1; _k++) {
             other = group[_k];
-            _ref = other.paths;
-            for (_l = 0, _len2 = _ref.length; _l < _len2; _l++) {
-              variable = _ref[_l];
-              if (typeof variable !== 'string') {
-                if (constraint.paths.indexOf(variable) > -1) {
-                  if (groupped && groupped !== group) {
-                    groupped.push.apply(groupped, group);
-                    groups.splice(groups.indexOf(group), 1);
-                  } else {
-                    groupped = group;
+            if (other.paths) {
+              _ref = other.paths;
+              for (_l = 0, _len2 = _ref.length; _l < _len2; _l++) {
+                variable = _ref[_l];
+                if (typeof variable !== 'string') {
+                  if (constraint.paths.indexOf(variable) > -1) {
+                    if (groupped && groupped !== group) {
+                      groupped.push.apply(groupped, group);
+                      groups.splice(groups.indexOf(group), 1);
+                    } else {
+                      groupped = group;
+                    }
+                    break;
                   }
-                  break;
                 }
               }
             }
@@ -23070,7 +23098,7 @@ Domain = (function() {
     result = {};
     for (path in solution) {
       value = solution[path];
-      if (!((_ref = this.nullified) != null ? _ref[path] : void 0)) {
+      if (!((_ref = this.nullified) != null ? _ref[path] : void 0) && path.substring(0, 9) !== 'suggested') {
         result[path] = value;
       }
     }
@@ -23224,6 +23252,19 @@ Domain.prototype.Methods = (function() {
 
   Methods.prototype.value = {
     command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
+      var variable, _base, _base1, _name;
+      if (this.suggest) {
+        variable = ((_base = operation.parent).suggestions || (_base.suggestions = {}))[operation.index];
+        if (!variable) {
+          variable = (_base1 = operation.parent.suggestions)[_name = operation.index] || (_base1[_name] = new c.Variable({
+            name: 'suggested_' + Math.random().toString().substring(2)
+          }));
+          variable.suggest = value;
+        }
+        console.error(value, operation, continuation);
+        debugger;
+        return variable;
+      }
       if (!continuation && contd) {
         return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
       }
@@ -24977,6 +25018,7 @@ Linear = (function(_super) {
 
   Linear.prototype.solve = function() {
     Domain.prototype.solve.apply(this, arguments);
+    debugger;
     if (this.constrained) {
       this.solver.solve();
     } else {
@@ -25007,6 +25049,7 @@ Linear = (function(_super) {
   Linear.prototype.edit = function(variable, strength, weight, continuation) {
     var constraint;
     constraint = new c.EditConstraint(variable, this.strength(strength, 'strong'), this.weight(weight));
+    constraint.paths = [variable];
     this.constrain(constraint);
     variable.editing = constraint;
     return constraint;

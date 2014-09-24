@@ -252,31 +252,48 @@ class Domain
         object[property] = value
     return object
 
-  compare: (a, b, mutate) ->
-    if a != b
-      if typeof a == 'object'
-        return unless typeof b == 'object'
-        if a[0] == 'value' && b[0] == 'value'
-          return unless a[3] == b[3]
-        else if a[0] == 'value'
-          return a[3] == b.toString()
-        else if b[0] == 'value'
-          return b[3] == a.toString()
-        else 
-          for value, index in a
-            return unless @compare(b[index], value)
-          return unless b[a.length] == a[a.length]
-      else
-        return if typeof b == 'object'
-    
+  compare: (a, b, mutation) ->
+    #if a != b
+    if typeof a == 'object'
+      return unless typeof b == 'object'
+      if a[0] == 'value' && b[0] == 'value'
+        if mutation && @suggest
+          console.error('sug', b[1], b[0])
+          @suggest a.parent.suggestions[a.index], b[1], 'require'
+        return unless a[3] == b[3]
+      else if a[0] == 'value'
+        return 'similar' if a[3] == b.toString()
+      else if b[0] == 'value'
+        return 'similar' if b[3] == a.toString()
+      else 
+        result = undefined
+        for value, index in a
+          sub = @compare(b[index], value, mutation)
+          if sub != true || !result? || result == true
+            result = sub ? false
+          else
+            result = false
+        return unless b[a.length] == a[a.length]
+        return result
+    else
+      return if typeof b == 'object'
+      return a == b
     return true
 
   reconstrain: (other, constraint) ->
-    if @compare(other.operation, constraint.operation)
-      index = @constraints.indexOf(other)
-      stack = undefined
+    return unless other.operation && constraint.operation
+    if compared = @compare(other.operation, constraint.operation)
+      if compared == true
+        @compare(other.operation, constraint.operation, true)
+      else
+        @unconstrain(other)
 
-      @unconstrain(other)
+      #index = @constraints.indexOf(other)
+      #stack = undefined
+
+      #@resuggest(other)
+
+      return true
 
       #stack = @constraints.splice(index)
       #if stack.length
@@ -301,6 +318,8 @@ class Domain
             if stack = @reconstrain other, constraint
               break
 
+      return if stack
+
       for path in constraint.paths
         if typeof path == 'string'
           (@paths[path] ||= []).push(constraint)
@@ -310,7 +329,11 @@ class Domain
             if bits[0] == 'get'
               (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
-        else if path.name
+        else if @isVariable(path)
+          if path.suggest
+            suggest = path.suggest
+            delete path.suggest
+            @suggest path, suggest, 'require'
           if @nullified
             delete @nullified[path.name]
           length = (path.constraints ||= []).push(constraint)
@@ -382,15 +405,16 @@ class Domain
       if constraint.paths
         for group in groups by -1
           for other in group
-            for variable in other.paths
-              if typeof variable != 'string'
-                if constraint.paths.indexOf(variable) > -1
-                  if groupped && groupped != group
-                    groupped.push.apply(groupped, group)
-                    groups.splice(groups.indexOf(group), 1)
-                  else
-                    groupped = group
-                  break
+            if other.paths
+              for variable in other.paths
+                if typeof variable != 'string'
+                  if constraint.paths.indexOf(variable) > -1
+                    if groupped && groupped != group
+                      groupped.push.apply(groupped, group)
+                      groups.splice(groups.indexOf(group), 1)
+                    else
+                      groupped = group
+                    break
             if groups.indexOf(group) == -1
               break
       unless groupped
@@ -426,7 +450,7 @@ class Domain
     @constrained = undefined
     result = {}
     for path, value of solution
-      if !@nullified?[path]
+      if !@nullified?[path] && path.substring(0, 9) != 'suggested'
         result[path] = value
 
     @merge result, true
@@ -531,6 +555,15 @@ class Domain
 class Domain::Methods
   value: 
     command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
+      if @suggest
+        variable = (operation.parent.suggestions ||= {})[operation.index]
+        unless variable
+          variable = operation.parent.suggestions[operation.index] ||= new c.Variable name: 'suggested_' + Math.random().toString().substring(2)
+          variable.suggest = value
+        console.error(value, operation, continuation)
+        debugger
+        return variable
+
       if !continuation && contd
         return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value

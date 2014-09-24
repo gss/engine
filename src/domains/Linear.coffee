@@ -49,6 +49,7 @@ class Linear extends Domain
   # Read commands
   solve: ()->
     Domain::solve.apply(@, arguments)
+    debugger
     if @constrained
       @solver.solve()
     else
@@ -70,6 +71,7 @@ class Linear extends Domain
 
   edit: (variable, strength, weight, continuation) ->
     constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
+    constraint.paths = [variable]
     @constrain constraint
     variable.editing = constraint
     return constraint
