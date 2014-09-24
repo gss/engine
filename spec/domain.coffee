@@ -224,7 +224,7 @@ describe 'Domain', ->
               engine.then (solution) ->
                 console.info(solution)
                 expect(solution).to.eql 
-                  #"$box0[intrinsic-width]": null
+                  "$box0[intrinsic-width]": null
                   "x": null
                   "result": null
 

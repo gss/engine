@@ -20305,7 +20305,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var finish, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4;
+    var finish, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (domain && !domain.solve && domain.postMessage) {
       domain.postMessage(this.clone(problems));
       (workflow.busy || (workflow.busy = [])).push(domain.url);
@@ -20387,6 +20387,7 @@ Engine = (function(_super) {
       for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
         other = _ref3[_l];
         locals = [];
+        other.changes = void 0;
         for (_m = 0, _len4 = removes.length; _m < _len4; _m++) {
           remove = removes[_m];
           for (index = _n = 0, _len5 = remove.length; _n < _len5; index = ++_n) {
@@ -20401,6 +20402,15 @@ Engine = (function(_super) {
             }
           }
         }
+        if (other.changes) {
+          debugger;
+          _ref4 = other.changes;
+          for (property in _ref4) {
+            value = _ref4[property];
+            (result || (result = {}))[property] = value;
+          }
+          other.changes = void 0;
+        }
         if (locals.length) {
           locals.unshift('remove');
           workflow.push([locals], other, true);
@@ -20412,9 +20422,9 @@ Engine = (function(_super) {
       if (typeof problems[0] === 'string') {
         problems = [problems];
       }
-      _ref4 = this.workers;
-      for (url in _ref4) {
-        worker = _ref4[url];
+      _ref5 = this.workers;
+      for (url in _ref5) {
+        worker = _ref5[url];
         workflow.push(problems, worker);
       }
     }
@@ -22610,7 +22620,7 @@ Domain = (function() {
   };
 
   Domain.prototype.unwatch = function(object, property, operation, continuation, scope) {
-    var id, index, j, obj, observers, path, prop, watchers, _base;
+    var id, index, j, obj, observers, old, path, prop, watchers, _base;
     path = this.engine.getPath(object, property);
     observers = this.observers[continuation];
     index = this.engine.indexOfTriplet(observers, operation, path, scope);
@@ -22627,8 +22637,15 @@ Domain = (function() {
         if ((j = path.indexOf('[')) > -1) {
           id = path.substring(0, j);
           obj = (_base = this.objects)[id] || (_base[id] = {});
+          if (this.immediate) {
+            delete this.values[path];
+          }
           prop = path.substring(j + 1, path.length - 1);
+          old = obj[prop];
           delete obj[prop];
+          if (this.engine.updating) {
+            (this.changes || (this.changes = {}))[path] = null;
+          }
           if (Object.keys(obj).length === 0) {
             return delete this.objects[id];
           }

@@ -125,8 +125,13 @@ class Domain
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
           obj = @objects[id] ||= {}
+          if @immediate
+            delete @values[path]
           prop = path.substring(j + 1, path.length - 1)
+          old = obj[prop]
           delete obj[prop]
+          if @engine.updating 
+            (@changes ||= {})[path] = null
           if Object.keys(obj).length == 0
             delete @objects[id]
 

@@ -2586,6 +2586,7 @@ describe 'End - to - End', ->
                   "$desc1[y]": -43
                   "$desc2[y]": 13
                   "$title1[height]": null
+                  "$title1[intrinsic-height]": null
                   "$title1[y]": null
                   "$title2[y]": 1
                 engine.scope.innerHTML = ""

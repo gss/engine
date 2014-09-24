@@ -362,6 +362,7 @@ class Engine extends Domain.Events
             others.push(problem)
       for other in @domains
         locals = []
+        other.changes = undefined
         for remove in removes
           for path, index in remove
             continue if index == 0
@@ -369,6 +370,12 @@ class Engine extends Domain.Events
               locals.push(path)
             else if other.observers[path]
               other.remove(path)
+        if other.changes
+          debugger
+          for property, value of other.changes
+            (result ||= {})[property] = value
+          other.changes = undefined
+
         if locals.length
           locals.unshift 'remove'
           workflow.push([locals], other, true)
