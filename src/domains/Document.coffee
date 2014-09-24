@@ -29,10 +29,10 @@ class Document extends Abstract
     @engine.mutations   ||= new @Mutations(@)
     @engine.all           = @engine.scope.getElementsByTagName('*')
 
-    
     if @scope.nodeType == 9 && ['complete', 'loaded'].indexOf(@scope.readyState) == -1
-      @scope.addEventListener 'DOMContentLoaded', @
-      window.addEventListener 'load', @
+      @scope.addEventListener 'DOMContentLoaded', @engine
+      document.addEventListener 'readystatechange', @engine
+      window.addEventListener 'load', @engine
     else if @running
       @events.compile.call(@)
 
@@ -81,11 +81,21 @@ class Document extends Abstract
     # Observe stylesheets in dom
     DOMContentLoaded: ->
       @scope.removeEventListener 'DOMContentLoaded', @
-      window.removeEventListener 'load', @
       @engine.compile() if @running == undefined
+
+    readystatechange: ->
+      document.removeEventListener 'readystatechange', @
+      if @running == undefined
+        @triggerEvent('DOMContentLoaded')
+      @solve 'Document', 'onload', ->
+        @intrinsic.solve([])
     
-    onLoad: ->
-      @DOMContentLoaded()
+    load: ->
+      if @running == undefined
+        @triggerEvent('DOMContentLoaded')
+      window.removeEventListener 'load', @
+      @solve 'Document', 'onload', ->
+        @intrinsic.solve([])
 
     # Observe and parse stylesheets
     compile: ->

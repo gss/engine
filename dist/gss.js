@@ -25551,8 +25551,9 @@ Document = (function(_super) {
     (_base6 = this.engine).mutations || (_base6.mutations = new this.Mutations(this));
     this.engine.all = this.engine.scope.getElementsByTagName('*');
     if (this.scope.nodeType === 9 && ['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
-      this.scope.addEventListener('DOMContentLoaded', this);
-      window.addEventListener('load', this);
+      this.scope.addEventListener('DOMContentLoaded', this.engine);
+      document.addEventListener('readystatechange', this.engine);
+      window.addEventListener('load', this.engine);
     } else if (this.running) {
       this.events.compile.call(this);
     }
@@ -25617,13 +25618,27 @@ Document = (function(_super) {
     },
     DOMContentLoaded: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
-      window.removeEventListener('load', this);
       if (this.running === void 0) {
         return this.engine.compile();
       }
     },
-    onLoad: function() {
-      return this.DOMContentLoaded();
+    readystatechange: function() {
+      document.removeEventListener('readystatechange', this);
+      if (this.running === void 0) {
+        this.triggerEvent('DOMContentLoaded');
+      }
+      return this.solve('Document', 'onload', function() {
+        return this.intrinsic.solve([]);
+      });
+    },
+    load: function() {
+      if (this.running === void 0) {
+        this.triggerEvent('DOMContentLoaded');
+      }
+      window.removeEventListener('load', this);
+      return this.solve('Document', 'onload', function() {
+        return this.intrinsic.solve([]);
+      });
     },
     compile: function() {
       return this.stylesheets.compile();
@@ -26597,7 +26612,6 @@ Queries = (function() {
         for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
           s = _ref2[i];
           if (s !== scope || (operation && result.keys[i] !== operation)) {
-            debugger;
             shared = true;
             break;
           }
