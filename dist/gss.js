@@ -21702,7 +21702,6 @@ Selectors = (function() {
   Selectors.prototype[':previous'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
-      debugger;
       var collection, index;
       collection = this.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;

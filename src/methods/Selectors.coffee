@@ -349,7 +349,6 @@ class Selectors
   ':previous':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      debugger
       collection = @queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if index == -1 || !index

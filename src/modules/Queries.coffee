@@ -309,7 +309,6 @@ class Queries
         for s, i in result.scopes
           # fixme
           if s != scope || (operation && result.keys[i] != operation)
-            debugger
             shared = true
             break
 
@@ -555,7 +554,7 @@ class Queries
         @mutations.splice(index, 0, operation, continuation, scope)
     @
 
-  # temp
+  # temp workaround for inability to 
   getParentScope: (continuation, operation) ->
     @ScopeSplitterRegExp ||= new RegExp(@engine.DESCEND + '|' + @engine.ASCEND + '::this', 'g')
 

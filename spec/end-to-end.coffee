@@ -674,7 +674,6 @@ describe 'End - to - End', ->
                 expect(stringify engine.values).to.eql stringify
                   "multiplier": 2
                   "$b1[border-left-width]": 4
-                debugger
                 engine.solve 
                   multiplier: 3
               else if count == 2
