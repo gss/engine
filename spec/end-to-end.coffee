@@ -404,6 +404,55 @@ describe 'End - to - End', ->
             "blah2": 70
             "md2": 71 / 4
           done()
+
+    describe 'scoped order dependent selectors', ->
+      it 'should deliver', ->
+        container = document.createElement('div')
+        container.style.left = 0
+        container.style.top = 0
+        container.style.position = 'absolute'
+        window.$engine = engine = new GSS(container)
+        document.body.appendChild(container)
+        container.innerHTML = """
+          <article id="article1">
+            <section id="section11">
+              <p id="p111"></p>
+              <p id="p112"></p>
+            </section>
+            <section id="section12">
+              <p id="p121"></p>
+              <p id="p122"></p>
+            </section>
+          </article>
+          <article id="article2">
+            <section id="section21">
+              <p id="p211"></p>
+              <p id="p212"></p>
+            </section>
+            <section id="section22">
+              <p id="p221"></p>
+              <p id="p222"></p>
+            </section>
+          </article>
+
+          <style type="text/gss">
+            p {
+              height: == 50;
+              width: == 50;
+            }
+
+            article {
+              @h |(& section)-...| in(::);
+
+              section {
+                @h |(& p)...| in(::);
+              }
+            }
+          </style>
+        """
+        engine.then ->
+          1
+
     describe 'simpliest order dependent selectors', ->
       it 'should work in global scope', (done) ->                        
         container.innerHTML =  """

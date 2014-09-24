@@ -555,6 +555,46 @@ class Queries
         @mutations.splice(index, 0, operation, continuation, scope)
     @
 
+  # temp
+  getParentScope: (continuation, operation) ->
+    @ScopeSplitterRegExp ||= new RegExp(@engine.DESCEND + '|' + @engine.ASCEND + '::this', 'g')
+
+    bits = continuation.split(@ScopeSplitterRegExp)
+    
+    if !bits[bits.length - 1]
+      bits.pop()
+    bits.pop()
+
+    for bit, index in bits by -1
+      parent = operation.parent
+      canonical = @engine.getCanonicalPath(bit)
+      while parent = parent.parent
+        if parent.name == 'rule' && parent[1].path == canonical
+          break
+      break if parent
+      bits.splice index, 1
+
+    continuation = bits.join(@engine.DESCEND)
+    if !continuation || 
+        (bits.length == 1 && bits[0].indexOf('style[type*="text/gss"]') > -1)
+      return @engine.scope
+    if id = continuation.match(@engine.pairs.TrailingIDRegExp)
+      if id[1].indexOf('"') > -1
+        return id[1]
+      return @engine.identity[id[1]]
+    else
+      return @engine.queries[continuation]
+
+  getScopedCollection: (operation, continuation, scope) ->
+    path = @engine.getContinuation(@engine.getCanonicalPath(continuation))
+    collection = @get(path)
+    if operation[1].marked
+      collection = @filterByScope collection, scope
+    else if operation[1].def.mark
+      collection = @filterByScope collection, @getParentScope(continuation, operation)
+    return collection
+    
+
   # Compare position of two nodes to sort collection in DOM order
   comparePosition: (a, b, op1, op2) ->
     if op1 != op2

@@ -341,8 +341,7 @@ class Selectors
   ':next':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@getCanonicalPath(continuation))
-      collection = @queries.get path
+      collection = @queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
       return collection[index + 1]
@@ -350,8 +349,8 @@ class Selectors
   ':previous':
     relative: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@getCanonicalPath(continuation))
-      collection = @queries.get path
+      debugger
+      collection = @queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if index == -1 || !index
       return collection[index - 1]
@@ -360,8 +359,7 @@ class Selectors
     relative: true
     singular: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@getCanonicalPath(continuation))
-      collection = @queries.get path
+      collection = @queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index?
       return node if index == collection.length - 1
@@ -370,8 +368,7 @@ class Selectors
     relative: true
     singular: true
     command: (operation, continuation, scope, meta, node) ->
-      path = @getContinuation(@getCanonicalPath(continuation))
-      collection = @queries.get path
+      collection = @queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index?
       return node if index == 0

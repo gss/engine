@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-23) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21689,9 +21689,8 @@ Selectors = (function() {
   Selectors.prototype[':next'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
-      var collection, index, path;
-      path = this.getContinuation(this.getCanonicalPath(continuation));
-      collection = this.queries.get(path);
+      var collection, index;
+      collection = this.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if ((index == null) || index === -1 || index === collection.length - 1) {
         return;
@@ -21703,9 +21702,9 @@ Selectors = (function() {
   Selectors.prototype[':previous'] = {
     relative: true,
     command: function(operation, continuation, scope, meta, node) {
-      var collection, index, path;
-      path = this.getContinuation(this.getCanonicalPath(continuation));
-      collection = this.queries.get(path);
+      debugger;
+      var collection, index;
+      collection = this.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index === -1 || !index) {
         return;
@@ -21718,9 +21717,8 @@ Selectors = (function() {
     relative: true,
     singular: true,
     command: function(operation, continuation, scope, meta, node) {
-      var collection, index, path;
-      path = this.getContinuation(this.getCanonicalPath(continuation));
-      collection = this.queries.get(path);
+      var collection, index;
+      collection = this.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index == null) {
         return;
@@ -21735,9 +21733,8 @@ Selectors = (function() {
     relative: true,
     singular: true,
     command: function(operation, continuation, scope, meta, node) {
-      var collection, index, path;
-      path = this.getContinuation(this.getCanonicalPath(continuation));
-      collection = this.queries.get(path);
+      var collection, index;
+      collection = this.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index == null) {
         return;
@@ -26906,6 +26903,54 @@ Queries = (function() {
       }
     }
     return this;
+  };
+
+  Queries.prototype.getParentScope = function(continuation, operation) {
+    var bit, bits, canonical, id, index, parent, _i;
+    this.ScopeSplitterRegExp || (this.ScopeSplitterRegExp = new RegExp(this.engine.DESCEND + '|' + this.engine.ASCEND + '::this', 'g'));
+    bits = continuation.split(this.ScopeSplitterRegExp);
+    if (!bits[bits.length - 1]) {
+      bits.pop();
+    }
+    bits.pop();
+    for (index = _i = bits.length - 1; _i >= 0; index = _i += -1) {
+      bit = bits[index];
+      parent = operation.parent;
+      canonical = this.engine.getCanonicalPath(bit);
+      while (parent = parent.parent) {
+        if (parent.name === 'rule' && parent[1].path === canonical) {
+          break;
+        }
+      }
+      if (parent) {
+        break;
+      }
+      bits.splice(index, 1);
+    }
+    continuation = bits.join(this.engine.DESCEND);
+    if (!continuation || (bits.length === 1 && bits[0].indexOf('style[type*="text/gss"]') > -1)) {
+      return this.engine.scope;
+    }
+    if (id = continuation.match(this.engine.pairs.TrailingIDRegExp)) {
+      if (id[1].indexOf('"') > -1) {
+        return id[1];
+      }
+      return this.engine.identity[id[1]];
+    } else {
+      return this.engine.queries[continuation];
+    }
+  };
+
+  Queries.prototype.getScopedCollection = function(operation, continuation, scope) {
+    var collection, path;
+    path = this.engine.getContinuation(this.engine.getCanonicalPath(continuation));
+    collection = this.get(path);
+    if (operation[1].marked) {
+      collection = this.filterByScope(collection, scope);
+    } else if (operation[1].def.mark) {
+      collection = this.filterByScope(collection, this.getParentScope(continuation, operation));
+    }
+    return collection;
   };
 
   Queries.prototype.comparePosition = function(a, b, op1, op2) {
