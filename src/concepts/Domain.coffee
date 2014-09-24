@@ -257,14 +257,17 @@ class Domain
     if typeof a == 'object'
       return unless typeof b == 'object'
       if a[0] == 'value' && b[0] == 'value'
-        if mutation && @suggest
-          console.error('sug', b[1], b[0])
-          @suggest a.parent.suggestions[a.index], b[1], 'require'
         return unless a[3] == b[3]
+        if mutation && @suggest && @solver
+          @suggest a.parent.suggestions[a.index], b[1], 'require'
+
+          return true
       else if a[0] == 'value'
         return 'similar' if a[3] == b.toString()
+        return false
       else if b[0] == 'value'
         return 'similar' if b[3] == a.toString()
+        return false
       else 
         result = undefined
         for value, index in a
@@ -330,7 +333,7 @@ class Domain
               (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
         else if @isVariable(path)
-          if path.suggest
+          if path.suggest != undefined
             suggest = path.suggest
             delete path.suggest
             @suggest path, suggest, 'require'
@@ -364,6 +367,9 @@ class Domain
       else if path[0] == 'value'
         @substituted.splice(@substituted.indexOf(constraint))
       else
+        if path.editing
+          path.editing.removed = true
+          delete path.editing
         index = path.constraints.indexOf(constraint)
         if index > -1
           path.constraints.splice(index, 1)
@@ -379,16 +385,20 @@ class Domain
 
     @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
-    @removeConstraint(constraint)
+    unless constraint.removed
+      @removeConstraint(constraint)
 
 
   declare: (name, operation) ->
-    unless variable = @variables[name]
-      variable = @variables[name] = @variable(name)
+    if name
+      unless variable = @variables[name]
+        variable = @variables[name] = @variable(name)
 
-    if @nullified && @nullified[name]
-      delete @nullified[name]
-    (@added ||= {})[name] = variable
+      if @nullified && @nullified[name]
+        delete @nullified[name]
+      (@added ||= {})[name] = variable
+    else
+      variable = @variable('suggested_' + Math.random())
     if operation
       ops = variable.operations ||= []
       if ops.indexOf(operation)
@@ -502,7 +512,7 @@ class Domain
 
 
   export: ->
-    for constraint in @constraints
+    for constraint in @constraints when constraint.operation
       constraint.operation
 
 
@@ -555,13 +565,14 @@ class Domain
 class Domain::Methods
   value: 
     command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
-      if @suggest
+      if @suggest && @solver
         variable = (operation.parent.suggestions ||= {})[operation.index]
         unless variable
-          variable = operation.parent.suggestions[operation.index] ||= new c.Variable name: 'suggested_' + Math.random().toString().substring(2)
-          variable.suggest = value
-        console.error(value, operation, continuation)
-        debugger
+          Domain::Methods.uids ||= 0
+          uid = ++Domain::Methods.uids
+          variable = operation.parent.suggestions[operation.index] ||= @declare(null, operation)
+        #if variable.value != value
+        variable.suggest = value
         return variable
 
       if !continuation && contd

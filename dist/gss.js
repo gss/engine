@@ -22829,21 +22829,23 @@ Domain = (function() {
         return;
       }
       if (a[0] === 'value' && b[0] === 'value') {
-        if (mutation && this.suggest) {
-          console.error('sug', b[1], b[0]);
-          this.suggest(a.parent.suggestions[a.index], b[1], 'require');
-        }
         if (a[3] !== b[3]) {
           return;
+        }
+        if (mutation && this.suggest && this.solver) {
+          this.suggest(a.parent.suggestions[a.index], b[1], 'require');
+          return true;
         }
       } else if (a[0] === 'value') {
         if (a[3] === b.toString()) {
           return 'similar';
         }
+        return false;
       } else if (b[0] === 'value') {
         if (b[3] === a.toString()) {
           return 'similar';
         }
+        return false;
       } else {
         result = void 0;
         for (index = _i = 0, _len = a.length; _i < _len; index = ++_i) {
@@ -22931,7 +22933,7 @@ Domain = (function() {
           }
           this.substituted.push(constraint);
         } else if (this.isVariable(path)) {
-          if (path.suggest) {
+          if (path.suggest !== void 0) {
             suggest = path.suggest;
             delete path.suggest;
             this.suggest(path, suggest, 'require');
@@ -22975,6 +22977,10 @@ Domain = (function() {
       } else if (path[0] === 'value') {
         this.substituted.splice(this.substituted.indexOf(constraint));
       } else {
+        if (path.editing) {
+          path.editing.removed = true;
+          delete path.editing;
+        }
         index = path.constraints.indexOf(constraint);
         if (index > -1) {
           path.constraints.splice(index, 1);
@@ -22999,18 +23005,24 @@ Domain = (function() {
     }
     this.constrained = true;
     this.constraints.splice(this.constraints.indexOf(constraint), 1);
-    return this.removeConstraint(constraint);
+    if (!constraint.removed) {
+      return this.removeConstraint(constraint);
+    }
   };
 
   Domain.prototype.declare = function(name, operation) {
     var ops, variable;
-    if (!(variable = this.variables[name])) {
-      variable = this.variables[name] = this.variable(name);
+    if (name) {
+      if (!(variable = this.variables[name])) {
+        variable = this.variables[name] = this.variable(name);
+      }
+      if (this.nullified && this.nullified[name]) {
+        delete this.nullified[name];
+      }
+      (this.added || (this.added = {}))[name] = variable;
+    } else {
+      variable = this.variable('suggested_' + Math.random());
     }
-    if (this.nullified && this.nullified[name]) {
-      delete this.nullified[name];
-    }
-    (this.added || (this.added = {}))[name] = variable;
     if (operation) {
       ops = variable.operations || (variable.operations = []);
       if (ops.indexOf(operation)) {
@@ -23179,7 +23191,9 @@ Domain = (function() {
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       constraint = _ref[_i];
-      _results.push(constraint.operation);
+      if (constraint.operation) {
+        _results.push(constraint.operation);
+      }
     }
     return _results;
   };
@@ -23252,17 +23266,15 @@ Domain.prototype.Methods = (function() {
 
   Methods.prototype.value = {
     command: function(operation, continuation, scope, meta, value, contd, hash, exported, scoped) {
-      var variable, _base, _base1, _name;
-      if (this.suggest) {
+      var uid, variable, _base, _base1, _base2, _name;
+      if (this.suggest && this.solver) {
         variable = ((_base = operation.parent).suggestions || (_base.suggestions = {}))[operation.index];
         if (!variable) {
-          variable = (_base1 = operation.parent.suggestions)[_name = operation.index] || (_base1[_name] = new c.Variable({
-            name: 'suggested_' + Math.random().toString().substring(2)
-          }));
-          variable.suggest = value;
+          (_base1 = Domain.prototype.Methods).uids || (_base1.uids = 0);
+          uid = ++Domain.prototype.Methods.uids;
+          variable = (_base2 = operation.parent.suggestions)[_name = operation.index] || (_base2[_name] = this.declare(null, operation));
         }
-        console.error(value, operation, continuation);
-        debugger;
+        variable.suggest = value;
         return variable;
       }
       if (!continuation && contd) {
@@ -25018,7 +25030,6 @@ Linear = (function(_super) {
 
   Linear.prototype.solve = function() {
     Domain.prototype.solve.apply(this, arguments);
-    debugger;
     if (this.constrained) {
       this.solver.solve();
     } else {
@@ -25052,6 +25063,7 @@ Linear = (function(_super) {
     constraint.paths = [variable];
     this.constrain(constraint);
     variable.editing = constraint;
+    constraint.editing = variable;
     return constraint;
   };
 

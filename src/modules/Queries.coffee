@@ -309,7 +309,6 @@ class Queries
         for s, i in result.scopes
           # fixme
           if s != scope || (operation && result.keys[i] != operation)
-            debugger
             shared = true
             break
 
