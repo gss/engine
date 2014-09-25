@@ -127,6 +127,7 @@ class Domain
           obj = @objects[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           delete obj[prop]
+          @set path, null
           if Object.keys(obj).length == 0
             delete @objects[id]
 
@@ -160,6 +161,7 @@ class Domain
       @changes[path] = value ? null
     else if @immediate
       @solved.set null, path, value
+
 
     if value?
       @values[path] = value
@@ -443,11 +445,17 @@ class Domain
         return bl - al
 
       separated = groups.splice(1)
+      commands = []
       if separated.length
-        for group in separated
+        shift = 0
+        for group, index in separated
+          ops = []
           for constraint, index in group
             @unconstrain constraint
-            group[index] = constraint.operation
+            if constraint.operation
+              ops.push constraint.operation
+          if ops.length
+            commands.push ops
 
 
 
@@ -467,7 +475,8 @@ class Domain
 
     if @nullified
       for path, variable of @nullified
-        result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
+        if path.substring(0, 9) != 'suggested'
+          result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]
         @nullify(variable)
@@ -482,10 +491,10 @@ class Domain
           result[path] ?= value
           @values[path] = value
       @added = undefined
-    if separated?.length
-      if separated.length == 1
-        separated = separated[0]
-      @engine.provide @orphanize separated
+    if commands?.length
+      if commands.length == 1
+        commands = commands[0]
+      @engine.provide @orphanize commands
     return result
 
 

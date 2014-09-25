@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-24) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22633,6 +22632,7 @@ Domain = (function() {
           obj = (_base = this.objects)[id] || (_base[id] = {});
           prop = path.substring(j + 1, path.length - 1);
           delete obj[prop];
+          this.set(path, null);
           if (Object.keys(obj).length === 0) {
             return delete this.objects[id];
           }
@@ -23081,7 +23081,7 @@ Domain = (function() {
   Domain.prototype.nullify = function() {};
 
   Domain.prototype.apply = function(solution) {
-    var constraint, group, groups, index, path, result, separated, value, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var commands, constraint, group, groups, index, ops, path, result, separated, shift, value, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     if (this.constrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
@@ -23090,13 +23090,21 @@ Domain = (function() {
         return bl - al;
       });
       separated = groups.splice(1);
+      commands = [];
       if (separated.length) {
-        for (_i = 0, _len = separated.length; _i < _len; _i++) {
-          group = separated[_i];
+        shift = 0;
+        for (index = _i = 0, _len = separated.length; _i < _len; index = ++_i) {
+          group = separated[index];
+          ops = [];
           for (index = _j = 0, _len1 = group.length; _j < _len1; index = ++_j) {
             constraint = group[index];
             this.unconstrain(constraint);
-            group[index] = constraint.operation;
+            if (constraint.operation) {
+              ops.push(constraint.operation);
+            }
+          }
+          if (ops.length) {
+            commands.push(ops);
           }
         }
       }
@@ -23119,7 +23127,9 @@ Domain = (function() {
       _ref1 = this.nullified;
       for (path in _ref1) {
         variable = _ref1[path];
-        result[path] = (_ref2 = (_ref3 = this.assumed.values[path]) != null ? _ref3 : (_ref4 = this.intrinsic) != null ? _ref4.values[path] : void 0) != null ? _ref2 : null;
+        if (path.substring(0, 9) !== 'suggested') {
+          result[path] = (_ref2 = (_ref3 = this.assumed.values[path]) != null ? _ref3 : (_ref4 = this.intrinsic) != null ? _ref4.values[path] : void 0) != null ? _ref2 : null;
+        }
         if (this.values.hasOwnProperty(path)) {
           delete this.values[path];
         }
@@ -23142,11 +23152,11 @@ Domain = (function() {
       }
       this.added = void 0;
     }
-    if (separated != null ? separated.length : void 0) {
-      if (separated.length === 1) {
-        separated = separated[0];
+    if (commands != null ? commands.length : void 0) {
+      if (commands.length === 1) {
+        commands = commands[0];
       }
-      this.engine.provide(this.orphanize(separated));
+      this.engine.provide(this.orphanize(commands));
     }
     return result;
   };
@@ -25271,6 +25281,7 @@ Intrinsic = (function(_super) {
     if (typeof value !== 'string') {
       value = prop.toString(value);
     }
+    debugger;
     if (property === 'left' || property === 'top') {
       if (element.style[camel] === '') {
         if ((value != null) && value !== '') {
@@ -25319,10 +25330,8 @@ Intrinsic = (function(_super) {
     var changes;
     this.changes = {};
     Numeric.prototype.solve.apply(this, arguments);
-    if (arguments.length < 3) {
-      this.console.row('measure', arguments[0], arguments[1]);
-      this.each(this.scope, this.update);
-    }
+    this.console.row('measure', arguments[0], arguments[1]);
+    this.each(this.scope, this.update);
     changes = this.changes;
     this.changes = void 0;
     return changes;
@@ -26656,7 +26665,6 @@ Queries = (function() {
         for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
           s = _ref2[i];
           if (s !== scope || (operation && result.keys[i] !== operation)) {
-            debugger;
             shared = true;
             break;
           }

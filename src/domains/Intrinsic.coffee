@@ -52,6 +52,8 @@ class Intrinsic extends Numeric
     if typeof value != 'string'
       value = prop.toString(value)
 
+    debugger
+
     if property == 'left' || property == 'top'
       if element.style[camel] == ''
         if value? && value != ''
@@ -90,9 +92,8 @@ class Intrinsic extends Numeric
   solve: ->
     @changes = {}
     Numeric::solve.apply(@, arguments)
-    if arguments.length < 3
-      @console.row('measure', arguments[0], arguments[1])
-      @each @scope, @update
+    @console.row('measure', arguments[0], arguments[1])
+    @each @scope, @update
     changes = @changes
     @changes = undefined
     return changes
