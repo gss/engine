@@ -69,11 +69,12 @@ class Linear extends Domain
         @solver._editVarMap.delete(variable)
 
   edit: (variable, strength, weight, continuation) ->
-    constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
-    constraint.paths = [variable]
-    @constrain constraint
-    variable.editing = constraint
-    constraint.editing = variable
+    unless constraint = variable.editing
+      constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
+      constraint.paths = [variable]
+      @addConstraint constraint
+      variable.editing = constraint
+      constraint.editing = variable
     return constraint
 
   nullify: (variable) ->

@@ -85,7 +85,7 @@ for method in Console::methods
       else if method == 'groupEnd'
         Console::groups--
 
-      if @level
+      if @level || method == 'error'
         console?[method]?(arguments...)
 
 module.exports = Console
