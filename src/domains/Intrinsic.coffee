@@ -90,9 +90,8 @@ class Intrinsic extends Numeric
   solve: ->
     @changes = {}
     Numeric::solve.apply(@, arguments)
-    if arguments.length < 3
-      @console.row('measure', arguments[0], arguments[1])
-      @each @scope, @update
+    @console.row('measure', arguments[0], arguments[1])
+    @each @scope, @update
     changes = @changes
     @changes = undefined
     return changes

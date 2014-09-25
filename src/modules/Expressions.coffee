@@ -205,6 +205,7 @@ class Expressions
         solution.parent    = operation.parent
         solution.domain    = operation.domain
         solution.index     = operation.index
+
         parent[operation.index] = solution
         @engine.engine.provide solution
         return
@@ -263,7 +264,7 @@ class Expressions
 
     if parent
       if mark = operation.def.mark || operation.marked
-        if parent && !parent.def.capture
+        if parent && !parent.def.capture# && !parent.def.noop
           parent.marked = mark
 
     return if def.noop

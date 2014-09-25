@@ -125,13 +125,13 @@ class Domain
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
           obj = @objects[id] ||= {}
-          if @immediate
-            delete @values[path]
           prop = path.substring(j + 1, path.length - 1)
           old = obj[prop]
           delete obj[prop]
           if @engine.updating 
             (@changes ||= {})[path] = null
+          if @immediate
+            @set path, null
           if Object.keys(obj).length == 0
             delete @objects[id]
 
@@ -165,6 +165,7 @@ class Domain
       @changes[path] = value ? null
     else if @immediate
       @solved.set null, path, value
+
 
     if value?
       @values[path] = value
@@ -257,31 +258,51 @@ class Domain
         object[property] = value
     return object
 
-  compare: (a, b, mutate) ->
-    if a != b
-      if typeof a == 'object'
-        return unless typeof b == 'object'
-        if a[0] == 'value' && b[0] == 'value'
-          return unless a[3] == b[3]
-        else if a[0] == 'value'
-          return a[3] == b.toString()
-        else if b[0] == 'value'
-          return b[3] == a.toString()
-        else 
-          for value, index in a
-            return unless @compare(b[index], value)
-          return unless b[a.length] == a[a.length]
-      else
-        return if typeof b == 'object'
-    
+  compare: (a, b, mutation) ->
+    #if a != b
+    if typeof a == 'object'
+      return unless typeof b == 'object'
+      if a[0] == 'value' && b[0] == 'value'
+        return unless a[3] == b[3]
+        if mutation && @suggest && @solver
+          @suggest a.parent.suggestions[a.index], b[1], 'require'
+
+          return true
+      else if a[0] == 'value'
+        return 'similar' if a[3] == b.toString()
+        return false
+      else if b[0] == 'value'
+        return 'similar' if b[3] == a.toString()
+        return false
+      else 
+        result = undefined
+        for value, index in a
+          sub = @compare(b[index], value, mutation)
+          if sub != true || !result? || result == true
+            result = sub ? false
+          else
+            result = false
+        return unless b[a.length] == a[a.length]
+        return result
+    else
+      return if typeof b == 'object'
+      return a == b
     return true
 
   reconstrain: (other, constraint) ->
-    if @compare(other.operation, constraint.operation)
-      index = @constraints.indexOf(other)
-      stack = undefined
+    return unless other.operation && constraint.operation
+    if compared = @compare(other.operation, constraint.operation)
+      if compared == true
+        @compare(other.operation, constraint.operation, true)
+      else
+        @unconstrain(other)
 
-      @unconstrain(other)
+      #index = @constraints.indexOf(other)
+      #stack = undefined
+
+      #@resuggest(other)
+
+      return true
 
       #stack = @constraints.splice(index)
       #if stack.length
@@ -306,6 +327,8 @@ class Domain
             if stack = @reconstrain other, constraint
               break
 
+      return if stack
+
       for path in constraint.paths
         if typeof path == 'string'
           (@paths[path] ||= []).push(constraint)
@@ -315,7 +338,11 @@ class Domain
             if bits[0] == 'get'
               (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
-        else if path.name
+        else if @isVariable(path)
+          if path.suggest != undefined
+            suggest = path.suggest
+            delete path.suggest
+            @suggest path, suggest, 'require'
           if @nullified
             delete @nullified[path.name]
           length = (path.constraints ||= []).push(constraint)
@@ -346,6 +373,9 @@ class Domain
       else if path[0] == 'value'
         @substituted.splice(@substituted.indexOf(constraint))
       else
+        if path.editing
+          path.editing.removed = true
+          delete path.editing
         index = path.constraints.indexOf(constraint)
         if index > -1
           path.constraints.splice(index, 1)
@@ -361,16 +391,20 @@ class Domain
 
     @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
-    @removeConstraint(constraint)
+    unless constraint.removed
+      @removeConstraint(constraint)
 
 
   declare: (name, operation) ->
-    unless variable = @variables[name]
-      variable = @variables[name] = @variable(name)
+    if name
+      unless variable = @variables[name]
+        variable = @variables[name] = @variable(name)
 
-    if @nullified && @nullified[name]
-      delete @nullified[name]
-    (@added ||= {})[name] = variable
+      if @nullified && @nullified[name]
+        delete @nullified[name]
+      (@added ||= {})[name] = variable
+    else
+      variable = @variable('suggested_' + Math.random())
     if operation
       ops = variable.operations ||= []
       if ops.indexOf(operation)
@@ -387,15 +421,16 @@ class Domain
       if constraint.paths
         for group in groups by -1
           for other in group
-            for variable in other.paths
-              if typeof variable != 'string'
-                if constraint.paths.indexOf(variable) > -1
-                  if groupped && groupped != group
-                    groupped.push.apply(groupped, group)
-                    groups.splice(groups.indexOf(group), 1)
-                  else
-                    groupped = group
-                  break
+            if other.paths
+              for variable in other.paths
+                if typeof variable != 'string'
+                  if constraint.paths.indexOf(variable) > -1
+                    if groupped && groupped != group
+                      groupped.push.apply(groupped, group)
+                      groups.splice(groups.indexOf(group), 1)
+                    else
+                      groupped = group
+                    break
             if groups.indexOf(group) == -1
               break
       unless groupped
@@ -414,11 +449,17 @@ class Domain
         return bl - al
 
       separated = groups.splice(1)
+      commands = []
       if separated.length
-        for group in separated
+        shift = 0
+        for group, index in separated
+          ops = []
           for constraint, index in group
             @unconstrain constraint
-            group[index] = constraint.operation
+            if constraint.operation
+              ops.push constraint.operation
+          if ops.length
+            commands.push ops
 
 
 
@@ -431,14 +472,15 @@ class Domain
     @constrained = undefined
     result = {}
     for path, value of solution
-      if !@nullified?[path]
+      if !@nullified?[path] && path.substring(0, 9) != 'suggested'
         result[path] = value
 
     @merge result, true
 
     if @nullified
       for path, variable of @nullified
-        result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
+        if path.substring(0, 9) != 'suggested'
+          result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         if @values.hasOwnProperty(path)
           delete @values[path]
         @nullify(variable)
@@ -453,10 +495,10 @@ class Domain
           result[path] ?= value
           @values[path] = value
       @added = undefined
-    if separated?.length
-      if separated.length == 1
-        separated = separated[0]
-      @engine.provide @orphanize separated
+    if commands?.length
+      if commands.length == 1
+        commands = commands[0]
+      @engine.provide @orphanize commands
     return result
 
 
@@ -483,7 +525,7 @@ class Domain
 
 
   export: ->
-    for constraint in @constraints
+    for constraint in @constraints when constraint.operation
       constraint.operation
 
 
@@ -536,6 +578,16 @@ class Domain
 class Domain::Methods
   value: 
     command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
+      if @suggest && @solver
+        variable = (operation.parent.suggestions ||= {})[operation.index]
+        unless variable
+          Domain::Methods.uids ||= 0
+          uid = ++Domain::Methods.uids
+          variable = operation.parent.suggestions[operation.index] ||= @declare(null, operation)
+        #if variable.value != value
+        variable.suggest = value
+        return variable
+
       if !continuation && contd
         return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value

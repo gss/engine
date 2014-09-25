@@ -70,8 +70,10 @@ class Linear extends Domain
 
   edit: (variable, strength, weight, continuation) ->
     constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
+    constraint.paths = [variable]
     @constrain constraint
     variable.editing = constraint
+    constraint.editing = variable
     return constraint
 
   nullify: (variable) ->

@@ -176,7 +176,7 @@ describe 'Domain', ->
         document.body.removeChild(el)
 
 
-  describe 'solvers in worker', ->
+  xdescribe 'solvers in worker', ->
     it 'should receieve measurements from document to make substitutions', (done) ->
       root = document.createElement('div')
       root.innerHTML = """
