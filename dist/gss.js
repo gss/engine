@@ -22613,7 +22613,6 @@ Domain = (function() {
           obj = (_base2 = this.objects)[id] || (_base2[id] = {});
           prop = path.substring(j + 1, path.length - 1);
           obj[prop] = true;
-          debugger;
           if (typeof this.onWatch === "function") {
             this.onWatch(id, prop);
           }
@@ -22840,7 +22839,7 @@ Domain = (function() {
   };
 
   Domain.prototype.resuggest = function(a, b) {
-    var index, result, sub, value, _i, _len;
+    var index, result, sub, value, variable, _i, _len;
     if (typeof a === 'object') {
       if (typeof b !== 'object') {
         return;
@@ -22850,8 +22849,13 @@ Domain = (function() {
           return;
         }
         if (this.suggest && this.solver) {
-          this.suggest(a.parent.suggestions[a.index], b[1], 'require');
-          return true;
+          variable = a.parent.suggestions[a.index];
+          if (variable.suggest !== b[1]) {
+            this.suggest(a.parent.suggestions[a.index], b[1], 'require');
+            return true;
+          } else {
+            return 'skip';
+          }
         }
       } else {
         result = void 0;
@@ -22901,15 +22905,15 @@ Domain = (function() {
   };
 
   Domain.prototype.reconstrain = function(other, constraint) {
-    var compared;
+    var compared, suggested;
     if (!(other.operation && constraint.operation)) {
       return;
     }
     if (compared = this.compare(other.operation, constraint.operation)) {
-      if (compared !== true || !this.resuggest(other.operation, constraint.operation)) {
-        this.unconstrain(other);
+      if (compared !== true || !(suggested = this.resuggest(other.operation, constraint.operation))) {
+        this.unconstrain(other, void 0, true);
       } else {
-        return true;
+        return suggested !== 'skip';
       }
     }
   };
@@ -22945,6 +22949,9 @@ Domain = (function() {
         }
       }
       if (stack) {
+        debugger;
+      }
+      if (stack) {
         return;
       }
       _ref3 = constraint.paths;
@@ -22966,9 +22973,6 @@ Domain = (function() {
             delete path.suggest;
             this.suggest(path, suggest, 'require');
           }
-          if (this.nullified) {
-            delete this.nullified[path.name];
-          }
           length = (path.constraints || (path.constraints = [])).push(constraint);
         }
       }
@@ -22981,12 +22985,11 @@ Domain = (function() {
     }
     constraint.domain = this;
     this.constraints.push(constraint);
-    this.constrained = true;
-    return this.addConstraint(constraint);
+    return (this.constrained || (this.constrained = [])).push(constraint);
   };
 
-  Domain.prototype.unconstrain = function(constraint, continuation) {
-    var group, index, op, other, path, _i, _j, _k, _len, _ref, _ref1;
+  Domain.prototype.unconstrain = function(constraint, continuation, moving) {
+    var group, i, index, op, other, path, _i, _j, _k, _len, _ref, _ref1, _ref2;
     _ref = constraint.paths;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
@@ -23013,7 +23016,7 @@ Domain = (function() {
         if (index > -1) {
           path.constraints.splice(index, 1);
           if (!path.constraints.length) {
-            this.undeclare(path);
+            this.undeclare(path, moving);
           }
         }
         if (path.operations) {
@@ -23031,9 +23034,12 @@ Domain = (function() {
         }
       }
     }
-    this.constrained = true;
     this.constraints.splice(this.constraints.indexOf(constraint), 1);
-    return this.removeConstraint(constraint);
+    if ((i = (_ref2 = this.constrained) != null ? _ref2.indexOf(constraint) : void 0) > -1) {
+      return this.constrained.splice(i, 1);
+    } else {
+      return (this.unconstrained || (this.unconstrained = [])).push(constraint);
+    }
   };
 
   Domain.prototype.declare = function(name, operation) {
@@ -23058,12 +23064,17 @@ Domain = (function() {
     return variable;
   };
 
-  Domain.prototype.undeclare = function(variable) {
+  Domain.prototype.undeclare = function(variable, moving) {
     var _ref;
     (this.nullified || (this.nullified = {}))[variable.name] = variable;
     if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
-      return delete this.added[variable.name];
+      delete this.added[variable.name];
     }
+    if (!moving && this.values[variable.name] !== void 0) {
+      delete this.variables[variable.name];
+    }
+    delete this.values[variable.name];
+    return this.nullify(variable);
   };
 
   Domain.prototype.reach = function(constraints, groups) {
@@ -23108,12 +23119,9 @@ Domain = (function() {
     return groups;
   };
 
-  Domain.prototype.nullify = function() {};
-
   Domain.prototype.validate = function(commands) {
-    debugger;
     var constraint, group, groups, index, ops, separated, shift, _i, _j, _len, _len1;
-    if (this.constrained) {
+    if (this.constrained || this.unconstrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
         al = a.length;
@@ -23129,7 +23137,7 @@ Domain = (function() {
           ops = [];
           for (index = _j = 0, _len1 = group.length; _j < _len1; index = ++_j) {
             constraint = group[index];
-            this.unconstrain(constraint);
+            this.unconstrain(constraint, void 0, true);
             if (constraint.operation) {
               ops.push(constraint.operation);
             }
@@ -23139,7 +23147,6 @@ Domain = (function() {
           }
         }
       }
-      this.constrained = void 0;
       if (this.constraints.length === 0) {
         if ((index = this.engine.domains.indexOf(this)) > -1) {
           this.engine.domains.splice(index, 1);
@@ -23170,11 +23177,7 @@ Domain = (function() {
         if (path.substring(0, 9) !== 'suggested') {
           result[path] = (_ref2 = (_ref3 = this.assumed.values[path]) != null ? _ref3 : (_ref4 = this.intrinsic) != null ? _ref4.values[path] : void 0) != null ? _ref2 : null;
         }
-        if (this.values.hasOwnProperty(path)) {
-          delete this.values[path];
-        }
         this.nullify(variable);
-        delete this.variables[path];
       }
       this.nullified = void 0;
     }
@@ -23320,6 +23323,7 @@ Domain.prototype.Methods = (function() {
           variable = (_base2 = operation.parent.suggestions)[_name = operation.index] || (_base2[_name] = this.declare(null, operation));
           variable.suggest = value;
           variable.operation = operation;
+          this.constrained || (this.constrained = []);
         }
         return variable;
       }
@@ -24183,6 +24187,17 @@ Update.prototype = {
         }
       }
     }
+    if (this.engine.updating) {
+      globals = this.engine.updating.domains.indexOf(null, this.engine.updating.index + 1);
+      if (!domain.MAYBE) {
+        if (globals > -1) {
+          globs = this.engine.updating.problems[globals];
+          if (globs[0] === 'remove') {
+            domain.remove.apply(domain, globs.slice(1));
+          }
+        }
+      }
+    }
     while (prob = probs[i++]) {
       if (prob[0] === 'remove') {
         domain.remove.apply(domain, prob.slice(1));
@@ -24198,7 +24213,7 @@ Update.prototype = {
     _ref = domain.constraints;
     for (_i = _ref.length - 1; _i >= 0; _i += -1) {
       constraint = _ref[_i];
-      domain.unconstrain(constraint);
+      domain.unconstrain(constraint, void 0, true);
     }
     if ((i = this.engine.domains.indexOf(domain)) > -1) {
       this.engine.domains.splice(i, 1);
@@ -25131,23 +25146,49 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.solve = function() {
-    var commands, result;
+    var commands, constraint, needed, path, result, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2, _ref3, _ref4;
     Domain.prototype.solve.apply(this, arguments);
-    if (this.constrained) {
-      debugger;
+    if (this.constrained || this.unconstrained) {
       commands = this.validate();
+      if (this.constrained) {
+        _ref1 = this.constrained;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          constraint = _ref1[_i];
+          this.addConstraint(constraint);
+        }
+      }
+      if (this.unconstrained) {
+        _ref2 = this.unconstrained;
+        for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+          constraint = _ref2[_j];
+          this.removeConstraint(constraint);
+          _ref3 = constraint.paths;
+          for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+            path = _ref3[_k];
+            if (((_ref4 = path.constraints) != null ? _ref4.length : void 0) === 0) {
+              this.nullify(path);
+            }
+          }
+        }
+      }
+      this.unconstrained = this.constrained = void 0;
       if (commands === false) {
         return;
       }
-      this.solver.solve();
+      if (needed = this.solver._needsSolving) {
+        this.solver.solve();
+      }
     } else {
+      needed = true;
       this.solver.resolve();
     }
-    result = this.apply(this.solver._changed);
+    if (needed) {
+      result = this.apply(this.solver._changed);
+    }
     if (commands) {
       this.engine.provide(commands);
     }
-    return result;
+    return result || {};
   };
 
   Linear.prototype.addConstraint = function(constraint) {
@@ -25184,6 +25225,7 @@ Linear = (function(_super) {
       constraint.paths = [variable];
       this.addConstraint(constraint);
       variable.editing = constraint;
+      this.constrained || (this.constrained = []);
     }
     return constraint;
   };

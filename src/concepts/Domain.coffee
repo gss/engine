@@ -107,7 +107,6 @@ class Domain
           obj = @objects[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           obj[prop] = true
-          debugger
           @onWatch?(id, prop)
 
     return @get(path)
@@ -267,9 +266,12 @@ class Domain
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
         if @suggest && @solver
-          @suggest a.parent.suggestions[a.index], b[1], 'require'
-
-          return true
+          variable = a.parent.suggestions[a.index]
+          if variable.suggest != b[1]
+            @suggest a.parent.suggestions[a.index], b[1], 'require'
+            return true
+          else
+            return 'skip'
       else
         result = undefined
         for value, index in a
@@ -303,8 +305,8 @@ class Domain
       if compared != true || !(suggested = @resuggest(other.operation, constraint.operation))
         @unconstrain(other, undefined, true)
         return
-      else
-        return true
+      else 
+        return suggested != 'skip'
       #index = @constraints.indexOf(other)
       #stack = undefined
 
@@ -332,7 +334,8 @@ class Domain
           unless other == constraint
             if stack = @reconstrain other, constraint
               break
-
+      if stack
+        debugger
       return if stack
 
       for path in constraint.paths
@@ -350,8 +353,6 @@ class Domain
             delete path.suggest
             @suggest path, suggest, 'require'
 
-          if @nullified
-            delete @nullified[path.name]
           length = (path.constraints ||= []).push(constraint)
 
     if typeof (name = constraint[0]) == 'string'
@@ -359,9 +360,7 @@ class Domain
       return true
     constraint.domain = @
     @constraints.push(constraint)
-    @constrained = true
-    
-    @addConstraint(constraint)
+    (@constrained ||= []).push(constraint)
 
     #if stack
     #  @constraints.push.apply @constraints, stack
@@ -396,16 +395,17 @@ class Domain
                 break
               op = op.parent
 
-    @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
-    @removeConstraint(constraint)
+    if (i = @constrained?.indexOf(constraint)) > -1
+      @constrained.splice(i, 1)
+    else
+      (@unconstrained ||= []).push(constraint)
 
 
   declare: (name, operation) ->
     if name
       unless variable = @variables[name]
         variable = @variables[name] = @variable(name)
-
       if @nullified && @nullified[name]
         delete @nullified[name]
       (@added ||= {})[name] = variable
@@ -423,6 +423,7 @@ class Domain
       delete @added[variable.name]
     if !moving && @values[variable.name] != undefined
       delete @variables[variable.name]
+
     delete @values[variable.name]
     @nullify(variable)
 
@@ -457,11 +458,8 @@ class Domain
       groupped.push(constraint)
     return groups
 
-  nullify: ->
-
   validate: (commands) ->
-    debugger
-    if @constrained
+    if @constrained || @unconstrained
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
         bl = b.length
@@ -481,7 +479,6 @@ class Domain
             commands.push ops
 
 
-      @constrained = undefined
       if @constraints.length == 0
         if (index = @engine.domains.indexOf(@)) > -1
           @engine.domains.splice(index, 1)
@@ -502,12 +499,7 @@ class Domain
       for path, variable of @nullified
         if path.substring(0, 9) != 'suggested'
           result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
-        if @values.hasOwnProperty(path)
-          delete @values[path]
-        @nullify(variable)
-        delete @variables[path]
-
-
+        @nullify variable
       @nullified = undefined
     if @added
       for path, variable of @added
@@ -606,6 +598,8 @@ class Domain::Methods
           variable = operation.parent.suggestions[operation.index] ||= @declare(null, operation)
           variable.suggest = value
           variable.operation = operation
+
+          @constrained ||= []
         return variable
 
       if !continuation && contd

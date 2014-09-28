@@ -49,18 +49,29 @@ class Linear extends Domain
   # Read commands
   solve: () ->
     Domain::solve.apply(@, arguments)
-    if @constrained
-      debugger
+    if @constrained || @unconstrained
       commands = @validate()
+      if @constrained
+        for constraint in @constrained
+          @addConstraint(constraint)
+      if @unconstrained
+        for constraint in @unconstrained
+          @removeConstraint(constraint)
+          for path in constraint.paths
+            if path.constraints?.length == 0
+              @nullify(path)
+      @unconstrained = @constrained = undefined
       return if commands == false
-      @solver.solve()
-
+      if needed = @solver._needsSolving
+        @solver.solve()
     else
+      needed = true
       @solver.resolve()
-    result = @apply(@solver._changed)
+    if needed
+      result = @apply(@solver._changed)
     if commands
       @engine.provide commands
-    return result
+    return result || {}
 
   addConstraint: (constraint) ->
     @solver.addConstraint(constraint)
@@ -87,6 +98,8 @@ class Linear extends Domain
       constraint.paths = [variable]
       @addConstraint constraint
       variable.editing = constraint
+      @constrained ||= []
+    
     return constraint
 
   nullify: (variable) ->
