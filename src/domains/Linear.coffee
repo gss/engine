@@ -50,7 +50,9 @@ class Linear extends Domain
   solve: () ->
     Domain::solve.apply(@, arguments)
     if @constrained
+      debugger
       commands = @validate()
+      return if commands == false
       @solver.solve()
 
     else

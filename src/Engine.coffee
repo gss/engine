@@ -231,14 +231,17 @@ class Engine extends Domain.Events
 
   onSolve: (update, restyled) ->
     # Apply styles
+    debugger
+
     if solution = update || @updating.solution
+      #if Object.keys(solution).length
       @applier?.solve(solution)
     else if !@updating.reflown && !restyled
       if !@updating.problems.length
         delete @updating
       return
 
-    if @intrinsic
+    if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
       scope = @updating.reflown || @scope
       @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
@@ -289,6 +292,7 @@ class Engine extends Domain.Events
       return @engine.updating.provide solution
     if !solution.push
       return @updating.each(@resolve, @, solution) || @onSolve()
+
     if @providing != undefined
       unless @hasOwnProperty('providing')
         @engine.providing ||= []
@@ -360,7 +364,8 @@ class Engine extends Domain.Events
             removes.push(problem)
           else
             others.push(problem)
-      for other in @domains
+
+      for other, i in @domains
         locals = []
         other.changes = undefined
         for remove in removes

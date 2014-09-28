@@ -261,26 +261,32 @@ class Domain
         object[property] = value
     return object
 
-  compare: (a, b, mutation) ->
-    #if a != b
+  resuggest: (a, b) ->
     if typeof a == 'object'
       return unless typeof b == 'object'
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
-        if mutation && @suggest && @solver
+        if @suggest && @solver
+          debugger
           @suggest a.parent.suggestions[a.index], b[1], 'require'
 
           return true
-      else if a[0] == 'value'
-        return 'similar' if a[3] == b.toString()
-        return false
-      else if b[0] == 'value'
-        return 'similar' if b[3] == a.toString()
-        return false
-      else 
+      else
         result = undefined
         for value, index in a
-          sub = @compare(b[index], value, mutation)
+          sub = @resuggest(b[index], value)
+          result ||= sub
+        return result
+
+  compare: (a, b) ->
+    if typeof a == 'object'
+      return unless typeof b == 'object'
+      if a[0] == 'value' && b[0] == 'value'
+        return unless a[3] == b[3]
+      else
+        result = undefined
+        for value, index in a
+          sub = @compare(b[index], value)
           if sub != true || !result? || result == true
             result = sub ? false
           else
@@ -295,17 +301,15 @@ class Domain
   reconstrain: (other, constraint) ->
     return unless other.operation && constraint.operation
     if compared = @compare(other.operation, constraint.operation)
-      if compared == true
-        @compare(other.operation, constraint.operation, true)
-      else
+      if compared != true || !@resuggest(other.operation, constraint.operation)
         @unconstrain(other)
-
+        return
+      else
+        return true
       #index = @constraints.indexOf(other)
       #stack = undefined
 
       #@resuggest(other)
-
-      return true
 
       #stack = @constraints.splice(index)
       #if stack.length
@@ -449,6 +453,7 @@ class Domain
   nullify: ->
 
   validate: (commands) ->
+    debugger
     if @constrained
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
@@ -592,8 +597,7 @@ class Domain::Methods
           Domain::Methods.uids ||= 0
           uid = ++Domain::Methods.uids
           variable = operation.parent.suggestions[operation.index] ||= @declare(null, operation)
-        #if variable.value != value
-        variable.suggest = value
+          variable.suggest = value
         return variable
 
       if !continuation && contd

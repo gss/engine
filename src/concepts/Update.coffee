@@ -455,13 +455,13 @@ Update.prototype =
           if preceeding.length > 1
             for index in preceeding by -1
               for property, value of result
-                if solution = @solutions[index]
-                  if solution.hasOwnProperty(property)
+                if solved = @solutions[index]
+                  if solved.hasOwnProperty(property)
                     if redefined.hasOwnProperty(property)
-                      if solution[property] != value
+                      if solved[property] != value
                         @engine.console.error(property, 'is looping')
                         delete result[property]
-                    else if solution[property] != value
+                    else if solved[property] != value
                       redefined[property] = value
 
           @apply(result)

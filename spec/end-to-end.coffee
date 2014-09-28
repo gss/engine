@@ -2481,6 +2481,55 @@ describe 'End - to - End', ->
   
             </style>
           """
+    describe 'order specific selectors on the left within rules', ->
+      it 'should do it', (done) ->
+        container.innerHTML = """
+          <style type="text/gss">
+            article {
+              width: == 50;
+              height: == 50;
+              x: >= 0;
+            }
+            #p1[width] == 50;
+            @h (article)... {
+              (&:next p)[width] == (& p)[width];
+            }
+          </style>
+          <article id="article1">
+            <p id="p1"></p>
+          </article>
+          <article id="article1">
+            <p id="p2"></p>
+          </article>
+        """
+        engine.then (solution) ->
+          expect(solution['$p1[width]']).to.eql solution['$p2[width]']
+          done()
+
+    describe 'order specific selectors on the right within rules', ->
+      it 'should do it', (done) ->
+        container.innerHTML = """
+          <style type="text/gss">
+            article {
+              width: == 50;
+              height: == 50;
+              x: >= 0;
+            }
+            #p1[width] == 50;
+            @h (article)... {
+              (& p)[width] == (&:next p)[width];
+            }
+          </style>
+          <article id="article1">
+            <p id="p1"></p>
+          </article>
+          <article id="article1">
+            <p id="p2"></p>
+          </article>
+        """
+        engine.then (solution) ->
+          expect(solution['$p1[width]']).to.eql solution['$p2[width]']
+          done()
 
       
     describe "context-specific VFL", ->

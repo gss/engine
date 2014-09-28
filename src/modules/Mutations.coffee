@@ -170,6 +170,8 @@ class Mutations
           @engine.eval(parent)
 
   onAttributes: (target, name, changed) ->
+    if name == 'style'
+      @engine.engine.restyled = true
     # Notify parents about class and attribute changes
     if name == 'class' && typeof changed == 'string'
       klasses = target.classList
