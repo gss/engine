@@ -2,7 +2,7 @@
 # Then evaluate it asynchronously, in order. Re-evaluate side-effects.
 
 Updater = (engine) ->
-  Update = (domain, problem) ->
+  Update = (domain, problem, parent) ->
     # Handle constructor invocation
     if @ instanceof Update
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
@@ -41,12 +41,12 @@ Updater = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            effects = @update(d, arg)
+            effects = @update(d, arg, parent)
             break
           else if typeof a != 'string'
             stringy = false
         if !effects && typeof arg?[0] == 'string' && stringy
-          effects = new @update([null], [arg])
+          effects = new @update([null], [arg], parent)
 
       # Merge updates
       if effects
@@ -54,6 +54,7 @@ Updater = (engine) ->
           update.push(effects)
         else
           update = effects
+          parent ||= update
       effects = undefined
 
     # Handle broadcasted commands (e.g. remove)
@@ -65,7 +66,7 @@ Updater = (engine) ->
 
     # Replace arguments updates with parent function update
     if typeof problem[0] == 'string'
-      update.wrap(problem, @)
+      update.wrap(problem, parent)
       update.compact()
 
     # Unroll recursion, solve problems
@@ -129,13 +130,32 @@ Update.prototype =
             p = p.parent
     return
 
-  merge: (from, to) ->
+
+
+  merge: (from, to, parent) ->
     domain = @domains[from]
     return if domain.frame
     other = @domains[to]
+    probs = @problems[from]
+
+    if parent
+      globals = parent.domains.indexOf(null, @index + 1)
+      if !domain.MAYBE
+        if globals > -1# && globals < from
+          globs = parent.problems[globals]
+          if globs[0] == 'remove'
+            domain.remove.apply(domain, globs.slice(1))
+
     
+    while prob = probs[i++]
+      if prob[0] == 'remove'
+        domain.remove.apply(domain, prob.slice(1))
+        probs.splice(i, 1)
+      else
+        i++
+
     @problems[to].push.apply(@problems[to], domain.export())
-    @problems[to].push.apply(@problems[to], @problems[from])
+    @problems[to].push.apply(@problems[to], probs)
     @domains.splice(from, 1)
     @problems.splice(from, 1)
     for constraint in domain.constraints by -1
@@ -145,7 +165,7 @@ Update.prototype =
     return true
 
   # Group expressions
-  wrap: (problem) -> 
+  wrap: (problem, parent) -> 
     bubbled = undefined
     for other, index in @domains by -1
       exps = @problems[index]
@@ -176,10 +196,10 @@ Update.prototype =
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
                     if index < n || other.constraints?.length > domain.constraints?.length
-                      if @merge n, index
+                      if @merge n, index, parent
                         1#probs.splice(j, 1)
                     else
-                      unless @merge index, n
+                      unless @merge index, n, parent
                         exps.splice(--i, 1)
 
                       other = domain

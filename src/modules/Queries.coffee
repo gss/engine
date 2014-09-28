@@ -325,6 +325,7 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
+        
         @engine.provide(['remove', contd])
     return true
 

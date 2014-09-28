@@ -22851,7 +22851,6 @@ Domain = (function() {
           return;
         }
         if (this.suggest && this.solver) {
-          debugger;
           this.suggest(a.parent.suggestions[a.index], b[1], 'require');
           return true;
         }
@@ -22908,7 +22907,6 @@ Domain = (function() {
       return;
     }
     if (compared = this.compare(other.operation, constraint.operation)) {
-      debugger;
       if (compared !== true || !this.resuggest(other.operation, constraint.operation)) {
         this.unconstrain(other);
       } else {
@@ -23009,9 +23007,7 @@ Domain = (function() {
         this.substituted.splice(this.substituted.indexOf(constraint));
       } else {
         if (path.editing) {
-          path.editing.removed = true;
           path.suggest = path.value;
-          delete path.editing;
         }
         index = path.constraints.indexOf(constraint);
         if (index > -1) {
@@ -24013,7 +24009,7 @@ var Update, Updater;
 
 Updater = function(engine) {
   var Update, property, value, _ref;
-  Update = function(domain, problem) {
+  Update = function(domain, problem, parent) {
     var a, arg, d, effects, foreign, index, offset, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
     if (this instanceof Update) {
       this.domains = domain && (domain.push && domain || [domain]) || [];
@@ -24057,14 +24053,14 @@ Updater = function(engine) {
             } else {
               d = domain || true;
             }
-            effects = this.update(d, arg);
+            effects = this.update(d, arg, parent);
             break;
           } else if (typeof a !== 'string') {
             stringy = false;
           }
         }
         if (!effects && typeof (arg != null ? arg[0] : void 0) === 'string' && stringy) {
-          effects = new this.update([null], [arg]);
+          effects = new this.update([null], [arg], parent);
         }
       }
       if (effects) {
@@ -24072,6 +24068,7 @@ Updater = function(engine) {
           update.push(effects);
         } else {
           update = effects;
+          parent || (parent = update);
         }
       }
       effects = void 0;
@@ -24084,7 +24081,7 @@ Updater = function(engine) {
       update = new this.update([domain !== true && domain || null], [problem]);
     }
     if (typeof problem[0] === 'string') {
-      update.wrap(problem, this);
+      update.wrap(problem, parent);
       update.compact();
     }
     if (start || foreign) {
@@ -24172,15 +24169,37 @@ Update.prototype = {
       }
     }
   },
-  merge: function(from, to) {
-    var constraint, domain, i, other, _i, _ref;
+  merge: function(from, to, parent) {
+    var constraint, domain, globals, globs, i, other, prob, probs, _i, _ref;
     domain = this.domains[from];
     if (domain.frame) {
       return;
     }
     other = this.domains[to];
+    probs = this.problems[from];
+    if (parent) {
+      globals = parent.domains.indexOf(null, this.index + 1);
+      if (!domain.MAYBE) {
+        debugger;
+        if (globals > -1) {
+          debugger;
+          globs = parent.problems[globals];
+          if (globs[0] === 'remove') {
+            domain.remove.apply(domain, globs.slice(1));
+          }
+        }
+      }
+    }
+    while (prob = probs[i++]) {
+      if (prob[0] === 'remove') {
+        domain.remove.apply(domain, prob.slice(1));
+        probs.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
     this.problems[to].push.apply(this.problems[to], domain["export"]());
-    this.problems[to].push.apply(this.problems[to], this.problems[from]);
+    this.problems[to].push.apply(this.problems[to], probs);
     this.domains.splice(from, 1);
     this.problems.splice(from, 1);
     _ref = domain.constraints;
@@ -24193,7 +24212,7 @@ Update.prototype = {
     }
     return true;
   },
-  wrap: function(problem) {
+  wrap: function(problem, parent) {
     var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, opdomain, other, previous, problems, probs, strong, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     bubbled = void 0;
     _ref = this.domains;
@@ -24242,11 +24261,11 @@ Update.prototype = {
                 if (domain !== other && domain.priority < 0 && other.priority < 0) {
                   if (!domain.MAYBE) {
                     if (index < n || ((_ref3 = other.constraints) != null ? _ref3.length : void 0) > ((_ref4 = domain.constraints) != null ? _ref4.length : void 0)) {
-                      if (this.merge(n, index)) {
+                      if (this.merge(n, index, parent)) {
                         1;
                       }
                     } else {
-                      if (!this.merge(index, n)) {
+                      if (!this.merge(index, n, parent)) {
                         exps.splice(--i, 1);
                       }
                       other = domain;
@@ -25524,6 +25543,19 @@ Intrinsic = (function(_super) {
       }
     }
     return value;
+  };
+
+  Intrinsic.prototype.onWatch = function(id, property) {
+    var node;
+    if ((node = this.identity.solve(id)) && node.nodeType === 1) {
+      debugger;
+      if (property.indexOf('intrinsic-') > -1) {
+        property = property.substring(10);
+      }
+      if (this.engine.values[this.getPath(id, property)] !== void 0) {
+        return node.style[property] = '';
+      }
+    }
   };
 
   Intrinsic.prototype.update = function(node, x, y, full) {

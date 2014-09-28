@@ -231,7 +231,6 @@ class Engine extends Domain.Events
 
   onSolve: (update, restyled) ->
     # Apply styles
-    debugger
 
     if solution = update || @updating.solution
       #if Object.keys(solution).length

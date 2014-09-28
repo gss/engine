@@ -267,7 +267,6 @@ class Domain
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
         if @suggest && @solver
-          debugger
           @suggest a.parent.suggestions[a.index], b[1], 'require'
 
           return true
@@ -381,9 +380,7 @@ class Domain
         @substituted.splice(@substituted.indexOf(constraint))
       else
         if path.editing
-          path.editing.removed = true
           path.suggest = path.value
-          delete path.editing
         index = path.constraints.indexOf(constraint)
         if index > -1
           path.constraints.splice(index, 1)
