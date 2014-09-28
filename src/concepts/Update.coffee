@@ -138,6 +138,7 @@ Update.prototype =
     other = @domains[to]
     probs = @problems[from]
 
+    # Apply removes from parent update
     if parent
       globals = parent.domains.indexOf(null, parent.index + 1)
       if !domain.MAYBE
@@ -145,8 +146,17 @@ Update.prototype =
           globs = parent.problems[globals]
           if globs[0] == 'remove'
             domain.remove.apply(domain, globs.slice(1))
+            
+    # Apply removes from global update
+    if @engine.updating
+      globals = @engine.updating.domains.indexOf(null, @engine.updating.index + 1)
+      if !domain.MAYBE
+        if globals > -1# && globals < from
+          globs = @engine.updating.problems[globals]
+          if globs[0] == 'remove'
+            domain.remove.apply(domain, globs.slice(1))
 
-    
+    # Apply removes scheduled for exported domain
     while prob = probs[i++]
       if prob[0] == 'remove'
         domain.remove.apply(domain, prob.slice(1))
@@ -159,7 +169,7 @@ Update.prototype =
     @domains.splice(from, 1)
     @problems.splice(from, 1)
     for constraint in domain.constraints by -1
-      domain.unconstrain(constraint)
+      domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
     return true
