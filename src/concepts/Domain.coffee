@@ -391,8 +391,7 @@ class Domain
 
     @constrained = true
     @constraints.splice(@constraints.indexOf(constraint), 1)
-    unless constraint.removed
-      @removeConstraint(constraint)
+    @removeConstraint(constraint)
 
 
   declare: (name, operation) ->
@@ -413,6 +412,12 @@ class Domain
 
   undeclare: (variable) ->
     (@nullified ||= {})[variable.name] = variable
+    if @added?[variable.name]
+      delete @added[variable.name]
+    if variable.editing
+      if variable.value
+        @removeConstraint variable.editing
+      delete variable.editing
 
   reach: (constraints, groups) ->
     groups ||= []

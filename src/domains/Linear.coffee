@@ -62,11 +62,12 @@ class Linear extends Domain
     @solver.removeConstraint(constraint)
 
   undeclare: (variable) ->
-    super
     if variable.editing
       if cei = @solver._editVarMap.get(variable)
         @solver.removeColumn(cei.editMinus)
         @solver._editVarMap.delete(variable)
+      delete variable.editing
+    super
 
   edit: (variable, strength, weight, continuation) ->
     unless constraint = variable.editing
@@ -74,7 +75,6 @@ class Linear extends Domain
       constraint.paths = [variable]
       @addConstraint constraint
       variable.editing = constraint
-      constraint.editing = variable
     return constraint
 
   nullify: (variable) ->
@@ -93,8 +93,7 @@ class Linear extends Domain
     else
       variable = path
 
-    unless variable.editing
-      @edit(variable, strength, weight, continuation)
+    @edit(variable, strength, weight, continuation)
     @solver.suggestValue(variable, value)
     return variable
 
