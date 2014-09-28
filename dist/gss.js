@@ -20238,7 +20238,6 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(update, restyled) {
-    debugger;
     var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
     if (solution = update || this.updating.solution) {
       if ((_ref = this.applier) != null) {
@@ -24178,11 +24177,9 @@ Update.prototype = {
     other = this.domains[to];
     probs = this.problems[from];
     if (parent) {
-      globals = parent.domains.indexOf(null, this.index + 1);
+      globals = parent.domains.indexOf(null, parent.index + 1);
       if (!domain.MAYBE) {
-        debugger;
         if (globals > -1) {
-          debugger;
           globs = parent.problems[globals];
           if (globs[0] === 'remove') {
             domain.remove.apply(domain, globs.slice(1));

@@ -139,7 +139,7 @@ Update.prototype =
     probs = @problems[from]
 
     if parent
-      globals = parent.domains.indexOf(null, @index + 1)
+      globals = parent.domains.indexOf(null, parent.index + 1)
       if !domain.MAYBE
         if globals > -1# && globals < from
           globs = parent.problems[globals]
