@@ -99,6 +99,7 @@ class Domain
       watchers = @watchers[path] ||= []
       watchers.push(operation, continuation, scope)
 
+      
       # Register props by id for quick lookup
       if @structured && watchers.length == 3
         if (j = path.indexOf('[')) > -1
@@ -404,12 +405,12 @@ class Domain
       if @nullified && @nullified[name]
         delete @nullified[name]
       (@added ||= {})[name] = variable
+      if operation
+        ops = variable.operations ||= []
+        if ops.indexOf(operation)
+          ops.push(operation)
     else
       variable = @variable('suggested_' + Math.random())
-    if operation
-      ops = variable.operations ||= []
-      if ops.indexOf(operation)
-        ops.push(operation)
     return variable
 
   undeclare: (variable) ->
@@ -447,8 +448,7 @@ class Domain
 
   nullify: ->
 
-
-  apply: (solution) ->
+  validate: (commands) ->
     if @constrained
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
@@ -469,20 +469,22 @@ class Domain
             commands.push ops
 
 
-
+      @constrained = undefined
       if @constraints.length == 0
         if (index = @engine.domains.indexOf(@)) > -1
-          
           @engine.domains.splice(index, 1)
 
 
-    @constrained = undefined
+      if commands?.length
+        if commands.length == 1
+          commands = commands[0]
+        return  @orphanize commands
+        
+  apply: (solution) ->
     result = {}
     for path, value of solution
       if !@nullified?[path] && path.substring(0, 9) != 'suggested'
         result[path] = value
-
-    @merge result, true
 
     if @nullified
       for path, variable of @nullified
@@ -502,10 +504,9 @@ class Domain
           result[path] ?= value
           @values[path] = value
       @added = undefined
-    if commands?.length
-      if commands.length == 1
-        commands = commands[0]
-      @engine.provide @orphanize commands
+
+    @merge result, true
+
     return result
 
 

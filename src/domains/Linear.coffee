@@ -47,13 +47,18 @@ class Linear extends Domain
     return
 
   # Read commands
-  solve: ()->
+  solve: () ->
     Domain::solve.apply(@, arguments)
     if @constrained
+      commands = @validate()
       @solver.solve()
+
     else
       @solver.resolve()
-    return @apply(@solver._changed)
+    result = @apply(@solver._changed)
+    if commands
+      @engine.provide commands
+    return result
 
   addConstraint: (constraint) ->
     @solver.addConstraint(constraint)
