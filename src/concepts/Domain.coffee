@@ -274,7 +274,7 @@ class Domain
       else
         result = undefined
         for value, index in a
-          sub = @resuggest(b[index], value)
+          sub = @resuggest(value, b[index])
           result ||= sub
         return result
 
@@ -382,6 +382,7 @@ class Domain
       else
         if path.editing
           path.editing.removed = true
+          path.suggest = path.value
           delete path.editing
         index = path.constraints.indexOf(constraint)
         if index > -1

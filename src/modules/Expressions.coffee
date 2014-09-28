@@ -153,7 +153,7 @@ class Expressions
     if result? 
       if parent = operation.parent
         pdef = parent.def
-      if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document)
+      if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document || parent.domain == @engine)
         # For each node in collection, recurse to a parent with id appended to continuation key
         if parent && @engine.isCollection(result)
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
