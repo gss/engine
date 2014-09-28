@@ -106,6 +106,8 @@ class Domain
           obj = @objects[id] ||= {}
           prop = path.substring(j + 1, path.length - 1)
           obj[prop] = true
+          debugger
+          @onWatch?(id, prop)
 
     return @get(path)
 

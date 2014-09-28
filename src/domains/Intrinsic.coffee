@@ -179,6 +179,12 @@ class Intrinsic extends Numeric
         return num
     return value
 
+  onWatch: (id, property) ->
+    if (node = @identity.solve(id)) && node.nodeType == 1
+      if property.indexOf('intrinsic-') > -1
+        property = property.substring(10)
+      node.style[property] = ''
+
   update: (node, x, y, full) ->
     return unless @objects
     if id = node._gss_id
