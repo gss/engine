@@ -300,8 +300,8 @@ class Domain
   reconstrain: (other, constraint) ->
     return unless other.operation && constraint.operation
     if compared = @compare(other.operation, constraint.operation)
-      if compared != true || !@resuggest(other.operation, constraint.operation)
-        @unconstrain(other)
+      if compared != true || !(suggested = @resuggest(other.operation, constraint.operation))
+        @unconstrain(other, undefined, true)
         return
       else
         return true
@@ -368,7 +368,7 @@ class Domain
     #  for constraint in stack
     #    @addConstraint constraint
 
-  unconstrain: (constraint, continuation) ->
+  unconstrain: (constraint, continuation, moving) ->
     for path in constraint.paths
       if typeof path == 'string'
         if group = @paths[path]
@@ -387,7 +387,7 @@ class Domain
         if index > -1
           path.constraints.splice(index, 1)
           unless path.constraints.length
-            @undeclare(path)
+            @undeclare(path, moving)
         if path.operations
           for op, index in path.operations by -1
             while op
@@ -417,10 +417,17 @@ class Domain
       variable = @variable('suggested_' + Math.random())
     return variable
 
-  undeclare: (variable) ->
+  undeclare: (variable, moving) ->
     (@nullified ||= {})[variable.name] = variable
     if @added?[variable.name]
       delete @added[variable.name]
+    if !moving && @values[variable.name] != undefined
+      delete @variables[variable.name]
+    delete @values[variable.name]
+    @nullify(variable)
+
+
+
     #if variable.editing
     #  if variable.value
     #    @removeConstraint variable.editing
@@ -467,7 +474,7 @@ class Domain
         for group, index in separated
           ops = []
           for constraint, index in group
-            @unconstrain constraint
+            @unconstrain constraint, undefined, true
             if constraint.operation
               ops.push constraint.operation
           if ops.length
