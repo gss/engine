@@ -22949,9 +22949,6 @@ Domain = (function() {
         }
       }
       if (stack) {
-        debugger;
-      }
-      if (stack) {
         return;
       }
       _ref3 = constraint.paths;
@@ -23067,7 +23064,7 @@ Domain = (function() {
   Domain.prototype.undeclare = function(variable, moving) {
     var _ref;
     (this.nullified || (this.nullified = {}))[variable.name] = variable;
-    if (!moving) {
+    if (!moving || this.values[variable.name] !== void 0) {
       if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
         delete this.added[variable.name];
       }

@@ -417,7 +417,7 @@ class Domain
 
   undeclare: (variable, moving) ->
     (@nullified ||= {})[variable.name] = variable
-    if !moving
+    if !moving || @values[variable.name] != undefined
       if @added?[variable.name]
         delete @added[variable.name]
     if !moving && @values[variable.name] != undefined
