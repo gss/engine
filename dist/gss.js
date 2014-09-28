@@ -23007,6 +23007,7 @@ Domain = (function() {
       } else {
         if (path.editing) {
           path.suggest = path.value;
+          this.unedit(path);
         }
         index = path.constraints.indexOf(constraint);
         if (index > -1) {
@@ -23061,13 +23062,7 @@ Domain = (function() {
     var _ref;
     (this.nullified || (this.nullified = {}))[variable.name] = variable;
     if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
-      delete this.added[variable.name];
-    }
-    if (variable.editing) {
-      if (variable.value) {
-        this.removeConstraint(variable.editing);
-      }
-      return delete variable.editing;
+      return delete this.added[variable.name];
     }
   };
 
@@ -23324,6 +23319,7 @@ Domain.prototype.Methods = (function() {
           uid = ++Domain.prototype.Methods.uids;
           variable = (_base2 = operation.parent.suggestions)[_name = operation.index] || (_base2[_name] = this.declare(null, operation));
           variable.suggest = value;
+          variable.operation = operation;
         }
         return variable;
       }
@@ -25162,8 +25158,8 @@ Linear = (function(_super) {
     return this.solver.removeConstraint(constraint);
   };
 
-  Linear.prototype.undeclare = function(variable) {
-    var cei;
+  Linear.prototype.unedit = function(variable) {
+    var cei, _ref1;
     if (variable.editing) {
       if (cei = this.solver._editVarMap.get(variable)) {
         this.solver.removeColumn(cei.editMinus);
@@ -25171,6 +25167,13 @@ Linear = (function(_super) {
       }
       delete variable.editing;
     }
+    if (((_ref1 = variable.operation) != null ? _ref1.parent.suggestions : void 0) != null) {
+      return delete variable.operation.parent.suggestions[variable.operation.index];
+    }
+  };
+
+  Linear.prototype.undeclare = function(variable) {
+    this.unedit(variable);
     return Linear.__super__.undeclare.apply(this, arguments);
   };
 

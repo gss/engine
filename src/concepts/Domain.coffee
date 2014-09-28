@@ -349,6 +349,7 @@ class Domain
             suggest = path.suggest
             delete path.suggest
             @suggest path, suggest, 'require'
+
           if @nullified
             delete @nullified[path.name]
           length = (path.constraints ||= []).push(constraint)
@@ -381,6 +382,7 @@ class Domain
       else
         if path.editing
           path.suggest = path.value
+          @unedit(path)
         index = path.constraints.indexOf(constraint)
         if index > -1
           path.constraints.splice(index, 1)
@@ -419,10 +421,10 @@ class Domain
     (@nullified ||= {})[variable.name] = variable
     if @added?[variable.name]
       delete @added[variable.name]
-    if variable.editing
-      if variable.value
-        @removeConstraint variable.editing
-      delete variable.editing
+    #if variable.editing
+    #  if variable.value
+    #    @removeConstraint variable.editing
+    #  delete variable.editing
 
   reach: (constraints, groups) ->
     groups ||= []
@@ -596,6 +598,7 @@ class Domain::Methods
           uid = ++Domain::Methods.uids
           variable = operation.parent.suggestions[operation.index] ||= @declare(null, operation)
           variable.suggest = value
+          variable.operation = operation
         return variable
 
       if !continuation && contd

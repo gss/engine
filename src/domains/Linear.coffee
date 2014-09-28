@@ -68,12 +68,17 @@ class Linear extends Domain
   removeConstraint: (constraint) ->
     @solver.removeConstraint(constraint)
 
-  undeclare: (variable) ->
+  unedit: (variable) ->
     if variable.editing
       if cei = @solver._editVarMap.get(variable)
         @solver.removeColumn(cei.editMinus)
         @solver._editVarMap.delete(variable)
       delete variable.editing
+    if variable.operation?.parent.suggestions?
+      delete variable.operation.parent.suggestions[variable.operation.index]
+
+  undeclare: (variable) ->
+    @unedit(variable)
     super
 
   edit: (variable, strength, weight, continuation) ->
