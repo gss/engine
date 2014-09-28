@@ -270,9 +270,25 @@ Update.prototype =
       @compact()
 
     @defer()
+    @reify()
 
 
     @
+
+  # change all maybe-domains to this domain
+  reify: (operation, domain) ->
+    if !operation
+      for domain, i in @domains by -1
+        break if i == @index
+        if domain
+          @reify @problems[i], domain
+    else
+      if operation.domain?.MAYBE
+        operation.domain = domain
+      if operation?.push
+        for arg in operation
+          if arg && typeof arg == 'object'
+            @reify arg, domain
 
   # Defer substitutions to thread
   defer: ->
@@ -455,12 +471,10 @@ Update.prototype =
     return solution || @
 
   apply: (result, solution = @solution) ->
-    if solution && result != @solution
+    if result != @solution
+      solution ||= @solution = {}
       for property, value of result
         solution[property] = value
-
-    else unless solution
-      @solution = solution = result
     return solution
 
   remove: (continuation, problem) ->
