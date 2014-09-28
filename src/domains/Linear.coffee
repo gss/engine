@@ -51,15 +51,15 @@ class Linear extends Domain
     Domain::solve.apply(@, arguments)
     if @constrained || @unconstrained
       commands = @validate()
-      if @constrained
-        for constraint in @constrained
-          @addConstraint(constraint)
       if @unconstrained
         for constraint in @unconstrained
           @removeConstraint(constraint)
           for path in constraint.paths
             if path.constraints?.length == 0
               @nullify(path)
+      if @constrained
+        for constraint in @constrained
+          @addConstraint(constraint)
       @unconstrained = @constrained = undefined
       return if commands == false
       if needed = @solver._needsSolving

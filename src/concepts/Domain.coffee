@@ -334,8 +334,6 @@ class Domain
           unless other == constraint
             if stack = @reconstrain other, constraint
               break
-      if stack
-        debugger
       return if stack
 
       for path in constraint.paths
@@ -419,8 +417,9 @@ class Domain
 
   undeclare: (variable, moving) ->
     (@nullified ||= {})[variable.name] = variable
-    if @added?[variable.name]
-      delete @added[variable.name]
+    if !moving
+      if @added?[variable.name]
+        delete @added[variable.name]
     if !moving && @values[variable.name] != undefined
       delete @variables[variable.name]
 
@@ -428,11 +427,6 @@ class Domain
     @nullify(variable)
 
 
-
-    #if variable.editing
-    #  if variable.value
-    #    @removeConstraint variable.editing
-    #  delete variable.editing
 
   reach: (constraints, groups) ->
     groups ||= []

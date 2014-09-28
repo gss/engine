@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-28) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-09-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -23067,8 +23067,10 @@ Domain = (function() {
   Domain.prototype.undeclare = function(variable, moving) {
     var _ref;
     (this.nullified || (this.nullified = {}))[variable.name] = variable;
-    if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
-      delete this.added[variable.name];
+    if (!moving) {
+      if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
+        delete this.added[variable.name];
+      }
     }
     if (!moving && this.values[variable.name] !== void 0) {
       delete this.variables[variable.name];
@@ -25150,25 +25152,25 @@ Linear = (function(_super) {
     Domain.prototype.solve.apply(this, arguments);
     if (this.constrained || this.unconstrained) {
       commands = this.validate();
-      if (this.constrained) {
-        _ref1 = this.constrained;
+      if (this.unconstrained) {
+        _ref1 = this.unconstrained;
         for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
           constraint = _ref1[_i];
-          this.addConstraint(constraint);
-        }
-      }
-      if (this.unconstrained) {
-        _ref2 = this.unconstrained;
-        for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-          constraint = _ref2[_j];
           this.removeConstraint(constraint);
-          _ref3 = constraint.paths;
-          for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-            path = _ref3[_k];
-            if (((_ref4 = path.constraints) != null ? _ref4.length : void 0) === 0) {
+          _ref2 = constraint.paths;
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            path = _ref2[_j];
+            if (((_ref3 = path.constraints) != null ? _ref3.length : void 0) === 0) {
               this.nullify(path);
             }
           }
+        }
+      }
+      if (this.constrained) {
+        _ref4 = this.constrained;
+        for (_k = 0, _len2 = _ref4.length; _k < _len2; _k++) {
+          constraint = _ref4[_k];
+          this.addConstraint(constraint);
         }
       }
       this.unconstrained = this.constrained = void 0;
@@ -25590,7 +25592,6 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.onWatch = function(id, property) {
     var node;
     if ((node = this.identity.solve(id)) && node.nodeType === 1) {
-      debugger;
       if (property.indexOf('intrinsic-') > -1) {
         property = property.substring(10);
       }

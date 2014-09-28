@@ -181,7 +181,6 @@ class Intrinsic extends Numeric
 
   onWatch: (id, property) ->
     if (node = @identity.solve(id)) && node.nodeType == 1
-      debugger
       if property.indexOf('intrinsic-') > -1
         property = property.substring(10)
       if @engine.values[@getPath(id, property)] != undefined
