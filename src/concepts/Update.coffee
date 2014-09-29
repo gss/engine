@@ -174,8 +174,14 @@ Update.prototype =
       else
         i++
 
+    console.log('exporting')
+    console.log(domain.export())
+    console.log(probs.slice())
     @problems[to].push.apply(@problems[to], domain.export())
     @problems[to].push.apply(@problems[to], probs)
+    for prob in probs
+      if prob.domain == domain
+        prob.domain = other
     @domains.splice(from, 1)
     @problems.splice(from, 1)
     for constraint in domain.constraints by -1
@@ -228,6 +234,7 @@ Update.prototype =
 
                     break
                   else if !other.MAYBE
+                    @merge n, index
                     @problems[index].push.apply(@problems[index], @problems[n])
                     @domains.splice(n, 1)
                     @problems.splice(n, 1)

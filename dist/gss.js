@@ -20125,8 +20125,10 @@ Engine = (function(_super) {
           return [];
         }
       }
-      if (path && this.assumed[path] !== expressions[1]) {
-        (result || (result = {}))[path] = (_ref = expressions[1]) != null ? _ref : null;
+      if (path && this.assumed.values[path] !== expressions[1]) {
+        if (!(result || (result = {})).hasOwnProperty(path)) {
+          result[path] = (_ref = expressions[1]) != null ? _ref : null;
+        }
       }
     }
     if (!start) {
@@ -20135,12 +20137,13 @@ Engine = (function(_super) {
       }
       return result;
     }
-    if (result) {
-      this.assumed.merge(result);
-    }
     this.inputs = result;
     if (expressions.length) {
-      return this.provide(expressions);
+      this.provide(expressions);
+    }
+    if (result) {
+      console.error(JSON.stringify(result));
+      return this.assumed.merge(result);
     }
   };
 
@@ -20443,6 +20446,7 @@ Engine = (function(_super) {
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
     return this.solve = function(commands) {
+      console.log('solve', commands.slice());
       _this.worker.postMessage(_this.clone(commands));
       return _this.worker;
     };
@@ -20864,12 +20868,15 @@ Conventions = (function() {
   })();
 
   Conventions.prototype.getRootOperation = function(operation, domain) {
-    var parent;
+    var parent, _ref;
     if (domain == null) {
       domain = operation.domain;
     }
     parent = operation;
     while (parent.parent && typeof parent.parent[0] === 'string' && (!parent.parent.def || (!parent.parent.def.noop && parent.domain === domain))) {
+      parent = parent.parent;
+    }
+    while (((_ref = parent.parent) != null ? _ref.domain : void 0) === parent.domain) {
       parent = parent.parent;
     }
     return parent;
@@ -22763,7 +22770,7 @@ Domain = (function() {
   };
 
   Domain.prototype.callback = function(domain, path, value, meta) {
-    var constraint, d, frame, index, op, url, values, variable, watcher, watchers, worker, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
+    var constraint, d, frame, index, op, root, url, values, variable, watcher, watchers, worker, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
     if (meta !== true) {
       if (watchers = (_ref = domain.watchers) != null ? _ref[path] : void 0) {
         for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
@@ -22772,7 +22779,11 @@ Domain = (function() {
             break;
           }
           if (watcher.domain !== domain || (value == null)) {
-            this.update([this.sanitize(this.getRootOperation(watcher, domain))]);
+            if (watcher.parent[watcher.index] !== watcher) {
+              watcher.parent[watcher.index] = watcher;
+            }
+            root = this.getRootOperation(watcher, domain);
+            this.update([this.sanitize(root)]);
           } else {
             if (watcher.parent.domain === domain) {
               domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
@@ -22996,6 +23007,9 @@ Domain = (function() {
       return true;
     }
     constraint.domain = this;
+    if (constraint.length === 1) {
+      debugger;
+    }
     this.constraints.push(constraint);
     return (this.constrained || (this.constrained = [])).push(constraint);
   };
@@ -23245,9 +23259,12 @@ Domain = (function() {
   };
 
   Domain.prototype.remove = function() {
-    var constraint, constraints, contd, observers, path, _i, _j, _k, _len, _len1, _ref;
+    var constraint, constraints, contd, observers, path, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
+      if (path === 'style[type*="text/gss"]$1↓@1↓ article$article') {
+        debugger;
+      }
       _ref = this.getPossibleContinuations(path);
       for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
         contd = _ref[_j];
@@ -23262,6 +23279,17 @@ Domain = (function() {
           constraint = constraints[_k];
           if (this.isConstraint(constraint)) {
             this.unconstrain(constraint, path);
+          }
+        }
+      }
+      if (this.constrained) {
+        _ref1 = this.constrained;
+        for (_l = 0, _len2 = _ref1.length; _l < _len2; _l++) {
+          constraint = _ref1[_l];
+          if (constraint.indexOf(path) > -1) {
+            debugger;
+            this.unconstrain(constraint);
+            break;
           }
         }
       }
@@ -24214,7 +24242,7 @@ Update.prototype = {
     }
   },
   merge: function(from, to, parent) {
-    var constraint, domain, glob, globals, globs, i, other, prob, probs, _i, _j, _k, _len, _len1, _ref;
+    var constraint, domain, glob, globals, globs, i, other, prob, probs, _i, _j, _k, _l, _len, _len1, _len2, _ref;
     domain = this.domains[from];
     if (domain.frame) {
       return;
@@ -24269,13 +24297,22 @@ Update.prototype = {
         i++;
       }
     }
+    console.log('exporting');
+    console.log(domain["export"]());
+    console.log(probs.slice());
     this.problems[to].push.apply(this.problems[to], domain["export"]());
     this.problems[to].push.apply(this.problems[to], probs);
+    for (_k = 0, _len2 = probs.length; _k < _len2; _k++) {
+      prob = probs[_k];
+      if (prob.domain === domain) {
+        prob.domain = other;
+      }
+    }
     this.domains.splice(from, 1);
     this.problems.splice(from, 1);
     _ref = domain.constraints;
-    for (_k = _ref.length - 1; _k >= 0; _k += -1) {
-      constraint = _ref[_k];
+    for (_l = _ref.length - 1; _l >= 0; _l += -1) {
+      constraint = _ref[_l];
       domain.unconstrain(constraint, void 0, true);
     }
     if ((i = this.engine.domains.indexOf(domain)) > -1) {
@@ -24345,6 +24382,7 @@ Update.prototype = {
                     }
                     break;
                   } else if (!other.MAYBE) {
+                    this.merge(n, index);
                     this.problems[index].push.apply(this.problems[index], this.problems[n]);
                     this.domains.splice(n, 1);
                     this.problems.splice(n, 1);

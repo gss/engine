@@ -211,7 +211,10 @@ class Domain
           break unless watcher
           if watcher.domain != domain || !value?
             # Re-evaluate expression
-            @update([@sanitize(@getRootOperation(watcher, domain))])
+            if watcher.parent[watcher.index] != watcher
+              watcher.parent[watcher.index] = watcher
+            root = @getRootOperation(watcher, domain)
+            @update([@sanitize(root)])
           else
             if watcher.parent.domain == domain
               domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
@@ -365,6 +368,8 @@ class Domain
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
     constraint.domain = @
+    if constraint.length == 1
+      debugger
     @constraints.push(constraint)
     (@constrained ||= []).push(constraint)
 
@@ -539,6 +544,8 @@ class Domain
 
   remove: ->
     for path in arguments
+      if path == 'style[type*="text/gss"]$1↓@1↓ article$article'
+        debugger
       for contd in @getPossibleContinuations(path)
         if observers = @observers[contd]
           while observers[0]
@@ -548,6 +555,13 @@ class Domain
         for constraint in constraints by -1
           if @isConstraint(constraint)
             @unconstrain(constraint, path)
+
+      if @constrained
+        for constraint in @constrained
+          if constraint.indexOf(path) > -1
+            debugger  
+            @unconstrain(constraint)
+            break
     return
 
   # Schedule execution of expressions to the next tick, buffer input

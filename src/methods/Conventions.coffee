@@ -296,6 +296,8 @@ class Conventions
                               (!parent.parent.def.noop && 
                               parent.domain == domain))
       parent = parent.parent
+    while parent.parent?.domain == parent.domain
+      parent = parent.parent
     return parent
 
 # Little shim for require.js so we dont have to carry it around

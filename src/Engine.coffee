@@ -142,17 +142,20 @@ class Engine extends Domain.Events
           parent.splice(index, 1)
         else
           return []
-      if path && @assumed[path] != expressions[1]
-        (result ||= {})[path] = expressions[1] ? null
+      if path && @assumed.values[path] != expressions[1]
+        
+        unless (result ||= {}).hasOwnProperty(path)
+          result[path] = expressions[1] ? null
     unless start
       if !expressions.length
         parent.splice(index, 1)
       return result
-    if result
-      @assumed.merge result
     @inputs = result
     if expressions.length
       @provide expressions
+    if result
+      console.error(JSON.stringify(result))
+      @assumed.merge result
 
   solve: () ->
     if typeof arguments[0] == 'string'
@@ -402,6 +405,7 @@ class Engine extends Domain.Events
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
+      console.log('solve', commands.slice())
       @worker.postMessage(@clone(commands))
       return @worker
 
