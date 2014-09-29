@@ -54,6 +54,7 @@ class Document extends Abstract
         @once 'solve', ->
           if @updated.resizing == 'scheduled'
             @triggerEvent('resize')
+        
 
 
       @solve id + ' resized', ->

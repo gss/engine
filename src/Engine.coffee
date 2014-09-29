@@ -143,7 +143,7 @@ class Engine extends Domain.Events
         else
           return []
       if path && @assumed[path] != expressions[1]
-        (result ||= {})[path] = expressions[1]
+        (result ||= {})[path] = expressions[1] ? null
     unless start
       if !expressions.length
         parent.splice(index, 1)
@@ -226,7 +226,7 @@ class Engine extends Domain.Events
     restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
     
 
-    if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled)
+    if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled) 
       return @onSolve(null, restyled)
 
   onSolve: (update, restyled) ->
@@ -303,6 +303,7 @@ class Engine extends Domain.Events
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
+      console.log('post', problems, workflow.busy?.slice())
       domain.postMessage(@clone problems)
       (workflow.busy ||= []).push(domain.url)
       return
@@ -325,6 +326,7 @@ class Engine extends Domain.Events
 
         if value?
           problems.push ['value', value, property]
+          console.error('import', property, value)
 
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
@@ -449,6 +451,8 @@ if !self.window && self.onmessage != undefined
     engine = Engine.messenger ||= Engine()
     assumed = engine.assumed.toObject()
     solution = engine.solve(e.data) || {}
+    if e.data.toString().indexOf('intrinsic-width') > -1
+      debugger
     for property, value of engine.inputs
       if value? || !solution[property]?
         solution[property] = value

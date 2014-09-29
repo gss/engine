@@ -20102,7 +20102,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.substitute = function(expressions, result, parent, index) {
-    var exp, expression, i, path, start, _i;
+    var exp, expression, i, path, start, _i, _ref;
     if (result === void 0) {
       start = true;
       result = null;
@@ -20126,7 +20126,7 @@ Engine = (function(_super) {
         }
       }
       if (path && this.assumed[path] !== expressions[1]) {
-        (result || (result = {}))[path] = expressions[1];
+        (result || (result = {}))[path] = (_ref = expressions[1]) != null ? _ref : null;
       }
     }
     if (!start) {
@@ -20305,13 +20305,14 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     if (domain && !domain.solve && domain.postMessage) {
+      console.log('post', problems, (_ref = workflow.busy) != null ? _ref.slice() : void 0);
       domain.postMessage(this.clone(problems));
       (workflow.busy || (workflow.busy = [])).push(domain.url);
       return;
     }
-    if ((index = (_ref = workflow.imports) != null ? _ref.indexOf(domain) : void 0) > -1) {
+    if ((index = (_ref1 = workflow.imports) != null ? _ref1.indexOf(domain) : void 0) > -1) {
       finish = index;
       imports = [];
       while (property = workflow.imports[++finish]) {
@@ -20327,13 +20328,14 @@ Engine = (function(_super) {
         property = imports[_i];
         if (this.intrinsic.values.hasOwnProperty(property)) {
           value = this.intrinsic.values[property];
-        } else if ((_ref1 = workflow.solution) != null ? _ref1.hasOwnProperty(property) : void 0) {
+        } else if ((_ref2 = workflow.solution) != null ? _ref2.hasOwnProperty(property) : void 0) {
           value = workflow.solution[property];
         } else {
-          value = (_ref2 = this.solution) != null ? _ref2[property] : void 0;
+          value = (_ref3 = this.solution) != null ? _ref3[property] : void 0;
         }
         if (value != null) {
           problems.push(['value', value, property]);
+          console.error('import', property, value);
         }
       }
     }
@@ -20383,9 +20385,9 @@ Engine = (function(_super) {
           }
         }
       }
-      _ref3 = this.domains;
-      for (i = _l = 0, _len3 = _ref3.length; _l < _len3; i = ++_l) {
-        other = _ref3[i];
+      _ref4 = this.domains;
+      for (i = _l = 0, _len3 = _ref4.length; _l < _len3; i = ++_l) {
+        other = _ref4[i];
         locals = [];
         other.changes = void 0;
         for (_m = 0, _len4 = removes.length; _m < _len4; _m++) {
@@ -20403,9 +20405,9 @@ Engine = (function(_super) {
           }
         }
         if (other.changes) {
-          _ref4 = other.changes;
-          for (property in _ref4) {
-            value = _ref4[property];
+          _ref5 = other.changes;
+          for (property in _ref5) {
+            value = _ref5[property];
             (result || (result = {}))[property] = value;
           }
           other.changes = void 0;
@@ -20422,9 +20424,9 @@ Engine = (function(_super) {
       if (typeof problems[0] === 'string') {
         problems = [problems];
       }
-      _ref5 = this.workers;
-      for (url in _ref5) {
-        worker = _ref5[url];
+      _ref6 = this.workers;
+      for (url in _ref6) {
+        worker = _ref6[url];
         workflow.push(problems, worker);
       }
     }
@@ -20511,6 +20513,9 @@ if (!self.window && self.onmessage !== void 0) {
     engine = Engine.messenger || (Engine.messenger = Engine());
     assumed = engine.assumed.toObject();
     solution = engine.solve(e.data) || {};
+    if (e.data.toString().indexOf('intrinsic-width') > -1) {
+      debugger;
+    }
     _ref = engine.inputs;
     for (property in _ref) {
       value = _ref[property];
@@ -22286,7 +22291,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = parseFloat((typeof window !== "undefined" && window !== null ? (_ref = window.location) != null ? (_ref1 = _ref.href.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
+      this.level = parseFloat((typeof self !== "undefined" && self !== null ? (_ref = self.location) != null ? (_ref1 = _ref.search.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 1);
     }
     if (!Console.bind) {
       this.level = 0;
@@ -22787,18 +22792,25 @@ Domain = (function() {
         worker = _ref1[url];
         if (values = worker.values) {
           if (values.hasOwnProperty(path)) {
+            if (value == null) {
+              delete worker.values[path];
+              debugger;
+            }
             this.update(worker, [['value', value, path]]);
+            console.log('kallback', path, value);
           }
         }
       }
     }
     if (variable = this.variables[path]) {
       frame = void 0;
-      _ref2 = variable.constraints;
-      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-        constraint = _ref2[_j];
-        if (frame = constraint.domain.frame) {
-          break;
+      if (variable.constraints) {
+        _ref2 = variable.constraints;
+        for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+          constraint = _ref2[_j];
+          if (frame = constraint.domain.frame) {
+            break;
+          }
         }
       }
       _ref3 = variable.operations;
@@ -22879,6 +22891,10 @@ Domain = (function() {
         if (a[3] !== b[3]) {
           return;
         }
+      } else if (a[0] === 'value') {
+        return true;
+      } else if (b[0] === 'value') {
+        return true;
       } else {
         result = void 0;
         for (index = _i = 0, _len = a.length; _i < _len; index = ++_i) {
@@ -22911,7 +22927,7 @@ Domain = (function() {
     }
     if (compared = this.compare(other.operation, constraint.operation)) {
       if (compared !== true || !(suggested = this.resuggest(other.operation, constraint.operation))) {
-        this.unconstrain(other, void 0, true);
+        this.unconstrain(other, void 0, 'reset');
       } else {
         return suggested !== 'skip';
       }
@@ -22941,6 +22957,7 @@ Domain = (function() {
         _ref2 = this.substituted;
         for (i = _k = _ref2.length - 1; _k >= 0; i = _k += -1) {
           other = _ref2[i];
+          debugger;
           if (other !== constraint) {
             if (stack = this.reconstrain(other, constraint)) {
               break;
@@ -23019,9 +23036,6 @@ Domain = (function() {
       } else if (path[0] === 'value') {
         this.substituted.splice(this.substituted.indexOf(constraint));
       } else {
-        if (path.name === '$1[y]') {
-          debugger;
-        }
         if (path.editing) {
           path.suggest = path.value;
           this.unedit(path);
@@ -23080,11 +23094,10 @@ Domain = (function() {
 
   Domain.prototype.undeclare = function(variable, moving) {
     var _ref;
-    if (variable.name === '$1[y]') {
-      debugger;
+    if (!moving) {
+      (this.nullified || (this.nullified = {}))[variable.name] = variable;
     }
-    (this.nullified || (this.nullified = {}))[variable.name] = variable;
-    if (!moving || this.values[variable.name] !== void 0) {
+    if (!moving) {
       if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
         delete this.added[variable.name];
       }
@@ -23191,7 +23204,6 @@ Domain = (function() {
           if (equal) {
             throw 'Trying to separate what was just added. Means loop. ';
           }
-          debugger;
         }
         return this.orphanize(commands);
       }
@@ -24631,7 +24643,7 @@ Update.prototype = {
                 }
               }
               if (!copy) {
-                if (reverse || (domain && !domain.solve && other.url === domain.url)) {
+                if (reverse || (domain && !domain.solve && other.url === domain.url && problem[0] === 'remove')) {
                   cmds.unshift(problem);
                 } else {
                   cmds.push(problem);
@@ -26497,7 +26509,6 @@ Positions = (function() {
           }
         }
       }
-      this.engine.intrinsic.update(element, x, y, full);
     }
     return offsets;
   };

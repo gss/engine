@@ -421,7 +421,7 @@ Update.prototype =
                   copy = true
 
               unless copy
-                if reverse || (domain && !domain.solve && other.url == domain.url)
+                if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
                   cmds.unshift problem
                 else
                   cmds.push problem

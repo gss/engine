@@ -449,7 +449,7 @@ DEMOS =
     ::scope[height] == ::scope[intrinsic-height];
     ::scope[width] == ::scope[intrinsic-width];
 
-    @if ::scope[width] < ::scope[height] {
+    @if ::scope[intrinsic-width] < ::scope[intrinsic-height] {
       @h |-(article)-| gap([article-gap]) in(::scope) {
         height: == &[intrinsic-height];
         width: <= 800;        
@@ -496,12 +496,7 @@ DEMOS =
   """
 
 DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
-  replace('::window[height]', '[height]').
-  replace('::window[width]', '[width]').
-  replace('@if', """
-  [width] == ::window[width];
-  [height] == ::window[height];
-  @if""")
+  replace('::scope[intrinsic-width] < ::scope[intrinsic-height]', '::scope[width] < ::scope[height]')
 
 
 assert = chai.assert
@@ -628,7 +623,6 @@ describe 'Full page tests', ->
                           done()
 
 
-
       describe type, ->
         @timeout 10000
         
@@ -720,40 +714,23 @@ describe 'Full page tests', ->
                   container.innerHTML = ""
                   engine.then (solution) ->
                     done()
-
-        it 'Adaptive aspect', (done) ->
-          container = document.createElement('div')
-          container.style.height = '640px'
-          container.style.width = '640px'
-          container.style.position = 'absolute'
-          container.style.overflow = 'auto'
-          container.style.left = 0
-          container.style.top = 0
-          window.$engine = engine = new GSS(container, index == 0)
-          $('#fixtures').appendChild container
-          container.innerHTML = DEMOS.ADAPTIVE_ASPECT
-
-          engine.then (solution) ->
-            expect(solution['$article[height]']).to.eql 600
-            expect(solution['$article[width]']).to.eql 480
-            expect(solution['$footer[height]']).to.eql 600
-            expect(solution['$footer[width]']).to.eql 72
-            expect(solution['$header[height]']).to.eql 600
-            expect(solution['$header[width]']).to.eql 72
-            expect(solution['article-gap']).to.eql 20
-            container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
-
-            engine.then (solution) ->
-              expect(solution['$article[height]'] > 1500).to.eql true
-              expect(solution['$article[width]']).to.eql 608
-              expect(solution['$footer[height]']).to.eql 72
-              expect(solution['$footer[width]']).to.eql 608
-              expect(solution['$header[height]']).to.eql 72
-              expect(solution['$header[width]']).to.eql 608
-              expect(solution['article-gap']).to.eql 16
-
-              container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
-
+        for type, j in ['with intrinsic condition', 'with linear condition']
+          describe type, ->
+            it 'Adaptive aspect', (done) ->
+              container = document.createElement('div')
+              container.style.height = '640px'
+              container.style.width = '640px'
+              container.style.position = 'absolute'
+              container.style.overflow = 'auto'
+              container.style.left = 0
+              container.style.top = 0
+              window.$engine = engine = new GSS(container, index == 0)
+              $('#fixtures').appendChild container
+              if j == 0
+                container.innerHTML = DEMOS.ADAPTIVE_ASPECT
+              else
+                container.innerHTML = DEMOS.ADAPTIVE_ASPECT_LINEAR
+                
               engine.then (solution) ->
                 expect(solution['$article[height]']).to.eql 600
                 expect(solution['$article[width]']).to.eql 480
@@ -773,12 +750,36 @@ describe 'Full page tests', ->
                   expect(solution['$header[width]']).to.eql 608
                   expect(solution['article-gap']).to.eql 16
 
-                  container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0')
-                  
+                  container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+
                   engine.then (solution) ->
-                    expect(solution['$article[height]'] > 1500).to.eql true
-                    expect(solution['$article[width]']).to.eql 568
-                    expect(solution['$footer[width]']).to.eql 568
-                    expect(solution['$header[width]']).to.eql 568
-                    done()
+                    expect(solution['$article[height]']).to.eql 600
+                    expect(solution['$article[width]']).to.eql 480
+                    expect(solution['$footer[height]']).to.eql 600
+                    expect(solution['$footer[width]']).to.eql 72
+                    expect(solution['$header[height]']).to.eql 600
+                    expect(solution['$header[width]']).to.eql 72
+                    expect(solution['article-gap']).to.eql 20
+                    container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+
+                    engine.then (solution) ->
+                      expect(solution['$article[height]'] > 1500).to.eql true
+                      expect(solution['$article[width]']).to.eql 608
+                      expect(solution['$footer[height]']).to.eql 72
+                      expect(solution['$footer[width]']).to.eql 608
+                      expect(solution['$header[height]']).to.eql 72
+                      expect(solution['$header[width]']).to.eql 608
+                      expect(solution['article-gap']).to.eql 16
+
+                      container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0')
+                      
+                      engine.then (solution) ->
+                        expect(solution['$article[height]'] > 1500).to.eql true
+                        expect(solution['$article[width]']).to.eql 568
+                        expect(solution['$footer[width]']).to.eql 568
+                        expect(solution['$header[width]']).to.eql 568
+                        engine.scope.innerHTML = ""
+                        engine.then ->
+                          expect(engine.values).to.eql {}
+                          done()
  

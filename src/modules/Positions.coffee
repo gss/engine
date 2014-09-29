@@ -78,7 +78,7 @@ class Positions
                 (offsets ||= {}).y = value - y
 
       # Let other measurements hook up into this batch
-      @engine.intrinsic.update(element, x, y, full)
+      # @engine.intrinsic.update(element, x, y, full)
 
 
     return offsets

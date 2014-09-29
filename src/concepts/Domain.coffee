@@ -224,7 +224,11 @@ class Domain
       for url, worker of @workers
         if values = worker.values
           if values.hasOwnProperty(path)
+            unless value?
+              delete worker.values[path]
+              debugger
             @update(worker, [['value', value, path]])
+            console.log('kallback', path, value)
 
     #while (index = @updating.imports.indexOf(path)) > -1
     #if exports = @updating?.exports?[path]
@@ -233,9 +237,10 @@ class Domain
 
     if variable = @variables[path]
       frame = undefined
-      for constraint in variable.constraints
-        if frame = constraint.domain.frame
-          break
+      if variable.constraints
+        for constraint in variable.constraints
+          if frame = constraint.domain.frame
+            break
       for op in variable.operations
         if !watchers || watchers.indexOf(op) == -1
           if value == null
@@ -284,6 +289,10 @@ class Domain
       return unless typeof b == 'object'
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
+      else if a[0] == 'value'
+        return true
+      else if b[0] == 'value'
+        return true
       else
         result = undefined
         for value, index in a
@@ -303,7 +312,7 @@ class Domain
     return unless other.operation && constraint.operation
     if compared = @compare(other.operation, constraint.operation)
       if compared != true || !(suggested = @resuggest(other.operation, constraint.operation))
-        @unconstrain(other, undefined, true)
+        @unconstrain(other, undefined, 'reset')
         return
       else 
         return suggested != 'skip'
@@ -331,6 +340,7 @@ class Domain
 
       unless stack?
         for other, i in @substituted by -1
+          debugger
           unless other == constraint
             if stack = @reconstrain other, constraint
               break
@@ -386,8 +396,6 @@ class Domain
       else if path[0] == 'value'
         @substituted.splice(@substituted.indexOf(constraint))
       else
-        if path.name == '$1[y]'
-          debugger
         if path.editing
           path.suggest = path.value
           @unedit(path)
@@ -427,10 +435,9 @@ class Domain
     return variable
 
   undeclare: (variable, moving) ->
-    if variable.name == '$1[y]'
-      debugger
-    (@nullified ||= {})[variable.name] = variable
-    if !moving || @values[variable.name] != undefined
+    if moving != 'reset'
+      (@nullified ||= {})[variable.name] = variable
+    if !moving
       if @added?[variable.name]
         delete @added[variable.name]
     if !moving && @values[variable.name] != undefined
@@ -505,7 +512,6 @@ class Domain
               break
           if equal
             throw 'Trying to separate what was just added. Means loop. '
-          debugger
         return  @orphanize commands
         
   apply: (solution) ->
@@ -523,7 +529,7 @@ class Domain
       @added = undefined
     if @nullified
       for path, variable of @nullified
-        if path.substring(0, 9) != 'suggested'# && @values.hasOwnProperty(path)
+        if path.substring(0, 9) != 'suggested'
           result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         @nullify variable
 
