@@ -144,8 +144,13 @@ Update.prototype =
       if !domain.MAYBE
         if globals > -1# && globals < from
           globs = parent.problems[globals]
-          if globs[0] == 'remove'
-            domain.remove.apply(domain, globs.slice(1))
+          if typeof globs[0] == 'string'
+            if globs[0] == 'remove'
+              domain.remove.apply(domain, globs.slice(1))
+          else
+            for glob in globs
+              if glob[0] == 'remove'
+                domain.remove.apply(domain, glob.slice(1))
             
     # Apply removes from global update
     if @engine.updating
@@ -153,8 +158,13 @@ Update.prototype =
       if !domain.MAYBE
         if globals > -1# && globals < from
           globs = @engine.updating.problems[globals]
-          if globs[0] == 'remove'
-            domain.remove.apply(domain, globs.slice(1))
+          if typeof globs[0] == 'string'
+            if globs[0] == 'remove'
+              domain.remove.apply(domain, globs.slice(1))
+          else
+            for glob in globs
+              if glob[0] == 'remove'
+                domain.remove.apply(domain, glob.slice(1))
 
     # Apply removes scheduled for exported domain
     while prob = probs[i++]

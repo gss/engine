@@ -24168,7 +24168,7 @@ Update.prototype = {
     }
   },
   merge: function(from, to, parent) {
-    var constraint, domain, globals, globs, i, other, prob, probs, _i, _ref;
+    var constraint, domain, glob, globals, globs, i, other, prob, probs, _i, _j, _k, _len, _len1, _ref;
     domain = this.domains[from];
     if (domain.frame) {
       return;
@@ -24180,8 +24180,17 @@ Update.prototype = {
       if (!domain.MAYBE) {
         if (globals > -1) {
           globs = parent.problems[globals];
-          if (globs[0] === 'remove') {
-            domain.remove.apply(domain, globs.slice(1));
+          if (typeof globs[0] === 'string') {
+            if (globs[0] === 'remove') {
+              domain.remove.apply(domain, globs.slice(1));
+            }
+          } else {
+            for (_i = 0, _len = globs.length; _i < _len; _i++) {
+              glob = globs[_i];
+              if (glob[0] === 'remove') {
+                domain.remove.apply(domain, glob.slice(1));
+              }
+            }
           }
         }
       }
@@ -24191,8 +24200,17 @@ Update.prototype = {
       if (!domain.MAYBE) {
         if (globals > -1) {
           globs = this.engine.updating.problems[globals];
-          if (globs[0] === 'remove') {
-            domain.remove.apply(domain, globs.slice(1));
+          if (typeof globs[0] === 'string') {
+            if (globs[0] === 'remove') {
+              domain.remove.apply(domain, globs.slice(1));
+            }
+          } else {
+            for (_j = 0, _len1 = globs.length; _j < _len1; _j++) {
+              glob = globs[_j];
+              if (glob[0] === 'remove') {
+                domain.remove.apply(domain, glob.slice(1));
+              }
+            }
           }
         }
       }
@@ -24210,8 +24228,8 @@ Update.prototype = {
     this.domains.splice(from, 1);
     this.problems.splice(from, 1);
     _ref = domain.constraints;
-    for (_i = _ref.length - 1; _i >= 0; _i += -1) {
-      constraint = _ref[_i];
+    for (_k = _ref.length - 1; _k >= 0; _k += -1) {
+      constraint = _ref[_k];
       domain.unconstrain(constraint, void 0, true);
     }
     if ((i = this.engine.domains.indexOf(domain)) > -1) {
