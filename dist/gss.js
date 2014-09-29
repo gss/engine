@@ -22985,6 +22985,20 @@ Domain = (function() {
     return (this.constrained || (this.constrained = [])).push(constraint);
   };
 
+  Domain.prototype.hasConstraint = function(path) {
+    var other, used, _i, _len, _ref;
+    used = false;
+    _ref = path.constraints;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      other = _ref[_i];
+      if (this.constraints.indexOf(other) > -1) {
+        used = true;
+        break;
+      }
+    }
+    return used;
+  };
+
   Domain.prototype.unconstrain = function(constraint, continuation, moving) {
     var group, i, index, op, other, path, _i, _j, _k, _len, _ref, _ref1, _ref2;
     _ref = constraint.paths;
@@ -23005,6 +23019,9 @@ Domain = (function() {
       } else if (path[0] === 'value') {
         this.substituted.splice(this.substituted.indexOf(constraint));
       } else {
+        if (path.name === '$1[y]') {
+          debugger;
+        }
         if (path.editing) {
           path.suggest = path.value;
           this.unedit(path);
@@ -23012,9 +23029,9 @@ Domain = (function() {
         index = path.constraints.indexOf(constraint);
         if (index > -1) {
           path.constraints.splice(index, 1);
-          if (!path.constraints.length) {
-            this.undeclare(path, moving);
-          }
+        }
+        if (!this.hasConstraint(path)) {
+          this.undeclare(path, moving);
         }
         if (path.operations) {
           _ref1 = path.operations;
@@ -23063,6 +23080,9 @@ Domain = (function() {
 
   Domain.prototype.undeclare = function(variable, moving) {
     var _ref;
+    if (variable.name === '$1[y]') {
+      debugger;
+    }
     (this.nullified || (this.nullified = {}))[variable.name] = variable;
     if (!moving || this.values[variable.name] !== void 0) {
       if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
@@ -23118,8 +23138,8 @@ Domain = (function() {
     return groups;
   };
 
-  Domain.prototype.validate = function(commands) {
-    var constraint, group, groups, index, ops, separated, shift, _i, _j, _len, _len1;
+  Domain.prototype.validate = function() {
+    var arg, args, commands, constraint, equal, group, groups, i, index, ops, separated, shift, _i, _j, _k, _len, _len1, _len2;
     if (this.constrained || this.unconstrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
@@ -23155,6 +23175,24 @@ Domain = (function() {
         if (commands.length === 1) {
           commands = commands[0];
         }
+        args = arguments;
+        if (args.length === 1) {
+          args = args[0];
+        }
+        if (commands.length === args.length) {
+          equal = true;
+          for (i = _k = 0, _len2 = args.length; _k < _len2; i = ++_k) {
+            arg = args[i];
+            if (commands.indexOf(arg) === -1) {
+              equal = false;
+              break;
+            }
+          }
+          if (equal) {
+            throw 'Trying to separate what was just added. Means loop. ';
+          }
+          debugger;
+        }
         return this.orphanize(commands);
       }
     }
@@ -23169,22 +23207,11 @@ Domain = (function() {
         result[path] = value;
       }
     }
-    if (this.nullified) {
-      _ref1 = this.nullified;
+    if (this.added) {
+      _ref1 = this.added;
       for (path in _ref1) {
         variable = _ref1[path];
-        if (path.substring(0, 9) !== 'suggested') {
-          result[path] = (_ref2 = (_ref3 = this.assumed.values[path]) != null ? _ref3 : (_ref4 = this.intrinsic) != null ? _ref4.values[path] : void 0) != null ? _ref2 : null;
-        }
-        this.nullify(variable);
-      }
-      this.nullified = void 0;
-    }
-    if (this.added) {
-      _ref5 = this.added;
-      for (path in _ref5) {
-        variable = _ref5[path];
-        value = (_ref6 = variable.value) != null ? _ref6 : 0;
+        value = (_ref2 = variable.value) != null ? _ref2 : 0;
         if (this.values[path] !== value) {
           if (result[path] == null) {
             result[path] = value;
@@ -23193,6 +23220,17 @@ Domain = (function() {
         }
       }
       this.added = void 0;
+    }
+    if (this.nullified) {
+      _ref3 = this.nullified;
+      for (path in _ref3) {
+        variable = _ref3[path];
+        if (path.substring(0, 9) !== 'suggested') {
+          result[path] = (_ref4 = (_ref5 = this.assumed.values[path]) != null ? _ref5 : (_ref6 = this.intrinsic) != null ? _ref6.values[path] : void 0) != null ? _ref4 : null;
+        }
+        this.nullify(variable);
+      }
+      this.nullified = void 0;
     }
     this.merge(result, true);
     return result;
@@ -25163,10 +25201,10 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.solve = function() {
-    var commands, constraint, needed, path, result, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2, _ref3, _ref4;
+    var commands, constraint, needed, path, result, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2, _ref3;
     Domain.prototype.solve.apply(this, arguments);
     if (this.constrained || this.unconstrained) {
-      commands = this.validate();
+      commands = this.validate.apply(this, arguments);
       if (this.unconstrained) {
         _ref1 = this.unconstrained;
         for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
@@ -25175,16 +25213,18 @@ Linear = (function(_super) {
           _ref2 = constraint.paths;
           for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
             path = _ref2[_j];
-            if (((_ref3 = path.constraints) != null ? _ref3.length : void 0) === 0) {
-              this.nullify(path);
+            if (path.constraints) {
+              if (!this.hasConstraint(path)) {
+                this.nullify(path);
+              }
             }
           }
         }
       }
       if (this.constrained) {
-        _ref4 = this.constrained;
-        for (_k = 0, _len2 = _ref4.length; _k < _len2; _k++) {
-          constraint = _ref4[_k];
+        _ref3 = this.constrained;
+        for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+          constraint = _ref3[_k];
           this.addConstraint(constraint);
         }
       }
@@ -25248,7 +25288,8 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.nullify = function(variable) {
-    return this.solver._externalParametricVars["delete"](variable);
+    this.solver._externalParametricVars["delete"](variable);
+    return this.solver._externalRows["delete"](variable);
   };
 
   Linear.prototype.suggest = function(path, value, strength, weight, continuation) {

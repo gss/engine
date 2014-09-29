@@ -1,102 +1,5 @@
 DEMOS = 
-  ADAPTIVE_ASPECT: """
-    <header id="header">header</header>
-    
-    <article id="article">
-      <p>ISTANBUL — Forty-nine Turkish hostages who had been held for months in Iraq by Islamic State militants were returned to Turkey on Saturday after what Turkey said was a covert operation led by its intelligence agency.</p>
-      <p>The hostages, including diplomats and their families, had been seized in June from the Turkish Consulate in Mosul, in northern Iraq.</p>
-      <p>“The Turkish intelligence agency has followed the situation very sensitively and patiently since the beginning and, as a result, conducted a successful rescue operation,” President Recep Tayyip Erdogan said in a statement Saturday.</p>
-      <p>The details of the hostages’ release were unclear. The semiofficial Turkish news agency Anadolu reported that Turkey had not paid ransom or engaged in a military operation, but said it had used drones to track the hostages, who had been moved at least eight times during their 101 days in captivity.</p>
-      <p>Times Topic: Islamic State in Iraq and Syria (ISIS) Back and Forth, Wearily, Across the ISIS BorderSEPT. 20, 2014 The agency said that Turkish intelligence teams had tried five times to rescue the hostages, but that each attempt had been thwarted by clashes in the area where they were being held.</p>
-      <p>An employee of the Turkish Consulate in Mosul was greeted by family members. Credit Reuters One senior American official, who asked not to be named, said Saturday that Turkey had not notified the United States before securing the return of the hostages, or made a specific request for American military help in connection with their release.</p>
-      <p>“I am sharing joyful news, which as a nation we have been waiting for,” Prime Minister Ahmet Davutoglu said in Baku, Azerbaijan, where he was on an official visit.</p>
-      <p>“After intense efforts that lasted days and weeks, in the early hours, our citizens were handed over to us and we brought them back to our country,” he said.</p>
-      <p>The prime minister left Baku for the Turkish province of Urfa, where the freed hostages, who included Consul General Ozturk Yilmaz, other diplomats, children and consulate guards, had been brought from Raqqa, Syria, the de facto headquarters of the Islamic State militants.</p>
-    </article>
-    
-    <footer id="footer">footer</footer>
-    
-    <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;      
-    }
-    html {
-      background-color: hsl(0,0%,95%);
-    }
-    article {
-      background-color: hsl(0,0%,99%);
-      padding: 72px;
-      -webkit-column-width: 400px;
-      overflow-x: auto;
-      font-size: 20px;
-      line-height: 30px;
-    }
-    header {
-      background-color: hsl(0,0%,90%);
-      padding: 16px;
-      text-align: center;
-    }
-    footer {
-      background-color: hsl(0,0%,85%);
-      padding: 16px;
-      text-align: center;
-    }
-    p {
-      margin-bottom: 1em;
-    }
-    </style>
-    <style type="text/gss">
-    // vertical article
-      
-    [article-gap] >= 16; // centers article
-      
-    @if ::window[width] < ::window[height] {
-      @h |-(article)-| gap([article-gap]) in(::window) {
-        height: == &[intrinsic-height];
-        width: <= 800;        
-      }
-      @v |
-        -72-
-        (header)
-        (article)
-        (footer)
-        
-        in(::window);
-      
-      header, footer {
-        height: == 72;
-        @h |(&)| in(article);
-      }
-    }
-    
-    // horizontal article
-    @else {
-      
-      @v |-(article)-| gap([article-gap]) in(::window) {
-        width: == &[intrinsic-width];
-        height: <= 600;   
-      }
-      
-      @h |
-        -16-
-        (header)
-        (footer)
-        (article)        
-        
-        in(::window);
-      
-      header, footer {
-        width: == 72;
-        @v |(&)| in(article);
-      }
-    }
 
-    
-    </style>
-
-
-  """
   SCOPING: """
     <div id="box1" class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
       this.classList.toggle('w-virtual');">
@@ -488,6 +391,119 @@ DEMOS =
     <button id="followers">Followers</button>
     <button id="message">Message</button>
   """
+
+  ADAPTIVE_ASPECT: """
+    <header id="header">header</header>
+    
+    <article id="article">
+      <p>ISTANBUL — Forty-nine Turkish hostages who had been held for months in Iraq by Islamic State militants were returned to Turkey on Saturday after what Turkey said was a covert operation led by its intelligence agency.</p>
+      <p>The hostages, including diplomats and their families, had been seized in June from the Turkish Consulate in Mosul, in northern Iraq.</p>
+      <p>“The Turkish intelligence agency has followed the situation very sensitively and patiently since the beginning and, as a result, conducted a successful rescue operation,” President Recep Tayyip Erdogan said in a statement Saturday.</p>
+      <p>The details of the hostages’ release were unclear. The semiofficial Turkish news agency Anadolu reported that Turkey had not paid ransom or engaged in a military operation, but said it had used drones to track the hostages, who had been moved at least eight times during their 101 days in captivity.</p>
+      <p>Times Topic: Islamic State in Iraq and Syria (ISIS) Back and Forth, Wearily, Across the ISIS BorderSEPT. 20, 2014 The agency said that Turkish intelligence teams had tried five times to rescue the hostages, but that each attempt had been thwarted by clashes in the area where they were being held.</p>
+      <p>An employee of the Turkish Consulate in Mosul was greeted by family members. Credit Reuters One senior American official, who asked not to be named, said Saturday that Turkey had not notified the United States before securing the return of the hostages, or made a specific request for American military help in connection with their release.</p>
+      <p>“I am sharing joyful news, which as a nation we have been waiting for,” Prime Minister Ahmet Davutoglu said in Baku, Azerbaijan, where he was on an official visit.</p>
+      <p>“After intense efforts that lasted days and weeks, in the early hours, our citizens were handed over to us and we brought them back to our country,” he said.</p>
+      <p>The prime minister left Baku for the Turkish province of Urfa, where the freed hostages, who included Consul General Ozturk Yilmaz, other diplomats, children and consulate guards, had been brought from Raqqa, Syria, the de facto headquarters of the Islamic State militants.</p>
+    </article>
+    
+    <footer id="footer">footer</footer>
+    
+    <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;      
+    }
+    html {
+      background-color: hsl(0,0%,95%);
+    }
+    article {
+      background-color: hsl(0,0%,99%);
+      padding: 72px;
+      -webkit-column-width: 400px;
+      overflow-x: auto;
+      font-size: 20px;
+      line-height: 30px;
+    }
+    header {
+      background-color: hsl(0,0%,90%);
+      padding: 16px;
+      text-align: center;
+    }
+    footer {
+      background-color: hsl(0,0%,85%);
+      padding: 16px;
+      text-align: center;
+    }
+    p {
+      margin-bottom: 1em;
+    }
+    </style>
+    <style type="text/gss">
+    // vertical article
+      
+    [article-gap] >= 16; // centers article
+      
+    ::scope[left] == 0;
+    ::scope[top] == 0;
+    ::scope[height] == ::scope[intrinsic-height];
+    ::scope[width] == ::scope[intrinsic-width];
+
+    @if ::scope[width] < ::scope[height] {
+      @h |-(article)-| gap([article-gap]) in(::scope) {
+        height: == &[intrinsic-height];
+        width: <= 800;        
+      }
+      @v |
+        -72-
+        (header)
+        (article)
+        (footer)
+        
+        in(::scope);
+      
+      header, footer {
+        height: == 72;
+        @h |(&)| in(article);
+      }
+    }
+    
+    // horizontal article
+    @else {
+      
+      @v |-(article)-| gap([article-gap]) in(::scope) {
+        width: == &[intrinsic-width];
+        height: <= 600;   
+      }
+      
+      @h |
+        -16-
+        (header)
+        (footer)
+        (article)        
+        
+        in(::scope);
+      
+      header, footer {
+        width: == 72;
+        @v |(&)| in(article);
+      }
+    }
+
+    
+    </style>
+
+  """
+
+DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
+  replace('::window[height]', '[height]').
+  replace('::window[width]', '[width]').
+  replace('@if', """
+  [width] == ::window[width];
+  [height] == ::window[height];
+  @if""")
+
+
 assert = chai.assert
 expect = chai.expect
 
@@ -614,6 +630,8 @@ describe 'Full page tests', ->
 
 
       describe type, ->
+        @timeout 10000
+        
         it 'gss1 demo', (done) ->
           container = document.createElement('div')
           container.style.height = '640px'
@@ -656,7 +674,6 @@ describe 'Full page tests', ->
                   engine.then (solution) ->
                     done()
 
-        @timeout 10000
         it 'profile card', (done) ->
           container = document.createElement('div')
           container.id = 'profile-card-demo'
@@ -702,5 +719,66 @@ describe 'Full page tests', ->
  
                   container.innerHTML = ""
                   engine.then (solution) ->
+                    done()
+
+        it 'Adaptive aspect', (done) ->
+          container = document.createElement('div')
+          container.style.height = '640px'
+          container.style.width = '640px'
+          container.style.position = 'absolute'
+          container.style.overflow = 'auto'
+          container.style.left = 0
+          container.style.top = 0
+          window.$engine = engine = new GSS(container, index == 0)
+          $('#fixtures').appendChild container
+          container.innerHTML = DEMOS.ADAPTIVE_ASPECT
+
+          engine.then (solution) ->
+            expect(solution['$article[height]']).to.eql 600
+            expect(solution['$article[width]']).to.eql 480
+            expect(solution['$footer[height]']).to.eql 600
+            expect(solution['$footer[width]']).to.eql 72
+            expect(solution['$header[height]']).to.eql 600
+            expect(solution['$header[width]']).to.eql 72
+            expect(solution['article-gap']).to.eql 20
+            container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+
+            engine.then (solution) ->
+              expect(solution['$article[height]'] > 1500).to.eql true
+              expect(solution['$article[width]']).to.eql 608
+              expect(solution['$footer[height]']).to.eql 72
+              expect(solution['$footer[width]']).to.eql 608
+              expect(solution['$header[height]']).to.eql 72
+              expect(solution['$header[width]']).to.eql 608
+              expect(solution['article-gap']).to.eql 16
+
+              container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+
+              engine.then (solution) ->
+                expect(solution['$article[height]']).to.eql 600
+                expect(solution['$article[width]']).to.eql 480
+                expect(solution['$footer[height]']).to.eql 600
+                expect(solution['$footer[width]']).to.eql 72
+                expect(solution['$header[height]']).to.eql 600
+                expect(solution['$header[width]']).to.eql 72
+                expect(solution['article-gap']).to.eql 20
+                container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+
+                engine.then (solution) ->
+                  expect(solution['$article[height]'] > 1500).to.eql true
+                  expect(solution['$article[width]']).to.eql 608
+                  expect(solution['$footer[height]']).to.eql 72
+                  expect(solution['$footer[width]']).to.eql 608
+                  expect(solution['$header[height]']).to.eql 72
+                  expect(solution['$header[width]']).to.eql 608
+                  expect(solution['article-gap']).to.eql 16
+
+                  container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0')
+                  
+                  engine.then (solution) ->
+                    expect(solution['$article[height]'] > 1500).to.eql true
+                    expect(solution['$article[width]']).to.eql 568
+                    expect(solution['$footer[width]']).to.eql 568
+                    expect(solution['$header[width]']).to.eql 568
                     done()
  

@@ -365,6 +365,15 @@ class Domain
     #  for constraint in stack
     #    @addConstraint constraint
 
+  hasConstraint: (path) ->
+    used = false
+    for other in path.constraints
+      if @constraints.indexOf(other) > -1
+        used = true
+        break
+    return used
+
+
   unconstrain: (constraint, continuation, moving) ->
     for path in constraint.paths
       if typeof path == 'string'
@@ -377,14 +386,16 @@ class Domain
       else if path[0] == 'value'
         @substituted.splice(@substituted.indexOf(constraint))
       else
+        if path.name == '$1[y]'
+          debugger
         if path.editing
           path.suggest = path.value
           @unedit(path)
         index = path.constraints.indexOf(constraint)
         if index > -1
           path.constraints.splice(index, 1)
-          unless path.constraints.length
-            @undeclare(path, moving)
+        if !@hasConstraint(path)
+          @undeclare(path, moving)
         if path.operations
           for op, index in path.operations by -1
             while op
@@ -416,6 +427,8 @@ class Domain
     return variable
 
   undeclare: (variable, moving) ->
+    if variable.name == '$1[y]'
+      debugger
     (@nullified ||= {})[variable.name] = variable
     if !moving || @values[variable.name] != undefined
       if @added?[variable.name]
@@ -452,7 +465,7 @@ class Domain
       groupped.push(constraint)
     return groups
 
-  validate: (commands) ->
+  validate: () ->
     if @constrained || @unconstrained
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
@@ -481,6 +494,18 @@ class Domain
       if commands?.length
         if commands.length == 1
           commands = commands[0]
+        args = arguments
+        if args.length == 1
+          args = args[0]
+        if commands.length == args.length
+          equal = true
+          for arg, i in args
+            if commands.indexOf(arg) == -1
+              equal = false
+              break
+          if equal
+            throw 'Trying to separate what was just added. Means loop. '
+          debugger
         return  @orphanize commands
         
   apply: (solution) ->
@@ -489,12 +514,6 @@ class Domain
       if !@nullified?[path] && path.substring(0, 9) != 'suggested'
         result[path] = value
 
-    if @nullified
-      for path, variable of @nullified
-        if path.substring(0, 9) != 'suggested'
-          result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
-        @nullify variable
-      @nullified = undefined
     if @added
       for path, variable of @added
         value = variable.value ? 0
@@ -502,6 +521,13 @@ class Domain
           result[path] ?= value
           @values[path] = value
       @added = undefined
+    if @nullified
+      for path, variable of @nullified
+        if path.substring(0, 9) != 'suggested'# && @values.hasOwnProperty(path)
+          result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
+        @nullify variable
+
+      @nullified = undefined
 
     @merge result, true
 

@@ -50,13 +50,14 @@ class Linear extends Domain
   solve: () ->
     Domain::solve.apply(@, arguments)
     if @constrained || @unconstrained
-      commands = @validate()
+      commands = @validate.apply(@, arguments)
       if @unconstrained
         for constraint in @unconstrained
           @removeConstraint(constraint)
           for path in constraint.paths
-            if path.constraints?.length == 0
-              @nullify(path)
+            if path.constraints
+              if !@hasConstraint(path)
+                @nullify(path)
       if @constrained
         for constraint in @constrained
           @addConstraint(constraint)
@@ -104,6 +105,7 @@ class Linear extends Domain
 
   nullify: (variable) ->
     @solver._externalParametricVars.delete(variable)
+    @solver._externalRows.delete(variable)
 
 
   suggest: (path, value, strength, weight, continuation) ->
