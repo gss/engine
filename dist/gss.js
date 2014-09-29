@@ -22891,10 +22891,12 @@ Domain = (function() {
         if (a[3] !== b[3]) {
           return;
         }
-      } else if (a[0] === 'value') {
-        return true;
-      } else if (b[0] === 'value') {
-        return true;
+      } else if (a[0] === 'value' && b.toString() === a[3]) {
+        debugger;
+        return 'similar';
+      } else if (b[0] === 'value' && a.toString() === b[3]) {
+        debugger;
+        return 'similar';
       } else {
         result = void 0;
         for (index = _i = 0, _len = a.length; _i < _len; index = ++_i) {
@@ -23094,10 +23096,8 @@ Domain = (function() {
 
   Domain.prototype.undeclare = function(variable, moving) {
     var _ref;
-    if (!moving) {
+    if (moving !== 'reset') {
       (this.nullified || (this.nullified = {}))[variable.name] = variable;
-    }
-    if (!moving) {
       if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
         delete this.added[variable.name];
       }

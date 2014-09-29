@@ -289,10 +289,12 @@ class Domain
       return unless typeof b == 'object'
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
-      else if a[0] == 'value'
-        return true
-      else if b[0] == 'value'
-        return true
+      else if a[0] == 'value' && b.toString() == a[3]
+        debugger
+        return 'similar'
+      else if b[0] == 'value' && a.toString() == b[3]
+        debugger
+        return 'similar'
       else
         result = undefined
         for value, index in a
@@ -437,7 +439,6 @@ class Domain
   undeclare: (variable, moving) ->
     if moving != 'reset'
       (@nullified ||= {})[variable.name] = variable
-    if !moving
       if @added?[variable.name]
         delete @added[variable.name]
     if !moving && @values[variable.name] != undefined
