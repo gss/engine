@@ -226,7 +226,6 @@ class Domain
           if values.hasOwnProperty(path)
             unless value?
               delete worker.values[path]
-              debugger
             @update(worker, [['value', value, path]])
             console.log('kallback', path, value)
 
@@ -290,10 +289,8 @@ class Domain
       if a[0] == 'value' && b[0] == 'value'
         return unless a[3] == b[3]
       else if a[0] == 'value' && b.toString() == a[3]
-        debugger
         return 'similar'
       else if b[0] == 'value' && a.toString() == b[3]
-        debugger
         return 'similar'
       else
         result = undefined
@@ -342,7 +339,6 @@ class Domain
 
       unless stack?
         for other, i in @substituted by -1
-          debugger
           unless other == constraint
             if stack = @reconstrain other, constraint
               break

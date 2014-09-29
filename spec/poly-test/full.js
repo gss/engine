@@ -242,67 +242,70 @@ describe('Full page tests', function() {
         _results1 = [];
         for (j = _j = 0, _len1 = _ref1.length; _j < _len1; j = ++_j) {
           type = _ref1[j];
-          _results1.push(describe(type, function() {
-            return it('Adaptive aspect', function(done) {
-              container = document.createElement('div');
-              container.style.height = '640px';
-              container.style.width = '640px';
-              container.style.position = 'absolute';
-              container.style.overflow = 'auto';
-              container.style.left = 0;
-              container.style.top = 0;
-              window.$engine = engine = new GSS(container, index === 0);
-              $('#fixtures').appendChild(container);
-              if (j === 0) {
-                container.innerHTML = DEMOS.ADAPTIVE_ASPECT;
-              } else {
-                container.innerHTML = DEMOS.ADAPTIVE_ASPECT_LINEAR;
-              }
-              return engine.then(function(solution) {
-                expect(solution['$article[height]']).to.eql(600);
-                expect(solution['$article[width]']).to.eql(480);
-                expect(solution['$footer[height]']).to.eql(600);
-                expect(solution['$footer[width]']).to.eql(72);
-                expect(solution['$header[height]']).to.eql(600);
-                expect(solution['$header[width]']).to.eql(72);
-                expect(solution['article-gap']).to.eql(20);
-                container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
+          _results1.push((function(type, j) {
+            return describe(type, function() {
+              return it('Adaptive aspect', function(done) {
+                container = document.createElement('div');
+                container.style.height = '640px';
+                container.style.width = '640px';
+                container.style.position = 'absolute';
+                container.style.overflow = 'auto';
+                container.style.left = 0;
+                container.style.top = 0;
+                window.$engine = engine = new GSS(container, index === 0);
+                $('#fixtures').appendChild(container);
+                if (j === 0) {
+                  container.innerHTML = DEMOS.ADAPTIVE_ASPECT;
+                } else {
+                  container.innerHTML = DEMOS.ADAPTIVE_ASPECT_LINEAR;
+                }
+                console.log(container.innerHTML);
                 return engine.then(function(solution) {
-                  expect(solution['$article[height]'] > 1500).to.eql(true);
-                  expect(solution['$article[width]']).to.eql(608);
-                  expect(solution['$footer[height]']).to.eql(72);
-                  expect(solution['$footer[width]']).to.eql(608);
-                  expect(solution['$header[height]']).to.eql(72);
-                  expect(solution['$header[width]']).to.eql(608);
-                  expect(solution['article-gap']).to.eql(16);
-                  container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
+                  expect(solution['$article[height]']).to.eql(600);
+                  expect(solution['$article[width]']).to.eql(480);
+                  expect(solution['$footer[height]']).to.eql(600);
+                  expect(solution['$footer[width]']).to.eql(72);
+                  expect(solution['$header[height]']).to.eql(600);
+                  expect(solution['$header[width]']).to.eql(72);
+                  expect(solution['article-gap']).to.eql(20);
+                  container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
                   return engine.then(function(solution) {
-                    expect(solution['$article[height]']).to.eql(600);
-                    expect(solution['$article[width]']).to.eql(480);
-                    expect(solution['$footer[height]']).to.eql(600);
-                    expect(solution['$footer[width]']).to.eql(72);
-                    expect(solution['$header[height]']).to.eql(600);
-                    expect(solution['$header[width]']).to.eql(72);
-                    expect(solution['article-gap']).to.eql(20);
-                    container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
+                    expect(solution['$article[height]'] > 1500).to.eql(true);
+                    expect(solution['$article[width]']).to.eql(608);
+                    expect(solution['$footer[height]']).to.eql(72);
+                    expect(solution['$footer[width]']).to.eql(608);
+                    expect(solution['$header[height]']).to.eql(72);
+                    expect(solution['$header[width]']).to.eql(608);
+                    expect(solution['article-gap']).to.eql(16);
+                    container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
                     return engine.then(function(solution) {
-                      expect(solution['$article[height]'] > 1500).to.eql(true);
-                      expect(solution['$article[width]']).to.eql(608);
-                      expect(solution['$footer[height]']).to.eql(72);
-                      expect(solution['$footer[width]']).to.eql(608);
-                      expect(solution['$header[height]']).to.eql(72);
-                      expect(solution['$header[width]']).to.eql(608);
-                      expect(solution['article-gap']).to.eql(16);
-                      container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0');
+                      expect(solution['$article[height]']).to.eql(600);
+                      expect(solution['$article[width]']).to.eql(480);
+                      expect(solution['$footer[height]']).to.eql(600);
+                      expect(solution['$footer[width]']).to.eql(72);
+                      expect(solution['$header[height]']).to.eql(600);
+                      expect(solution['$header[width]']).to.eql(72);
+                      expect(solution['article-gap']).to.eql(20);
+                      container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
                       return engine.then(function(solution) {
                         expect(solution['$article[height]'] > 1500).to.eql(true);
-                        expect(solution['$article[width]']).to.eql(568);
-                        expect(solution['$footer[width]']).to.eql(568);
-                        expect(solution['$header[width]']).to.eql(568);
-                        engine.scope.innerHTML = "";
-                        return engine.then(function() {
-                          expect(engine.values).to.eql({});
-                          return done();
+                        expect(solution['$article[width]']).to.eql(608);
+                        expect(solution['$footer[height]']).to.eql(72);
+                        expect(solution['$footer[width]']).to.eql(608);
+                        expect(solution['$header[height]']).to.eql(72);
+                        expect(solution['$header[width]']).to.eql(608);
+                        expect(solution['article-gap']).to.eql(16);
+                        container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0');
+                        return engine.then(function(solution) {
+                          expect(solution['$article[height]'] > 1500).to.eql(true);
+                          expect(solution['$article[width]']).to.eql(568);
+                          expect(solution['$footer[width]']).to.eql(568);
+                          expect(solution['$header[width]']).to.eql(568);
+                          engine.scope.innerHTML = "";
+                          return engine.then(function() {
+                            expect(engine.values).to.eql({});
+                            return done();
+                          });
                         });
                       });
                     });
@@ -310,7 +313,7 @@ describe('Full page tests', function() {
                 });
               });
             });
-          }));
+          })(type, j));
         }
         return _results1;
       });

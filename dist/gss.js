@@ -22794,7 +22794,6 @@ Domain = (function() {
           if (values.hasOwnProperty(path)) {
             if (value == null) {
               delete worker.values[path];
-              debugger;
             }
             this.update(worker, [['value', value, path]]);
             console.log('kallback', path, value);
@@ -22892,10 +22891,8 @@ Domain = (function() {
           return;
         }
       } else if (a[0] === 'value' && b.toString() === a[3]) {
-        debugger;
         return 'similar';
       } else if (b[0] === 'value' && a.toString() === b[3]) {
-        debugger;
         return 'similar';
       } else {
         result = void 0;
@@ -22959,7 +22956,6 @@ Domain = (function() {
         _ref2 = this.substituted;
         for (i = _k = _ref2.length - 1; _k >= 0; i = _k += -1) {
           other = _ref2[i];
-          debugger;
           if (other !== constraint) {
             if (stack = this.reconstrain(other, constraint)) {
               break;
