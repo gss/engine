@@ -174,9 +174,6 @@ Update.prototype =
       else
         i++
 
-    console.log('exporting')
-    console.log(domain.export())
-    console.log(probs.slice())
     @problems[to].push.apply(@problems[to], domain.export())
     @problems[to].push.apply(@problems[to], probs)
     for prob in probs
@@ -468,6 +465,22 @@ Update.prototype =
     @cleanup 'collections', continuation
     @cleanup 'mutations'
 
+  await: (url) ->
+    (@busy ||= []).push(url)
+    if @terminated
+      delete @terminated[url]
+
+  postMessage: (url, message) ->
+    ((@posted ||= {})[url.url || url] ||= []).push(@engine.clone(message))
+
+  terminate: ->
+    if @posted
+      for url, message of @posted
+        @engine.workers[url].postMessage(message)
+        while (i = @busy.indexOf(url)) > -1 && @busy.lastIndexOf(url) != i
+          @busy.splice(i, 1)
+      @posted = undefined
+
   each: (callback, bind, solution) ->
     if solution
       @apply(solution) 
@@ -487,6 +500,7 @@ Update.prototype =
 
 
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
+        @terminate()
         return result
 
       if result && result.onerror == undefined
@@ -513,6 +527,7 @@ Update.prototype =
 
           @apply(result)
           solution = @apply(result, solution || {})
+    @terminate()
     @index--
 
     return solution || @

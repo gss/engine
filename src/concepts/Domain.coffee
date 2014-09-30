@@ -75,6 +75,18 @@ class Domain
       else
         result = @[strategy].apply(@, arguments)
 
+
+    if @constrained || @unconstrained
+      commands = @validate.apply(@, arguments)
+      @restruct()
+      return if commands == false
+    
+    if result = @perform?()
+      result = @apply(result)
+
+    if commands
+      @engine.provide commands
+
     return result
 
   provide: (solution, value) ->
@@ -162,6 +174,8 @@ class Domain
 
     path = @engine.getPath(object, property)
     old = @values[path]
+    if path == '$header[width]' && value == 0
+      debugger
     return if old == value
     if @changes
       @changes[path] = value ? null
@@ -214,7 +228,8 @@ class Domain
             if watcher.parent[watcher.index] != watcher
               watcher.parent[watcher.index] = watcher
             root = @getRootOperation(watcher, domain)
-            @update([@sanitize(root)])
+            if value?
+              @update([@sanitize(root)])
           else
             if watcher.parent.domain == domain
               domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
@@ -230,14 +245,13 @@ class Domain
             unless value?
               delete worker.values[path]
             @update(worker, [['value', value, path]])
-            console.log('kallback', path, value)
 
     #while (index = @updating.imports.indexOf(path)) > -1
     #if exports = @updating?.exports?[path]
     #  for domain in exports
     #    @update(domain, [['value', value, path]])
 
-    if variable = @variables[path]
+    if (variable = @variables[path]) && domain.priority > 0
       frame = undefined
       if variable.constraints
         for constraint in variable.constraints
@@ -266,6 +280,21 @@ class Domain
       if property != 'engine' && property != 'observers' && property != 'watchers' && property != 'values'
         object[property] = value
     return object
+
+
+  restruct: () ->
+    if @unconstrained
+      for constraint in @unconstrained
+        @removeConstraint(constraint)
+        for path in constraint.paths
+          if path.constraints
+            if !@hasConstraint(path)
+              @nullify(path)
+    if @constrained
+      for constraint in @constrained
+        @addConstraint(constraint)
+    @constrained = []
+    @unconstrained = undefined
 
   resuggest: (a, b) ->
     if typeof a == 'object'
@@ -368,8 +397,7 @@ class Domain
       @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
       return true
     constraint.domain = @
-    if constraint.length == 1
-      debugger
+
     @constraints.push(constraint)
     (@constrained ||= []).push(constraint)
 
@@ -437,6 +465,11 @@ class Domain
       variable = @variable('suggested_' + Math.random())
     return variable
 
+  unedit: (variable) ->
+    if variable.operation?.parent.suggestions?
+      delete variable.operation.parent.suggestions[variable.operation.index]
+    delete variable.editing
+
   undeclare: (variable, moving) ->
     if moving != 'reset'
       (@nullified ||= {})[variable.name] = variable
@@ -447,6 +480,7 @@ class Domain
 
     delete @values[variable.name]
     @nullify(variable)
+    @unedit(variable)
 
 
 

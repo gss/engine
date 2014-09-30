@@ -18,7 +18,8 @@ class Linear extends Domain
     return object instanceof c.Expression
 
   setup: () ->
-    Domain::setup.apply(@, arguments)
+    super
+
     unless @hasOwnProperty('solver')
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
@@ -46,33 +47,20 @@ class Linear extends Domain
     @constrain(result)
     return
 
-  # Read commands
-  solve: () ->
-    Domain::solve.apply(@, arguments)
-    if @constrained || @unconstrained
-      commands = @validate.apply(@, arguments)
-      if @unconstrained
-        for constraint in @unconstrained
-          @removeConstraint(constraint)
-          for path in constraint.paths
-            if path.constraints
-              if !@hasConstraint(path)
-                @nullify(path)
-      if @constrained
-        for constraint in @constrained
-          @addConstraint(constraint)
-      @unconstrained = @constrained = undefined
-      return if commands == false
-      if needed = @solver._needsSolving
+  perform: ->
+    if @constrained
+
+      console.error('performing c')
+      @constrained = @suggested = undefined
+      if @solver._needsSolving
         @solver.solve()
-    else
-      needed = true
+        return @solver._changed
+    else if @suggested
+
+      console.error('performing r')
+      @suggested = undefined
       @solver.resolve()
-    if needed
-      result = @apply(@solver._changed)
-    if commands
-      @engine.provide commands
-    return result || {}
+      return @solver._changed
 
   addConstraint: (constraint) ->
     @solver.addConstraint(constraint)
@@ -85,13 +73,7 @@ class Linear extends Domain
       if cei = @solver._editVarMap.get(variable)
         @solver.removeColumn(cei.editMinus)
         @solver._editVarMap.delete(variable)
-      delete variable.editing
-    if variable.operation?.parent.suggestions?
-      delete variable.operation.parent.suggestions[variable.operation.index]
-
-  undeclare: (variable) ->
-    @unedit(variable)
-    super
+      super
 
   edit: (variable, strength, weight, continuation) ->
     unless constraint = variable.editing
@@ -122,12 +104,14 @@ class Linear extends Domain
 
     @edit(variable, strength, weight, continuation)
     @solver.suggestValue(variable, value)
+    @suggested = true
     return variable
 
   variable: (name) ->
     return new c.Variable name: name
 
   stay: ->
+    @suggested = true
     for arg in arguments
       @solver.addStay(arg)
     return

@@ -103,7 +103,8 @@ class Engine extends Domain.Events
       if @updating
         if @updating.busy.length
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
-          @updating.solutions[@updating.solutions.indexOf(e.target)] = e.data
+          if (i = @updating.solutions.indexOf(e.target)) > -1
+            @updating.solutions[i] = e.data
           unless @updating.busy.length
             return @updating.each(@resolve, @, e.data) || @onSolve()
           else
@@ -130,6 +131,11 @@ class Engine extends Domain.Events
     for expression, i in expressions by -1
       if expression?.push
         result = @substitute(expression, result, expressions, i)
+    if expressions[0] == 'remove'
+      debugger
+      @updating.push expressions, null
+      if parent
+        parent.splice(index, 1)
     if expressions[0] == 'value'
       # Substituted part of expression
       if expressions[4]
@@ -143,19 +149,24 @@ class Engine extends Domain.Events
         else
           return []
       if path && @assumed.values[path] != expressions[1]
-        
         unless (result ||= {}).hasOwnProperty(path)
           result[path] = expressions[1] ? null
+        else unless result[path]?
+          delete result[path]
     unless start
       if !expressions.length
         parent.splice(index, 1)
       return result
-    @inputs = result
+    # Substitute variables next
+    if result
+      @assumed.merge result
+    # Perform remove commands first
+    if @updating
+      debugger
+      @updating.each(@resolve, @, result)
+    # Execute given expressions
     if expressions.length
       @provide expressions
-    if result
-      console.error(JSON.stringify(result))
-      @assumed.merge result
 
   solve: () ->
     if typeof arguments[0] == 'string'
@@ -293,7 +304,7 @@ class Engine extends Domain.Events
     if solution.operation
       return @engine.updating.provide solution
     if !solution.push
-      return @updating.each(@resolve, @, solution) || @onSolve()
+      return @updating?.each(@resolve, @, solution) || @onSolve()
 
     if @providing != undefined
       unless @hasOwnProperty('providing')
@@ -306,10 +317,9 @@ class Engine extends Domain.Events
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
-      console.log('post', problems, workflow.busy?.slice())
-      domain.postMessage(@clone problems)
-      (workflow.busy ||= []).push(domain.url)
-      return
+      workflow.postMessage domain, problems
+      workflow.await(domain.url)
+      return domain
     if (index = workflow.imports?.indexOf(domain)) > -1
       finish = index
       imports = []
@@ -329,7 +339,6 @@ class Engine extends Domain.Events
 
         if value?
           problems.push ['value', value, property]
-          console.error('import', property, value)
 
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
@@ -343,7 +352,7 @@ class Engine extends Domain.Events
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || undefined
       if result && result.postMessage
-        (workflow.busy ||= []).push(result.url)
+        workflow.await(result.url)
       else
         if providing && @providing
           workflow.push(@update(@frame || true, @providing))
@@ -405,8 +414,8 @@ class Engine extends Domain.Events
     @worker.addEventListener 'message', @eventHandler
     @worker.addEventListener 'error', @eventHandler
     @solve = (commands) =>
-      console.log('solve', commands.slice())
-      @worker.postMessage(@clone(commands))
+      @engine.updating ||= new @update
+      @engine.updating.postMessage(@worker, commands)
       return @worker
 
   getWorker: (url) ->
@@ -439,6 +448,7 @@ class Engine extends Domain.Events
     
     @triggerEvent('compile', @)
 
+
 # Identity and console modules are shared between engines
 Engine.identity = Engine::identity = new Engine::Identity
 Engine.console  = Engine::console  = new Engine::Console
@@ -453,14 +463,10 @@ Engine.clone    = Engine::clone    = Native::clone
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     engine = Engine.messenger ||= Engine()
-    assumed = engine.assumed.toObject()
+    changes = engine.assumed.changes = {}
     solution = engine.solve(e.data) || {}
-    if e.data.toString().indexOf('intrinsic-width') > -1
-      debugger
-    for property, value of engine.inputs
-      if value? || !solution[property]?
-        solution[property] = value
-
+    engine.assumed.changes = undefined
+    for property, value of changes
+      solution[property] = value
     postMessage(solution)
-
 module.exports = @GSS = Engine

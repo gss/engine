@@ -442,14 +442,16 @@ DEMOS =
     <style type="text/gss">
     // vertical article
       
-    [article-gap] >= 16; // centers article
-      
     ::scope[left] == 0;
     ::scope[top] == 0;
     ::scope[height] == ::scope[intrinsic-height];
     ::scope[width] == ::scope[intrinsic-width];
 
     @if ::scope[intrinsic-width] < ::scope[intrinsic-height] {
+      
+      [article-gap] >= 16; // centers article
+      
+      [article-gap] >= 16; // centers article
       @h |-(article)-| gap([article-gap]) in(::scope) {
         height: == &[intrinsic-height];
         width: <= 800;        
@@ -471,6 +473,8 @@ DEMOS =
     // horizontal article
     @else {
       
+      
+      [article-gap] >= 16; // centers article
       @v |-(article)-| gap([article-gap]) in(::scope) {
         width: == &[intrinsic-width];
         height: <= 600;   
@@ -641,7 +645,7 @@ describe 'Full page tests', ->
           engine.then (solution) ->
             expect(solution['li-width']).to.eql((640 - 16) / 3)
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
-            expect(solution['$header[width]']).to.eql(Math.round(640 / 2))
+            expect(solution['$header[width]']).to.eql(Math.round(640 / 2)) 
 
             li = engine.$first('ul li:last-child')
             clone = li.cloneNode()

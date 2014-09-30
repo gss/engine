@@ -4,7 +4,7 @@ Native = require '../methods/Native'
 
 class Console
   constructor: (@level) ->
-    @level ?= parseFloat(self?.location?.search.match(/log=\d/)?[0] || 1)
+    @level ?= parseFloat(self?.location?.search.match(/log=\d/)?[0] || 0)
     if !Console.bind
       @level = 0
 
