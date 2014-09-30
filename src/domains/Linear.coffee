@@ -49,15 +49,11 @@ class Linear extends Domain
 
   perform: ->
     if @constrained
-
-      console.error('performing c')
       @constrained = @suggested = undefined
       if @solver._needsSolving
         @solver.solve()
         return @solver._changed
     else if @suggested
-
-      console.error('performing r')
       @suggested = undefined
       @solver.resolve()
       return @solver._changed

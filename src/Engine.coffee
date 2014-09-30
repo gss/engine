@@ -150,7 +150,7 @@ class Engine extends Domain.Events
           return []
       if path && @assumed.values[path] != expressions[1]
         unless (result ||= {}).hasOwnProperty(path)
-          result[path] = expressions[1] ? null
+          result[path] = expressions[1]
         else unless result[path]?
           delete result[path]
     unless start

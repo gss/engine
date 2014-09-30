@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-09-30) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20104,7 +20103,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.substitute = function(expressions, result, parent, index) {
-    var exp, expression, i, path, start, _i, _ref;
+    var exp, expression, i, path, start, _i;
     if (result === void 0) {
       start = true;
       result = null;
@@ -20136,7 +20135,7 @@ Engine = (function(_super) {
       }
       if (path && this.assumed.values[path] !== expressions[1]) {
         if (!(result || (result = {})).hasOwnProperty(path)) {
-          result[path] = (_ref = expressions[1]) != null ? _ref : null;
+          result[path] = expressions[1];
         } else if (result[path] == null) {
           delete result[path];
         }
@@ -22806,7 +22805,7 @@ Domain = (function() {
               watcher.parent[watcher.index] = watcher;
             }
             root = this.getRootOperation(watcher, domain);
-            if (value != null) {
+            if (value !== void 0) {
               this.update([this.sanitize(root)]);
             }
           } else {
@@ -25330,14 +25329,12 @@ Linear = (function(_super) {
 
   Linear.prototype.perform = function() {
     if (this.constrained) {
-      console.error('performing c');
       this.constrained = this.suggested = void 0;
       if (this.solver._needsSolving) {
         this.solver.solve();
         return this.solver._changed;
       }
     } else if (this.suggested) {
-      console.error('performing r');
       this.suggested = void 0;
       this.solver.resolve();
       return this.solver._changed;
