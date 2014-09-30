@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-09-30) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -27403,6 +27404,10 @@ Mutations = (function() {
     return this.listener.disconnect();
   };
 
+  Mutations.prototype.filter = function() {
+    return true;
+  };
+
   Mutations.prototype.solve = function(mutations) {
     var result;
     if (!this.engine.engine.running) {
@@ -27413,6 +27418,9 @@ Mutations = (function() {
       this.engine.updating.reset();
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
+        if (this.mutations.filter(mutation) === false) {
+          continue;
+        }
         switch (mutation.type) {
           case "attributes":
             this.mutations.onAttributes(mutation.target, mutation.attributeName, mutation.oldValue);

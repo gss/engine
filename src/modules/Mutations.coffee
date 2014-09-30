@@ -19,6 +19,9 @@ class Mutations
   disconnect: ->
     @listener.disconnect()
 
+  filter: ->
+    return true
+
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     return @engine.engine.compile(true) unless @engine.engine.running
@@ -27,6 +30,8 @@ class Mutations
       @engine.updating.reset()
 
       for mutation in mutations
+        if @mutations.filter(mutation) == false
+          continue
         switch mutation.type
           when "attributes"
             @mutations.onAttributes(mutation.target, mutation.attributeName, mutation.oldValue)
