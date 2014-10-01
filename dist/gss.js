@@ -27795,8 +27795,8 @@ Pairs = (function() {
         }
       }
       first = continuation.indexOf(this.engine.PAIR);
-      if (first === 0 && last === continuation.length - 1) {
-        return this.onRight(operation, continuation, scope);
+      if (first === 0 && last === continuation.length - 1 && (this.onRight(operation, continuation, scope) != null)) {
+        return false;
       } else if (operation.def.serialized) {
         prev = -1;
         while ((index = continuation.indexOf(this.engine.PAIR, prev + 1)) > -1) {

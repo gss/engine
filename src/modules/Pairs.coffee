@@ -53,8 +53,8 @@ class Pairs
         break if parent.def.noop
       # Found right side
       first = continuation.indexOf(@engine.PAIR) 
-      if first == 0 && last == continuation.length - 1
-        return @onRight(operation, continuation, scope)
+      if first == 0 && last == continuation.length - 1 && @onRight(operation, continuation, scope)?
+        return false
       # Found left side, rewrite continuation
       else if operation.def.serialized
         prev = -1
