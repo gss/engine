@@ -45,7 +45,6 @@ class Queries
 
   addMatch: (node, continuation) ->
     return unless node.nodeType
-    debugger
     @engine.console.error(continuation)
     if (index = continuation.indexOf(@engine.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
@@ -89,7 +88,7 @@ class Queries
       @chain node, collection[index + 1], continuation
       if operation.parent.name == 'rule'
         @addMatch(node, continuation)
-        
+
       return true
     else
       duplicates = (collection.duplicates ||= [])
@@ -233,13 +232,14 @@ class Queries
             return false
 
         collection.splice(index, 1)
-        @removeMatch(node, continuation)
         if keys
           keys.splice(index, 1)
           paths.splice(index, 1)
           scopes.splice(index, 1)
         @chain collection[index - 1], node, continuation
         @chain node, collection[index], continuation
+        if operation.parent.name == 'rule'
+          @removeMatch(node, continuation)
         return true
 
 
@@ -305,7 +305,6 @@ class Queries
       @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     @engine.solved.remove(path)
-    @engine.stylesheets?.remove(path)
     @engine.stylesheets?.remove(path)
 
     shared = false

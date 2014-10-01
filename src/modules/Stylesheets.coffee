@@ -58,13 +58,13 @@ class Stylesheets
     sheet = dump.sheet
     needle = @getOperation(operation, watchers, rule)
     previous = []
+    debugger
     for item, index in watchers
       break if index >= needle
-      if operations = watchers[index]
-        for op in operations
-          other = @getRule(op)
-          if previous.indexOf(other) == -1
-            previous.push(other)
+      if ops = watchers[index]
+        other = @getRule(watchers[ops[0]][0])
+        if previous.indexOf(other) == -1
+          previous.push(other)
     unless sheet
       if dump.parentNode
         dump.parentNode.removeChild(dump)
@@ -76,8 +76,12 @@ class Stylesheets
       rule = rules[previous.length]
       rule.style[property] = value
 
-      if rule.style.length == 0
-        sheet.deleteRule(previous.length)
+      for index in [needle + 1 ... watchers.length]
+        if ops = watchers[index]
+          other = @getRule(watchers[ops[0]][0])
+          if other != rule
+            sheet.deleteRule(previous.length)
+          break
     else
       body = property + ':' + value
       selectors = @getSelector(operation)
@@ -109,6 +113,7 @@ class Stylesheets
 
     unless meta.length
       delete watchers[index]
+      debugger
       @update operation, operation[1], '', stylesheet, @getRule(operation)
 
   remove: (continuation, stylesheets) ->

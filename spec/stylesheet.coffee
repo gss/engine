@@ -196,7 +196,7 @@ describe 'Stylesheet', ->
               for rule in engine.stylesheets.sheets.$gss2.sheet.cssRules
                 rule.cssText
             ).to.eql ["#box1.box { width: 1px; }"]
-            expect(engine.$id('box1').getAttribute('matches')).to.eql ' #box1 #box1' + GSS.DESCEND + '.box'
+            expect(engine.$id('box1').getAttribute('matches')).to.eql ' #box1 #box1.box'
             expect(engine.$id('box1').offsetWidth).to.eql 1
             expect(engine.$id('box2').getAttribute('matches')).to.eql null
             expect(engine.$id('box2').offsetWidth).to.not.eql 1

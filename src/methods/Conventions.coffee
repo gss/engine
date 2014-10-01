@@ -112,8 +112,21 @@ class Conventions
   getOperationSelectors: (operation) ->
     parent = operation
     results = wrapped = custom = undefined
+
+    # Iterate rules
     while parent
-      if parent.name == 'rule'
+
+      # Append condition id to path
+      if parent.name == 'if'
+        if parent.uid
+          if results
+            for result, index in results
+              if result.substring(0, 11) != '[matches~="'
+                result = @getCustomSelector(result)
+              results[index] = result.substring(0, 11) + parent.uid + result.substring(11)
+      
+      # Add rule selector to path
+      else if parent.name == 'rule'
         selectors = parent[1].path
 
         if parent[1].groupped
@@ -125,6 +138,8 @@ class Conventions
           paths = [parent[1].key]
           if paths[0].substring(0, 6) == '::this'
             paths[0] = paths[0].substring(6)
+
+        # Prepend selectors with selectors of a parent rule
         if results?.length
           selectors = selectors.split(',')
           bits = selectors.map (bit) ->
@@ -132,7 +147,6 @@ class Conventions
               bit = bit.substring(6)
             return bit
 
-          console.info(paths)
           update = []
           for result in results
             if result.substring(0, 11) == '[matches~="'
@@ -147,14 +161,16 @@ class Conventions
                   update.push bit + result
 
           results = update
+        # Return all selectors
         else 
+
           results = selectors.split(',').map (path, index) =>
             selector = path
             if path.substring(0, 6) == '::this'
               selector = path = path.substring(6)
             else
               selector = ' ' + selector
-            console.error(path, paths[index], index, paths)
+
             if path != paths[index]
               @getCustomSelector(selectors)
             else
@@ -188,11 +204,10 @@ class Conventions
 
   getCanonicalSelector: (selector) ->
     selector = selector.trim()
-    debugger
     selector = selector.replace(@CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, @engine.DESCEND)
     return selector
   CanonicalizeSelectorRegExp: new RegExp("" +
-    "\\$[a-z0-9]+([" + Conventions::DESCEND + "])\s*", "gi")
+    "[$][a-z0-9]+[" + Conventions::DESCEND + "]\s*", "gi")
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)

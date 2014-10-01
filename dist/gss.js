@@ -20640,12 +20640,24 @@ Conventions = (function() {
   };
 
   Conventions.prototype.getOperationSelectors = function(operation) {
-    var bit, bits, custom, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _len, _len1,
+    var bit, bits, custom, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _len, _len1, _len2,
       _this = this;
     parent = operation;
     results = wrapped = custom = void 0;
     while (parent) {
-      if (parent.name === 'rule') {
+      if (parent.name === 'if') {
+        if (parent.uid) {
+          if (results) {
+            for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
+              result = results[index];
+              if (result.substring(0, 11) !== '[matches~="') {
+                result = this.getCustomSelector(result);
+              }
+              results[index] = result.substring(0, 11) + parent.uid + result.substring(11);
+            }
+          }
+        }
+      } else if (parent.name === 'rule') {
         selectors = parent[1].path;
         if (parent[1].groupped) {
           paths = parent[1].groupped.split(',');
@@ -20667,14 +20679,13 @@ Conventions = (function() {
             }
             return bit;
           });
-          console.info(paths);
           update = [];
-          for (_i = 0, _len = results.length; _i < _len; _i++) {
-            result = results[_i];
+          for (_j = 0, _len1 = results.length; _j < _len1; _j++) {
+            result = results[_j];
             if (result.substring(0, 11) === '[matches~="') {
               update.push(result.substring(0, 11) + bits.join(',') + this.DESCEND + result.substring(11));
             } else {
-              for (index = _j = 0, _len1 = bits.length; _j < _len1; index = ++_j) {
+              for (index = _k = 0, _len2 = bits.length; _k < _len2; index = ++_k) {
                 bit = bits[index];
                 if (paths[index] !== bit) {
                   update.push(this.getCustomSelector(bits.join(',')) + result);
@@ -20697,7 +20708,6 @@ Conventions = (function() {
             } else {
               selector = ' ' + selector;
             }
-            console.error(path, paths[index], index, paths);
             if (path !== paths[index]) {
               return _this.getCustomSelector(selectors);
             } else {
@@ -20732,12 +20742,11 @@ Conventions = (function() {
 
   Conventions.prototype.getCanonicalSelector = function(selector) {
     selector = selector.trim();
-    debugger;
     selector = selector.replace(this.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.engine.DESCEND);
     return selector;
   };
 
-  Conventions.prototype.CanonicalizeSelectorRegExp = new RegExp("" + "\\$[a-z0-9]+([" + Conventions.prototype.DESCEND + "])\s*", "gi");
+  Conventions.prototype.CanonicalizeSelectorRegExp = new RegExp("" + "[$][a-z0-9]+[" + Conventions.prototype.DESCEND + "]\s*", "gi");
 
   Conventions.prototype.getScopePath = function(scope, continuation) {
     var bits, id, index, last, path, prev;
@@ -26730,7 +26739,6 @@ Queries = (function() {
     if (!node.nodeType) {
       return;
     }
-    debugger;
     this.engine.console.error(continuation);
     if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
       continuation = continuation.substring(index + 1);
@@ -26970,7 +26978,6 @@ Queries = (function() {
           }
         }
         collection.splice(index, 1);
-        this.removeMatch(node, continuation);
         if (keys) {
           keys.splice(index, 1);
           paths.splice(index, 1);
@@ -26978,6 +26985,9 @@ Queries = (function() {
         }
         this.chain(collection[index - 1], node, continuation);
         this.chain(node, collection[index], continuation);
+        if (operation.parent.name === 'rule') {
+          this.removeMatch(node, continuation);
+        }
         return true;
       }
     }
@@ -27036,7 +27046,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, contd) {
-    var i, result, s, shared, _i, _len, _ref, _ref1, _ref2, _ref3;
+    var i, result, s, shared, _i, _len, _ref, _ref1, _ref2;
     if (path.def) {
       path = (continuation || '') + (path.uid || '') + (path.key || '');
     }
@@ -27054,15 +27064,12 @@ Queries = (function() {
     if ((_ref = this.engine.stylesheets) != null) {
       _ref.remove(path);
     }
-    if ((_ref1 = this.engine.stylesheets) != null) {
-      _ref1.remove(path);
-    }
     shared = false;
     if (this.engine.isCollection(result)) {
       if (result.scopes) {
-        _ref2 = result.scopes;
-        for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
-          s = _ref2[i];
+        _ref1 = result.scopes;
+        for (i = _i = 0, _len = _ref1.length; _i < _len; i = ++_i) {
+          s = _ref1[i];
           if (s !== scope || (operation && result.continuations[i] !== operation)) {
             shared = true;
             break;
@@ -27080,8 +27087,8 @@ Queries = (function() {
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.PAIR) {
         contd = this.engine.getContinuation(path);
-        if ((_ref3 = this.engine.updating) != null) {
-          _ref3.remove(contd);
+        if ((_ref2 = this.engine.updating) != null) {
+          _ref2.remove(contd);
         }
         this.engine.provide(['remove', contd]);
       }
@@ -28166,24 +28173,22 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
-    var body, dump, index, item, needle, op, operations, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _len1;
+    var body, dump, index, item, needle, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref, _ref1;
     watchers = this.getWatchers(stylesheet);
     dump = this.getStylesheet(stylesheet);
     sheet = dump.sheet;
     needle = this.getOperation(operation, watchers, rule);
     previous = [];
+    debugger;
     for (index = _i = 0, _len = watchers.length; _i < _len; index = ++_i) {
       item = watchers[index];
       if (index >= needle) {
         break;
       }
-      if (operations = watchers[index]) {
-        for (_j = 0, _len1 = operations.length; _j < _len1; _j++) {
-          op = operations[_j];
-          other = this.getRule(op);
-          if (previous.indexOf(other) === -1) {
-            previous.push(other);
-          }
+      if (ops = watchers[index]) {
+        other = this.getRule(watchers[ops[0]][0]);
+        if (previous.indexOf(other) === -1) {
+          previous.push(other);
         }
       }
     }
@@ -28197,8 +28202,14 @@ Stylesheets = (function() {
     if (needle !== operation.sourceIndex || value === '') {
       rule = rules[previous.length];
       rule.style[property] = value;
-      if (rule.style.length === 0) {
-        sheet.deleteRule(previous.length);
+      for (index = _j = _ref = needle + 1, _ref1 = watchers.length; _ref <= _ref1 ? _j < _ref1 : _j > _ref1; index = _ref <= _ref1 ? ++_j : --_j) {
+        if (ops = watchers[index]) {
+          other = this.getRule(watchers[ops[0]][0]);
+          if (other !== rule) {
+            sheet.deleteRule(previous.length);
+          }
+          break;
+        }
       }
     } else {
       body = property + ':' + value;
@@ -28234,6 +28245,7 @@ Stylesheets = (function() {
     }
     if (!meta.length) {
       delete watchers[index];
+      debugger;
       return this.update(operation, operation[1], '', stylesheet, this.getRule(operation));
     }
   };
