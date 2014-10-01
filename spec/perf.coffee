@@ -4,6 +4,7 @@ remove = (el) ->
   el.parentNode.removeChild(el)
 
 stringify = JSON.stringify
+stringify = (o) -> o
 expect = chai.expect
 assert = chai.assert
 
@@ -32,7 +33,7 @@ describe 'Perf', ->
       for i in [0...100] 
         innerHTML += "<div class='box' id='gen-00" + i + "'>One</div>"
       scope.innerHTML = innerHTML
-      #console.profile(123)
+      #GSS.console.profile(123)
 
       engine.once 'solve', ->
         scope.innerHTML = ""
@@ -73,13 +74,13 @@ describe 'Perf', ->
       scope.insertAdjacentHTML 'beforeend', """
           <div class='box' id='gen-35346#{count}'>One</div>
         """    
-      console.profile('100 serially')  
+      GSS.console.profile('100 serially')  
       listener = (e) ->       
         count++
-        #console.error(count)
+        #GSS.console.error(count)
         if count is 100
           engine.removeEventListener 'solve', listener
-          console.profileEnd('100 serially')
+          GSS.console.profileEnd('100 serially')
           scope.innerHTML = ""
           engine.then ->
             done()
@@ -104,7 +105,7 @@ describe 'Perf', ->
       scope.insertAdjacentHTML 'beforeend', """
           <div class='box' id='35346#{count}'>One</div>
         """   
-      console.profile('100 intrinsics serially')   
+      GSS.console.profile('100 intrinsics serially')   
       listener = (e) ->        
         count++
         scope.insertAdjacentHTML 'beforeend', """
@@ -112,7 +113,7 @@ describe 'Perf', ->
           """
         if count is 100
           engine.removeEventListener 'solve', listener
-          console.profileEnd('100 intrinsics serially')
+          GSS.console.profileEnd('100 intrinsics serially')
           scope.innerHTML = ""
           engine.then ->
             done()

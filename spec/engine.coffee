@@ -426,7 +426,7 @@ describe 'GSS engine', ->
       it 'after modified GSS style tag', (done) ->
         engine = GSS(container)
         styleNode = engine.$id 'gssa'
-        styleNode.innerHTML = """
+        styleNode.innerHTML = styleNode.innerText = """
           [
               ["==", ["get", "col-width-11"], 1111]
           ]  

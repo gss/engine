@@ -9,7 +9,7 @@
   var registrationsTable = new WeakMap();
 
   // We use setImmediate or postMessage for our future callback.
-  var setImmediate = window.msSetImmediate;
+  var setImmediate = window.msSetImmediate || window.setImmediate;
 
   // Use post message to emulate setImmediate.
   if (!setImmediate) {

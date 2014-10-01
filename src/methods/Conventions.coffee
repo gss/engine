@@ -112,6 +112,8 @@ class Conventions
     while parent
       if parent.name == 'rule'
         selectors = parent[1].path
+        if selectors.substring(0, 6) == '::this'
+          selectors = selectors.substring(6)
         custom = (selectors != parent[1].groupped)
 
         if results?.length
@@ -119,10 +121,11 @@ class Conventions
           results.length = 0
           for bit, index in selectors.split(',')
             results.push.apply(results, base.map((selector) ->
+              @console.log(selector, 'mofo', wrapped, bit)
               unless selector.charAt(0) == ' '
                 selector = ' ' + selector
               if wrapped
-                return selector.substring(0, 12) + bit + selector.substring(12)
+                return selector.substring(0, 12) + bit + ' ' + selector.substring(12)
               else if custom
                 bit = @getCustomSelector(bit)
 
@@ -159,6 +162,15 @@ class Conventions
     "([^" + Conventions::PAIR + "])" +
     "\\$[^" + Conventions::ASCEND + "]+" +
     "(?:" + Conventions::ASCEND + "|$)", "g")
+
+
+  getCanonicalSelector: (selector) ->
+    selector = selector.trim().replace(/\s+/g, @engine.DESCEND)
+    selector = selector.replace(@CanonicalizeSelectorRegExp, '')
+    return selector
+  CanonicalizeSelectorRegExp: new RegExp("" +
+    "^\s+|\s+$|" +
+    "\$[a-z0-9]+([" + Conventions::DESCEND + "])\s*", "gi")
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)
@@ -299,6 +311,8 @@ class Conventions
     while parent.parent?.domain == parent.domain
       parent = parent.parent
     return parent
+
+
 
 # Little shim for require.js so we dont have to carry it around
 @require ||= (string) ->

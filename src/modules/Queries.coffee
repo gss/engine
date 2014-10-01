@@ -42,11 +42,14 @@ class Queries
     @
 
 
+
   addMatch: (node, continuation) ->
     return unless node.nodeType
+    @engine.console.error(continuation)
     if (index = continuation.indexOf(@engine.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
-    continuation = continuation.replace(/\s+/, @engine.DESCEND)
+    @engine.console.error(continuation, @engine.getCanonicalSelector(continuation))
+    continuation = @engine.getCanonicalSelector(continuation)
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
   
   removeMatch: (node, continuation) ->
@@ -54,7 +57,7 @@ class Queries
     if matches = node.getAttribute('matches')
       if (index = continuation.indexOf(@engine.DESCEND)) > -1
         continuation = continuation.substring(index + 1)
-      path = ' ' + continuation.replace(/\s+/, @engine.DESCEND)
+      path = ' ' + @engine.getCanonicalSelector(continuation)
       if matches.indexOf(path) > -1
         node.setAttribute('matches', matches.replace(path,''))
 
@@ -67,7 +70,7 @@ class Queries
       return
     collection.isCollection = true
 
-    keys = collection.keys ||= []
+    keys = collection.continuations ||= []
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
 
@@ -144,8 +147,8 @@ class Queries
       operation = @engine.pairs.getTopmostOperation(operation)
     for s, index in collection.scopes
       if s == scope
-        if operation && collection.keys
-          top = @engine.pairs.getTopmostOperation(collection.keys[index])
+        if operation && collection.continuations
+          top = @engine.pairs.getTopmostOperation(collection.continuations[index])
           continue unless top == operation
         if index < length
           value = collection[index]
@@ -166,8 +169,8 @@ class Queries
         c.duplicates = collection.duplicates.slice()
       if collection.scopes
         c.scopes = collection.scopes.slice()
-      if collection.keys
-        c.keys = collection.keys.slice()
+      if collection.continuations
+        c.continuations = collection.continuations.slice()
 
       collection = c
       
@@ -176,9 +179,9 @@ class Queries
 
   # Remove element from collection needlely
   removeFromCollection: (node, continuation, operation, scope, needle, contd) ->
-    return null unless (collection = @get(continuation))?.keys
+    return null unless (collection = @get(continuation))?.continuations
     length = collection.length
-    keys = collection.keys
+    keys = collection.continuations
     paths = collection.paths
     scopes = collection.scopes
     duplicate = null
@@ -308,7 +311,7 @@ class Queries
       if result.scopes
         for s, i in result.scopes
           # fixme
-          if s != scope || (operation && result.keys[i] != operation)
+          if s != scope || (operation && result.continuations[i] != operation)
             shared = true
             break
 
@@ -377,11 +380,11 @@ class Queries
     if added
       @each 'add', added, path, operation, scope, operation, contd
 
-    if (collection = @[path])?.keys
+    if (collection = @[path])?.continuations
       sorted = collection.slice().sort (a, b) =>
         i = collection.indexOf(a)
         j = collection.indexOf(b)
-        return @comparePosition(a, b, collection.keys[i], collection.keys[j]) && -1 || 1
+        return @comparePosition(a, b, collection.continuations[i], collection.continuations[j]) && -1 || 1
       
 
       updated = undefined
@@ -391,7 +394,7 @@ class Queries
             updated = collection.slice()
             if @[path]
               @[path] = updated
-            updated.keys = collection.keys.slice()
+            updated.continuations = collection.continuations.slice()
             updated.paths = collection.paths.slice()
             updated.scopes = collection.scopes.slice()
             updated.duplicates = collection.duplicates
@@ -399,7 +402,7 @@ class Queries
             updated[index] = node
           i = collection.indexOf(node)
           updated[index] = node
-          updated.keys[index] = collection.keys[i]
+          updated.continuations[index] = collection.continuations[i]
           updated.paths[index] = collection.paths[i]
           updated.scopes[index] = collection.scopes[i]
 
@@ -477,7 +480,7 @@ class Queries
       added = result 
       removed = old
 
-    if result?.keys
+    if result?.continuations
       @updateCollections(operation, path, scope, undefined, undefined, undefined, continuation)
     else
       @updateCollections(operation, path, scope, added, removed, undefined, continuation)

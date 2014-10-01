@@ -1,3 +1,4 @@
+
 class Mutations
   options:
     subtree: true
@@ -8,7 +9,7 @@ class Mutations
 
 
   constructor: (@engine) ->
-    @listener = new @Observer @solve.bind(this)
+    @listener = new @Observer @solve.bind(@engine)
 
   Observer: 
     window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
@@ -51,6 +52,7 @@ class Mutations
     # Invalidate sibling observers
     added = []
     removed = []
+    @onCharacterData(target, target)
     for child in mutation.addedNodes
       if child.nodeType == 1
         added.push(child)
@@ -112,7 +114,7 @@ class Mutations
       for attribute in node.attributes
         switch attribute.name
           when 'class'
-            for kls in node.classList
+            for kls in node.classList || node.className.split(/\s+/)
               @index update, ' $class', kls
           when 'id'
             @index update, ' $id', attribute.value
@@ -167,8 +169,7 @@ class Mutations
       update[type] = []
     update[type].push(value)
 
-  onCharacterData: (target) ->
-    parent = target.parentNode
+  onCharacterData: (target, parent = target.parentNode) ->
     if id = @engine.identity.find(parent)
       if parent.tagName == 'STYLE' 
         if parent.getAttribute('type')?.indexOf('text/gss') > -1
@@ -179,11 +180,11 @@ class Mutations
       @engine.engine.restyled = true
     # Notify parents about class and attribute changes
     if name == 'class' && typeof changed == 'string'
-      klasses = target.classList
+      klasses = target.classList || target.className.split(/\s+/)
       old = changed.split(' ')
       changed = []
       for kls in old
-        changed.push kls unless kls && klasses.contains(kls)
+        changed.push kls unless kls && ((klasses.indexOf && klasses.indexOf(kls) > -1) ? klasses.contains(kls))
       for kls in klasses
         changed.push kls unless kls && old.indexOf(kls) > -1
 

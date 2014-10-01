@@ -111,14 +111,14 @@ describe 'Domain', ->
         result: 555 * 2 + 10
         b: 10
 
-      console.info('a=-555, was 555')
+      GSS.console.info('a=-555, was 555')
       
       expect(engine.solve
         a: -555
       ).to.eql
         result: -1100
 
-      console.info('A=1, was 2')
+      GSS.console.info('A=1, was 2')
 
       expect(engine.solve
         A: 1
@@ -138,14 +138,14 @@ describe 'Domain', ->
         result: 0
         a: -1
 
-      console.error('A=666')
+      GSS.console.error('A=666')
       expect(engine.solve
         a: 666
       ).to.eql
         a: 666
         result: 667
 
-      console.error('A=null')
+      GSS.console.error('A=null')
       expect(engine.solve
         a: null
       ).to.eql
@@ -216,13 +216,13 @@ describe 'Domain', ->
             engine.solve
               "x": null
             , (solution) ->
-              console.info(solution)
+              GSS.console.info(solution)
               expect(solution).to.eql 
                 result: 0
                 x: 0
               root.removeChild(engine.$id('box0'))
               engine.then (solution) ->
-                console.info(solution)
+                GSS.console.info(solution)
                 expect(solution).to.eql 
                   "$box0[intrinsic-width]": null
                   "x": null
@@ -468,7 +468,7 @@ describe 'Domain', ->
         b: 2
         c: 2
         a: 1
-      console.log(1)
+      GSS.console.log(1)
       expect(engine.solve [
         ['remove', 'my_tracker_path']
       ]).to.eql

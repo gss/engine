@@ -407,7 +407,8 @@ class Engine extends Domain.Events
 
   # Initialize new worker and subscribe engine to its events
   useWorker: (url) ->
-    return unless typeof url == 'string' && self.onmessage != undefined
+    unless typeof url == 'string' && Worker? && self.onmessage != undefined
+      return
 
     @worker = @getWorker(url)
     @worker.url = url
@@ -417,6 +418,7 @@ class Engine extends Domain.Events
       @engine.updating ||= new @update
       @engine.updating.postMessage(@worker, commands)
       return @worker
+    return @worker
 
   getWorker: (url) ->
     return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)

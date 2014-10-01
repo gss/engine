@@ -26,7 +26,7 @@ if (typeof WeakMap === 'undefined') {
         return (entry = key[this.name]) && entry[0] === key ?
             entry[1] : undefined;
       },
-      delete: function(key) {
+      'delete': function(key) {
         this.set(key, undefined);
       }
     };

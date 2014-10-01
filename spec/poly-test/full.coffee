@@ -1,16 +1,17 @@
 DEMOS = 
 
   SCOPING: """
-    <div id="box1" class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
-      this.classList.toggle('w-virtual');">
+    <div id="box1" class="box w-virtual" onclick="
+      this.setAttribute('class', 
+        this.className = 'box ' + (this.className.indexOf('wo') > -1 ? 'w-virtual' : 'wo-virtual'))">
       <div class="innie" id="innie1" ></div>
     </div>
-    <div id="box2" class="box wo-virtual" onclick="this.classList.toggle('wo-virtual');
-      this.classList.toggle('w-virtual');">
+    <div id="box2" class="box wo-virtual" onclick="this.setAttribute('class', 
+      this.className = 'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
       <div class="innie" id="innie2" ></div>
     </div>
-    <div id="box3" class="box w-virtual" onclick="this.classList.toggle('wo-virtual');
-      this.classList.toggle('w-virtual');">
+    <div id="box3" class="box w-virtual" onclick="this.setAttribute('class', 
+      this.className = 'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
       <div class="innie" id="innie3" ></div>
     </div>
     
@@ -506,9 +507,6 @@ DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
 assert = chai.assert
 expect = chai.expect
 
-stringify = (o) ->
-  return JSON.stringify o, 1, 1
-
 $  = () ->
   return document.querySelector arguments...
   
@@ -687,7 +685,7 @@ describe 'Full page tests', ->
             roughAssert = (a, b, threshold = 15) ->
               expect(Math.abs(a - b) < threshold).to.eql true
 
-            console.log(JSON.stringify solution)
+            GSS.console.log(JSON.stringify solution)
 
 
             roughAssert(solution['$follow[y]'], 540)
@@ -697,14 +695,14 @@ describe 'Full page tests', ->
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
-              console.log(solution)
+              GSS.console.log(solution)
               roughAssert(solution['$follow[x]'], 435)
               roughAssert(solution['$follow[y]'], 537)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
  
               engine.then (solution) ->
-                console.log(solution)
+                GSS.console.log(solution)
                 roughAssert(solution['flex-gap'], 95)
                 roughAssert(solution['$follow[y]'], 540)
                 roughAssert(solution['$follow[x]'], 329.5)
@@ -735,7 +733,7 @@ describe 'Full page tests', ->
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT
                 else
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT_LINEAR
-                console.log(container.innerHTML)
+                GSS.console.log(container.innerHTML)
                   
                 engine.then (solution) ->
                   expect(solution['$article[height]']).to.eql 600

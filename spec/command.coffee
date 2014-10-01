@@ -4,6 +4,7 @@ remove = (el) ->
   el.parentNode.removeChild(el)
 
 stringify = JSON.stringify
+stringify = (o) -> o
 expect = chai.expect
 assert = chai.assert
 

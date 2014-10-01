@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-09-30) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-01) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -15279,10 +15279,11 @@ CustomEvent = function(event, params) {
   return evt;
 };
 
-CustomEvent.prototype = window.Event.prototype;
+if (typeof window != 'undefined') {
+  CustomEvent.prototype = window.Event.prototype;
 
-window.CustomEvent = CustomEvent;
-
+  window.CustomEvent = CustomEvent;
+}
 });
 require.register("slightlyoff-cassowary.js/index.js", function(exports, require, module){
 module.exports = require("./src/c.js");
@@ -20449,19 +20450,20 @@ Engine = (function(_super) {
 
   Engine.prototype.useWorker = function(url) {
     var _this = this;
-    if (!(typeof url === 'string' && self.onmessage !== void 0)) {
+    if (!(typeof url === 'string' && (typeof Worker !== "undefined" && Worker !== null) && self.onmessage !== void 0)) {
       return;
     }
     this.worker = this.getWorker(url);
     this.worker.url = url;
     this.worker.addEventListener('message', this.eventHandler);
     this.worker.addEventListener('error', this.eventHandler);
-    return this.solve = function(commands) {
+    this.solve = function(commands) {
       var _base;
       (_base = _this.engine).updating || (_base.updating = new _this.update);
       _this.engine.updating.postMessage(_this.worker, commands);
       return _this.worker;
     };
+    return this.worker;
   };
 
   Engine.prototype.getWorker = function(url) {
@@ -20646,6 +20648,9 @@ Conventions = (function() {
     while (parent) {
       if (parent.name === 'rule') {
         selectors = parent[1].path;
+        if (selectors.substring(0, 6) === '::this') {
+          selectors = selectors.substring(6);
+        }
         custom = selectors !== parent[1].groupped;
         if (results != null ? results.length : void 0) {
           base = results.slice();
@@ -20654,11 +20659,12 @@ Conventions = (function() {
           for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
             bit = _ref[index];
             results.push.apply(results, base.map(function(selector) {
+              this.console.log(selector, 'mofo', wrapped, bit);
               if (selector.charAt(0) !== ' ') {
                 selector = ' ' + selector;
               }
               if (wrapped) {
-                return selector.substring(0, 12) + bit + selector.substring(12);
+                return selector.substring(0, 12) + bit + ' ' + selector.substring(12);
               } else if (custom) {
                 bit = this.getCustomSelector(bit);
               }
@@ -20698,6 +20704,14 @@ Conventions = (function() {
   };
 
   Conventions.prototype.CanonicalizeRegExp = new RegExp("" + "([^" + Conventions.prototype.PAIR + "])" + "\\$[^" + Conventions.prototype.ASCEND + "]+" + "(?:" + Conventions.prototype.ASCEND + "|$)", "g");
+
+  Conventions.prototype.getCanonicalSelector = function(selector) {
+    selector = selector.trim().replace(/\s+/g, this.engine.DESCEND);
+    selector = selector.replace(this.CanonicalizeSelectorRegExp, '');
+    return selector;
+  };
+
+  Conventions.prototype.CanonicalizeSelectorRegExp = new RegExp("" + "^\s+|\s+$|" + "\$[a-z0-9]+([" + Conventions.prototype.DESCEND + "])\s*", "gi");
 
   Conventions.prototype.getScopePath = function(scope, continuation) {
     var bits, id, index, last, path, prev;
@@ -20994,7 +21008,7 @@ Native = (function() {
   };
 
   Native.prototype.time = function(other, time) {
-    time || (time = (typeof performance !== "undefined" && performance !== null ? performance.now() : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
+    time || (time = (typeof performance !== "undefined" && performance !== null ? typeof performance.now === "function" ? performance.now() : void 0 : void 0) || (typeof Date.now === "function" ? Date.now() : void 0) || +(new Date));
     if (time && !other) {
       return time;
     }
@@ -21790,6 +21804,13 @@ for (property in _ref) {
 
 if (typeof document !== "undefined" && document !== null) {
   dummy = (this.GSS || this.Engine || Selectors).dummy = document.createElement('_');
+  if (!dummy.hasOwnProperty("classList")) {
+    Selectors.prototype['$class'][2] = function(node, value) {
+      if (node.className.split(/\s+/).indexOf(value) > -1) {
+        return node;
+      }
+    };
+  }
   if (!dummy.hasOwnProperty("parentElement")) {
     Selectors.prototype['$!>'][1] = Selectors.prototype['::parent'][1] = function(node) {
       var parent;
@@ -21808,8 +21829,7 @@ if (typeof document !== "undefined" && document !== null) {
         }
       }
     };
-    Selectors.prototype['$!+'][1] = function() {
-      var node;
+    Selectors.prototype['$!+'][1] = function(node) {
       while (node = node.previousSibling) {
         if (node.nodeType === 1) {
           return node;
@@ -21819,13 +21839,14 @@ if (typeof document !== "undefined" && document !== null) {
     Selectors.prototype['$++'][1] = function(node) {
       var next, nodes, prev;
       nodes = void 0;
-      while (prev = node.previousSibling) {
+      prev = next = node;
+      while (prev = prev.previousSibling) {
         if (prev.nodeType === 1) {
           (nodes || (nodes = [])).push(prev);
           break;
         }
       }
-      while (next = node.nextSibling) {
+      while (next = next.nextSibling) {
         if (next.nodeType === 1) {
           (nodes || (nodes = [])).push(next);
           break;
@@ -21847,11 +21868,11 @@ if (typeof document !== "undefined" && document !== null) {
       var nodes, prev;
       nodes = void 0;
       prev = node.parentNode.firstChild;
-      while (prev !== node) {
-        if (pref.nodeType === 1) {
+      while (prev && (prev !== node)) {
+        if (prev.nodeType === 1) {
           (nodes || (nodes = [])).push(prev);
         }
-        node = node.nextSibling;
+        prev = prev.nextSibling;
       }
       return nodes;
     };
@@ -21886,7 +21907,9 @@ if (typeof document !== "undefined" && document !== null) {
         while (child && child.nodeType !== 1) {
           child = child.previousSibling;
         }
-        return child === node;
+        if (child === node) {
+          return mpde;
+        }
       }
     };
   }
@@ -22305,7 +22328,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = parseFloat((typeof self !== "undefined" && self !== null ? (_ref = self.location) != null ? (_ref1 = _ref.search.match(/log=\d/)) != null ? _ref1[0] : void 0 : void 0 : void 0) || 0);
+      this.level = parseFloat((typeof self !== "undefined" && self !== null ? (_ref = self.location) != null ? (_ref1 = _ref.search.match(/log=(\d)/)) != null ? _ref1[1] : void 0 : void 0 : void 0) || 0);
     }
     if (!Console.bind) {
       this.level = 0;
@@ -22545,7 +22568,9 @@ Domain = (function() {
       if (this.url && this.getWorkerURL) {
         if (this.url && (this.url = typeof this.getWorkerURL === "function" ? this.getWorkerURL(this.url) : void 0)) {
           if (engine !== this) {
-            this.useWorker(this.url);
+            if (!this.useWorker(this.url)) {
+              this.url = void 0;
+            }
           }
         }
       }
@@ -23478,7 +23503,26 @@ module.exports = Domain;
 
 });
 require.register("gss/lib/concepts/Events.js", function(exports, require, module){
-var Events;
+var CustomEvent, Events;
+
+CustomEvent = function(event, params) {
+  var evt;
+  if (params == null) {
+    params = {
+      bubbles: false,
+      cancelable: false,
+      detail: void 0
+    };
+  }
+  evt = document.createEvent("CustomEvent");
+  evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
+  return evt;
+};
+
+if (typeof window !== "undefined" && window !== null) {
+  CustomEvent.prototype = window.Event.prototype;
+  window.CustomEvent = CustomEvent;
+}
 
 Events = (function() {
   function Events() {
@@ -23555,7 +23599,7 @@ Events = (function() {
   };
 
   Events.prototype.dispatchEvent = function(element, type, data, bubbles, cancelable) {
-    var CustomEvent, detail, params, prop, value;
+    var detail, prop, value;
     if (!this.scope) {
       return;
     }
@@ -23566,18 +23610,11 @@ Events = (function() {
       value = data[prop];
       detail[prop] = value;
     }
-    params = {
+    return element.dispatchEvent(new CustomEvent(type, {
       detail: detail,
       bubbles: bubbles,
       cancelable: cancelable
-    };
-    CustomEvent = window.CustomEvent || function(event, params) {
-      var evt;
-      evt = document.createEvent("CustomEvent");
-      evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
-      return evt;
-    };
-    return element.dispatchEvent(new CustomEvent(type, params));
+    }));
   };
 
   Events.prototype.handleEvent = function(e) {
@@ -26656,10 +26693,12 @@ Queries = (function() {
     if (!node.nodeType) {
       return;
     }
+    this.engine.console.error(continuation);
     if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
       continuation = continuation.substring(index + 1);
     }
-    continuation = continuation.replace(/\s+/, this.engine.DESCEND);
+    this.engine.console.error(continuation, this.engine.getCanonicalSelector(continuation));
+    continuation = this.engine.getCanonicalSelector(continuation);
     return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.engine.DESCEND));
   };
 
@@ -26672,7 +26711,7 @@ Queries = (function() {
       if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
         continuation = continuation.substring(index + 1);
       }
-      path = ' ' + continuation.replace(/\s+/, this.engine.DESCEND);
+      path = ' ' + this.engine.getCanonicalSelector(continuation);
       if (matches.indexOf(path) > -1) {
         return node.setAttribute('matches', matches.replace(path, ''));
       }
@@ -26686,7 +26725,7 @@ Queries = (function() {
       return;
     }
     collection.isCollection = true;
-    keys = collection.keys || (collection.keys = []);
+    keys = collection.continuations || (collection.continuations = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
     this.snapshot(continuation, collection);
@@ -26789,8 +26828,8 @@ Queries = (function() {
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       s = _ref[index];
       if (s === scope) {
-        if (operation && collection.keys) {
-          top = this.engine.pairs.getTopmostOperation(collection.keys[index]);
+        if (operation && collection.continuations) {
+          top = this.engine.pairs.getTopmostOperation(collection.continuations[index]);
           if (top !== operation) {
             continue;
           }
@@ -26824,8 +26863,8 @@ Queries = (function() {
       if (collection.scopes) {
         c.scopes = collection.scopes.slice();
       }
-      if (collection.keys) {
-        c.keys = collection.keys.slice();
+      if (collection.continuations) {
+        c.continuations = collection.continuations.slice();
       }
       collection = c;
     }
@@ -26834,11 +26873,11 @@ Queries = (function() {
 
   Queries.prototype.removeFromCollection = function(node, continuation, operation, scope, needle, contd) {
     var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _i, _len, _ref;
-    if (!((_ref = (collection = this.get(continuation))) != null ? _ref.keys : void 0)) {
+    if (!((_ref = (collection = this.get(continuation))) != null ? _ref.continuations : void 0)) {
       return null;
     }
     length = collection.length;
-    keys = collection.keys;
+    keys = collection.continuations;
     paths = collection.paths;
     scopes = collection.scopes;
     duplicate = null;
@@ -26986,7 +27025,7 @@ Queries = (function() {
         _ref2 = result.scopes;
         for (i = _i = 0, _len = _ref2.length; _i < _len; i = ++_i) {
           s = _ref2[i];
-          if (s !== scope || (operation && result.keys[i] !== operation)) {
+          if (s !== scope || (operation && result.continuations[i] !== operation)) {
             shared = true;
             break;
           }
@@ -27073,12 +27112,12 @@ Queries = (function() {
     if (added) {
       this.each('add', added, path, operation, scope, operation, contd);
     }
-    if ((_ref = (collection = this[path])) != null ? _ref.keys : void 0) {
+    if ((_ref = (collection = this[path])) != null ? _ref.continuations : void 0) {
       sorted = collection.slice().sort(function(a, b) {
         var i, j;
         i = collection.indexOf(a);
         j = collection.indexOf(b);
-        return _this.comparePosition(a, b, collection.keys[i], collection.keys[j]) && -1 || 1;
+        return _this.comparePosition(a, b, collection.continuations[i], collection.continuations[j]) && -1 || 1;
       });
       updated = void 0;
       _results = [];
@@ -27090,7 +27129,7 @@ Queries = (function() {
             if (this[path]) {
               this[path] = updated;
             }
-            updated.keys = collection.keys.slice();
+            updated.continuations = collection.continuations.slice();
             updated.paths = collection.paths.slice();
             updated.scopes = collection.scopes.slice();
             updated.duplicates = collection.duplicates;
@@ -27099,7 +27138,7 @@ Queries = (function() {
           }
           i = collection.indexOf(node);
           updated[index] = node;
-          updated.keys[index] = collection.keys[i];
+          updated.continuations[index] = collection.continuations[i];
           updated.paths[index] = collection.paths[i];
           updated.scopes[index] = collection.scopes[i];
           this.chain(sorted[index - 1], node, path);
@@ -27194,7 +27233,7 @@ Queries = (function() {
       added = result;
       removed = old;
     }
-    if (result != null ? result.keys : void 0) {
+    if (result != null ? result.continuations : void 0) {
       this.updateCollections(operation, path, scope, void 0, void 0, void 0, continuation);
     } else {
       this.updateCollections(operation, path, scope, added, removed, void 0, continuation);
@@ -27391,7 +27430,7 @@ Mutations = (function() {
 
   function Mutations(engine) {
     this.engine = engine;
-    this.listener = new this.Observer(this.solve.bind(this));
+    this.listener = new this.Observer(this.solve.bind(this.engine));
   }
 
   Mutations.prototype.Observer = (typeof window !== "undefined" && window !== null) && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver);
@@ -27444,6 +27483,7 @@ Mutations = (function() {
     var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, removed, tag, update, value, values, _base, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _s, _t, _u, _v;
     added = [];
     removed = [];
+    this.onCharacterData(target, target);
     _ref = mutation.addedNodes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       child = _ref[_i];
@@ -27529,7 +27569,7 @@ Mutations = (function() {
         attribute = _ref4[_q];
         switch (attribute.name) {
           case 'class':
-            _ref5 = node.classList;
+            _ref5 = node.classList || node.className.split(/\s+/);
             for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
               kls = _ref5[_r];
               this.index(update, ' $class', kls);
@@ -27616,9 +27656,11 @@ Mutations = (function() {
     return update[type].push(value);
   };
 
-  Mutations.prototype.onCharacterData = function(target) {
-    var id, parent, _ref;
-    parent = target.parentNode;
+  Mutations.prototype.onCharacterData = function(target, parent) {
+    var id, _ref;
+    if (parent == null) {
+      parent = target.parentNode;
+    }
     if (id = this.engine.identity.find(parent)) {
       if (parent.tagName === 'STYLE') {
         if (((_ref = parent.getAttribute('type')) != null ? _ref.indexOf('text/gss') : void 0) > -1) {
@@ -27629,17 +27671,17 @@ Mutations = (function() {
   };
 
   Mutations.prototype.onAttributes = function(target, name, changed) {
-    var $attribute, $class, klasses, kls, old, parent, _i, _j, _k, _len, _len1, _len2;
+    var $attribute, $class, klasses, kls, old, parent, _i, _j, _k, _len, _len1, _len2, _ref;
     if (name === 'style') {
       this.engine.engine.restyled = true;
     }
     if (name === 'class' && typeof changed === 'string') {
-      klasses = target.classList;
+      klasses = target.classList || target.className.split(/\s+/);
       old = changed.split(' ');
       changed = [];
       for (_i = 0, _len = old.length; _i < _len; _i++) {
         kls = old[_i];
-        if (!(kls && klasses.contains(kls))) {
+        if (!(kls && ((_ref = klasses.indexOf && klasses.indexOf(kls) > -1) != null ? _ref : klasses.contains(kls)))) {
           changed.push(kls);
         }
       }
@@ -33012,7 +33054,7 @@ require.register("gss/vendor/MutationObserver.js", function(exports, require, mo
   var registrationsTable = new WeakMap();
 
   // We use setImmediate or postMessage for our future callback.
-  var setImmediate = window.msSetImmediate;
+  var setImmediate = window.msSetImmediate || window.setImmediate;
 
   // Use post message to emulate setImmediate.
   if (!setImmediate) {

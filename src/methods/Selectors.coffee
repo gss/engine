@@ -385,6 +385,10 @@ if document?
   # Add shims for IE<=8 that dont support some DOM properties
   dummy = (@GSS || @Engine || Selectors).dummy = document.createElement('_')
 
+  unless dummy.hasOwnProperty("classList")
+    Selectors::['$class'][2] = (node, value) ->
+      return node if node.className.split(/\s+/).indexOf(value) > -1
+        
   unless dummy.hasOwnProperty("parentElement") 
     Selectors::['$!>'][1] = Selectors::['::parent'][1] = (node) ->
       if parent = node.parentNode
@@ -393,16 +397,17 @@ if document?
     Selectors::['$+'][1] = (node) ->
       while node = node.nextSibling
         return node if node.nodeType == 1
-    Selectors::['$!+'][1] = ->
+    Selectors::['$!+'][1] = (node) ->
       while node = node.previousSibling
         return node if node.nodeType == 1
     Selectors::['$++'][1] = (node) ->
       nodes = undefined
-      while prev = node.previousSibling
+      prev = next = node
+      while prev = prev.previousSibling
         if prev.nodeType == 1
           (nodes ||= []).push(prev)
           break
-      while next = node.nextSibling
+      while next = next.nextSibling
         if next.nodeType == 1
           (nodes ||= []).push(next)
           break
@@ -415,9 +420,9 @@ if document?
     Selectors::['$!~'][1] = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
-      while prev != node
-        (nodes ||= []).push(prev) if pref.nodeType == 1
-        node = node.nextSibling
+      while prev && (prev != node)
+        (nodes ||= []).push(prev) if prev.nodeType == 1
+        prev = prev.nextSibling
       return nodes
     Selectors::['$~~'][1] = (node) ->
       nodes = undefined
@@ -438,7 +443,7 @@ if document?
         child = parent.lastChild
         while child && child.nodeType != 1
           child = child.previousSibling
-        return child == node
+        return mpde if child == node
 
 
 module.exports = Selectors

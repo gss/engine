@@ -12,6 +12,8 @@ CustomEvent = function(event, params) {
   return evt;
 };
 
-CustomEvent.prototype = window.Event.prototype;
+if (typeof window != 'undefined') {
+  CustomEvent.prototype = window.Event.prototype;
 
-window.CustomEvent = CustomEvent;
+  window.CustomEvent = CustomEvent;
+}

@@ -1,6 +1,16 @@
 # Simple event trigger that provides `handleEvent` interface
 # and calls `on<event>` function on the object if defined
 
+
+CustomEvent = (event, params = {bubbles: false, cancelable: false, detail: undefined}) ->
+  evt = document.createEvent("CustomEvent")
+  evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail)
+  return evt
+
+if window?
+  CustomEvent.prototype = window.Event.prototype
+  window.CustomEvent = CustomEvent
+
 class Events
   constructor: ->
     @listeners = {}
@@ -47,13 +57,7 @@ class Events
     for prop, value of data
       detail[prop] = value
 
-    params = {detail,bubbles,cancelable}
-    CustomEvent = window.CustomEvent || (event, params) ->
-      evt = document.createEvent("CustomEvent")
-      evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail)
-      return evt
-
-    element.dispatchEvent new CustomEvent(type, params)
+    element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
 
   # Catch-all event listener 
   handleEvent: (e) ->

@@ -2,6 +2,7 @@ assert = chai.assert
 expect = chai.expect
 
 stringify = (o) ->
+  return o
   return JSON.stringify o, 1, 1
 
 $  = () ->
@@ -816,7 +817,7 @@ describe 'End - to - End', ->
             "$b3[x]": 100
           b3 = engine.$id('b3')
           b3.parentNode.removeChild(b3)
-          console.log(1)
+          GSS.console.log(1)
 
           engine.once 'solve', (e) ->
             expect(engine.values).to.eql 
@@ -828,7 +829,7 @@ describe 'End - to - End', ->
 
             b2 = engine.$id('b2')
             b2.parentNode.removeChild(b2)
-            console.log(1)
+            GSS.console.log(1)
             engine.once 'solve', (e) ->
               expect(engine.values).to.eql 
                 "x": 100
@@ -844,7 +845,7 @@ describe 'End - to - End', ->
                   "$b2[x]": 100
                 a1 = engine.$id('a1')
                 a1.parentNode.removeChild(a1)
-                console.log(1)
+                GSS.console.log(1)
                 debugger
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql 
@@ -1797,7 +1798,7 @@ describe 'End - to - End', ->
             </style>
             """
           listener = (e) ->        
-            console.log engine.vars
+            GSS.console.log engine.vars
             for key, val of target
               assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
             done()
@@ -2470,7 +2471,7 @@ describe 'End - to - End', ->
   
       it 'should compute', (done) ->
         engine.once 'solve', (e) ->
-          console.log JSON.stringify engine.vars
+          GSS.console.log JSON.stringify engine.vars
           expect(engine.values).to.eql      
             "$s1[x]": 10,
             "$container[x]": 0,
@@ -2731,9 +2732,9 @@ describe 'End - to - End', ->
            
         </style>
         """
-        console.profile(1)
+        GSS.console.profile(1)
         engine.once 'solve', (solution) ->
-          console.profileEnd(1)
+          GSS.console.profileEnd(1)
           expect(solution).to.eql 
             "::window[y]": 0
             "$box2[width]": 70

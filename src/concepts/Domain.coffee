@@ -34,7 +34,8 @@ class Domain
       if @url && @getWorkerURL
         if @url && (@url = @getWorkerURL?(@url))
           if engine != @
-            @useWorker(@url)
+            unless @useWorker(@url)
+              @url = undefined
 
       return @
     else

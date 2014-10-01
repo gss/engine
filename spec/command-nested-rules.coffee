@@ -4,6 +4,7 @@ assert = chai.assert
 expect = chai.expect
 
 stringify = (o) ->
+  return o
   return JSON.stringify o, 1, 1
 
 $  = () ->
@@ -87,8 +88,8 @@ describe 'Nested Rules', ->
             </div>
           </section>
         """
-        console.log(container.innerHTML)
-        console.info("(header > h2.gizoogle ! section div:get('parentNode'))[target-size] == 100")
+        GSS.console.log(container.innerHTML)
+        GSS.console.info("(header > h2.gizoogle ! section div:get('parentNode'))[target-size] == 100")
           
         
         engine = new GSS(container)
@@ -130,8 +131,8 @@ describe 'Nested Rules', ->
             <main id="main0"></main>
           </section>
         """
-        console.log(container.innerHTML)
-        console.info("(div + main !~ *)[width] == 50")
+        GSS.console.log(container.innerHTML)
+        GSS.console.info("(div + main !~ *)[width] == 50")
         all = container.getElementsByTagName('*')
         parent = all.main0.parentNode
 
@@ -149,7 +150,7 @@ describe 'Nested Rules', ->
           expect(all.header0.style.width).to.eql '50px'
           expect(all.box0.style.width).to.eql '50px'
           
-          console.error('Mutation: container.removeChild(#main)')
+          GSS.console.error('Mutation: container.removeChild(#main)')
           parent.removeChild(all.main0) 
           engine.once 'solve', ->
             expect(stringify engine.updated.getProblems()).to.eql stringify [
@@ -187,7 +188,7 @@ describe 'Nested Rules', ->
               100]
           ]
         ]
-        console.info(".vessel .box { ::[x] == 100 }")
+        GSS.console.info(".vessel .box { ::[x] == 100 }")
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div class="vessel">
@@ -223,7 +224,7 @@ describe 'Nested Rules', ->
                       "x"], 
                     100]
                 ]
-        console.info(".vessel { (:: .box)[x] == 100 }")
+        GSS.console.info(".vessel { (:: .box)[x] == 100 }")
 
         container.innerHTML =  """
           <div id="box0" class="box"></div>
@@ -337,7 +338,7 @@ describe 'Nested Rules', ->
             <div id="box4" class="box"></div>
           </div>
           """
-        console.info(".vessel, #group1 { (:: :first-child)[y] == 100 }")
+        GSS.console.info(".vessel, #group1 { (:: :first-child)[y] == 100 }")
 
         vessel0 = container.getElementsByClassName('vessel')[0]
         box1 = container.getElementsByClassName('box')[1]
@@ -409,7 +410,7 @@ describe 'Nested Rules', ->
             <div id="box4" class="box"></div>
           </div>
           """
-        console.info("#box1 !>, > div { (& :first-child)[y] == 100 }")
+        GSS.console.info("#box1 !>, > div { (& :first-child)[y] == 100 }")
 
         vessel0 = container.getElementsByClassName('vessel')[0]
         box0    = container.getElementsByClassName('box')[0]
@@ -432,7 +433,7 @@ describe 'Nested Rules', ->
           expect(engine.queries['#box1!>,>div'].length).to.eql(3)
           expect(engine.queries['#box1!>,>div'].duplicates.length).to.eql(1)
           
-          console.error('box1.remove()')
+          GSS.console.error('box1.remove()')
           box1.parentNode.removeChild(box1)
           engine.once 'solve', ->
 
@@ -451,7 +452,7 @@ describe 'Nested Rules', ->
 
             vessel0.insertBefore(box1, vessel0.firstChild)
 
-            console.error('prepend(box1)')
+            GSS.console.error('prepend(box1)')
             engine.once 'solve', ->
               expect(stringify(engine.updated.getProblems())).to.eql stringify([
                 ['remove', "#box1!>,>div$vessel0↑::this :first-child$box2"]
@@ -463,7 +464,7 @@ describe 'Nested Rules', ->
               expect(box3.style.top).to.eql('100px')
 
               vessel0.removeChild(box1)
-              console.error('vessel0.remove()')
+              GSS.console.error('vessel0.remove()')
 
               engine.once 'solve', ->
                 expect(stringify(engine.updated.getProblems())).to.eql stringify([
@@ -531,7 +532,7 @@ describe 'Nested Rules', ->
                             ['remove', "#box1!>,>div$group1", ">$group1↑div", ">$group1"]
                           ])
                           window.zzzz = true
-                          console.log('append vessel0')
+                          GSS.console.log('append vessel0')
 
                           engine.scope.appendChild(vessel0)
 
@@ -598,7 +599,7 @@ describe 'Nested Rules', ->
                 'width']
 
               100]]
-        console.info('.group .vessel { (::scope .box:last-child)[width] == 100 }')
+        GSS.console.info('.group .vessel { (::scope .box:last-child)[width] == 100 }')
         container.innerHTML =  """
           <div id="group1" class="group">
             <div id="box0" class="box"></div>
@@ -863,7 +864,7 @@ describe 'Nested Rules', ->
             ["<=", ["get", ["$reserved","this"], "width"], ["get", ["$id","vessel1"], "width"]]
           ]
         ]
-        console.info('.vessel .box { ::[width] == #vessel1[width] } ')
+        GSS.console.info('.vessel .box { ::[width] == #vessel1[width] } ')
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div id="vessel1" class="vessel">
@@ -930,7 +931,7 @@ describe 'Nested Rules', ->
             ["<=", ["get", ["$reserved","this"], "width"], ["get", ["$reserved","parent"], "width"]]
           ]
         ]
-        console.info('.vessel .box { ::[width] == ::parent[width] } ')
+        GSS.console.info('.vessel .box { ::[width] == ::parent[width] } ')
         container.innerHTML =  """
           <div id="box0" class="box"></div>
           <div id="vessel1" class="vessel">
