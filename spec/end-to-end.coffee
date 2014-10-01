@@ -225,8 +225,8 @@ describe 'End - to - End', ->
           """
         engine.once 'solve', ->
           expect(getSource(engine.$tag('style')[1])).to.equal """
-            [matches~=".innie-outie!>*"]{height:200px;}
-            [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+            [matches~=".innie-outie#{GSS.DESCEND}!>*"]{height:200px;}
+            [matches~=".innie-outie#{GSS.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
             """
 
           A = engine.$class("innie-outie")[0]
@@ -235,21 +235,21 @@ describe 'End - to - End', ->
           B.setAttribute('class', 'innie-outie-zzz')
           engine.once 'solve', ->
             expect(getSource(engine.$tag('style')[1])).to.equal """
-              [matches~=".innie-outie!>*"]{height:200px;}
+              [matches~=".innie-outie#{GSS.DESCEND}!>*"]{height:200px;}
               """
             B.setAttribute('class', 'innie-outie')
 
             engine.once 'solve', ->
               expect(getSource(engine.$tag('style')[1])).to.equal """
-                [matches~=".innie-outie!>*"]{height:200px;}
-                [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+                [matches~=".innie-outie#{GSS.DESCEND}!>*"]{height:200px;}
+                [matches~=".innie-outie#{GSS.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
                 """
               A.setAttribute('class', 'innie-outie-zzz')
 
               engine.once 'solve', ->
                 expect(getSource(engine.$tag('style')[1])).to.equal """
-                  [matches~=".innie-outie!>*"]{height:200px;}
-                  [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+                  [matches~=".innie-outie#{GSS.DESCEND}!>*"]{height:200px;}
+                  [matches~=".innie-outie#{GSS.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
                   """
                 B.setAttribute('class', 'innie-outie-zzz')
 
@@ -261,14 +261,14 @@ describe 'End - to - End', ->
 
                   engine.once 'solve', ->
                     expect(getSource(engine.$tag('style')[1])).to.equal """
-                      [matches~=".innie-outie!>*"]{height:200px;}
+                      [matches~=".innie-outie#{GSS.DESCEND}!>*"]{height:200px;}
                       """
                     B.setAttribute('class', 'innie-outie')
 
                     engine.once 'solve', ->
                       expect(getSource(engine.$tag('style')[1])).to.equal """
-                        [matches~=".innie-outie!>*"]{height:200px;}
-                        [matches~=".innie-outie!>*"] #css-inner-dump-2{z-index:-1;}
+                        [matches~=".innie-outie#{GSS.DESCEND}!>*"]{height:200px;}
+                        [matches~=".innie-outie#{GSS.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
                         """
                       done()
     describe 'conditional', ->

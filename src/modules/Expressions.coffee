@@ -307,8 +307,12 @@ class Expressions
     def = operation.def
     prefix = def.prefix || otherdef?.prefix || (operation.def.noop && operation.name) || ''
     suffix = def.suffix || otherdef?.suffix || ''
-    separator = operation.def.separator
-
+    if separator = operation.def.separator
+      if group
+        for index in [1 ... operation.length]
+          if op = operation[index]
+            if op.path != op.groupped
+              return
     after = before = ''
     for index in [1 ... operation.length]
       if op = operation[index]
@@ -340,11 +344,11 @@ class Expressions
             else
               group = false 
               continue
+
           else if separator
             before += (before && separator || '') + op.path
           else
             before += op.path
-
     return before + prefix + after + suffix
 
 

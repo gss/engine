@@ -88,6 +88,9 @@ class Selectors
 
     # Add * to a combinator at the end of native selector (e.g. `+` transforms to `+ *`)
     promise: (operation, parent) ->
+      if operation.def.separator
+        for arg, index in operation
+          continue unless index
       promise = operation.groupped
       if operation.tail
         if operation[0] == '$combinator' && (parent[0] == '$combinator' || parent[0] == ',')

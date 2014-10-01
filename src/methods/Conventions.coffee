@@ -101,6 +101,9 @@ class Conventions
     if continuation
       if continuation.nodeType
         return @identity.provide(continuation) + ' ' + operation.path
+      #else if operation.marked
+      #  debugger
+      #  return @getContinuation(continuation, null, @[operation.marked]) + (operation.key || operation.path)
       else
         return continuation + (operation.key || operation.path)
     else
@@ -112,31 +115,50 @@ class Conventions
     while parent
       if parent.name == 'rule'
         selectors = parent[1].path
-        if selectors.substring(0, 6) == '::this'
-          selectors = selectors.substring(6)
-        custom = (selectors != parent[1].groupped)
 
+        if parent[1].groupped
+          paths = parent[1].groupped.split(',')
+        else if parent[1][0] == ','
+          paths = parent[1].slice(1).map (item) -> 
+            return item.groupped || item.key
+        else
+          paths = [parent[1].key]
+          if paths[0].substring(0, 6) == '::this'
+            paths[0] = paths[0].substring(6)
         if results?.length
-          base = results.slice()
-          results.length = 0
-          for bit, index in selectors.split(',')
-            results.push.apply(results, base.map((selector) ->
-              @console.log(selector, 'mofo', wrapped, bit)
-              unless selector.charAt(0) == ' '
-                selector = ' ' + selector
-              if wrapped
-                return selector.substring(0, 12) + bit + ' ' + selector.substring(12)
-              else if custom
-                bit = @getCustomSelector(bit)
+          selectors = selectors.split(',')
+          bits = selectors.map (bit) ->
+            if bit.substring(0, 6) == '::this'
+              bit = bit.substring(6)
+            return bit
 
-              return bit + selector
-            , @))
+          console.info(paths)
+          update = []
+          for result in results
+            if result.substring(0, 11) == '[matches~="'
+              update.push result.substring(0, 11) + bits.join(',') + @DESCEND + result.substring(11)
+            else
+              for bit, index in bits
+                if paths[index] != bit
+                  update.push @getCustomSelector(bits.join(',')) + result
+                else 
+                  unless selectors[index].substring(0, 6) == '::this'
+                    bit = ' ' + bit
+                  update.push bit + result
+
+          results = update
         else 
-          results = selectors.split(',')
-          if custom
-            results = results.map @getCustomSelector, @
-        if custom
-          wrapped = true
+          results = selectors.split(',').map (path, index) =>
+            selector = path
+            if path.substring(0, 6) == '::this'
+              selector = path = path.substring(6)
+            else
+              selector = ' ' + selector
+            console.error(path, paths[index], index, paths)
+            if path != paths[index]
+              @getCustomSelector(selectors)
+            else
+              selector
       parent = parent.parent
 
     return results
@@ -165,12 +187,12 @@ class Conventions
 
 
   getCanonicalSelector: (selector) ->
-    selector = selector.trim().replace(/\s+/g, @engine.DESCEND)
-    selector = selector.replace(@CanonicalizeSelectorRegExp, '')
+    selector = selector.trim()
+    debugger
+    selector = selector.replace(@CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, @engine.DESCEND)
     return selector
   CanonicalizeSelectorRegExp: new RegExp("" +
-    "^\s+|\s+$|" +
-    "\$[a-z0-9]+([" + Conventions::DESCEND + "])\s*", "gi")
+    "\\$[a-z0-9]+([" + Conventions::DESCEND + "])\s*", "gi")
 
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)

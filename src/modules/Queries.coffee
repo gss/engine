@@ -45,6 +45,7 @@ class Queries
 
   addMatch: (node, continuation) ->
     return unless node.nodeType
+    debugger
     @engine.console.error(continuation)
     if (index = continuation.indexOf(@engine.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
@@ -88,6 +89,7 @@ class Queries
       @chain node, collection[index + 1], continuation
       if operation.parent.name == 'rule'
         @addMatch(node, continuation)
+        
       return true
     else
       duplicates = (collection.duplicates ||= [])
@@ -351,21 +353,6 @@ class Queries
     
     oppath = @engine.getCanonicalPath(path)
     if path == oppath || @engine.PAIR + oppath == path
-      
-      if operation
-        if operation.bound && (operation.path != operation.key)
-          if added
-            if @engine.isCollection(added)
-              for add in added
-                @addMatch(add, path) 
-            else
-              @addMatch(added, path) 
-      if removed
-        if @engine.isCollection(removed)
-          for remove in removed
-            @removeMatch(remove, path)
-        else
-          @removeMatch(removed, path)
 
     else if recursion != oppath
       @updateCollection operation, oppath, scope, added, removed, oppath, path
