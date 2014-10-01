@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-01) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-02) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -28146,11 +28146,9 @@ Stylesheets = (function() {
     _ref = rule.properties;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       other = _ref[_i];
-      if (other !== needle) {
-        if ((_ref1 = watchers[other]) != null ? _ref1.length : void 0) {
-          needle = other;
-          break;
-        }
+      if ((_ref1 = watchers[other]) != null ? _ref1.length : void 0) {
+        needle = other;
+        break;
       }
     }
     return needle;
@@ -28173,7 +28171,7 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
-    var body, dump, index, item, needle, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref, _ref1;
+    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref, _ref1;
     watchers = this.getWatchers(stylesheet);
     dump = this.getStylesheet(stylesheet);
     sheet = dump.sheet;
@@ -28200,16 +28198,20 @@ Stylesheets = (function() {
     }
     rules = sheet.rules || sheet.cssRules;
     if (needle !== operation.sourceIndex || value === '') {
-      rule = rules[previous.length];
-      rule.style[property] = value;
+      generated = rules[previous.length];
+      generated.style[property] = value;
+      next = void 0;
       for (index = _j = _ref = needle + 1, _ref1 = watchers.length; _ref <= _ref1 ? _j < _ref1 : _j > _ref1; index = _ref <= _ref1 ? ++_j : --_j) {
         if (ops = watchers[index]) {
-          other = this.getRule(watchers[ops[0]][0]);
-          if (other !== rule) {
+          next = this.getRule(watchers[ops[0]][0]);
+          if (next !== rule) {
             sheet.deleteRule(previous.length);
           }
           break;
         }
+      }
+      if (!next) {
+        sheet.deleteRule(previous.length);
       }
     } else {
       body = property + ':' + value;

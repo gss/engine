@@ -34,10 +34,9 @@ class Stylesheets
   getOperation: (operation, watchers, rule) ->
     needle = operation.sourceIndex
     for other in rule.properties
-      if other != needle
-        if watchers[other]?.length
-          needle = other
-          break
+      if watchers[other]?.length
+        needle = other
+        break
     return needle
 
   getSelector: (operation) ->
@@ -73,15 +72,18 @@ class Stylesheets
     
 
     if needle != operation.sourceIndex || value == ''
-      rule = rules[previous.length]
-      rule.style[property] = value
+      generated = rules[previous.length]
+      generated.style[property] = value
 
+      next = undefined
       for index in [needle + 1 ... watchers.length]
         if ops = watchers[index]
-          other = @getRule(watchers[ops[0]][0])
-          if other != rule
+          next = @getRule(watchers[ops[0]][0])
+          if next != rule
             sheet.deleteRule(previous.length)
           break
+      if !next
+        sheet.deleteRule(previous.length)
     else
       body = property + ':' + value
       selectors = @getSelector(operation)
