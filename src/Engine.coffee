@@ -132,7 +132,6 @@ class Engine extends Domain.Events
       if expression?.push
         result = @substitute(expression, result, expressions, i)
     if expressions[0] == 'remove'
-      debugger
       @updating.push expressions, null
       if parent
         parent.splice(index, 1)
@@ -162,7 +161,6 @@ class Engine extends Domain.Events
       @assumed.merge result
     # Perform remove commands first
     if @updating
-      debugger
       @updating.each(@resolve, @, result)
     # Execute given expressions
     if expressions.length

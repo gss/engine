@@ -846,7 +846,6 @@ describe 'End - to - End', ->
                 a1 = engine.$id('a1')
                 a1.parentNode.removeChild(a1)
                 GSS.console.log(1)
-                debugger
                 engine.once 'solve', (e) ->
                   expect(engine.values).to.eql 
                     "x": 100

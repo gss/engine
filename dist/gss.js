@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-10-01) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20117,7 +20116,6 @@ Engine = (function(_super) {
       }
     }
     if (expressions[0] === 'remove') {
-      debugger;
       this.updating.push(expressions, null);
       if (parent) {
         parent.splice(index, 1);
@@ -20153,7 +20151,6 @@ Engine = (function(_super) {
       this.assumed.merge(result);
     }
     if (this.updating) {
-      debugger;
       this.updating.each(this.resolve, this, result);
     }
     if (expressions.length) {
@@ -22748,9 +22745,6 @@ Domain = (function() {
     this.setup();
     path = this.engine.getPath(object, property);
     old = this.values[path];
-    if (path === '$header[width]' && value === 0) {
-      debugger;
-    }
     if (old === value) {
       return;
     }
@@ -23346,9 +23340,6 @@ Domain = (function() {
     var constraint, constraints, contd, observers, path, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
-      if (path === 'style[type*="text/gss"]$1↓@1↓ article$article') {
-        debugger;
-      }
       _ref = this.getPossibleContinuations(path);
       for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
         contd = _ref[_j];
@@ -23371,7 +23362,6 @@ Domain = (function() {
         for (_l = 0, _len2 = _ref1.length; _l < _len2; _l++) {
           constraint = _ref1[_l];
           if (constraint.indexOf(path) > -1) {
-            debugger;
             this.unconstrain(constraint);
             break;
           }

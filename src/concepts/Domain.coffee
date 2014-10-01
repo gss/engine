@@ -175,8 +175,6 @@ class Domain
 
     path = @engine.getPath(object, property)
     old = @values[path]
-    if path == '$header[width]' && value == 0
-      debugger
     return if old == value
     if @changes
       @changes[path] = value ? null
@@ -579,8 +577,6 @@ class Domain
 
   remove: ->
     for path in arguments
-      if path == 'style[type*="text/gss"]$1↓@1↓ article$article'
-        debugger
       for contd in @getPossibleContinuations(path)
         if observers = @observers[contd]
           while observers[0]
@@ -594,7 +590,6 @@ class Domain
       if @constrained
         for constraint in @constrained
           if constraint.indexOf(path) > -1
-            debugger  
             @unconstrain(constraint)
             break
     return
