@@ -34,6 +34,7 @@ class Engine extends Domain.Events
     Finite:    require('./domains/Finite')
     Boolean:   require('./domains/Boolean')
 
+
   constructor: (scope, url) ->
     for argument, index in arguments
       continue unless argument

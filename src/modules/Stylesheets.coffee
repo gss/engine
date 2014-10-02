@@ -5,11 +5,13 @@ class Stylesheets
     @watchers = {}
     @sheets = {}
 
+  initialize: [
+    ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
+    ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
+  ]
+
   compile: ->
-    @engine.engine.solve 'Document', 'stylesheets', [
-      ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
-      ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
-    ]
+    @engine.engine.solve 'Document', 'stylesheets', @initialize
     @inline = @engine.queries['style[type*="text/gss"]']
     @remote = @engine.queries['link[type*="text/gss"]']
     @collections = [@inline, @remote]
@@ -57,7 +59,7 @@ class Stylesheets
     sheet = dump.sheet
     needle = @getOperation(operation, watchers, rule)
     previous = []
-    debugger
+
     for item, index in watchers
       break if index >= needle
       if ops = watchers[index]

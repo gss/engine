@@ -101,9 +101,8 @@ class Conventions
     if continuation
       if continuation.nodeType
         return @identity.provide(continuation) + ' ' + operation.path
-      #else if operation.marked
-      #  debugger
-      #  return @getContinuation(continuation, null, @[operation.marked]) + (operation.key || operation.path)
+      else if operation.marked && operation.arity == 2
+        return continuation + operation.path
       else
         return continuation + (operation.key || operation.path)
     else
@@ -123,61 +122,59 @@ class Conventions
             for result, index in results
               if result.substring(0, 11) != '[matches~="'
                 result = @getCustomSelector(result)
-              results[index] = result.substring(0, 11) + parent.uid + result.substring(11)
+              results[index] = result.substring(0, 11) + parent.uid + @DESCEND + result.substring(11)
       
       # Add rule selector to path
       else if parent.name == 'rule'
         selectors = parent[1].path
 
-        if parent[1].groupped
-          paths = parent[1].groupped.split(',')
-        else if parent[1][0] == ','
+        if parent[1][0] == ','
           paths = parent[1].slice(1).map (item) -> 
-            return item.groupped || item.key
+            return !item.marked && item.groupped || item.path
         else
-          paths = [parent[1].key]
-          if paths[0].substring(0, 6) == '::this'
-            paths[0] = paths[0].substring(6)
+          paths = [parent[1].path]
+
+        groups = parent[1].groupped && parent[1].groupped.split(',') ? paths
 
         # Prepend selectors with selectors of a parent rule
         if results?.length
-          selectors = selectors.split(',')
-          bits = selectors.map (bit) ->
-            if bit.substring(0, 6) == '::this'
-              bit = bit.substring(6)
-            return bit
+          bits = selectors.split(',')
 
           update = []
           for result in results
             if result.substring(0, 11) == '[matches~="'
-              update.push result.substring(0, 11) + bits.join(',') + @DESCEND + result.substring(11)
+              update.push result.substring(0, 11) + selectors + @DESCEND + result.substring(11)
             else
               for bit, index in bits
-                if paths[index] != bit
-                  update.push @getCustomSelector(bits.join(',')) + result
+                if groups[index] != bit && '::this' + groups[index] != paths[index] 
+                  if result.substring(0, 6) == '::this'
+                    update.push @getCustomSelector(selectors) + result.substring(6)
+                  else
+                    update.push @getCustomSelector(selectors) + ' ' + result
                 else 
-                  unless selectors[index].substring(0, 6) == '::this'
-                    bit = ' ' + bit
-                  update.push bit + result
+                  if result.substring(0, 6) == '::this'
+                    update.push bit + result.substring(6)
+                  else
+                    update.push bit + ' ' + result
 
           results = update
         # Return all selectors
         else 
 
           results = selectors.split(',').map (path, index) =>
-            selector = path
-            if path.substring(0, 6) == '::this'
-              selector = path = path.substring(6)
-            else
-              selector = ' ' + selector
-
-            if path != paths[index]
+            if path != groups[index] && '::this' + groups[index] != paths[index]
               @getCustomSelector(selectors)
             else
-              selector
+              path
       parent = parent.parent
 
+    for result, index in results
+      if result.substring(0, 6) == '::this'
+        results[index] = result.substring(6)
+      results[index] = results[index].replace(@CleanupSelectorRegExp, '')
     return results
+
+  CleanupSelectorRegExp: new RegExp(Conventions::DESCEND + '::this', 'g')
 
   getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(@CustomizeRegExp, @DESCEND) + '"]'
@@ -204,7 +201,10 @@ class Conventions
 
   getCanonicalSelector: (selector) ->
     selector = selector.trim()
-    selector = selector.replace(@CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, @engine.DESCEND)
+    selector = selector.
+      replace(@CanonicalizeSelectorRegExp, ' ').
+      replace(/\s+/g, @engine.DESCEND).
+      replace(@CleanupSelectorRegExp, '')
     return selector
   CanonicalizeSelectorRegExp: new RegExp("" +
     "[$][a-z0-9]+[" + Conventions::DESCEND + "]\s*", "gi")
@@ -248,7 +248,10 @@ class Conventions
   getOperationPath: (operation, continuation, scope) ->
     if continuation?
       if operation.def.serialized && !operation.def.hidden
-        path = continuation + (operation.key || operation.path)
+        if operation.marked && operation.arity == 2
+          path = continuation + operation.path
+        else
+          path = continuation + (operation.key || operation.path)
       else
         path = continuation
     else

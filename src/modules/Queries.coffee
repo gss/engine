@@ -53,6 +53,7 @@ class Queries
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
   
   removeMatch: (node, continuation) ->
+    console.info('remove', node, path, continuation)
     return unless node.nodeType == 1
     if matches = node.getAttribute('matches')
       if (index = continuation.indexOf(@engine.DESCEND)) > -1
@@ -113,6 +114,7 @@ class Queries
 
   # Remove observers from element
   unobserve: (id, continuation, quick, path, contd, scope) ->
+    debugger
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
@@ -294,7 +296,10 @@ class Queries
 
   clean: (path, continuation, operation, scope, bind, contd) ->
     if path.def
-      path = (continuation || '') + (path.uid || '') + (path.key || '')
+      if path.marked && path.arity == 2
+        path = (continuation || '') + (path.uid || '') + (path.path || '')
+      else
+        path = (continuation || '') + (path.uid || '') + (path.key || '')
     continuation = path if bind
     result = @get(path)
     
