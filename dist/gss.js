@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-02) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-03) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20265,11 +20265,14 @@ Engine = (function(_super) {
       return;
     }
     if (this.intrinsic) {
+      this.intrinsic.changes = {};
       scope = this.updating.reflown || this.scope;
       this.updating.reflown = void 0;
       if ((_ref1 = this.intrinsic) != null) {
         _ref1.each(scope, this.intrinsic.update);
       }
+      this.updating.apply(this.intrinsic.changes);
+      this.intrinsic.changes = void 0;
     }
     this.solved.merge(solution);
     if ((_ref2 = this.pairs) != null) {

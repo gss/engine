@@ -254,9 +254,12 @@ class Engine extends Domain.Events
       return
 
     if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
+      @intrinsic.changes = {}
       scope = @updating.reflown || @scope
       @updating.reflown = undefined
       @intrinsic?.each(scope, @intrinsic.update)
+      @updating.apply @intrinsic.changes
+      @intrinsic.changes = undefined
 
     @solved.merge solution
 

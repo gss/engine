@@ -39,8 +39,9 @@ describe('Full page tests', function() {
   for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
     type = _ref[index];
     _results.push((function(type, index) {
-      describe(type, function() {
-        return it('scoping', function(done) {
+      return describe(type, function() {
+        var j, _fn, _j, _k, _len1, _len2, _ref1, _ref2, _results1;
+        it('scoping', function(done) {
           container = document.createElement('div');
           container.style.height = '1000px';
           container.style.width = '1000px';
@@ -146,9 +147,6 @@ describe('Full page tests', function() {
             });
           });
         });
-      });
-      return describe(type, function() {
-        var j, _j, _len1, _ref1, _results1;
         this.timeout(10000);
         it('gss1 demo', function(done) {
           container = document.createElement('div');
@@ -192,45 +190,54 @@ describe('Full page tests', function() {
             });
           });
         });
-        it('face detection section', function(done) {
-          container = document.createElement('div');
-          container.id = 'face-demo';
-          window.$engine = engine = new GSS(container, index === 0);
-          $('#fixtures').appendChild(container);
-          container.innerHTML = DEMOS.FACE_DETECTION_SECTION;
-          container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
-          return engine.then(function(solution) {
-            expect(solution).to.eql({
-              '$title[margin-top]': 72,
-              '$title[padding-top]': 40,
-              '$face-demo[intrinsic-width]': 640,
-              '$face-demo[width]': 640,
-              'md': 72,
-              'md-sub': 8
-            });
-            debugger;
-            container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0');
+        _ref1 = ['with intrinsic condition', 'with linear condition'];
+        _fn = function(type, j) {
+          return it(type, function(done) {
+            var html;
+            container = document.createElement('div');
+            container.id = 'face-demo';
+            window.$engine = engine = new GSS(container, index === 0);
+            $('#fixtures').appendChild(container);
+            html = DEMOS.FACE_DETECTION_SECTION;
+            if (j === 0) {
+              html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500');
+            }
+            container.innerHTML = html;
+            container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
             return engine.then(function(solution) {
               expect(solution).to.eql({
-                '$title[margin-top]': 8,
-                '$title[padding-top]': null,
-                '$face-demo[intrinsic-width]': 400,
-                '$face-demo[width]': 400
+                '$title[margin-top]': 72,
+                '$title[padding-top]': 40,
+                '$face-demo[intrinsic-width]': 640,
+                '$face-demo[width]': 640,
+                'md': 72,
+                'md-sub': 8
               });
-              container.innerHTML = "";
+              container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0');
               return engine.then(function(solution) {
-                expect(solution).to.eql({
-                  '$title[margin-top]': null,
-                  '$face-demo[intrinsic-width]': null,
-                  '$face-demo[width]': null,
-                  'md': null,
-                  'md-sub': null
+                expect(solution['$title[margin-top]']).to.eql(8);
+                expect(solution['$title[padding-top]']).to.eql(null);
+                expect(solution['$face-demo[intrinsic-width]']).to.eql(400);
+                expect(solution['$face-demo[width]']).to.eql(400);
+                container.innerHTML = "";
+                return engine.then(function(solution) {
+                  expect(solution).to.eql({
+                    '$title[margin-top]': null,
+                    '$face-demo[intrinsic-width]': null,
+                    '$face-demo[width]': null,
+                    'md': null,
+                    'md-sub': null
+                  });
+                  return done();
                 });
-                return done();
               });
             });
           });
-        });
+        };
+        for (j = _j = 0, _len1 = _ref1.length; _j < _len1; j = ++_j) {
+          type = _ref1[j];
+          _fn(type, j);
+        }
         it('profile card', function(done) {
           container = document.createElement('div');
           container.id = 'profile-card-demo';
@@ -274,10 +281,10 @@ describe('Full page tests', function() {
             });
           });
         });
-        _ref1 = ['with intrinsic condition', 'with linear condition'];
+        _ref2 = ['with intrinsic condition', 'with linear condition'];
         _results1 = [];
-        for (j = _j = 0, _len1 = _ref1.length; _j < _len1; j = ++_j) {
-          type = _ref1[j];
+        for (j = _k = 0, _len2 = _ref2.length; _k < _len2; j = ++_k) {
+          type = _ref2[j];
           _results1.push((function(type, j) {
             return describe(type, function() {
               return it('Adaptive aspect', function(done) {
