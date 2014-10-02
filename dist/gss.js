@@ -24377,7 +24377,7 @@ Update.prototype = {
     }
   },
   merge: function(from, to, parent) {
-    var constraint, domain, glob, globals, globs, i, other, prob, probs, _i, _j, _k, _l, _len, _len1, _len2, _ref;
+    var constraint, domain, glob, globals, globs, i, other, prob, probs, prop, solution, _i, _j, _k, _l, _len, _len1, _len2, _ref;
     domain = this.domains[from];
     if (domain.frame) {
       return;
@@ -24439,6 +24439,13 @@ Update.prototype = {
       if (prob.domain === domain) {
         prob.domain = other;
       }
+    }
+    if (domain.nullified) {
+      solution = {};
+      for (prop in domain.nullified) {
+        (solution || (solution = {}))[prop] = null;
+      }
+      this.engine.updating.apply(solution);
     }
     this.domains.splice(from, 1);
     this.problems.splice(from, 1);
@@ -26029,9 +26036,11 @@ Document = (function(_super) {
         }
         this.updating.resizing = 'computing';
         this.once('solve', function() {
-          if (this.updated.resizing === 'scheduled') {
-            return this.triggerEvent('resize');
-          }
+          return setTimeout(function() {
+            if (this.updated.resizing === 'scheduled') {
+              return this.triggerEvent('resize');
+            }
+          }, 10);
         });
       }
       return this.solve(id + ' resized', function() {

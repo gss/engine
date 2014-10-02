@@ -1,5 +1,36 @@
 DEMOS = 
+  FACE_DETECTION_SECTION: """
+    <section class="demo">
 
+      <h1 class="title" id="title">We've already broken ground on more than 30 layout filters.</h1>
+      <h2 class="subtitle">Before we invest the hard work of making each bullet-proof, we need to know this is wanted & needed, become a founding member & help us help you!</h2>
+      <img class="image" src="image.png">
+
+    </section>
+
+    <style type="text/gss">
+      [md] == 72 !require;
+      [md-sub] == 8;
+      ::scope[width] == ::scope[intrinsic-width];
+
+
+      .demo {
+        @if ::scope[width] < 500 {
+          .title {
+            margin-top: == [md-sub];
+          }
+        } @else {
+          .title {
+            margin-top: == [md];
+            padding-top: == ([md-sub] * 6) - 8;
+          }
+        }
+
+      }
+
+    </style>
+
+  """
   SCOPING: """
     <div id="box1" class="box w-virtual" onclick="
       this.setAttribute('class', 
@@ -669,6 +700,48 @@ describe 'Full page tests', ->
                   container.innerHTML = ""
                   engine.then (solution) ->
                     done()
+
+        it 'face detection section', (done) ->
+          container = document.createElement('div')
+          container.id = 'face-demo'
+
+          window.$engine = engine = new GSS(container, index == 0)
+          $('#fixtures').appendChild container
+
+          container.innerHTML = DEMOS.FACE_DETECTION_SECTION
+          container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+  
+
+          engine.then (solution) ->
+            expect(solution).to.eql
+              '$title[margin-top]': 72
+              '$title[padding-top]': 40
+              '$face-demo[intrinsic-width]': 640
+              '$face-demo[width]': 640
+              'md': 72
+              'md-sub': 8
+            
+            debugger
+            container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0')
+            
+            engine.then (solution) ->
+              expect(solution).to.eql
+                '$title[margin-top]': 8
+                '$title[padding-top]': null
+                '$face-demo[intrinsic-width]': 400
+                '$face-demo[width]': 400
+
+
+              container.innerHTML = ""
+              
+              engine.then (solution) ->
+                expect(solution).to.eql
+                  '$title[margin-top]': null
+                  '$face-demo[intrinsic-width]': null
+                  '$face-demo[width]': null
+                  'md': null
+                  'md-sub': null
+                done()
 
         it 'profile card', (done) ->
           container = document.createElement('div')

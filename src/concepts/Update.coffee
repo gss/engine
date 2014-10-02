@@ -174,11 +174,17 @@ Update.prototype =
       else
         i++
 
+
     @problems[to].push.apply(@problems[to], domain.export())
     @problems[to].push.apply(@problems[to], probs)
     for prob in probs
       if prob.domain == domain
         prob.domain = other
+    if domain.nullified
+      solution = {}
+      for prop of domain.nullified
+        (solution ||= {})[prop] = null
+      @engine.updating.apply solution 
     @domains.splice(from, 1)
     @problems.splice(from, 1)
     for constraint in domain.constraints by -1
