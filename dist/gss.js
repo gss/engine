@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-10-02) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -26739,21 +26738,18 @@ Queries = (function() {
 
   Queries.prototype.addMatch = function(node, continuation) {
     var index;
-    if (!node.nodeType) {
+    if (node.nodeType !== 1) {
       return;
     }
-    this.engine.console.error(continuation);
     if ((index = continuation.indexOf(this.engine.DESCEND)) > -1) {
       continuation = continuation.substring(index + 1);
     }
-    this.engine.console.error(continuation, this.engine.getCanonicalSelector(continuation));
     continuation = this.engine.getCanonicalSelector(continuation);
     return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.engine.DESCEND));
   };
 
   Queries.prototype.removeMatch = function(node, continuation) {
     var index, matches, path;
-    console.info('remove', node, path, continuation);
     if (node.nodeType !== 1) {
       return;
     }
@@ -26824,7 +26820,6 @@ Queries = (function() {
   };
 
   Queries.prototype.unobserve = function(id, continuation, quick, path, contd, scope) {
-    debugger;
     var index, matched, parent, query, refs, subscope, watcher, watchers, _ref;
     if (continuation !== true) {
       refs = this.engine.getPossibleContinuations(continuation);
@@ -28257,7 +28252,6 @@ Stylesheets = (function() {
     }
     if (!meta.length) {
       delete watchers[index];
-      debugger;
       return this.update(operation, operation[1], '', stylesheet, this.getRule(operation));
     }
   };

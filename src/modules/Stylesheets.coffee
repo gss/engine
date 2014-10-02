@@ -117,7 +117,6 @@ class Stylesheets
 
     unless meta.length
       delete watchers[index]
-      debugger
       @update operation, operation[1], '', stylesheet, @getRule(operation)
 
   remove: (continuation, stylesheets) ->

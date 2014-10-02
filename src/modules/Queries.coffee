@@ -44,16 +44,13 @@ class Queries
 
 
   addMatch: (node, continuation) ->
-    return unless node.nodeType
-    @engine.console.error(continuation)
+    return unless node.nodeType == 1
     if (index = continuation.indexOf(@engine.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
-    @engine.console.error(continuation, @engine.getCanonicalSelector(continuation))
     continuation = @engine.getCanonicalSelector(continuation)
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
   
   removeMatch: (node, continuation) ->
-    console.info('remove', node, path, continuation)
     return unless node.nodeType == 1
     if matches = node.getAttribute('matches')
       if (index = continuation.indexOf(@engine.DESCEND)) > -1
@@ -114,7 +111,6 @@ class Queries
 
   # Remove observers from element
   unobserve: (id, continuation, quick, path, contd, scope) ->
-    debugger
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
