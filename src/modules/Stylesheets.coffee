@@ -78,7 +78,9 @@ class Stylesheets
       generated.style[property] = value
 
       next = undefined
-      for index in [needle + 1 ... watchers.length]
+      if needle == operation.sourceIndex
+        needle++
+      for index in [needle ... watchers.length]
         if ops = watchers[index]
           next = @getRule(watchers[ops[0]][0])
           if next != rule

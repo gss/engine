@@ -7,6 +7,8 @@
 # Uniquely structured cache key enables bottom-up evaluation 
 # and stateless continuations. 
 
+# Most of the nasty stuff is in this file, and waiting to move out
+
 class Conventions
 
 # ### Delimeters

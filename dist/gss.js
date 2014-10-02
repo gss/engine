@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-10-02) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -26269,7 +26270,7 @@ Expressions = (function() {
   };
 
   Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var contd, item, parent, pdef, solution, _i, _len, _ref, _ref1, _ref2;
+    var contd, item, parent, pdef, scoped, solution, _i, _len, _ref, _ref1;
     if (result != null) {
       if (parent = operation.parent) {
         pdef = parent.def;
@@ -26312,11 +26313,16 @@ Expressions = (function() {
           continuation = operation[3];
         }
         solution = ['value', result, continuation || '', operation.toString()];
-        if (operation.exported || (scope && scope !== this.engine.scope)) {
+        if (!(scoped = scope !== this.engine.scope && scope)) {
+          if (operation[0] === 'get' && operation[4]) {
+            scoped = this.engine.identity.solve(operation[4]);
+          }
+        }
+        if (operation.exported || scoped) {
           solution.push((_ref1 = operation.exported) != null ? _ref1 : null);
         }
-        if (scope && scope !== this.engine.scope) {
-          solution.push((_ref2 = scope && this.engine.identity.provide(scope)) != null ? _ref2 : null);
+        if (scoped) {
+          solution.push(this.engine.identity.provide(scoped));
         }
         solution.operation = operation;
         solution.parent = operation.parent;
@@ -28177,7 +28183,7 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
-    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref, _ref1;
+    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref;
     watchers = this.getWatchers(stylesheet);
     dump = this.getStylesheet(stylesheet);
     sheet = dump.sheet;
@@ -28206,7 +28212,10 @@ Stylesheets = (function() {
       generated = rules[previous.length];
       generated.style[property] = value;
       next = void 0;
-      for (index = _j = _ref = needle + 1, _ref1 = watchers.length; _ref <= _ref1 ? _j < _ref1 : _j > _ref1; index = _ref <= _ref1 ? ++_j : --_j) {
+      if (needle === operation.sourceIndex) {
+        needle++;
+      }
+      for (index = _j = needle, _ref = watchers.length; needle <= _ref ? _j < _ref : _j > _ref; index = needle <= _ref ? ++_j : --_j) {
         if (ops = watchers[index]) {
           next = this.getRule(watchers[ops[0]][0]);
           if (next !== rule) {

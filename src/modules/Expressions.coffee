@@ -197,10 +197,14 @@ class Expressions
           continuation = operation[3]
         solution = ['value', result, continuation || '', 
                     operation.toString()]
-        if operation.exported || (scope && scope != @engine.scope)
+        unless scoped = (scope != @engine.scope && scope)
+          if operation[0] == 'get' && operation[4]
+            scoped = @engine.identity.solve(operation[4])
+        if operation.exported || scoped
           solution.push(operation.exported ? null)
-        if scope && scope != @engine.scope
-          solution.push(scope && @engine.identity.provide(scope) ? null)
+        if scoped
+          solution.push(@engine.identity.provide(scoped))
+
         solution.operation = operation
         solution.parent    = operation.parent
         solution.domain    = operation.domain
