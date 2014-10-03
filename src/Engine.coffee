@@ -283,9 +283,13 @@ class Engine extends Domain.Events
         (@updating.problems.length != 1 || @updating.domains[0] != null) &&
         !@engine.restyled
       return 
-    @updated = @updating
-    @updating = undefined
-    
+
+    if !@updating.problems.length && @updated?.problems.length
+      @updating = undefined
+      return
+    else
+      @updated = @updating
+      @updating = undefined
 
     @console.info('Solution\t   ', @updated, solution, @solved.values)
 

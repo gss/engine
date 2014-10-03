@@ -186,8 +186,8 @@ class Expressions
           else if parent && (ascender? || 
               ((result.nodeType || operation.def.serialized) && 
               (!operation.def.hidden || parent.tail == parent)))
-            if operation.def.mark && continuation != @engine.PAIR
-              continuation = @engine.getContinuation(continuation, null, @engine[operation.def.mark])
+            #if operation.def.mark && continuation != @engine.PAIR
+            #  continuation = @engine.getContinuation(continuation, null, @engine[operation.def.mark])
             @solve parent, continuation, scope, meta, operation.index, result
             return
 

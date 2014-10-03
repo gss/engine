@@ -123,6 +123,8 @@ class Styles
   float:               ['none', 'left', 'right']
   clear:               ['none', 'left', 'right', 'both']
   overflow:            ['visible', 'hidden', 'scroll', 'auto']
+  'overflow-x':            ['visible', 'hidden', 'scroll', 'auto']
+  'overflow-y':            ['visible', 'hidden', 'scroll', 'auto']
   position:            ['static', 'relative', 'absolute', 'fixed', 'sticky']
   top:                 ['Length', 'Percentage', 'auto']
   left:                ['Length', 'Percentage', 'auto']
@@ -133,6 +135,11 @@ class Styles
   cursor:              ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize',
                        'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help']
   color:               ['color']
+
+  columns:             ['length']
+  'column-gap':        ['length']
+  'column-width':      ['length']
+  'column-count':      ['Integer']
 
 
 

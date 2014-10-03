@@ -62,6 +62,8 @@ class Domain
   solve: (args) ->
     return unless args
 
+    if @disconnected
+      @mutations?.disconnect()
 
     @setup()
 
@@ -87,6 +89,9 @@ class Domain
 
     if commands
       @engine.provide commands
+
+    if @disconnected
+      @mutations?.connect()
 
     return result
 

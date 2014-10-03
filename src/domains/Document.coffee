@@ -18,6 +18,7 @@ class Document extends Abstract
   Stylesheet: require('../modules/Stylesheets')
 
   helps: true
+  disconnected: true
 
   constructor: () ->
     @engine.positions   ||= new @Positions(@)
@@ -74,7 +75,9 @@ class Document extends Abstract
         html = @scope.body.parentNode
         klass = html.className
         if klass.indexOf('gss-ready') == -1
+          @mutations?.connect()
           html.className = (klass && klass + ' ' || '') + 'gss-ready' 
+          @mutations?.disconnect()
       # Unreference removed elements
       if @document.removed
         for id in @document.removed

@@ -20253,7 +20253,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(update, restyled) {
-    var effects, scope, solution, _ref, _ref1, _ref2, _ref3;
+    var effects, scope, solution, _ref, _ref1, _ref2, _ref3, _ref4;
     if (solution = update || this.updating.solution) {
       if ((_ref = this.applier) != null) {
         _ref.solve(solution);
@@ -20290,8 +20290,13 @@ Engine = (function(_super) {
     if ((!solution || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null) && !this.engine.restyled) {
       return;
     }
-    this.updated = this.updating;
-    this.updating = void 0;
+    if (!this.updating.problems.length && ((_ref4 = this.updated) != null ? _ref4.problems.length : void 0)) {
+      this.updating = void 0;
+      return;
+    } else {
+      this.updated = this.updating;
+      this.updating = void 0;
+    }
     this.console.info('Solution\t   ', this.updated, solution, this.solved.values);
     this.triggerEvent('solve', this.updated.solution, this.updated);
     if (this.scope) {
@@ -22657,9 +22662,14 @@ Domain = (function() {
   };
 
   Domain.prototype.solve = function(args) {
-    var commands, object, result, strategy;
+    var commands, object, result, strategy, _ref, _ref1;
     if (!args) {
       return;
+    }
+    if (this.disconnected) {
+      if ((_ref = this.mutations) != null) {
+        _ref.disconnect();
+      }
     }
     this.setup();
     if (typeof args === 'object' && !args.push) {
@@ -22687,6 +22697,11 @@ Domain = (function() {
     }
     if (commands) {
       this.engine.provide(commands);
+    }
+    if (this.disconnected) {
+      if ((_ref1 = this.mutations) != null) {
+        _ref1.connect();
+      }
     }
     return result;
   };
@@ -24935,10 +24950,10 @@ Update.prototype = {
                   if (solved.hasOwnProperty(property)) {
                     if (redefined.hasOwnProperty(property)) {
                       if (solved[property] !== value) {
-                        this.engine.console.error(property, 'is looping');
+                        this.engine.console.error(property, 'is looping', value, redefined[property], solved[property]);
                         delete result[property];
                       }
-                    } else if (solved[property] !== value) {
+                    } else if ((solved[property] != null) && solved[property] !== value) {
                       redefined[property] = value;
                     }
                   }
@@ -26002,6 +26017,8 @@ Document = (function(_super) {
 
   Document.prototype.helps = true;
 
+  Document.prototype.disconnected = true;
+
   function Document() {
     var _base, _base1, _base2, _base3, _base4, _base5, _base6;
     (_base = this.engine).positions || (_base.positions = new this.Positions(this));
@@ -26063,18 +26080,24 @@ Document = (function(_super) {
       });
     },
     solve: function() {
-      var html, id, klass, _i, _len, _ref;
+      var html, id, klass, _i, _len, _ref, _ref1, _ref2;
       if (this.scope.nodeType === 9) {
         html = this.scope.body.parentNode;
         klass = html.className;
         if (klass.indexOf('gss-ready') === -1) {
+          if ((_ref = this.mutations) != null) {
+            _ref.connect();
+          }
           html.className = (klass && klass + ' ' || '') + 'gss-ready';
+          if ((_ref1 = this.mutations) != null) {
+            _ref1.disconnect();
+          }
         }
       }
       if (this.document.removed) {
-        _ref = this.document.removed;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          id = _ref[_i];
+        _ref2 = this.document.removed;
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          id = _ref2[_i];
           this.identity.unset(id);
         }
         return this.document.removed = void 0;
@@ -26312,9 +26335,6 @@ Expressions = (function() {
               return this.engine.provide(result);
             }
           } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
-            if (operation.def.mark && continuation !== this.engine.PAIR) {
-              continuation = this.engine.getContinuation(continuation, null, this.engine[operation.def.mark]);
-            }
             this.solve(parent, continuation, scope, meta, operation.index, result);
             return;
           }
@@ -27234,6 +27254,9 @@ Queries = (function() {
     isCollection = this.engine.isCollection(result);
     if (old) {
       if (this.engine.isCollection(old)) {
+        if ((continuation != null ? continuation.charAt(0) : void 0) === this.engine.PAIR) {
+          old = this.filterByScope(old, scope, operation);
+        }
         removed = void 0;
         for (index = _i = 0, _len = old.length; _i < _len; index = ++_i) {
           child = old[index];
@@ -27496,6 +27519,7 @@ Mutations = (function() {
     if (!this.engine.engine.running) {
       return this.engine.engine.compile(true);
     }
+    console.log(mutations, 444);
     result = this.engine.engine.solve('mutations', function() {
       var mutation, _i, _len;
       this.engine.updating.reset();
@@ -28901,6 +28925,10 @@ Styles = (function() {
 
   Styles.prototype.overflow = ['visible', 'hidden', 'scroll', 'auto'];
 
+  Styles.prototype['overflow-x'] = ['visible', 'hidden', 'scroll', 'auto'];
+
+  Styles.prototype['overflow-y'] = ['visible', 'hidden', 'scroll', 'auto'];
+
   Styles.prototype.position = ['static', 'relative', 'absolute', 'fixed', 'sticky'];
 
   Styles.prototype.top = ['Length', 'Percentage', 'auto'];
@@ -28918,6 +28946,14 @@ Styles = (function() {
   Styles.prototype.cursor = ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize', 'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help'];
 
   Styles.prototype.color = ['color'];
+
+  Styles.prototype.columns = ['length'];
+
+  Styles.prototype['column-gap'] = ['length'];
+
+  Styles.prototype['column-width'] = ['length'];
+
+  Styles.prototype['column-count'] = ['Integer'];
 
   _ref = sides = ['top', 'right', 'bottom', 'left'];
   for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {

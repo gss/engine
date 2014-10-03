@@ -526,9 +526,9 @@ Update.prototype =
                   if solved.hasOwnProperty(property)
                     if redefined.hasOwnProperty(property)
                       if solved[property] != value
-                        @engine.console.error(property, 'is looping')
+                        @engine.console.error(property, 'is looping', value, redefined[property], solved[property])
                         delete result[property]
-                    else if solved[property] != value
+                    else if solved[property]? && solved[property] != value
                       redefined[property] = value
 
           @apply(result)

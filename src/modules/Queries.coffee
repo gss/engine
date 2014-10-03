@@ -49,7 +49,6 @@ class Queries
       continuation = continuation.substring(index + 1)
     continuation = @engine.getCanonicalSelector(continuation)
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.DESCEND))
-  
   removeMatch: (node, continuation) ->
     return unless node.nodeType == 1
     if matches = node.getAttribute('matches')
@@ -426,10 +425,11 @@ class Queries
 
     isCollection = @engine.isCollection(result)
 
-
     # Clean refs of nodes that dont match anymore
     if old
       if @engine.isCollection(old)
+        if continuation?.charAt(0) == @engine.PAIR
+          old = @filterByScope(old, scope, operation)
         removed = undefined
         for child, index in old
           if !old.scopes || old.scopes?[index] == scope
@@ -484,7 +484,6 @@ class Queries
       (@engine.updating.queries ||= {})[query] = result
 
     @snapshot path, old
-
 
     return if result == old
 

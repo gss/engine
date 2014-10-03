@@ -130,6 +130,7 @@ class Rules
         @queries[path] = condition
         if !d && (d = @pairs.dirty)
           @pairs.onBeforeSolve()
+
         if @updating
           collections = @updating.collections
           @updating.collections = {}
