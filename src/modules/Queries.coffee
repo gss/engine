@@ -109,14 +109,17 @@ class Queries
       return result
 
   # Remove observers from element
-  unobserve: (id, continuation, quick, path, contd, scope) ->
+  unobserve: (id, continuation, quick, path, contd, scope, top) ->
     if continuation != true
       refs = @engine.getPossibleContinuations(continuation)
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
       query = watchers[index + 1]
-      if refs && (refs.indexOf(query) == -1 || (scope && scope != watchers[index + 2]))
+      if refs && 
+          (refs.indexOf(query) == -1 || 
+          (scope && scope != watchers[index + 2]) ||
+          (top && @engine.pairs.getTopmostOperation(watcher) != top))
         index += 3
         continue
       if path
@@ -130,6 +133,7 @@ class Queries
         unless matched
           index += 3
           continue 
+
       subscope = watchers[index + 2]
       watchers.splice(index, 3)
       if !quick
@@ -188,7 +192,6 @@ class Queries
       refs = [undefined]
     else
       refs = @engine.getPossibleContinuations(contd)
-
 
     # Dont remove it if element matches more than one selector
     if (duplicates = collection.duplicates)
@@ -329,7 +332,6 @@ class Queries
       unless path.charAt(0) == @engine.PAIR
         contd = @engine.getContinuation(path)
         @engine.updating?.remove(contd)
-        
         @engine.provide(['remove', contd])
     return true
 

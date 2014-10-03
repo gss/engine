@@ -54,7 +54,7 @@ class Document extends Abstract
         @updating.resizing = 'computing'
         @once 'solve', ->
           setTimeout ->
-            if @updated.resizing == 'scheduled'
+            if @updated?.resizing == 'scheduled'
               @triggerEvent('resize')
           , 10
         

@@ -210,23 +210,25 @@ class Pairs
         cleaning = false
         break
     if cleaning
-      @clean(left, scope)
+      @clean(left, scope, operation)
 
     @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.provide(scope) + left + right)
 
-  clean: (left, scope) ->  
+  clean: (left, scope, operation) ->  
     if pairs = @paths?[left]
       rights = []
 
+      top = @getTopmostOperation(operation)
       for op, index in pairs by 3
-        if pairs[index + 2] == scope
+        if pairs[index + 2] == scope && @getTopmostOperation(pairs[index + 1]) == top
           rights.push(index)
 
       cleaning = rights.slice()
 
       # clean right part if nobody else is subscribed
+      top = @getTopmostOperation(operation)
       for prefix, others of @paths
-        for other, i in others
+        for other, i in others by 3
           for index, j in cleaning by -1
             if other == pairs[index] && (others != pairs || scope != others[i + 2])
               cleaning.splice(j, 1)
@@ -236,7 +238,7 @@ class Pairs
         delete @engine.queries[right]
       for index in rights by -1
         right = pairs[index]
-        @engine.queries.unobserve(scope._gss_id, @engine.PAIR, null, right.substring(1), undefined, scope)
+        @engine.queries.unobserve(scope._gss_id, @engine.PAIR, null, right.substring(1), undefined, scope, top)
         pairs.splice(index, 3)
       if !pairs.length
         delete @paths[left]
