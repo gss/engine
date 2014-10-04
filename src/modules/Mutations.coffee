@@ -26,7 +26,6 @@ class Mutations
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     return @engine.engine.compile(true) unless @engine.engine.running
-    console.log(mutations, 444)
     result = @engine.engine.solve 'mutations', ->
       @engine.updating.reset()
 

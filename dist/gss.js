@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-04) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-05) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -27543,7 +27543,6 @@ Mutations = (function() {
     if (!this.engine.engine.running) {
       return this.engine.engine.compile(true);
     }
-    console.log(mutations, 444);
     result = this.engine.engine.solve('mutations', function() {
       var mutation, _i, _len;
       this.engine.updating.reset();
