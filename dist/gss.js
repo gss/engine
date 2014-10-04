@@ -22670,7 +22670,7 @@ Domain = (function() {
   };
 
   Domain.prototype.solve = function(args) {
-    var commands, object, result, strategy, _ref, _ref1;
+    var commands, object, result, strategy, _ref, _ref1, _ref2;
     if (!args) {
       return;
     }
@@ -22697,6 +22697,11 @@ Domain = (function() {
       commands = this.validate.apply(this, arguments);
       this.restruct();
       if (commands === false) {
+        if (this.disconnected) {
+          if ((_ref1 = this.mutations) != null) {
+            _ref1.connect();
+          }
+        }
         return;
       }
     }
@@ -22707,8 +22712,8 @@ Domain = (function() {
       this.engine.provide(commands);
     }
     if (this.disconnected) {
-      if ((_ref1 = this.mutations) != null) {
-        _ref1.connect();
+      if ((_ref2 = this.mutations) != null) {
+        _ref2.connect();
       }
     }
     return result;
@@ -24921,7 +24926,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, index, preceeding, previous, property, redefined, result, solved, value, _i, _ref, _ref1;
+    var domain, index, preceeding, previous, property, redefined, result, solved, value, _i, _ref, _ref1, _ref2;
     if (solution) {
       this.apply(solution);
     }
@@ -24956,13 +24961,11 @@ Update.prototype = {
                 value = result[property];
                 if (solved = this.solutions[index]) {
                   if (solved.hasOwnProperty(property)) {
-                    if (redefined.hasOwnProperty(property)) {
-                      if (solved[property] !== value) {
-                        this.engine.console.error(property, 'is looping', value, redefined[property], solved[property]);
-                        delete result[property];
-                      }
-                    } else if ((solved[property] != null) && solved[property] !== value) {
-                      redefined[property] = value;
+                    if (((_ref2 = redefined[property]) != null ? _ref2.indexOf(solved[property]) : void 0) > -1) {
+                      this.engine.console.error(property, 'is looping', value, redefined[property], solved[property]);
+                      delete result[property];
+                    } else if (solved[property] != null) {
+                      (redefined[property] || (redefined[property] = [])).push(solved[property]);
                     }
                   }
                 }
@@ -26095,11 +26098,11 @@ Document = (function(_super) {
         klass = html.className;
         if (klass.indexOf('gss-ready') === -1) {
           if ((_ref = this.mutations) != null) {
-            _ref.connect();
+            _ref.disconnect();
           }
           html.className = (klass && klass + ' ' || '') + 'gss-ready';
           if ((_ref1 = this.mutations) != null) {
-            _ref1.disconnect();
+            _ref1.connect();
           }
         }
       }
@@ -26979,9 +26982,6 @@ Queries = (function() {
     } else {
       refs = this.engine.getPossibleContinuations(contd);
     }
-    if (continuation === '→::this"zone1"') {
-      debugger;
-    }
     if ((duplicates = collection.duplicates)) {
       for (index = _i = 0, _len = duplicates.length; _i < _len; index = ++_i) {
         dup = duplicates[index];
@@ -27143,9 +27143,6 @@ Queries = (function() {
         contd = this.engine.getContinuation(path);
         if ((_ref2 = this.engine.updating) != null) {
           _ref2.remove(contd);
-        }
-        if (contd.indexOf('ost$4↓::this .media$8→::this"zone1"$') > -1) {
-          debugger;
         }
         this.engine.provide(['remove', contd]);
       }
