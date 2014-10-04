@@ -20004,8 +20004,9 @@ Engine = (function(_super) {
     Boolean: require('./domains/Boolean')
   };
 
-  function Engine(scope, url) {
-    var argument, assumed, engine, id, index, _i, _len;
+  function Engine() {
+    debugger;
+    var argument, assumed, engine, id, index, scope, url, _i, _len;
     for (index = _i = 0, _len = arguments.length; _i < _len; index = ++_i) {
       argument = arguments[index];
       if (!argument) {
@@ -20015,9 +20016,10 @@ Engine = (function(_super) {
         case 'object':
           if (argument.nodeType) {
             if (this.Expressions) {
-              Engine[Engine.identity.provide(scope)] = this;
-              this.scope = scope;
+              Engine[Engine.identity.provide(argument)] = this;
+              this.scope = scope = argument;
             } else {
+              scope = argument;
               while (scope) {
                 if (id = Engine.identity.find(scope)) {
                   if (engine = Engine[id]) {
@@ -20040,7 +20042,7 @@ Engine = (function(_super) {
       }
     }
     if (!this.Expressions) {
-      return new Engine(scope, url);
+      return new Engine(arguments[0], arguments[1], arguments[2]);
     }
     Engine.__super__.constructor.call(this, this, url);
     this.domain = this;

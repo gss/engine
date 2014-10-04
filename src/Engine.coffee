@@ -35,16 +35,17 @@ class Engine extends Domain.Events
     Boolean:   require('./domains/Boolean')
 
 
-  constructor: (scope, url) ->
+  constructor: () -> #(scope, url, data)
     for argument, index in arguments
       continue unless argument
       switch typeof argument
         when 'object'
           if argument.nodeType
             if @Expressions
-              Engine[Engine.identity.provide(scope)] = @
-              @scope = scope
+              Engine[Engine.identity.provide(argument)] = @
+              @scope = scope = argument
             else
+              scope = argument
               while scope
                 if id = Engine.identity.find(scope)
                   if engine = Engine[id]
@@ -59,7 +60,7 @@ class Engine extends Domain.Events
     # **GSS()** creates new Engine at the root, 
     # if there is no engine assigned to it yet
     unless @Expressions
-      return new Engine(scope, url)
+      return new Engine(arguments[0], arguments[1], arguments[2])
 
     # Create instance own objects and context objects.
     # Context objects are contain non-callable 
