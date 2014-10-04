@@ -75,9 +75,9 @@ class Document extends Abstract
         html = @scope.body.parentNode
         klass = html.className
         if klass.indexOf('gss-ready') == -1
-          @mutations?.connect()
-          html.className = (klass && klass + ' ' || '') + 'gss-ready' 
           @mutations?.disconnect()
+          html.className = (klass && klass + ' ' || '') + 'gss-ready' 
+          @mutations?.connect()
       # Unreference removed elements
       if @document.removed
         for id in @document.removed

@@ -82,8 +82,11 @@ class Domain
     if @constrained || @unconstrained
       commands = @validate.apply(@, arguments)
       @restruct()
-      return if commands == false
-    
+
+      if commands == false
+        if @disconnected
+          @mutations?.connect()
+        return
     if result = @perform?()
       result = @apply(result)
 
