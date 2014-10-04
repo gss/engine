@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-10-04) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -25672,7 +25673,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, first, id, j, parent, path, prop, shared, stylesheet, _ref, _ref1;
+    var bits, camel, first, id, j, parent, path, position, prop, shared, stylesheet, _ref, _ref1;
     if (value == null) {
       value = '';
     }
@@ -25691,6 +25692,13 @@ Intrinsic = (function(_super) {
       value = prop.toString(value);
     }
     if (property === 'left' || property === 'top') {
+      position = element.style.position;
+      if (element.positioned === void 0) {
+        element.positioned = +(!!position);
+      }
+      if (position && position !== 'absolute') {
+        return;
+      }
       if (element.style[camel] === '') {
         if ((value != null) && value !== '') {
           element.positioned = (element.positioned || 0) + 1;
@@ -25825,7 +25833,11 @@ Intrinsic = (function(_super) {
           y += parent.offsetTop + parent.clientTop;
           offsetParent = parent;
         }
-        this.each(child, callback, x, y, offsetParent, a, r, g, s);
+        if (child.style.position === 'relative') {
+          this.each(child, callback, 0, 0, offsetParent, a, r, g, s);
+        } else {
+          this.each(child, callback, x, y, offsetParent, a, r, g, s);
+        }
         index++;
       }
       child = child.nextSibling;

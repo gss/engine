@@ -53,6 +53,11 @@ class Intrinsic extends Numeric
       value = prop.toString(value)
 
     if property == 'left' || property == 'top'
+      position = element.style.position
+      if element.positioned == undefined
+        element.positioned = + !!position
+      if position && position != 'absolute'
+        return
       if element.style[camel] == ''
         if value? && value != ''
           element.positioned = (element.positioned || 0) + 1
@@ -165,7 +170,11 @@ class Intrinsic extends Numeric
           x += parent.offsetLeft + parent.clientLeft
           y += parent.offsetTop + parent.clientTop
           offsetParent = parent
-        @each(child, callback, x, y, offsetParent, a,r,g,s)
+        if child.style.position == 'relative'
+          @each(child, callback, 0, 0, offsetParent, a,r,g,s)
+        else
+          @each(child, callback, x, y, offsetParent, a,r,g,s)
+        
         index++
 
       child = child.nextSibling
