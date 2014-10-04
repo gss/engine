@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-10-04) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20005,7 +20004,6 @@ Engine = (function(_super) {
   };
 
   function Engine() {
-    debugger;
     var argument, assumed, engine, id, index, scope, url, _i, _len;
     for (index = _i = 0, _len = arguments.length; _i < _len; index = ++_i) {
       argument = arguments[index];
