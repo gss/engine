@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-04) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -23321,7 +23321,7 @@ Domain = (function() {
   };
 
   Domain.prototype.validate = function() {
-    var arg, args, commands, constraint, equal, group, groups, i, index, ops, separated, shift, _i, _j, _k, _len, _len1, _len2;
+    var arg, args, commands, constraint, equal, err, group, groups, i, index, message, ops, separated, shift, _i, _j, _k, _len, _len1, _len2;
     if (this.constrained || this.unconstrained) {
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
@@ -23371,7 +23371,9 @@ Domain = (function() {
             }
           }
           if (equal) {
-            throw 'Trying to separate what was just added. Means loop. ';
+            message = 'Trying to separate what was just added. Means loop.';
+            err = new Error(message);
+            throw err;
           }
         }
         return this.orphanize(commands);

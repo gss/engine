@@ -554,7 +554,9 @@ class Domain
               equal = false
               break
           if equal
-            throw 'Trying to separate what was just added. Means loop. '
+            message = 'Trying to separate what was just added. Means loop.'
+            err = new Error message
+            throw err
         return  @orphanize commands
         
   apply: (solution) ->
