@@ -5,12 +5,12 @@ class Pairs
 
 
   onLeft: (operation, continuation, scope) ->
-    left = @engine.getCanonicalPath(continuation)
+    left = @engine.Continuation.getCanonicalPath(continuation)
     parent = @getTopmostOperation(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
-      contd = @engine.PAIR
-      return @engine.PAIR
+      contd = @engine.Continuation.PAIR
+      return @engine.Continuation.PAIR
     else
       (@dirty ||= {})[left] = true
       return false
@@ -24,7 +24,7 @@ class Pairs
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, continuation, scope, left, right) ->
-    right = @engine.getCanonicalPath(continuation.substring(0, continuation.length - 1))
+    right = @engine.Continuation.getCanonicalPath(continuation.substring(0, continuation.length - 1))
     parent = @getTopmostOperation(operation)
     for op, index in @lefts by 3
       if op == parent && @lefts[index + 2] == scope
@@ -32,7 +32,7 @@ class Pairs
         @watch(operation, continuation, scope, left, right)
     return unless left
 
-    left = @engine.getCanonicalPath(left)
+    left = @engine.Continuation.getCanonicalPath(left)
     pairs = @paths[left] ||= []
     if pairs.indexOf(right) == -1
       pushed = pairs.push(right, operation, scope)
@@ -46,19 +46,19 @@ class Pairs
     
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
-    last = continuation.lastIndexOf(@engine.PAIR)
+    last = continuation.lastIndexOf(@engine.Continuation.PAIR)
     if last > 0
       parent = operation
       while parent = parent.parent
         break if parent.def.noop
       # Found right side
-      first = continuation.indexOf(@engine.PAIR) 
+      first = continuation.indexOf(@engine.Continuation.PAIR) 
       if first == 0 && last == continuation.length - 1 && @onRight(operation, continuation, scope)?
         return false
       # Found left side, rewrite continuation
       else if operation.def.serialized
         prev = -1
-        while (index = continuation.indexOf(@engine.PAIR, prev + 1)) > -1
+        while (index = continuation.indexOf(@engine.Continuation.PAIR, prev + 1)) > -1
           if result = @getSolution(operation, continuation.substring(prev || 0, index), scope, true)
             return result
           prev = index 
@@ -67,8 +67,8 @@ class Pairs
     # Fetch saved result if operation path mathes continuation canonical path
     else
       return if continuation.length == 1
-      contd = @engine.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
-      if contd.charAt(0) == @engine.PAIR
+      contd = @engine.Continuation.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
+      if contd.charAt(0) == @engine.Continuation.PAIR
         contd = contd.substring(1)
       if operation.path.substring(0, 6) == '::this'
         if (i = contd.lastIndexOf('::this')) > -1
@@ -197,7 +197,7 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        @engine.document.solve operation.parent, contd + @engine.PAIR, scope, undefined, true
+        @engine.document.solve operation.parent, contd + @engine.Continuation.PAIR, scope, undefined, true
       
         
     for contd in cleaned
@@ -238,7 +238,7 @@ class Pairs
         delete @engine.queries[right]
       for index in rights by -1
         right = pairs[index]
-        @engine.queries.unobserve(scope._gss_id, @engine.PAIR, null, right.substring(1), undefined, scope, top)
+        @engine.queries.unobserve(scope._gss_id, @engine.Continuation.PAIR, null, right.substring(1), undefined, scope, top)
         pairs.splice(index, 3)
       if !pairs.length
         delete @paths[left]
@@ -254,8 +254,8 @@ class Pairs
   set: (path, result) ->
     if pairs = @paths?[path]
       (@dirty ||= {})[path] = true
-    else if path.charAt(0) == @engine.PAIR
-      path = @engine.getCanonicalPath(path)
+    else if path.charAt(0) == @engine.Continuation.PAIR
+      path = @engine.Continuation.getCanonicalPath(path)
       for left, watchers of @paths
         if watchers.indexOf(path) > -1
           (@dirty ||= {})[left] = true

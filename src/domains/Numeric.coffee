@@ -54,7 +54,7 @@ class Numeric::Methods extends Domain::Methods
         domain = @
       else if domain != @
         if domain.structured
-          clone = ['get', null, path, @getContinuation(continuation || "")]
+          clone = ['get', null, path, @Continuation(continuation || "")]
           if scope && scope != @scope
             clone.push(@identity.provide(scope))
           clone.parent = operation.parent
@@ -66,7 +66,7 @@ class Numeric::Methods extends Domain::Methods
         scoped = @engine.identity.solve(scoped)
       else
         scoped = scope
-      return domain.watch(null, path, operation, @getContinuation(continuation || contd || ""), scoped)
+      return domain.watch(null, path, operation, @Continuation(continuation || contd || ""), scoped)
 
 for property, value of Selectors::
   Numeric::Methods::[property] = value

@@ -6,7 +6,7 @@ class Operation
     else if @engine
       return new Operation(engine)
     @engine = engine
-    @CleanupSelectorRegExp = new RegExp(@engine.DESCEND + '::this', 'g')
+    @CleanupSelectorRegExp = new RegExp(@engine.Continuation.DESCEND + '::this', 'g')
 
   sanitize: (exps, soft, parent = exps.parent, index = exps.index) ->
     if exps[0] == 'value' && exps.operation
@@ -29,6 +29,17 @@ class Operation
         @orphanize arg
     operation
 
+
+  # Return element that is used as a context for given DOM operation
+  getContext: (operation, args, scope, node) ->
+    index = args[0].def && 4 || 0
+    if (args.length != index && (args[index]?.nodeType))
+      return args[index]
+    if !operation.bound
+      if (operation.def.serialized && operation[1].def && args[index]?)
+        return args[index]
+      return @engine.scope
+    return scope
 
   getDomain: (operation, domain) ->
     if typeof operation[0] == 'string'
@@ -98,7 +109,7 @@ class Operation
               for result, index in results
                 if result.substring(0, 11) != '[matches~="'
                   result = @getCustomSelector(result)
-                results[index] = result.substring(0, 11) + parent.uid + @engine.DESCEND + result.substring(11)
+                results[index] = result.substring(0, 11) + parent.uid + @engine.Continuation.DESCEND + result.substring(11)
         
         # Add rule selector to path
         else if parent.name == 'rule'
@@ -119,7 +130,7 @@ class Operation
             update = []
             for result in results
               if result.substring(0, 11) == '[matches~="'
-                update.push result.substring(0, 11) + selectors + @engine.DESCEND + result.substring(11)
+                update.push result.substring(0, 11) + selectors + @engine.Continuation.DESCEND + result.substring(11)
               else
                 for bit, index in bits
                   if groups[index] != bit && '::this' + groups[index] != paths[index] 
@@ -151,7 +162,7 @@ class Operation
       return results
 
   getCustomSelector: (selector) ->
-    return '[matches~="' + selector.replace(/\s+/, @engine.DESCEND) + '"]'
+    return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
 

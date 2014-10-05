@@ -35,6 +35,7 @@ class Variable
     unless domain
       if property && (index = property.indexOf('-')) > -1
         prefix = property.substring(0, index)
+        debugger
         if (domain = @engine[prefix])
           unless domain instanceof @engine.Domain
             domain = undefined

@@ -62,6 +62,7 @@ class Domain
 
   # Dont solve system with a single variable+constant constraint 
   bypass: (operation) ->
+    return
     primitive = continuation = fallback = undefined
     for arg in operation
       if arg?.push
@@ -79,7 +80,7 @@ class Domain
       value = primitive
 
     result = {}
-    continuation ||= fallback
+    continuation ?= fallback
     console.log('bypass', operation.variables[0])
     result[operation.variables[0]] = value
     (@bypassers[continuation] ||= []).push operation
@@ -596,7 +597,7 @@ class Domain
 
   remove: ->
     for path in arguments
-      for contd in @getPossibleContinuations(path)
+      for contd in @Continuation.getVariants(path)
         if observers = @observers[contd]
           while observers[0]
             @unwatch(observers[1], undefined, observers[0], contd, observers[2])

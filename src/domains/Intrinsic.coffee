@@ -70,7 +70,7 @@ class Intrinsic extends Numeric
         element.style.position = ''
 
     if continuation
-      bits = continuation.split(@DESCEND)
+      bits = continuation.split(@Continuation.DESCEND)
       first = bits.shift()
       if (j = first.lastIndexOf('$')) > -1
         id = first.substring(j)
@@ -81,7 +81,7 @@ class Intrinsic extends Numeric
               shared = false
               break
           if shared != false
-            if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
+            if @stylesheets.solve stylesheet, operation, @Continuation(continuation), element, property, value
               return
 
     path = @Variable.getPath(element, 'intrinsic-' + property)
@@ -220,6 +220,14 @@ class Intrinsic extends Numeric
 
     return
 
+  # Return name of intrinsic property used in property path 
+  getIntrinsicProperty: (path) ->
+    index = path.indexOf('intrinsic-')
+    if index > -1
+      if (last = path.indexOf(']', index)) == -1
+        last = undefined
+      return property = path.substring(index + 10, last)
+      
   @condition: ->
     @scope?
     

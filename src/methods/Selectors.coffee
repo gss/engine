@@ -82,7 +82,7 @@ class Selectors
       if shortcut.length > 2
         if operation.marked
           shortcut.marked = operation.marked
-          shortcut.parentath = shortcut.key = head.path
+          shortcut.path = shortcut.key = head.path
 
       return shortcut
 
@@ -146,7 +146,7 @@ class Selectors
     1: (value) ->
       return '"' + value + '"'
     command: (o,c,s,m, scope, value) ->
-      if c?.charAt(0) == @PAIR
+      if c?.charAt(0) == @Continuation.PAIR
         collection = [@identity.provide(scope) + '"' + value + '"']
         collection.isCollection = true
         collection

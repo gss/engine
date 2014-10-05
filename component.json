@@ -36,6 +36,7 @@
     "lib/concepts/Update.js",
     "lib/concepts/Identity.js",
     "lib/concepts/Evaluator.js",
+    "lib/concepts/Continuation.js",
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",

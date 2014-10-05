@@ -7,7 +7,7 @@
 # * Input: Engine, reads commands
 # * Output: Engine, outputs results, leaves out unrecognized commands as is
 
-class Evaluator
+class Expressions
   displayName: 'Expressions'
 
   constructor: (@engine) ->
@@ -74,7 +74,7 @@ class Evaluator
       (args ||= []).unshift scope
     # Operation has a context 
     else 
-      node = @engine.Operation.getContext(operation, args, scope, node)
+      node = @engine.getContext(args, operation, scope, node)
 
     # Use function, or look up method on the first argument. Falls back to builtin
     unless func = operation.func
@@ -230,4 +230,4 @@ class Evaluator
 
 
 @module ||= {}
-module.exports = Evaluator
+module.exports = Expressions
