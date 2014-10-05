@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-06) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22481,7 +22481,7 @@ Operation = (function() {
     return domain;
   };
 
-  Operation.prototype.getRoot = function(operation, domain) {
+  Operation.prototype.ascend = function(operation, domain) {
     var parent, _ref;
     if (domain == null) {
       domain = operation.domain;
@@ -22494,6 +22494,13 @@ Operation = (function() {
       parent = parent.parent;
     }
     return parent;
+  };
+
+  Operation.prototype.getRoot = function(operation) {
+    while (!operation.def.noop) {
+      operation = operation.parent;
+    }
+    return operation;
   };
 
   Operation.prototype.getPath = function(operation, continuation, scope) {
@@ -23434,7 +23441,7 @@ Domain = (function() {
             if (watcher.parent[watcher.index] !== watcher) {
               watcher.parent[watcher.index] = watcher;
             }
-            root = this.Operation.getRoot(watcher, domain);
+            root = this.Operation.ascend(watcher, domain);
             if (value !== void 0) {
               this.update([this.Operation.sanitize(root)]);
             }
@@ -23492,7 +23499,7 @@ Domain = (function() {
               domain.evaluator.ascend(op, void 0, value, void 0, void 0, op.index);
               op.domain = d;
             } else {
-              this.update(this.Operation.sanitize(this.Operation.getRoot(op)));
+              this.update(this.Operation.sanitize(this.Operation.ascend(op)));
             }
           }
         }
@@ -24924,7 +24931,7 @@ Update.prototype = {
     parent = operation.parent;
     if (domain = parent.domain) {
       if (((_ref = parent.parent) != null ? _ref.domain : void 0) === domain) {
-        root = solution.domain.Operation.getRoot(parent);
+        root = solution.domain.Operation.ascend(parent);
       } else {
         root = parent;
       }
@@ -27440,7 +27447,7 @@ Queries = (function() {
     }
     while (watcher = watchers[index]) {
       query = watchers[index + 1];
-      if (refs && (refs.indexOf(query) === -1 || (scope && scope !== watchers[index + 2]) || (top && this.engine.pairs.getTopmostOperation(watcher) !== top))) {
+      if (refs && (refs.indexOf(query) === -1 || (scope && scope !== watchers[index + 2]) || (top && this.engine.Operation.getRoot(watcher) !== top))) {
         index += 3;
         continue;
       }
@@ -27478,14 +27485,14 @@ Queries = (function() {
     length = collection.length;
     result = [];
     if (operation) {
-      operation = this.engine.pairs.getTopmostOperation(operation);
+      operation = this.engine.Operation.getRoot(operation);
     }
     _ref = collection.scopes;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       s = _ref[index];
       if (s === scope) {
         if (operation && collection.continuations) {
-          top = this.engine.pairs.getTopmostOperation(collection.continuations[index]);
+          top = this.engine.Operation.getRoot(collection.continuations[index]);
           if (top !== operation) {
             continue;
           }
@@ -28372,7 +28379,7 @@ Pairs = (function() {
   Pairs.prototype.onLeft = function(operation, continuation, scope) {
     var contd, left, parent;
     left = this.engine.Continuation.getCanonicalPath(continuation);
-    parent = this.getTopmostOperation(operation);
+    parent = this.engine.Operation.getRoot(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       this.lefts.push(parent, left, scope);
       contd = this.engine.Continuation.PAIR;
@@ -28383,17 +28390,10 @@ Pairs = (function() {
     }
   };
 
-  Pairs.prototype.getTopmostOperation = function(operation) {
-    while (!operation.def.noop) {
-      operation = operation.parent;
-    }
-    return operation;
-  };
-
   Pairs.prototype.onRight = function(operation, continuation, scope, left, right) {
     var index, op, pairs, parent, pushed, _base, _i, _len, _ref;
     right = this.engine.Continuation.getCanonicalPath(continuation.substring(0, continuation.length - 1));
-    parent = this.getTopmostOperation(operation);
+    parent = this.engine.Operation.getRoot(operation);
     _ref = this.lefts;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = _i += 3) {
       op = _ref[index];
@@ -28628,15 +28628,15 @@ Pairs = (function() {
     var cleaning, contd, i, index, j, op, other, others, pairs, prefix, right, rights, top, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1;
     if (pairs = (_ref = this.paths) != null ? _ref[left] : void 0) {
       rights = [];
-      top = this.getTopmostOperation(operation);
+      top = this.engine.Operation.getRoot(operation);
       for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
         op = pairs[index];
-        if (pairs[index + 2] === scope && this.getTopmostOperation(pairs[index + 1]) === top) {
+        if (pairs[index + 2] === scope && this.engine.Operation.getRoot(pairs[index + 1]) === top) {
           rights.push(index);
         }
       }
       cleaning = rights.slice();
-      top = this.getTopmostOperation(operation);
+      top = this.engine.Operation.getRoot(operation);
       _ref1 = this.paths;
       for (prefix in _ref1) {
         others = _ref1[prefix];

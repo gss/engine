@@ -1,3 +1,6 @@
+# Operation is a command represented with a plain array
+# Can be either variable, a list of tokens, or function call
+
 
 class Operation
   constructor: (engine) ->
@@ -51,7 +54,7 @@ class Operation
     return domain
 
   # get topmost meaniningful function call with matching domain
-  getRoot: (operation, domain = operation.domain) ->
+  ascend: (operation, domain = operation.domain) ->
     parent = operation
     while parent.parent &&  typeof parent.parent[0] == 'string' && 
           (!parent.parent.def || 
@@ -61,6 +64,12 @@ class Operation
     while parent.parent?.domain == parent.domain
       parent = parent.parent
     return parent
+
+
+  getRoot: (operation) ->
+    while !operation.def.noop
+      operation = operation.parent
+    return operation
 
   # Return path for given operation
   getPath: (operation, continuation, scope) ->

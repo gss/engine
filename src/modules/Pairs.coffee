@@ -6,7 +6,7 @@ class Pairs
 
   onLeft: (operation, continuation, scope) ->
     left = @engine.Continuation.getCanonicalPath(continuation)
-    parent = @getTopmostOperation(operation)
+    parent = @engine.Operation.getRoot(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       @lefts.push parent, left, scope
       contd = @engine.Continuation.PAIR
@@ -15,17 +15,12 @@ class Pairs
       (@dirty ||= {})[left] = true
       return false
 
-  getTopmostOperation: (operation) ->
-    while !operation.def.noop
-      operation = operation.parent
-    return operation
-
   # Check if operation is pairly bound with another selector
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, continuation, scope, left, right) ->
     right = @engine.Continuation.getCanonicalPath(continuation.substring(0, continuation.length - 1))
-    parent = @getTopmostOperation(operation)
+    parent = @engine.Operation.getRoot(operation)
     for op, index in @lefts by 3
       if op == parent && @lefts[index + 2] == scope
         left = @lefts[index + 1]
@@ -218,15 +213,15 @@ class Pairs
     if pairs = @paths?[left]
       rights = []
 
-      top = @getTopmostOperation(operation)
+      top = @engine.Operation.getRoot(operation)
       for op, index in pairs by 3
-        if pairs[index + 2] == scope && @getTopmostOperation(pairs[index + 1]) == top
+        if pairs[index + 2] == scope && @engine.Operation.getRoot(pairs[index + 1]) == top
           rights.push(index)
 
       cleaning = rights.slice()
 
       # clean right part if nobody else is subscribed
-      top = @getTopmostOperation(operation)
+      top = @engine.Operation.getRoot(operation)
       for prefix, others of @paths
         for other, i in others by 3
           for index, j in cleaning by -1

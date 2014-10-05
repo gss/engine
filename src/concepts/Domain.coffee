@@ -245,7 +245,7 @@ class Domain
             # Re-evaluate expression
             if watcher.parent[watcher.index] != watcher
               watcher.parent[watcher.index] = watcher
-            root = @Operation.getRoot(watcher, domain)
+            root = @Operation.ascend(watcher, domain)
             if value != undefined
               @update([@Operation.sanitize(root)])
           else
@@ -287,7 +287,7 @@ class Domain
               domain.evaluator.ascend op, undefined, value, undefined, undefined, op.index
               op.domain = d
             else
-              @update(@Operation.sanitize(@Operation.getRoot(op)))
+              @update(@Operation.sanitize(@Operation.ascend(op)))
 
     return
 

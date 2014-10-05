@@ -119,7 +119,7 @@ class Queries
       if refs && 
           (refs.indexOf(query) == -1 || 
           (scope && scope != watchers[index + 2]) ||
-          (top && @engine.pairs.getTopmostOperation(watcher) != top))
+          (top && @engine.Operation.getRoot(watcher) != top))
         index += 3
         continue
       if path
@@ -146,11 +146,11 @@ class Queries
     length = collection.length
     result = []
     if operation
-      operation = @engine.pairs.getTopmostOperation(operation)
+      operation = @engine.Operation.getRoot(operation)
     for s, index in collection.scopes
       if s == scope
         if operation && collection.continuations
-          top = @engine.pairs.getTopmostOperation(collection.continuations[index])
+          top = @engine.Operation.getRoot(collection.continuations[index])
           continue unless top == operation
         if index < length
           value = collection[index]

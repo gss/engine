@@ -123,7 +123,7 @@ Update.prototype =
     # Provide solution for constraint that was set before
     if domain = parent.domain
       if parent.parent?.domain == domain
-        root = solution.domain.Operation.getRoot(parent)
+        root = solution.domain.Operation.ascend(parent)
       else
         root = parent
       index = @domains.indexOf(domain, @index + 1)
