@@ -45,7 +45,9 @@ class Domain
     @variables   ||= {}
     @bypassers   ||= {}
     unless @hasOwnProperty('watchers')
-      @expressions = new @Expressions(@) 
+      @evaluator   = new @Evaluator(@) 
+      @Operation   = new @Operation.constructor(@) 
+      @Variable    = new @Variable.constructor(@) 
       @watchers    = {}
       @observers   = {}
       @paths       = {}
@@ -250,7 +252,7 @@ class Domain
             if watcher.parent.domain == domain
               domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
             else
-              @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
+              @evaluator.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
     
     return if domain.immutable
 
@@ -282,7 +284,7 @@ class Domain
             if frame
               d = op.domain
               op.domain = domain
-              domain.expressions.ascend op, undefined, value, undefined, undefined, op.index
+              domain.evaluator.ascend op, undefined, value, undefined, undefined, op.index
               op.domain = d
             else
               @update(@Operation.sanitize(@Operation.getRoot(op)))
@@ -662,7 +664,7 @@ class Domain
       EngineDomainWrapper       = engine.mixin(engine, domain)
       EngineDomain.prototype    = new EngineDomainWrapper
       EngineDomain::solve     ||= Domain::solve unless domain::solve
-      EngineDomain::strategy    = 'expressions'
+      EngineDomain::strategy    = 'evaluator'
       EngineDomain::displayName = name
       EngineDomain.displayName  = name
       unless engine.prototype
@@ -687,7 +689,7 @@ class Domain::Methods
         return variable
 
       if !continuation && contd
-        return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
+        return @evaluator.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value
 
   framed: (value) ->

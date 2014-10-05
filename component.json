@@ -26,6 +26,7 @@
     "lib/concepts/Wrapper.js",
     "lib/concepts/Operation.js",
     "lib/concepts/Variable.js",
+    "lib/concepts/Evaluation.js",
     "lib/concepts/Domain.js",
     "lib/concepts/Events.js",
     "lib/concepts/Method.js",
@@ -33,6 +34,8 @@
     "lib/concepts/Property.js",
     "lib/concepts/Style.js",
     "lib/concepts/Update.js",
+    "lib/concepts/Identity.js",
+    "lib/concepts/Evaluator.js",
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
@@ -43,8 +46,6 @@
     "lib/domains/Finite.js", 
     "lib/domains/Document.js",
 
-    "lib/modules/Expressions.js", 
-    "lib/modules/Identity.js", 
     "lib/modules/Positions.js", 
     "lib/modules/Queries.js", 
     "lib/modules/Mutations.js", 

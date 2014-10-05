@@ -13,9 +13,8 @@ Domain.Events ||= Native::mixin(Domain, Events)
 
 class Engine extends Domain.Events
 
-  Identity:    require('./modules/Identity')
-  Expressions: require('./modules/Expressions')
-
+  Identity:    require('./concepts/Identity')
+  Evaluator:   require('./concepts/Evaluator')
   Operation:   require('./concepts/Operation')
   Variable:    require('./concepts/Variable')
   Method:      require('./concepts/Method')
@@ -43,7 +42,7 @@ class Engine extends Domain.Events
       switch typeof argument
         when 'object'
           if argument.nodeType
-            if @Expressions
+            if @Evaluator
               Engine[Engine.identity.provide(argument)] = @
               @scope = scope = argument
             else
@@ -61,7 +60,7 @@ class Engine extends Domain.Events
 
     # **GSS()** creates new Engine at the root, 
     # if there is no engine assigned to it yet
-    unless @Expressions
+    unless @Evaluator
       return new Engine(arguments[0], arguments[1], arguments[2])
 
     # Create instance own objects and context objects.
@@ -73,7 +72,7 @@ class Engine extends Domain.Events
     @domain      = @
     @properties  = new @Properties(@)
     @methods     = new @Methods(@)
-    @expressions = new @Expressions(@)
+    @evaluator   = new @Evaluator(@)
 
     @Operation   = new @Operation(@)
     @Variable    = new @Variable(@)

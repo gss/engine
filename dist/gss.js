@@ -19978,9 +19978,9 @@ Domain.Events || (Domain.Events = Native.prototype.mixin(Domain, Events));
 Engine = (function(_super) {
   __extends(Engine, _super);
 
-  Engine.prototype.Identity = require('./modules/Identity');
+  Engine.prototype.Identity = require('./concepts/Identity');
 
-  Engine.prototype.Expressions = require('./modules/Expressions');
+  Engine.prototype.Evaluator = require('./concepts/Evaluator');
 
   Engine.prototype.Operation = require('./concepts/Operation');
 
@@ -20018,7 +20018,7 @@ Engine = (function(_super) {
       switch (typeof argument) {
         case 'object':
           if (argument.nodeType) {
-            if (this.Expressions) {
+            if (this.Evaluator) {
               Engine[Engine.identity.provide(argument)] = this;
               this.scope = scope = argument;
             } else {
@@ -20044,14 +20044,14 @@ Engine = (function(_super) {
           url = argument;
       }
     }
-    if (!this.Expressions) {
+    if (!this.Evaluator) {
       return new Engine(arguments[0], arguments[1], arguments[2]);
     }
     Engine.__super__.constructor.call(this, this, url);
     this.domain = this;
     this.properties = new this.Properties(this);
     this.methods = new this.Methods(this);
-    this.expressions = new this.Expressions(this);
+    this.evaluator = new this.Evaluator(this);
     this.Operation = new this.Operation(this);
     this.Variable = new this.Variable(this);
     this.precompile();
@@ -20921,7 +20921,7 @@ Rules = (function() {
     bound: 1,
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
       if (operation.index === 2 && !ascender && (ascending != null)) {
-        this.expressions.solve(operation, continuation, ascending, operation);
+        this.evaluator.solve(operation, continuation, ascending, operation);
         return false;
       }
     },
@@ -20944,7 +20944,7 @@ Rules = (function() {
   Rules.prototype["scoped"] = {
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
       if (operation.index === 2 && !ascender && (ascending != null)) {
-        this.expressions.solve(operation, continuation, ascending, operation);
+        this.evaluator.solve(operation, continuation, ascending, operation);
         return false;
       }
     }
@@ -21232,7 +21232,7 @@ Selectors = (function() {
       if (head.bound) {
         shortcut.bound = head.bound;
       }
-      this.expressions.analyze(shortcut);
+      this.Operation.analyze(shortcut);
       tail = operation.tail;
       if (!(global = tail.arity === 1 && tail.length === 2)) {
         shortcut.splice(1, 0, tail[1]);
@@ -21253,7 +21253,7 @@ Selectors = (function() {
       if (shortcut.length > 2) {
         if (operation.marked) {
           shortcut.marked = operation.marked;
-          shortcut.path = shortcut.key = head.path;
+          shortcut.parentath = shortcut.key = head.path;
         }
       }
       return shortcut;
@@ -22387,6 +22387,8 @@ Operation = (function() {
   function Operation(engine) {
     if (!engine) {
       return Array.prototype.slice.call(arguments);
+    } else if (this.engine) {
+      return new Operation(engine);
     }
     this.engine = engine;
     this.CleanupSelectorRegExp = new RegExp(this.engine.DESCEND + '::this', 'g');
@@ -22487,7 +22489,7 @@ Operation = (function() {
   Operation.prototype.getQueryPath = function(operation, continuation) {
     if (continuation) {
       if (continuation.nodeType) {
-        return this.identity.provide(continuation) + ' ' + operation.path;
+        return this.engine.identity.provide(continuation) + ' ' + operation.path;
       } else if (operation.marked && operation.arity === 2) {
         return continuation + operation.path;
       } else {
@@ -22585,6 +22587,164 @@ Operation = (function() {
     return '[matches~="' + selector.replace(/\s+/, this.engine.DESCEND) + '"]';
   };
 
+  Operation.prototype.analyze = function(operation, parent) {
+    var child, def, func, index, mark, otherdef, _i, _len, _ref;
+    if (typeof operation[0] === 'string') {
+      operation.name = operation[0];
+    }
+    def = this.engine.methods[operation.name];
+    if (parent) {
+      if (operation.parent == null) {
+        operation.parent = parent;
+      }
+      if (operation.index == null) {
+        operation.index = parent.indexOf(operation);
+      }
+      if (parent.bound || ((_ref = parent.def) != null ? _ref.bound : void 0) === operation.index) {
+        operation.bound = parent;
+      }
+    }
+    operation.arity = operation.length - 1;
+    if (def && def.lookup) {
+      if (operation.arity > 1) {
+        operation.arity--;
+        operation.skip = operation.length - operation.arity;
+      } else {
+        operation.skip = 1;
+      }
+      operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '');
+      otherdef = def;
+      switch (typeof def.lookup) {
+        case 'function':
+          def = def.lookup.call(this, operation);
+          break;
+        case 'string':
+          def = this.engine.methods[def.lookup + operation.name];
+          break;
+        default:
+          def = this.engine.methods[operation.name];
+      }
+    }
+    operation.def = def || (def = {
+      noop: true
+    });
+    operation.domain = this.engine;
+    if (typeof def.onAnalyze === "function") {
+      def.onAnalyze(operation);
+    }
+    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
+      child = operation[index];
+      if (child instanceof Array) {
+        this.analyze(child, operation);
+      }
+    }
+    if (parent) {
+      if (mark = operation.def.mark || operation.marked) {
+        if (parent && !parent.def.capture) {
+          parent.marked = mark;
+        }
+      }
+    }
+    if (def.noop) {
+      return;
+    }
+    if (def.serialized) {
+      operation.key = this.serialize(operation, otherdef, false);
+      operation.path = this.serialize(operation, otherdef);
+      if (def.group) {
+        operation.groupped = this.serialize(operation, otherdef, def.group);
+      }
+    }
+    if (def.init) {
+      this.engine[def.init](operation, false);
+    }
+    if (typeof def === 'function') {
+      func = def;
+      operation.offset = 1;
+    } else if (func = def[operation.arity]) {
+      operation.offset = 1;
+    } else {
+      func = def.command;
+    }
+    if (def.offset) {
+      if (operation.offset == null) {
+        operation.offset = def.offset;
+      }
+    }
+    if (typeof func === 'string') {
+      operation.method = func;
+    } else {
+      operation.func = func;
+    }
+    return operation;
+  };
+
+  Operation.prototype.serialize = function(operation, otherdef, group) {
+    var after, before, binary, def, following, groupper, index, next, op, prefix, separator, suffix, tail, _i, _j, _ref, _ref1;
+    def = operation.def;
+    prefix = def.prefix || (otherdef != null ? otherdef.prefix : void 0) || (operation.def.noop && operation.name) || '';
+    suffix = def.suffix || (otherdef != null ? otherdef.suffix : void 0) || '';
+    if (separator = operation.def.separator) {
+      if (group) {
+        for (index = _i = 1, _ref = operation.length; 1 <= _ref ? _i < _ref : _i > _ref; index = 1 <= _ref ? ++_i : --_i) {
+          if (op = operation[index]) {
+            if (op.path !== op.groupped) {
+              return;
+            }
+          }
+        }
+      }
+    }
+    after = before = '';
+    for (index = _j = 1, _ref1 = operation.length; 1 <= _ref1 ? _j < _ref1 : _j > _ref1; index = 1 <= _ref1 ? ++_j : --_j) {
+      if (op = operation[index]) {
+        if (typeof op !== 'object') {
+          if (operation.def.binary && after && !binary) {
+            after = op + after;
+            binary = true;
+          } else if (binary) {
+            if (operation.def.quote) {
+              after += '"' + op + '"';
+            }
+          } else {
+            after += op;
+          }
+        } else if (op.key && group !== false) {
+          if (group && (groupper = this.engine.methods[group])) {
+            if (op.def.group === group) {
+              following = index;
+              next = void 0;
+              while (next = operation[++following]) {
+                if (next.def && (next.def.group !== group || next.marked !== op.marked)) {
+                  group = false;
+                  break;
+                }
+              }
+              if (!next) {
+                if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
+                  operation.groupped = groupper.promise(op, operation);
+                  tail.head = operation;
+                  operation.tail = tail;
+                  before += (before && separator || '') + op.groupped || op.key;
+                } else {
+                  continue;
+                }
+              }
+            } else {
+              group = false;
+              continue;
+            }
+          } else if (separator) {
+            before += (before && separator || '') + op.path;
+          } else {
+            before += op.path;
+          }
+        }
+      }
+    }
+    return before + prefix + after + suffix;
+  };
+
   return Operation;
 
 })();
@@ -22602,6 +22762,8 @@ Variable = (function() {
       args = Array.prototype.slice.call(arguments);
       args.unshift('get');
       return args;
+    } else if (this.engine) {
+      return new Variable(engine);
     }
     this.engine = engine;
   }
@@ -22685,6 +22847,243 @@ Variable = (function() {
 module.exports = Variable;
 
 });
+require.register("gss/lib/concepts/Evaluation.js", function(exports, require, module){
+var Evaluator;
+
+Evaluator = (function() {
+  Evaluator.prototype.displayName = 'Expressions';
+
+  function Evaluator(engine) {
+    this.engine = engine;
+  }
+
+  Evaluator.prototype.solve = function(operation, continuation, scope, meta, ascender, ascending) {
+    var args, result, solve, solved, _ref, _ref1;
+    if (scope == null) {
+      scope = this.engine.scope;
+    }
+    if (!operation.def) {
+      this.engine.Operation.analyze(operation);
+    }
+    if (meta !== operation && (solve = (_ref = operation.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.solve : void 0 : void 0)) {
+      solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
+      if (solved === false) {
+        return;
+      }
+      if (typeof solved === 'string') {
+        continuation = solved;
+      }
+    }
+    if (operation.tail) {
+      operation = this.skip(operation, ascender, continuation);
+    }
+    if (continuation && operation.path && operation.def.serialized) {
+      result = this.engine.Operation.getSolution(operation, continuation, scope);
+      switch (typeof result) {
+        case 'string':
+          if (operation.def.virtual && result.charAt(0) !== this.engine.PAIR) {
+            return result;
+          } else {
+            continuation = result;
+            result = void 0;
+          }
+          break;
+        case 'object':
+          return result;
+        case 'boolean':
+          return;
+      }
+    }
+    if (result === void 0) {
+      args = this.descend(operation, continuation, scope, meta, ascender, ascending);
+      if (args === false) {
+        return;
+      }
+      if (operation.name && !operation.def.hidden) {
+        this.engine.console.row(operation, args, continuation || "");
+      }
+      if (operation.def.noop) {
+        result = args;
+      } else {
+        result = this.execute(operation, continuation, scope, args);
+        continuation = this.engine.Operation.getPath(operation, continuation, scope);
+      }
+    }
+    return this.ascend(operation, continuation, result, scope, meta, ascender);
+  };
+
+  Evaluator.prototype.execute = function(operation, continuation, scope, args) {
+    var command, context, func, method, node, onAfter, onBefore, result;
+    scope || (scope = this.engine.scope);
+    if (!args) {
+      node = scope;
+      (args || (args = [])).unshift(scope);
+    } else {
+      node = this.engine.getContext(args, operation, scope, node);
+    }
+    if (!(func = operation.func)) {
+      if (method = operation.method) {
+        if (node && (func = node[method])) {
+          if (args[0] === node) {
+            args.shift();
+          }
+          context = node;
+        }
+        if (!func) {
+          if (!context && (func = scope[method])) {
+            context = scope;
+          } else if (command = this.engine.methods[method]) {
+            func = this.engine[command.displayName];
+            if (operation.def.scoped && operation.bound) {
+              args.unshift(scope);
+            }
+          }
+        }
+      }
+    }
+    if (!func) {
+      throw new Error("Couldn't find method: " + operation.method);
+    }
+    if (onBefore = operation.def.before) {
+      result = this.engine[onBefore](context || node || scope, args, operation, continuation, scope);
+    }
+    if (result === void 0) {
+      result = func.apply(context || this.engine, args);
+    }
+    if (onAfter = operation.def.after) {
+      result = this.engine[onAfter](context || node || scope, args, result, operation, continuation, scope);
+    }
+    return result;
+  };
+
+  Evaluator.prototype.descend = function(operation, continuation, scope, meta, ascender, ascending) {
+    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
+    args = prev = void 0;
+    skip = operation.skip;
+    shift = 0;
+    offset = operation.offset || 0;
+    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
+      argument = operation[index];
+      if (offset > index) {
+        continue;
+      }
+      if (!offset && index === 0 && !operation.def.noop) {
+        args = [operation, continuation || operation.path, scope, meta];
+        shift += 3;
+        continue;
+      } else if (ascender === index) {
+        argument = ascending;
+      } else if (skip === index) {
+        shift--;
+        continue;
+      } else if (argument instanceof Array) {
+        if (ascender != null) {
+          contd = this.engine.getDescendingContinuation(operation, continuation, ascender);
+        } else {
+          contd = continuation;
+        }
+        argument = this.solve(argument, contd, scope, meta, void 0, prev);
+      }
+      if (argument === void 0) {
+        if ((!this.engine.eager && !operation.def.eager) || (ascender != null)) {
+          if (operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
+            stopping = true;
+          } else if (!operation.def.noop || operation.name) {
+            return false;
+          }
+        }
+        offset += 1;
+        continue;
+      }
+      (args || (args = []))[index - offset + shift] = prev = argument;
+    }
+    return args;
+  };
+
+  Evaluator.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
+    var contd, item, parent, pdef, scoped, solution, _i, _len, _ref, _ref1;
+    if (result != null) {
+      if (parent = operation.parent) {
+        pdef = parent.def;
+      }
+      if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document || parent.domain === this.engine)) {
+        if (parent && this.engine.isCollection(result)) {
+          this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation);
+          for (_i = 0, _len = result.length; _i < _len; _i++) {
+            item = result[_i];
+            contd = this.engine.getAscendingContinuation(continuation, item);
+            this.ascend(operation, contd, item, scope, meta, operation.index);
+          }
+          this.engine.console.groupEnd();
+          return;
+        } else {
+          if (pdef != null ? (_ref = pdef.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta, ascender) : void 0 : void 0) {
+            return;
+          }
+          if (operation.def.noop && operation.name && result.length === 1) {
+            return;
+          }
+          if (!parent.name) {
+            if (result && (!parent || ((!pdef || pdef.noop) && (!parent.parent || parent.length === 1) || (ascender != null)))) {
+              if (result.length === 1) {
+                result = result[0];
+              }
+              return this.engine.provide(result);
+            }
+          } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
+            this.solve(parent, continuation, scope, meta, operation.index, result);
+            return;
+          }
+          return result;
+        }
+      } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
+        if (!continuation && operation[0] === 'get') {
+          continuation = operation[3];
+        }
+        solution = ['value', result, continuation || '', operation.toString()];
+        if (!(scoped = scope !== this.engine.scope && scope)) {
+          if (operation[0] === 'get' && operation[4]) {
+            scoped = this.engine.identity.solve(operation[4]);
+          }
+        }
+        if (operation.exported || scoped) {
+          solution.push((_ref1 = operation.exported) != null ? _ref1 : null);
+        }
+        if (scoped) {
+          solution.push(this.engine.identity.provide(scoped));
+        }
+        solution.operation = operation;
+        solution.parent = operation.parent;
+        solution.domain = operation.domain;
+        solution.index = operation.index;
+        parent[operation.index] = solution;
+        this.engine.engine.provide(solution);
+        return;
+      } else {
+        return this.engine.provide(result);
+      }
+    }
+    return result;
+  };
+
+  Evaluator.prototype.skip = function(operation, ascender, continuation) {
+    var _base;
+    if (operation.tail.path === operation.tail.key || (ascender != null) || (continuation && continuation.lastIndexOf(this.engine.PAIR) !== continuation.indexOf(this.engine.PAIR))) {
+      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.methods[operation.def.group].perform.call(this.engine, operation));
+    } else {
+      return operation.tail[1];
+    }
+  };
+
+  return Evaluator;
+
+})();
+
+this.module || (this.module = {});
+
+module.exports = Expressions;
+
+});
 require.register("gss/lib/concepts/Domain.js", function(exports, require, module){
 /* Domain: Observed values
 Acts as input values for equations.
@@ -22753,7 +23152,9 @@ Domain = (function() {
     this.variables || (this.variables = {});
     this.bypassers || (this.bypassers = {});
     if (!this.hasOwnProperty('watchers')) {
-      this.expressions = new this.Expressions(this);
+      this.evaluator = new this.Evaluator(this);
+      this.Operation = new this.Operation.constructor(this);
+      this.Variable = new this.Variable.constructor(this);
       this.watchers = {};
       this.observers = {};
       this.paths = {};
@@ -23011,7 +23412,7 @@ Domain = (function() {
             if (watcher.parent.domain === domain) {
               domain.solve(watcher.parent, watchers[index + 1], watchers[index + 2] || void 0, meta || void 0, watcher.index || void 0, value);
             } else {
-              this.expressions.ascend(watcher, watchers[index + 1], value, watchers[index + 2], meta);
+              this.evaluator.ascend(watcher, watchers[index + 1], value, watchers[index + 2], meta);
             }
           }
         }
@@ -23058,7 +23459,7 @@ Domain = (function() {
             if (frame) {
               d = op.domain;
               op.domain = domain;
-              domain.expressions.ascend(op, void 0, value, void 0, void 0, op.index);
+              domain.evaluator.ascend(op, void 0, value, void 0, void 0, op.index);
               op.domain = d;
             } else {
               this.update(this.Operation.sanitize(this.Operation.getRoot(op)));
@@ -23619,7 +24020,7 @@ Domain = (function() {
       if (!domain.prototype.solve) {
         (_base = EngineDomain.prototype).solve || (_base.solve = Domain.prototype.solve);
       }
-      EngineDomain.prototype.strategy = 'expressions';
+      EngineDomain.prototype.strategy = 'evaluator';
       EngineDomain.prototype.displayName = name;
       EngineDomain.displayName = name;
       if (!engine.prototype) {
@@ -23654,7 +24055,7 @@ Domain.prototype.Methods = (function() {
         return variable;
       }
       if (!continuation && contd) {
-        return this.expressions.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
+        return this.evaluator.solve(operation.parent, contd, this.identity.solve(scoped), meta, operation.index, value);
       }
       return value;
     }
@@ -25157,6 +25558,297 @@ Update.prototype = {
 module.exports = Update;
 
 });
+require.register("gss/lib/concepts/Identity.js", function(exports, require, module){
+var Identity;
+
+Identity = (function() {
+  function Identity() {}
+
+  Identity.uid = 0;
+
+  Identity.prototype.provide = function(object, generate) {
+    var id;
+    if (typeof object === 'string') {
+      if (object.charAt(0) !== '$') {
+        return '$' + object;
+      } else {
+        return object;
+      }
+    }
+    if (!(id = object._gss_id)) {
+      if (object === document) {
+        id = "::document";
+      } else if (object === window) {
+        id = "::window";
+      }
+      if (generate !== false) {
+        object._gss_id = id || (id = "$" + (object.id || ++Identity.uid));
+        this[id] = object;
+      }
+    }
+    return id;
+  };
+
+  Identity.prototype.get = function(id) {
+    return this[id];
+  };
+
+  Identity.prototype.solve = function(id) {
+    return this[id];
+  };
+
+  Identity.prototype.unset = function(object) {
+    return delete this[object._gss_id];
+  };
+
+  Identity.prototype.find = function(object) {
+    return this.provide(object, false);
+  };
+
+  return Identity;
+
+})();
+
+module.exports = Identity;
+
+});
+require.register("gss/lib/concepts/Evaluator.js", function(exports, require, module){
+var Evaluator;
+
+Evaluator = (function() {
+  Evaluator.prototype.displayName = 'Expressions';
+
+  function Evaluator(engine) {
+    this.engine = engine;
+  }
+
+  Evaluator.prototype.solve = function(operation, continuation, scope, meta, ascender, ascending) {
+    var args, result, solve, solved, _ref, _ref1;
+    if (scope == null) {
+      scope = this.engine.scope;
+    }
+    if (!operation.def) {
+      this.engine.Operation.analyze(operation);
+    }
+    if (meta !== operation && (solve = (_ref = operation.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.solve : void 0 : void 0)) {
+      solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
+      if (solved === false) {
+        return;
+      }
+      if (typeof solved === 'string') {
+        continuation = solved;
+      }
+    }
+    if (operation.tail) {
+      operation = this.skip(operation, ascender, continuation);
+    }
+    if (continuation && operation.path && operation.def.serialized) {
+      result = this.engine.Operation.getSolution(operation, continuation, scope);
+      switch (typeof result) {
+        case 'string':
+          if (operation.def.virtual && result.charAt(0) !== this.engine.PAIR) {
+            return result;
+          } else {
+            continuation = result;
+            result = void 0;
+          }
+          break;
+        case 'object':
+          return result;
+        case 'boolean':
+          return;
+      }
+    }
+    if (result === void 0) {
+      args = this.descend(operation, continuation, scope, meta, ascender, ascending);
+      if (args === false) {
+        return;
+      }
+      if (operation.name && !operation.def.hidden) {
+        this.engine.console.row(operation, args, continuation || "");
+      }
+      if (operation.def.noop) {
+        result = args;
+      } else {
+        result = this.execute(operation, continuation, scope, args);
+        continuation = this.engine.Operation.getPath(operation, continuation, scope);
+      }
+    }
+    return this.ascend(operation, continuation, result, scope, meta, ascender);
+  };
+
+  Evaluator.prototype.execute = function(operation, continuation, scope, args) {
+    var command, context, func, method, node, onAfter, onBefore, result;
+    scope || (scope = this.engine.scope);
+    if (!args) {
+      node = scope;
+      (args || (args = [])).unshift(scope);
+    } else {
+      node = this.engine.getContext(args, operation, scope, node);
+    }
+    if (!(func = operation.func)) {
+      if (method = operation.method) {
+        if (node && (func = node[method])) {
+          if (args[0] === node) {
+            args.shift();
+          }
+          context = node;
+        }
+        if (!func) {
+          if (!context && (func = scope[method])) {
+            context = scope;
+          } else if (command = this.engine.methods[method]) {
+            func = this.engine[command.displayName];
+            if (operation.def.scoped && operation.bound) {
+              args.unshift(scope);
+            }
+          }
+        }
+      }
+    }
+    if (!func) {
+      throw new Error("Couldn't find method: " + operation.method);
+    }
+    if (onBefore = operation.def.before) {
+      result = this.engine[onBefore](context || node || scope, args, operation, continuation, scope);
+    }
+    if (result === void 0) {
+      result = func.apply(context || this.engine, args);
+    }
+    if (onAfter = operation.def.after) {
+      result = this.engine[onAfter](context || node || scope, args, result, operation, continuation, scope);
+    }
+    return result;
+  };
+
+  Evaluator.prototype.descend = function(operation, continuation, scope, meta, ascender, ascending) {
+    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
+    args = prev = void 0;
+    skip = operation.skip;
+    shift = 0;
+    offset = operation.offset || 0;
+    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
+      argument = operation[index];
+      if (offset > index) {
+        continue;
+      }
+      if (!offset && index === 0 && !operation.def.noop) {
+        args = [operation, continuation || operation.path, scope, meta];
+        shift += 3;
+        continue;
+      } else if (ascender === index) {
+        argument = ascending;
+      } else if (skip === index) {
+        shift--;
+        continue;
+      } else if (argument instanceof Array) {
+        if (ascender != null) {
+          contd = this.engine.getDescendingContinuation(operation, continuation, ascender);
+        } else {
+          contd = continuation;
+        }
+        argument = this.solve(argument, contd, scope, meta, void 0, prev);
+      }
+      if (argument === void 0) {
+        if ((!this.engine.eager && !operation.def.eager) || (ascender != null)) {
+          if (operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
+            stopping = true;
+          } else if (!operation.def.noop || operation.name) {
+            return false;
+          }
+        }
+        offset += 1;
+        continue;
+      }
+      (args || (args = []))[index - offset + shift] = prev = argument;
+    }
+    return args;
+  };
+
+  Evaluator.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
+    var contd, item, parent, pdef, scoped, solution, _i, _len, _ref, _ref1;
+    if (result != null) {
+      if (parent = operation.parent) {
+        pdef = parent.def;
+      }
+      if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document || parent.domain === this.engine)) {
+        if (parent && this.engine.isCollection(result)) {
+          this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation);
+          for (_i = 0, _len = result.length; _i < _len; _i++) {
+            item = result[_i];
+            contd = this.engine.getAscendingContinuation(continuation, item);
+            this.ascend(operation, contd, item, scope, meta, operation.index);
+          }
+          this.engine.console.groupEnd();
+          return;
+        } else {
+          if (pdef != null ? (_ref = pdef.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta, ascender) : void 0 : void 0) {
+            return;
+          }
+          if (operation.def.noop && operation.name && result.length === 1) {
+            return;
+          }
+          if (!parent.name) {
+            if (result && (!parent || ((!pdef || pdef.noop) && (!parent.parent || parent.length === 1) || (ascender != null)))) {
+              if (result.length === 1) {
+                result = result[0];
+              }
+              return this.engine.provide(result);
+            }
+          } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
+            this.solve(parent, continuation, scope, meta, operation.index, result);
+            return;
+          }
+          return result;
+        }
+      } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
+        if (!continuation && operation[0] === 'get') {
+          continuation = operation[3];
+        }
+        solution = ['value', result, continuation || '', operation.toString()];
+        if (!(scoped = scope !== this.engine.scope && scope)) {
+          if (operation[0] === 'get' && operation[4]) {
+            scoped = this.engine.identity.solve(operation[4]);
+          }
+        }
+        if (operation.exported || scoped) {
+          solution.push((_ref1 = operation.exported) != null ? _ref1 : null);
+        }
+        if (scoped) {
+          solution.push(this.engine.identity.provide(scoped));
+        }
+        solution.operation = operation;
+        solution.parent = operation.parent;
+        solution.domain = operation.domain;
+        solution.index = operation.index;
+        parent[operation.index] = solution;
+        this.engine.engine.provide(solution);
+        return;
+      } else {
+        return this.engine.provide(result);
+      }
+    }
+    return result;
+  };
+
+  Evaluator.prototype.skip = function(operation, ascender, continuation) {
+    var _base;
+    if (operation.tail.path === operation.tail.key || (ascender != null) || (continuation && continuation.lastIndexOf(this.engine.PAIR) !== continuation.indexOf(this.engine.PAIR))) {
+      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.methods[operation.def.group].perform.call(this.engine, operation));
+    } else {
+      return operation.tail[1];
+    }
+  };
+
+  return Evaluator;
+
+})();
+
+this.module || (this.module = {});
+
+module.exports = Evaluator;
+
+});
 require.register("gss/lib/domains/Numeric.js", function(exports, require, module){
 /* Domain: Solved values
 
@@ -26293,455 +26985,6 @@ Document = (function(_super) {
 module.exports = Document;
 
 });
-require.register("gss/lib/modules/Expressions.js", function(exports, require, module){
-var Expressions;
-
-Expressions = (function() {
-  Expressions.prototype.displayName = 'Expressions';
-
-  function Expressions(engine) {
-    this.engine = engine;
-  }
-
-  Expressions.prototype.solve = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, result, solve, solved, _ref, _ref1;
-    if (scope == null) {
-      scope = this.engine.scope;
-    }
-    if (!operation.def) {
-      this.analyze(operation);
-    }
-    if (meta !== operation && (solve = (_ref = operation.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.solve : void 0 : void 0)) {
-      solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
-      if (solved === false) {
-        return;
-      }
-      if (typeof solved === 'string') {
-        continuation = solved;
-      }
-    }
-    if (operation.tail) {
-      operation = this.skip(operation, ascender, continuation);
-    }
-    if (continuation && operation.path && operation.def.serialized) {
-      result = this.engine.Operation.getSolution(operation, continuation, scope);
-      switch (typeof result) {
-        case 'string':
-          if (operation.def.virtual && result.charAt(0) !== this.engine.PAIR) {
-            return result;
-          } else {
-            continuation = result;
-            result = void 0;
-          }
-          break;
-        case 'object':
-          return result;
-        case 'boolean':
-          return;
-      }
-    }
-    if (result === void 0) {
-      args = this.descend(operation, continuation, scope, meta, ascender, ascending);
-      if (args === false) {
-        return;
-      }
-      if (operation.name && !operation.def.hidden) {
-        this.engine.console.row(operation, args, continuation || "");
-      }
-      if (operation.def.noop) {
-        result = args;
-      } else {
-        result = this.execute(operation, continuation, scope, args);
-        continuation = this.engine.Operation.getPath(operation, continuation, scope);
-      }
-    }
-    return this.ascend(operation, continuation, result, scope, meta, ascender);
-  };
-
-  Expressions.prototype.execute = function(operation, continuation, scope, args) {
-    var command, context, func, method, node, onAfter, onBefore, result;
-    scope || (scope = this.engine.scope);
-    if (!args) {
-      node = scope;
-      (args || (args = [])).unshift(scope);
-    } else {
-      node = this.engine.getContext(args, operation, scope, node);
-    }
-    if (!(func = operation.func)) {
-      if (method = operation.method) {
-        if (node && (func = node[method])) {
-          if (args[0] === node) {
-            args.shift();
-          }
-          context = node;
-        }
-        if (!func) {
-          if (!context && (func = scope[method])) {
-            context = scope;
-          } else if (command = this.engine.methods[method]) {
-            func = this.engine[command.displayName];
-            if (operation.def.scoped && operation.bound) {
-              args.unshift(scope);
-            }
-          }
-        }
-      }
-    }
-    if (!func) {
-      throw new Error("Couldn't find method: " + operation.method);
-    }
-    if (onBefore = operation.def.before) {
-      result = this.engine[onBefore](context || node || scope, args, operation, continuation, scope);
-    }
-    if (result === void 0) {
-      result = func.apply(context || this.engine, args);
-    }
-    if (onAfter = operation.def.after) {
-      result = this.engine[onAfter](context || node || scope, args, result, operation, continuation, scope);
-    }
-    return result;
-  };
-
-  Expressions.prototype.descend = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
-    args = prev = void 0;
-    skip = operation.skip;
-    shift = 0;
-    offset = operation.offset || 0;
-    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
-      argument = operation[index];
-      if (offset > index) {
-        continue;
-      }
-      if (!offset && index === 0 && !operation.def.noop) {
-        args = [operation, continuation || operation.path, scope, meta];
-        shift += 3;
-        continue;
-      } else if (ascender === index) {
-        argument = ascending;
-      } else if (skip === index) {
-        shift--;
-        continue;
-      } else if (argument instanceof Array) {
-        if (ascender != null) {
-          contd = this.engine.getDescendingContinuation(operation, continuation, ascender);
-        } else {
-          contd = continuation;
-        }
-        argument = this.solve(argument, contd, scope, meta, void 0, prev);
-      }
-      if (argument === void 0) {
-        if ((!this.engine.eager && !operation.def.eager) || (ascender != null)) {
-          if (operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
-            stopping = true;
-          } else if (!operation.def.noop || operation.name) {
-            return false;
-          }
-        }
-        offset += 1;
-        continue;
-      }
-      (args || (args = []))[index - offset + shift] = prev = argument;
-    }
-    return args;
-  };
-
-  Expressions.prototype.ascend = function(operation, continuation, result, scope, meta, ascender) {
-    var contd, item, parent, pdef, scoped, solution, _i, _len, _ref, _ref1;
-    if (result != null) {
-      if (parent = operation.parent) {
-        pdef = parent.def;
-      }
-      if (parent && (pdef || operation.def.noop) && (parent.domain === operation.domain || parent.domain === this.engine.document || parent.domain === this.engine)) {
-        if (parent && this.engine.isCollection(result)) {
-          this.engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', this.engine.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation);
-          for (_i = 0, _len = result.length; _i < _len; _i++) {
-            item = result[_i];
-            contd = this.engine.getAscendingContinuation(continuation, item);
-            this.ascend(operation, contd, item, scope, meta, operation.index);
-          }
-          this.engine.console.groupEnd();
-          return;
-        } else {
-          if (pdef != null ? (_ref = pdef.capture) != null ? _ref.call(this.engine, result, operation, continuation, scope, meta, ascender) : void 0 : void 0) {
-            return;
-          }
-          if (operation.def.noop && operation.name && result.length === 1) {
-            return;
-          }
-          if (!parent.name) {
-            if (result && (!parent || ((!pdef || pdef.noop) && (!parent.parent || parent.length === 1) || (ascender != null)))) {
-              if (result.length === 1) {
-                result = result[0];
-              }
-              return this.engine.provide(result);
-            }
-          } else if (parent && ((ascender != null) || ((result.nodeType || operation.def.serialized) && (!operation.def.hidden || parent.tail === parent)))) {
-            this.solve(parent, continuation, scope, meta, operation.index, result);
-            return;
-          }
-          return result;
-        }
-      } else if (parent && ((typeof parent[0] === 'string' || operation.exported) && (parent.domain !== operation.domain))) {
-        if (!continuation && operation[0] === 'get') {
-          continuation = operation[3];
-        }
-        solution = ['value', result, continuation || '', operation.toString()];
-        if (!(scoped = scope !== this.engine.scope && scope)) {
-          if (operation[0] === 'get' && operation[4]) {
-            scoped = this.engine.identity.solve(operation[4]);
-          }
-        }
-        if (operation.exported || scoped) {
-          solution.push((_ref1 = operation.exported) != null ? _ref1 : null);
-        }
-        if (scoped) {
-          solution.push(this.engine.identity.provide(scoped));
-        }
-        solution.operation = operation;
-        solution.parent = operation.parent;
-        solution.domain = operation.domain;
-        solution.index = operation.index;
-        parent[operation.index] = solution;
-        this.engine.engine.provide(solution);
-        return;
-      } else {
-        return this.engine.provide(result);
-      }
-    }
-    return result;
-  };
-
-  Expressions.prototype.skip = function(operation, ascender, continuation) {
-    var _base;
-    if (operation.tail.path === operation.tail.key || (ascender != null) || (continuation && continuation.lastIndexOf(this.engine.PAIR) !== continuation.indexOf(this.engine.PAIR))) {
-      return (_base = operation.tail).shortcut || (_base.shortcut = this.engine.methods[operation.def.group].perform.call(this.engine, operation));
-    } else {
-      return operation.tail[1];
-    }
-  };
-
-  Expressions.prototype.analyze = function(operation, parent) {
-    var child, def, func, index, mark, otherdef, _i, _len, _ref;
-    if (typeof operation[0] === 'string') {
-      operation.name = operation[0];
-    }
-    def = this.engine.methods[operation.name];
-    if (parent) {
-      if (operation.parent == null) {
-        operation.parent = parent;
-      }
-      if (operation.index == null) {
-        operation.index = parent.indexOf(operation);
-      }
-      if (parent.bound || ((_ref = parent.def) != null ? _ref.bound : void 0) === operation.index) {
-        operation.bound = parent;
-      }
-    }
-    operation.arity = operation.length - 1;
-    if (def && def.lookup) {
-      if (operation.arity > 1) {
-        operation.arity--;
-        operation.skip = operation.length - operation.arity;
-      } else {
-        operation.skip = 1;
-      }
-      operation.name = (def.prefix || '') + operation[operation.skip] + (def.suffix || '');
-      otherdef = def;
-      switch (typeof def.lookup) {
-        case 'function':
-          def = def.lookup.call(this, operation);
-          break;
-        case 'string':
-          def = this.engine.methods[def.lookup + operation.name];
-          break;
-        default:
-          def = this.engine.methods[operation.name];
-      }
-    }
-    operation.def = def || (def = {
-      noop: true
-    });
-    operation.domain = this.engine;
-    if (typeof def.onAnalyze === "function") {
-      def.onAnalyze(operation);
-    }
-    for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
-      child = operation[index];
-      if (child instanceof Array) {
-        this.analyze(child, operation);
-      }
-    }
-    if (parent) {
-      if (mark = operation.def.mark || operation.marked) {
-        if (parent && !parent.def.capture) {
-          parent.marked = mark;
-        }
-      }
-    }
-    if (def.noop) {
-      return;
-    }
-    if (def.serialized) {
-      operation.key = this.serialize(operation, otherdef, false);
-      operation.path = this.serialize(operation, otherdef);
-      if (def.group) {
-        operation.groupped = this.serialize(operation, otherdef, def.group);
-      }
-    }
-    if (def.init) {
-      this.engine[def.init](operation, false);
-    }
-    if (typeof def === 'function') {
-      func = def;
-      operation.offset = 1;
-    } else if (func = def[operation.arity]) {
-      operation.offset = 1;
-    } else {
-      func = def.command;
-    }
-    if (def.offset) {
-      if (operation.offset == null) {
-        operation.offset = def.offset;
-      }
-    }
-    if (typeof func === 'string') {
-      operation.method = func;
-    } else {
-      operation.func = func;
-    }
-    return operation;
-  };
-
-  Expressions.prototype.serialize = function(operation, otherdef, group) {
-    var after, before, binary, def, following, groupper, index, next, op, prefix, separator, suffix, tail, _i, _j, _ref, _ref1;
-    def = operation.def;
-    prefix = def.prefix || (otherdef != null ? otherdef.prefix : void 0) || (operation.def.noop && operation.name) || '';
-    suffix = def.suffix || (otherdef != null ? otherdef.suffix : void 0) || '';
-    if (separator = operation.def.separator) {
-      if (group) {
-        for (index = _i = 1, _ref = operation.length; 1 <= _ref ? _i < _ref : _i > _ref; index = 1 <= _ref ? ++_i : --_i) {
-          if (op = operation[index]) {
-            if (op.path !== op.groupped) {
-              return;
-            }
-          }
-        }
-      }
-    }
-    after = before = '';
-    for (index = _j = 1, _ref1 = operation.length; 1 <= _ref1 ? _j < _ref1 : _j > _ref1; index = 1 <= _ref1 ? ++_j : --_j) {
-      if (op = operation[index]) {
-        if (typeof op !== 'object') {
-          if (operation.def.binary && after && !binary) {
-            after = op + after;
-            binary = true;
-          } else if (binary) {
-            if (operation.def.quote) {
-              after += '"' + op + '"';
-            }
-          } else {
-            after += op;
-          }
-        } else if (op.key && group !== false) {
-          if (group && (groupper = this.engine.methods[group])) {
-            if (op.def.group === group) {
-              following = index;
-              next = void 0;
-              while (next = operation[++following]) {
-                if (next.def && (next.def.group !== group || next.marked !== op.marked)) {
-                  group = false;
-                  break;
-                }
-              }
-              if (!next) {
-                if (tail = op.tail || (op.tail = groupper.condition(op) && op)) {
-                  operation.groupped = groupper.promise(op, operation);
-                  tail.head = operation;
-                  operation.tail = tail;
-                  before += (before && separator || '') + op.groupped || op.key;
-                } else {
-                  continue;
-                }
-              }
-            } else {
-              group = false;
-              continue;
-            }
-          } else if (separator) {
-            before += (before && separator || '') + op.path;
-          } else {
-            before += op.path;
-          }
-        }
-      }
-    }
-    return before + prefix + after + suffix;
-  };
-
-  return Expressions;
-
-})();
-
-this.module || (this.module = {});
-
-module.exports = Expressions;
-
-});
-require.register("gss/lib/modules/Identity.js", function(exports, require, module){
-var Identity;
-
-Identity = (function() {
-  function Identity() {}
-
-  Identity.uid = 0;
-
-  Identity.prototype.provide = function(object, generate) {
-    var id;
-    if (typeof object === 'string') {
-      if (object.charAt(0) !== '$') {
-        return '$' + object;
-      } else {
-        return object;
-      }
-    }
-    if (!(id = object._gss_id)) {
-      if (object === document) {
-        id = "::document";
-      } else if (object === window) {
-        id = "::window";
-      }
-      if (generate !== false) {
-        object._gss_id = id || (id = "$" + (object.id || ++Identity.uid));
-        this[id] = object;
-      }
-    }
-    return id;
-  };
-
-  Identity.prototype.get = function(id) {
-    return this[id];
-  };
-
-  Identity.prototype.solve = function(id) {
-    return this[id];
-  };
-
-  Identity.prototype.unset = function(object) {
-    return delete this[object._gss_id];
-  };
-
-  Identity.prototype.find = function(object) {
-    return this.provide(object, false);
-  };
-
-  return Identity;
-
-})();
-
-module.exports = Identity;
-
-});
 require.register("gss/lib/modules/Positions.js", function(exports, require, module){
 /* Output: DOM element styles
   
@@ -26907,7 +27150,7 @@ Queries = (function() {
           }
         }
         if (collection != null ? collection.length : void 0) {
-          this.engine.document.expressions.ascend(this.ascending[index], contd, collection, this.ascending[index + 2]);
+          this.engine.document.evaluator.ascend(this.ascending[index], contd, collection, this.ascending[index + 2]);
         }
         index += 3;
       }
@@ -34176,6 +34419,7 @@ module.exports = {
     "lib/concepts/Wrapper.js",
     "lib/concepts/Operation.js",
     "lib/concepts/Variable.js",
+    "lib/concepts/Evaluation.js",
     "lib/concepts/Domain.js",
     "lib/concepts/Events.js",
     "lib/concepts/Method.js",
@@ -34183,6 +34427,8 @@ module.exports = {
     "lib/concepts/Property.js",
     "lib/concepts/Style.js",
     "lib/concepts/Update.js",
+    "lib/concepts/Identity.js",
+    "lib/concepts/Evaluator.js",
 
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
@@ -34193,8 +34439,6 @@ module.exports = {
     "lib/domains/Finite.js", 
     "lib/domains/Document.js",
 
-    "lib/modules/Expressions.js", 
-    "lib/modules/Identity.js", 
     "lib/modules/Positions.js", 
     "lib/modules/Queries.js", 
     "lib/modules/Mutations.js", 

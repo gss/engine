@@ -67,7 +67,7 @@ class Selectors
       shortcut.parent = head.parent
       shortcut.index = head.index
       shortcut.bound = head.bound if head.bound
-      @expressions.analyze(shortcut)
+      @Operation.analyze(shortcut)
       tail = operation.tail
       unless global = tail.arity == 1 && tail.length == 2
         shortcut.splice(1, 0, tail[1])
@@ -82,7 +82,7 @@ class Selectors
       if shortcut.length > 2
         if operation.marked
           shortcut.marked = operation.marked
-          shortcut.path = shortcut.key = head.path
+          shortcut.parentath = shortcut.key = head.path
 
       return shortcut
 

@@ -5,6 +5,8 @@ class Variable
       args = Array.prototype.slice.call(arguments)
       args.unshift 'get'
       return args
+    else if @engine
+      return new Variable(engine)
     @engine = engine
 
 
