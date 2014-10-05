@@ -60,15 +60,15 @@ class Domain
 
   # Dont solve system with a single variable+constant constraint 
   bypass: (operation) ->
-    if typeof @variables[operation.variables[0]]?.bypass
-      return
-    primitive = continuation = undefined
+    primitive = continuation = fallback = undefined
     for arg in operation
       if arg?.push
         if arg[0] == 'get'
-          continuation = arg[3]
+          if continuation != undefined
+            return
+          continuation = arg[3] ? null
         else if arg[0] == 'value'
-          continuation ?= arg[2]
+          fallback ?= arg[2]
           value = arg[1]
       else
         primitive = arg
@@ -77,9 +77,11 @@ class Domain
       value = primitive
 
     result = {}
+    continuation ||= fallback
+    console.log('bypass', operation.variables[0])
     result[operation.variables[0]] = value
     (@bypassers[continuation] ||= []).push operation
-    @variables[operation.variables[0]].bypass = continuation
+    @variables[operation.variables[0]] = continuation
     return result
 
 
@@ -139,7 +141,7 @@ class Domain
 
   watch: (object, property, operation, continuation, scope) ->
     @setup()
-    path = @engine.getPath(object, property)
+    path = @engine.Variable.getPath(object, property)
     if @engine.indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @observers[continuation] ||= []
       observers.push(operation, path, scope)
@@ -160,7 +162,7 @@ class Domain
     return @get(path)
 
   unwatch: (object, property, operation, continuation, scope) ->
-    path = @engine.getPath(object, property)
+    path = @engine.Variable.getPath(object, property)
     observers = @observers[continuation]
     index = @engine.indexOfTriplet observers, operation, path, scope
     observers.splice index, 3
@@ -186,7 +188,7 @@ class Domain
             delete @objects[id]
 
   get: (object, property) ->
-    return @values[@engine.getPath(object, property)]
+    return @values[@engine.Variable.getPath(object, property)]
 
   merge: (object, meta) ->
     # merge objects/domains
@@ -208,7 +210,7 @@ class Domain
   set: (object, property, value, meta) ->
     @setup()
 
-    path = @engine.getPath(object, property)
+    path = @engine.Variable.getPath(object, property)
     old = @values[path]
     return if old == value
     if @changes
@@ -231,26 +233,6 @@ class Domain
 
     return value
 
-  sanitize: (exps, soft, parent = exps.parent, index = exps.index) ->
-    if exps[0] == 'value' && exps.operation
-      return parent[index] = @sanitize exps.operation, soft, parent, index
-    for own prop, value of exps
-      unless isFinite(parseInt(prop))
-        delete exps[prop]
-    for exp, i in exps
-      if exp?.push
-        @sanitize exp, soft, exps, i
-    exps.parent = parent
-    exps.index  = index
-    exps
-
-  orphanize: (operation) ->
-    if operation.domain
-      delete operation.domain
-    for arg in operation
-      if arg?.push
-        @orphanize arg
-    operation
 
   callback: (domain, path, value, meta) ->
     unless meta == true
@@ -261,9 +243,9 @@ class Domain
             # Re-evaluate expression
             if watcher.parent[watcher.index] != watcher
               watcher.parent[watcher.index] = watcher
-            root = @getRootOperation(watcher, domain)
+            root = @Operation.getRoot(watcher, domain)
             if value != undefined
-              @update([@sanitize(root)])
+              @update([@Operation.sanitize(root)])
           else
             if watcher.parent.domain == domain
               domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
@@ -303,7 +285,7 @@ class Domain
               domain.expressions.ascend op, undefined, value, undefined, undefined, op.index
               op.domain = d
             else
-              @update(@sanitize(@getRootOperation(op)))
+              @update(@Operation.sanitize(@Operation.getRoot(op)))
 
     return
 
@@ -417,7 +399,7 @@ class Domain
           if path[3]
             bits = path[3].split(',')
             if bits[0] == 'get'
-              (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
+              (constraint.substitutions ||= {})[@Variable.getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
         else if @isVariable(path)
           if path.suggest != undefined
@@ -582,7 +564,7 @@ class Domain
               break
           if equal
             throw 'Trying to separate what was just added. Means loop. '
-        return  @orphanize commands
+        return @Operation.orphanize commands
         
   apply: (solution) ->
     result = {}

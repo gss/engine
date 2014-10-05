@@ -24,6 +24,8 @@
 
     "lib/concepts/Console.js",
     "lib/concepts/Wrapper.js",
+    "lib/concepts/Operation.js",
+    "lib/concepts/Variable.js",
     "lib/concepts/Domain.js",
     "lib/concepts/Events.js",
     "lib/concepts/Method.js",

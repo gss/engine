@@ -32,7 +32,7 @@ class Expressions
 
     # Let engine modify continuation or return cached result
     if continuation && operation.path && operation.def.serialized
-      result = @engine.getOperationSolution(operation, continuation, scope)
+      result = @engine.Operation.getSolution(operation, continuation, scope)
       switch typeof result
         when 'string'
           if operation.def.virtual && result.charAt(0) != @engine.PAIR
@@ -61,7 +61,7 @@ class Expressions
       else
         result = @execute(operation, continuation, scope, args)
 
-        continuation = @engine.getOperationPath(operation, continuation, scope)
+        continuation = @engine.Operation.getPath(operation, continuation, scope)
     # Ascend the execution (fork for each item in collection)
     return @ascend(operation, continuation, result, scope, meta, ascender)
 

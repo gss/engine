@@ -119,7 +119,7 @@ class Linear::Methods extends Domain::Methods
       if typeof @properties[property] == 'function' && scope && scope != @scope
         return @properties[property].call(@, object, object)
       else
-        absolute = @getPath(object, property)
+        absolute = @Variable.getPath(object, property)
         variable = @declare(absolute, operation)
         if variable.constraints
           for constrain in variable.constraints

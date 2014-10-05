@@ -47,9 +47,9 @@ class Numeric::Methods extends Domain::Methods
 
   get: 
     command: (operation, continuation, scope, meta, object, path, contd, scoped) ->
-      path = @getPath(object, path)
+      path = @Variable.getPath(object, path)
 
-      domain = @getVariableDomain(operation, true, true)
+      domain = @Variable.getDomain(operation, true, true)
       if !domain || domain.priority < 0
         domain = @
       else if domain != @

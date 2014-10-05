@@ -25,19 +25,22 @@ Updater = (engine) ->
 
       # Analyze variable
       if arg[0] == 'get'
-        vardomain = @getVariableDomain(arg)
-        path = @getPath(arg[1], arg[2])
+        vardomain = @Variable.getDomain(arg)
+        path = @Variable.getPath(arg[1], arg[2])
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         effects = new Update vardomain, [arg]
-        if bypasser = @variables[path]?.bypass
-          debugger
+        if typeof (bypasser = @variables[path]) == 'string'
           bypassers = @engine.bypassers
           property = bypassers[bypasser]
-          for op in property
+          index = 0
+          while op = property[index]
             if op.variables.indexOf(path) > -1
-              effects.push [op], [vardomain]
-          delete property[path]
+              effects.push [op], [vardomain], true
+              property.splice(index, 1)
+            else 
+              index++
+
           if Object.keys(property).length == 0
             delete bypassers[bypasser]
           delete @variables[path]
@@ -120,7 +123,7 @@ Update.prototype =
     # Provide solution for constraint that was set before
     if domain = parent.domain
       if parent.parent?.domain == domain
-        root = solution.domain.getRootOperation(parent)
+        root = solution.domain.Operation.getRoot(parent)
       else
         root = parent
       index = @domains.indexOf(domain, @index + 1)
@@ -263,7 +266,7 @@ Update.prototype =
 
         # Force operation domain
         if other
-          opdomain = @engine.getOperationDomain(problem, other)
+          opdomain = @engine.Operation.getDomain(problem, other)
         if opdomain && (opdomain.displayName != other.displayName)
           if (index = @domains.indexOf(opdomain)) == -1
             index = @domains.push(opdomain) - 1
@@ -299,7 +302,7 @@ Update.prototype =
       problems.exported = true
       problems.parent = undefined
       result.push(problems)
-      path = @engine.getPath(problems[1], problems[2])
+      path = @engine.Variable.getPath(problems[1], problems[2])
       exports = (@exports ||= {})[path] ||= []
       exports.push domain
       imports = (@imports ||= [])
@@ -319,7 +322,7 @@ Update.prototype =
     for arg in problem
       if arg[0] == 'get'
         if !arg.domain || arg.domain.MAYBE || (arg.domain.displayName == domain.displayName && domain.priority < 0)
-          (variables ||= []).push(@engine.getPath(arg[1], arg[2]))
+          (variables ||= []).push(@engine.Variable.getPath(arg[1], arg[2]))
       else if arg.variables
         (variables ||= []).push.apply(variables, arg.variables)
     target.variables = variables
@@ -373,7 +376,7 @@ Update.prototype =
 
 
   # Merge connected graphs 
-  connect: ->
+  connect: (recursive) ->
     connected = breaking = undefined
     i = @domains.length
     while domain = @domains[--i]
@@ -395,8 +398,9 @@ Update.prototype =
                   break
                 else
                   framed = domain.frame && domain || other
-    while connected
-      break unless @connect()
+    if !recursive 
+      while connected
+        break unless @connect(true)
     return connected
 
   # Remove empty domains again

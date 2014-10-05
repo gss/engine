@@ -73,7 +73,7 @@ class Abstract::Methods
       op = string.split(',')
       scope = op[1]
       property = op[2]
-      @engine.values[@engine.getPath(scope, property)] = value
+      @engine.values[@engine.Variable.getPath(scope, property)] = value
     return value
 
 # Proxy math for axioms

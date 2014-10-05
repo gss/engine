@@ -4,10 +4,6 @@
 # Dynamic systems need to be able to clean  side effects.
 # Instead of remembering effects explicitly, we generate 
 # unique tracking labels with special delimeters.
-# Uniquely structured cache key enables bottom-up evaluation 
-# and stateless continuations. 
-
-# Most of the nasty stuff is in this file, and waiting to move out
 
 class Conventions
 
@@ -72,21 +68,6 @@ class Conventions
   getPossibleContinuations: (path) ->
     [path, path + @ASCEND, path + @PAIR, path + @DESCEND]
 
-  # Return computed path for id and property e.g. $id[property]
-  getPath: (id, property) ->
-    unless property
-      property = id
-      id = undefined
-    if property.indexOf('[') > -1 || !id
-      return property
-    else
-      if typeof id != 'string'
-        if id.nodeType
-          id = @identity.provide(id)
-        else 
-          id = id.path
-      return id + '[' + property + ']'
-
   # Hook: Should interpreter iterate returned object?
   # (yes, if it's a collection of objects or empty array)
   isCollection: (object) ->
@@ -97,91 +78,7 @@ class Conventions
           return object[0].nodeType
         when "undefined"
           return object.length == 0
-
-  # Return shared absolute path of a dom query ($id selector) 
-  getQueryPath: (operation, continuation) ->
-    if continuation
-      if continuation.nodeType
-        return @identity.provide(continuation) + ' ' + operation.path
-      else if operation.marked && operation.arity == 2
-        return continuation + operation.path
-      else
-        return continuation + (operation.key || operation.path)
-    else
-      return operation.key
-
-  getOperationSelectors: (operation) ->
-    parent = operation
-    results = wrapped = custom = undefined
-
-    # Iterate rules
-    while parent
-
-      # Append condition id to path
-      if parent.name == 'if'
-        if parent.uid
-          if results
-            for result, index in results
-              if result.substring(0, 11) != '[matches~="'
-                result = @getCustomSelector(result)
-              results[index] = result.substring(0, 11) + parent.uid + @DESCEND + result.substring(11)
-      
-      # Add rule selector to path
-      else if parent.name == 'rule'
-        selectors = parent[1].path
-
-        if parent[1][0] == ','
-          paths = parent[1].slice(1).map (item) -> 
-            return !item.marked && item.groupped || item.path
-        else
-          paths = [parent[1].path]
-
-        groups = parent[1].groupped && parent[1].groupped.split(',') ? paths
-
-        # Prepend selectors with selectors of a parent rule
-        if results?.length
-          bits = selectors.split(',')
-
-          update = []
-          for result in results
-            if result.substring(0, 11) == '[matches~="'
-              update.push result.substring(0, 11) + selectors + @DESCEND + result.substring(11)
-            else
-              for bit, index in bits
-                if groups[index] != bit && '::this' + groups[index] != paths[index] 
-                  if result.substring(0, 6) == '::this'
-                    update.push @getCustomSelector(selectors) + result.substring(6)
-                  else
-                    update.push @getCustomSelector(selectors) + ' ' + result
-                else 
-                  if result.substring(0, 6) == '::this'
-                    update.push bit + result.substring(6)
-                  else
-                    update.push bit + ' ' + result
-
-          results = update
-        # Return all selectors
-        else 
-
-          results = selectors.split(',').map (path, index) =>
-            if path != groups[index] && '::this' + groups[index] != paths[index]
-              @getCustomSelector(selectors)
-            else
-              path
-      parent = parent.parent
-
-    for result, index in results
-      if result.substring(0, 6) == '::this'
-        results[index] = result.substring(6)
-      results[index] = results[index].replace(@CleanupSelectorRegExp, '')
-    return results
-
-  CleanupSelectorRegExp: new RegExp(Conventions::DESCEND + '::this', 'g')
-
-  getCustomSelector: (selector) ->
-    return '[matches~="' + selector.replace(@CustomizeRegExp, @DESCEND) + '"]'
-
-  CustomizeRegExp: /\s+/g
+  
 
 
 
@@ -231,10 +128,6 @@ class Conventions
     return path
     
 
-  getOperationSolution: (operation, continuation, scope) ->
-    if operation.def.serialized && (!operation.def.hidden || operation.parent.def.serialized)
-      return @pairs.getSolution(operation, continuation, scope)
-
   getAscendingContinuation: (continuation, item) ->
     return @engine.getContinuation(continuation, item, @engine.ASCEND)
 
@@ -246,19 +139,6 @@ class Conventions
       else
         return continuation
 
-  # Return path for given operation
-  getOperationPath: (operation, continuation, scope) ->
-    if continuation?
-      if operation.def.serialized && !operation.def.hidden
-        if operation.marked && operation.arity == 2
-          path = continuation + operation.path
-        else
-          path = continuation + (operation.key || operation.path)
-      else
-        path = continuation
-    else
-      path = operation.path
-    return path
 
   # Return element that is used as a context for given DOM operation
   getContext: (args, operation, scope, node) ->
@@ -286,52 +166,7 @@ class Conventions
       return object.valueOf != Object.prototype.valueOf
     return true
 
-  getOperationDomain: (operation, domain) ->
-    if typeof operation[0] == 'string'
-      if !domain.methods[operation[0]]
-        return @linear.maybe()
-      for arg in operation
-        if arg.domain && arg.domain.priority > domain.priority && arg.domain < 0
-          return arg.domain
-    return domain
 
-  # Return domain that should be used to evaluate given variable
-  getVariableDomain: (operation, force, quick) ->
-    if operation.domain && !force
-      return operation.domain
-    [cmd, scope, property] = variable = operation
-    path = @getPath(scope, property)
-    
-    if (scope || path.indexOf('[') > -1) && property && @intrinsic?.properties[path]?
-      domain = @intrinsic
-    else if scope && property && @intrinsic?.properties[property] && !@intrinsic.properties[property].matcher
-      domain = @intrinsic
-    else
-      for d in @domains
-        if d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path])
-          domain = d
-          break
-        if d.substituted
-          for constraint in d.substituted
-            if constraint.substitutions?[path]
-              domain = d
-              break
-    unless domain
-      if property && (index = property.indexOf('-')) > -1
-        prefix = property.substring(0, index)
-        if (domain = @[prefix])
-          unless domain instanceof @Domain
-            domain = undefined
-
-      unless domain
-        #if scope && property && @intrinsic?.properties[property]
-        #  domain = @intrinsic.maybe()
-        #else
-        if !quick
-          domain = @linear.maybe()
-    if variable && !force
-      variable.domain = domain
-    return domain
 
   # auto-worker url, only works with sync scripts!
   getWorkerURL: do ->
@@ -343,17 +178,6 @@ class Conventions
     return (url) ->
       return typeof url == 'string' && url || src
 
-  # get topmost meaniningful function call with matching domain
-  getRootOperation: (operation, domain = operation.domain) ->
-    parent = operation
-    while parent.parent &&  typeof parent.parent[0] == 'string' && 
-          (!parent.parent.def || 
-                              (!parent.parent.def.noop && 
-                              parent.domain == domain))
-      parent = parent.parent
-    while parent.parent?.domain == parent.domain
-      parent = parent.parent
-    return parent
 
 
 

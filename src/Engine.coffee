@@ -16,6 +16,8 @@ class Engine extends Domain.Events
   Identity:    require('./modules/Identity')
   Expressions: require('./modules/Expressions')
 
+  Operation:   require('./concepts/Operation')
+  Variable:    require('./concepts/Variable')
   Method:      require('./concepts/Method')
   Property:    require('./concepts/Property')
   Console:     require('./concepts/Console')
@@ -72,6 +74,9 @@ class Engine extends Domain.Events
     @properties  = new @Properties(@)
     @methods     = new @Methods(@)
     @expressions = new @Expressions(@)
+
+    @Operation   = new @Operation(@)
+    @Variable    = new @Variable(@)
 
     @precompile()
 
@@ -141,7 +146,7 @@ class Engine extends Domain.Events
       # Substituted part of expression
       if expressions[4]
         exp = parent[index] = expressions[3].split(',')
-        path = @getPath(exp[1], exp[2])
+        path = @Variable.getPath(exp[1], exp[2])
       # Updates for substituted variables
       else if !expressions[3]
         path = expressions[2]
@@ -388,6 +393,7 @@ class Engine extends Domain.Events
       for remove in removes
         for path, index in remove
           if bypassers = @bypassers[path]
+            console.log('remove bypasser', path)
             for bypasser in bypassers
               delete @variables[bypasser.variables[0]]
               (result ||= {})[bypasser.variables[0]] = null

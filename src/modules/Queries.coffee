@@ -339,7 +339,7 @@ class Queries
   # Maybe somebody else calculated it already
   fetch: (node, args, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    query = @engine.getQueryPath(operation, node)
+    query = @engine.Operation.getQueryPath(operation, node)
     return @engine.updating?.queries?[query]
 
   chain: (left, right, continuation) ->
@@ -412,12 +412,12 @@ class Queries
   # Filter out known nodes from DOM collections
   update: (node, args, result = undefined, operation, continuation, scope) ->
     node ||= @engine.getContext(args, operation, scope, node)
-    path = @engine.getQueryPath(operation, continuation)
+    path = @engine.Operation.getQueryPath(operation, continuation)
     old = @get(path)
 
     # Normalize query to reuse results
     if !operation.def.relative && !operation.marked && 
-            (query = @engine.getQueryPath(operation, node, scope)) && 
+            (query = @engine.Operation.getQueryPath(operation, node, scope)) && 
             @engine.updating.queries?.hasOwnProperty(query)
       result = @engine.updating.queries[query]
     if @engine.updating.collections?.hasOwnProperty(path)
