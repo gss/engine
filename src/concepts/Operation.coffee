@@ -172,9 +172,10 @@ class Operation
 
   getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'
+
+
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
-
     operation.name = operation[0] if typeof operation[0] == 'string'
     def = @engine.methods[operation.name]
         
@@ -299,5 +300,13 @@ class Operation
             before += op.path
     return before + prefix + after + suffix
 
-
+  setVariables: (problem, target = problem, domain) ->
+    variables = undefined
+    for arg in problem
+      if arg[0] == 'get'
+        if !arg.domain || arg.domain.MAYBE || (arg.domain.displayName == domain.displayName && domain.priority < 0)
+          (variables ||= []).push(@engine.Variable.getPath(arg[1], arg[2]))
+      else if arg.variables
+        (variables ||= []).push.apply(variables, arg.variables)
+    target.variables = variables
 module.exports = Operation

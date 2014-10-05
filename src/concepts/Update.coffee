@@ -293,7 +293,7 @@ Update.prototype =
                   if (j = problems.indexOf(arg)) > -1
                     problems.splice(j, 1)
 
-          @setVariables(problem, null, opdomain || other)
+          @engine.Operation.setVariables(problem, null, opdomain || other)
         return true
 
   # Simplify groupped multi-domain expression down to variables
@@ -317,15 +317,7 @@ Update.prototype =
           @unwrap(problem, domain, result)
     return result
 
-  setVariables: (problem, target = problem, domain) ->
-    variables = undefined
-    for arg in problem
-      if arg[0] == 'get'
-        if !arg.domain || arg.domain.MAYBE || (arg.domain.displayName == domain.displayName && domain.priority < 0)
-          (variables ||= []).push(@engine.Variable.getPath(arg[1], arg[2]))
-      else if arg.variables
-        (variables ||= []).push.apply(variables, arg.variables)
-    target.variables = variables
+
 
   finish: ->
     @time = @engine.time(@start)
@@ -392,7 +384,7 @@ Update.prototype =
     while domain = @domains[--i]
       break if i == @index
       problems = @problems[i]
-      @setVariables(problems, null, domain)
+      @engine.Operation.setVariables(problems, null, domain)
       if vars = problems.variables
         for other, j in @domains by -1
           break if j == i || domain != @domains[i]

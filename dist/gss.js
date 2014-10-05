@@ -22780,6 +22780,25 @@ Operation = (function() {
     return before + prefix + after + suffix;
   };
 
+  Operation.prototype.setVariables = function(problem, target, domain) {
+    var arg, variables, _i, _len;
+    if (target == null) {
+      target = problem;
+    }
+    variables = void 0;
+    for (_i = 0, _len = problem.length; _i < _len; _i++) {
+      arg = problem[_i];
+      if (arg[0] === 'get') {
+        if (!arg.domain || arg.domain.MAYBE || (arg.domain.displayName === domain.displayName && domain.priority < 0)) {
+          (variables || (variables = [])).push(this.engine.Variable.getPath(arg[1], arg[2]));
+        }
+      } else if (arg.variables) {
+        (variables || (variables = [])).push.apply(variables, arg.variables);
+      }
+    }
+    return target.variables = variables;
+  };
+
   return Operation;
 
 })();
@@ -25167,7 +25186,7 @@ Update.prototype = {
               }
             }
           }
-          this.setVariables(problem, null, opdomain || other);
+          this.engine.Operation.setVariables(problem, null, opdomain || other);
         }
         return true;
       }
@@ -25201,24 +25220,6 @@ Update.prototype = {
       }
     }
     return result;
-  },
-  setVariables: function(problem, target, domain) {
-    var arg, variables, _i, _len;
-    if (target == null) {
-      target = problem;
-    }
-    variables = void 0;
-    for (_i = 0, _len = problem.length; _i < _len; _i++) {
-      arg = problem[_i];
-      if (arg[0] === 'get') {
-        if (!arg.domain || arg.domain.MAYBE || (arg.domain.displayName === domain.displayName && domain.priority < 0)) {
-          (variables || (variables = [])).push(this.engine.Variable.getPath(arg[1], arg[2]));
-        }
-      } else if (arg.variables) {
-        (variables || (variables = [])).push.apply(variables, arg.variables);
-      }
-    }
-    return target.variables = variables;
   },
   finish: function() {
     this.time = this.engine.time(this.start);
@@ -25316,7 +25317,7 @@ Update.prototype = {
         break;
       }
       problems = this.problems[i];
-      this.setVariables(problems, null, domain);
+      this.engine.Operation.setVariables(problems, null, domain);
       if (vars = problems.variables) {
         _ref = this.domains;
         for (j = _i = _ref.length - 1; _i >= 0; j = _i += -1) {
