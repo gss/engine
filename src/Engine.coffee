@@ -301,10 +301,12 @@ class Engine extends Domain.Events
       return 
 
     if !@updating.problems.length && @updated?.problems.length
+      @updating.finish()
       @updating = undefined
       return
     else
       @updated = @updating
+      @updating.finish()
       @updating = undefined
 
     @console.info('Solution\t   ', @updated, solution, @solved.values)

@@ -20312,10 +20312,12 @@ Engine = (function(_super) {
       return;
     }
     if (!this.updating.problems.length && ((_ref4 = this.updated) != null ? _ref4.problems.length : void 0)) {
+      this.updating.finish();
       this.updating = void 0;
       return;
     } else {
       this.updated = this.updating;
+      this.updating.finish();
       this.updating = void 0;
     }
     this.console.info('Solution\t   ', this.updated, solution, this.solved.values);
@@ -22829,7 +22831,6 @@ Variable = (function() {
     if (!domain) {
       if (property && (index = property.indexOf('-')) > -1) {
         prefix = property.substring(0, index);
-        debugger;
         if ((domain = this.engine[prefix])) {
           if (!(domain instanceof this.engine.Domain)) {
             domain = void 0;
@@ -23203,7 +23204,6 @@ Domain = (function() {
 
   Domain.prototype.bypass = function(operation) {
     var arg, continuation, fallback, primitive, result, value, _base, _i, _len, _ref;
-    return;
     primitive = continuation = fallback = void 0;
     for (_i = 0, _len = operation.length; _i < _len; _i++) {
       arg = operation[_i];
@@ -23230,7 +23230,7 @@ Domain = (function() {
     if (continuation == null) {
       continuation = fallback;
     }
-    console.log('bypass', operation.variables[0]);
+    this.console.log('bypass', operation.variables[0]);
     result[operation.variables[0]] = value;
     ((_base = this.bypassers)[continuation] || (_base[continuation] = [])).push(operation);
     this.variables[operation.variables[0]] = continuation;
@@ -25213,8 +25213,20 @@ Update.prototype = {
     }
     return target.variables = variables;
   },
+  finish: function() {
+    this.time = this.engine.time(this.start);
+    this.start = void 0;
+    console.info('update time', this.time, this.problems.length);
+    return console.profileEnd(1);
+  },
   optimize: function() {
     this.compact();
+    if (this.start == null) {
+      console.profile(1);
+    }
+    if (this.start == null) {
+      this.start = this.engine.time();
+    }
     if (this.connect()) {
       this.compact();
     }
@@ -25989,9 +26001,6 @@ Continuation = (function() {
   Continuation.prototype.descend = function(operation, continuation, ascender) {
     var mark;
     if (ascender != null) {
-      if (continuation.indexOf('$aside') > -1) {
-        debugger;
-      }
       mark = operation.def.rule && ascender === 1 && this.DESCEND || this.PAIR;
       if (mark) {
         return this.get(continuation, null, mark);

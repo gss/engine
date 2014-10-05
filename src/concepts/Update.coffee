@@ -327,9 +327,19 @@ Update.prototype =
         (variables ||= []).push.apply(variables, arg.variables)
     target.variables = variables
 
+  finish: ->
+    @time = @engine.time(@start)
+    @start = undefined
+    console.info('update time', @time, @problems.length)
+    console.profileEnd(1)
+
   # Last minute changes to update before execution
   optimize: ->
     @compact()
+    unless @start?
+      console.profile(1)
+
+    @start ?= @engine.time()
 
     if @connect()
       @compact()

@@ -118,8 +118,6 @@ class Continuation
 
   descend: (operation, continuation, ascender) ->
     if ascender?
-      if continuation.indexOf('$aside') > -1
-        debugger
       mark = operation.def.rule && ascender == 1 && @DESCEND || @PAIR
       if mark
         return @get(continuation, null, mark)
