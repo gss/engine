@@ -26,9 +26,21 @@ Updater = (engine) ->
       # Analyze variable
       if arg[0] == 'get'
         vardomain = @getVariableDomain(arg)
+        path = @getPath(arg[1], arg[2])
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         effects = new Update vardomain, [arg]
+        if bypasser = @variables[path]?.bypass
+          debugger
+          bypassers = @engine.bypassers
+          property = bypassers[bypasser]
+          for op in property
+            if op.variables.indexOf(path) > -1
+              effects.push [op], [vardomain]
+          delete property[path]
+          if Object.keys(property).length == 0
+            delete bypassers[bypasser]
+          delete @variables[path]
       else
         # Handle framed expressions
         stringy = true

@@ -384,7 +384,14 @@ class Engine extends Domain.Events
             removes.push(problem)
           else
             others.push(problem)
-
+      
+      for remove in removes
+        for path, index in remove
+          if bypassers = @bypassers[path]
+            for bypasser in bypassers
+              delete @variables[bypasser.variables[0]]
+              (result ||= {})[bypasser.variables[0]] = null
+            delete @bypassers[path]
       for other, i in @domains
         locals = []
         other.changes = undefined

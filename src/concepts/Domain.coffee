@@ -43,6 +43,7 @@ class Domain
 
   setup: (hidden = @immutable) ->
     @variables   ||= {}
+    @bypassers   ||= {}
     unless @hasOwnProperty('watchers')
       @expressions = new @Expressions(@) 
       @watchers    = {}
@@ -57,6 +58,29 @@ class Domain
         @domains.push(@)
       @MAYBE       = undefined
 
+  # Dont solve system with a single variable+constant constraint 
+  bypass: (operation) ->
+    if typeof @variables[operation.variables[0]]?.bypass
+      return
+    primitive = continuation = undefined
+    for arg in operation
+      if arg?.push
+        if arg[0] == 'get'
+          continuation = arg[3]
+        else if arg[0] == 'value'
+          continuation ?= arg[2]
+          value = arg[1]
+      else
+        primitive = arg
+
+    unless value?
+      value = primitive
+
+    result = {}
+    result[operation.variables[0]] = value
+    (@bypassers[continuation] ||= []).push operation
+    @variables[operation.variables[0]].bypass = continuation
+    return result
 
 
   solve: (args) ->
@@ -65,6 +89,9 @@ class Domain
     if @disconnected
       @mutations?.disconnect()
 
+    if @MAYBE && arguments.length == 1 && typeof args[0] == 'string' && args.variables.length == 1
+      if result = @bypass(args)
+        return result
     @setup()
 
     if typeof args == 'object' && !args.push

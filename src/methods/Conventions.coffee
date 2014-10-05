@@ -301,6 +301,7 @@ class Conventions
       return operation.domain
     [cmd, scope, property] = variable = operation
     path = @getPath(scope, property)
+    
     if (scope || path.indexOf('[') > -1) && property && @intrinsic?.properties[path]?
       domain = @intrinsic
     else if scope && property && @intrinsic?.properties[property] && !@intrinsic.properties[property].matcher

@@ -20329,7 +20329,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var bypasser, bypassers, finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _m, _n, _o, _p, _q, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (domain && !domain.solve && domain.postMessage) {
       workflow.postMessage(domain, problems);
       workflow.await(domain.url);
@@ -20407,14 +20407,28 @@ Engine = (function(_super) {
           }
         }
       }
+      for (_l = 0, _len3 = removes.length; _l < _len3; _l++) {
+        remove = removes[_l];
+        for (index = _m = 0, _len4 = remove.length; _m < _len4; index = ++_m) {
+          path = remove[index];
+          if (bypassers = this.bypassers[path]) {
+            for (_n = 0, _len5 = bypassers.length; _n < _len5; _n++) {
+              bypasser = bypassers[_n];
+              delete this.variables[bypasser.variables[0]];
+              (result || (result = {}))[bypasser.variables[0]] = null;
+            }
+            delete this.bypassers[path];
+          }
+        }
+      }
       _ref3 = this.domains;
-      for (i = _l = 0, _len3 = _ref3.length; _l < _len3; i = ++_l) {
+      for (i = _o = 0, _len6 = _ref3.length; _o < _len6; i = ++_o) {
         other = _ref3[i];
         locals = [];
         other.changes = void 0;
-        for (_m = 0, _len4 = removes.length; _m < _len4; _m++) {
-          remove = removes[_m];
-          for (index = _n = 0, _len5 = remove.length; _n < _len5; index = ++_n) {
+        for (_p = 0, _len7 = removes.length; _p < _len7; _p++) {
+          remove = removes[_p];
+          for (index = _q = 0, _len8 = remove.length; _q < _len8; index = ++_q) {
             path = remove[index];
             if (index === 0) {
               continue;
@@ -22649,6 +22663,7 @@ Domain = (function() {
       hidden = this.immutable;
     }
     this.variables || (this.variables = {});
+    this.bypassers || (this.bypassers = {});
     if (!this.hasOwnProperty('watchers')) {
       this.expressions = new this.Expressions(this);
       this.watchers = {};
@@ -22670,6 +22685,37 @@ Domain = (function() {
     }
   };
 
+  Domain.prototype.bypass = function(operation) {
+    var arg, continuation, primitive, result, value, _base, _i, _len, _ref;
+    if (typeof ((_ref = this.variables[operation.variables[0]]) != null ? _ref.bypass : void 0)) {
+      return;
+    }
+    primitive = continuation = void 0;
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      arg = operation[_i];
+      if (arg != null ? arg.push : void 0) {
+        if (arg[0] === 'get') {
+          continuation = arg[3];
+        } else if (arg[0] === 'value') {
+          if (continuation == null) {
+            continuation = arg[2];
+          }
+          value = arg[1];
+        }
+      } else {
+        primitive = arg;
+      }
+    }
+    if (value == null) {
+      value = primitive;
+    }
+    result = {};
+    result[operation.variables[0]] = value;
+    ((_base = this.bypassers)[continuation] || (_base[continuation] = [])).push(operation);
+    this.variables[operation.variables[0]].bypass = continuation;
+    return result;
+  };
+
   Domain.prototype.solve = function(args) {
     var commands, object, result, strategy, _ref, _ref1, _ref2;
     if (!args) {
@@ -22678,6 +22724,11 @@ Domain = (function() {
     if (this.disconnected) {
       if ((_ref = this.mutations) != null) {
         _ref.disconnect();
+      }
+    }
+    if (this.MAYBE && arguments.length === 1 && typeof args[0] === 'string' && args.variables.length === 1) {
+      if (result = this.bypass(args)) {
+        return result;
       }
     }
     this.setup();
@@ -24249,7 +24300,7 @@ var Update, Updater;
 Updater = function(engine) {
   var Update, property, value, _ref;
   Update = function(domain, problem, parent) {
-    var a, arg, d, effects, foreign, index, offset, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
+    var a, arg, bypasser, bypassers, d, effects, foreign, index, offset, op, path, property, start, stringy, update, vardomain, _base, _i, _j, _k, _len, _len1, _len2, _ref;
     if (this instanceof Update) {
       this.domains = domain && (domain.push && domain || [domain]) || [];
       this.problems = problem && (domain.push && problem || [problem]) || [];
@@ -24274,14 +24325,31 @@ Updater = function(engine) {
       offset = 0;
       if (arg[0] === 'get') {
         vardomain = this.getVariableDomain(arg);
+        path = this.getPath(arg[1], arg[2]);
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;
         }
         effects = new Update(vardomain, [arg]);
+        if (bypasser = (_ref = this.variables[path]) != null ? _ref.bypass : void 0) {
+          debugger;
+          bypassers = this.engine.bypassers;
+          property = bypassers[bypasser];
+          for (_j = 0, _len1 = property.length; _j < _len1; _j++) {
+            op = property[_j];
+            if (op.variables.indexOf(path) > -1) {
+              effects.push([op], [vardomain]);
+            }
+          }
+          delete property[path];
+          if (Object.keys(property).length === 0) {
+            delete bypassers[bypasser];
+          }
+          delete this.variables[path];
+        }
       } else {
         stringy = true;
-        for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
-          a = arg[_j];
+        for (_k = 0, _len2 = arg.length; _k < _len2; _k++) {
+          a = arg[_k];
           if (a != null ? a.push : void 0) {
             if (arg[0] === 'framed') {
               if (typeof arg[1] === 'string') {
