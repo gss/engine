@@ -24,7 +24,7 @@ describe 'Domain', ->
 
   describe 'solving and assumed domains together', ->
     it 'should calculate simplified expression', ->
-      engine = new GSS({
+      window.$engine = engine = new GSS({
         a: 666
       })
 
@@ -60,7 +60,7 @@ describe 'Domain', ->
 
 
     it 'should simplify partially', ->
-      engine = new GSS({
+      window.$engine = engine = new GSS({
         a: 555
       })
 

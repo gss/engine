@@ -215,6 +215,8 @@ class Engine extends Domain.Events
         @console.start(reason || args[0], name)
     unless old = @updating
       @engine.updating = new @update
+      @engine.updating.start ?= @engine.time()
+      console.profile(1)
 
     if @providing == undefined
       @providing = null
@@ -407,8 +409,9 @@ class Engine extends Domain.Events
           if bypassers = @bypassers[path]
             console.log('remove bypasser', path)
             for bypasser in bypassers
-              delete @variables[bypasser.variables[0]]
-              (result ||= {})[bypasser.variables[0]] = null
+              key = Object.keys(bypasser.variables)[0]
+              delete @variables[key]
+              (result ||= {})[key] = null
             delete @bypassers[path]
       for other, i in @domains
         locals = []

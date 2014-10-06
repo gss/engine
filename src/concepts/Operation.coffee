@@ -16,7 +16,8 @@ class Operation
       return parent[index] = @sanitize exps.operation, soft, parent, index
     for own prop, value of exps
       unless isFinite(parseInt(prop))
-        delete exps[prop]
+        unless prop == 'variables'
+          delete exps[prop]
     for exp, i in exps
       if exp?.push
         @sanitize exp, soft, exps, i
@@ -176,6 +177,8 @@ class Operation
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
+    Operation.analyzed ||= 0
+    Operation.analyzed++
     operation.name = operation[0] if typeof operation[0] == 'string'
     def = @engine.methods[operation.name]
         

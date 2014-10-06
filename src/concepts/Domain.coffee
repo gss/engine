@@ -62,6 +62,12 @@ class Domain
 
   # Dont solve system with a single variable+constant constraint 
   bypass: (operation) ->
+    name = undefined
+    for prop, variable of operation.variables
+      if variable.domain.displayName == @displayName
+        return if name
+        name = prop
+
     primitive = continuation = fallback = undefined
     for arg in operation
       if arg?.push
@@ -80,10 +86,10 @@ class Domain
 
     result = {}
     continuation ?= fallback
-    @console.log('bypass', operation.variables[0])
-    result[operation.variables[0]] = value
+    result[name] = value
+#    console.log('bypass', name, value)
     (@bypassers[continuation] ||= []).push operation
-    @variables[operation.variables[0]] = continuation
+    @variables[name] = continuation
     return result
 
 
@@ -93,8 +99,8 @@ class Domain
     if @disconnected
       @mutations?.disconnect()
 
-    if @MAYBE && arguments.length == 1 && typeof args[0] == 'string' && args.variables.length == 1
-      if result = @bypass(args)
+    if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
+      if (result = @bypass(args))
         return result
     @setup()
 
@@ -528,6 +534,7 @@ class Domain
 
   validate: () ->
     if @constrained || @unconstrained
+      console.log('reach', @constraints.length)
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
         bl = b.length

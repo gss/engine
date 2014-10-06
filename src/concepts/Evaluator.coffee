@@ -195,6 +195,7 @@ class Evaluator
       else if parent && ((typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain))
         if !continuation && operation[0] == 'get'
           continuation = operation[3]
+          
         solution = ['value', result, continuation || '', 
                     operation.toString()]
         unless scoped = (scope != @engine.scope && scope)
