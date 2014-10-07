@@ -217,10 +217,14 @@ class Rules
       src = node.href || node.src || node
       type ||= node.type || 'text/gss'
       xhr = new XMLHttpRequest()
+      @requesting = (@requesting || 0) + 1
       xhr.onreadystatechange = =>
         if xhr.readyState == 4 && xhr.status == 200
+          --@requesting
           @eval.command.call(@, operation, continuation, scope, meta,
                                 node, type, xhr.responseText, src)
+
+
       xhr.open(method.toUpperCase(), src)
       xhr.send()
 

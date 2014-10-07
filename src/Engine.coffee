@@ -239,7 +239,6 @@ class Engine extends Domain.Events
 
     onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
     restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
-    
 
     if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled) 
       return @onSolve(null, restyled)
@@ -274,6 +273,8 @@ class Engine extends Domain.Events
     effects = @updating.each(@resolve, @, effects)
     if @updating.busy?.length
       return effects
+      
+    #return if @requesting
 
     if effects && Object.keys(effects).length
       return @onSolve(effects)
@@ -448,7 +449,6 @@ class Engine extends Domain.Events
     @mutations?.connect()
 
     if location.search.indexOf('export=') > -1
-      debugger
       @preexport()
 
   preexport: ->
@@ -483,12 +483,16 @@ class Engine extends Domain.Events
         @postexport()
 
   postexport: ->
+    debugger
     for size in @sizes
       unless localStorage[size]
         location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
         return
-
-
+    result = {}
+    for property, value of localStorage
+      if property.match(/^\d+x\d+$/)
+        result[property] = JSON.parse(value)
+    document.write(JSON.stringify(result))
 
   export: ->
     values = {}

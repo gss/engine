@@ -124,8 +124,11 @@ class Stylesheets
   export: ->
     sheet = []
     for id, style of @sheets
-      for rule in style.sheet.rules
-        sheet.push rule.cssText
+      for rule in (style.sheet.rules || style.sheet.cssRules)
+        text = rule.cssText.replace /\[matches~="(.*?)"\]/g, (m, selector) ->
+          selector.replace(/@\d+/g, '').replace(/↓/g, ' ')
+        sheet.push text
+
     return sheet.join('')
 
   remove: (continuation, stylesheets) ->

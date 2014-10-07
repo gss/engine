@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-07) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-08) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20505,7 +20505,6 @@ Engine = (function(_super) {
       _ref3.connect();
     }
     if (location.search.indexOf('export=') > -1) {
-      debugger;
       return this.preexport();
     }
   };
@@ -20561,7 +20560,8 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.postexport = function() {
-    var size, _i, _len, _ref;
+    debugger;
+    var property, result, size, value, _i, _len, _ref;
     _ref = this.sizes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       size = _ref[_i];
@@ -20570,6 +20570,14 @@ Engine = (function(_super) {
         return;
       }
     }
+    result = {};
+    for (property in localStorage) {
+      value = localStorage[property];
+      if (property.match(/^\d+x\d+$/)) {
+        result[property] = JSON.parse(value);
+      }
+    }
+    return document.write(JSON.stringify(result));
   };
 
   Engine.prototype["export"] = function() {
@@ -21414,8 +21422,10 @@ Rules = (function() {
       src = node.href || node.src || node;
       type || (type = node.type || 'text/gss');
       xhr = new XMLHttpRequest();
+      this.requesting = (this.requesting || 0) + 1;
       xhr.onreadystatechange = function() {
         if (xhr.readyState === 4 && xhr.status === 200) {
+          --_this.requesting;
           return _this["eval"].command.call(_this, operation, continuation, scope, meta, node, type, xhr.responseText, src);
         }
       };
@@ -26669,7 +26679,7 @@ Identity = (function() {
   Identity.uid = 0;
 
   Identity.prototype.provide = function(object, generate) {
-    var id;
+    var id, uid;
     if (typeof object === 'string') {
       if (object.charAt(0) !== '$') {
         return '$' + object;
@@ -26684,7 +26694,10 @@ Identity = (function() {
         id = "::window";
       }
       if (generate !== false) {
-        object._gss_id = id || (id = "$" + (object.id || ++Identity.uid));
+        if (uid = object._gss_uid) {
+          object._gss_id = uid;
+        }
+        object._gss_id = id || (id = "$" + (object.id || object._gss_id || ++Identity.uid));
         this[id] = object;
       }
     }
@@ -28417,15 +28430,18 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype["export"] = function() {
-    var id, rule, sheet, style, _i, _len, _ref, _ref1;
+    var id, rule, sheet, style, text, _i, _len, _ref, _ref1;
     sheet = [];
     _ref = this.sheets;
     for (id in _ref) {
       style = _ref[id];
-      _ref1 = style.sheet.rules;
+      _ref1 = style.sheet.rules || style.sheet.cssRules;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         rule = _ref1[_i];
-        sheet.push(rule.cssText);
+        text = rule.cssText.replace(/\[matches~="(.*?)"\]/g, function(m, selector) {
+          return selector.replace(/@\d+/g, '').replace(/↓/g, ' ');
+        });
+        sheet.push(text);
       }
     }
     return sheet.join('');
@@ -28497,7 +28513,6 @@ Dimensions = (function() {
 
   Dimensions.prototype['::window'] = {
     width: function() {
-      debugger;
       return window.innerWidth;
     },
     height: function() {
