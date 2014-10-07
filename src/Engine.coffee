@@ -68,6 +68,7 @@ class Engine extends Domain.Events
     # Definitions are compiled into functions 
     # right before first commands are executed
     super(@, url)
+
     @domain      = @
     @properties  = new @Properties(@)
     @methods     = new @Methods(@)
@@ -445,6 +446,64 @@ class Engine extends Domain.Events
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @update = Engine::Update.compile(@)
     @mutations?.connect()
+
+    if location.search.indexOf('export=') > -1
+      debugger
+      @preexport()
+
+  preexport: ->
+    # Let every element get an ID
+    for element in @scope.getElementsByTagName('*')
+      @identity.provide(element)
+    if window.Sizes
+      @sizes = []
+      for pairs in window.Sizes
+        for width in pairs[0]
+          for height in pairs[1]
+            @sizes.push(width + 'x' + height)
+    if match = location.search.match(/export=([a-z0-9]+)/)?[1]
+      if match.indexOf('x') > -1
+        [width, height] = match.split('x')
+        baseline = 72
+        width = parseInt(width) * baseline
+        height = parseInt(height) * baseline
+        window.addEventListener 'load', =>
+          localStorage[match] = JSON.stringify(@export())
+          @postexport()
+
+        document.body.style.width = width + 'px'
+        @intrinsic.properties['::window[height]'] = ->
+          return height
+        @intrinsic.properties['::window[width]'] = ->
+          return width
+
+      else 
+        if match == 'true'
+          localStorage.clear()
+        @postexport()
+
+  postexport: ->
+    for size in @sizes
+      unless localStorage[size]
+        location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
+        return
+
+
+
+  export: ->
+    values = {}
+    for path, value of @values
+      if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
+        property = @camelize(path.substring(index + 1, path.length - 1))
+        id = path.substring(0, index)
+        if property == 'x' || property == 'y' || document.body.style.hasOwnProperty(property)
+          unless @values[id + '[intrinsic-' + property + ']']?
+            values[path] = Math.ceil(value)
+    values.stylesheets = @stylesheets.export() 
+    return values
+
+  generate: ->
+
 
   # Comile user provided features specific to this engine
   compile: (state) ->

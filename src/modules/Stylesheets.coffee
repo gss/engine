@@ -120,6 +120,13 @@ class Stylesheets
     unless meta.length
       delete watchers[index]
       @update operation, operation[1], '', stylesheet, @getRule(operation)
+  
+  export: ->
+    sheet = []
+    for id, style of @sheets
+      for rule in style.sheet.rules
+        sheet.push rule.cssText
+    return sheet.join('')
 
   remove: (continuation, stylesheets) ->
     if @collections

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-07) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20501,8 +20501,98 @@ Engine = (function(_super) {
       }
     }
     this.update = Engine.prototype.Update.compile(this);
-    return (_ref3 = this.mutations) != null ? _ref3.connect() : void 0;
+    if ((_ref3 = this.mutations) != null) {
+      _ref3.connect();
+    }
+    if (location.search.indexOf('export=') > -1) {
+      debugger;
+      return this.preexport();
+    }
   };
+
+  Engine.prototype.preexport = function() {
+    var baseline, element, height, match, pairs, width, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5,
+      _this = this;
+    _ref = this.scope.getElementsByTagName('*');
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      element = _ref[_i];
+      this.identity.provide(element);
+    }
+    if (window.Sizes) {
+      this.sizes = [];
+      _ref1 = window.Sizes;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        pairs = _ref1[_j];
+        _ref2 = pairs[0];
+        for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+          width = _ref2[_k];
+          _ref3 = pairs[1];
+          for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+            height = _ref3[_l];
+            this.sizes.push(width + 'x' + height);
+          }
+        }
+      }
+    }
+    if (match = (_ref4 = location.search.match(/export=([a-z0-9]+)/)) != null ? _ref4[1] : void 0) {
+      if (match.indexOf('x') > -1) {
+        _ref5 = match.split('x'), width = _ref5[0], height = _ref5[1];
+        baseline = 72;
+        width = parseInt(width) * baseline;
+        height = parseInt(height) * baseline;
+        window.addEventListener('load', function() {
+          localStorage[match] = JSON.stringify(_this["export"]());
+          return _this.postexport();
+        });
+        document.body.style.width = width + 'px';
+        this.intrinsic.properties['::window[height]'] = function() {
+          return height;
+        };
+        return this.intrinsic.properties['::window[width]'] = function() {
+          return width;
+        };
+      } else {
+        if (match === 'true') {
+          localStorage.clear();
+        }
+        return this.postexport();
+      }
+    }
+  };
+
+  Engine.prototype.postexport = function() {
+    var size, _i, _len, _ref;
+    _ref = this.sizes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      size = _ref[_i];
+      if (!localStorage[size]) {
+        location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size;
+        return;
+      }
+    }
+  };
+
+  Engine.prototype["export"] = function() {
+    var id, index, path, property, value, values, _ref;
+    values = {};
+    _ref = this.values;
+    for (path in _ref) {
+      value = _ref[path];
+      if ((index = path.indexOf('[')) > -1 && path.indexOf('"') === -1) {
+        property = this.camelize(path.substring(index + 1, path.length - 1));
+        id = path.substring(0, index);
+        if (property === 'x' || property === 'y' || document.body.style.hasOwnProperty(property)) {
+          if (this.values[id + '[intrinsic-' + property + ']'] == null) {
+            values[path] = Math.ceil(value);
+          }
+        }
+      }
+    }
+    values.stylesheets = this.stylesheets["export"]();
+    return values;
+  };
+
+  Engine.prototype.generate = function() {};
 
   Engine.prototype.compile = function(state) {
     var methods, properties;
@@ -28326,6 +28416,21 @@ Stylesheets = (function() {
     }
   };
 
+  Stylesheets.prototype["export"] = function() {
+    var id, rule, sheet, style, _i, _len, _ref, _ref1;
+    sheet = [];
+    _ref = this.sheets;
+    for (id in _ref) {
+      style = _ref[id];
+      _ref1 = style.sheet.rules;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        rule = _ref1[_i];
+        sheet.push(rule.cssText);
+      }
+    }
+    return sheet.join('');
+  };
+
   Stylesheets.prototype.remove = function(continuation, stylesheets) {
     var collection, operation, operations, stylesheet, watchers, _i, _j, _k, _len, _len1, _ref;
     if (this.collections) {
@@ -28392,6 +28497,7 @@ Dimensions = (function() {
 
   Dimensions.prototype['::window'] = {
     width: function() {
+      debugger;
       return window.innerWidth;
     },
     height: function() {
