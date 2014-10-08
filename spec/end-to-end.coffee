@@ -2629,14 +2629,14 @@ describe 'End - to - End', ->
             engine.then (solution) ->
               expect(solution).to.eql 
 
-               "$article1[y]": 0
-                
-               "$title1[y]": 1
-               "$desc1[y]": 23
+                "$article1[y]": 0
 
-               "$article2[y]": 66
-               "$desc2[y]": 13 + 66
-               "$title2[y]": 1 + 66
+                "$title1[y]": 1
+                "$desc1[y]": 23
+
+                "$article2[y]": 66
+                "$desc2[y]": 13 + 66
+                "$title2[y]": 1 + 66
 
 
               title1 = engine.$id('title1')

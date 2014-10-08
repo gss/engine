@@ -1,19 +1,31 @@
----
 language: node_js
 node_js:
 - '0.10'
 before_script:
 - npm install -g grunt-cli
+- grunt build
 script: grunt crossbrowser
+deploy:
+  provider: s3
+  secret_access_key:
+    secure: He1S0/sHSIFVuX55RDVGSdkkO8+gzolMYEHq+EiZBrC9VgXX8BcqS+dFVU2nwhNO1okTOMurCqBzTlKucwyH5GhbvYmxmHiPVWzWhjLiebuvStm6OZ75m8prkQlseuRkmArVJARDSKe2e9LRfNXam0pe+60BJpBc9v10VeByuCs=
+  access_key_id:
+    secure: BIylx5hpoOeaPT3mLiSX6iLGEFyazrThGooi0QTI+m6z2c1FgvGAGu6kp8bKvNlB6Tti92DxI2iiDFxl23exph3rpFZ/LSFb2j0b+e/B6ydaeA2pvYfVpuOLUT5ulGlSWMvMooBEZNgMArevq8OguhcGddJEP3KmEWg7sDszKME=
+  bucket: cdn.thegrid.io
+  skip_cleanup: true
+  local-dir: dist/
+  upload-dir: gss/$TRAVIS_BRANCH/${TRAVIS_TAG:-HEAD}
+  endpoint: s3-website-us-west-2.amazonaws.com
+  region: us-west-2
+  on:
+    all_branches: true
 env:
   global:
-  - secure: ! 'JQFbHURLGcXjfgSy3bf+8unRrMgbkvQ/MAkthK1N9dpVHBKwFQUHa7NR2N2Q
-
+  - secure: |-
+      JQFbHURLGcXjfgSy3bf+8unRrMgbkvQ/MAkthK1N9dpVHBKwFQUHa7NR2N2Q
       lWbCvWQGwyguu91oPm1tQmHHRUDwzlJPXaNT2Dt5vxI7YPDtf6aPU8RkcqI9
-
-      i5ZmNcDIAF8VQQYDf07ZStAp72T21zCOnsBEHC5OKeR8JW18qMo='
-  - secure: ! 'AwXQ++vjwzi2YQLnrvlC0SExqCZh3nxVsYJNib8TR++UJJ2jkosfXeDUvvKk
-
+      i5ZmNcDIAF8VQQYDf07ZStAp72T21zCOnsBEHC5OKeR8JW18qMo=
+  - secure: |-
+      AwXQ++vjwzi2YQLnrvlC0SExqCZh3nxVsYJNib8TR++UJJ2jkosfXeDUvvKk
       QrIpnMlHte1kn6KRcojm+HL9AkTHMWhnQE1aYAe12FwBCgD0AI3dD7162s5N
-
-      VB9WEjNUagi6ppPs8e2IJ7D6r6qZUxCj9zixIg4RBkxu/gq87kA='
+      VB9WEjNUagi6ppPs8e2IJ7D6r6qZUxCj9zixIg4RBkxu/gq87kA=
