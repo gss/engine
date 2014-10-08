@@ -452,6 +452,7 @@ class Engine extends Domain.Events
       @preexport()
 
   preexport: ->
+    
     # Let every element get an ID
     for element in @scope.getElementsByTagName('*')
       @identity.provide(element)
@@ -468,7 +469,7 @@ class Engine extends Domain.Events
         width = parseInt(width) * baseline
         height = parseInt(height) * baseline
         window.addEventListener 'load', =>
-          localStorage[match] = JSON.stringify(@export())
+          localStorage[location.pathname + ' ' + match] = JSON.stringify(@export())
           @postexport()
 
         document.body.style.width = width + 'px'
@@ -479,18 +480,19 @@ class Engine extends Domain.Events
 
       else 
         if match == 'true'
-          localStorage.clear()
-        @postexport()
+          for property of localStorage
+            if property.indexOf(location.pathname + ' ') > -1
+              localStorage.removeItem(property)
+          @postexport()
 
   postexport: ->
-    debugger
     for size in @sizes
-      unless localStorage[size]
+      unless localStorage[location.pathname + ' ' + size]
         location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
         return
     result = {}
     for property, value of localStorage
-      if property.match(/^\d+x\d+$/)
+      if property.indexOf(location.pathname + ' ') > -1
         result[property] = JSON.parse(value)
     document.write(JSON.stringify(result))
 
@@ -500,7 +502,7 @@ class Engine extends Domain.Events
       if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
         property = @camelize(path.substring(index + 1, path.length - 1))
         id = path.substring(0, index)
-        if property == 'x' || property == 'y' || document.body.style.hasOwnProperty(property)
+        if property == 'x' || property == 'y' || document.body.style[property] != undefined
           unless @values[id + '[intrinsic-' + property + ']']?
             values[path] = Math.ceil(value)
     values.stylesheets = @stylesheets.export() 

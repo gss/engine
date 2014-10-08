@@ -9,16 +9,17 @@ class Mutations
 
 
   constructor: (@engine) ->
-    @listener = new @Observer @solve.bind(@engine)
+    if @Observer
+      @listener = new @Observer @solve.bind(@engine)
 
   Observer: 
     window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
 
   connect: ->
-    @listener.observe @engine.scope, @options 
+    @listener?.observe @engine.scope, @options 
 
   disconnect: ->
-    @listener.disconnect()
+    @listener?.disconnect()
 
   filter: ->
     return true
