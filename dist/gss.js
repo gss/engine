@@ -20510,7 +20510,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.preexport = function() {
-    var baseline, element, height, match, pairs, property, width, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5,
+    var baseline, element, height, match, pairs, width, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5,
       _this = this;
     _ref = this.scope.getElementsByTagName('*');
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -20540,7 +20540,7 @@ Engine = (function(_super) {
         width = parseInt(width) * baseline;
         height = parseInt(height) * baseline;
         window.addEventListener('load', function() {
-          localStorage[location.pathname + ' ' + match] = JSON.stringify(_this["export"]());
+          localStorage[match] = JSON.stringify(_this["export"]());
           return _this.postexport();
         });
         document.body.style.width = width + 'px';
@@ -20552,11 +20552,7 @@ Engine = (function(_super) {
         };
       } else {
         if (match === 'true') {
-          for (property in localStorage) {
-            if (property.indexOf(location.pathname + ' ') > -1) {
-              localStorage.removeItem(property);
-            }
-          }
+          localStorage.clear();
           return this.postexport();
         }
       }
@@ -20568,7 +20564,7 @@ Engine = (function(_super) {
     _ref = this.sizes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       size = _ref[_i];
-      if (!localStorage[location.pathname + ' ' + size]) {
+      if (!localStorage[size]) {
         location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size;
         return;
       }
@@ -20576,7 +20572,7 @@ Engine = (function(_super) {
     result = {};
     for (property in localStorage) {
       value = localStorage[property];
-      if (property.indexOf(location.pathname + ' ') > -1) {
+      if (property.match(/^\d+x\d+$/)) {
         result[property] = JSON.parse(value);
       }
     }

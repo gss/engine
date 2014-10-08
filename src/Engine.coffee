@@ -452,7 +452,7 @@ class Engine extends Domain.Events
       @preexport()
 
   preexport: ->
-    
+
     # Let every element get an ID
     for element in @scope.getElementsByTagName('*')
       @identity.provide(element)
@@ -469,7 +469,7 @@ class Engine extends Domain.Events
         width = parseInt(width) * baseline
         height = parseInt(height) * baseline
         window.addEventListener 'load', =>
-          localStorage[location.pathname + ' ' + match] = JSON.stringify(@export())
+          localStorage[match] = JSON.stringify(@export())
           @postexport()
 
         document.body.style.width = width + 'px'
@@ -480,19 +480,17 @@ class Engine extends Domain.Events
 
       else 
         if match == 'true'
-          for property of localStorage
-            if property.indexOf(location.pathname + ' ') > -1
-              localStorage.removeItem(property)
+          localStorage.clear()
           @postexport()
 
   postexport: ->
     for size in @sizes
-      unless localStorage[location.pathname + ' ' + size]
+      unless localStorage[size]
         location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
         return
     result = {}
     for property, value of localStorage
-      if property.indexOf(location.pathname + ' ') > -1
+      if property.match(/^\d+x\d+$/)
         result[property] = JSON.parse(value)
     document.write(JSON.stringify(result))
 
