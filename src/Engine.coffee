@@ -455,7 +455,8 @@ class Engine extends Domain.Events
 
     # Let every element get an ID
     for element in @scope.getElementsByTagName('*')
-      @identity.provide(element)
+      if element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1
+        @identity.provide(element)
     if window.Sizes
       @sizes = []
       for pairs in window.Sizes
