@@ -454,8 +454,12 @@ class Engine extends Domain.Events
   preexport: ->
 
     # Let every element get an ID
-    for element in @scope.getElementsByTagName('*')
-      if element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1
+    if (scope = @scope).nodeType == 9
+      scope = @scope.body
+    @identity.provide(scope)
+    for element in scope.getElementsByTagName('*')
+      if element.tagName != 'SCRIPT' &&
+          (element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1)
         @identity.provide(element)
     if window.Sizes
       @sizes = []
