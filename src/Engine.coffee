@@ -378,6 +378,8 @@ class Engine extends Domain.Events
         @providing = null
         providing = true
       @console.start(problems, domain.displayName)
+      if @domains.indexOf(domain) == -1
+        @domains.push(domain)
       result = domain.solve(problems) || undefined
       if result && result.postMessage
         workflow.await(result.url)

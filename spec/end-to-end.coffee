@@ -1618,6 +1618,7 @@ describe 'End - to - End', ->
 
           engine.then (solution) ->
             expect(solution).to.eql
+              "\"z\"[x]": 10
               '$a1[x]': 10
               "$a2[x]": 10
 
