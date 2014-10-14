@@ -48,21 +48,27 @@ class Document extends Abstract
   events:
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-      if e.target && @updating
-        if @updating.resizing
-          return @updating.resizing = 'scheduled'
-        @updating.resizing = 'computing'
+        
+
+      unless @resizer?
+        if e.target && @updating
+          if @updating.resizing
+            return @updating.resizing = 'scheduled'
+          @updating.resizing = 'computing'
         @once 'solve', ->
           setTimeout ->
             if @updated?.resizing == 'scheduled'
               @triggerEvent('resize')
           , 10
-        
+      else
+        clearTimeout(@resizer);
 
-
-      @solve id + ' resized', ->
-        @intrinsic.verify(id, "width")
-        @intrinsic.verify(id, "height")
+      @resizer = setTimeout =>
+        @resizer = undefined
+        @solve id + ' resized', ->
+          @intrinsic.verify(id, "width")
+          @intrinsic.verify(id, "height")
+      , 50
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
