@@ -235,7 +235,9 @@ class Domain
             if watcher.parent[watcher.index] != watcher
               watcher.parent[watcher.index] = watcher
             root = @getRootOperation(watcher, domain)
-            if value != undefined
+            if root.parent.def?.domain
+              @update([@[root.parent.def.domain]], [@sanitize(root)])
+            else if value != undefined
               @update([@sanitize(root)])
           else
             if watcher.parent.domain == domain

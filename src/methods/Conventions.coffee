@@ -348,9 +348,10 @@ class Conventions
     while parent.parent &&  typeof parent.parent[0] == 'string' && 
           (!parent.parent.def || 
                               (!parent.parent.def.noop && 
+                              !parent.parent.def.capture &&
                               parent.domain == domain))
       parent = parent.parent
-    while parent.parent?.domain == parent.domain
+    while !parent.parent?.def?.capture && parent.parent?.domain == parent.domain
       parent = parent.parent
     return parent
 

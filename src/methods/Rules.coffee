@@ -90,10 +90,9 @@ class Rules
   ###
 
   'if':
-    # Resolve all values in first argument
-    primitive: 1
-
     cleaning: true
+
+    domain: 'solved'
 
     solve: (operation, continuation, scope, meta, ascender, ascending) ->
       return if @ == @solved
