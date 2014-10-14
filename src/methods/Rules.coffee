@@ -126,7 +126,7 @@ class Rules
         unless old == undefined
           @queries.clean(@getContinuation(path) , continuation, operation.parent, scope)
         unless @switching
-          switching = true#@switching = true
+          switching = @switching = true
 
         @queries[path] = condition
         if switching
