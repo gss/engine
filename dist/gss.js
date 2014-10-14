@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-11) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-14) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20613,6 +20613,7 @@ Engine = (function(_super) {
     properties = this.properties || this.Properties.prototype;
     this.Method.compile(methods, this);
     this.Property.compile(properties, this);
+    this.console.compile(this);
     this.running = state != null ? state : null;
     return this.triggerEvent('compile', this);
   };
@@ -21039,15 +21040,15 @@ Conventions = (function() {
   })();
 
   Conventions.prototype.getRootOperation = function(operation, domain) {
-    var parent, _ref;
+    var parent, _ref, _ref1, _ref2;
     if (domain == null) {
       domain = operation.domain;
     }
     parent = operation;
-    while (parent.parent && typeof parent.parent[0] === 'string' && (!parent.parent.def || (!parent.parent.def.noop && parent.domain === domain))) {
+    while (parent.parent && typeof parent.parent[0] === 'string' && (!parent.parent.def || (!parent.parent.def.noop && !parent.parent.def.capture && parent.domain === domain))) {
       parent = parent.parent;
     }
-    while (((_ref = parent.parent) != null ? _ref.domain : void 0) === parent.domain) {
+    while (!((_ref = parent.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.capture : void 0 : void 0) && ((_ref2 = parent.parent) != null ? _ref2.domain : void 0) === parent.domain) {
       parent = parent.parent;
     }
     return parent;
@@ -21268,8 +21269,8 @@ Rules = (function() {
 
 
   Rules.prototype['if'] = {
-    primitive: 1,
     cleaning: true,
+    domain: 'solved',
     solve: function(operation, continuation, scope, meta, ascender, ascending) {
       var arg, condition, _i, _len, _ref;
       if (this === this.solved) {
@@ -21309,7 +21310,7 @@ Rules = (function() {
           this.queries.clean(this.getContinuation(path), continuation, operation.parent, scope);
         }
         if (!this.switching) {
-          switching = true;
+          switching = this.switching = true;
         }
         this.queries[path] = condition;
         if (switching) {
@@ -22496,7 +22497,7 @@ Console = (function() {
     var _ref, _ref1;
     this.level = level;
     if (this.level == null) {
-      this.level = parseFloat((typeof self !== "undefined" && self !== null ? (_ref = self.location) != null ? (_ref1 = _ref.search.match(/log=(\d)/)) != null ? _ref1[1] : void 0 : void 0 : void 0) || 0);
+      this.level = parseFloat((typeof self !== "undefined" && self !== null ? (_ref = self.location) != null ? (_ref1 = _ref.search.match(/log=([\d.]+)/)) != null ? _ref1[1] : void 0 : void 0 : void 0) || 0);
     }
     if (!Console.bind) {
       this.level = 0;
@@ -22506,6 +22507,44 @@ Console = (function() {
   Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
 
   Console.prototype.groups = 0;
+
+  Console.prototype.compile = function(engine) {
+    if (this.level > 0) {
+      return this.tick(engine);
+    }
+  };
+
+  Console.prototype.tick = function(engine) {
+    var ticker, update;
+    ticker = document.createElement('div');
+    ticker.style.position = 'fixed';
+    ticker.style.top = 0;
+    ticker.style.left = 0;
+    ticker.style.zIndex = 9999;
+    ticker.style.background = 'white';
+    ticker.style.padding = 10 + 'px';
+    update = function() {
+      var string;
+      if (engine && engine.domains) {
+        string = engine.domains.map(function(d) {
+          return d.constraints.length;
+        }).sort(function(a, b) {
+          return a - b;
+        }).slice(-10);
+        string += '=' + engine.domains.map(function(d) {
+          return d.constraints.length;
+        }).reduce(function(a, b) {
+          return a + b;
+        });
+        if (ticker.innerHTML !== string) {
+          ticker.innerHTML = string;
+        }
+      }
+      return requestAnimationFrame(update);
+    };
+    document.body.appendChild(ticker);
+    return update();
+  };
 
   Console.prototype.stringify = function(obj) {
     if (!obj) {
@@ -22530,7 +22569,7 @@ Console = (function() {
 
   Console.prototype.row = function(a, b, c) {
     var breakpoint, p1, p2;
-    if (!this.level) {
+    if (this.level < 1) {
       return;
     }
     a = a.name || a;
@@ -22998,7 +23037,7 @@ Domain = (function() {
   };
 
   Domain.prototype.callback = function(domain, path, value, meta) {
-    var constraint, d, frame, index, op, root, url, values, variable, watcher, watchers, worker, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
+    var constraint, d, frame, index, op, root, url, values, variable, watcher, watchers, worker, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
     if (meta !== true) {
       if (watchers = (_ref = domain.watchers) != null ? _ref[path] : void 0) {
         for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
@@ -23011,7 +23050,9 @@ Domain = (function() {
               watcher.parent[watcher.index] = watcher;
             }
             root = this.getRootOperation(watcher, domain);
-            if (value !== void 0) {
+            if ((_ref1 = root.parent.def) != null ? _ref1.domain : void 0) {
+              this.update([this[root.parent.def.domain]], [this.sanitize(root)]);
+            } else if (value !== void 0) {
               this.update([this.sanitize(root)]);
             }
           } else {
@@ -23028,9 +23069,9 @@ Domain = (function() {
       return;
     }
     if (this.workers) {
-      _ref1 = this.workers;
-      for (url in _ref1) {
-        worker = _ref1[url];
+      _ref2 = this.workers;
+      for (url in _ref2) {
+        worker = _ref2[url];
         if (values = worker.values) {
           if (values.hasOwnProperty(path)) {
             if (value == null) {
@@ -23044,17 +23085,17 @@ Domain = (function() {
     if ((variable = this.variables[path]) && domain.priority > 0) {
       frame = void 0;
       if (variable.constraints) {
-        _ref2 = variable.constraints;
-        for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-          constraint = _ref2[_j];
+        _ref3 = variable.constraints;
+        for (_j = 0, _len1 = _ref3.length; _j < _len1; _j++) {
+          constraint = _ref3[_j];
           if (frame = constraint.domain.frame) {
             break;
           }
         }
       }
-      _ref3 = variable.operations;
-      for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-        op = _ref3[_k];
+      _ref4 = variable.operations;
+      for (_k = 0, _len2 = _ref4.length; _k < _len2; _k++) {
+        op = _ref4[_k];
         if (!watchers || watchers.indexOf(op) === -1) {
           if (value === null) {
             while (op.domain === domain) {
@@ -25300,7 +25341,7 @@ Abstract.prototype.Methods = (function() {
       var getter, id, prop;
       if (typeof object === 'string') {
         id = object;
-      } else if (object.absolute === 'window' || object === document) {
+      } else if (object.absolute === 'window' || object === window) {
         id = '::window';
       } else if (object.nodeType) {
         id = this.identity.provide(object);
@@ -26175,16 +26216,19 @@ Document = (function(_super) {
 
   Document.prototype.events = {
     resize: function(e) {
-      var id;
+      var id,
+        _this = this;
       if (e == null) {
         e = '::window';
       }
       id = e.target && this.identity.provide(e.target) || e;
-      if (e.target && this.updating) {
-        if (this.updating.resizing) {
-          return this.updating.resizing = 'scheduled';
+      if (this.resizer == null) {
+        if (e.target && this.updating) {
+          if (this.updating.resizing) {
+            return this.updating.resizing = 'scheduled';
+          }
+          this.updating.resizing = 'computing';
         }
-        this.updating.resizing = 'computing';
         this.once('solve', function() {
           return setTimeout(function() {
             var _ref;
@@ -26193,11 +26237,16 @@ Document = (function(_super) {
             }
           }, 10);
         });
+      } else {
+        clearTimeout(this.resizer);
       }
-      return this.solve(id + ' resized', function() {
-        this.intrinsic.verify(id, "width");
-        return this.intrinsic.verify(id, "height");
-      });
+      return this.resizer = setTimeout(function() {
+        _this.resizer = void 0;
+        return _this.solve(id + ' resized', function() {
+          this.intrinsic.verify(id, "width");
+          return this.intrinsic.verify(id, "height");
+        });
+      }, 50);
     },
     scroll: function(e) {
       var id;
@@ -28090,7 +28139,7 @@ Pairs = (function() {
 
   Pairs.prototype.pad = function(value, length) {
     var i, result, _i;
-    if (!(value != null ? value.push : void 0)) {
+    if (value && !value.push) {
       result = [];
       for (i = _i = 0; 0 <= length ? _i < length : _i > length; i = 0 <= length ? ++_i : --_i) {
         result.push(value);

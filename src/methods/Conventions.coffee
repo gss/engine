@@ -350,6 +350,7 @@ class Conventions
                               (!parent.parent.def.noop && 
                               !parent.parent.def.capture &&
                               parent.domain == domain))
+
       parent = parent.parent
     while !parent.parent?.def?.capture && parent.parent?.domain == parent.domain
       parent = parent.parent

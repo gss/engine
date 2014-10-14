@@ -520,6 +520,8 @@ class Engine extends Domain.Events
     properties = @properties || @Properties::
     @Method  .compile(methods,    @)
     @Property.compile(properties, @)
+    
+    @console.compile(@)
 
     @running = state ? null
     

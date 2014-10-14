@@ -18,7 +18,7 @@ class Abstract::Methods
         id = object
 
       # Get document property
-      else if object.absolute is 'window' || object == document
+      else if object.absolute is 'window' || object == window
         id = '::window'
 
       # Get element property
