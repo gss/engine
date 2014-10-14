@@ -6,6 +6,15 @@ It initializes and orchestrates all moving parts.
 It includes interpreter that operates in defined constraint domains.
 Each domain has its own command set, that extends engine defaults. ###
 
+
+# Little shim for require.js so we dont have to carry it around
+@require ||= (string) ->
+  if string == 'cassowary'
+    return c
+  bits = string.replace('', '').split('/')
+  return this[bits[bits.length - 1]]
+@module ||= {}
+
 Native          = require('./methods/Native')
 Events          = require('./concepts/Events')
 Domain          = require('./concepts/Domain')
@@ -13,26 +22,28 @@ Domain.Events ||= Native::mixin(Domain, Events)
 
 class Engine extends Domain.Events
 
-  Identity:    require('./modules/Identity')
-  Expressions: require('./modules/Expressions')
+  Identity:     require('./concepts/Identity')
+  Evaluator:    require('./concepts/Evaluator')
+  Operation:    require('./concepts/Operation')
+  Variable:     require('./concepts/Variable')
+  Method:       require('./concepts/Method')
+  Property:     require('./concepts/Property')
+  Console:      require('./concepts/Console')
+  Update:       require('./concepts/Update')
+  Continuation: require('./concepts/Continuation')
 
-  Method:      require('./concepts/Method')
-  Property:    require('./concepts/Property')
-  Console:     require('./concepts/Console')
-  Update:      require('./concepts/Update')
-  
-  Properties:  require('./properties/Axioms')
+  Properties:   require('./properties/Axioms')
+ 
+  Methods:      Native
 
-  Methods:     Native::mixin new Native,
-               require('./methods/Conventions')
   Domains: 
-    Abstract:  require('./domains/Abstract')
-    Document:  require('./domains/Document')
-    Intrinsic: require('./domains/Intrinsic')
-    Numeric:   require('./domains/Numeric')
-    Linear:    require('./domains/Linear')
-    Finite:    require('./domains/Finite')
-    Boolean:   require('./domains/Boolean')
+    Abstract:   require('./domains/Abstract')
+    Document:   require('./domains/Document')
+    Intrinsic:  require('./domains/Intrinsic')
+    Numeric:    require('./domains/Numeric')
+    Linear:     require('./domains/Linear')
+    Finite:     require('./domains/Finite')
+    Boolean:    require('./domains/Boolean')
 
 
   constructor: () -> #(scope, url, data)
@@ -41,7 +52,7 @@ class Engine extends Domain.Events
       switch typeof argument
         when 'object'
           if argument.nodeType
-            if @Expressions
+            if @Evaluator
               Engine[Engine.identity.provide(argument)] = @
               @scope = scope = argument
             else
@@ -59,7 +70,7 @@ class Engine extends Domain.Events
 
     # **GSS()** creates new Engine at the root, 
     # if there is no engine assigned to it yet
-    unless @Expressions
+    unless @Evaluator
       return new Engine(arguments[0], arguments[1], arguments[2])
 
     # Create instance own objects and context objects.
@@ -68,13 +79,17 @@ class Engine extends Domain.Events
     # Definitions are compiled into functions 
     # right before first commands are executed
     super(@, url)
-
-    @domain      = @
-    @properties  = new @Properties(@)
-    @methods     = new @Methods(@)
-    @expressions = new @Expressions(@)
+    
+    @domain       = @
+    @properties   = new @Properties(@)
+    @methods      = new @Methods(@)
+    @evaluator    = new @Evaluator(@)
 
     @precompile()
+ 
+    @Operation    = new @Operation(@)
+    @Variable     = new @Variable(@)
+    @Continuation = @Continuation.new(@)
 
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
@@ -142,7 +157,7 @@ class Engine extends Domain.Events
       # Substituted part of expression
       if expressions[4]
         exp = parent[index] = expressions[3].split(',')
-        path = @getPath(exp[1], exp[2])
+        path = @Variable.getPath(exp[1], exp[2])
       # Updates for substituted variables
       else if !expressions[3]
         path = expressions[2]
@@ -201,6 +216,8 @@ class Engine extends Domain.Events
         @console.start(reason || args[0], name)
     unless old = @updating
       @engine.updating = new @update
+      @engine.updating.start ?= @engine.time()
+      console.profile(1)
 
     if @providing == undefined
       @providing = null
@@ -288,10 +305,12 @@ class Engine extends Domain.Events
       return 
 
     if !@updating.problems.length && @updated?.problems.length
+      @updating.finish()
       @updating = undefined
       return
     else
       @updated = @updating
+      @updating.finish()
       @updating = undefined
 
     @console.info('Solution\t   ', @updated, solution, @solved.values)
@@ -386,7 +405,16 @@ class Engine extends Domain.Events
             removes.push(problem)
           else
             others.push(problem)
-
+      
+      for remove in removes
+        for path, index in remove
+          if bypassers = @bypassers[path]
+            console.log('remove bypasser', path)
+            for bypasser in bypassers
+              key = Object.keys(bypasser.variables)[0]
+              delete @variables[key]
+              (result ||= {})[key] = null
+            delete @bypassers[path]
       for other, i in @domains
         locals = []
         other.changes = undefined
@@ -413,6 +441,19 @@ class Engine extends Domain.Events
       for url, worker of @workers
         workflow.push problems, worker
     return result
+
+
+  # auto-worker url, only works with sync scripts!
+  getWorkerURL: do ->
+    if document?
+      scripts = document.getElementsByTagName('script')
+      src = scripts[scripts.length - 1].src
+      if location.search?.indexOf('log=0') > -1
+        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
+    return (url) ->
+      return typeof url == 'string' && url || src
+
+
 
   # Initialize new worker and subscribe engine to its events
   useWorker: (url) ->
@@ -527,6 +568,19 @@ class Engine extends Domain.Events
     
     @triggerEvent('compile', @)
 
+  # Hook: Should interpreter iterate returned object?
+  # (yes, if it's a collection of objects or empty array)
+  isCollection: (object) ->
+    if object && object.length != undefined && !object.substring && !object.nodeType
+      return true if object.isCollection
+      switch typeof object[0]
+        when "object"
+          return object[0].nodeType
+        when "undefined"
+          return object.length == 0
+  
+
+Engine.Continuation = Engine::Continuation
 
 # Identity and console modules are shared between engines
 Engine.identity = Engine::identity = new Engine::Identity

@@ -70,7 +70,7 @@ class Intrinsic extends Numeric
         element.style.position = ''
 
     if continuation
-      bits = continuation.split(@DESCEND)
+      bits = continuation.split(@Continuation.DESCEND)
       first = bits.shift()
       if (j = first.lastIndexOf('$')) > -1
         id = first.substring(j)
@@ -81,10 +81,10 @@ class Intrinsic extends Numeric
               shared = false
               break
           if shared != false
-            if @stylesheets.solve stylesheet, operation, @getContinuation(continuation), element, property, value
+            if @stylesheets.solve stylesheet, operation, @Continuation(continuation), element, property, value
               return
 
-    path = @getPath(element, 'intrinsic-' + property)
+    path = @Variable.getPath(element, 'intrinsic-' + property)
     if @watchers?[path]
       return
     element.style[camel] = value
@@ -102,7 +102,7 @@ class Intrinsic extends Numeric
     return changes
 
   get: (object, property, continuation) ->
-    path = @getPath(object, property)
+    path = @Variable.getPath(object, property)
 
     if (prop = @properties[path])?
       if typeof prop == 'function'
@@ -137,7 +137,7 @@ class Intrinsic extends Numeric
     @engine.updating.reflown = @scope
 
   verify: (object, property, continuation) ->
-    path = @getPath(object, property)
+    path = @Variable.getPath(object, property)
     if @values.hasOwnProperty(path)
       @set(null, path, @get(null, path, continuation))
 
@@ -192,7 +192,7 @@ class Intrinsic extends Numeric
     if (node = @identity.solve(id)) && node.nodeType == 1
       if property.indexOf('intrinsic-') > -1
         property = property.substring(10)
-      if @engine.values[@getPath(id, property)] != undefined
+      if @engine.values[@Variable.getPath(id, property)] != undefined
         node.style[property] = ''
 
   update: (node, x, y, full) ->
@@ -220,6 +220,14 @@ class Intrinsic extends Numeric
 
     return
 
+  # Return name of intrinsic property used in property path 
+  getIntrinsicProperty: (path) ->
+    index = path.indexOf('intrinsic-')
+    if index > -1
+      if (last = path.indexOf(']', index)) == -1
+        last = undefined
+      return property = path.substring(index + 10, last)
+      
   @condition: ->
     @scope?
     

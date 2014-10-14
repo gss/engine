@@ -42,7 +42,7 @@ class Stylesheets
     return needle
 
   getSelector: (operation) ->
-    return @engine.getOperationSelectors(operation).join(', ')
+    return @engine.Operation.getSelectors(operation).join(', ')
 
   # dump style into native stylesheet rule
   solve: (stylesheet, operation, continuation, element, property, value) ->

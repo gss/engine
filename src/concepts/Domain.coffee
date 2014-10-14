@@ -43,8 +43,11 @@ class Domain
 
   setup: (hidden = @immutable) ->
     @variables   ||= {}
+    @bypassers   ||= {}
     unless @hasOwnProperty('watchers')
-      @expressions = new @Expressions(@) 
+      @evaluator   = new @Evaluator(@) 
+      @Operation   = new @Operation.constructor(@) 
+      @Variable    = new @Variable.constructor(@) 
       @watchers    = {}
       @observers   = {}
       @paths       = {}
@@ -57,6 +60,37 @@ class Domain
         @domains.push(@)
       @MAYBE       = undefined
 
+  # Dont solve system with a single variable+constant constraint 
+  bypass: (operation) ->
+    name = undefined
+    for prop, variable of operation.variables
+      if variable.domain.displayName == @displayName
+        return if name
+        name = prop
+
+    primitive = continuation = fallback = undefined
+    for arg in operation
+      if arg?.push
+        if arg[0] == 'get'
+          if continuation != undefined
+            return
+          continuation = arg[3] ? null
+        else if arg[0] == 'value'
+          fallback ?= arg[2]
+          value = arg[1]
+      else
+        primitive = arg
+
+    unless value?
+      value = primitive
+
+    result = {}
+    continuation ?= fallback
+    result[name] = value
+#    console.log('bypass', name, value)
+    (@bypassers[continuation] ||= []).push operation
+    @variables[name] = continuation
+    return result
 
 
   solve: (args) ->
@@ -65,6 +99,9 @@ class Domain
     if @disconnected
       @mutations?.disconnect()
 
+    if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
+      if (result = @bypass(args))
+        return result
     @setup()
 
     if typeof args == 'object' && !args.push
@@ -112,7 +149,7 @@ class Domain
 
   watch: (object, property, operation, continuation, scope) ->
     @setup()
-    path = @engine.getPath(object, property)
+    path = @engine.Variable.getPath(object, property)
     if @engine.indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @observers[continuation] ||= []
       observers.push(operation, path, scope)
@@ -133,7 +170,7 @@ class Domain
     return @get(path)
 
   unwatch: (object, property, operation, continuation, scope) ->
-    path = @engine.getPath(object, property)
+    path = @engine.Variable.getPath(object, property)
     observers = @observers[continuation]
     index = @engine.indexOfTriplet observers, operation, path, scope
     observers.splice index, 3
@@ -159,7 +196,7 @@ class Domain
             delete @objects[id]
 
   get: (object, property) ->
-    return @values[@engine.getPath(object, property)]
+    return @values[@engine.Variable.getPath(object, property)]
 
   merge: (object, meta) ->
     # merge objects/domains
@@ -181,7 +218,7 @@ class Domain
   set: (object, property, value, meta) ->
     @setup()
 
-    path = @engine.getPath(object, property)
+    path = @engine.Variable.getPath(object, property)
     old = @values[path]
     return if old == value
     if @changes
@@ -204,26 +241,6 @@ class Domain
 
     return value
 
-  sanitize: (exps, soft, parent = exps.parent, index = exps.index) ->
-    if exps[0] == 'value' && exps.operation
-      return parent[index] = @sanitize exps.operation, soft, parent, index
-    for own prop, value of exps
-      unless isFinite(parseInt(prop))
-        delete exps[prop]
-    for exp, i in exps
-      if exp?.push
-        @sanitize exp, soft, exps, i
-    exps.parent = parent
-    exps.index  = index
-    exps
-
-  orphanize: (operation) ->
-    if operation.domain
-      delete operation.domain
-    for arg in operation
-      if arg?.push
-        @orphanize arg
-    operation
 
   callback: (domain, path, value, meta) ->
     unless meta == true
@@ -234,16 +251,16 @@ class Domain
             # Re-evaluate expression
             if watcher.parent[watcher.index] != watcher
               watcher.parent[watcher.index] = watcher
-            root = @getRootOperation(watcher, domain)
+            root = @Operation.ascend(watcher, domain)
             if root.parent.def?.domain
-              @update([@[root.parent.def.domain]], [@sanitize(root)])
+              @update([@[root.parent.def.domain]], [@Operation.sanitize(root)])
             else if value != undefined
-              @update([@sanitize(root)])
+              @update([@Operation.sanitize(root)])
           else
             if watcher.parent.domain == domain
               domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
             else
-              @expressions.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
+              @evaluator.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
     
     return if domain.immutable
 
@@ -275,10 +292,10 @@ class Domain
             if frame
               d = op.domain
               op.domain = domain
-              domain.expressions.ascend op, undefined, value, undefined, undefined, op.index
+              domain.evaluator.ascend op, undefined, value, undefined, undefined, op.index
               op.domain = d
             else
-              @update(@sanitize(@getRootOperation(op)))
+              @update(@Operation.sanitize(@Operation.ascend(op)))
 
     return
 
@@ -392,7 +409,7 @@ class Domain
           if path[3]
             bits = path[3].split(',')
             if bits[0] == 'get'
-              (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
+              (constraint.substitutions ||= {})[@Variable.getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
         else if @isVariable(path)
           if path.suggest != undefined
@@ -519,6 +536,7 @@ class Domain
 
   validate: () ->
     if @constrained || @unconstrained
+      console.log('reach', @constraints.length)
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
         bl = b.length
@@ -556,10 +574,8 @@ class Domain
               equal = false
               break
           if equal
-            message = 'Trying to separate what was just added. Means loop.'
-            err = new Error message
-            throw err
-        return  @orphanize commands
+            throw new Error 'Trying to separate what was just added. Means loop. '
+        return @Operation.orphanize commands
         
   apply: (solution) ->
     result = {}
@@ -589,7 +605,7 @@ class Domain
 
   remove: ->
     for path in arguments
-      for contd in @getPossibleContinuations(path)
+      for contd in @Continuation.getVariants(path)
         if observers = @observers[contd]
           while observers[0]
             @unwatch(observers[1], undefined, observers[0], contd, observers[2])
@@ -657,7 +673,7 @@ class Domain
       EngineDomainWrapper       = engine.mixin(engine, domain)
       EngineDomain.prototype    = new EngineDomainWrapper
       EngineDomain::solve     ||= Domain::solve unless domain::solve
-      EngineDomain::strategy    = 'expressions'
+      EngineDomain::strategy    = 'evaluator'
       EngineDomain::displayName = name
       EngineDomain.displayName  = name
       unless engine.prototype
@@ -682,7 +698,7 @@ class Domain::Methods
         return variable
 
       if !continuation && contd
-        return @expressions.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
+        return @evaluator.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
       return value
 
   framed: (value) ->

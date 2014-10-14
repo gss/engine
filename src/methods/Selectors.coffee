@@ -67,7 +67,7 @@ class Selectors
       shortcut.parent = head.parent
       shortcut.index = head.index
       shortcut.bound = head.bound if head.bound
-      @expressions.analyze(shortcut)
+      @Operation.analyze(shortcut)
       tail = operation.tail
       unless global = tail.arity == 1 && tail.length == 2
         shortcut.splice(1, 0, tail[1])
@@ -146,7 +146,7 @@ class Selectors
     1: (value) ->
       return '"' + value + '"'
     command: (o,c,s,m, scope, value) ->
-      if c?.charAt(0) == @PAIR
+      if c?.charAt(0) == @Continuation.PAIR
         collection = [@identity.provide(scope) + '"' + value + '"']
         collection.isCollection = true
         collection

@@ -34,11 +34,10 @@ class Abstract::Methods
       if object
         if prop = @properties[property]
           unless prop.matcher
-            return prop.call(@, object, @getContinuation(continuation || contd || ''))
+            return prop.call(@, object, @Continuation(continuation || contd || ''))
       
 
-
-      getter = ['get', id, property, @getContinuation(continuation || contd || '')]
+      getter = ['get', id, property, @Continuation(continuation || contd || '')]
       
       if scope && scope != @scope
         getter.push(@identity.provide(scope))
@@ -73,7 +72,7 @@ class Abstract::Methods
       op = string.split(',')
       scope = op[1]
       property = op[2]
-      @engine.values[@engine.getPath(scope, property)] = value
+      @engine.values[@engine.Variable.getPath(scope, property)] = value
     return value
 
 # Proxy math for axioms
