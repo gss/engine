@@ -116,7 +116,7 @@ class Pairs
       value? && 1 || 0
 
   pad: (value, length) ->
-    unless value?.push
+    if value && !value.push
       result = []
       for i in [0...length]
         result.push value
