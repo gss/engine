@@ -4,12 +4,43 @@ Native = require '../methods/Native'
 
 class Console
   constructor: (@level) ->
-    @level ?= parseFloat(self?.location?.search.match(/log=(\d)/)?[1] || 0)
+    @level ?= parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
     if !Console.bind
       @level = 0
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0
+
+  compile: (engine) ->
+    if @level > 0
+      @tick(engine)
+
+  tick: (engine) ->
+
+    ticker = document.createElement('div')
+    ticker.style.position = 'fixed'
+    ticker.style.top = 0
+    ticker.style.left = 0
+    ticker.style.zIndex = 9999
+    ticker.style.background = 'white'
+    ticker.style.padding = 10 + 'px'
+
+    update = ->
+      if (engine && engine.domains)
+        string = engine.domains.
+                    map((d) -> d.constraints.length).
+                    sort((a, b) -> a - b).
+                    slice(-10)
+        string += '=' + engine.domains.
+          map((d) -> d.constraints.length).
+          reduce (a, b) -> a + b
+
+        if (ticker.innerHTML != string)
+          ticker.innerHTML = string
+      requestAnimationFrame(update)
+    document.body.appendChild(ticker)
+    update()
+
 
   stringify: (obj) ->
     return '' unless obj
@@ -30,7 +61,7 @@ class Console
   breakpoint: decodeURIComponent (document?.location.search.match(/breakpoint=([^&]+)/, '') || ['',''])[1]
 
   row: (a, b, c) ->
-    return unless @level
+    return if @level < 1
     a = a.name || a
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
     if document?
