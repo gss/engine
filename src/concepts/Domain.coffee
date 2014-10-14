@@ -88,7 +88,7 @@ class Domain
     continuation ?= fallback
     result[name] = value
 #    console.log('bypass', name, value)
-    unless @variables[name]
+    if !@variables[name] || @variables[name].constraints?.length == 0
       (@bypassers[continuation] ||= []).push operation
       @variables[name] = continuation
     return result
