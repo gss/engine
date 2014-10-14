@@ -289,7 +289,10 @@ Update.prototype =
         else unless bubbled
           if problem.indexOf(exps[i - 1]) > -1
             bubbled = exps
-            exps[i - 1] = problem
+            if exps.indexOf(problem) == -1
+              exps[i - 1] = problem
+            else 
+              exps.splice(--i, 1)
             problem.domain = other
 
         if other

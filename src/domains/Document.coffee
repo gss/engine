@@ -111,7 +111,9 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
+      console.profile(1)
       @stylesheets.compile()
+      console.profileEnd(1)
       
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @

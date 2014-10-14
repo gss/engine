@@ -25599,7 +25599,11 @@ Update.prototype = {
         } else if (!bubbled) {
           if (problem.indexOf(exps[i - 1]) > -1) {
             bubbled = exps;
-            exps[i - 1] = problem;
+            if (exps.indexOf(problem) === -1) {
+              exps[i - 1] = problem;
+            } else {
+              exps.splice(--i, 1);
+            }
             problem.domain = other;
           }
         }
@@ -27598,7 +27602,9 @@ Document = (function(_super) {
       });
     },
     compile: function() {
-      return this.stylesheets.compile();
+      console.profile(1);
+      this.stylesheets.compile();
+      return console.profileEnd(1);
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
