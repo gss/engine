@@ -23679,8 +23679,10 @@ Domain = (function() {
       continuation = fallback;
     }
     result[name] = value;
-    ((_base = this.bypassers)[continuation] || (_base[continuation] = [])).push(operation);
-    this.variables[name] = continuation;
+    if (!this.variables[name]) {
+      ((_base = this.bypassers)[continuation] || (_base[continuation] = [])).push(operation);
+      this.variables[name] = continuation;
+    }
     return result;
   };
 
@@ -24301,13 +24303,13 @@ Domain = (function() {
   Domain.prototype.validate = function() {
     var arg, args, commands, constraint, equal, group, groups, i, index, ops, separated, shift, _i, _j, _k, _len, _len1, _len2;
     if (this.constrained || this.unconstrained) {
-      console.log('reach', this.constraints.length);
       groups = this.reach(this.constraints).sort(function(a, b) {
         var al, bl;
         al = a.length;
         bl = b.length;
         return bl - al;
       });
+      console.log('reach', this.constraints.length, groups.length);
       separated = groups.splice(1);
       commands = [];
       if (separated.length) {

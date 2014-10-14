@@ -88,8 +88,9 @@ class Domain
     continuation ?= fallback
     result[name] = value
 #    console.log('bypass', name, value)
-    (@bypassers[continuation] ||= []).push operation
-    @variables[name] = continuation
+    unless @variables[name]
+      (@bypassers[continuation] ||= []).push operation
+      @variables[name] = continuation
     return result
 
 
@@ -536,11 +537,11 @@ class Domain
 
   validate: () ->
     if @constrained || @unconstrained
-      console.log('reach', @constraints.length)
       groups = @reach(@constraints).sort (a, b) ->
         al = a.length
         bl = b.length
         return bl - al
+      console.log('reach', @constraints.length, groups.length)
 
       separated = groups.splice(1)
       commands = []
