@@ -396,10 +396,10 @@ Update.prototype =
     return unless domain
     problems = @problems[position]
     
-    `connector: {`
     while (other = @domains[++index]) != undefined
       continue if position == index
     
+      `connector: {`
       if other && other.domain?.displayName == domain.displayName
         for cmd in @problems[index]
           if cmd.variables
