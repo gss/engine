@@ -25756,7 +25756,7 @@ Update.prototype = {
     }
   },
   connect: function(position) {
-    var cmd, domain, framed, index, other, problem, problems, property, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var cmd, domain, framed, index, other, problem, problems, property, variable, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
     index = this.index;
     domain = this.domains[position];
     if (!domain) {
@@ -25777,9 +25777,9 @@ Update.prototype = {
               problem = problems[_j];
               for (property in problem.variables) {
                 if (variable = cmd.variables[property]) {
-                  if (!variable.domain || variable.domain.displayName === domain.displayName) {
+                  if (((_ref2 = variable.domain) != null ? _ref2.displayName : void 0) === domain.displayName) {
                     if (domain.frame === other.frame) {
-                      if (((_ref2 = other.constraints) != null ? _ref2.length : void 0) > ((_ref3 = domain.constraints) != null ? _ref3.length : void 0) || position > index) {
+                      if (((_ref3 = other.constraints) != null ? _ref3.length : void 0) > ((_ref4 = domain.constraints) != null ? _ref4.length : void 0) || position > index) {
                         this.merge(position, index);
                         position = index;
                       } else {

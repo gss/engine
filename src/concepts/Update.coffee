@@ -409,7 +409,7 @@ Update.prototype =
             for problem in problems
               for property of problem.variables
                 if variable = cmd.variables[property]
-                  if !variable.domain || variable.domain.displayName == domain.displayName
+                  if variable.domain?.displayName == domain.displayName
                     if domain.frame == other.frame
                       if other.constraints?.length > domain.constraints?.length || position > index
                         @merge position, index
