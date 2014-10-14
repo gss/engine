@@ -1569,12 +1569,12 @@ describe 'End - to - End', ->
         
       """
       engine.then (solution) ->
-        expect(solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
+        expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
 
         engine.$id('box').click()
 
         engine.then (solution) ->
-          expect(solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
+          expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
           done()
 
 
@@ -2571,7 +2571,9 @@ describe 'End - to - End', ->
           ::scope[left] == 0;
           ::scope[top] == 0;
 
-          @v |(article)... in(::scope);
+          @v |(article)... in(::scope) {
+            height: >= 0;
+          }
 
           article {
             @v |
