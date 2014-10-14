@@ -20355,7 +20355,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var bypasser, bypassers, finish, i, imports, key, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _m, _n, _o, _p, _q, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (domain && !domain.solve && domain.postMessage) {
       workflow.postMessage(domain, problems);
       workflow.await(domain.url);
@@ -20433,30 +20433,14 @@ Engine = (function(_super) {
           }
         }
       }
-      for (_l = 0, _len3 = removes.length; _l < _len3; _l++) {
-        remove = removes[_l];
-        for (index = _m = 0, _len4 = remove.length; _m < _len4; index = ++_m) {
-          path = remove[index];
-          if (bypassers = this.bypassers[path]) {
-            console.log('remove bypasser', path);
-            for (_n = 0, _len5 = bypassers.length; _n < _len5; _n++) {
-              bypasser = bypassers[_n];
-              key = Object.keys(bypasser.variables)[0];
-              delete this.variables[key];
-              (result || (result = {}))[key] = null;
-            }
-            delete this.bypassers[path];
-          }
-        }
-      }
       _ref3 = this.domains;
-      for (i = _o = 0, _len6 = _ref3.length; _o < _len6; i = ++_o) {
+      for (i = _l = 0, _len3 = _ref3.length; _l < _len3; i = ++_l) {
         other = _ref3[i];
         locals = [];
         other.changes = void 0;
-        for (_p = 0, _len7 = removes.length; _p < _len7; _p++) {
-          remove = removes[_p];
-          for (index = _q = 0, _len8 = remove.length; _q < _len8; index = ++_q) {
+        for (_m = 0, _len4 = removes.length; _m < _len4; _m++) {
+          remove = removes[_m];
+          for (index = _n = 0, _len5 = remove.length; _n < _len5; index = ++_n) {
             path = remove[index];
             if (index === 0) {
               continue;
@@ -25994,7 +25978,7 @@ Update.prototype = {
     return solution;
   },
   remove: function(continuation, problem) {
-    var arg, i, index, problems, spliced, _i, _len, _results;
+    var arg, bypasser, bypassers, i, index, key, problems, result, spliced, _i, _j, _len, _len1, _results;
     if (problem) {
       if ((problem[0] === 'value' && problem[2] === continuation) || (problem[0] === 'get' && problem[3] === continuation)) {
         return true;
@@ -26011,12 +25995,24 @@ Update.prototype = {
     } else {
       index = this.index;
       spliced = false;
+      if (bypassers = this.engine.bypassers[continuation]) {
+        console.log('remove bypasser', continuation);
+        for (_j = 0, _len1 = bypassers.length; _j < _len1; _j++) {
+          bypasser = bypassers[_j];
+          key = Object.keys(bypasser.variables)[0];
+          delete this.engine.variables[key];
+          result = {};
+          result[key] = null;
+          this.apply(result);
+        }
+        delete this.engine.bypassers[continuation];
+      }
       _results = [];
       while (problems = this.problems[index++]) {
         _results.push((function() {
-          var _j, _results1;
+          var _k, _results1;
           _results1 = [];
-          for (i = _j = problems.length - 1; _j >= 0; i = _j += -1) {
+          for (i = _k = problems.length - 1; _k >= 0; i = _k += -1) {
             problem = problems[i];
             if (this.remove(continuation, problem)) {
               problems.splice(i, 1);

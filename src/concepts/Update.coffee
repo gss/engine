@@ -598,6 +598,18 @@ Update.prototype =
     else
       index = @index
       spliced = false
+
+
+      if bypassers = @engine.bypassers[continuation]
+        console.log('remove bypasser', continuation)
+        for bypasser in bypassers
+          key = Object.keys(bypasser.variables)[0]
+          delete @engine.variables[key]
+          result = {}
+          result[key] = null
+          @apply result
+        delete @engine.bypassers[continuation]
+
       while problems = @problems[index++]
         for problem, i in problems by -1
           if @remove continuation, problem

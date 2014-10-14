@@ -406,15 +406,6 @@ class Engine extends Domain.Events
           else
             others.push(problem)
       
-      for remove in removes
-        for path, index in remove
-          if bypassers = @bypassers[path]
-            console.log('remove bypasser', path)
-            for bypasser in bypassers
-              key = Object.keys(bypasser.variables)[0]
-              delete @variables[key]
-              (result ||= {})[key] = null
-            delete @bypassers[path]
       for other, i in @domains
         locals = []
         other.changes = undefined
