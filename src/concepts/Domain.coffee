@@ -482,6 +482,9 @@ class Domain
                 break
               op = op.parent
 
+    if constraint.operation.variables?['$10[height]'] && constraint.operation.variables?['$10[width]']
+      debugger
+
     @constraints.splice(@constraints.indexOf(constraint), 1)
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)
@@ -553,7 +556,6 @@ class Domain
         al = a.length
         bl = b.length
         return bl - al
-      console.log('reach', @constraints.length, groups.length)
 
       separated = groups.splice(1)
       commands = []

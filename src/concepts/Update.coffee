@@ -309,8 +309,6 @@ Update.prototype =
                       @problems.splice(counter, 1)
                       @domains.splice(counter, 1)
 
-          #@engine.Operation.setVariables(problem, null, opdomain || other)
-        
         if bubbled
           for arg in problem
             if arg.push
@@ -323,7 +321,7 @@ Update.prototype =
                 for prop, value of arg.variables
                   @setVariable(problem, prop, value)
                   @setVariable(exp, prop, value)
-
+          @setVariables(bubbled, problem, other)
           return @problems.indexOf(bubbled)
         return
 
@@ -333,12 +331,10 @@ Update.prototype =
 
   setVariables: (result, probs, other) ->
     if probs.variables
-      variables = result.variables ||= {length: 0}
+      variables = result.variables ||= {}
       for property, operation of probs.variables
         if !operation.domain || operation.domain.displayName == other.displayName
           operation.domain = other
-          unless variables[property]
-            variables.length++
           variables[property] = operation
     return
 
@@ -423,7 +419,7 @@ Update.prototype =
       continue if position == index
     
       `connector: {`
-      if other && other.domain?.displayName == domain.displayName
+      if other?.displayName == domain.displayName
         if variables = @problems[index].variables
           for property of problems.variables
             if variable = variables[property]
@@ -434,12 +430,11 @@ Update.prototype =
                     position = index
                   else
                     @merge index, position
-                  `break connector;`
                   if index < position
                     position--
                   else
                     index--
-                  break
+                  `break connector;`
                 else
                   framed = domain.frame && domain || other
     `}`
@@ -452,7 +447,6 @@ Update.prototype =
       for domain, index in problems.domains
         @push problems.problems[index], domain
       return @
-    merged = undefined
     priority = @domains.length
     position = @index + 1
     while (other = @domains[position]) != undefined
@@ -479,8 +473,11 @@ Update.prototype =
                 else
                   cmds.push problem
                 @setVariables(cmds, problem, other)
-          merged = true
-          break
+
+          @connect(position)
+
+          return true
+
         else if other && domain
           if ((other.priority < domain.priority) || 
               (other.priority == domain.priority && other.MAYBE && !domain.MAYBE)) && 
@@ -490,12 +487,12 @@ Update.prototype =
         else if !domain
           priority--
       position++
-    if !merged
-      @domains.splice(priority, 0, domain)
-      @problems.splice(priority, 0, problems)
-      for problem in problems
-        @setVariables(problems, problem, domain)
-      @connect(priority)
+
+    @domains.splice(priority, 0, domain)
+    @problems.splice(priority, 0, problems)
+    for problem in problems
+      @setVariables(problems, problem, domain)
+    @connect(priority)
     return @
 
 
