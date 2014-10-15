@@ -554,6 +554,7 @@ describe 'Full page tests', ->
   afterEach ->
     remove(container)
     engine.destroy()
+  @timeout 100000
 
   for type, index in ['With worker', 'Without worker']
     do (type, index) ->
@@ -656,7 +657,7 @@ describe 'Full page tests', ->
                           done()
 
 
-        @timeout 10000
+        @timeout 100000
         
         it 'gss1 demo', (done) ->
           container = document.createElement('div')
@@ -702,47 +703,48 @@ describe 'Full page tests', ->
 
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
-            it type, (done) ->
-              container = document.createElement('div')
-              container.id = 'face-demo'
+            describe type, (done) ->
+              it 'should handle face detection section', (done) ->
+                container = document.createElement('div')
+                container.id = 'face-demo'
 
-              window.$engine = engine = new GSS(container, index == 0)
-              $('#fixtures').appendChild container
+                window.$engine = engine = new GSS(container, index == 0)
+                $('#fixtures').appendChild container
 
-              html = DEMOS.FACE_DETECTION_SECTION
-              if j == 0
-                html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500')
-              container.innerHTML = html
-              container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
-      
-              engine.then (solution) ->
-                expect(solution).to.eql
-                  '$title[margin-top]': 72
-                  '$title[padding-top]': 40
-                  '$face-demo[intrinsic-width]': 640
-                  '$face-demo[width]': 640
-                  'md': 72
-                  'md-sub': 8
-                
-                container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0')
-                
+                html = DEMOS.FACE_DETECTION_SECTION
+                if j == 0
+                  html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500')
+                container.innerHTML = html
+                container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
+        
                 engine.then (solution) ->
-                  expect(solution['$title[margin-top]']).to.eql 8
-                  expect(solution['$title[padding-top]']).to.eql null
-                  expect(solution['$face-demo[intrinsic-width]']).to.eql 400
-                  expect(solution['$face-demo[width]']).to.eql 400
-
-
-                  container.innerHTML = ""
+                  expect(solution).to.eql
+                    '$title[margin-top]': 72
+                    '$title[padding-top]': 40
+                    '$face-demo[intrinsic-width]': 640
+                    '$face-demo[width]': 640
+                    'md': 72
+                    'md-sub': 8
+                  
+                  container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0')
                   
                   engine.then (solution) ->
-                    expect(solution).to.eql
-                      '$title[margin-top]': null
-                      '$face-demo[intrinsic-width]': null
-                      '$face-demo[width]': null
-                      'md': null
-                      'md-sub': null
-                    done()
+                    expect(solution['$title[margin-top]']).to.eql 8
+                    expect(solution['$title[padding-top]']).to.eql null
+                    expect(solution['$face-demo[intrinsic-width]']).to.eql 400
+                    expect(solution['$face-demo[width]']).to.eql 400
+
+
+                    container.innerHTML = ""
+                    
+                    engine.then (solution) ->
+                      expect(solution).to.eql
+                        '$title[margin-top]': null
+                        '$face-demo[intrinsic-width]': null
+                        '$face-demo[width]': null
+                        'md': null
+                        'md-sub': null
+                      done()
 
         it 'profile card', (done) ->
           container = document.createElement('div')

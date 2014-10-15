@@ -60,6 +60,17 @@ class Domain
         @domains.push(@)
       @MAYBE       = undefined
 
+  unbypass: (path) ->
+    if bypassers = @bypassers[path]
+      console.log('remove bypasser', path)
+      for bypasser in bypassers
+        key = Object.keys(bypasser.variables)[0]
+        delete @variables[key]
+        result = {}
+        result[key] = null
+        @updating.apply result
+      delete @bypassers[path]
+
   # Dont solve system with a single variable+constant constraint 
   bypass: (operation) ->
     name = undefined

@@ -24,7 +24,7 @@ class Variable
       domain = intrinsic
     else
       for d in @engine.domains
-        if d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path])
+        if d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path]) && d.displayName != 'Solved'
           domain = d
           break
         if d.substituted

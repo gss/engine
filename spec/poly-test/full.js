@@ -34,6 +34,7 @@ describe('Full page tests', function() {
     remove(container);
     return engine.destroy();
   });
+  this.timeout(100000);
   _ref = ['With worker', 'Without worker'];
   _results = [];
   for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
@@ -147,7 +148,7 @@ describe('Full page tests', function() {
             });
           });
         });
-        this.timeout(10000);
+        this.timeout(100000);
         it('gss1 demo', function(done) {
           container = document.createElement('div');
           container.style.height = '640px';
@@ -192,43 +193,45 @@ describe('Full page tests', function() {
         });
         _ref1 = ['with intrinsic condition', 'with linear condition'];
         _fn = function(type, j) {
-          return it(type, function(done) {
-            var html;
-            container = document.createElement('div');
-            container.id = 'face-demo';
-            window.$engine = engine = new GSS(container, index === 0);
-            $('#fixtures').appendChild(container);
-            html = DEMOS.FACE_DETECTION_SECTION;
-            if (j === 0) {
-              html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500');
-            }
-            container.innerHTML = html;
-            container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
-            return engine.then(function(solution) {
-              expect(solution).to.eql({
-                '$title[margin-top]': 72,
-                '$title[padding-top]': 40,
-                '$face-demo[intrinsic-width]': 640,
-                '$face-demo[width]': 640,
-                'md': 72,
-                'md-sub': 8
-              });
-              container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0');
+          return describe(type, function(done) {
+            return it('should handle face detection section', function(done) {
+              var html;
+              container = document.createElement('div');
+              container.id = 'face-demo';
+              window.$engine = engine = new GSS(container, index === 0);
+              $('#fixtures').appendChild(container);
+              html = DEMOS.FACE_DETECTION_SECTION;
+              if (j === 0) {
+                html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500');
+              }
+              container.innerHTML = html;
+              container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0');
               return engine.then(function(solution) {
-                expect(solution['$title[margin-top]']).to.eql(8);
-                expect(solution['$title[padding-top]']).to.eql(null);
-                expect(solution['$face-demo[intrinsic-width]']).to.eql(400);
-                expect(solution['$face-demo[width]']).to.eql(400);
-                container.innerHTML = "";
+                expect(solution).to.eql({
+                  '$title[margin-top]': 72,
+                  '$title[padding-top]': 40,
+                  '$face-demo[intrinsic-width]': 640,
+                  '$face-demo[width]': 640,
+                  'md': 72,
+                  'md-sub': 8
+                });
+                container.setAttribute('style', 'height: 640px; width: 400px; position: absolute; overflow: auto; left: 0; top: 0');
                 return engine.then(function(solution) {
-                  expect(solution).to.eql({
-                    '$title[margin-top]': null,
-                    '$face-demo[intrinsic-width]': null,
-                    '$face-demo[width]': null,
-                    'md': null,
-                    'md-sub': null
+                  expect(solution['$title[margin-top]']).to.eql(8);
+                  expect(solution['$title[padding-top]']).to.eql(null);
+                  expect(solution['$face-demo[intrinsic-width]']).to.eql(400);
+                  expect(solution['$face-demo[width]']).to.eql(400);
+                  container.innerHTML = "";
+                  return engine.then(function(solution) {
+                    expect(solution).to.eql({
+                      '$title[margin-top]': null,
+                      '$face-demo[intrinsic-width]': null,
+                      '$face-demo[width]': null,
+                      'md': null,
+                      'md-sub': null
+                    });
+                    return done();
                   });
-                  return done();
                 });
               });
             });

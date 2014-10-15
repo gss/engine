@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-14) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-15) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20285,7 +20285,7 @@ Engine = (function(_super) {
       }
     } else if (!this.updating.reflown && !restyled) {
       if (!this.updating.problems.length) {
-        delete this.updating;
+        this.updating = void 0;
       }
       return;
     }
@@ -20355,7 +20355,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var finish, i, imports, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _len7, _m, _n, _o, _p, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     if (domain && !domain.solve && domain.postMessage) {
       workflow.postMessage(domain, problems);
       workflow.await(domain.url);
@@ -20403,12 +20403,14 @@ Engine = (function(_super) {
       }
       this.console.start(problems, domain.displayName);
       result = domain.solve(problems) || void 0;
+      if (this.domains.indexOf(domain) === -1 && !domain.MAYBE) {
+        this.domains.push(domain);
+      }
       if (result && result.postMessage) {
         workflow.await(result.url);
       } else {
         if (providing && this.providing) {
           workflow.push(this.update(this.frame || true, this.providing));
-          workflow.optimize();
         }
         if ((result != null ? result.length : void 0) === 1) {
           result = result[0];
@@ -20433,14 +20435,24 @@ Engine = (function(_super) {
           }
         }
       }
+      for (_l = 0, _len3 = removes.length; _l < _len3; _l++) {
+        remove = removes[_l];
+        for (index = _m = 0, _len4 = remove.length; _m < _len4; index = ++_m) {
+          path = remove[index];
+          if (index === 0) {
+            continue;
+          }
+          this.unbypass(path);
+        }
+      }
       _ref3 = this.domains;
-      for (i = _l = 0, _len3 = _ref3.length; _l < _len3; i = ++_l) {
+      for (i = _n = 0, _len5 = _ref3.length; _n < _len5; i = ++_n) {
         other = _ref3[i];
         locals = [];
         other.changes = void 0;
-        for (_m = 0, _len4 = removes.length; _m < _len4; _m++) {
-          remove = removes[_m];
-          for (index = _n = 0, _len5 = remove.length; _n < _len5; index = ++_n) {
+        for (_o = 0, _len6 = removes.length; _o < _len6; _o++) {
+          remove = removes[_o];
+          for (index = _p = 0, _len7 = remove.length; _p < _len7; index = ++_p) {
             path = remove[index];
             if (index === 0) {
               continue;
@@ -20694,6 +20706,7 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
+    debugger;
     var changes, engine, property, solution, value;
     engine = Engine.messenger || (Engine.messenger = Engine());
     changes = engine.assumed.changes = {};
@@ -23233,7 +23246,7 @@ Variable = (function() {
       _ref1 = this.engine.domains;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         d = _ref1[_i];
-        if (d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path])) {
+        if (d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path]) && d.displayName !== 'Solved') {
           domain = d;
           break;
         }
@@ -23620,6 +23633,22 @@ Domain = (function() {
         this.domains.push(this);
       }
       return this.MAYBE = void 0;
+    }
+  };
+
+  Domain.prototype.unbypass = function(path) {
+    var bypasser, bypassers, key, result, _i, _len;
+    if (bypassers = this.bypassers[path]) {
+      console.log('remove bypasser', path);
+      for (_i = 0, _len = bypassers.length; _i < _len; _i++) {
+        bypasser = bypassers[_i];
+        key = Object.keys(bypasser.variables)[0];
+        delete this.variables[key];
+        result = {};
+        result[key] = null;
+        this.updating.apply(result);
+      }
+      return delete this.bypassers[path];
     }
   };
 
@@ -25978,7 +26007,7 @@ Update.prototype = {
     return solution;
   },
   remove: function(continuation, problem) {
-    var arg, bypasser, bypassers, i, index, key, problems, result, spliced, _i, _j, _len, _len1, _results;
+    var arg, i, index, problems, spliced, _i, _len, _results;
     if (problem) {
       if ((problem[0] === 'value' && problem[2] === continuation) || (problem[0] === 'get' && problem[3] === continuation)) {
         return true;
@@ -25995,24 +26024,12 @@ Update.prototype = {
     } else {
       index = this.index;
       spliced = false;
-      if (bypassers = this.engine.bypassers[continuation]) {
-        console.log('remove bypasser', continuation);
-        for (_j = 0, _len1 = bypassers.length; _j < _len1; _j++) {
-          bypasser = bypassers[_j];
-          key = Object.keys(bypasser.variables)[0];
-          delete this.engine.variables[key];
-          result = {};
-          result[key] = null;
-          this.apply(result);
-        }
-        delete this.engine.bypassers[continuation];
-      }
       _results = [];
       while (problems = this.problems[index++]) {
         _results.push((function() {
-          var _k, _results1;
+          var _j, _results1;
           _results1 = [];
-          for (i = _k = problems.length - 1; _k >= 0; i = _k += -1) {
+          for (i = _j = problems.length - 1; _j >= 0; i = _j += -1) {
             problem = problems[i];
             if (this.remove(continuation, problem)) {
               problems.splice(i, 1);
@@ -28154,6 +28171,7 @@ Queries = (function() {
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.Continuation.PAIR) {
         contd = this.engine.Continuation(path);
+        this.engine.unbypass(contd);
         if ((_ref2 = this.engine.updating) != null) {
           _ref2.remove(contd);
         }

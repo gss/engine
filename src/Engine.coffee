@@ -268,7 +268,7 @@ class Engine extends Domain.Events
       @applier?.solve(solution)
     else if !@updating.reflown && !restyled
       if !@updating.problems.length
-        delete @updating
+        @updating = undefined
       return
 
     if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
@@ -378,15 +378,15 @@ class Engine extends Domain.Events
         @providing = null
         providing = true
       @console.start(problems, domain.displayName)
-      if @domains.indexOf(domain) == -1
-        @domains.push(domain)
       result = domain.solve(problems) || undefined
+      if @domains.indexOf(domain) == -1 && !domain.MAYBE
+        @domains.push(domain)
       if result && result.postMessage
         workflow.await(result.url)
       else
         if providing && @providing
           workflow.push(@update(@frame || true, @providing))
-          workflow.optimize()
+          #workflow.optimize()
 
         if result?.length == 1
           result = result[0]
@@ -407,7 +407,12 @@ class Engine extends Domain.Events
             removes.push(problem)
           else
             others.push(problem)
-      
+     
+      for remove in removes
+        for path, index in remove
+          continue if index == 0
+          @unbypass(path)
+
       for other, i in @domains
         locals = []
         other.changes = undefined
@@ -588,6 +593,7 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
+    debugger
     engine = Engine.messenger ||= Engine()
     changes = engine.assumed.changes = {}
     solution = engine.solve(e.data) || {}

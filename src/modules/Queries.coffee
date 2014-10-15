@@ -331,6 +331,7 @@ class Queries
     if !result || !@engine.isCollection(result)
       unless path.charAt(0) == @engine.Continuation.PAIR
         contd = @engine.Continuation(path)
+        @engine.unbypass(contd)
         @engine.updating?.remove(contd)
         @engine.provide(['remove', contd])
     return true
