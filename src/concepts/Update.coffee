@@ -213,6 +213,8 @@ Update.prototype =
       domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
+    if @engine.domains.indexOf(other) == -1
+      @engine.domains.push(other)
     return true
 
   # Group expressions

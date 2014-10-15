@@ -20403,17 +20403,6 @@ Engine = (function(_super) {
       }
       this.console.start(problems, domain.displayName);
       result = domain.solve(problems) || void 0;
-      if (!domain.MAYBE && domain.priority < 0) {
-        if ((i = this.domains.indexOf(domain)) === -1) {
-          if (domain.constraints.length) {
-            this.domains.push(domain);
-          }
-        } else {
-          if (!domain.constraints.length) {
-            this.domains.splice(i, 1);
-          }
-        }
-      }
       if (result && result.postMessage) {
         workflow.await(result.url);
       } else {
@@ -22607,7 +22596,7 @@ Console = (function() {
           return d.constraints.length;
         }).sort(function(a, b) {
           return a - b;
-        }).slice(-10);
+        }).slice(-20);
         string += '=' + engine.domains.map(function(d) {
           return d.constraints.length;
         }).reduce(function(a, b) {
@@ -23619,7 +23608,9 @@ Domain = (function() {
       }
       (_base = this.engine).domains || (_base.domains = []);
       if (!hidden && this.domain !== this.engine) {
-        this.domains.push(this);
+        if (this.domains.indexOf(this) === -1) {
+          this.domains.push(this);
+        }
       }
       return this.MAYBE = void 0;
     }
@@ -24164,6 +24155,7 @@ Domain = (function() {
 
   Domain.prototype.unconstrain = function(constraint, continuation, moving) {
     var group, i, index, op, other, path, _i, _j, _k, _len, _ref, _ref1, _ref2, _ref3, _ref4;
+    this.constraints.splice(this.constraints.indexOf(constraint), 1);
     _ref = constraint.paths;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       path = _ref[_i];
@@ -24211,7 +24203,6 @@ Domain = (function() {
     if (((_ref2 = constraint.operation.variables) != null ? _ref2['$10[height]'] : void 0) && ((_ref3 = constraint.operation.variables) != null ? _ref3['$10[width]'] : void 0)) {
       debugger;
     }
-    this.constraints.splice(this.constraints.indexOf(constraint), 1);
     if ((i = (_ref4 = this.constrained) != null ? _ref4.indexOf(constraint) : void 0) > -1) {
       return this.constrained.splice(i, 1);
     } else {
@@ -24335,11 +24326,6 @@ Domain = (function() {
           }
         }
       }
-      if (this.constraints.length === 0) {
-        if ((index = this.engine.domains.indexOf(this)) > -1) {
-          this.engine.domains.splice(index, 1);
-        }
-      }
       if (commands != null ? commands.length : void 0) {
         if (commands.length === 1) {
           commands = commands[0];
@@ -24367,7 +24353,7 @@ Domain = (function() {
   };
 
   Domain.prototype.apply = function(solution) {
-    var path, result, value, variable, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var index, path, result, value, variable, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     result = {};
     for (path in solution) {
       value = solution[path];
@@ -24401,6 +24387,11 @@ Domain = (function() {
       this.nullified = void 0;
     }
     this.merge(result, true);
+    if (this.constraints.length === 0) {
+      if ((index = this.engine.domains.indexOf(this)) > -1) {
+        this.engine.domains.splice(index, 1);
+      }
+    }
     return result;
   };
 
@@ -25501,6 +25492,9 @@ Update.prototype = {
     }
     if ((i = this.engine.domains.indexOf(domain)) > -1) {
       this.engine.domains.splice(i, 1);
+    }
+    if (this.engine.domains.indexOf(other) === -1) {
+      this.engine.domains.push(other);
     }
     return true;
   },

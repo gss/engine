@@ -30,7 +30,7 @@ class Console
         string = engine.domains.
                     map((d) -> d.constraints.length).
                     sort((a, b) -> a - b).
-                    slice(-10)
+                    slice(-20)
         string += '=' + engine.domains.
           map((d) -> d.constraints.length).
           reduce (a, b) -> a + b

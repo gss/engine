@@ -57,7 +57,8 @@ class Domain
       @values       = {} unless @hasOwnProperty('values')
       @engine.domains ||= []
       if !hidden && @domain != @engine
-        @domains.push(@)
+        if @domains.indexOf(@) == -1
+          @domains.push(@)
       @MAYBE       = undefined
 
   unbypass: (path) ->
@@ -455,6 +456,8 @@ class Domain
 
 
   unconstrain: (constraint, continuation, moving) ->
+    @constraints.splice(@constraints.indexOf(constraint), 1)
+    
     for path in constraint.paths
       if typeof path == 'string'
         if group = @paths[path]
@@ -485,7 +488,6 @@ class Domain
     if constraint.operation.variables?['$10[height]'] && constraint.operation.variables?['$10[width]']
       debugger
 
-    @constraints.splice(@constraints.indexOf(constraint), 1)
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)
     else
@@ -570,12 +572,6 @@ class Domain
           if ops.length
             commands.push ops
 
-
-      if @constraints.length == 0
-        if (index = @engine.domains.indexOf(@)) > -1
-          @engine.domains.splice(index, 1)
-
-
       if commands?.length
         if commands.length == 1
           commands = commands[0]
@@ -614,6 +610,11 @@ class Domain
       @nullified = undefined
 
     @merge result, true
+
+    if @constraints.length == 0
+      if (index = @engine.domains.indexOf(@)) > -1
+        @engine.domains.splice(index, 1)
+
 
     return result
 
