@@ -96,8 +96,8 @@ class Domain
         else if arg[0] == 'value'
           fallback ?= arg[2]
           value = arg[1]
-      else
-        primitive = arg
+      else if typeof arg == 'number'
+        primitive ?= arg
 
     unless value?
       value = primitive

@@ -20707,7 +20707,6 @@ Engine.clone = Engine.prototype.clone = Native.prototype.clone;
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    debugger;
     var changes, engine, property, solution, value;
     engine = Engine.messenger || (Engine.messenger = Engine());
     changes = engine.assumed.changes = {};
@@ -23672,8 +23671,10 @@ Domain = (function() {
           }
           value = arg[1];
         }
-      } else {
-        primitive = arg;
+      } else if (typeof arg === 'number') {
+        if (primitive == null) {
+          primitive = arg;
+        }
       }
     }
     if (value == null) {
