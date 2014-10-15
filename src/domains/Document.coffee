@@ -68,7 +68,7 @@ class Document extends Abstract
         @solve id + ' resized', ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
-      , 50
+      , 20
       
     scroll: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e

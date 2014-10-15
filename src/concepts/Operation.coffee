@@ -302,14 +302,5 @@ class Operation
           else
             before += op.path
     return before + prefix + after + suffix
-
-  setVariables: (problem, target = problem, domain) ->
-    variables = undefined
-    for arg in problem
-      if arg[0] == 'get'
-        if !arg.domain || arg.domain.MAYBE || (arg.domain.displayName == domain.displayName && domain.priority < 0)
-          (variables ||= []).push(@engine.Variable.getPath(arg[1], arg[2]))
-      else if arg.variables
-        (variables ||= []).push.apply(variables, arg.variables)
-    target.variables = variables
+    
 module.exports = Operation

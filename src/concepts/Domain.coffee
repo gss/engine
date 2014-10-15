@@ -64,11 +64,12 @@ class Domain
     if bypassers = @bypassers[path]
       console.log('remove bypasser', path)
       for bypasser in bypassers
-        key = Object.keys(bypasser.variables)[0]
-        delete @variables[key]
-        result = {}
-        result[key] = null
-        @updating.apply result
+        for key of bypasser.variables
+          delete @variables[key]
+          result = {}
+          result[key] = null
+          @updating.apply result
+          break
       delete @bypassers[path]
 
   # Dont solve system with a single variable+constant constraint 
