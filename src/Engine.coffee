@@ -379,8 +379,13 @@ class Engine extends Domain.Events
         providing = true
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || undefined
-      if @domains.indexOf(domain) == -1 && !domain.MAYBE
-        @domains.push(domain)
+      if !domain.MAYBE && domain.priority < 0
+        if (i = @domains.indexOf(domain)) == -1
+          if domain.constraints.length
+            @domains.push(domain)
+        else
+          if !domain.constraints.length
+            @domains.splice(i, 1)
       if result && result.postMessage
         workflow.await(result.url)
       else

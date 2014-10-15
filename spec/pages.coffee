@@ -77,6 +77,6 @@ describe 'Standalone page tests', ->
 
         iframe.width = 1024
         iframe.height = 768
-        iframe.src = './pages/grid_team.html'
+        iframe.src = './pages/grid_team.html?log=0.5'
         
 
