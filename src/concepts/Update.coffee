@@ -548,6 +548,9 @@ Update.prototype =
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
+      if @effects
+        @apply(@effects, (result = @solutions[@index] ||= {}))
+        @effects = undefined
 
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         @terminate()

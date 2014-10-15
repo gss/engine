@@ -20304,7 +20304,11 @@ Engine = (function(_super) {
       _ref2.onBeforeSolve();
     }
     this.updating.reset();
-    effects = {};
+    if (effects = this.updating.effects) {
+      this.updating.effects = void 0;
+    } else {
+      effects = {};
+    }
     effects = this.updating.each(this.resolve, this, effects);
     if ((_ref3 = this.updating.busy) != null ? _ref3.length : void 0) {
       return effects;
@@ -23616,22 +23620,28 @@ Domain = (function() {
     }
   };
 
-  Domain.prototype.unbypass = function(path) {
-    var bypasser, bypassers, key, result, _i, _len;
+  Domain.prototype.unbypass = function(path, result) {
+    var bypasser, bypassers, key, _base, _i, _len;
     if (bypassers = this.bypassers[path]) {
       console.log('remove bypasser', path);
       for (_i = 0, _len = bypassers.length; _i < _len; _i++) {
         bypasser = bypassers[_i];
         for (key in bypasser.variables) {
           delete this.variables[key];
-          result = {};
-          result[key] = null;
-          this.updating.apply(result);
+          if (this.updating.index > -1) {
+            debugger;
+            (result = (_base = this.updating).effects || (_base.effects = {}))[key] = null;
+          } else {
+            result = {};
+            result[key] = null;
+            this.updating.apply(result);
+          }
           break;
         }
       }
-      return delete this.bypassers[path];
+      delete this.bypassers[path];
     }
+    return result;
   };
 
   Domain.prototype.bypass = function(operation) {
@@ -25942,7 +25952,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, index, preceeding, previous, property, redefined, result, solved, value, _i, _ref, _ref1, _ref2;
+    var domain, index, preceeding, previous, property, redefined, result, solved, value, _base, _i, _name, _ref, _ref1, _ref2;
     if (solution) {
       this.apply(solution);
     }
@@ -25954,6 +25964,10 @@ Update.prototype = {
     while ((domain = this.domains[++this.index]) !== void 0) {
       previous = domain;
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
+      if (this.effects) {
+        this.apply(this.effects, (result = (_base = this.solutions)[_name = this.index] || (_base[_name] = {})));
+        this.effects = void 0;
+      }
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         this.terminate();
         return result;
@@ -27663,8 +27677,6 @@ Positions = (function() {
       }
       property = path.substring(last + 1, path.length - 1);
       id = path.substring(0, last);
-    } else {
-      path = this.engine.Variable.getPath(id, property);
     }
     if (id.charAt(0) === ':') {
       return;
@@ -28167,7 +28179,9 @@ Queries = (function() {
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.Continuation.PAIR) {
         contd = this.engine.Continuation(path);
-        this.engine.unbypass(contd);
+        if (this.engine.updating) {
+          this.engine.unbypass(contd);
+        }
         if ((_ref2 = this.engine.updating) != null) {
           _ref2.remove(contd);
         }

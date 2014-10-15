@@ -16,8 +16,6 @@ class Positions
       return if last == -1
       property = path.substring(last + 1, path.length - 1)
       id = path.substring(0, last)
-    else
-      path = @engine.Variable.getPath(id, property)
 
     return unless id.charAt(0) != ':'
     unless element = @engine.identity[id]

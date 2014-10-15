@@ -286,7 +286,11 @@ class Engine extends Domain.Events
 
     # Launch another pass here if solutions caused effects
     # Effects are processed separately, then merged with found solution
-    effects = {}
+    if effects = @updating.effects
+      @updating.effects = undefined
+    else
+      effects = {}
+
     effects = @updating.each(@resolve, @, effects)
     if @updating.busy?.length
       return effects
@@ -591,7 +595,6 @@ Engine.clone    = Engine::clone    = Native::clone
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
-    debugger
     engine = Engine.messenger ||= Engine()
     changes = engine.assumed.changes = {}
     solution = engine.solve(e.data) || {}
