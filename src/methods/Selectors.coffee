@@ -12,6 +12,7 @@ Filter: If step returns single element, e.g. it matches qualifier,
 or points to a another element, execution is continued (reduce)
 
 Reduce: Otherwise, the selector branch doesnt match, execution stops.
+Found elements are collected into a shared collection 
 
 When it hits the end of selector, parent expression is evaluated 
 with found element.

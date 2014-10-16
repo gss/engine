@@ -638,7 +638,7 @@ class Domain
 
       if @constrained
         for constraint in @constrained
-          if constraint.indexOf(path) > -1
+          if constraint.paths.indexOf(path) > -1
             @unconstrain(constraint)
             break
     return

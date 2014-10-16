@@ -21537,6 +21537,7 @@ Filter: If step returns single element, e.g. it matches qualifier,
 or points to a another element, execution is continued (reduce)
 
 Reduce: Otherwise, the selector branch doesnt match, execution stops.
+Found elements are collected into a shared collection 
 
 When it hits the end of selector, parent expression is evaluated 
 with found element.
@@ -22729,7 +22730,7 @@ var Wrapper,
   __hasProp = {}.hasOwnProperty;
 
 Wrapper = function(node, args, result, operation, continuation, scope) {
-  var arg, index, offset, _i, _j, _len, _len1, _ref;
+  var arg, index, offset, path, _i, _j, _k, _len, _len1, _len2, _ref, _ref1;
   if (this.isConstraint(result) || this.isExpression(result) || this.isVariable(result)) {
     if (!this.isVariable(result)) {
       result.operation = operation;
@@ -22745,11 +22746,17 @@ Wrapper = function(node, args, result, operation, continuation, scope) {
         result.push(arg);
       }
       if (arg.paths) {
-        result.push.apply(result, arg.paths);
+        _ref1 = arg.paths;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          path = _ref1[_j];
+          if (result.indexOf(path) === -1) {
+            result.push(path);
+          }
+        }
       }
     }
-    for (_j = 0, _len1 = args.length; _j < _len1; _j++) {
-      arg = args[_j];
+    for (_k = 0, _len2 = args.length; _k < _len2; _k++) {
+      arg = args[_k];
       arg.paths = void 0;
     }
   }
@@ -24165,7 +24172,7 @@ Domain = (function() {
   };
 
   Domain.prototype.unconstrain = function(constraint, continuation, moving) {
-    var group, i, index, op, other, path, _i, _j, _k, _len, _ref, _ref1, _ref2, _ref3, _ref4;
+    var group, i, index, op, other, path, _i, _j, _k, _len, _ref, _ref1, _ref2;
     this.constraints.splice(this.constraints.indexOf(constraint), 1);
     _ref = constraint.paths;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -24211,10 +24218,7 @@ Domain = (function() {
         }
       }
     }
-    if (((_ref2 = constraint.operation.variables) != null ? _ref2['$10[height]'] : void 0) && ((_ref3 = constraint.operation.variables) != null ? _ref3['$10[width]'] : void 0)) {
-      debugger;
-    }
-    if ((i = (_ref4 = this.constrained) != null ? _ref4.indexOf(constraint) : void 0) > -1) {
+    if ((i = (_ref2 = this.constrained) != null ? _ref2.indexOf(constraint) : void 0) > -1) {
       return this.constrained.splice(i, 1);
     } else {
       return (this.unconstrained || (this.unconstrained = [])).push(constraint);
@@ -24410,6 +24414,9 @@ Domain = (function() {
     var constraint, constraints, contd, observers, path, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
+      if (path.indexOf('first') > -1 && path.indexOf('style[type*=\"text/gss\"]$10313↓.post-columns$10124↓@1↓::this .content') > -1) {
+        debugger;
+      }
       _ref = this.Continuation.getVariants(path);
       for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
         contd = _ref[_j];
@@ -24431,7 +24438,7 @@ Domain = (function() {
         _ref1 = this.constrained;
         for (_l = 0, _len2 = _ref1.length; _l < _len2; _l++) {
           constraint = _ref1[_l];
-          if (constraint.indexOf(path) > -1) {
+          if (constraint.paths.indexOf(path) > -1) {
             this.unconstrain(constraint);
             break;
           }
@@ -28103,7 +28110,11 @@ Queries = (function() {
       r = removed = this.removeFromCollection(node, continuation, operation, scope, needle, contd);
       this.engine.pairs.remove(id, continuation);
       ref = continuation + (((collection != null ? collection.length : void 0) != null) && id || '');
-      this.unobserve(id, ref, void 0, void 0, ref);
+      if (ref.charAt(0) === this.engine.Continuation.PAIR) {
+        this.unobserve(id, ref, void 0, void 0, ref, scope);
+      } else {
+        this.unobserve(id, ref, void 0, void 0, ref);
+      }
       if (recursion !== continuation) {
         if (removed !== null || !(parent != null ? parent.def.release : void 0)) {
           this.updateCollections(operation, continuation, scope, recursion, node, continuation, contd);

@@ -277,7 +277,10 @@ class Queries
 
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
-      @unobserve(id, ref, undefined, undefined, ref)
+      if ref.charAt(0) == @engine.Continuation.PAIR
+        @unobserve(id, ref, undefined, undefined, ref, scope)
+      else
+        @unobserve(id, ref, undefined, undefined, ref)
 
       if recursion != continuation
         if (removed != null || !parent?.def.release)

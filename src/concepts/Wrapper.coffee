@@ -15,7 +15,9 @@ Wrapper = (node, args, result, operation, continuation, scope) ->
       if @isVariable(arg)
         result.push(arg)
       if arg.paths
-        result.push.apply(result, arg.paths)
+        for path in arg.paths
+          if result.indexOf(path) == -1
+            result.push(path)
     for arg in args
       arg.paths = undefined
   # [variable, path] -> variable[paths]
