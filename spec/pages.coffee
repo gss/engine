@@ -63,13 +63,13 @@ describe 'Standalone page tests', ->
               expect(Math.floor e.data['$lost_cosmonaut[width]']).to.eql 216
               iframe.width = 320
             else
-              expect(Math.floor e.data['$dan_tocchini[y]']).to.eql 222
+              expect(Math.floor e.data['$dan_tocchini[y]']).to.eql 218
               expect(Math.floor e.data['$dan_tocchini[x]']).to.eql 320
               expect(Math.floor e.data['$dan_tocchini[width]']).to.eql 320
-              expect(Math.floor(e.data['$yaroslaff_fedin[y]'])).to.eql 236
+              expect(Math.floor(e.data['$yaroslaff_fedin[y]'])).to.eql 218
               expect(Math.floor(e.data['$yaroslaff_fedin[x]'])).to.eql 2560
               expect(Math.floor(e.data['$yaroslaff_fedin[width]'])).to.eql 320
-              expect(Math.floor e.data['$lost_cosmonaut[y]']).to.eql 236
+              expect(Math.floor e.data['$lost_cosmonaut[y]']).to.eql 218
               expect(Math.floor e.data['$lost_cosmonaut[x]']).to.eql 4160
               expect(Math.floor e.data['$lost_cosmonaut[width]']).to.eql 320
               iframe.width = 1024

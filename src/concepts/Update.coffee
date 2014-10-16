@@ -369,11 +369,9 @@ Update.prototype =
     console.info('update time', @time, @problems.length)
     console.profileEnd(1)
 
-  # Last minute changes to update before execution
+  # Last minute changes to queue before execution
   optimize: ->
     @defer()
-    @reify()
-
 
     @
 
@@ -389,8 +387,9 @@ Update.prototype =
         operation.domain = domain
       if operation?.push
         for arg in operation
-          if arg && typeof arg == 'object'
+          if arg?.push
             @reify arg, domain
+    return
 
   # Defer substitutions to thread
   defer: ->
@@ -475,6 +474,7 @@ Update.prototype =
                 else
                   cmds.push problem
                 @setVariables(cmds, problem, other)
+                @reify(problem, other)
 
           @connect(position)
 
@@ -494,6 +494,7 @@ Update.prototype =
     @problems.splice(priority, 0, problems)
     for problem in problems
       @setVariables(problems, problem, domain)
+    @reify(problems, domain)
     @connect(priority)
     return @
 
@@ -545,6 +546,8 @@ Update.prototype =
       #  @reset()
       previous = domain
 
+      @reify(@problems[@index], domain)
+
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
@@ -560,23 +563,6 @@ Update.prototype =
         if result.push
           @engine.update(result)
         else
-          preceeding = []
-          index = @index
-          redefined = {}
-          while previous = @domains[--index]
-            if previous && previous == domain
-              preceeding.push(index)
-          if preceeding.length > 1
-            for index in preceeding by -1
-              for property, value of result
-                if solved = @solutions[index]
-                  if solved.hasOwnProperty(property)
-                    if redefined[property]?.indexOf(solved[property]) > -1
-                      @engine.console.error(property, 'is looping', value, redefined[property], solved[property])
-                      delete result[property]
-                    else if solved[property]?
-                      (redefined[property] ||= []).push solved[property]
-
           @apply(result)
           solution = @apply(result, solution || {})
     @terminate()
@@ -587,8 +573,20 @@ Update.prototype =
   apply: (result, solution = @solution) ->
     if result != @solution
       solution ||= @solution = {}
-      for property, value of result
-        solution[property] = value
+      if solution == @solution
+        for property, value of result
+          if solution[property]?
+            redefined = ((@redefined ||= {})[property] ||= [])
+            if redefined.indexOf(value) > -1
+              console.error(property, 'is looping: ', redefined, ' and now ', value, 'again')
+              continue
+            else
+              redefined.push(value)
+          solution[property] = value
+      else
+        for property, value of result
+          solution[property] = value
+
     return solution
 
   remove: (continuation, problem) ->

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-15) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -25723,41 +25723,32 @@ Update.prototype = {
   },
   optimize: function() {
     this.defer();
-    this.reify();
     return this;
   },
   reify: function(operation, domain) {
-    var arg, i, _i, _j, _len, _ref, _ref1, _results, _results1;
+    var arg, i, _i, _j, _len, _ref, _ref1;
     if (!operation) {
       _ref = this.domains;
-      _results = [];
       for (i = _i = _ref.length - 1; _i >= 0; i = _i += -1) {
         domain = _ref[i];
         if (i === this.index) {
           break;
         }
         if (domain) {
-          _results.push(this.reify(this.problems[i], domain));
-        } else {
-          _results.push(void 0);
+          this.reify(this.problems[i], domain);
         }
       }
-      return _results;
     } else {
       if ((_ref1 = operation.domain) != null ? _ref1.MAYBE : void 0) {
         operation.domain = domain;
       }
       if (operation != null ? operation.push : void 0) {
-        _results1 = [];
         for (_j = 0, _len = operation.length; _j < _len; _j++) {
           arg = operation[_j];
-          if (arg && typeof arg === 'object') {
-            _results1.push(this.reify(arg, domain));
-          } else {
-            _results1.push(void 0);
+          if (arg != null ? arg.push : void 0) {
+            this.reify(arg, domain);
           }
         }
-        return _results1;
       }
     }
   },
@@ -25879,6 +25870,7 @@ Update.prototype = {
                   cmds.push(problem);
                 }
                 this.setVariables(cmds, problem, other);
+                this.reify(problem, other);
               }
             }
           }
@@ -25902,6 +25894,7 @@ Update.prototype = {
       problem = problems[_m];
       this.setVariables(problems, problem, domain);
     }
+    this.reify(problems, domain);
     this.connect(priority);
     return this;
   },
@@ -25953,7 +25946,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, index, preceeding, previous, property, redefined, result, solved, value, _base, _i, _name, _ref, _ref1, _ref2;
+    var domain, previous, result, _base, _name, _ref, _ref1;
     if (solution) {
       this.apply(solution);
     }
@@ -25964,6 +25957,7 @@ Update.prototype = {
     previous = this.domains[this.index];
     while ((domain = this.domains[++this.index]) !== void 0) {
       previous = domain;
+      this.reify(this.problems[this.index], domain);
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
       if (this.effects) {
         this.apply(this.effects, (result = (_base = this.solutions)[_name = this.index] || (_base[_name] = {})));
@@ -25977,32 +25971,6 @@ Update.prototype = {
         if (result.push) {
           this.engine.update(result);
         } else {
-          preceeding = [];
-          index = this.index;
-          redefined = {};
-          while (previous = this.domains[--index]) {
-            if (previous && previous === domain) {
-              preceeding.push(index);
-            }
-          }
-          if (preceeding.length > 1) {
-            for (_i = preceeding.length - 1; _i >= 0; _i += -1) {
-              index = preceeding[_i];
-              for (property in result) {
-                value = result[property];
-                if (solved = this.solutions[index]) {
-                  if (solved.hasOwnProperty(property)) {
-                    if (((_ref2 = redefined[property]) != null ? _ref2.indexOf(solved[property]) : void 0) > -1) {
-                      this.engine.console.error(property, 'is looping', value, redefined[property], solved[property]);
-                      delete result[property];
-                    } else if (solved[property] != null) {
-                      (redefined[property] || (redefined[property] = [])).push(solved[property]);
-                    }
-                  }
-                }
-              }
-            }
-          }
           this.apply(result);
           solution = this.apply(result, solution || {});
         }
@@ -26013,15 +25981,31 @@ Update.prototype = {
     return solution || this;
   },
   apply: function(result, solution) {
-    var property, value;
+    var property, redefined, value, _base;
     if (solution == null) {
       solution = this.solution;
     }
     if (result !== this.solution) {
       solution || (solution = this.solution = {});
-      for (property in result) {
-        value = result[property];
-        solution[property] = value;
+      if (solution === this.solution) {
+        for (property in result) {
+          value = result[property];
+          if (solution[property] != null) {
+            redefined = ((_base = (this.redefined || (this.redefined = {})))[property] || (_base[property] = []));
+            if (redefined.indexOf(value) > -1) {
+              console.error(property, 'is looping: ', redefined, ' and now ', value, 'again');
+              continue;
+            } else {
+              redefined.push(value);
+            }
+          }
+          solution[property] = value;
+        }
+      } else {
+        for (property in result) {
+          value = result[property];
+          solution[property] = value;
+        }
       }
     }
     return solution;
