@@ -2,9 +2,151 @@ class Debugger
   constructor: (@engine) ->
 
   update: () ->
-    @domains(@engine.domains)
-    @refresh()
+    if @engine.console.level > 0
+      @domains(@engine.domains)
+    if @engine.console.level > 1
+      @refresh()
 
+  stylesheet: ->
+    @sheet = sheet = document.createElement('style')
+    sheet.textContent = sheet.innerText = """
+      domains {
+        display: block;
+        position: fixed;
+        z-index: 999999;
+        top: 0;
+        left: 0;
+        background: rgba(255,255,255,0.76);
+        font-family: Helvetica, Arial;
+      }
+      domain {
+        -webkit-user-select: none;  /* Chrome all / Safari all */
+        -moz-user-select: none;     /* Firefox all */
+        -ms-user-select: none;      /* IE 10+ */
+
+        user-select: none;     
+      }
+      panel strong, panel b{
+        font-weight: normal;
+      }
+      panel em {
+        color: red;
+      }
+      panel strong {
+        color: MidnightBlue;
+      }
+      panel strong.virtual {
+        color: green;
+      }
+      panel strong.intrinsic {
+        color: red;
+      }
+      panel strong.local {
+        color: black;
+      }
+      panel strong.position {
+        color: olive;
+      }
+      domains domain{
+        padding: 5px;
+        text-align: center;
+        display: inline-block;
+        cursor: pointer;
+      }
+      domain.intrinsic {
+        background: rgba(255, 0, 0, 0.3)
+      }
+      domain[hidden] {
+        color: #666;
+      }
+      domain panel {
+        display: block;
+        position: absolute;
+        background: #fff;
+        text-align: left;
+        white-space: pre;
+        line-height: 18px;
+        font-size: 13px;
+        font-family: monospace, serif;
+      }
+      domain panel {
+        display: none;
+      }
+      domain:hover panel {
+        display: block;
+      }
+      ruler {
+        display: block;
+        position: absolute;
+        z-index: 99999;
+        border-width: 0;
+      }
+      ruler[hidden] {
+        display: none;
+      }
+      ruler.x {
+        border-bottom: 1px dotted orange;
+      }
+      ruler.y {
+        border-right: 1px dotted orange;
+      }
+      ruler.width {
+        border-bottom: 1px dashed blue;
+      }
+      ruler.height {
+        border-right: 1px dashed blue;
+      }
+      ruler.virtual {
+        border-color: green;
+      }
+      ruler.virtual.height {
+        z-index: 99998;
+      }
+      body:not([inspecting]) ruler.virtual.height {
+        width: 0px !important;
+      }
+      ruler.virtual.height:hover, body[inspecting]:not([reaching]) ruler.virtual.height {
+        background: rgba(0,255,0,0.15);
+      }
+      ruler.constant {
+        border-style: solid;
+      }
+      ruler.intrinsic {
+        border-color: red;
+      }
+      ruler:before {
+        content: "";
+        display: block;
+        position: absolute;
+        right: 0;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        cursor: pointer;
+      }
+      ruler.y:before, ruler.height:before, ruler.intrinsic-height:before {
+        left: -10px;
+        right: -10px;
+      }
+      ruler.x:before, ruler.width:before, ruler.intrinsic-width:before {
+        top: -10px;
+        bottom: -10px;
+      }
+      body[reaching] domain panel.filtered {
+        display: block
+      }
+      body[reaching] ruler {
+        opacity: 0.2
+      }
+      body[reaching] ruler.reached {
+        opacity: 1
+      }
+    """
+    document.body.appendChild(sheet)
+    document.addEventListener 'click', @onClick
+    document.addEventListener 'mousemove', @onMouseMove
+    document.addEventListener 'keydown', @onKeyDown
+    document.addEventListener 'keyup', @onKeyUp
   refresh: ->
     for domain in @engine.domains
       domain.distances = undefined
@@ -33,6 +175,8 @@ class Debugger
 
   onClick: (e) =>
     if e.target.tagName?.toLowerCase() == 'domain'
+      unless @rulers
+        @refresh()
       @filter([e.target.getAttribute('for')], e.shiftKey || e.ctrlKey, true)
       e.preventDefault()
       e.stopPropagation()
@@ -167,6 +311,8 @@ class Debugger
 
 
   domains: (domains) ->
+    unless @sheet
+      @stylesheet()
     unless @list
       @list = document.createElement('domains')
       @list._gss = true
@@ -174,150 +320,10 @@ class Debugger
     @list.innerHTML = domains.map (d) -> 
       Debugger.uid ||= 0
       d.uid ||= ++Debugger.uid
-      """<domain for="#{d.uid}" #{@console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{d.constraints.length}</domain>"""
+      """<domain for="#{d.uid}" #{@engine.console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{d.constraints.length}</domain>"""
     .join('')
 
   ruler: (element, path, value, x, y, width, height, inside) ->
-    unless @rulers
-      sheet = document.createElement('style')
-      sheet.textContent = sheet.innerText = """
-        domains {
-          display: block;
-          position: fixed;
-          z-index: 999999;
-          top: 0;
-          left: 0;
-          background: rgba(255,255,255,0.76);
-          font-family: Helvetica, Arial;
-        }
-        domain {
-          -webkit-user-select: none;  /* Chrome all / Safari all */
-          -moz-user-select: none;     /* Firefox all */
-          -ms-user-select: none;      /* IE 10+ */
-
-          user-select: none;     
-        }
-        panel strong, panel b{
-          font-weight: normal;
-        }
-        panel em {
-          color: red;
-        }
-        panel strong {
-          color: MidnightBlue;
-        }
-        panel strong.virtual {
-          color: green;
-        }
-        panel strong.intrinsic {
-          color: red;
-        }
-        panel strong.local {
-          color: black;
-        }
-        panel strong.position {
-          color: olive;
-        }
-        domains domain{
-          padding: 5px;
-          text-align: center;
-          display: inline-block;
-          cursor: pointer;
-        }
-        domain.intrinsic {
-          background: rgba(255, 0, 0, 0.3)
-        }
-        domain[hidden] {
-          color: #666;
-        }
-        domain panel {
-          display: block;
-          position: absolute;
-          background: #fff;
-          text-align: left;
-          white-space: pre;
-          line-height: 18px;
-          font-size: 13px;
-          font-family: monospace, serif;
-        }
-        domain panel {
-          display: none;
-        }
-        domain:hover panel {
-          display: block;
-        }
-        ruler {
-          display: block;
-          position: absolute;
-          z-index: 99999;
-          border-width: 0;
-        }
-        ruler[hidden] {
-          display: none;
-        }
-        ruler.x {
-          border-bottom: 1px dotted orange;
-        }
-        ruler.y {
-          border-right: 1px dotted orange;
-        }
-        ruler.width {
-          border-bottom: 1px dashed blue;
-        }
-        ruler.height {
-          border-right: 1px dashed blue;
-        }
-        ruler.virtual {
-          border-color: green;
-        }
-        ruler.virtual.height {
-          z-index: 99998;
-        }
-        body:not([inspecting]) ruler.virtual.height {
-          width: 0px !important;
-        }
-        ruler.virtual.height:hover, body[inspecting]:not([reaching]) ruler.virtual.height {
-          background: rgba(0,255,0,0.15);
-        }
-        ruler.constant {
-          border-style: solid;
-        }
-        ruler.intrinsic {
-          border-color: red;
-        }
-        ruler:before {
-          content: "";
-          display: block;
-          position: absolute;
-          right: 0;
-          top: 0;
-          left: 0;
-          bottom: 0;
-          cursor: pointer;
-        }
-        ruler.y:before, ruler.height:before, ruler.intrinsic-height:before {
-          left: -10px;
-          right: -10px;
-        }
-        ruler.x:before, ruler.width:before, ruler.intrinsic-width:before {
-          top: -10px;
-          bottom: -10px;
-        }
-        body[reaching] domain panel.filtered {
-          display: block
-        }
-        body[reaching] ruler {
-          opacity: 0.2
-        }
-        body[reaching] ruler.reached {
-          opacity: 1
-        }
-      """
-      document.body.appendChild(sheet)
-      document.addEventListener 'click', @onClick
-      document.addEventListener 'mousemove', @onMouseMove
-      document.addEventListener 'keydown', @onKeyDown
-      document.addEventListener 'keyup', @onKeyUp
 
     bits = path.split('[')
     id = bits[0]
