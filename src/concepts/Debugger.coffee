@@ -181,6 +181,7 @@ class Debugger
       e.preventDefault()
       e.stopPropagation()
     else
+
       if (property = document.body.getAttribute('reaching')) && e.target.tagName?.toLowerCase() == 'ruler'
         domain = @reaching
         if domain && properties = domain.distances[property]
@@ -191,6 +192,9 @@ class Debugger
           @constraints domain.uid, null, props
           @panel.classList.add('filtered')
       else if e.ctrlKey || e.metaKey
+        
+        unless @rulers
+          @refresh()
         target = e.target
         ids = []
         while target
@@ -202,7 +206,7 @@ class Debugger
                   if ids.indexOf(d) == -1
                     ids.push(d)
           target = target.parentNode
-        
+          
         @filter ids, e.shiftKey
       e.preventDefault()
       e.stopPropagation()

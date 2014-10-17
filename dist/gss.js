@@ -22802,6 +22802,9 @@ Debugger = (function() {
           this.panel.classList.add('filtered');
         }
       } else if (e.ctrlKey || e.metaKey) {
+        if (!this.rulers) {
+          this.refresh();
+        }
         target = e.target;
         ids = [];
         while (target) {
