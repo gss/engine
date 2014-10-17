@@ -573,19 +573,19 @@ Update.prototype =
   apply: (result, solution = @solution) ->
     if result != @solution
       solution ||= @solution = {}
-      if solution == @solution
-        for property, value of result
-          if solution[property]?
-            redefined = ((@redefined ||= {})[property] ||= [])
-            if redefined.indexOf(value) > -1
-              console.error(property, 'is looping: ', redefined, ' and now ', value, 'again')
-              continue
-            else
-              redefined.push(value)
-          solution[property] = value
-      else
-        for property, value of result
-          solution[property] = value
+      for property, value of result
+        if (redefined = @redefined?[property])
+          i = redefined.indexOf(value)
+          if i > -1
+            solution[property] = redefined[redefined.length - 1]
+            if i != redefined.length - 1
+              console.error(property, 'is looping: ', @redefined[property], ' and now ', value, 'again')
+            continue
+        if solution == @solution
+          redefined = (@redefined ||= {})[property] ||= []
+          if redefined[redefined.length - 1] != value && value?
+            redefined.push(value)
+        solution[property] = value
 
     return solution
 
