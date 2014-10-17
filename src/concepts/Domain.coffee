@@ -68,7 +68,6 @@ class Domain
         for key of bypasser.variables
           delete @variables[key]
           if @updating.index > -1
-            debugger
             (result = @updating.effects ||= {})[key] = null
           else
             result = {}
@@ -489,9 +488,6 @@ class Domain
                 path.operations.splice(index, 1)
                 break
               op = op.parent
-
-    if constraint.operation.variables?['$10[height]'] && constraint.operation.variables?['$10[width]']
-      debugger
 
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)

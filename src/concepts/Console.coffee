@@ -12,34 +12,8 @@ class Console
   groups: 0
 
   compile: (engine) ->
-    if @level > 0
-      @tick(engine)
 
-  tick: (engine) ->
 
-    ticker = document.createElement('div')
-    ticker.style.position = 'fixed'
-    ticker.style.top = 0
-    ticker.style.left = 0
-    ticker.style.zIndex = 9999
-    ticker.style.background = 'white'
-    ticker.style.padding = 10 + 'px'
-
-    update = ->
-      if (engine && engine.domains)
-        string = engine.domains.
-                    map((d) -> d.constraints.length).
-                    sort((a, b) -> a - b).
-                    slice(-20)
-        string += '=' + engine.domains.
-          map((d) -> d.constraints.length).
-          reduce (a, b) -> a + b
-
-        if (ticker.innerHTML != string)
-          ticker.innerHTML = string
-      requestAnimationFrame(update)
-    document.body.appendChild(ticker)
-    update()
 
 
   stringify: (obj) ->
@@ -107,6 +81,8 @@ class Console
     return if !popped || @started.indexOf(popped) > -1
     @groupEnd()
     @endTime = Native::time()
+
+
 
 for method in Console::methods 
   Console::[method] = do (method) ->

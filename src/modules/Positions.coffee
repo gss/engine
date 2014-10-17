@@ -46,7 +46,7 @@ class Positions
     for id, styles of positioning
       for prop, value of styles
         @provide id, prop, value
-        
+
     @engine.mutations?.connect()
     return data
 

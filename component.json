@@ -23,6 +23,7 @@
     "lib/methods/Variables.js", 
 
     "lib/concepts/Console.js",
+    "lib/concepts/Debugger.js",
     "lib/concepts/Wrapper.js",
     "lib/concepts/Operation.js",
     "lib/concepts/Variable.js",

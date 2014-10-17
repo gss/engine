@@ -254,6 +254,26 @@ class Operation
 
     return operation
 
+  toExpressionString: (operation) ->
+    if operation?.push
+      if operation[0] == 'get'
+        path = @engine.Variable.getPath(operation[1], operation[2])
+        if @engine.values[path.replace('[', '[intrinsic-')]?
+          klass = 'intrinsic'
+        else if path.indexOf('"') > -1
+          klass = 'virtual'
+        else if operation[2] && operation[1]
+          if operation[2] == 'x' || operation[2] == 'y'
+            klass = 'position'
+          else if !(@engine.intrinsic.properties[operation[2]]?.matcher)
+            klass = 'local'
+        return '<strong class="' + (klass || 'variable') + '" for="' + path + '">' + path + '</strong>'
+      else if operation[0] == 'value'
+        return '<em>' + operation[1] + '</em>'
+      return @toExpressionString(operation[1]) + ' <b>' + operation[0] + '</b> ' + @toExpressionString(operation[2])
+    else
+      return operation ? ''
+
   # Serialize operation to a string with arguments, but without context
   serialize: (operation, otherdef, group) ->
     def = operation.def

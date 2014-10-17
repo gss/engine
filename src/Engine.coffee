@@ -29,6 +29,7 @@ class Engine extends Domain.Events
   Method:       require('./concepts/Method')
   Property:     require('./concepts/Property')
   Console:      require('./concepts/Console')
+  Debugger:     require('./concepts/Debugger')
   Update:       require('./concepts/Update')
   Continuation: require('./concepts/Continuation')
 
@@ -84,6 +85,7 @@ class Engine extends Domain.Events
     @properties   = new @Properties(@)
     @methods      = new @Methods(@)
     @evaluator    = new @Evaluator(@)
+    @debugger     = new @Debugger(@)
 
     @precompile()
  
@@ -328,7 +330,10 @@ class Engine extends Domain.Events
     @triggerEvent('solved', @updated.solution, @updated)
     if @scope
       @dispatchEvent(@scope, 'solved', @updated.solution, @updated)
-
+    
+    @debugger.update(@)
+        
+    
     return @updated.solution
 
   # Accept solution from a solver and resolve it to verify

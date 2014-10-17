@@ -21,8 +21,19 @@ class Mutations
   disconnect: ->
     @listener?.disconnect()
 
-  filter: ->
+  filter: (mutation)->
+    parent = mutation.target
+    while parent
+      if parent.nodeType == 1 && @filterNode(mutation.target) == false
+        return false
+      parent = parent.parentNode
     return true
+
+  filterNode: (target) ->
+    if target._gss
+      return false
+    return true
+
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
@@ -54,10 +65,10 @@ class Mutations
     removed = []
     @onCharacterData(target, target)
     for child in mutation.addedNodes
-      if child.nodeType == 1
+      if child.nodeType == 1 && @filterNode(child) != false
         added.push(child)
     for child in mutation.removedNodes
-      if child.nodeType == 1
+      if child.nodeType == 1 && @filterNode(child) != false
         if (index = added.indexOf(child)) > -1
           added.splice index, 1
         else
