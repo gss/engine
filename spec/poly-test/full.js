@@ -247,7 +247,42 @@ describe('Full page tests', function() {
           window.$engine = engine = new GSS(container, index === 0);
           $('#fixtures').appendChild(container);
           container.innerHTML = DEMOS.PROFILE_CARD;
-          return container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0');
+          container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0');
+          return engine.then(function(solution) {
+            var roughAssert;
+            roughAssert = function(a, b, threshold) {
+              if (threshold == null) {
+                threshold = 15;
+              }
+              return expect(Math.abs(a - b) < threshold).to.eql(true);
+            };
+            GSS.console.log(JSON.stringify(solution));
+            roughAssert(solution['$follow[y]'], 540);
+            roughAssert(solution['$follow[x]'], 329.5);
+            roughAssert(solution['flex-gap'], 95);
+            container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0');
+            return engine.then(function(solution) {
+              GSS.console.log(solution);
+              roughAssert(solution['$follow[x]'], 435);
+              roughAssert(solution['$follow[y]'], 537);
+              container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0');
+              return engine.then(function(solution) {
+                GSS.console.log(solution);
+                roughAssert(solution['flex-gap'], 95);
+                roughAssert(solution['$follow[y]'], 540);
+                roughAssert(solution['$follow[x]'], 329.5);
+                container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0');
+                return engine.then(function(solution) {
+                  roughAssert(solution['$follow[x]'], 435);
+                  roughAssert(solution['$follow[y]'], 537);
+                  container.innerHTML = "";
+                  return engine.then(function(solution) {
+                    return done();
+                  });
+                });
+              });
+            });
+          });
         });
         _ref2 = ['with intrinsic condition', 'with linear condition'];
         _results1 = [];
