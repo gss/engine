@@ -63,7 +63,6 @@ class Domain
 
   unbypass: (path, result) ->
     if bypassers = @bypassers[path]
-      console.log('remove bypasser', path)
       for bypasser in bypassers
         for key of bypasser.variables
           delete @variables[key]
@@ -115,7 +114,7 @@ class Domain
     return unless args
 
     if @disconnected
-      @mutations?.disconnect()
+      @mutations?.disconnect(true)
 
     if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
       if (result = @bypass(args))
@@ -141,7 +140,7 @@ class Domain
 
       if commands == false
         if @disconnected
-          @mutations?.connect()
+          @mutations?.connect(true)
         return
     if result = @perform?.apply(@, arguments)
       result = @apply(result)
@@ -151,7 +150,7 @@ class Domain
       @engine.provide commands
 
     if @disconnected
-      @mutations?.connect()
+      @mutations?.connect(true)
 
     if transacting
       commited = @commit()

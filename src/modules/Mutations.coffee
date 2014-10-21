@@ -1,3 +1,6 @@
+require '../../vendor/weakmap.js'
+require '../../vendor/MutationObserver.js'
+require '../../vendor/MutationObserver.attributes.js'
 
 class Mutations
   options:
@@ -15,10 +18,12 @@ class Mutations
   Observer: 
     window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
 
-  connect: ->
+  connect: (temporary) ->
+    return if temporary && window.JsMutationObserver == @Observer
     @listener?.observe @engine.scope, @options 
 
-  disconnect: ->
+  disconnect: (temporary) ->
+    return if temporary && window.JsMutationObserver == @Observer
     @listener?.disconnect()
 
   filter: (mutation)->

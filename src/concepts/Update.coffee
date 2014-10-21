@@ -366,8 +366,6 @@ Update.prototype =
   finish: ->
     @time = @engine.time(@start)
     @start = undefined
-    console.info('update time', @time, @problems.length)
-    console.profileEnd(1)
 
   # Last minute changes to queue before execution
   optimize: ->

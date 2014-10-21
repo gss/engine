@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-21) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-22) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20224,7 +20224,6 @@ Engine = (function(_super) {
       if ((_base = this.engine.updating).start == null) {
         _base.start = this.engine.time();
       }
-      console.profile(1);
     }
     if (this.providing === void 0) {
       this.providing = null;
@@ -20373,7 +20372,6 @@ Engine = (function(_super) {
       workflow.await(domain.url);
       return domain;
     }
-    debugger;
     if ((index = (_ref = workflow.imports) != null ? _ref.indexOf(domain) : void 0) > -1) {
       finish = index;
       imports = [];
@@ -20564,7 +20562,7 @@ Engine = (function(_super) {
     }
     this.update = Engine.prototype.Update.compile(this);
     if ((_ref3 = this.mutations) != null) {
-      _ref3.connect();
+      _ref3.connect(true);
     }
     if (location.search.indexOf('export=') > -1) {
       return this.preexport();
@@ -23645,10 +23643,10 @@ Operation = (function() {
     return '[matches~="' + selector.replace(/\s+/, this.engine.Continuation.DESCEND) + '"]';
   };
 
+  Operation.prototype.infer = function(operation) {};
+
   Operation.prototype.analyze = function(operation, parent) {
     var child, def, func, index, mark, otherdef, _i, _len, _ref;
-    Operation.analyzed || (Operation.analyzed = 0);
-    Operation.analyzed++;
     if (typeof operation[0] === 'string') {
       operation.name = operation[0];
     }
@@ -24265,7 +24263,6 @@ Domain = (function() {
   Domain.prototype.unbypass = function(path, result) {
     var bypasser, bypassers, key, _base, _i, _len;
     if (bypassers = this.bypassers[path]) {
-      console.log('remove bypasser', path);
       for (_i = 0, _len = bypassers.length; _i < _len; _i++) {
         bypasser = bypassers[_i];
         for (key in bypasser.variables) {
@@ -24341,7 +24338,7 @@ Domain = (function() {
     }
     if (this.disconnected) {
       if ((_ref = this.mutations) != null) {
-        _ref.disconnect();
+        _ref.disconnect(true);
       }
     }
     if (this.MAYBE && arguments.length === 1 && typeof args[0] === 'string') {
@@ -24370,7 +24367,7 @@ Domain = (function() {
       if (commands === false) {
         if (this.disconnected) {
           if ((_ref1 = this.mutations) != null) {
-            _ref1.connect();
+            _ref1.connect(true);
           }
         }
         return;
@@ -24384,7 +24381,7 @@ Domain = (function() {
     }
     if (this.disconnected) {
       if ((_ref3 = this.mutations) != null) {
-        _ref3.connect();
+        _ref3.connect(true);
       }
     }
     if (transacting) {
@@ -26377,9 +26374,7 @@ Update.prototype = {
   },
   finish: function() {
     this.time = this.engine.time(this.start);
-    this.start = void 0;
-    console.info('update time', this.time, this.problems.length);
-    return console.profileEnd(1);
+    return this.start = void 0;
   },
   optimize: function() {
     this.defer();
@@ -28226,11 +28221,11 @@ Document = (function(_super) {
         klass = html.className;
         if (klass.indexOf('gss-ready') === -1) {
           if ((_ref = this.mutations) != null) {
-            _ref.disconnect();
+            _ref.disconnect(true);
           }
           html.className = (klass && klass + ' ' || '') + 'gss-ready';
           if ((_ref1 = this.mutations) != null) {
-            _ref1.connect();
+            _ref1.connect(true);
           }
         }
       }
@@ -28268,9 +28263,9 @@ Document = (function(_super) {
       });
     },
     compile: function() {
-      console.profile(1);
+      this.console.profile(1);
       this.stylesheets.compile();
-      return console.profileEnd(1);
+      return this.console.profileEnd(1);
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -28341,7 +28336,7 @@ Positions = (function() {
     var id, path, positioning, prop, styles, value, _ref, _ref1;
     node || (node = this.reflown || this.engine.scope);
     if ((_ref = this.engine.mutations) != null) {
-      _ref.disconnect();
+      _ref.disconnect(true);
     }
     positioning = {};
     if (data) {
@@ -28361,7 +28356,7 @@ Positions = (function() {
       }
     }
     if ((_ref1 = this.engine.mutations) != null) {
-      _ref1.connect();
+      _ref1.connect(true);
     }
     return data;
   };
@@ -29184,6 +29179,12 @@ module.exports = Queries;
 require.register("gss/lib/modules/Mutations.js", function(exports, require, module){
 var Mutations;
 
+require('../../vendor/weakmap.js');
+
+require('../../vendor/MutationObserver.js');
+
+require('../../vendor/MutationObserver.attributes.js');
+
 Mutations = (function() {
   Mutations.prototype.options = {
     subtree: true,
@@ -29202,13 +29203,19 @@ Mutations = (function() {
 
   Mutations.prototype.Observer = (typeof window !== "undefined" && window !== null) && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver);
 
-  Mutations.prototype.connect = function() {
+  Mutations.prototype.connect = function(temporary) {
     var _ref;
+    if (temporary && window.JsMutationObserver === this.Observer) {
+      return;
+    }
     return (_ref = this.listener) != null ? _ref.observe(this.engine.scope, this.options) : void 0;
   };
 
-  Mutations.prototype.disconnect = function() {
+  Mutations.prototype.disconnect = function(temporary) {
     var _ref;
+    if (temporary && window.JsMutationObserver === this.Observer) {
+      return;
+    }
     return (_ref = this.listener) != null ? _ref.disconnect() : void 0;
   };
 
@@ -34861,6 +34868,45 @@ if(typeof(exports) !== 'undefined') {
 })(this);
 
 });
+require.register("gss/vendor/weakmap.js", function(exports, require, module){
+/*
+ * Copyright 2012 The Polymer Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ */
+
+if (typeof WeakMap === 'undefined') {
+  (function() {
+    var defineProperty = Object.defineProperty;
+    var counter = Date.now() % 1e9;
+
+    var WeakMap = function() {
+      this.name = '__st' + (Math.random() * 1e9 >>> 0) + (counter++ + '__');
+    };
+
+    WeakMap.prototype = {
+      set: function(key, value) {
+        var entry = key[this.name];
+        if (entry && entry[0] === key)
+          entry[1] = value;
+        else
+          defineProperty(key, this.name, {value: [key, value], writable: true});
+      },
+      get: function(key) {
+        var entry;
+        return (entry = key[this.name]) && entry[0] === key ?
+            entry[1] : undefined;
+      },
+      'delete': function(key) {
+        this.set(key, undefined);
+      }
+    };
+
+    window.WeakMap = WeakMap;
+  })();
+}
+
+});
 require.register("gss/vendor/MutationObserver.js", function(exports, require, module){
 /*
  * Copyright 2012 The Polymer Authors. All rights reserved.
@@ -35796,6 +35842,7 @@ module.exports = {
     "lib/properties/Styles.js",
 
     "vendor/gl-matrix.js",
+    "vendor/weakmap.js",
     "vendor/MutationObserver.js",
     "vendor/MutationObserver.attributes.js",
     "vendor/MutationObserver.classList.js"

@@ -219,7 +219,6 @@ class Engine extends Domain.Events
     unless old = @updating
       @engine.updating = new @update
       @engine.updating.start ?= @engine.time()
-      console.profile(1)
 
     if @providing == undefined
       @providing = null
@@ -304,7 +303,6 @@ class Engine extends Domain.Events
     if effects && Object.keys(effects).length
       return @onSolve(effects)
 
-    debugger
     # Fire up solved event if we've had remove commands that 
     # didnt cause any reactions
     if (!solution || (!solution.push && !Object.keys(solution).length) || @updating.problems[@updating.index + 1]) &&
@@ -359,7 +357,7 @@ class Engine extends Domain.Events
       workflow.postMessage domain, problems
       workflow.await(domain.url)
       return domain
-    debugger
+
     if (index = workflow.imports?.indexOf(domain)) > -1
       finish = index
       imports = []
@@ -495,7 +493,7 @@ class Engine extends Domain.Events
           @constructor::[property] ||= 
           @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @update = Engine::Update.compile(@)
-    @mutations?.connect()
+    @mutations?.connect(true)
 
     if location.search.indexOf('export=') > -1
       @preexport()

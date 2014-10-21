@@ -81,9 +81,9 @@ class Document extends Abstract
         html = @scope.body.parentNode
         klass = html.className
         if klass.indexOf('gss-ready') == -1
-          @mutations?.disconnect()
+          @mutations?.disconnect(true)
           html.className = (klass && klass + ' ' || '') + 'gss-ready' 
-          @mutations?.connect()
+          @mutations?.connect(true)
       # Unreference removed elements
       if @document.removed
         for id in @document.removed
@@ -111,9 +111,9 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
-      console.profile(1)
+      @console.profile(1)
       @stylesheets.compile()
-      console.profileEnd(1)
+      @console.profileEnd(1)
       
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @

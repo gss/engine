@@ -60,6 +60,7 @@
     "lib/properties/Styles.js",
 
     "vendor/gl-matrix.js",
+    "vendor/weakmap.js",
     "vendor/MutationObserver.js",
     "vendor/MutationObserver.attributes.js",
     "vendor/MutationObserver.classList.js"
