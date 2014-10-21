@@ -121,6 +121,7 @@ class Domain
       if (result = @bypass(args))
         return result
     @setup()
+    transacting = @transact()
 
     if typeof args == 'object' && !args.push
       if @domain == @engine
@@ -142,8 +143,9 @@ class Domain
         if @disconnected
           @mutations?.connect()
         return
-    if result = @perform?()
+    if result = @perform?.apply(@, arguments)
       result = @apply(result)
+
 
     if commands
       @engine.provide commands
@@ -151,7 +153,10 @@ class Domain
     if @disconnected
       @mutations?.connect()
 
-    return result
+    if transacting
+      commited = @commit()
+
+    return result || commited
 
   provide: (solution, value) ->
     if solution instanceof Domain
@@ -164,6 +169,14 @@ class Domain
       return 
     return true
 
+  transact: ->
+    unless @changes && @hasOwnProperty('changes')
+      @changes = {}
+
+  commit: ->
+    changes = @changes
+    @changes = undefined
+    return changes
 
   watch: (object, property, operation, continuation, scope) ->
     @setup()
@@ -241,8 +254,6 @@ class Domain
     return if old == value
     if @changes
       @changes[path] = value ? null
-    else if @immediate
-      @solved.set null, path, value
 
 
     if value?

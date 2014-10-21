@@ -38,7 +38,6 @@ class Numeric::Methods extends Domain::Methods
   'Infinity': Infinity
   'NaN': NaN
 
-
   isVariable: (object) ->
     return object[0] == 'get'
 

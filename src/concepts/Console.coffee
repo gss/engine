@@ -4,7 +4,7 @@ Native = require '../methods/Native'
 
 class Console
   constructor: (@level) ->
-    @level ?= parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
+    @level ?= self.GSS_LOG ? parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
     if !Console.bind
       @level = 0
 
@@ -62,6 +62,7 @@ class Console
       started = true
     @started.push(name)
     return if started
+    return if @level < 1
     fmt = '%c%s'
     fmt += Array(5 - Math.floor(String(name).length / 4) ).join('\t')
 
@@ -79,8 +80,9 @@ class Console
   end: (reason) ->
     popped = @started?.pop()
     return if !popped || @started.indexOf(popped) > -1
-    @groupEnd()
     @endTime = Native::time()
+    return if @level < 1
+    @groupEnd()
 
 
 

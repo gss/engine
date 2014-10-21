@@ -92,15 +92,12 @@ class Intrinsic extends Numeric
 
 
 
-  solve: ->
-    @changes = {}
-    Numeric::solve.apply(@, arguments)
+  perform: ->
     if arguments.length < 4
       @console.row('measure', arguments[0], arguments[1])
       @each @scope, @update
-    changes = @changes
-    @changes = undefined
-    return changes
+    debugger
+    return
 
   get: (object, property, continuation) ->
     path = @Variable.getPath(object, property)

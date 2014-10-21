@@ -4,7 +4,7 @@ class Debugger
   update: () ->
     if @engine.console.level > 0
       @domains(@engine.domains)
-    if @engine.console.level > 1
+    if @engine.console.level > 1 || @rulers
       @refresh()
 
   stylesheet: ->
@@ -25,6 +25,10 @@ class Debugger
         -ms-user-select: none;      /* IE 10+ */
 
         user-select: none;     
+      }
+      panel {
+        padding: 10px;
+        left: 0
       }
       panel strong, panel b{
         font-weight: normal;
@@ -47,17 +51,38 @@ class Debugger
       panel strong.position {
         color: olive;
       }
+      panel strong[mark] {
+        text-decoration: underline;
+      }
       domains domain{
         padding: 5px;
         text-align: center;
         display: inline-block;
         cursor: pointer;
       }
-      domain.intrinsic {
-        background: rgba(255, 0, 0, 0.3)
-      }
       domain[hidden] {
-        color: #666;
+        color: #999;
+        background: none;
+      }
+      domain.intrinsic, domain.assumed, domain.solved, domain.document {
+        background: rgba(255, 0, 0, 0.15);
+        font: 0/0 "0";
+        width: 15px;
+        height: 15px;
+        display: none;
+      }
+      domain, domain.active {
+        background: #fff;
+        color: #000;
+      }
+      domain.active {
+        font-weight: bold;
+      }
+      domains:hover domain {
+        background: none;
+      }
+      domains:hover domain:hover {
+        background: #fff
       }
       domain panel {
         display: block;
@@ -72,7 +97,7 @@ class Debugger
       domain panel {
         display: none;
       }
-      domain:hover panel {
+      domain:hover panel, body[reaching] panel {
         display: block;
       }
       ruler {
@@ -105,6 +130,9 @@ class Debugger
       body:not([inspecting]) ruler.virtual.height {
         width: 0px !important;
       }
+      body[inspecting][reaching] ruler.virtual.height:not(:hover) {
+        width: 0px !important;
+      }
       ruler.virtual.height:hover, body[inspecting]:not([reaching]) ruler.virtual.height {
         background: rgba(0,255,0,0.15);
       }
@@ -132,7 +160,7 @@ class Debugger
         top: -10px;
         bottom: -10px;
       }
-      body[reaching] domain panel.filtered {
+      domain panel.filtered {
         display: block
       }
       body[reaching] ruler {
@@ -143,7 +171,7 @@ class Debugger
       }
     """
     document.body.appendChild(sheet)
-    document.addEventListener 'click', @onClick
+    document.addEventListener 'mousedown', @onClick
     document.addEventListener 'mousemove', @onMouseMove
     document.addEventListener 'keydown', @onKeyDown
     document.addEventListener 'keyup', @onKeyUp
@@ -153,10 +181,10 @@ class Debugger
     values = {}
     for property, value of @engine.values
       values[property] = value
-    if @updated
-      for property, value of @updated?.solution
-        unless value?
-          values[property] = value
+    if @rulers
+      for property, value of @rulers
+        unless values.hasOwnProperty(property)
+          values[property] = null
     ids = @ids = []
     for property, value of values
       if (bits = property.split('[')).length > 1
@@ -166,12 +194,24 @@ class Debugger
       @draw(id, values)
 
   onKeyDown: (e) =>
-    if e.ctrlKey || e.metaKey
+    if e.altKey
       document.body.setAttribute('inspecting', 'inspecting')
 
   onKeyUp: (e) =>
     if document.body.getAttribute('inspecting')?
       document.body.removeAttribute('inspecting')
+
+  getDomains: (ids) ->
+    domains = []
+    for domain in @engine.domains
+      if domain.displayName != 'Solved' && domain.constraints.length
+        for own property, value of domain.values
+          id = property.split('[')
+          if id.length > 1
+            if ids.indexOf(id[0]) > -1
+              if domains.indexOf(domain) == -1
+                domains.push(domain)
+    return domains
 
   onClick: (e) =>
     if e.target.tagName?.toLowerCase() == 'domain'
@@ -181,8 +221,33 @@ class Debugger
       e.preventDefault()
       e.stopPropagation()
     else
+      if e.metaKey
+        unless @rulers
+          @refresh()
 
-      if (property = document.body.getAttribute('reaching')) && e.target.tagName?.toLowerCase() == 'ruler'
+      if e.altKey || e.metaKey
+        
+        target = e.target
+        ids = []
+        inspecting = []
+        while target
+          if target.nodeType == 1
+            if e.altKey && target._gss && target.classList.contains('virtual')
+              inspecting.push target.getAttribute('for')
+            else if target._gss_id
+              inspecting.push target._gss_id
+          target = target.parentNode
+        
+        domains = @getDomains(inspecting)
+        ids = domains.map (d) -> String(d.uid)
+        if e.altKey
+          @remap(domains[0])
+          @visualize null, inspecting, e.shiftKey
+          @constraints ids[0], null, inspecting, e.shiftKey
+        if e.metaKey
+          @filter ids, e.shiftKey
+
+      else if (property = document.body.getAttribute('reaching')) && e.target.tagName?.toLowerCase() == 'ruler'
         domain = @reaching
         if domain && properties = domain.distances[property]
           props = []
@@ -190,28 +255,11 @@ class Debugger
             unless distance
               props.push(prop)
           @constraints domain.uid, null, props
-          @panel.classList.add('filtered')
-      else if e.ctrlKey || e.metaKey
-        
-        unless @rulers
-          @refresh()
-        target = e.target
-        ids = []
-        while target
-          if target.nodeType == 1
-            if target._gss_id
-              if @ids.indexOf(target._gss_id) > -1
-                for node in document.querySelectorAll('ruler[for="' + target._gss_id + '"]')
-                  d = node.getAttribute('domain')
-                  if ids.indexOf(d) == -1
-                    ids.push(d)
-          target = target.parentNode
-          
-        @filter ids, e.shiftKey
+      else return
       e.preventDefault()
       e.stopPropagation()
 
-  constraints: (id, element, props) ->
+  constraints: (id, element, props, all) ->
     unless @panel
       @panel = document.createElement('panel')
     else
@@ -223,55 +271,101 @@ class Debugger
           break
       return unless element
     unless @panel.parentNode == element
+      @panel.parentNode?.classList.remove('active')
       element.appendChild(@panel)
 
     for domain in @engine.domains
       if String(domain.uid) == String(id)
-
         @panel.innerHTML = domain.constraints.map (constraint) =>
           @engine.Operation.toExpressionString(constraint.operation)
         .filter (string) ->
           return true unless props
           for prop in props
             if string.indexOf(prop) > -1
-              debugger
+              if !all && props.length > 1
+                props.splice(1)
               return true
           return false
+        .map (string) ->
+          if props
+            for prop in props
+              prop = prop.replace(/([\[\]$])/g, '\\$1')
+              debugger
+              string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1')
+
+
+          return string
         .join('\n')
+        if props
+          @panel.classList.add('filtered')
+        diff = element.offsetLeft + element.offsetWidth + 10 - @panel.offsetWidth
+        if diff > 0
+          @panel.style.left = diff + 'px'
+        else
+          @panel.style.left = ''
+        element.classList.add('active')
+
 
 
         break
 
+
   onMouseMove: (e) =>
-    unless e.target._gss
-      if e.target.tagName.toLowerCase() == 'domain'
-        @constraints(e.target.getAttribute('for'), e.target)
-      else if @panel?.parentNode
-        @panel.parentNode.removeChild(@panel)
+    target = e.target
+    if target._gss
+      return @visualize e.target.getAttribute('property')
+
+    while target
+      if target.nodeType == 1
+        if target.tagName.toLowerCase() == 'domain'
+          return @constraints(target.getAttribute('for'), target)
+
+      target = target.parentNode
+
+    if @panel?.parentNode
+      @panel.parentNode.classList.remove('active')
+      @panel.parentNode.removeChild(@panel)
+    if @reaching
+      @visualize()
+
+  visualize: (property, ids, all) ->
+    if !property && !ids
       if @reaching
         @reaching = undefined
         document.body.removeAttribute('reaching')
         for ruler in document.getElementsByTagName('ruler')
           ruler.classList.remove('reached')
       return 
-    property = e.target.getAttribute('property')
-    if document.body.getAttribute('reaching') == property
+    if !ids && document.body.getAttribute('reaching') == property
       return
-    domain = undefined
+    if ids
+      props = []
+      for property of @rulers
+        for id in ids
+          if property.substring(0, id.length) == id
+            if property.substring(id.length, id.length + 1) == '['
+              props.push(property)
 
-    for other in @engine.domains
-      if other.values.hasOwnProperty(property) && other.displayName != 'Solved'
-        domain = other
-        break
-    if domain && properties = domain.distances[property]
-      for prop, distance of properties
-        unless distance
-          @rulers[prop]?.classList.add('reached')
-      @reaching = domain
-      document.body.setAttribute('reaching', property)
+              if !all && ids.length > 1
+                ids.splice(1)
+                break
     else
-      @reaching = undefined
-      document.body.removeAttribute('reaching')
+      props = [property]
+      ids = [property.split('[')[0]]
+
+    domain = @getDomains(ids)[0]
+
+    reached = false
+    for prop in props
+      if domain && properties = domain.distances[prop]
+        for key, distance of properties
+          unless distance
+            reached = true
+            @rulers[key]?.classList.add('reached')
+            @reaching = domain
+            document.body.setAttribute('reaching', prop || id)
+  
+
 
   filter: (ids, all, scroll) ->
     @indexes ||= for node in @list.childNodes
@@ -292,10 +386,14 @@ class Debugger
           @indexes.splice(i, 1)
 
     for domain, index in @list.childNodes
-      if @indexes.indexOf(String(@engine.domains[index].uid)) == -1
-        domain.setAttribute('hidden', 'hidden')
-      else
-        domain.removeAttribute('hidden')
+      if @engine.domains[index]?
+        if @indexes.indexOf(String(@engine.domains[index].uid)) == -1
+          domain.setAttribute('hidden', 'hidden')
+          if @panel?.parentNode == domain
+            domain.classList.remove('active')
+            domain.removeChild(@panel)
+        else
+          domain.removeAttribute('hidden')
 
     top = null
     for property, ruler of @rulers
@@ -321,11 +419,27 @@ class Debugger
       @list = document.createElement('domains')
       @list._gss = true
       document.body.appendChild(@list)
-    @list.innerHTML = domains.map (d) -> 
+
+    total = 0
+    innerHTML = domains.map (d) => 
       Debugger.uid ||= 0
       d.uid ||= ++Debugger.uid
+      total += d.constraints.length
       """<domain for="#{d.uid}" #{@engine.console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{d.constraints.length}</domain>"""
     .join('')
+    innerHTML += '<label> = <strong>' + total + '</strong></label>'
+    @list.innerHTML = innerHTML
+
+  remap: (domain) ->
+    if !(distances = domain.distances)
+      distances = domain.distances = {}
+      for constraint in domain.constraints
+        for a of constraint.operation.variables
+          if a.match(/width\]|height\]|\[\x]|\[\y\]|/)
+            for b of constraint.operation.variables
+              if b.match(/width\]|height\]|\[\x]|\[\y\]|/)
+                @reach distances, a, b
+
 
   ruler: (element, path, value, x, y, width, height, inside) ->
 
@@ -337,7 +451,8 @@ class Debugger
       ruler = @rulers[path] = document.createElement('ruler')
       ruler.className = property
       ruler._gss = true
-      ruler.setAttribute('for', element._gss_id)
+      id = path.split('[')[0]
+      ruler.setAttribute('for', id)
       ruler.setAttribute('property', path)
       ruler.setAttribute('title', path)
       ruler.removeAttribute('hidden')
@@ -357,14 +472,8 @@ class Debugger
 
 
     ruler.setAttribute('domain', domain.uid)
-    if !(distances = domain.distances)
-      distances = domain.distances = {}
-      for constraint in domain.constraints
-        for a of constraint.operation.variables
-          if a.match(/width\]|height\]|\[\x]|\[\y\]|/)
-            for b of constraint.operation.variables
-              if b.match(/width\]|height\]|\[\x]|\[\y\]|/)
-                @reach distances, a, b
+
+    @remap domain
 
     unless konst = (typeof @engine.variables[path] == 'string')
       for constraint in domain.constraints
@@ -394,7 +503,6 @@ class Debugger
 
     if inside
       element.appendChild(ruler)
-      debugger
       if property == 'height' && @engine.values[id + '[width]']?
         ruler.style.width = @engine.values[id + '[width]'] + 'px'
 

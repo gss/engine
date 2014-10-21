@@ -1810,7 +1810,146 @@ describe 'End - to - End', ->
   # ===========================================================
   
   describe "@if @else", ->
-  
+    describe '&& in condition', ->
+      it 'should compute values', (done) ->
+        listen = (e) ->     
+          expect(engine.values).to.eql 
+            "t": 500
+            "x": 1
+          done()     
+                     
+        engine.once 'solve', listen
+    
+        container.innerHTML =  """
+            <style type="text/gss">
+            [t] == 500;
+        
+            @if [t] >= 400 && [t] < 450 {          
+              [x] == 96;
+            }
+
+            @else {  
+              [x] == 1;  
+            }
+            </style>
+          """
+
+    describe '|| over two variables', ->
+      it 'should compute values', (done) ->
+        
+        engine.assumed.merge A: 200, B: 200
+
+        engine.once 'solve', ->     
+          expect(engine.values).to.eql 
+            "a": 200
+            "b": 200
+            "x": 1
+
+          engine.once 'solve', ->     
+            expect(engine.values).to.eql 
+              "a": 500
+              "b": 200
+              "x": 96
+
+            engine.once 'solve', ->     
+              expect(engine.values).to.eql 
+              "a": 200
+              "b": 200
+              "x": 1
+
+              engine.once 'solve', ->     
+                expect(engine.values).to.eql 
+                  "a": 200
+                  "b": 500
+                  "x": 96
+
+                engine.once 'solve', ->     
+                  expect(engine.values).to.eql 
+                    "a": 200
+                    "b": 200
+                    "x": 1
+
+
+                  engine.once 'solve', ->     
+                    expect(engine.values).to.eql 
+                      "a": 500
+                      "b": 500
+                      "x": 96
+
+                    engine.once 'solve', ->     
+                      expect(engine.values).to.eql 
+                        "a": 200
+                        "b": 200
+                        "x": 1
+                      done()
+                      
+                    engine.assumed.merge A: 200, B: 200
+                  engine.assumed.merge A: 500, B: 500
+                engine.assumed.merge B: 200
+              engine.assumed.merge B: 500
+            engine.assumed.merge A: 200
+
+          engine.assumed.merge A: 500
+    
+        container.innerHTML =  """
+            <style type="text/gss">
+            [a] == [A];
+            [b] == [B];
+        
+            @if [a] >= 400 || [b] >= 400 {          
+              [x] == 96;
+            }
+
+            @else {  
+              [x] == 1;  
+            }
+            </style>
+          """
+
+
+    describe '&& over two variables', ->
+      it 'should compute values', (done) ->
+        
+        engine.assumed.merge input: 200
+
+        engine.once 'solve', ->     
+          expect(engine.values).to.eql 
+            "t": 500
+            "x": 96
+            "z": 200
+
+          engine.once 'solve', ->     
+            expect(engine.values).to.eql 
+              "t": 500
+              "x": 1
+              "z": 500
+
+            engine.once 'solve', ->     
+              expect(engine.values).to.eql 
+                "t": 500
+                "x": 96
+                "z": 200
+
+              done()
+            engine.assumed.merge input: 200
+
+          engine.assumed.merge input: 500
+    
+        container.innerHTML =  """
+            <style type="text/gss">
+            [t] == 500;
+            [z] == [input];
+        
+            @if [t] >= 400 && [z] < 450 {          
+              [x] == 96;
+            }
+
+            @else {  
+              [x] == 1;  
+            }
+            </style>
+          """
+
     describe 'flat @if @else w/o queries', ->
   
       it 'should compute values', (done) ->

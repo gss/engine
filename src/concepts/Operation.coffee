@@ -267,7 +267,7 @@ class Operation
             klass = 'position'
           else if !(@engine.intrinsic.properties[operation[2]]?.matcher)
             klass = 'local'
-        return '<strong class="' + (klass || 'variable') + '" for="' + path + '">' + path + '</strong>'
+        return '<strong class="' + (klass || 'variable') + '" for="' + path + '" title="' + @engine.values[path] + '">' + path + '</strong>'
       else if operation[0] == 'value'
         return '<em>' + operation[1] + '</em>'
       return @toExpressionString(operation[1]) + ' <b>' + operation[0] + '</b> ' + @toExpressionString(operation[2])
