@@ -96,7 +96,7 @@ module.exports = ->
         expand: true
         cwd: 'spec'
         src: ['**.coffee', '**/*.coffee']
-        dest: 'spec'
+        dest: 'spec/js'
         ext: '.js'
 
     # Cross-browser testing

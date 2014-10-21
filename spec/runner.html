@@ -10,22 +10,10 @@
       }
     </style>
     <script src="../vendor/weakmap.js"></script>
-
-
-
     <script src="../vendor/MutationObserver.js"></script>
     <script src="../vendor/MutationObserver.attributes.js"></script>
     <script src="../dist/gss.js"></script>
-    <script>
-      GSS_CONFIG = {
-        defaultStrength: 'required',
-        useWorker: true
-      }
-    </script>
-    <script>
-    //GSS.document = new GSS.Document
-    </script>
-
+    
     <style>
       #mocha .test {
         overflow: auto;
@@ -37,8 +25,6 @@
     <div id="fixtures"></div>
     <script src="../node_modules/chai/chai.js"></script>
     <script src="../node_modules/mocha/mocha.js"></script>
-    <script src="../../../cassowary.js/bin/c.js"></script>
-    <script src="../vendor/gl-matrix.js"></script>
     <script>
       mocha.setup('bdd');
       chai.config.includeStack = true;
@@ -46,24 +32,21 @@
     </script>
     <!-- 
     -->
-    <script src="./domain.js"></script>
-    <script src="./command.js"></script>
-    <script src="./cassowary.js"></script>
-    <script src="./command-nested-rules.js"></script>   
-    <script src="./perf.js"></script>
-    <script src="./thread.js"></script>
-    <script src="./engine.js"></script>
-    <script src="./view.js"></script>
-    <script src="./styles.js"></script>
-    <script src="./end-to-end.js"></script>
-    <script src="./poly-test/full.js"></script>
-    <script src="./stylesheet.js"></script>
-    <script src="./pages.js"></script>
-    <!-- 
-    <script src="./worker.js"></script> -->
+    <script src="./js/domain.js"></script>
+    <script src="./js/command.js"></script>
+    <script src="./js/cassowary.js"></script>
+    <script src="./js/command-nested-rules.js"></script>   
+    <script src="./js/perf.js"></script>
+    <script src="./js/thread.js"></script>
+    <script src="./js/engine.js"></script>
+    <script src="./js/view.js"></script>
+    <script src="./js/styles.js"></script>
+    <script src="./js/end-to-end.js"></script>
+    <script src="./js/poly-test/full.js"></script>
+    <script src="./js/stylesheet.js"></script>
+    <script src="./js/pages.js"></script>
     
     <script>
-    //GSS.document.once("DOMContentLoaded", function(){
       if (window.mochaPhantomJS) {
         mochaPhantomJS.run();
       } else {
@@ -72,7 +55,6 @@
           window.mochaResults = runner.stats;
         });
       }
-    //});
     </script>
   </body>
 </html>

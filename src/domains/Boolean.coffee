@@ -5,6 +5,12 @@ class Boolean extends Numeric
   immutable: true
 
 class Boolean::Methods
+  "&&": (a, b) ->
+    return a && b
+
+  "||": (a, b) ->
+    return a || b
+    
   "!=": (a, b) ->
     return a == b
 

@@ -20235,6 +20235,9 @@ Engine = (function(_super) {
     } else {
       solution = Domain.prototype.solve.apply(this, args);
     }
+    if (solution) {
+      this.updating.apply(solution);
+    }
     if ((_ref = this.queries) != null) {
       _ref.onBeforeSolve();
     }
@@ -20319,10 +20322,11 @@ Engine = (function(_super) {
     if (effects && Object.keys(effects).length) {
       return this.onSolve(effects);
     }
-    if ((!solution || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null) && !this.engine.restyled) {
+    debugger;
+    if ((!solution || (!solution.push && !Object.keys(solution).length) || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null) && !this.engine.restyled) {
       return;
     }
-    if (!this.updating.problems.length && ((_ref4 = this.updated) != null ? _ref4.problems.length : void 0)) {
+    if (!this.updating.problems.length && ((_ref4 = this.updated) != null ? _ref4.problems.length : void 0) && !this.engine.restyled) {
       this.updating.finish();
       this.updating = void 0;
       return;
@@ -20369,6 +20373,7 @@ Engine = (function(_super) {
       workflow.await(domain.url);
       return domain;
     }
+    debugger;
     if ((index = (_ref = workflow.imports) != null ? _ref.indexOf(domain) : void 0) > -1) {
       finish = index;
       imports = [];
@@ -24459,8 +24464,9 @@ Domain = (function() {
           prop = path.substring(j + 1, path.length - 1);
           old = obj[prop];
           delete obj[prop];
-          if (this.engine.updating) {
-            (this.changes || (this.changes = {}))[path] = null;
+          if (this.updating) {
+            this.transact();
+            this.changes[path] = null;
           }
           if (this.immediate) {
             this.set(path, null);
@@ -24491,14 +24497,18 @@ Domain = (function() {
   };
 
   Domain.prototype.merger = function(object, meta, domain) {
-    var async, path, value;
+    var async, path, transacting, value;
     if (domain == null) {
       domain = this;
     }
+    transacting = domain.transact();
     async = false;
     for (path in object) {
       value = object[path];
       domain.set(void 0, path, value, meta);
+    }
+    if (transacting) {
+      return domain.commit();
     }
   };
 
@@ -24510,7 +24520,8 @@ Domain = (function() {
     if (old === value) {
       return;
     }
-    if (this.changes) {
+    if (this.updating) {
+      this.transact();
       this.changes[path] = value != null ? value : null;
     }
     if (value != null) {
@@ -27166,14 +27177,6 @@ Numeric.prototype.Methods = (function(_super) {
     return _ref1;
   }
 
-  Methods.prototype["&&"] = function(a, b) {
-    return a && b;
-  };
-
-  Methods.prototype["||"] = function(a, b) {
-    return a || b;
-  };
-
   Methods.prototype["+"] = function(a, b) {
     return a + b;
   };
@@ -27208,6 +27211,7 @@ Numeric.prototype.Methods = (function(_super) {
     command: function(operation, continuation, scope, meta, object, path, contd, scoped) {
       var clone, domain;
       path = this.Variable.getPath(object, path);
+      debugger;
       domain = this.Variable.getDomain(operation, true, true);
       if (!domain || domain.priority < 0) {
         domain = this;
@@ -27393,6 +27397,14 @@ Boolean = (function(_super) {
 
 Boolean.prototype.Methods = (function() {
   function Methods() {}
+
+  Methods.prototype["&&"] = function(a, b) {
+    return a && b;
+  };
+
+  Methods.prototype["||"] = function(a, b) {
+    return a || b;
+  };
 
   Methods.prototype["!="] = function(a, b) {
     return a === b;

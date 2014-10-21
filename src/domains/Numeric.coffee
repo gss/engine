@@ -16,12 +16,6 @@ class Numeric extends Domain
 
 class Numeric::Methods extends Domain::Methods
 
-  "&&": (a, b) ->
-    return a && b
-
-  "||": (a, b) ->
-    return a || b
-
   "+": (a, b) ->
     return a + b
 
@@ -47,7 +41,7 @@ class Numeric::Methods extends Domain::Methods
   get: 
     command: (operation, continuation, scope, meta, object, path, contd, scoped) ->
       path = @Variable.getPath(object, path)
-
+      debugger
       domain = @Variable.getDomain(operation, true, true)
       if !domain || domain.priority < 0
         domain = @

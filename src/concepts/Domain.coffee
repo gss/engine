@@ -219,8 +219,9 @@ class Domain
           prop = path.substring(j + 1, path.length - 1)
           old = obj[prop]
           delete obj[prop]
-          if @engine.updating 
-            (@changes ||= {})[path] = null
+          if @updating
+            @transact()
+            @changes[path] = null
           if @immediate
             @set path, null
           if Object.keys(obj).length == 0
@@ -240,10 +241,12 @@ class Domain
         return @engine.solve @displayName || 'GSS', @merger, object, meta, @
 
   merger: (object, meta, domain = @) ->
+    transacting = domain.transact()
+        
     async = false
     for path, value of object
       domain.set undefined, path, value, meta
-    return
+    return domain.commit() if transacting
 
   # Set key-value pair or merge object
   set: (object, property, value, meta) ->
@@ -252,7 +255,8 @@ class Domain
     path = @engine.Variable.getPath(object, property)
     old = @values[path]
     return if old == value
-    if @changes
+    if @updating
+      @transact()
       @changes[path] = value ? null
 
 

@@ -1810,28 +1810,51 @@ describe 'End - to - End', ->
   # ===========================================================
   
   describe "@if @else", ->
-    describe '&& in condition', ->
+    describe '|| and :: in condition', ->
       it 'should compute values', (done) ->
-        listen = (e) ->     
-          expect(engine.values).to.eql 
-            "t": 500
-            "x": 1
-          done()     
                      
-        engine.once 'solve', listen
-    
+        engine.assumed.merge '$button1[t]': 500, '$button2[t]': 400
+
+        engine.once 'solve', ->     
+          expect(engine.values).to.eql 
+            "$button1[x]": 96
+            "$button2[x]": 1
+            "$button1[t]": 500
+            "$button2[t]": 400
+
+          engine.once 'solve', ->
+            expect(engine.values).to.eql 
+              "$button1[x]": 1
+              "$button2[x]": 96
+              "$button1[t]": 400
+              "$button2[t]": 100
+
+            engine.once 'solve', ->
+              expect(engine.values).to.eql 
+                "$button1[x]": 1
+                "$button2[x]": 1
+                "$button1[t]": 400
+                "$button2[t]": 400
+              done()   
+
+            engine.assumed.merge '$button2[t]': 400
+
+          engine.assumed.merge '$button1[t]': 400, '$button2[t]': 100
+
         container.innerHTML =  """
             <style type="text/gss">
-            [t] == 500;
-        
-            @if [t] >= 400 && [t] < 450 {          
-              [x] == 96;
-            }
+              button {
+                @if &[t] >= 450 || &[t] < 250 {          
+                  &[x] == 96;
+                }
 
-            @else {  
-              [x] == 1;  
-            }
+                @else {  
+                  &[x] == 1;  
+                }
+              }
             </style>
+            <button id="button1"></button>
+            <button id="button2"></button>
           """
 
     describe '|| over two variables', ->
@@ -1841,30 +1864,40 @@ describe 'End - to - End', ->
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
+            "A": 200
+            "B": 200
             "a": 200
             "b": 200
             "x": 1
 
           engine.once 'solve', ->     
             expect(engine.values).to.eql 
+              "A": 500
+              "B": 200
               "a": 500
               "b": 200
               "x": 96
 
             engine.once 'solve', ->     
               expect(engine.values).to.eql 
-              "a": 200
-              "b": 200
-              "x": 1
+                "A": 200
+                "B": 200
+                "a": 200
+                "b": 200
+                "x": 1
 
               engine.once 'solve', ->     
                 expect(engine.values).to.eql 
+                  "A": 200
+                  "B": 500
                   "a": 200
                   "b": 500
                   "x": 96
 
                 engine.once 'solve', ->     
                   expect(engine.values).to.eql 
+                    "A": 200
+                    "B": 200
                     "a": 200
                     "b": 200
                     "x": 1
@@ -1872,12 +1905,16 @@ describe 'End - to - End', ->
 
                   engine.once 'solve', ->     
                     expect(engine.values).to.eql 
+                      "A": 500
+                      "B": 500
                       "a": 500
                       "b": 500
                       "x": 96
 
                     engine.once 'solve', ->     
                       expect(engine.values).to.eql 
+                        "A": 200
+                        "B": 200
                         "a": 200
                         "b": 200
                         "x": 1
@@ -1914,18 +1951,21 @@ describe 'End - to - End', ->
 
         engine.once 'solve', ->     
           expect(engine.values).to.eql 
+            "input": 200
             "t": 500
             "x": 96
             "z": 200
 
           engine.once 'solve', ->     
             expect(engine.values).to.eql 
+              "input": 500
               "t": 500
               "x": 1
               "z": 500
 
             engine.once 'solve', ->     
               expect(engine.values).to.eql 
+                "input": 200
                 "t": 500
                 "x": 96
                 "z": 200

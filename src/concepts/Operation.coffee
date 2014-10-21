@@ -174,11 +174,11 @@ class Operation
   getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'
 
+  infer: (operation) ->
+    
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
-    Operation.analyzed ||= 0
-    Operation.analyzed++
     operation.name = operation[0] if typeof operation[0] == 'string'
     def = @engine.methods[operation.name]
         

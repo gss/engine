@@ -229,6 +229,8 @@ class Engine extends Domain.Events
     else
       solution = Domain::solve.apply(@, args)
 
+    if solution
+      @updating.apply(solution)
 
     @queries?.onBeforeSolve()
     @pairs?.onBeforeSolve()
@@ -302,15 +304,15 @@ class Engine extends Domain.Events
     if effects && Object.keys(effects).length
       return @onSolve(effects)
 
-
+    debugger
     # Fire up solved event if we've had remove commands that 
     # didnt cause any reactions
-    if (!solution || @updating.problems[@updating.index + 1]) &&
+    if (!solution || (!solution.push && !Object.keys(solution).length) || @updating.problems[@updating.index + 1]) &&
         (@updating.problems.length != 1 || @updating.domains[0] != null) &&
         !@engine.restyled
       return 
 
-    if !@updating.problems.length && @updated?.problems.length
+    if !@updating.problems.length && @updated?.problems.length && !@engine.restyled
       @updating.finish()
       @updating = undefined
       return
@@ -357,6 +359,7 @@ class Engine extends Domain.Events
       workflow.postMessage domain, problems
       workflow.await(domain.url)
       return domain
+    debugger
     if (index = workflow.imports?.indexOf(domain)) > -1
       finish = index
       imports = []
