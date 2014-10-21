@@ -20321,7 +20321,6 @@ Engine = (function(_super) {
     if (effects && Object.keys(effects).length) {
       return this.onSolve(effects);
     }
-    debugger;
     if ((!solution || (!solution.push && !Object.keys(solution).length) || this.updating.problems[this.updating.index + 1]) && (this.updating.problems.length !== 1 || this.updating.domains[0] !== null) && !this.engine.restyled) {
       return;
     }
@@ -29198,6 +29197,7 @@ Mutations = (function() {
     this.engine = engine;
     if (this.Observer) {
       this.listener = new this.Observer(this.solve.bind(this.engine));
+      this.connect();
     }
   }
 

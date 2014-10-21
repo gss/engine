@@ -14,6 +14,7 @@ class Mutations
   constructor: (@engine) ->
     if @Observer
       @listener = new @Observer @solve.bind(@engine)
+      @connect()
 
   Observer: 
     window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
