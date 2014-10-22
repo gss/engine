@@ -96,7 +96,6 @@ class Intrinsic extends Numeric
     if arguments.length < 4
       @console.row('measure', arguments[0], arguments[1])
       @each @scope, @update
-    debugger
     return
 
   get: (object, property, continuation) ->

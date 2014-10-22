@@ -259,6 +259,7 @@ class Engine extends Domain.Events
 
     onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
     restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
+    @restyled = undefined
 
     if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled) 
       return @onSolve(null, restyled)

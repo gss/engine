@@ -41,7 +41,6 @@ class Numeric::Methods extends Domain::Methods
   get: 
     command: (operation, continuation, scope, meta, object, path, contd, scoped) ->
       path = @Variable.getPath(object, path)
-      debugger
       domain = @Variable.getDomain(operation, true, true)
       if !domain || domain.priority < 0
         domain = @

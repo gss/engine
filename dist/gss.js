@@ -20277,6 +20277,7 @@ Engine = (function(_super) {
     }
     onlyRemoving = workflow.problems.length === 1 && workflow.domains[0] === null;
     restyled = onlyRemoving || (this.restyled && !old && !workflow.problems.length);
+    this.restyled = void 0;
     if (this.engine === this && providing && (!workflow.problems[workflow.index + 1] || restyled)) {
       return this.onSolve(null, restyled);
     }
@@ -27205,7 +27206,6 @@ Numeric.prototype.Methods = (function(_super) {
     command: function(operation, continuation, scope, meta, object, path, contd, scoped) {
       var clone, domain;
       path = this.Variable.getPath(object, path);
-      debugger;
       domain = this.Variable.getDomain(operation, true, true);
       if (!domain || domain.priority < 0) {
         domain = this;
@@ -27841,7 +27841,6 @@ Intrinsic = (function(_super) {
       this.console.row('measure', arguments[0], arguments[1]);
       this.each(this.scope, this.update);
     }
-    debugger;
   };
 
   Intrinsic.prototype.get = function(object, property, continuation) {
