@@ -29222,7 +29222,7 @@ Mutations = (function() {
     var parent;
     parent = mutation.target;
     while (parent) {
-      if (parent.nodeType === 1 && this.filterNode(mutation.target) === false) {
+      if (parent.nodeType === 1 && this.filterNode(parent) === false) {
         return false;
       }
       parent = parent.parentNode;

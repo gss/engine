@@ -30,7 +30,7 @@ class Mutations
   filter: (mutation)->
     parent = mutation.target
     while parent
-      if parent.nodeType == 1 && @filterNode(mutation.target) == false
+      if parent.nodeType == 1 && @filterNode(parent) == false
         return false
       parent = parent.parentNode
     return true
