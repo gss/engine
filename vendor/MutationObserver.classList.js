@@ -1,4 +1,5 @@
 
+if (typeof window != 'undefined')
 var attrModifiedWorks = false;
 var listener = function(e){ 
   if (e[0].attributeName != 'class')

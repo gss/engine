@@ -4,6 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
+if (typeof window != 'undefined')
 (function(global) {
 
   var registrationsTable = new WeakMap();

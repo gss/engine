@@ -4,6 +4,7 @@
  * license that can be found in the LICENSE file.
  */
 
+if (typeof window != 'undefined')
 if (typeof WeakMap === 'undefined') {
   (function() {
     var defineProperty = Object.defineProperty;
