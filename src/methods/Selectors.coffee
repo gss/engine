@@ -282,35 +282,38 @@ class Selectors
       return '::window' 
 
 
-  '$attribute':
-    lookup: true
-    #type: 'qualifier'
-    prefix: '['
-    suffix: ']'
 
   '[=]': 
     binary: true
     quote: true
     group: '$query'
+    prefix: '['
+    suffix: ']'
     command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
       return node if node.getAttribute(attribute) == value
 
   '[*=]': 
     binary: true
     quote: true
+    prefix: '['
+    suffix: ']'
     group: '$query'
     command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
-      return node if  node.getAttribute(attribute)?.indexOf(value) > -1
+      return node if node.getAttribute(attribute)?.indexOf(value) > -1
   
   '[|=]': 
     binary: true
     quote: true
     group: '$query'
+    prefix: '['
+    suffix: ']'
     command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
       return node if  node.getAttribute(attribute)?
   
   '[]': 
     group: '$query'
+    prefix: '['
+    suffix: ']'
     command: (operation, continuation, scope, meta, node, attribute, value, operator) ->
       return node if  node.getAttribute(attribute)?
 
@@ -449,5 +452,7 @@ if document?
           child = child.previousSibling
         return mpde if child == node
 
+for property, value of Selectors::
+  Selectors::[property] = new Selector(value)
 
 module.exports = Selectors

@@ -53,6 +53,11 @@ class Rules
   
   "rule":
     bound: 1
+    
+    signature: [
+    	collection: ['Collection'],
+    	body: ['Array']
+    ]
 
     # Set rule body scope to a found element
     solve: (operation, continuation, scope, meta, ascender, ascending) ->
@@ -90,6 +95,14 @@ class Rules
   ###
 
   'if':
+    signature: [
+    	if: ['Expression'],
+    	then: ['Array'], 
+    	[
+    		else: ['Array']
+    	]
+    ]
+
     cleaning: true
 
     domain: 'solved'

@@ -15,8 +15,8 @@ class Evaluator
   # Evaluate operation depth first
   solve: (operation, continuation, scope = @engine.scope, meta, ascender, ascending) ->
     # Analyze operation once
-    unless operation.def
-      @engine.Operation.analyze(operation)
+    unless operation.command
+      @engine.Command operation
 
     # Use custom argument evaluator of parent operation if it has one
     if meta != operation && (solve = operation.parent?.def?.solve)
@@ -35,7 +35,7 @@ class Evaluator
       result = @engine.Operation.getSolution(operation, continuation, scope)
       switch typeof result
         when 'string'
-          if operation.def.virtual && result.charAt(0) != @engine.Continuation.PAIR
+          if operation[0] == '$virtual' && result.charAt(0) != @engine.Continuation.PAIR
             return result
           else
             continuation = result
@@ -69,61 +69,38 @@ class Evaluator
   execute: (operation, continuation, scope, args) ->
     scope ||= @engine.scope
     # Command needs current context (e.g. ::this)
-    if !args
-      node = scope
-      (args ||= []).unshift scope
-    # Operation has a context 
-    else 
-      node = @engine.Operation.getContext(operation, args, scope, node)
-
-    # Use function, or look up method on the first argument. Falls back to builtin
-    unless func = operation.func
-      if method = operation.method
-        if node && func = node[method]
-          args.shift() if args[0] == node
-          context = node
-        unless func
-          if !context && (func = scope[method])
-            context = scope
-          else if command = @engine.methods[method]
-            func = @engine[command.displayName]
-            if operation.def.scoped && operation.bound
-              args.unshift scope
-
-    unless func
-      throw new Error("Couldn't find method: #{operation.method}")
+    node = @engine.Operation.getContext(operation, args, scope, node)
 
     # Let context lookup for cached value
-    if onBefore = operation.def.before
-      result = @engine[onBefore](context || node || scope, args, operation, continuation, scope)
+    if onBefore = operation.command.before
+      result = @engine[onBefore](node || scope, args, operation, continuation, scope)
     
     # Execute the function
     if result == undefined
-      result = func.apply(context || @engine, args)
+      result = func.apply(@engine, args)
 
     # Let context transform or filter the result
-    if onAfter = operation.def.after
-      result = @engine[onAfter](context || node || scope, args, result, operation, continuation, scope)
+    if onAfter = operation.command.after
+      result = @engine[onAfter](node || scope, args, result, operation, continuation, scope)
 
     return result
 
   # Evaluate operation arguments in order, break on undefined
   descend: (operation, continuation, scope, meta, ascender, ascending) ->
     args = prev = undefined
-    skip = operation.skip
-    shift = 0
-    offset = operation.offset || 0
+    offset = 0
     for argument, index in operation
-      continue if offset > index
-      if (!offset && index == 0 && !operation.def.noop)
-        args = [operation, continuation || operation.path, scope, meta]
-        shift += 3
-        continue
-      else if ascender == index
+      # Skip function name
+      if index == 0 
+        if typeof argument == 'string'
+          offset = 1
+          continue
+          
+      # Use ascending value
+      if ascender == index
         argument = ascending
-      else if skip == index
-        shift--
-        continue
+
+      # Process function calls and lists
       else if argument instanceof Array
         # Leave forking mark in a path when resolving next arguments
         if ascender?
@@ -131,19 +108,21 @@ class Evaluator
         else
           contd = continuation
         argument = @solve(argument, contd, scope, meta, undefined, prev)
+
+      # Handle undefined argument, usually stop evaluation
       if argument == undefined
-        if ((!@engine.eager && !operation.def.eager) || ascender?)
-          if operation.def.capture and 
-          (if operation.parent then operation.def.noop else !operation.name)
+        if ((!@engine.eager && !operation.command.eager) || ascender?)
+          if operation.command.capture and 
+          (if operation.parent then !operation.command.method else !offset)
 
             stopping = true
           # Lists are allowed to continue execution when they hit undefined
-          else if (!operation.def.noop || operation.name)
+          else if (operation.command.method || offset)
             return false
             
         offset += 1
         continue
-      (args ||= [])[index - offset + shift] = prev = argument
+      (args ||= [])[index + offset] = prev = argument
     return args
 
   # Pass control (back) to parent operation. 
@@ -153,7 +132,7 @@ class Evaluator
     if result? 
       if parent = operation.parent
         pdef = parent.def
-      if parent && (pdef || operation.def.noop) && (parent.domain == operation.domain || parent.domain == @engine.document || parent.domain == @engine)
+      if parent && (pdef || operation.command.noop) && (parent.domain == operation.domain || parent.domain == @engine.document || parent.domain == @engine)
         # For each node in collection, recurse to a parent with id appended to continuation key
         if parent && @engine.isCollection(result)
           @engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', @engine.Continuation.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
@@ -168,7 +147,7 @@ class Evaluator
           return if pdef?.capture?.call(@engine, result, operation, continuation, scope, meta, ascender)
 
           # Topmost unknown commands are returned as results
-          if operation.def.noop && operation.name && result.length == 1
+          if !operation.command && typeof operation[0] == 'string' && result.length == 1
             return 
 
           if !parent.name

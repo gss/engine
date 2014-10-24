@@ -192,7 +192,7 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
         arguments[0]
         arguments[1] ? arguments[0]
         arguments[2] ? arguments[0]
-        arguments[3] ? arguments[1] ? arguments[0]
+        arguments[1] ? arguments[0]
       ]
 
     for argument, i in (args || arguments)

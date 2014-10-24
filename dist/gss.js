@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-10-23) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21889,16 +21890,12 @@ Selectors = (function() {
     }
   };
 
-  Selectors.prototype['$attribute'] = {
-    lookup: true,
-    prefix: '[',
-    suffix: ']'
-  };
-
   Selectors.prototype['[=]'] = {
     binary: true,
     quote: true,
     group: '$query',
+    prefix: '[',
+    suffix: ']',
     command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
       if (node.getAttribute(attribute) === value) {
         return node;
@@ -21909,6 +21906,8 @@ Selectors = (function() {
   Selectors.prototype['[*=]'] = {
     binary: true,
     quote: true,
+    prefix: '[',
+    suffix: ']',
     group: '$query',
     command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
       var _ref;
@@ -21922,6 +21921,8 @@ Selectors = (function() {
     binary: true,
     quote: true,
     group: '$query',
+    prefix: '[',
+    suffix: ']',
     command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
       if (node.getAttribute(attribute) != null) {
         return node;
@@ -21931,6 +21932,8 @@ Selectors = (function() {
 
   Selectors.prototype['[]'] = {
     group: '$query',
+    prefix: '[',
+    suffix: ']',
     command: function(operation, continuation, scope, meta, node, attribute, value, operator) {
       if (node.getAttribute(attribute) != null) {
         return node;
@@ -23643,7 +23646,20 @@ Operation = (function() {
     return '[matches~="' + selector.replace(/\s+/, this.engine.Continuation.DESCEND) + '"]';
   };
 
-  Operation.prototype.infer = function(operation) {};
+  Operation.prototype.infer = function(operation, parent, index) {
+    var arg, argument, i, _base, _i, _len, _name;
+    for (i = _i = 0, _len = operation.length; _i < _len; i = ++_i) {
+      argument = operation[i];
+      if (argument != null ? argument.push : void 0) {
+        arg = this.infer(argument, operation, i);
+      } else {
+        arg = argument;
+      }
+    }
+    if (typeof operation[0] === 'string') {
+      return operation.command = typeof (_base = this.engine.methods)[_name = operation[0]] === "function" ? _base[_name](operation) : void 0;
+    }
+  };
 
   Operation.prototype.analyze = function(operation, parent) {
     var child, def, func, index, mark, otherdef, _i, _len, _ref;
@@ -25783,14 +25799,14 @@ Shorthand = (function() {
 Matcher = function(name, keywords, types, keys, required, pad, depth, initial, callback) {
   var matcher;
   matcher = function() {
-    var arg, args, argument, i, index, j, matched, property, props, req, result, returned, type, typed, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
+    var arg, args, argument, i, index, j, matched, property, props, req, result, returned, type, typed, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
     result = matched = void 0;
     if (pad && arguments.length < 4) {
-      args = [arguments[0], (_ref = arguments[1]) != null ? _ref : arguments[0], (_ref1 = arguments[2]) != null ? _ref1 : arguments[0], (_ref2 = (_ref3 = arguments[3]) != null ? _ref3 : arguments[1]) != null ? _ref2 : arguments[0]];
+      args = [arguments[0], (_ref = arguments[1]) != null ? _ref : arguments[0], (_ref1 = arguments[2]) != null ? _ref1 : arguments[0], (_ref2 = arguments[1]) != null ? _ref2 : arguments[0]];
     }
-    _ref4 = args || arguments;
-    for (i = _i = 0, _len = _ref4.length; _i < _len; i = ++_i) {
-      argument = _ref4[i];
+    _ref3 = args || arguments;
+    for (i = _i = 0, _len = _ref3.length; _i < _len; i = ++_i) {
+      argument = _ref3[i];
       switch (typeof argument) {
         case 'object':
           if (typeof argument[0] !== 'string' || argument.length === 1) {
@@ -26777,8 +26793,8 @@ Evaluator = (function() {
     if (scope == null) {
       scope = this.engine.scope;
     }
-    if (!operation.def) {
-      this.engine.Operation.analyze(operation);
+    if (!operation.command) {
+      this.engine.Command(operation);
     }
     if (meta !== operation && (solve = (_ref = operation.parent) != null ? (_ref1 = _ref.def) != null ? _ref1.solve : void 0 : void 0)) {
       solved = solve.call(this.engine, operation, continuation, scope, meta, ascender, ascending);
@@ -26828,36 +26844,13 @@ Evaluator = (function() {
   };
 
   Evaluator.prototype.execute = function(operation, continuation, scope, args) {
-    var command, context, func, method, node, onAfter, onBefore, result;
+    var node, onAfter, onBefore, result;
     scope || (scope = this.engine.scope);
     if (!args) {
       node = scope;
       (args || (args = [])).unshift(scope);
     } else {
       node = this.engine.Operation.getContext(operation, args, scope, node);
-    }
-    if (!(func = operation.func)) {
-      if (method = operation.method) {
-        if (node && (func = node[method])) {
-          if (args[0] === node) {
-            args.shift();
-          }
-          context = node;
-        }
-        if (!func) {
-          if (!context && (func = scope[method])) {
-            context = scope;
-          } else if (command = this.engine.methods[method]) {
-            func = this.engine[command.displayName];
-            if (operation.def.scoped && operation.bound) {
-              args.unshift(scope);
-            }
-          }
-        }
-      }
-    }
-    if (!func) {
-      throw new Error("Couldn't find method: " + operation.method);
     }
     if (onBefore = operation.def.before) {
       result = this.engine[onBefore](context || node || scope, args, operation, continuation, scope);
@@ -26872,25 +26865,19 @@ Evaluator = (function() {
   };
 
   Evaluator.prototype.descend = function(operation, continuation, scope, meta, ascender, ascending) {
-    var args, argument, contd, index, offset, prev, shift, skip, stopping, _i, _len;
+    var args, argument, contd, index, offset, prev, stopping, _i, _len;
     args = prev = void 0;
-    skip = operation.skip;
-    shift = 0;
-    offset = operation.offset || 0;
+    offset = 0;
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       argument = operation[index];
-      if (offset > index) {
-        continue;
+      if (index === 0) {
+        if (typeof argument === 'string') {
+          offset = 1;
+          continue;
+        }
       }
-      if (!offset && index === 0 && !operation.def.noop) {
-        args = [operation, continuation || operation.path, scope, meta];
-        shift += 3;
-        continue;
-      } else if (ascender === index) {
+      if (ascender === index) {
         argument = ascending;
-      } else if (skip === index) {
-        shift--;
-        continue;
       } else if (argument instanceof Array) {
         if (ascender != null) {
           contd = this.engine.Continuation.descend(operation, continuation, ascender);
@@ -26900,17 +26887,17 @@ Evaluator = (function() {
         argument = this.solve(argument, contd, scope, meta, void 0, prev);
       }
       if (argument === void 0) {
-        if ((!this.engine.eager && !operation.def.eager) || (ascender != null)) {
-          if (operation.def.capture && (operation.parent ? operation.def.noop : !operation.name)) {
+        if ((!this.engine.eager && !operation.command.eager) || (ascender != null)) {
+          if (operation.command.capture && (operation.parent ? !operation.command.method : !offset)) {
             stopping = true;
-          } else if (!operation.def.noop || operation.name) {
+          } else if (operation.command.method || offset) {
             return false;
           }
         }
         offset += 1;
         continue;
       }
-      (args || (args = []))[index - offset + shift] = prev = argument;
+      (args || (args = []))[index + offset] = prev = argument;
     }
     return args;
   };

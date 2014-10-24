@@ -174,8 +174,8 @@ class Operation
   getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'
 
-  infer: (operation) ->
-    
+
+
 
   # Process and pollute a single AST node with meta data.
   analyze: (operation, parent) ->
