@@ -1,4 +1,7 @@
-Domain = require('../concepts/Domain')
+Domain     = require('../concepts/Domain'))
+Command    = require('../commands/Command')
+Constraint = require('../commands/Constraint')
+Value      = require('../commands/Value')
 
 class Finite extends Domain
   priority: -10
@@ -10,14 +13,10 @@ class Finite extends Domain
     super
     #@solver = new FD.Space
     
-class Finite::Methods extends Domain::Methods
-
-  value: (value) ->
-    return value
-
   variable: (name) ->
     return @solver.decl name
 
+Finite.Constraint = Constraint.extend {}, 
   '==': (left, right) ->
     return @solver.eq left, right
 
@@ -39,6 +38,11 @@ class Finite::Methods extends Domain::Methods
   '>': (left, right) ->
     return @solver.gt left, right
 
+Finite.Value            = Command.extend.call Value
+Finite.Value.Solution   = Command.extend.call Value.Solution
+Finite.Value.Variable   = Command.extend.call Value.Variable, {group: 'finite'}
+Finite.Value.Expression = Command.extend.call Value.Expression, {group: 'finite'},
+
   '+': (left, right) ->
     return @solver.plus left, right
 
@@ -50,5 +54,6 @@ class Finite::Methods extends Domain::Methods
 
   '/': (left, right) ->
     return @solver.divide left, right
+
 
 module.exports = Finite

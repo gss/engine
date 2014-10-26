@@ -8,24 +8,24 @@
 # re-measurements are deferred to be done in bulk
 
 Numeric = require('./Numeric')
-Native = require('../methods/Native')
+Inheritance = require('../methods/Native')
 class Intrinsic extends Numeric
   priority: 100
   structured: true
   immediate: true
   
-  Types:       require('../methods/Types')
-  Units:       require('../methods/Units')
-  Style:       require('../concepts/Style')
+  Types:          require('../methods/Types')
+  Style:          require('../concepts/Style')
 
-  Methods:     Native::mixin((new Numeric::Methods),
-               require('../methods/Types'),
-               require('../methods/Units'),
-               require('../methods/Transformations'))
+  Unit:           require('../commands/Unit')
+  Transformation: require('../commands/Transformation')
 
-  Properties:  Native::mixin {},
-               require('../properties/Dimensions'),
-               require('../properties/Styles')
+  Methods:        Native::mixin((new Numeric::Methods),
+                  require('../methods/Types'))
+
+  Properties:     Native::mixin {},
+                  require('../properties/Dimensions'),
+                  require('../properties/Styles')
 
   constructor: ->
     @types = new @Types(@)
@@ -224,9 +224,18 @@ class Intrinsic extends Numeric
       if (last = path.indexOf(']', index)) == -1
         last = undefined
       return property = path.substring(index + 10, last)
+ 
+  camelize: (string) ->
+    return string.toLowerCase().replace /-([a-z])/gi, (match) ->
+      return match[1].toUpperCase()
+
+  dasherize: (string) ->
+    return string.replace /[A-Z]/g, (match) ->
+      return '-' + match[0].toLowerCase()
       
   @condition: ->
     @scope?
-    
+
+  
   url: null
 module.exports = Intrinsic

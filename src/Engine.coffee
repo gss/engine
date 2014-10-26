@@ -3,8 +3,10 @@
 Engine is a base class for scripting environments.
 It initializes and orchestrates all moving parts.
 
-It includes interpreter that operates in defined constraint domains.
-Each domain has its own command set, that extends engine defaults. ###
+It includes interpreter that operates in multiple environments called domains.
+Each domain has its own command set, that extends engine defaults.
+Domains that set constraints only include constraints that refer shared variables
+forming multiple unrelated dependency graphs. ###
 
 
 # Little shim for require.js so we dont have to carry it around
@@ -15,27 +17,28 @@ Each domain has its own command set, that extends engine defaults. ###
   return this[bits[bits.length - 1]]
 @module ||= {}
 
-Native          = require('./methods/Native')
+Inheritance     = require('./concepts/Inheritance')
 Events          = require('./concepts/Events')
 Domain          = require('./concepts/Domain')
-Domain.Events ||= Native::mixin(Domain, Events)
+Domain.Events ||= Inheritance(Domain, Events)
 
 class Engine extends Domain.Events
 
-  Identity:     require('./concepts/Identity')
-  Evaluator:    require('./concepts/Evaluator')
-  Operation:    require('./concepts/Operation')
-  Variable:     require('./concepts/Variable')
-  Method:       require('./concepts/Method')
-  Property:     require('./concepts/Property')
-  Console:      require('./concepts/Console')
-  Debugger:     require('./concepts/Debugger')
   Update:       require('./concepts/Update')
+  
+  Command:      require('./concepts/Command')
+  Property:     require('./concepts/Property')
+  
+  Identity:     require('./concepts/Identity')
+  
+  Operation:    require('./concepts/Operation')
   Continuation: require('./concepts/Continuation')
 
+  Console:      require('./utilities/Console')
+  Inspector:    require('./utilities/Inspector')
+  Inspector:    require('./utilities/Exporter')
+  
   Properties:   require('./properties/Axioms')
- 
-  Methods:      Native
 
   Domains: 
     Abstract:   require('./domains/Abstract')
@@ -186,6 +189,9 @@ class Engine extends Domain.Events
     if expressions.length
       @provide expressions
 
+  # engine.solve({}) - solve with given constants
+  # engine.solve([]) - evaluate commands
+  # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
     if typeof arguments[0] == 'string'
       if typeof arguments[1] == 'string'
@@ -500,68 +506,37 @@ class Engine extends Domain.Events
     if location.search.indexOf('export=') > -1
       @preexport()
 
-  preexport: ->
+  getSolution: (operation, continuation, scope) ->
+    if operation.def.serialized && (!operation.def.hidden || operation.parent.def.serialized)
+      return @engine.pairs.getSolution(operation, continuation, scope)
 
-    # Let every element get an ID
-    if (scope = @scope).nodeType == 9
-      scope = @scope.body
-    @identity.provide(scope)
-    for element in scope.getElementsByTagName('*')
-      if element.tagName != 'SCRIPT' &&
-          (element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1)
-        @identity.provide(element)
-    if window.Sizes
-      @sizes = []
-      for pairs in window.Sizes
-        for width in pairs[0]
-          for height in pairs[1]
-            @sizes.push(width + 'x' + height)
-    if match = location.search.match(/export=([a-z0-9]+)/)?[1]
-      if match.indexOf('x') > -1
-        [width, height] = match.split('x')
-        baseline = 72
-        width = parseInt(width) * baseline
-        height = parseInt(height) * baseline
-        window.addEventListener 'load', =>
-          localStorage[match] = JSON.stringify(@export())
-          @postexport()
+  # Hook: Should interpreter iterate returned object?
+  # (yes, if it's a collection of objects or empty array)
+  isCollection: (object) ->
+    if object && object.length != undefined && !object.substring && !object.nodeType
+      return true if object.isCollection
+      switch typeof object[0]
+        when "object"
+          return object[0].nodeType
+        when "undefined"
+          return object.length == 0
 
-        document.body.style.width = width + 'px'
-        @intrinsic.properties['::window[height]'] = ->
-          return height
-        @intrinsic.properties['::window[width]'] = ->
-          return width
+  clone: (object) -> 
+    if object && object.map
+      return object.map @clone, @
+    return object
+    
+  time: (other, time) ->
+    time ||= performance?.now?() || Date.now?() || + (new Date)
+    return time if time && !other
+    return Math.floor((time - other) * 100) / 100
 
-      else 
-        if match == 'true'
-          localStorage.clear()
-          @postexport()
-
-  postexport: ->
-    for size in @sizes
-      unless localStorage[size]
-        location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
-        return
-    result = {}
-    for property, value of localStorage
-      if property.match(/^\d+x\d+$/)
-        result[property] = JSON.parse(value)
-    document.write(JSON.stringify(result))
-
-  export: ->
-    values = {}
-    for path, value of @values
-      if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
-        property = @camelize(path.substring(index + 1, path.length - 1))
-        id = path.substring(0, index)
-        if property == 'x' || property == 'y' || document.body.style[property] != undefined
-          unless @values[id + '[intrinsic-' + property + ']']?
-            values[path] = Math.ceil(value)
-    values.stylesheets = @stylesheets.export() 
-    return values
-
-  generate: ->
-
+  indexOfTriplet: (array, a, b, c) ->
+    if array
+      for op, index in array by 3
+        if op == a && array[index + 1] == b && array[index + 2] == c
+          return index
+    return -1
 
   # Comile user provided features specific to this engine
   compile: (state) ->
@@ -575,19 +550,7 @@ class Engine extends Domain.Events
     @running = state ? null
     
     @triggerEvent('compile', @)
-
-  # Hook: Should interpreter iterate returned object?
-  # (yes, if it's a collection of objects or empty array)
-  isCollection: (object) ->
-    if object && object.length != undefined && !object.substring && !object.nodeType
-      return true if object.isCollection
-      switch typeof object[0]
-        when "object"
-          return object[0].nodeType
-        when "undefined"
-          return object.length == 0
   
-
 Engine.Continuation = Engine::Continuation
 
 # Identity and console modules are shared between engines
@@ -596,7 +559,6 @@ Engine.console  = Engine::console  = new Engine::Console
 
 Engine.Engine   = Engine
 Engine.Domain   = Engine::Domain   = Domain
-Engine.mixin    = Engine::mixin    = Native::mixin
 Engine.time     = Engine::time     = Native::time
 Engine.clone    = Engine::clone    = Native::clone
 

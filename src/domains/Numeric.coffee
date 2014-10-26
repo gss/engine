@@ -6,64 +6,52 @@ enables anonymous constraints on immutable values
 ###
 
 Domain  = require('../concepts/Domain')
-Selectors = require('../methods/Selectors')
+Value = require('../commands/Value')
 
 class Numeric extends Domain
   priority: 10
 
   # Numeric domains usually dont use worker
   url: null
-
-class Numeric::Methods extends Domain::Methods
-
-  "+": (a, b) ->
-    return a + b
-
-  "-": (a, b) ->
-    return a - b
-
-  "*": (a, b) ->
-    return a * b
-
-  "/": (a, b) ->
-    return a / b
-
-  'Math': Math
-  'Infinity': Infinity
-  'NaN': NaN
-
-  isVariable: (object) ->
-    return object[0] == 'get'
-
-  isConstraint: (object) ->
-    return @constraints[object[0]]
-
-  get: 
-    command: (operation, continuation, scope, meta, object, path, contd, scoped) ->
-      path = @Variable.getPath(object, path)
-      domain = @Variable.getDomain(operation, true, true)
-      if !domain || domain.priority < 0
-        domain = @
-      else if domain != @
-        if domain.structured
-          clone = ['get', null, path, @Continuation(continuation || "")]
-          if scope && scope != @scope
-            clone.push(@identity.provide(scope))
-          clone.parent = operation.parent
-          clone.index = operation.index
-          clone.domain = domain
-          @update([clone])
-          return
-      if scoped
-        scoped = @engine.identity.solve(scoped)
-      else
-        scoped = scope
-      return domain.watch(null, path, operation, @Continuation(continuation || contd || ""), scoped)
-
-for property, value of Selectors::
-  Numeric::Methods::[property] = value
+  
 
 
-Numeric::Methods::['*'].linear = false
-Numeric::Methods::['/'].linear = false
+Numeric.Value            = Command.extend.call Value
+Numeric.Value.Solution   = Command.extend.call Value.Solution
+Numeric.Value.Variable   = Command.extend.call Value.Variable, {group: 'linear'},
+  get: (path, tracker, engine, scoped, engine, operation, continuation, scope) ->
+    domain = engine.Variable.getDomain(operation, true, true)
+    if !domain || domain.priority < 0
+      domain = engine
+    else if domain != engine
+      if domain.structured
+        clone = ['get', null, path, engine.Continuation(continuation || "")]
+        if scope && scope != engine.scope
+          clone.push(engine.identity.provide(scope))
+        clone.parent = operation.parent
+        clone.index = operation.index
+        clone.domain = domain
+        engine.update([clone])
+        return
+    if scoped
+      scoped = engine.identity.solve(scoped)
+    else
+      scoped = scope
+    return domain.watch(null, path, operation, engine.Continuation(continuation || contd || ""), scoped)
+    
+Numeric.Value.Expression = Command.extend.call Value.Expression {group: 'linear'},
+
+  "+": (left, right) ->
+    return left + right
+
+  "-": (left, right) ->
+    return left - right
+
+  "*": (left, right) ->
+    return left * right
+
+  "/": (left, right) ->
+    return left / right
+    
+    
 module.exports = Numeric

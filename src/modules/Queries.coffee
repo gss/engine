@@ -36,7 +36,7 @@ class Queries
             if old.indexOf(item) > -1
               collection.splice(i, 1)
         if collection?.length
-          @engine.document.evaluator.ascend @ascending[index], contd, collection, @ascending[index + 2]
+          @engine.document.ascend @ascending[index], contd, collection, @ascending[index + 2]
         index += 3
       @ascending = undefined
     @

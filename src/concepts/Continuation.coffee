@@ -113,6 +113,20 @@ class Continuation
     return path
     
 
+  # Return path for given operation
+  concat: (continuation, command, scope) ->
+    if continuation?
+      if operation.def.serialized && !operation.def.hidden
+        if operation.marked && operation.arity == 2
+          path = continuation + operation.path
+        else
+          path = continuation + (operation.key || operation.path)
+      else
+        path = continuation
+    else
+      path = operation.path
+    return path
+
   ascend: (continuation, item) ->
     return @get(continuation, item, @ASCEND)
 

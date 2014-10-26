@@ -1,6 +1,10 @@
 # Transforms variables into tracked variables
 
-Domain = require('../concepts/Domain')
+Domain     = require('../concepts/Domain')
+
+Value      = require('../commands/Value')
+Command    = require('../commands/Command')
+Constraint = require('../commands/Constraint')
 
 class Abstract extends Domain
   url: undefined
@@ -10,75 +14,66 @@ class Abstract extends Domain
       @compile()
     super
 
-class Abstract::Methods
-
-  get:
-    command: (operation, continuation, scope, meta, object, property, contd) ->
-      if typeof object == 'string'
-        id = object
-
-      # Get document property
-      else if object.absolute is 'window' || object == window
-        id = '::window'
-
-      # Get element property
-      else if object.nodeType
-        id = @identity.provide(object)
-
-      unless property
-        # Get global variable
-        id = ''
-        property = object
-        object = undefined
-
-      if object
-        if prop = @properties[property]
-          unless prop.matcher
-            return prop.call(@, object, @Continuation(continuation || contd || ''))
+# Global variable
+Abstract.Value = Command.extend.call Value
+Abstract.Value.Variable = Command.extend.call Abstract.Value, {
+  signature: [
+    property: ['String']
+    [tracker: ['String']]
+  ],
+}, 
+  'get': (property, tracker, engine, operation, continuation, scope) ->
+    return ['get', property, continuation, engine.identity.provide(scope)]
+    
+# Scoped variable
+Abstract.Value.Getter = Command.extend.call Abstract.Value, {
+  signature: [
+    object:   ['Query']
+    property: ['String']
+    [tracker: ['String']]
+  ]
+},
+  'get': (object, property, tracker, engine, operation, continuation, scope) -> 
+    if object.nodeType
+      object = engine.identity.provide(object)
       
-
-      getter = ['get', id, property, @Continuation(continuation || contd || '')]
+    continuation = engine.Continuation(continuation || tracker || '')
       
-      if scope && scope != @scope
-        getter.push(@identity.provide(scope))
-      return getter
+    if prop = engine.properties[property]
+      unless prop.matcher
+        return prop.call(engine, object, continuation)
 
-  set:
-    onAnalyze: (operation) ->
-      parent = operation
-      rule = undefined
-      while parent = parent.parent
-        if parent.name == 'rule'
-          rule ||= parent   
-        break unless parent.parent
-      if parent
-        operation.sourceIndex = parent.assignments = (parent.assignments || 0) + 1
-      if rule
-        (rule.properties ||= []).push operation.sourceIndex
-
-    command: (operation, continuation, scope, meta, property, value) ->
-      if @intrinsic
-        @intrinsic.restyle scope, property, value, continuation, operation
-      else
-        @assumed.set scope, property, value
-      return
-
-  suggest:
-    command: ->
-      @assumed.set.apply(@assumed, arguments)
-
-  value: (value, continuation, string, exported) ->
-    if exported
-      op = string.split(',')
-      scope = op[1]
-      property = op[2]
-      @engine.values[@engine.Variable.getPath(scope, property)] = value
-    return value
-
+    return ['get', engine.getPath(id, property), continuation, engine.identity.provide(scope)]
+  
 # Proxy math for axioms
-for op in ['+', '-', '*', '/']
-  do (op) ->
-    Abstract::Methods::[op] = (a, b) ->
-      return [op, a, b]
+Abstract.Value.Expression = Command.extend.call Value.Expression, {},
+  '+': (left, right) ->
+    ['+', left, right]
+    
+  '-': (left, right) ->
+    ['-', left, right]
+    
+  '/': (left, right) ->
+    ['/', left, right]
+  
+  '*': (left, right) ->
+    ['*', left, right]
+  
+# Constant definition
+Abstract.Assignment = Command.extend.call Assignment, {},
+  '=': (object, name, value) ->
+    @assumed.set(object, name, value)
+
+# Style assignment
+Abstract.Assignment.Unsafe = Command.extend.call Assignment.Unsafe, {},
+  'set':
+    index: ['rule', 'assignment']
+    
+    command: (object, property, value, engine, operation, continuation, scope) ->
+      if @intrinsic
+        @intrinsic.restyle object || scope, property, value, continuation, operation
+      else
+        @assumed.set object || scope, property, value
+      return
 
 module.exports = Abstract

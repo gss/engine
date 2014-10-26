@@ -4,12 +4,12 @@ Native   = require('../methods/Native')
 
 class Document extends Abstract
   priority: Infinity
-
-  Methods:    Native::mixin {},
-              Abstract::Methods,
-              require('../methods/Selectors'),
-              require('../methods/Rules')
-
+  
+  Selector:   require('../commands/Selector')
+  Iterator:   require('../commands/Iterator')
+  Condition:  require('../commands/Condition')
+  Source:     require('../commands/Source')
+              
   Queries:    require('../modules/Queries')
   Pairs:      require('../modules/Pairs')
 

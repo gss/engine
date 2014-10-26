@@ -18,7 +18,7 @@ State:
 
 ###
 
-Native = require('../methods/Native')
+Inheritance = require('../concepts/Inheritance')
 
 class Domain
   priority: 0  
@@ -103,13 +103,12 @@ class Domain
     result = {}
     continuation ?= fallback
     result[name] = value
-#    console.log('bypass', name, value)
+    
     if !@variables[name] || @variables[name].constraints?.length == 0
       (@bypassers[continuation] ||= []).push operation
       @variables[name] = continuation
     return result
-
-
+  
   solve: (args) ->
     return unless args
 
@@ -119,7 +118,7 @@ class Domain
     if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
       if (result = @bypass(args))
         return result
-    @setup()
+        
     transacting = @transact()
 
     if typeof args == 'object' && !args.push
@@ -132,7 +131,8 @@ class Domain
         result = object.solve.apply(object, arguments) || {}
       else
         result = @[strategy].apply(@, arguments)
-
+    else
+      result = @Command(operation).solve(@, operation, continuation, scope, ascending, ascender)
 
     if @constrained || @unconstrained
       commands = @validate.apply(@, arguments)
@@ -142,9 +142,9 @@ class Domain
         if @disconnected
           @mutations?.connect(true)
         return
+
     if result = @perform?.apply(@, arguments)
       result = @apply(result)
-
 
     if commands
       @engine.provide commands
@@ -169,6 +169,7 @@ class Domain
     return true
 
   transact: ->
+    @setup()
     unless @changes && @hasOwnProperty('changes')
       @changes = {}
 
@@ -229,26 +230,26 @@ class Domain
   get: (object, property) ->
     return @values[@engine.Variable.getPath(object, property)]
 
-  merge: (object, meta) ->
+  merge: (object) ->
     # merge objects/domains
     if object && !object.push
       if object instanceof Domain
         return# object
       if @updating
-        return @merger(object, meta)
+        return @merger(object)
       else
-        return @engine.solve @displayName || 'GSS', @merger, object, meta, @
+        return @engine.solve @displayName || 'GSS', @merger, object, @
 
-  merger: (object, meta, domain = @) ->
+  merger: (object, domain = @) ->
     transacting = domain.transact()
         
     async = false
     for path, value of object
-      domain.set undefined, path, value, meta
+      domain.set undefined, path, value
     return domain.commit() if transacting
 
   # Set key-value pair or merge object
-  set: (object, property, value, meta) ->
+  set: (object, property, value) ->
     @setup()
 
     path = @engine.Variable.getPath(object, property)
@@ -265,35 +266,34 @@ class Domain
       delete @values[path]
     # notify subscribers
     if @updating
-      @engine.callback(@, path, value, meta)
+      @engine.callback(@, path, value)
     else
       @engine.solve @displayName || 'GSS', (domain) ->
-        @callback(domain, path, value, meta)
+        @callback(domain, path, value)
       , @
 
     return value
 
 
-  callback: (domain, path, value, meta) ->
-    unless meta == true
-      if watchers = domain.watchers?[path]
-        for watcher, index in watchers by 3
-          break unless watcher
-          if watcher.domain != domain || !value?
-            # Re-evaluate expression
-            if watcher.parent[watcher.index] != watcher
-              watcher.parent[watcher.index] = watcher
-            root = @Operation.ascend(watcher, domain)
-            if root.parent.def?.domain
-              @update([@[root.parent.def.domain]], [@Operation.sanitize(root)])
-            else if value != undefined
-              @update([@Operation.sanitize(root)])
+  callback: (domain, path, value) ->
+    if watchers = domain.watchers?[path]
+      for watcher, index in watchers by 3
+        break unless watcher
+        if watcher.domain != domain || !value?
+          # Re-evaluate expression
+          if watcher.parent[watcher.index] != watcher
+            watcher.parent[watcher.index] = watcher
+          root = @Operation.ascend(watcher, domain)
+          if root.parent.def?.domain
+            @update([@[root.parent.def.domain]], [@Operation.sanitize(root)])
+          else if value != undefined
+            @update([@Operation.sanitize(root)])
+        else
+          if watcher.parent.domain == domain
+            domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined || undefined, watcher.index || undefined, value
           else
-            if watcher.parent.domain == domain
-              domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined, meta || undefined, watcher.index || undefined, value
-            else
-              @evaluator.ascend watcher, watchers[index + 1], value, watchers[index + 2], meta
-    
+            @evaluator.ascend watcher, watchers[index + 1], value, watchers[index + 2]
+  
     return if domain.immutable
 
     if @workers
@@ -653,23 +653,12 @@ class Domain
             break
     return
 
-  # Schedule execution of expressions to the next tick, buffer input
-  defer: (reason) ->
-    if @solve.apply(@, arguments)
-      @deferred ?= Native::setImmediate( =>
-        @deferred = undefined
-        @flush()
-      , 0)
-
-
   export: ->
     for constraint in @constraints when constraint.operation
       constraint.operation
-
-
-
+      
   maybe: () ->
-    @Maybe ||= Native::mixin(@, MAYBE: @)
+    @Maybe ||= Inheritance(@, MAYBE: @)
     return new @Maybe
 
   # Make Domain class inherit given engine instance. Crazy huh
@@ -687,7 +676,7 @@ class Domain
 
         unless @events == engine.events
           @addListeners(@events)
-          @events    = new (Native::mixin(@engine.events))
+          @events    = new (Inheritance(@engine.events))
 
         @Wrapper.compile @Methods::, @ if @Wrapper
 
@@ -704,7 +693,6 @@ class Domain
       EngineDomainWrapper       = engine.mixin(engine, domain)
       EngineDomain.prototype    = new EngineDomainWrapper
       EngineDomain::solve     ||= Domain::solve unless domain::solve
-      EngineDomain::strategy    = 'evaluator'
       EngineDomain::displayName = name
       EngineDomain.displayName  = name
       unless engine.prototype
@@ -715,13 +703,13 @@ class Domain
 
 class Domain::Methods
   value: 
-    command: (operation, continuation, scope, meta, value, contd, hash, exported, scoped) ->
-      if @suggest && @solver
+    command: (engine, operation, continuation, scope, value, contd, hash, exported, scoped) ->
+      if engine.suggest && engine.solver
         variable = (operation.parent.suggestions ||= {})[operation.index]
         unless variable
           Domain::Methods.uids ||= 0
           uid = ++Domain::Methods.uids
-          variable = operation.parent.suggestions[operation.index] ||= @declare(null, operation)
+          variable = operation.parent.suggestions[operation.index] ||= engine.declare(null, operation)
           variable.suggest = value
           variable.operation = operation
 
@@ -729,7 +717,7 @@ class Domain::Methods
         return variable
 
       if !continuation && contd
-        return @evaluator.solve operation.parent, contd, @identity.solve(scoped), meta, operation.index, value
+        return engine.solve operation.parent, contd, engine.identity.solve(scoped), operation.index, value
       return value
 
   framed: (value) ->
