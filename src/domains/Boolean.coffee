@@ -1,5 +1,8 @@
 
-Numeric = require('./Numeric')
+Numeric    = require('./Numeric')
+Command    = require('../concepts/Command')
+Value      = require('../commands/Value')
+Constraint = require('../commands/Constraint')
 
 class Boolean extends Numeric
   immutable: true

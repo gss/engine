@@ -57,7 +57,7 @@ class Operation
   ascend: (operation, domain = operation.domain) ->
     parent = operation
     while parent.parent &&  typeof parent.parent[0] == 'string' && 
-          (!@engine.Command(parent.parent) || parent.domain == domain))
+          (!@engine.Command(parent.parent) || parent.domain == domain)
       parent = parent.parent
     while parent.parent?.domain == parent.domain
       parent = parent.parent

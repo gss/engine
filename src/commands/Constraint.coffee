@@ -1,4 +1,7 @@
-class Constraint extends Commands
+Command = require('../concepts/Command')
+
+class Constraint extends Command
+  type: 'Constraint'
   
   signature: [
   	left:     ['Value'],

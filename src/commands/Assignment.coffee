@@ -1,18 +1,19 @@
 Command = require('../concepts/Command')
 
 class Assignment extends Command
+  type: 'Assignment'
   
   signature: [
     [object:   ['Query']]
-  	property: ['String']
-  	value:    ['Value']
+    property: ['String']
+    value:    ['Value']
   ]
   
 class Assignment.Unsafe extends Assignment
   
   signature: [
     [object:   ['Query']]
-    property: ['String'],
+    property: ['String']
     value:    null
   ]
   

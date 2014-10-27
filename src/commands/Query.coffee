@@ -1,13 +1,15 @@
-# Asynchronous reference to object
+Command = require('../concepts/Command')
 
-class Query
-
+# Asynchronous reference to object or collection
+class Query extends Command
+  type: 'Query'
+  
   @construct: ->
     return (operation) ->
       @name = @toString(operation, @constructor)
       @path = (operation[1]?.selector?.path || '') + @name
 
-  constructor: Object.construct()
+  constructor: @construct()
   
   push: (operation) ->
     unless group = @group
@@ -34,12 +36,12 @@ class Query
   
     
   # Check if query was already updated
-  before: (engine, node, args, operation, continuation, scope) ->
+  before: (node, args, engine, operation, continuation, scope) ->
     unless @hidden
       return engine.queries.fetch(node, args, operation, continuation, scope)
 
   # Subscribe elements to query 
-  after: (engine, node, args, result, operation, continuation, scope) ->
+  after: (node, args, result, engine, operation, continuation, scope) ->
     unless @hidden
       return engine.queries.update(node, args, result, operation, continuation, scope)
 

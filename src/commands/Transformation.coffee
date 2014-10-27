@@ -1,6 +1,8 @@
-Command = require('../concepts/command')
+Command = require('../concepts/Command')
 
 class Transformation extends Command
+  type: 'Transformation'
+  
   @Matrix: require('../../vendor/gl-matrix')
 
   matrix: ->

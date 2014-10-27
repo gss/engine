@@ -1,7 +1,5 @@
 # Console shim & wrapper. Used to output collapsible table view.
 
-Native = require '../methods/Native'
-
 class Console
   constructor: (@level) ->
     @level ?= self.GSS_LOG ? parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
@@ -56,7 +54,7 @@ class Console
       @log a, b, c
 
   start: (reason, name) ->
-    @startTime = Native::time()
+    @startTime = @getTime()
     @started ||= []
     if @started.indexOf(name) > -1
       started = true
@@ -68,7 +66,6 @@ class Console
 
     fmt += "%c"
     if typeof reason != 'string'
-      #reason = Native::clone(reason) if reason?.slice
       fmt += '%O'
     else
       fmt += '%s'
@@ -80,10 +77,14 @@ class Console
   end: (reason) ->
     popped = @started?.pop()
     return if !popped || @started.indexOf(popped) > -1
-    @endTime = Native::time()
+    @endTime = @getTime()
     return if @level < 1
     @groupEnd()
-
+    
+  getTime: (other, time) ->
+    time ||= performance?.now?() || Date.now?() || + (new Date)
+    return time if time && !other
+    return Math.floor((time - other) * 100) / 100
 
 
 for method in Console::methods 

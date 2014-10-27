@@ -5,10 +5,10 @@ Combinators fetch new elements, while qualifiers filter them.
 
 ###
 
-Query = require('../concepts/Query')
+Command = require('../concepts/Command')
+Query   = require('./Query')
 
 class Selector extends Query
-  constructor: Query.construct()
 
   toString: (command, operation) ->
     if command.prefix
@@ -69,13 +69,15 @@ class Selector extends Query
   
   relative: undefined
   
-class Selector.Combinator extends Selector
+class Query.Combinator extends Selector
+  constructor: Query.construct()
   
   signature: [
     [context: ['Node']]
   ]
   
-class Selector.Qualifier extends Selector
+class Query.Qualifier extends Selector
+  constructor: Query.construct()
 
   signature: [
     context: ['Node']
@@ -86,18 +88,19 @@ class Selector.Qualifier extends Selector
     ]
   ]
   
-class Selector.Element extends Selector
+class Query.Element extends Selector
+  constructor: Query.construct()
   
   signature: []
   
-Command.define.call Selector
+Command.define.call Query,
   # Live collections
 
   'class':
     prefix: '.'
     group: 'native'
     
-    Combinator: (value, operation, continuation, scope) ->
+    Combinator: (value, engine, operation, continuation, scope) ->
       return (scope || @scope).getElementsByClassName(value)
       
     Qualifier: (node, value) ->
@@ -107,7 +110,7 @@ Command.define.call Selector
     prefix: ''
     group: 'native'
     
-    Combinator: (value, operation, continuation, scope) ->
+    Combinator: (value, engine, operation, continuation, scope) ->
       return (scope || @scope).getElementsByTagName(value)
     
     Qualifier: (node, value) ->
@@ -119,7 +122,7 @@ Command.define.call Selector
     prefix: '#'
     group: 'native'
     
-    Combinator: (id, operation, continuation, scope = @scope) ->
+    Combinator: (id, engine, operation, continuation, scope = @scope) ->
       return scope.getElementById?(id) || node.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
@@ -135,7 +138,6 @@ Command.define.call Selector
 
   # All parent elements
   '!':
-  
     Combinator: (node) ->
       nodes = undefined
       while node = node.parentNode
@@ -206,7 +208,8 @@ Command.define.call Selector
       return nodes
 
 
-
+  
+Command.define.call Query,
   # Pseudo elements
   '::this':
     hidden: true
@@ -216,7 +219,7 @@ Command.define.call Selector
 
   # Parent element (alias for !> *)
   '::parent':
-    Element: Selector['!>'].Combinator
+    Element: Query['!>'].Combinator
 
   # Current engine scope (defaults to document)
   '::scope':
@@ -229,7 +232,9 @@ Command.define.call Selector
     hidden: true
     Element: ->
       return '::window' 
-
+  
+  
+Command.define.call Query,
   '[=]':
     binary: true
     quote: true
@@ -267,7 +272,8 @@ Command.define.call Selector
 
 
     # Pseudo classes
-
+  
+Command.define.call Query,
   ':value':
     Qualifier: (node) ->
       return node.value
@@ -361,24 +367,24 @@ Command.define.call Selector
 
 if document?
   # Add shims for IE<=8 that dont support some DOM properties
-  dummy = (@GSS || @Engine || Selectors).dummy = document.createElement('_')
+  dummy = Selector.dummy = document.createElement('_')
 
   unless dummy.hasOwnProperty("classList")
-    Selector['class'].Qualifier = (node, value) ->
+    Query['class'].Qualifier = (node, value) ->
       return node if node.className.split(/\s+/).indexOf(value) > -1
       
   unless dummy.hasOwnProperty("parentElement") 
-    Selector['!>'].Combinator = Selector['::parent'][1] = (node) ->
+    Query['!>'].Combinator = Selector['::parent'][1] = (node) ->
       if parent = node.parentNode
         return parent if parent.nodeType == 1
   unless dummy.hasOwnProperty("nextElementSibling")
-    Selector['+'].Combinator = (node) ->
+    Query['+'].Combinator = (node) ->
       while node = node.nextSibling
         return node if node.nodeType == 1
-    Selector['!+'].Combinator = (node) ->
+    Query['!+'].Combinator = (node) ->
       while node = node.previousSibling
         return node if node.nodeType == 1
-    Selector['++'].Combinator = (node) ->
+    Query['++'].Combinator = (node) ->
       nodes = undefined
       prev = next = node
       while prev = prev.previousSibling
@@ -390,19 +396,19 @@ if document?
           (nodes ||= []).push(next)
           break
       return nodes
-    Selector['~'].Combinator = (node) ->
+    Query['~'].Combinator = (node) ->
       nodes = undefined
       while node = node.nextSibling
         (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
-    Selector['!~'].Combinator = (node) ->
+    Query['!~'].Combinator = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev && (prev != node)
         (nodes ||= []).push(prev) if prev.nodeType == 1
         prev = prev.nextSibling
       return nodes
-    Selector['~~'].Combinator = (node) ->
+    Query['~~'].Combinator = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev
@@ -410,13 +416,13 @@ if document?
           (nodes ||= []).push(prev) 
         prev = prev.nextSibling
       return nodes
-    Selector[':first-child'].Qualifier = (node) ->
+    Query[':first-child'].Qualifier = (node) ->
       if parent = node.parentNode
         child = parent.firstChild
         while child && child.nodeType != 1
           child = child.nextSibling
         return node if child == node
-    Selector[':last-child'].Qualifier = (node) ->
+    Query[':last-child'].Qualifier = (node) ->
       if parent = node.parentNode
         child = parent.lastChild
         while child && child.nodeType != 1

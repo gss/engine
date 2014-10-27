@@ -1,4 +1,4 @@
-class Debugger
+class Inspector
   constructor: (@engine) ->
 
   toExpressionString: (operation) ->
@@ -577,4 +577,4 @@ class Debugger
       @ruler(element, prop, data[prop], (offsetLeft ? left), (offsetTop ? top) - data[prop], 0, data[prop], scope != id)
 
 
-module.exports = Debugger
+module.exports = Inspector

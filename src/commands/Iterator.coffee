@@ -1,5 +1,8 @@
-class Iterator extends Command
+Command = require('../concepts/Command')
 
+class Iterator extends Command
+  type: 'Iterator'
+  
   signature: [
   	collection: ['Object'],
   	body: null
@@ -25,7 +28,6 @@ Command.define.call Iterator
   "rule":
     index: 'rules'
     
-  "each":
-    
+  "each": {}
   
 module.exports = Iterator

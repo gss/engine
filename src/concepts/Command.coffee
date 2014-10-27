@@ -1,43 +1,43 @@
 # Return command definition (or instance) for given operation
 # by arguments type signature. 
 class Command 
-  constructor: (engine, operation, initial) ->
-    unless command = operation.command
-      if initial
-        match = Command.match(operation)
-      if typeof operation[0] == 'string'
-        if !command.group || !(command = Command.reduce(operation))
-    	    command = new command(operation)
-      operation.command = command
+  constructor: ->
+    return (engine, operation, initial) ->
+      unless command = operation.command || command.instance
+        if initial
+          match = Command.match(operation)
+        if typeof operation[0] == 'string'
+          if !match.group || !(command = Command.reduce(engine, operation, match))
+            command = new match(operation)
+            unless command.key
+              command.instance = instance
+        operation.command = command
       
-    return command
+      return command
   
   # Process arguments and match appropriate command
-  @match: (operation, parent, index) ->
+  @match: (engine, operation, parent, index) ->
     operation.parent = parent
     operation.index = index
     
     if typeof operation[0] == 'string'
-      command = engine.methods[operation[0]]
+      signature = engine.methods[operation[0]]
        
     i = -1
     j = operation.length
     while ++i < j
       argument = operation[i]
       if argument?.push
-        cmd = @Command(argument, true).types
+        type = engine.Command(argument, true).type
       else
-        cmd = @types[typeof argument]
+        type = @types[typeof argument]
         
-      if match = command[cmd]
-        command = match
-        # Pad skipped optional arguments
-        while command.index > i
-          operation.splice(i - 1, 0, undefined)
-          j++
-          i++
+      if match = signature[type]
+        signature = match
       else
         throw "Unexpected " + cmd + " in " + operation[0]
+    
+    
     
     return command
     
@@ -110,7 +110,7 @@ class Command
     scope ||= engine.scope
     # Let context lookup for cached value
     if @before
-      result = @before(engine, node || scope, args, operation, continuation, scope)
+      result = @before(node || scope, args, engine, operation, continuation, scope)
     
     # Execute the function
     if result == undefined
@@ -118,7 +118,7 @@ class Command
 
     # Let context transform or filter the result
     if @after
-      result = @after(engine, node || scope, args, result, operation, continuation, scope)
+      result = @after(node || scope, args, result, engine, operation, continuation, scope)
 
     return result
 
@@ -240,14 +240,12 @@ class Command
        
   # Define command subclass
   @extend: (definition, methods) ->
-    constructor = @constructorer()
     
     class Extended extends @
-      constructor: constructor
     
-    # Define given properties on a prototype  
-    for property, value of definition
-      Extended::[property] = value
+      # Define given properties on a prototype  
+      for property, value of definition
+        @prototype[property] = value
       
     if methods
       Command.define.call(Extended, methods)
@@ -258,18 +256,22 @@ class Command
   @define: (name, options) ->
     if !options
       for property, value of name
-        @define property, value
+        Command.define.call(@, property, value)
     else
-      @[name] = @extend(options)
+      @[name] = Command.extend.call(@, options)
     return
     
   
   # Attempt to re-use argument's command for the operation if groups match
   @reduce: (operation) ->
-  	for i in [1 ... operation.length]
-  		if argument = operation[i]
-  			if argument.command?.push?(operation)
-  				return argument.command
+    for i in [1 ... operation.length]
+      if argument = operation[i]
+        if argument.command?.push?(operation)
+          return argument.command
+  
+  @types:
+    'string': 'String'
+    'number': 'Number'
   
   # Find defined command signatures in the engine and register their methods
   @compile: (engine, command) ->
@@ -278,75 +280,17 @@ class Command
         if (proto = value?.prototype)? && proto instanceof Command
           @compile(engine, value)
       return
-    
+  
     Types = {}
     for property, value of command
       if value?.prototype instanceof command
         Types[property] = value
     for property, value of command
       unless value?.prototype instanceof command
-        @register engine, value, Types
-        
+        engine.signatures.set value, Types
+      
     @Types = Types
-        
+      
     @
-    
-  # Register signatures defined in a given object
-  @sign: (engine, command, types, object, method)
-    if signature = object.signature
-      @register engine, command, types, signature, method, 0, 0
-    else if signatures = object.signatures
-      for signature in signatures
-        @register engine, command, types, signature, method, 0, 0
-    
-  # Generate a lookup structure to find method definition by argument signature
-  @register: (engine, command, types, signature, method, index, offset) ->
-    # Lookup subtype and catch-all signatures
-    unless signature
-      for type of types
-        if command[type]
-          @sign engine, command, types, typed[type].prototype, method
-      @sign engine, command, types, command, method
-      return
-      
-    i = index
-    
-    # Find argument by index in definition
-    `seeker: {`
-    for arg in signature
-      if arg.push
-        for obj, k in arg
-          for property of obj
-            unless --i
-              argument = obj[proprty]
-              optional = true
-              `break seeker`
-      else 
-        for property of arg
-          unless --i
-            argument = arg[proprty]
-            `break seeker`
-    `}`
-    
-    # End of signature
-    unless argument
-       method.resolved = command
-       return
-      
-    # Branch off without optional argument
-    if optional
-      @register engine, command, types, signature, method, index + 1, offset + 1
-    
-    # Register all input types for given arguments
-    for type in argument
-      step = (method || engine.signatures)[type] = []
-      step.index = index - offset
-      
-
-      @register engine, command, types, step, step, index + 1, offset
-
-  @types:
-    'string': 'String'
-    'number': 'Number'
     
   module.exports = Command

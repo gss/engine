@@ -1,6 +1,6 @@
-Domain  = require('../concepts/Domain')
-Constraint = require('../commands/constraint')
-Variable = require('../commands/Variable')
+Domain     = require('../concepts/Domain')
+Command    = require('../concepts/Command')
+Value      = require('../commands/Value')
 Constraint = require('../commands/Constraint')
 
 
@@ -16,24 +16,10 @@ class Linear extends Domain
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
       @solver._store = []
-
-      # Phantom js doesnt enforce order of numerical keys in plain objects. Use arrays
-      unless c.isUnordered?
-        obj = {9: 1, 10: 1}
-        for property of obj
-          break
-        if c.isUnordered = (property == 10)
-          set = c.HashTable.prototype.set
-          c.HashTable.prototype.set = ->
-            if !@_store.push
-              store = @_store
-              @_store = []
-              for property of store
-                @_store[property] = store[property]
-
-            return set.apply(@, arguments)
       c.debug = true
       c.Strength.require = c.Strength.required
+
+      Linear.hack()
 
   provide: (result) ->
     @constrain(result)
@@ -77,7 +63,6 @@ class Linear extends Domain
     @solver._externalParametricVars.delete(variable)
     @solver._externalRows.delete(variable)
 
-
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'
       unless variable = @variables[path]
@@ -104,13 +89,11 @@ class Linear extends Domain
       @solver.addStay(arg)
     return
 
-  strength: (strength, deflt = 'medium') ->
-    return strength && c.Strength[strength] || c.Strength[deflt]
+  strength: (strength, byDefault = 'medium') ->
+    return strength && c.Strength[strength] || c.Strength[byDefault]
 
   weight: (weight) ->
     return weight
-
-
 
 Linear.Constraint = Command.extend.call Constraint, {},
   '==': (left, right, strength, weight) ->
@@ -127,7 +110,6 @@ Linear.Constraint = Command.extend.call Constraint, {},
 
   '>': (left, right, strength, weight, engine) ->
     return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
-
 
 Linear.Value            = Command.extend.call Value
 Linear.Value.Solution   = Command.extend.call Value.Solution
@@ -154,5 +136,22 @@ Linear.Value.Expression = Command.extend.call Value.Expression {group: 'linear'}
 
   '/': (left, right) ->
     return c.divide(left, right)
-    
+
+# Phantom js doesnt enforce order of numerical keys in plain objects.
+# The hack enforces arrays as base structure.
+Linear.hack = ->
+  unless c.isUnordered?
+    obj = {9: 1, 10: 1}
+    for property of obj
+      break
+    if c.isUnordered = (property == 10)
+      set = c.HashTable.prototype.set
+      c.HashTable.prototype.set = ->
+        if !@_store.push
+          store = @_store
+          @_store = []
+          for property of store
+            @_store[property] = store[property]
+
+        return set.apply(@, arguments)
 module.exports = Linear

@@ -8,28 +8,29 @@
 # re-measurements are deferred to be done in bulk
 
 Numeric = require('./Numeric')
-Inheritance = require('../methods/Native')
+
 class Intrinsic extends Numeric
   priority: 100
   structured: true
   immediate: true
   
-  Types:          require('../methods/Types')
+  Type:           require('../concepts/Type')
   Style:          require('../concepts/Style')
 
   Unit:           require('../commands/Unit')
   Transformation: require('../commands/Transformation')
 
-  Methods:        Native::mixin((new Numeric::Methods),
-                  require('../methods/Types'))
-
-  Properties:     Native::mixin {},
-                  require('../properties/Dimensions'),
-                  require('../properties/Styles')
+  Properties:     ((Dimensions, Styles) ->
+                    Properties = ->
+                    Properties.prototype = new Dimensions
+                    for property, value of Styles::
+                      Properties::[property] = value
+                    return Properties
+                  )(require('../properties/Dimensions'),
+                    require('../properties/Styles'))
 
   constructor: ->
-    @types = new @Types(@)
-    @units = new @Units(@)
+    @types = new @Type(@)
 
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?

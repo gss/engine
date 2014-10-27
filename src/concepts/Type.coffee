@@ -1,4 +1,13 @@
-class Types
+class Type
+  
+  @define: (property, value)-> 
+    if value
+      @[property] = value
+    else
+      for prop, value of property
+        @define prop, value
+  
+Type.define
   # Decimal value (e.g. line-height: 1.0)
   Float: (obj) ->
     parsed = parseFloat(obj)
@@ -13,12 +22,12 @@ class Types
 
   # Style-specific unquoted word 
   String: (obj) ->
-    if typeof obj == 'string'
+    if obj instanceof String
       return obj
     
   # Array of strings (e.g. font-family)
   Strings: (obj) ->
-    if typeof obj == 'string' || obj.push
+    if obj instanceof String || obj instanceof Array
       return obj
 
   Timings:
@@ -30,7 +39,7 @@ class Types
     'step-start':  'step-start'
     'step-end':    'step-end'
   Timing: (obj = 'ease') ->
-    if typeof obj == 'string'
+    if obj instanceof String
       if obj = @Timings[obj]
         return obj
     else if obj[0] == 'steps' || obj[0] == 'cubic-bezier'
@@ -38,7 +47,7 @@ class Types
 
 
   Length: (obj) ->
-    if typeof obj == 'number'
+    if obj instanceof Number
       return obj
     if (@units || @Units.prototype)[obj[0]]
       if obj[1] == 0
@@ -65,7 +74,7 @@ class Types
   Colors: {'transparent', 'hsl', 'rgb', 'hsla', 'rgba', 'hsb'}
   Pseudocolors: {'transparent', 'currentColor'}
   Color: (obj) ->
-    if typeof obj == 'string'
+    if obj instanceof String
       if @Pseudocolors[obj]
         return obj
     else
@@ -95,4 +104,4 @@ class Types
     if typeof obj == 'object' && object.length != undefined
       return obj
 
-module.exports = Types
+module.exports = Type

@@ -1,7 +1,8 @@
 Command = require('../concepts/Command')
 
 class Value extends Command
-
+  type: 'Value'
+  
 class Value.Variable extends Value
 
   signature: [
@@ -86,7 +87,7 @@ class Value.Variable extends Value
 class Value.Expression extends Value
   
   signature: [
-    left: ['Value', 'Number']
+    left:  ['Value', 'Number']
     right: ['Value', 'Number']
   ]
 

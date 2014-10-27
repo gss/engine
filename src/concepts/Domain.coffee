@@ -18,9 +18,9 @@ State:
 
 ###
 
-Inheritance = require('../concepts/Inheritance')
+Trigger = require('./Trigger')
 
-class Domain
+class Domain extends Trigger
   priority: 0  
 
   constructor: (engine, url, values, name) ->
@@ -30,6 +30,7 @@ class Domain
       @url          = url    if url
       @values       = {} unless @hasOwnProperty('values')
       @merge(values)         if values
+      Events::constructor.call(@)
 
       if @url && @getWorkerURL
         if @url && (@url = @getWorkerURL?(@url))
@@ -45,9 +46,8 @@ class Domain
     @variables   ||= {}
     @bypassers   ||= {}
     unless @hasOwnProperty('watchers')
-      @evaluator   = new @Evaluator(@) 
       @Operation   = new @Operation.constructor(@) 
-      @Variable    = new @Variable.constructor(@) 
+      @signatures  = new @Signatures(@)
       @watchers    = {}
       @observers   = {}
       @paths       = {}
@@ -657,8 +657,15 @@ class Domain
     for constraint in @constraints when constraint.operation
       constraint.operation
       
+  # Return a lazy that may later be promoted to a domain 
   maybe: () ->
-    @Maybe ||= Inheritance(@, MAYBE: @)
+    unless @Maybe
+      Base = ->
+      Base.prototype = @
+      @Maybe = ->
+      @Maybe.prototype = new Base
+      @Maybe.MAYBE = @
+      
     return new @Maybe
 
   # Make Domain class inherit given engine instance. Crazy huh
@@ -675,8 +682,12 @@ class Domain
         @domain      = @
 
         unless @events == engine.events
-          @addListeners(@events)
-          @events    = new (Inheritance(@engine.events))
+          events = {}
+          for property, value of @engine.events
+            events[property] = value
+          for property, value of @events
+            events[property] = value
+          @events = events
 
         @Wrapper.compile @Methods::, @ if @Wrapper
 

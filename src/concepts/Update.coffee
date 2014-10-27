@@ -364,7 +364,7 @@ Update.prototype =
 
 
   finish: ->
-    @time = @engine.time(@start)
+    @time = @engine.console.time(@start)
     @start = undefined
 
   # Last minute changes to queue before execution

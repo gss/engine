@@ -1,13 +1,13 @@
 Parser = require('ccss-compiler')
-Command = require('../concepts/command')
+Command = require('../concepts/Command')
 
 class Source extends Command
+  type: 'Source'
   
   signature: [
     'source': ['Object', 'String']
     [
-      'type': ['String'],
-      'label': ['String']
+      'type': ['String']
     ]
   ]
   
@@ -15,12 +15,11 @@ class Source extends Command
 Command.define.call Source 
   # Evaluate stylesheet
   "eval": 
-    command: (engine, operation, continuation, scope, 
-              node, type = 'text/gss', source, label = type) ->
+    command: (node, type = 'text/gss', engine, operation, continuation, scope) ->
       if node.nodeType
         if nodeType = node.getAttribute('type')
           type = nodeType
-        source ||= node.textContent || node 
+        source = node.textContent || node 
         if (nodeContinuation = node._continuation)?
           engine.queries.clean(nodeContinuation)
           continuation = nodeContinuation
@@ -39,9 +38,7 @@ Command.define.call Source
 
 
   # Load & evaluate stylesheet
-  "load": 
-    command: (engine, operation, continuation, scope, 
-              node, type, method = 'GET') ->
+  "load": (node, type, engine, operation, continuation, scope) ->
       src = node.href || node.src || node
       type ||= node.type || 'text/gss'
       xhr = new XMLHttpRequest()
@@ -51,9 +48,7 @@ Command.define.call Source
           --engine.requesting
           engine.commands.eval.call(@, engine, operation, continuation, scope,
                                 node, type, xhr.responseText, src)
-
-
-      xhr.open(method.toUpperCase(), src)
+      xhr.open('GET', src)
       xhr.send()
       
       

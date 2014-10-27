@@ -6,20 +6,19 @@ enables anonymous constraints on immutable values
 ###
 
 Domain  = require('../concepts/Domain')
-Value = require('../commands/Value')
+Command = require('../concepts/Command')
+Value   = require('../commands/Value')
 
 class Numeric extends Domain
   priority: 10
 
   # Numeric domains usually dont use worker
   url: null
-  
-
 
 Numeric.Value            = Command.extend.call Value
 Numeric.Value.Solution   = Command.extend.call Value.Solution
 Numeric.Value.Variable   = Command.extend.call Value.Variable, {group: 'linear'},
-  get: (path, tracker, engine, scoped, engine, operation, continuation, scope) ->
+  get: (path, tracker, scoped, engine, operation, continuation, scope) ->
     domain = engine.Variable.getDomain(operation, true, true)
     if !domain || domain.priority < 0
       domain = engine

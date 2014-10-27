@@ -1,6 +1,8 @@
 Command = require('../concepts/Command')
 
 class Unit extends Command
+  type: 'Unit'
+  
   signature: [
     value: ['Value']
   ]
@@ -45,22 +47,22 @@ Command.define.call Unit.Dynamic,
 
   # Dynamic lengths
 
-  em: (value, engine, operation, continuation, scope, ) ->
+  em: (value, engine, operation, continuation, scope) ->
     return @['*'](@get(scope, 'font-size', continuation), value)
   
-  rem: (value, engine, operation, continuation, scope, ) ->
+  rem: (value, engine, operation, continuation, scope) ->
     return @['*'](@get('::window', 'font-size', continuation), value)
 
-  vw: (value, engine, operation, continuation, scope, ) ->
+  vw: (value, engine, operation, continuation, scope) ->
     return @['*'](@['/'](@get('::window', 'width', continuation), 100), value)
 
-  vh: (value, engine, operation, continuation, scope, ) ->
+  vh: (value, engine, operation, continuation, scope) ->
     return @['*'](@['/'](@get('::window', 'height', continuation), 100), value)
 
-  vmin: (value, engine, operation, continuation, scope, ) ->
+  vmin: (value, engine, operation, continuation, scope) ->
     return @['*'](@['/'](@get('::window', 'min', continuation), 100), value)
     
-  vmax: (value, engine, operation, continuation, scope, ) ->
+  vmax: (value, engine, operation, continuation, scope) ->
     return @['*'](@['/'](@get('::window', 'max', continuation), 100), value)
 
 module.exports = Unit

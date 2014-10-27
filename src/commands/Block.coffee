@@ -1,4 +1,8 @@
+Command = require('../concepts/Command')
+
 class Block extends Command
+  type: 'Block'
+  
   signature: [
     body: null
   ]

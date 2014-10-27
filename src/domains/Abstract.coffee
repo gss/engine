@@ -1,10 +1,11 @@
 # Transforms variables into tracked variables
 
-Domain     = require('../concepts/Domain')
+Domain     = require('../concepts/Domain'
+Command    = require('../concepts/Command'))
 
 Value      = require('../commands/Value')
-Command    = require('../commands/Command')
 Constraint = require('../commands/Constraint')
+Assignment = require('../commands/Constraint')
 
 class Abstract extends Domain
   url: undefined

@@ -1,13 +1,12 @@
-Domain     = require('../concepts/Domain'))
-Command    = require('../commands/Command')
-Constraint = require('../commands/Constraint')
+Domain     = require('../concepts/Domain')
+Command    = require('../concepts/Command')
 Value      = require('../commands/Value')
+Constraint = require('../commands/Constraint')
 
 class Finite extends Domain
   priority: -10
 
   #Solver: require('FD')
-  Wrapper: require('../concepts/Wrapper')
 
   constructor: ->
     super

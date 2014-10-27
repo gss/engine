@@ -17,28 +17,25 @@ forming multiple unrelated dependency graphs. ###
   return this[bits[bits.length - 1]]
 @module ||= {}
 
-Inheritance     = require('./concepts/Inheritance')
-Events          = require('./concepts/Events')
-Domain          = require('./concepts/Domain')
-Domain.Events ||= Inheritance(Domain, Events)
+Domain = require ('./concepts/Domain')
 
-class Engine extends Domain.Events
+class Engine extends Domain
 
-  Update:       require('./concepts/Update')
-  
   Command:      require('./concepts/Command')
   Property:     require('./concepts/Property')
-  
-  Identity:     require('./concepts/Identity')
-  
+  Update:       require('./concepts/Update')
+    
   Operation:    require('./concepts/Operation')
   Continuation: require('./concepts/Continuation')
 
   Console:      require('./utilities/Console')
   Inspector:    require('./utilities/Inspector')
-  Inspector:    require('./utilities/Exporter')
+  Exporter:     require('./utilities/Exporter')
   
   Properties:   require('./properties/Axioms')
+  
+  Identity:     require('./modules/Identity')
+  Signatures:   require('./modules/Signatures')
 
   Domains: 
     Abstract:   require('./domains/Abstract')
@@ -86,25 +83,25 @@ class Engine extends Domain.Events
     
     @domain       = @
     @properties   = new @Properties(@)
-    @methods      = new @Methods(@)
-    @evaluator    = new @Evaluator(@)
-    @debugger     = new @Debugger(@)
+    @inspector    = new @Inspector(@)
 
     @precompile()
  
     @Operation    = new @Operation(@)
-    @Variable     = new @Variable(@)
     @Continuation = @Continuation.new(@)
 
+    # Constant and input values
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
     @assumed.setup()
 
+    # Conditions and final values
     @solved = new @Boolean
     @solved.displayName = 'Solved'
     @solved.eager = true
     @solved.setup()
 
+    # Alias engine.values from solved domain
     @values = @solved.values
 
 
@@ -224,7 +221,7 @@ class Engine extends Domain.Events
         @console.start(reason || args[0], name)
     unless old = @updating
       @engine.updating = new @update
-      @engine.updating.start ?= @engine.time()
+      @engine.updating.start ?= @engine.console.time()
 
     if @providing == undefined
       @providing = null
@@ -525,11 +522,6 @@ class Engine extends Domain.Events
     if object && object.map
       return object.map @clone, @
     return object
-    
-  time: (other, time) ->
-    time ||= performance?.now?() || Date.now?() || + (new Date)
-    return time if time && !other
-    return Math.floor((time - other) * 100) / 100
 
   indexOfTriplet: (array, a, b, c) ->
     if array
@@ -559,8 +551,6 @@ Engine.console  = Engine::console  = new Engine::Console
 
 Engine.Engine   = Engine
 Engine.Domain   = Engine::Domain   = Domain
-Engine.time     = Engine::time     = Native::time
-Engine.clone    = Engine::clone    = Native::clone
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined

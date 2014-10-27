@@ -1,6 +1,4 @@
-
 Abstract = require('./Abstract')
-Native   = require('../methods/Native')
 
 class Document extends Abstract
   priority: Infinity
@@ -21,13 +19,14 @@ class Document extends Abstract
   disconnected: true
 
   constructor: () ->
+    # Export modules into engine
     @engine.positions   ||= new @Positions(@)
     @engine.stylesheets ||= new @Stylesheet(@)
-    @engine.applier     ||= @engine.positions
-    @engine.scope       ||= document
     @engine.queries     ||= new @Queries(@)
     @engine.pairs       ||= new @Pairs(@)
     @engine.mutations   ||= new @Mutations(@)
+    @engine.applier     ||= @engine.positions
+    @engine.scope       ||= document
     @engine.all           = @engine.scope.getElementsByTagName('*')
 
     if @scope.nodeType == 9 && ['complete', 'loaded'].indexOf(@scope.readyState) == -1
@@ -36,9 +35,7 @@ class Document extends Abstract
       window.addEventListener 'load', @engine
     else if @running
       @events.compile.call(@)
-
-
-
+      
     @scope.addEventListener 'scroll', @engine, true
     if window?
       window.addEventListener 'resize', @engine
@@ -48,7 +45,6 @@ class Document extends Abstract
   events:
     resize: (e = '::window') ->
       id = e.target && @identity.provide(e.target) || e
-        
 
       unless @resizer?
         if e.target && @updating
