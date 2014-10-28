@@ -95,11 +95,28 @@ class Value.Expression extends Value
 class Value.Solution extends Value
   
   signature: [
-    property:     ['String']
-    continuation: ['String']
-    value:        ['Number']
-    tracker:      ['String']
+    property: ['String']
+    contd:    ['String']
+    value:    ['Number']
   ]
+
+Value.Solution.define
+  got: (property, contd, value, engine, operation, continuation, scope) ->
+    if engine.suggest && engine.solver
+      variable = (operation.parent.suggestions ||= {})[operation.index]
+      unless variable
+        Domain::Methods.uids ||= 0
+        uid = ++Domain::Methods.uids
+        variable = operation.parent.suggestions[operation.index] ||= engine.declare(null, operation)
+        variable.suggest = value
+        variable.operation = operation
+
+        @constrained ||= []
+      return variable
+
+    if !continuation && contd
+      return engine.solve operation.parent, contd, engine.identity.solve(scoped), operation.index, value
+    return value
   
 module.exports = Value
   

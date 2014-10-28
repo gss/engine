@@ -93,7 +93,7 @@ class Query.Element extends Selector
   
   signature: []
   
-Command.define.call Query,
+Query.define
   # Live collections
 
   'class':
@@ -208,8 +208,7 @@ Command.define.call Query,
       return nodes
 
 
-  
-Command.define.call Query,
+Query.define
   # Pseudo elements
   '::this':
     hidden: true
@@ -233,8 +232,8 @@ Command.define.call Query,
     Element: ->
       return '::window' 
   
-  
-Command.define.call Query,
+
+Query.define  
   '[=]':
     binary: true
     quote: true
@@ -273,7 +272,7 @@ Command.define.call Query,
 
     # Pseudo classes
   
-Command.define.call Query,
+Query.define
   ':value':
     Qualifier: (node) ->
       return node.value

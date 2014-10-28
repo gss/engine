@@ -5,7 +5,7 @@ Command    = require('../concepts/Command'))
 
 Value      = require('../commands/Value')
 Constraint = require('../commands/Constraint')
-Assignment = require('../commands/Constraint')
+Assignment = require('../commands/Assignment')
 
 class Abstract extends Domain
   url: undefined
@@ -14,6 +14,9 @@ class Abstract extends Domain
     if @running
       @compile()
     super
+
+# Catch-all class for unknown commands    
+Abstract.Default = Command.extend()
 
 # Global variable
 Abstract.Value = Command.extend.call Value

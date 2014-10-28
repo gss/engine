@@ -37,10 +37,10 @@ Finite.Constraint = Constraint.extend {},
   '>': (left, right) ->
     return @solver.gt left, right
 
-Finite.Value            = Command.extend.call Value
-Finite.Value.Solution   = Command.extend.call Value.Solution
-Finite.Value.Variable   = Command.extend.call Value.Variable, {group: 'finite'}
-Finite.Value.Expression = Command.extend.call Value.Expression, {group: 'finite'},
+Finite.Value            = Value.extend()
+Finite.Value.Solution   = Value.extend()
+Finite.Value.Variable   = Value.Variable.extend {group: 'finite'}
+Finite.Value.Expression = Value.Expression.extend {group: 'finite'},
 
   '+': (left, right) ->
     return @solver.plus left, right

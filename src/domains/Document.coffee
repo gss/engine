@@ -20,25 +20,26 @@ class Document extends Abstract
 
   constructor: () ->
     # Export modules into engine
-    @engine.positions   ||= new @Positions(@)
-    @engine.stylesheets ||= new @Stylesheet(@)
-    @engine.queries     ||= new @Queries(@)
-    @engine.pairs       ||= new @Pairs(@)
-    @engine.mutations   ||= new @Mutations(@)
-    @engine.applier     ||= @engine.positions
-    @engine.scope       ||= document
-    @engine.all           = @engine.scope.getElementsByTagName('*')
+    engine = @engine
+    engine.positions   ||= new @Positions(@)
+    engine.stylesheets ||= new @Stylesheet(@)
+    engine.queries     ||= new @Queries(@)
+    engine.pairs       ||= new @Pairs(@)
+    engine.mutations   ||= new @Mutations(@)
+    engine.applier     ||= engine.positions
+    engine.scope       ||= document
+    engine.all           = engine.scope.getElementsByTagName('*')
 
     if @scope.nodeType == 9 && ['complete', 'loaded'].indexOf(@scope.readyState) == -1
-      @scope.addEventListener 'DOMContentLoaded', @engine
-      document.addEventListener 'readystatechange', @engine
-      window.addEventListener 'load', @engine
+      @scope.addEventListener 'DOMContentLoaded', engine
+      document.addEventListener 'readystatechange', engine
+      window.addEventListener 'load', engine
     else if @running
       @events.compile.call(@)
       
-    @scope.addEventListener 'scroll', @engine, true
+    @scope.addEventListener 'scroll', engine, true
     if window?
-      window.addEventListener 'resize', @engine
+      window.addEventListener 'resize', engine
 
     super
 

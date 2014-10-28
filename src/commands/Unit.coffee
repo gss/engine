@@ -7,7 +7,7 @@ class Unit extends Command
     value: ['Value']
   ]
 
-Command.define.call Unit,
+Unit.define
 
   # Static lengths
 
@@ -43,7 +43,7 @@ Command.define.call Unit,
 
 class Unit.Dynamic extends Unit
   
-Command.define.call Unit.Dynamic,
+Unit.Dynamic.define
 
   # Dynamic lengths
 

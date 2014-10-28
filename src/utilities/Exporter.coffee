@@ -1,4 +1,4 @@
-
+class Exporter
   preexport: ->
 
     # Let every element get an ID
@@ -58,3 +58,5 @@
             values[path] = Math.ceil(value)
     values.stylesheets = @stylesheets.export() 
     return values
+
+module.export = Exporter

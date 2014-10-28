@@ -7,7 +7,7 @@ class Block extends Command
     body: null
   ]
   
-Command.define.call Block,
+Block.define
   "scoped":
     # Set rule body scope to a found element
     solve: (engine, operation, continuation, scope, ascender, ascending) ->

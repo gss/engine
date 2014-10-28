@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-27) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20006,7 +20006,7 @@ Engine = (function(_super) {
       switch (typeof argument) {
         case 'object':
           if (argument.nodeType) {
-            if (this.Evaluator) {
+            if (this.Command) {
               Engine[Engine.identity.provide(argument)] = this;
               this.scope = scope = argument;
             } else {
@@ -20032,12 +20032,14 @@ Engine = (function(_super) {
           url = argument;
       }
     }
-    if (!this.Evaluator) {
+    if (!this.Command) {
       return new Engine(arguments[0], arguments[1], arguments[2]);
     }
     Engine.__super__.constructor.call(this, this, url);
+    this.domains = [];
     this.domain = this;
     this.properties = new this.Properties(this);
+    this.signatures = new this.Signatures(this);
     this.inspector = new this.Inspector(this);
     this.precompile();
     this.Operation = new this.Operation(this);
@@ -20314,7 +20316,7 @@ Engine = (function(_super) {
     if (this.scope) {
       this.dispatchEvent(this.scope, 'solved', this.updated.solution, this.updated);
     }
-    this["debugger"].update(this);
+    this.inspector.update(this);
     return this.updated.solution;
   };
 
@@ -20510,30 +20512,11 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.precompile = function() {
-    var domain, method, name, property, _base, _base1, _base2, _base3, _ref, _ref1, _ref2, _ref3;
-    if (this.constructor.prototype.running === void 0) {
-      _ref = this.Methods.prototype;
-      for (property in _ref) {
-        method = _ref[property];
-        (_base = this.constructor.prototype)[property] || (_base[property] = (_base1 = this.constructor)[property] || (_base1[property] = Engine.prototype.Method(method, property)));
-      }
-      this.constructor.prototype.compile();
-    }
+    var _ref;
     this.Domain.compile(this.Domains, this);
-    _ref1 = this.Domains;
-    for (name in _ref1) {
-      domain = _ref1[name];
-      if (domain.prototype.helps) {
-        _ref2 = domain.prototype.Methods.prototype;
-        for (property in _ref2) {
-          method = _ref2[property];
-          (_base2 = this.constructor.prototype)[property] || (_base2[property] = (_base3 = this.constructor)[property] || (_base3[property] = Engine.prototype.Method(method, property, name.toLowerCase())));
-        }
-      }
-    }
     this.update = Engine.prototype.Update.compile(this);
-    if ((_ref3 = this.mutations) != null) {
-      _ref3.connect(true);
+    if ((_ref = this.mutations) != null) {
+      _ref.connect(true);
     }
     if (location.search.indexOf('export=') > -1) {
       return this.preexport();
@@ -20581,11 +20564,14 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.compile = function(state) {
-    var methods, properties;
-    methods = this.methods || this.Methods.prototype;
-    properties = this.properties || this.Properties.prototype;
-    this.Method.compile(methods, this);
-    this.Property.compile(properties, this);
+    var domain, name;
+    if (state) {
+      for (name in this.Domains) {
+        if (domain = this[name.toLowerCase()]) {
+          this.Command.compile(domain);
+        }
+      }
+    }
     this.console.compile(this);
     this.running = state != null ? state : null;
     return this.triggerEvent('compile', this);
@@ -20708,7 +20694,7 @@ Block = (function(_super) {
 
 })(Command);
 
-Command.define.call(Block, {
+Block.define({
   "scoped": {
     solve: function(engine, operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender && (ascending != null)) {
@@ -20966,12 +20952,12 @@ Iterator = (function(_super) {
 
 })(Command);
 
-Command.define.call(Iterator({
+Iterator.define({
   "rule": {
     index: 'rules'
   },
   "each": {}
-}));
+});
 
 module.exports = Iterator;
 
@@ -21225,7 +21211,7 @@ Query.Element = (function(_super) {
 
 })(Selector);
 
-Command.define.call(Query, {
+Query.define({
   'class': {
     prefix: '.',
     group: 'native',
@@ -21357,7 +21343,7 @@ Command.define.call(Query, {
   }
 });
 
-Command.define.call(Query, {
+Query.define({
   '::this': {
     hidden: true,
     mark: 'ASCEND',
@@ -21382,7 +21368,7 @@ Command.define.call(Query, {
   }
 });
 
-Command.define.call(Query, {
+Query.define({
   '[=]': {
     binary: true,
     quote: true,
@@ -21432,7 +21418,7 @@ Command.define.call(Query, {
   }
 });
 
-Command.define.call(Query, {
+Query.define({
   ':value': {
     Qualifier: function(node) {
       return node.value;
@@ -21697,7 +21683,7 @@ Source = (function(_super) {
 
 })(Command);
 
-Command.define.call(Source({
+Source.define({
   "eval": {
     command: function(node, type, engine, operation, continuation, scope) {
       var nodeContinuation, nodeType, rules, source;
@@ -21751,7 +21737,7 @@ Command.define.call(Source({
       return (_ref1 = Parser.parse(source)) != null ? _ref1.commands : void 0;
     }
   }
-}));
+});
 
 module.exports = Source;
 
@@ -21913,7 +21899,7 @@ Unit = (function(_super) {
 
 })(Command);
 
-Command.define.call(Unit, {
+Unit.define({
   px: function(value) {
     return value;
   },
@@ -21955,7 +21941,7 @@ Unit.Dynamic = (function(_super) {
 
 })(Unit);
 
-Command.define.call(Unit.Dynamic, {
+Unit.Dynamic.define({
   em: function(value, engine, operation, continuation, scope) {
     return this['*'](this.get(scope, 'font-size', continuation), value);
   },
@@ -22140,9 +22126,8 @@ Value.Solution = (function(_super) {
   Solution.prototype.signature = [
     {
       property: ['String'],
-      continuation: ['String'],
-      value: ['Number'],
-      tracker: ['String']
+      contd: ['String'],
+      value: ['Number']
     }
   ];
 
@@ -22150,59 +22135,91 @@ Value.Solution = (function(_super) {
 
 })(Value);
 
+Value.Solution.define({
+  got: function(property, contd, value, engine, operation, continuation, scope) {
+    var uid, variable, _base, _base1, _base2, _name;
+    if (engine.suggest && engine.solver) {
+      variable = ((_base = operation.parent).suggestions || (_base.suggestions = {}))[operation.index];
+      if (!variable) {
+        (_base1 = Domain.prototype.Methods).uids || (_base1.uids = 0);
+        uid = ++Domain.prototype.Methods.uids;
+        variable = (_base2 = operation.parent.suggestions)[_name = operation.index] || (_base2[_name] = engine.declare(null, operation));
+        variable.suggest = value;
+        variable.operation = operation;
+        this.constrained || (this.constrained = []);
+      }
+      return variable;
+    }
+    if (!continuation && contd) {
+      return engine.solve(operation.parent, contd, engine.identity.solve(scoped), operation.index, value);
+    }
+    return value;
+  }
+});
+
 module.exports = Value;
 
 });
 require.register("gss/lib/concepts/Command.js", function(exports, require, module){
-var Command,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+var Command;
 
 Command = (function() {
-  function Command() {
-    return function(engine, operation, initial) {
-      var command, match;
-      if (!(command = operation.command || command.instance)) {
-        if (initial) {
-          match = Command.match(operation);
-        }
-        if (typeof operation[0] === 'string') {
-          if (!match.group || !(command = Command.reduce(engine, operation, match))) {
-            command = new match(operation);
-            if (!command.key) {
-              command.instance = instance;
-            }
+  function Command(operation) {
+    var command, match;
+    if (!(command = operation.command)) {
+      match = Command.match(this, operation);
+      if (typeof operation[0] === 'string') {
+        if (!match.group || !(command = Command.reduce(this, operation, match))) {
+          command = match.instance || new match(operation);
+          if (!match.key) {
+            match.instance = command;
           }
         }
-        operation.command = command;
       }
-      return command;
-    };
+      operation.command = command;
+    }
+    return command;
   }
 
   Command.match = function(engine, operation, parent, index) {
-    var argument, i, j, match, signature, type;
+    var argument, command, i, j, match, signature, type;
     operation.parent = parent;
     operation.index = index;
     if (typeof operation[0] === 'string') {
-      signature = engine.methods[operation[0]];
+      if (!(signature = engine.signatures[operation[0]])) {
+        if (engine.Default) {
+          return engine.Default;
+        } else {
+          throw operation[0] + ' is not defined';
+        }
+      }
+      i = 0;
+    } else {
+      i = -1;
     }
-    i = -1;
     j = operation.length;
     while (++i < j) {
       argument = operation[i];
       if (argument != null ? argument.push : void 0) {
-        type = engine.Command(argument, true).type;
+        type = engine.Command(argument).type;
       } else {
         type = this.types[typeof argument];
       }
       if (match = signature[type]) {
         signature = match;
+      } else if (engine.Default) {
+        return engine.Default;
       } else {
-        throw "Unexpected " + cmd + " in " + operation[0];
+        throw "Unexpected " + type + " in " + operation[0];
       }
     }
-    return command;
+    if (command = signature.resolved) {
+      return command;
+    } else if (engine.Default) {
+      return engine.Default;
+    } else {
+      throw "Too few arguments in" + operation[0];
+    }
   };
 
   Command.prototype.solve = function(engine, operation, continuation, scope, ascender, ascending) {
@@ -22398,29 +22415,20 @@ Command = (function() {
   };
 
   Command.extend = function(definition, methods) {
-    var Extended, _ref;
-    Extended = (function(_super) {
-      var property, value;
-
-      __extends(Extended, _super);
-
-      function Extended() {
-        _ref = Extended.__super__.constructor.apply(this, arguments);
-        return _ref;
-      }
-
-      for (property in definition) {
-        value = definition[property];
-        Extended.prototype[property] = value;
-      }
-
-      return Extended;
-
-    })(this);
-    if (methods) {
-      Command.define.call(Extended, methods);
+    var Kommand, Prototype, property, value;
+    Kommand = function() {};
+    Kommand.__super__ = this;
+    Prototype = function() {};
+    Prototype.prototype = this.prototype;
+    Kommand.prototype = new Prototype;
+    for (property in definition) {
+      value = definition[property];
+      Kommand.prototype[property] = value;
     }
-    return Extended;
+    if (methods) {
+      Command.define.call(Kommand, methods);
+    }
+    return Kommand;
   };
 
   Command.define = function(name, options) {
@@ -22452,27 +22460,40 @@ Command = (function() {
   };
 
   Command.compile = function(engine, command) {
-    var Types, property, proto, value;
-    if (!Command) {
+    var Types, property, proto, value, _base;
+    if (!command) {
       for (property in engine) {
         value = engine[property];
         if (((proto = value != null ? value.prototype : void 0) != null) && proto instanceof Command) {
-          this.compile(engine, value);
+          if (property.match(/^[A-Z]/)) {
+            this.compile(engine, value);
+          }
         }
       }
       return;
     }
-    Types = {};
-    for (property in command) {
-      value = command[property];
-      if ((value != null ? value.prototype : void 0) instanceof command) {
-        Types[property] = value;
+    if (!(Types = command.types)) {
+      Types = command.types = {};
+      for (property in command) {
+        value = command[property];
+        if (property.match(/^[A-Z]/)) {
+          if ((value != null ? value.prototype : void 0) instanceof Command) {
+            this.compile(engine, value);
+            command.types[property] = value;
+          }
+        }
       }
     }
     for (property in command) {
       value = command[property];
-      if (!((value != null ? value.prototype : void 0) instanceof command)) {
-        engine.signatures.set(value, Types);
+      if (value !== Command[property] && property !== '__super__') {
+        if (typeof value === 'function') {
+          if ((value != null ? value.prototype : void 0) instanceof Command) {
+            if (!property.match(/^[A-Z]/)) {
+              engine.signatures.set(value, Types, void 0, ((_base = engine.signatures)[property] || (_base[property] = {})));
+            }
+          }
+        }
       }
     }
     this.Types = Types;
@@ -22683,10 +22704,11 @@ Domain = (function(_super) {
       if (!this.hasOwnProperty('values')) {
         this.values = {};
       }
+      this.signatures = new this.Signatures(this);
       if (values) {
         this.merge(values);
       }
-      Events.prototype.constructor.call(this);
+      Domain.__super__.constructor.apply(this, arguments);
       if (this.url && this.getWorkerURL) {
         if (this.url && (this.url = typeof this.getWorkerURL === "function" ? this.getWorkerURL(this.url) : void 0)) {
           if (engine !== this) {
@@ -22703,15 +22725,13 @@ Domain = (function(_super) {
   }
 
   Domain.prototype.setup = function(hidden) {
-    var _base;
     if (hidden == null) {
       hidden = this.immutable;
     }
     this.variables || (this.variables = {});
     this.bypassers || (this.bypassers = {});
-    if (!this.hasOwnProperty('watchers')) {
+    if (!this.hasOwnProperty('signatures')) {
       this.Operation = new this.Operation.constructor(this);
-      this.signatures = new this.Signatures(this);
       this.watchers = {};
       this.observers = {};
       this.paths = {};
@@ -22723,7 +22743,6 @@ Domain = (function(_super) {
       if (!this.hasOwnProperty('values')) {
         this.values = {};
       }
-      (_base = this.engine).domains || (_base.domains = []);
       if (!hidden && this.domain !== this.engine) {
         if (this.domains.indexOf(this) === -1) {
           this.domains.push(this);
@@ -23596,7 +23615,7 @@ Domain = (function(_super) {
   };
 
   Domain.compile = function(domains, engine) {
-    var EngineDomain, EngineDomainWrapper, domain, name, _base, _ref;
+    var EngineDomain, EngineDomainWrapper, domain, name, property, value, _base, _ref;
     for (name in domains) {
       if (!__hasProp.call(domains, name)) continue;
       domain = domains[name];
@@ -23604,7 +23623,7 @@ Domain = (function(_super) {
         continue;
       }
       EngineDomain = engine[name] = function(object) {
-        var Methods, Properties, events, property, value, _ref1, _ref2;
+        var Properties, events, property, value, _ref1, _ref2;
         if (object) {
           for (property in object) {
             value = object[property];
@@ -23629,19 +23648,18 @@ Domain = (function(_super) {
           }
           this.events = events;
         }
-        if (this.Wrapper) {
-          this.Wrapper.compile(this.Methods.prototype, this);
-        }
-        this.Method.compile(this.Methods.prototype, this);
-        Methods = this.Methods;
-        this.methods = new Methods;
         this.Property.compile(this.Properties.prototype, this);
         Properties = this.Properties;
         this.properties = new (Properties || Object);
         return Domain.prototype.constructor.call(this, engine);
       };
-      EngineDomainWrapper = engine.mixin(engine, domain);
+      EngineDomainWrapper = function() {};
+      EngineDomainWrapper.prototype = engine;
       EngineDomain.prototype = new EngineDomainWrapper;
+      for (property in domain) {
+        value = domain[property];
+        EngineDomain.prototype[property] = value;
+      }
       if (!domain.prototype.solve) {
         (_base = EngineDomain.prototype).solve || (_base.solve = Domain.prototype.solve);
       }
@@ -23659,39 +23677,6 @@ Domain = (function(_super) {
   return Domain;
 
 })(Trigger);
-
-Domain.prototype.Methods = (function() {
-  function Methods() {}
-
-  Methods.prototype.value = {
-    command: function(engine, operation, continuation, scope, value, contd, hash, exported, scoped) {
-      var uid, variable, _base, _base1, _base2, _name;
-      if (engine.suggest && engine.solver) {
-        variable = ((_base = operation.parent).suggestions || (_base.suggestions = {}))[operation.index];
-        if (!variable) {
-          (_base1 = Domain.prototype.Methods).uids || (_base1.uids = 0);
-          uid = ++Domain.prototype.Methods.uids;
-          variable = (_base2 = operation.parent.suggestions)[_name = operation.index] || (_base2[_name] = engine.declare(null, operation));
-          variable.suggest = value;
-          variable.operation = operation;
-          this.constrained || (this.constrained = []);
-        }
-        return variable;
-      }
-      if (!continuation && contd) {
-        return engine.solve(operation.parent, contd, engine.identity.solve(scoped), operation.index, value);
-      }
-      return value;
-    }
-  };
-
-  Methods.prototype.framed = function(value) {
-    return value;
-  };
-
-  return Methods;
-
-})();
 
 module.exports = Domain;
 
@@ -23859,7 +23844,7 @@ Property = function(property, reference, properties) {
 };
 
 Property.compile = function(properties, engine) {
-  var key, prop, property, _name, _name1;
+  var key, property;
   properties.engine || (properties.engine = engine);
   for (key in properties) {
     if (!__hasProp.call(properties, key)) continue;
@@ -23867,17 +23852,7 @@ Property.compile = function(properties, engine) {
     if (key === 'engine') {
       continue;
     }
-    prop = this.call(engine, property, key, properties);
-    if (engine[_name = '_' + key] == null) {
-      engine[_name] = prop;
-    }
-  }
-  for (key in properties) {
-    if (!__hasProp.call(properties, key)) continue;
-    property = properties[key];
-    if (engine[_name1 = '_' + key] == null) {
-      engine[_name1] = property;
-    }
+    this.call(engine, property, key, properties);
   }
   return properties;
 };
@@ -25429,11 +25404,11 @@ Numeric = (function(_super) {
 
 })(Domain);
 
-Numeric.Value = Command.extend.call(Value);
+Numeric.Value = Value.extend();
 
-Numeric.Value.Solution = Command.extend.call(Value.Solution);
+Numeric.Value.Solution = Value.Solution.extend();
 
-Numeric.Value.Variable = Command.extend.call(Value.Variable, {
+Numeric.Value.Variable = Value.Variable.extend({
   group: 'linear'
 }, {
   get: function(path, tracker, scoped, engine, operation, continuation, scope) {
@@ -25463,7 +25438,7 @@ Numeric.Value.Variable = Command.extend.call(Value.Variable, {
   }
 });
 
-Numeric.Value.Expression = Command.extend.call(Value.Expression({
+Numeric.Value.Expression = Value.Expression.extend({
   group: 'linear'
 }, {
   "+": function(left, right) {
@@ -25478,7 +25453,7 @@ Numeric.Value.Expression = Command.extend.call(Value.Expression({
   "/": function(left, right) {
     return left / right;
   }
-}));
+});
 
 module.exports = Numeric;
 
@@ -25494,7 +25469,7 @@ Value = require('../commands/Value');
 
 Constraint = require('../commands/Constraint');
 
-Assignment = require('../commands/Constraint');
+Assignment = require('../commands/Assignment');
 
 Abstract = (function(_super) {
   __extends(Abstract, _super);
@@ -25511,6 +25486,8 @@ Abstract = (function(_super) {
   return Abstract;
 
 })(Domain);
+
+Abstract.Default = Command.extend();
 
 Abstract.Value = Command.extend.call(Value);
 
@@ -25648,7 +25625,7 @@ Boolean.Constraint = Constraint.extend({}, {
   }
 });
 
-Boolean.Value = Command.extend.call(Value.Variable, {}, {
+Boolean.Value = Value.Variable.extend({}, {
   get: function(property, engine) {
     var path;
     path = engine.Variable.getPath(object, property);
@@ -26020,25 +25997,26 @@ Document = (function(_super) {
   Document.prototype.disconnected = true;
 
   function Document() {
-    var _base, _base1, _base2, _base3, _base4, _base5, _base6;
-    (_base = this.engine).positions || (_base.positions = new this.Positions(this));
-    (_base1 = this.engine).stylesheets || (_base1.stylesheets = new this.Stylesheet(this));
-    (_base2 = this.engine).queries || (_base2.queries = new this.Queries(this));
-    (_base3 = this.engine).pairs || (_base3.pairs = new this.Pairs(this));
-    (_base4 = this.engine).mutations || (_base4.mutations = new this.Mutations(this));
-    (_base5 = this.engine).applier || (_base5.applier = this.engine.positions);
-    (_base6 = this.engine).scope || (_base6.scope = document);
-    this.engine.all = this.engine.scope.getElementsByTagName('*');
+    var engine;
+    engine = this.engine;
+    engine.positions || (engine.positions = new this.Positions(this));
+    engine.stylesheets || (engine.stylesheets = new this.Stylesheet(this));
+    engine.queries || (engine.queries = new this.Queries(this));
+    engine.pairs || (engine.pairs = new this.Pairs(this));
+    engine.mutations || (engine.mutations = new this.Mutations(this));
+    engine.applier || (engine.applier = engine.positions);
+    engine.scope || (engine.scope = document);
+    engine.all = engine.scope.getElementsByTagName('*');
     if (this.scope.nodeType === 9 && ['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
-      this.scope.addEventListener('DOMContentLoaded', this.engine);
-      document.addEventListener('readystatechange', this.engine);
-      window.addEventListener('load', this.engine);
+      this.scope.addEventListener('DOMContentLoaded', engine);
+      document.addEventListener('readystatechange', engine);
+      window.addEventListener('load', engine);
     } else if (this.running) {
       this.events.compile.call(this);
     }
-    this.scope.addEventListener('scroll', this.engine, true);
+    this.scope.addEventListener('scroll', engine, true);
     if (typeof window !== "undefined" && window !== null) {
-      window.addEventListener('resize', this.engine);
+      window.addEventListener('resize', engine);
     }
     Document.__super__.constructor.apply(this, arguments);
   }
@@ -26322,11 +26300,11 @@ Linear.Constraint = Command.extend.call(Constraint, {}, {
   }
 });
 
-Linear.Value = Command.extend.call(Value);
+Linear.Value = Value.extend();
 
-Linear.Value.Solution = Command.extend.call(Value.Solution);
+Linear.Value.Solution = Value.Solution.extend();
 
-Linear.Value.Variable = Command.extend.call(Value.Variable, {
+Linear.Value.Variable = Value.Variable.extend({
   group: 'linear'
 }, {
   get: function(path, tracker, engine, operation, continuation, scope) {
@@ -26346,7 +26324,7 @@ Linear.Value.Variable = Command.extend.call(Value.Variable, {
   }
 });
 
-Linear.Value.Expression = Command.extend.call(Value.Expression({
+Linear.Value.Expression = Value.Expression.extend({
   group: 'linear'
 }, {
   '+': function(left, right) {
@@ -26361,7 +26339,7 @@ Linear.Value.Expression = Command.extend.call(Value.Expression({
   '/': function(left, right) {
     return c.divide(left, right);
   }
-}));
+});
 
 Linear.hack = function() {
   var obj, property, set;
@@ -26447,15 +26425,15 @@ Finite.Constraint = Constraint.extend({}, {
   }
 });
 
-Finite.Value = Command.extend.call(Value);
+Finite.Value = Value.extend();
 
-Finite.Value.Solution = Command.extend.call(Value.Solution);
+Finite.Value.Solution = Value.extend();
 
-Finite.Value.Variable = Command.extend.call(Value.Variable, {
+Finite.Value.Variable = Value.Variable.extend({
   group: 'finite'
 });
 
-Finite.Value.Expression = Command.extend.call(Value.Expression, {
+Finite.Value.Expression = Value.Expression.extend({
   group: 'finite'
 }, {
   '+': function(left, right) {
@@ -28367,7 +28345,11 @@ Signatures = (function() {
   };
 
   Signatures.prototype.permute = function(arg, permutation) {
-    var group, i, index, j, keys, position, values, _i, _j, _k, _l, _len, _len1, _name, _ref, _ref1, _ref2;
+    var group, i, index, j, keys, position, values, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2;
+    if ((permutation != null ? permutation.length : void 0) === 2) {
+      debugger;
+    }
+    console.log(arg, permutation, 123);
     keys = Object.keys(arg);
     if (!permutation) {
       return keys;
@@ -28382,7 +28364,10 @@ Signatures = (function() {
     }
     for (i = _j = _ref = permutation.length, _ref1 = keys.length; _j < _ref1; i = _j += 1) {
       for (j = _k = 0, _ref2 = keys.length; _k < _ref2; j = _k += 1) {
-        group[_name = keys[j]] || (group[_name] = keys[j]);
+        if (group[j] == null) {
+          group[j] = keys[i];
+          break;
+        }
       }
     }
     for (_l = 0, _len1 = group.length; _l < _len1; _l++) {
@@ -28416,15 +28401,15 @@ Signatures = (function() {
     return 1;
   };
 
-  Signatures.prototype.set = function(command, types, signature, method, index, permutation, shifts) {
-    var arg, argument, group, i, j, k, keys, next, obj, permutable, property, type, _i, _j, _k, _l, _len, _len1, _len2, _ref, _results;
+  Signatures.prototype.set = function(command, types, signature, step, index, permutation, shifts) {
+    var arg, argument, group, i, j, k, keys, next, obj, permutable, property, proto, type, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref, _ref1, _ref2;
     if (!signature) {
       for (type in types) {
-        if (command[type]) {
-          this.sign(command, types, typed[type].prototype, method);
+        if (proto = (_ref = command[type]) != null ? _ref.prototype : void 0) {
+          this.sign(command[type], types, proto, step);
         }
       }
-      this.sign(command, types, command, method);
+      this.sign(command, types, command.prototype, step);
       return;
     }
     i = index;
@@ -28437,24 +28422,26 @@ Signatures = (function() {
           j = 0;
           group = arg;
           for (property in obj) {
-            if (!--i) {
+            if (!i) {
+              arg = obj;
               if (!(keys = this.permute(arg, permutation))) {
                 return;
               }
-              arg = obj;
               argument = arg[property];
               break seeker;
             }
+            i--;
             j++;
           }
         }
       } else {
         j = void 0;
         for (property in arg) {
-          if (!--i) {
+          if (!i) {
             argument = arg[property];
             break seeker;
           }
+          i--;
         }
       }
     }
@@ -28467,28 +28454,30 @@ Signatures = (function() {
       if (j != null) {
         permutation || (permutation = []);
         permutable = this.isPermutable(arg, property, keys);
-        if (permutable > 0) {
-          for (i = _k = 0, _ref = keys.length; _k < _ref; i = _k += 1) {
-            if (i !== j && permutation.indexOf(i) === -1) {
-              this.set(command, types, signature, step, index + 1, permutation.concat(i), shifts);
+        if (permutable >= 0) {
+          for (i = _k = 0, _ref1 = keys.length; _k < _ref1; i = _k += 1) {
+            if (permutation.indexOf(i) === -1) {
+              if (permutable > 0 || i === index) {
+                _ref2 = arg[keys[index]];
+                for (_l = 0, _len2 = _ref2.length; _l < _len2; _l++) {
+                  type = _ref2[_l];
+                  next = step[type] || (step[type] = {});
+                  this.set(command, types, signature, next, index + 1, permutation.concat(i), shifts);
+                }
+              }
             }
           }
         }
         this.set(command, types, signature, step, index + 1, permutation.concat(-1), shifts);
-        if (permutable < 0) {
-          return;
-        }
-      } else {
-
+        return;
       }
     }
-    _results = [];
-    for (_l = 0, _len2 = argument.length; _l < _len2; _l++) {
-      type = argument[_l];
-      next = step[type] = {};
-      _results.push(this.set(command, types, signature, next, index + 1, permutation, shifts));
+    for (_m = 0, _len3 = argument.length; _m < _len3; _m++) {
+      type = argument[_m];
+      next = step[type] || (step[type] = {});
+      this.set(command, types, signature, next, index + 1, permutation, shifts);
     }
-    return _results;
+    return this;
   };
 
   return Signatures;
@@ -29128,8 +29117,12 @@ module.exports = Console;
 
 });
 require.register("gss/lib/utilities/Exporter.js", function(exports, require, module){
-({
-  preexport: function() {
+var Exporter;
+
+Exporter = (function() {
+  function Exporter() {}
+
+  Exporter.prototype.preexport = function() {
     var baseline, element, height, match, pairs, scope, width, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6,
       _this = this;
     if ((scope = this.scope).nodeType === 9) {
@@ -29183,8 +29176,9 @@ require.register("gss/lib/utilities/Exporter.js", function(exports, require, mod
         }
       }
     }
-  },
-  postexport: function() {
+  };
+
+  Exporter.prototype.postexport = function() {
     var property, result, size, value, _i, _len, _ref;
     _ref = this.sizes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -29202,8 +29196,9 @@ require.register("gss/lib/utilities/Exporter.js", function(exports, require, mod
       }
     }
     return document.write(JSON.stringify(result));
-  },
-  "export": function() {
+  };
+
+  Exporter.prototype["export"] = function() {
     var id, index, path, property, value, values, _ref;
     values = {};
     _ref = this.values;
@@ -29221,8 +29216,13 @@ require.register("gss/lib/utilities/Exporter.js", function(exports, require, mod
     }
     values.stylesheets = this.stylesheets["export"]();
     return values;
-  }
-});
+  };
+
+  return Exporter;
+
+})();
+
+module["export"] = Exporter;
 
 });
 require.register("gss/lib/utilities/Inspector.js", function(exports, require, module){

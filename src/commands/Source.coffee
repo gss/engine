@@ -12,7 +12,7 @@ class Source extends Command
   ]
   
   
-Command.define.call Source 
+Source.define
   # Evaluate stylesheet
   "eval": 
     command: (node, type = 'text/gss', engine, operation, continuation, scope) ->

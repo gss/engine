@@ -15,9 +15,9 @@ class Numeric extends Domain
   # Numeric domains usually dont use worker
   url: null
 
-Numeric.Value            = Command.extend.call Value
-Numeric.Value.Solution   = Command.extend.call Value.Solution
-Numeric.Value.Variable   = Command.extend.call Value.Variable, {group: 'linear'},
+Numeric.Value            = Value.extend()
+Numeric.Value.Solution   = Value.Solution.extend()
+Numeric.Value.Variable   = Value.Variable.extend {group: 'linear'},
   get: (path, tracker, scoped, engine, operation, continuation, scope) ->
     domain = engine.Variable.getDomain(operation, true, true)
     if !domain || domain.priority < 0
@@ -38,7 +38,7 @@ Numeric.Value.Variable   = Command.extend.call Value.Variable, {group: 'linear'}
       scoped = scope
     return domain.watch(null, path, operation, engine.Continuation(continuation || contd || ""), scoped)
     
-Numeric.Value.Expression = Command.extend.call Value.Expression {group: 'linear'},
+Numeric.Value.Expression = Value.Expression.extend {group: 'linear'},
 
   "+": (left, right) ->
     return left + right

@@ -29,8 +29,9 @@ class Domain extends Trigger
       @displayName  = name   if name
       @url          = url    if url
       @values       = {} unless @hasOwnProperty('values')
+      @signatures   = new @Signatures(@)
       @merge(values)         if values
-      Events::constructor.call(@)
+      super
 
       if @url && @getWorkerURL
         if @url && (@url = @getWorkerURL?(@url))
@@ -45,9 +46,8 @@ class Domain extends Trigger
   setup: (hidden = @immutable) ->
     @variables   ||= {}
     @bypassers   ||= {}
-    unless @hasOwnProperty('watchers')
+    unless @hasOwnProperty('signatures')
       @Operation   = new @Operation.constructor(@) 
-      @signatures  = new @Signatures(@)
       @watchers    = {}
       @observers   = {}
       @paths       = {}
@@ -55,7 +55,6 @@ class Domain extends Trigger
       @substituted = []
       @constraints = []
       @values       = {} unless @hasOwnProperty('values')
-      @engine.domains ||= []
       if !hidden && @domain != @engine
         if @domains.indexOf(@) == -1
           @domains.push(@)
@@ -688,21 +687,19 @@ class Domain extends Trigger
           for property, value of @events
             events[property] = value
           @events = events
-
-        @Wrapper.compile @Methods::, @ if @Wrapper
-
-        @Method.compile  @Methods::, @
-        Methods = @Methods
-        @methods = new Methods
-
+        
         @Property.compile @Properties::, @
         Properties = @Properties
         @properties  = new (Properties || Object)
 
         return Domain::constructor.call(@, engine)
-
-      EngineDomainWrapper       = engine.mixin(engine, domain)
+        
+      
+      EngineDomainWrapper = ->
+      EngineDomainWrapper.prototype = engine
       EngineDomain.prototype    = new EngineDomainWrapper
+      for property, value of domain
+        EngineDomain::[property] = value
       EngineDomain::solve     ||= Domain::solve unless domain::solve
       EngineDomain::displayName = name
       EngineDomain.displayName  = name
@@ -711,29 +708,6 @@ class Domain extends Trigger
     @
 
   DONE: 'solve'
-
-class Domain::Methods
-  value: 
-    command: (engine, operation, continuation, scope, value, contd, hash, exported, scoped) ->
-      if engine.suggest && engine.solver
-        variable = (operation.parent.suggestions ||= {})[operation.index]
-        unless variable
-          Domain::Methods.uids ||= 0
-          uid = ++Domain::Methods.uids
-          variable = operation.parent.suggestions[operation.index] ||= engine.declare(null, operation)
-          variable.suggest = value
-          variable.operation = operation
-
-          @constrained ||= []
-        return variable
-
-      if !continuation && contd
-        return engine.solve operation.parent, contd, engine.identity.solve(scoped), operation.index, value
-      return value
-
-  framed: (value) ->
-    return value
-
   
 module.exports = Domain
 

@@ -111,9 +111,9 @@ Linear.Constraint = Command.extend.call Constraint, {},
   '>': (left, right, strength, weight, engine) ->
     return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
 
-Linear.Value            = Command.extend.call Value
-Linear.Value.Solution   = Command.extend.call Value.Solution
-Linear.Value.Variable   = Command.extend.call Value.Variable, {group: 'linear'},
+Linear.Value            = Value.extend()
+Linear.Value.Solution   = Value.Solution.extend()
+Linear.Value.Variable   = Value.Variable.extend {group: 'linear'},
   get: (path, tracker, engine, operation, continuation, scope) ->
     variable = engine.declare(path, operation)
     if variable.constraints
@@ -123,7 +123,7 @@ Linear.Value.Variable   = Command.extend.call Value.Variable, {group: 'linear'},
           return variable.value 
     return [path, tracker || '']
     
-Linear.Value.Expression = Command.extend.call Value.Expression {group: 'linear'},
+Linear.Value.Expression = Value.Expression.extend {group: 'linear'},
 
   '+': (left, right) ->
     return c.plus(left, right)

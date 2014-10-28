@@ -19,6 +19,9 @@ class Signatures
         @set command, types, signature, step, 0
         
   permute: (arg, permutation) ->
+    if permutation?.length == 2
+      debugger
+    console.log(arg, permutation, 123)
     keys = Object.keys(arg)
     return keys unless permutation
     values = Object.keys(arg)
@@ -32,7 +35,9 @@ class Signatures
     # Fill blank spots with     
     for i in [permutation.length ... keys.length] by 1
       for j in [0 ... keys.length] by 1
-        group[keys[j]] ||= keys[j]
+        unless group[j]?
+          group[j] = keys[i]
+          break
           
     # Validate that there're no holes
     for arg in group
@@ -58,13 +63,13 @@ class Signatures
         
     
   # Generate a lookup structure to find method definition by argument signature
-  set: (command, types, signature, method, index, permutation, shifts) ->
+  set: (command, signature, types, index, permutation, shifts) ->
     # Lookup subtype and catch-all signatures
-    unless signature
-      for type of types
-        if command[type]
-          @sign command, types, typed[type].prototype, method
-      @sign command, types, command, method
+    unless signature.push
+      for type of signature
+        if proto = command[type]?.prototype
+          @sign command[type], types, proto, step
+      @sign command, types, command.prototype, step
       return
       
     i = index
@@ -77,19 +82,21 @@ class Signatures
           j = 0
           group = arg
           for property of obj
-            unless --i
+            unless i
+              arg = obj
               unless keys = @permute(arg,  permutation)
                 return
-              arg = obj
               argument = arg[property]
               `break seeker`
+            i--
             j++
       else
         j = undefined
         for property of arg
-          unless --i
+          unless i
             argument = arg[property]
             `break seeker`
+          i--
     `}`
     
     # End of signature
@@ -102,19 +109,17 @@ class Signatures
       if j?
         permutation ||= []
         permutable = @isPermutable(arg, property, keys)
-        if permutable > 0
+        if permutable >= 0
           for i in [0 ... keys.length] by 1
-            if i != j && permutation.indexOf(i) == -1
-              @set command, types, signature, step, index + 1, permutation.concat(i), shifts
+            if permutation.indexOf(i) == -1
+              if permutable > 0 || i == index
+                @set command, types, signature, arg[property], index + 1, permutation.concat(i), shifts
       
-        @set command, types, signature, step, index + 1, permutation.concat(-1), shifts
-        if permutable < 0
-          return
-      else 
-    
+        @set command, types, signature, arg[property], index + 1, permutation.concat(-1), shifts
+        return
+        
     # Register all input types for given arguments
     for type in argument
-      next = step[type] = {}
-      @set command, types, signature, next, index + 1, permutation, shifts
-  
+      @set command, types, signature, step, index + 1, permutation, shifts
+    @
 module.exports = Signatures

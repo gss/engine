@@ -22,7 +22,7 @@ class Iterator extends Command
       return true
 
   
-Command.define.call Iterator 
+Iterator.define
   # CSS rule
   
   "rule":

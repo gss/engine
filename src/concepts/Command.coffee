@@ -1,19 +1,17 @@
 # Return command definition (or instance) for given operation
 # by arguments type signature. 
 class Command 
-  constructor: ->
-    return (engine, operation, initial) ->
-      unless command = operation.command || command.instance
-        if initial
-          match = Command.match(operation)
-        if typeof operation[0] == 'string'
-          if !match.group || !(command = Command.reduce(engine, operation, match))
-            command = new match(operation)
-            unless command.key
-              command.instance = instance
-        operation.command = command
-      
-      return command
+  constructor: (operation) ->
+    unless command = operation.command
+      match = Command.match(@, operation)
+      if typeof operation[0] == 'string'
+        if !match.group || !(command = Command.reduce(@, operation, match))
+          command = match.instance || new match(operation)
+          unless match.key
+            match.instance = command
+      operation.command = command
+    
+    return command
   
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index) ->
@@ -21,26 +19,35 @@ class Command
     operation.index = index
     
     if typeof operation[0] == 'string'
-      signature = engine.methods[operation[0]]
-       
-    i = -1
+      unless signature = engine.signatures[operation[0]]
+        if engine.Default
+          return engine.Default
+        else
+          throw operation[0] + ' is not defined'
+      i = 0
+    else
+      i = -1
     j = operation.length
     while ++i < j
       argument = operation[i]
       if argument?.push
-        type = engine.Command(argument, true).type
+        type = engine.Command(argument).type
       else
         type = @types[typeof argument]
-        
+
       if match = signature[type]
         signature = match
+      else if engine.Default
+        return engine.Default
       else
-        throw "Unexpected " + cmd + " in " + operation[0]
-    
-    
-    
-    return command
-    
+        throw "Unexpected " + type + " in " + operation[0]
+    if command = signature.resolved
+      return command 
+    else if engine.Default
+      return engine.Default
+    else
+      throw "Too few arguments in" + operation[0]
+      
       
   solve: (engine, operation, continuation, scope = @engine.scope, ascender, ascending) ->
     # Analyze operation
@@ -240,17 +247,20 @@ class Command
        
   # Define command subclass
   @extend: (definition, methods) ->
+    Kommand = ->
+    Kommand.__super__ = @
+    Prototype = ->
+    Prototype.prototype = @prototype
+    Kommand.prototype = new Prototype
     
-    class Extended extends @
-    
-      # Define given properties on a prototype  
-      for property, value of definition
-        @prototype[property] = value
+    # Define given properties on a prototype  
+    for property, value of definition
+      Kommand.prototype[property] = value
       
     if methods
-      Command.define.call(Extended, methods)
+      Command.define.call(Kommand, methods)
       
-    return Extended
+    return Kommand
       
   # Define subclasses for given methods
   @define: (name, options) ->
@@ -275,19 +285,28 @@ class Command
   
   # Find defined command signatures in the engine and register their methods
   @compile: (engine, command) ->
-    unless Command
+    unless command
       for property, value of engine
         if (proto = value?.prototype)? && proto instanceof Command
-          @compile(engine, value)
+          if property.match /^[A-Z]/
+            @compile(engine, value)
       return
   
-    Types = {}
+    unless Types = command.types
+      Types = command.types = {}
+      for property, value of command
+        if property.match /^[A-Z]/
+          if value?.prototype instanceof Command
+            @compile engine, value
+            command.types[property] = value
+            
+            
     for property, value of command
-      if value?.prototype instanceof command
-        Types[property] = value
-    for property, value of command
-      unless value?.prototype instanceof command
-        engine.signatures.set value, Types
+      if value != Command[property] && property != '__super__'
+        if typeof value == 'function'
+          if value?.prototype instanceof Command
+            unless property.match /^[A-Z]/
+              engine.signatures.set value, Types, (engine.signatures[property] ||= {})
       
     @Types = Types
       

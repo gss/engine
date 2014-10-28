@@ -53,7 +53,7 @@ class Engine extends Domain
       switch typeof argument
         when 'object'
           if argument.nodeType
-            if @Evaluator
+            if @Command
               Engine[Engine.identity.provide(argument)] = @
               @scope = scope = argument
             else
@@ -71,7 +71,7 @@ class Engine extends Domain
 
     # **GSS()** creates new Engine at the root, 
     # if there is no engine assigned to it yet
-    unless @Evaluator
+    unless @Command
       return new Engine(arguments[0], arguments[1], arguments[2])
 
     # Create instance own objects and context objects.
@@ -81,9 +81,12 @@ class Engine extends Domain
     # right before first commands are executed
     super(@, url)
     
+    @domains      = []
     @domain       = @
     @properties   = new @Properties(@)
+    @signatures   = new @Signatures(@)
     @inspector    = new @Inspector(@)
+    
 
     @precompile()
  
@@ -336,7 +339,7 @@ class Engine extends Domain
     if @scope
       @dispatchEvent(@scope, 'solved', @updated.solution, @updated)
     
-    @debugger.update(@)
+    @inspector.update(@)
         
     
     return @updated.solution
@@ -486,17 +489,7 @@ class Engine extends Domain
 
   # Compile initial domains and shared engine features 
   precompile: ->
-    if @constructor::running == undefined
-      for property, method of @Methods::
-        @constructor::[property] ||= 
-        @constructor[property] ||= Engine::Method(method, property)
-      @constructor::compile()
     @Domain.compile(@Domains,   @)
-    for name, domain of @Domains
-      if domain::helps
-        for property, method of domain::Methods::
-          @constructor::[property] ||= 
-          @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
     @update = Engine::Update.compile(@)
     @mutations?.connect(true)
 
@@ -532,15 +525,13 @@ class Engine extends Domain
 
   # Comile user provided features specific to this engine
   compile: (state) ->
-    methods    = @methods    || @Methods::
-    properties = @properties || @Properties::
-    @Method  .compile(methods,    @)
-    @Property.compile(properties, @)
-    
+    if state
+      for name of @Domains
+        if domain = @[name.toLowerCase()]
+          @Command.compile domain
+        
     @console.compile(@)
-
     @running = state ? null
-    
     @triggerEvent('compile', @)
   
 Engine.Continuation = Engine::Continuation

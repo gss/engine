@@ -16,7 +16,6 @@ Property = (property, reference, properties) ->
         else
           path = reference + '[' + key + ']'
 
-
         properties[path] = @Property(value, path, properties)
   return property
 
@@ -24,11 +23,7 @@ Property.compile = (properties, engine) ->
   properties.engine ||= engine
   for own key, property of properties
     continue if key == 'engine'
-    prop = @call(engine, property, key, properties)
-    engine['_' + key] ?= prop
-
-  for own key, property of properties
-    engine['_' + key] ?= property
+    @call(engine, property, key, properties)
   return properties
 
 module.exports = Property

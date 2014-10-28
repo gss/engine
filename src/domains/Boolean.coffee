@@ -32,7 +32,7 @@ Boolean.Constraint = Constraint.extend {},
   ">": (a, b) ->
     return a > b
 
-Boolean.Value = Command.extend.call Value.Variable, {}, 
+Boolean.Value = Value.Variable.extend {}, 
   get: (property, engine) ->
     path = engine.Variable.getPath(object, property)
     if engine.intrinsic.properties[path]
