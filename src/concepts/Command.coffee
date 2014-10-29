@@ -308,6 +308,7 @@ class Command
                 signed = value.__super__.signed ||= {displayName: property}
                 engine.signatures.set value, (signed ||= {displayName: property}), value, Types
               engine.signatures.apply engine.signatures[property] ||= {}, signed
+              console.log(signed, property)
     @Types = Types
       
     @

@@ -4,8 +4,15 @@ Generate lookup structures to match methods by name and argument type signature
 
 Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Value']['Number']`
 
-Dispatcher support css-style typed optional argument groups, but has no support for keywords yet
-### 
+A matched signature returns customized class for an operation that can further 
+pick a sub-class dynamically. Signatures allows special case optimizations and 
+composition to be coded as a structural composition, instead of branching in runtime.
+
+Signatures are shared between commands. Dispatcher support css-style 
+typed optional argument groups, but has no support for keywords yet
+###
+Command = require('../concepts/Command')
+
 class Signatures
   
   constructor: (@engine) ->
@@ -42,23 +49,9 @@ class Signatures
         return
         
     return group
-    
-  # Check if argument can be removed or moved around within its group
-  isPermutable: (group, property, keys) ->
-    types = group[property]
-    for prop, value of group
-      if property == prop
-        break
-      for type in value
-        if types.indexOf(type) > -1
-          if keys.indexOf(prop) == -1
-            return -1 #can only be ommited
-          else
-            return 0 #omitable
-          
-    return 1 #movable
 
-  getPermutation: (args, properties, signature) ->
+  # Return array of key names for current permutation
+  getPermutation: (args, properties) ->
     result = []
     for arg, index in args
       unless arg == null
@@ -68,13 +61,18 @@ class Signatures
         result.splice(index, 1)
     return result
 
+  # Return array with positions for given argument signature
   getPositions: (args) ->
     result = []
     for value, index in args
       if value?
         result[value] = index
+    for arg, index in result by -1
+      unless arg?
+        result.splice(index, 1)
     return result
 
+  # Return array of keys for a full list of arguments
   getProperties: (signature) ->
     if properties = signature.properties
       return properties
@@ -88,20 +86,29 @@ class Signatures
         for property, definition of arg
           properties.push(definition)
     return properties
-        
-  write: (args, command, storage, properties, i = 0)->
-    while (props = properties[i]) == undefined && i < args.length
+
+  generate: (combinations, command, storage, positions, properties, i = 0) ->
+
+    while (props = properties[i]) == undefined && i < properties.length
       i++
-    if i == args.length
+
+    if i == properties.length
       return if storage.resolved
-      storage.resolved = command
-      storage.permutation = @getPositions(args)
+      storage.resolved = Command.extend.call command,
+        permutation: positions
     else
       for type in properties[i]
-        @write args, command, storage[type] ||= {}, properties, i + 1
+        @generate combinations, command, storage, positions, properties, i + 1
+        
+  # Create actual nested lookup tables for argument types
+  write: (args, command, storage, positions, properties)->
+    combinations = []
+    @generate combinations, command, storage, positions, properties
+
 
     return
 
+  # Write cached lookup tables into a given storage (register method by signature)
   apply: (storage, signature) ->
     for property, value of signature
       if typeof value == 'object'
@@ -114,9 +121,7 @@ class Signatures
   set: (command, storage, signature, args, permutation, types) ->
     # Lookup subtype and catch-all signatures
     unless signature.push
-      debugger
       for type of types
-        console.error('SYBCLASIN LIKE A PRO', type, command[type])
         if proto = command[type]?.prototype
           @sign command[type], storage, proto
       @sign command, storage, command.prototype
@@ -153,22 +158,21 @@ class Signatures
     
     # End of signature
     unless argument
-      @write args, command, storage, @getPermutation(args, @getProperties(signature))
+      @write args, command, storage, @getPositions(args), @getPermutation(args, @getProperties(signature))
       return
       
     # Permute optional argument within its group
     if keys && j?
       permutation ||= []
-      permutable = @isPermutable(arg, property, keys)
-      if permutable >= 0
-        for i in [0 ... keys.length] by 1
-          if permutation.indexOf(i) == -1
-            @set command, storage, signature, args.concat(args.length - j + i), permutation.concat(i)
-    
+      
+      for i in [0 ... keys.length] by 1
+        if permutation.indexOf(i) == -1
+          @set command, storage, signature, args.concat(args.length - j + i), permutation.concat(i)
+  
       @set command, storage, signature, args.concat(null), permutation.concat(null)
       return
         
     # Register all input types for given arguments
-    @set command, storage, signature, args.concat(args.length), permutation
+    @set command, storage, signature, args.concat(args.length)
 
 module.exports = Signatures
