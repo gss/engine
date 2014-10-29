@@ -4,8 +4,6 @@ assert = chai.assert
 
 
 describe 'Signatures', ->
-  scope = null
-  engine = null
     
   PrimitiveCommand = GSS::Command.extend {
     signature: [
@@ -24,6 +22,24 @@ describe 'Signatures', ->
     ]]
   }, {
     'unordered': () ->
+  }
+
+  OptionalGroupCommand = GSS::Command.extend {
+    signature: [
+      left: ['Value']]
+      [
+        a: ['String']
+        b: ['Number']
+      ]
+      right: ['Number']
+      [
+        c: ['Number']
+      ]
+    ]
+
+    ]
+  }, {
+    'optional': () ->
   }
   
 
@@ -79,7 +95,7 @@ describe 'Signatures', ->
 
     describe 'with variables', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['unordered', ['get', 'test']])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['unordered', ['get', 'test']])).to.be.an.instanceof(UnorderedCommand.unordered)
         expect(engine.abstract.Command(['unordered', ['get', 'test'], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
         expect(engine.abstract.Command(['unordered', ['get', 'test'], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
         expect(engine.abstract.Command(['unordered', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(UnorderedCommand.unordered)
@@ -87,11 +103,43 @@ describe 'Signatures', ->
     
     describe 'with expressions', ->
       it 'should match property function definition', ->
-        expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1]])).to.be.an.instanceof(UnorderedCommand.unordered)
         expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
         expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
         expect(engine.abstract.Command(['unordered', ['+',  ['get', 'test'], 1], ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(UnorderedCommand.unordered)
-        expect(engine.abstract.Command(['undeclared', ['+',  ['get', 'test'], 1] 10])).to.be.an.instanceof(engine.abstract.Default)
+        expect(engine.abstract.Command(['undeclared', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(engine.abstract.Default)
+
+  
+  describe 'dispatched with optional group between two required arguments', ->
+    engine = new GSS
+    engine.abstract.UnorderedCommand = UnorderedCommand 
+    engine.compile(true)
+    
+    describe 'and no required arguments', ->
+      it 'should match property function definition', ->
+        expect(engine.abstract.Command(['optional', 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', 'test', 10])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', 'test', 10, 20])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', 10, 'test', 20])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', 10, 20, 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', 10, 'test', 20, 30])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', 'test', 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+
+    describe 'with variables', ->
+      it 'should match property function definition', ->
+        expect(engine.abstract.Command(['optional', ['get', 'test']])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', ['get', 'test'], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', ['get', 'test'], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', ['get', 'test'], ['get', 'test']])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['undeclared', ['get', 'test'], 10])).to.be.an.instanceof(engine.abstract.Default)
+    
+    describe 'with expressions', ->
+      it 'should match property function definition', ->
+        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1]])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test', 10]])).to.be.an.instanceof(UnorderedCommand.unordered)
+        expect(engine.abstract.Command(['undeclared', ['+',  ['get', 'test'], 1], 10, 20])).to.be.an.instanceof(engine.abstract.Default)
 
 describe '', ->
   1

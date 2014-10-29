@@ -698,7 +698,7 @@ class Domain extends Trigger
       EngineDomainWrapper = ->
       EngineDomainWrapper.prototype = engine
       EngineDomain.prototype    = new EngineDomainWrapper
-      for property, value of domain
+      for property, value of domain::
         EngineDomain::[property] = value
       EngineDomain::solve     ||= Domain::solve unless domain::solve
       EngineDomain::displayName = name

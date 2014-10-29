@@ -291,23 +291,23 @@ class Command
           if property.match /^[A-Z]/
             @compile(engine, value)
       return
-  
-    unless Types = command.types
-      Types = command.types = {}
-      for property, value of command
-        if property.match /^[A-Z]/
-          if value?.prototype instanceof Command
-            @compile engine, value
-            command.types[property] = value
-            
+
+    Types = command.types = {}
+    for property, value of command
+      if property.match /^[A-Z]/
+        if value?.prototype instanceof Command
+          Types[property] = value
+          @compile engine, value
             
     for property, value of command
       if value != Command[property] && property != '__super__'
         if typeof value == 'function'
           if value?.prototype instanceof Command
             unless property.match /^[A-Z]/
-              engine.signatures.set value, Types, (engine.signatures[property] ||= {})
-      
+              unless signed = value.__super__.signed
+                signed = value.__super__.signed ||= {displayName: property}
+                engine.signatures.set value, (signed ||= {displayName: property}), value, Types
+              engine.signatures.apply engine.signatures[property] ||= {}, signed
     @Types = Types
       
     @

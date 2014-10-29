@@ -11,17 +11,14 @@ class Signatures
   constructor: (@engine) ->
     
   # Register signatures defined in a given object
-  sign: (command, types, object, step) ->
+  sign: (command, storage, object, step) ->
     if signature = object.signature
-      @set command, types, signature, step, 0
+      @set command, storage, signature, step
     else if signatures = object.signatures
       for signature in signatures
-        @set command, types, signature, step, 0
+        @set command, storage, signature, step
         
   permute: (arg, permutation) ->
-    if permutation?.length == 2
-      debugger
-    console.log(arg, permutation, 123)
     keys = Object.keys(arg)
     return keys unless permutation
     values = Object.keys(arg)
@@ -29,7 +26,7 @@ class Signatures
     
     # Put keys at their permuted places
     for position, index in permutation
-      unless position == -1
+      unless position == null
         group[position] = keys[index]
     
     # Fill blank spots with     
@@ -60,19 +57,74 @@ class Signatures
             return 0 #omitable
           
     return 1 #movable
+
+  getPermutation: (args, properties, signature) ->
+    result = []
+    for arg, index in args
+      unless arg == null
+        result[arg] = properties[index]
+    for arg, index in result by -1
+      unless arg?
+        result.splice(index, 1)
+    return result
+
+  getPositions: (args) ->
+    result = []
+    for value, index in args
+      if value?
+        result[value] = index
+    return result
+
+  getProperties: (signature) ->
+    if properties = signature.properties
+      return properties
+    signature.properties = properties = []
+    for arg in signature
+      if arg.push
+        for a in arg
+          for property, definition of a
+            properties.push(definition)
+      else
+        for property, definition of arg
+          properties.push(definition)
+    return properties
         
+  write: (args, command, storage, properties, i = 0)->
+    while (props = properties[i]) == undefined && i < args.length
+      i++
+    if i == args.length
+      return if storage.resolved
+      storage.resolved = command
+      storage.permutation = @getPositions(args)
+    else
+      for type in properties[i]
+        @write args, command, storage[type] ||= {}, properties, i + 1
+
+    return
+
+  apply: (storage, signature) ->
+    for property, value of signature
+      if typeof value == 'object'
+        @apply storage[property] ||= {}, value
+      else
+        storage[property] = value
+    return
     
   # Generate a lookup structure to find method definition by argument signature
-  set: (command, signature, types, index, permutation, shifts) ->
+  set: (command, storage, signature, args, permutation, types) ->
     # Lookup subtype and catch-all signatures
     unless signature.push
-      for type of signature
+      debugger
+      for type of types
+        console.error('SYBCLASIN LIKE A PRO', type, command[type])
         if proto = command[type]?.prototype
-          @sign command[type], types, proto, step
-      @sign command, types, command.prototype, step
+          @sign command[type], storage, proto
+      @sign command, storage, command.prototype
       return
-      
-    i = index
+
+
+    args ||= []
+    i = args.length
     
     # Find argument by index in definition
     `seeker: {`
@@ -101,25 +153,22 @@ class Signatures
     
     # End of signature
     unless argument
-      step.resolved = command
+      @write args, command, storage, @getPermutation(args, @getProperties(signature))
       return
       
     # Permute optional argument within its group
-    if keys
-      if j?
-        permutation ||= []
-        permutable = @isPermutable(arg, property, keys)
-        if permutable >= 0
-          for i in [0 ... keys.length] by 1
-            if permutation.indexOf(i) == -1
-              if permutable > 0 || i == index
-                @set command, types, signature, arg[property], index + 1, permutation.concat(i), shifts
-      
-        @set command, types, signature, arg[property], index + 1, permutation.concat(-1), shifts
-        return
+    if keys && j?
+      permutation ||= []
+      permutable = @isPermutable(arg, property, keys)
+      if permutable >= 0
+        for i in [0 ... keys.length] by 1
+          if permutation.indexOf(i) == -1
+            @set command, storage, signature, args.concat(args.length - j + i), permutation.concat(i)
+    
+      @set command, storage, signature, args.concat(null), permutation.concat(null)
+      return
         
     # Register all input types for given arguments
-    for type in argument
-      @set command, types, signature, step, index + 1, permutation, shifts
-    @
+    @set command, storage, signature, args.concat(args.length), permutation
+
 module.exports = Signatures

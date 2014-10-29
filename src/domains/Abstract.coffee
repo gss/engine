@@ -16,21 +16,23 @@ class Abstract extends Domain
     super
 
 # Catch-all class for unknown commands    
-Abstract.Default = Command.extend()
+Abstract::Default = Command.extend()
 
 # Global variable
-Abstract.Value = Command.extend.call Value
-Abstract.Value.Variable = Command.extend.call Abstract.Value, {
+Abstract::Value = Command.extend.call Value
+Abstract::Value.Variable = Command.extend.call Abstract::Value, {
   signature: [
     property: ['String']
     [tracker: ['String']]
   ],
 }, 
   'get': (property, tracker, engine, operation, continuation, scope) ->
+    continuation = engine.Continuation(continuation || tracker || '')
+
     return ['get', property, continuation, engine.identity.provide(scope)]
     
 # Scoped variable
-Abstract.Value.Getter = Command.extend.call Abstract.Value, {
+Abstract::Value.Getter = Command.extend.call Abstract::Value, {
   signature: [
     object:   ['Query']
     property: ['String']
@@ -50,7 +52,7 @@ Abstract.Value.Getter = Command.extend.call Abstract.Value, {
     return ['get', engine.getPath(id, property), continuation, engine.identity.provide(scope)]
   
 # Proxy math for axioms
-Abstract.Value.Expression = Command.extend.call Value.Expression, {},
+Abstract::Value.Expression = Command.extend.call Value.Expression, {},
   '+': (left, right) ->
     ['+', left, right]
     
@@ -64,12 +66,12 @@ Abstract.Value.Expression = Command.extend.call Value.Expression, {},
     ['*', left, right]
   
 # Constant definition
-Abstract.Assignment = Command.extend.call Assignment, {},
+Abstract::Assignment = Command.extend.call Assignment, {},
   '=': (object, name, value) ->
     @assumed.set(object, name, value)
 
 # Style assignment
-Abstract.Assignment.Unsafe = Command.extend.call Assignment.Unsafe, {},
+Abstract::Assignment.Unsafe = Command.extend.call Assignment.Unsafe, {},
   'set':
     index: ['rule', 'assignment']
     

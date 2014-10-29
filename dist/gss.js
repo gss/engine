@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-10-28) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22460,7 +22459,7 @@ Command = (function() {
   };
 
   Command.compile = function(engine, command) {
-    var Types, property, proto, value, _base;
+    var Types, property, proto, signed, value, _base, _base1;
     if (!command) {
       for (property in engine) {
         value = engine[property];
@@ -22472,15 +22471,13 @@ Command = (function() {
       }
       return;
     }
-    if (!(Types = command.types)) {
-      Types = command.types = {};
-      for (property in command) {
-        value = command[property];
-        if (property.match(/^[A-Z]/)) {
-          if ((value != null ? value.prototype : void 0) instanceof Command) {
-            this.compile(engine, value);
-            command.types[property] = value;
-          }
+    Types = command.types = {};
+    for (property in command) {
+      value = command[property];
+      if (property.match(/^[A-Z]/)) {
+        if ((value != null ? value.prototype : void 0) instanceof Command) {
+          Types[property] = value;
+          this.compile(engine, value);
         }
       }
     }
@@ -22490,7 +22487,15 @@ Command = (function() {
         if (typeof value === 'function') {
           if ((value != null ? value.prototype : void 0) instanceof Command) {
             if (!property.match(/^[A-Z]/)) {
-              engine.signatures.set(value, Types, void 0, ((_base = engine.signatures)[property] || (_base[property] = {})));
+              if (!(signed = value.__super__.signed)) {
+                signed = (_base = value.__super__).signed || (_base.signed = {
+                  displayName: property
+                });
+                engine.signatures.set(value, (signed || (signed = {
+                  displayName: property
+                })), value, Types);
+              }
+              engine.signatures.apply((_base1 = engine.signatures)[property] || (_base1[property] = {}), signed);
             }
           }
         }
@@ -23615,7 +23620,7 @@ Domain = (function(_super) {
   };
 
   Domain.compile = function(domains, engine) {
-    var EngineDomain, EngineDomainWrapper, domain, name, property, value, _base, _ref;
+    var EngineDomain, EngineDomainWrapper, domain, name, property, value, _base, _ref, _ref1;
     for (name in domains) {
       if (!__hasProp.call(domains, name)) continue;
       domain = domains[name];
@@ -23656,8 +23661,9 @@ Domain = (function(_super) {
       EngineDomainWrapper = function() {};
       EngineDomainWrapper.prototype = engine;
       EngineDomain.prototype = new EngineDomainWrapper;
-      for (property in domain) {
-        value = domain[property];
+      _ref1 = domain.prototype;
+      for (property in _ref1) {
+        value = _ref1[property];
         EngineDomain.prototype[property] = value;
       }
       if (!domain.prototype.solve) {
@@ -25487,11 +25493,11 @@ Abstract = (function(_super) {
 
 })(Domain);
 
-Abstract.Default = Command.extend();
+Abstract.prototype.Default = Command.extend();
 
-Abstract.Value = Command.extend.call(Value);
+Abstract.prototype.Value = Command.extend.call(Value);
 
-Abstract.Value.Variable = Command.extend.call(Abstract.Value, {
+Abstract.prototype.Value.Variable = Command.extend.call(Abstract.prototype.Value, {
   signature: [
     {
       property: ['String']
@@ -25503,11 +25509,12 @@ Abstract.Value.Variable = Command.extend.call(Abstract.Value, {
   ]
 }, {
   'get': function(property, tracker, engine, operation, continuation, scope) {
+    continuation = engine.Continuation(continuation || tracker || '');
     return ['get', property, continuation, engine.identity.provide(scope)];
   }
 });
 
-Abstract.Value.Getter = Command.extend.call(Abstract.Value, {
+Abstract.prototype.Value.Getter = Command.extend.call(Abstract.prototype.Value, {
   signature: [
     {
       object: ['Query'],
@@ -25534,7 +25541,7 @@ Abstract.Value.Getter = Command.extend.call(Abstract.Value, {
   }
 });
 
-Abstract.Value.Expression = Command.extend.call(Value.Expression, {}, {
+Abstract.prototype.Value.Expression = Command.extend.call(Value.Expression, {}, {
   '+': function(left, right) {
     return ['+', left, right];
   },
@@ -25549,13 +25556,13 @@ Abstract.Value.Expression = Command.extend.call(Value.Expression, {}, {
   }
 });
 
-Abstract.Assignment = Command.extend.call(Assignment, {}, {
+Abstract.prototype.Assignment = Command.extend.call(Assignment, {}, {
   '=': function(object, name, value) {
     return this.assumed.set(object, name, value);
   }
 });
 
-Abstract.Assignment.Unsafe = Command.extend.call(Assignment.Unsafe, {}, {
+Abstract.prototype.Assignment.Unsafe = Command.extend.call(Assignment.Unsafe, {}, {
   'set': {
     index: ['rule', 'assignment'],
     command: function(object, property, value, engine, operation, continuation, scope) {
@@ -28330,15 +28337,15 @@ Signatures = (function() {
     this.engine = engine;
   }
 
-  Signatures.prototype.sign = function(command, types, object, step) {
+  Signatures.prototype.sign = function(command, storage, object, step) {
     var signature, signatures, _i, _len, _results;
     if (signature = object.signature) {
-      return this.set(command, types, signature, step, 0);
+      return this.set(command, storage, signature, step);
     } else if (signatures = object.signatures) {
       _results = [];
       for (_i = 0, _len = signatures.length; _i < _len; _i++) {
         signature = signatures[_i];
-        _results.push(this.set(command, types, signature, step, 0));
+        _results.push(this.set(command, storage, signature, step));
       }
       return _results;
     }
@@ -28346,10 +28353,6 @@ Signatures = (function() {
 
   Signatures.prototype.permute = function(arg, permutation) {
     var group, i, index, j, keys, position, values, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2;
-    if ((permutation != null ? permutation.length : void 0) === 2) {
-      debugger;
-    }
-    console.log(arg, permutation, 123);
     keys = Object.keys(arg);
     if (!permutation) {
       return keys;
@@ -28358,7 +28361,7 @@ Signatures = (function() {
     group = [];
     for (index = _i = 0, _len = permutation.length; _i < _len; index = ++_i) {
       position = permutation[index];
-      if (position !== -1) {
+      if (position !== null) {
         group[position] = keys[index];
       }
     }
@@ -28401,18 +28404,112 @@ Signatures = (function() {
     return 1;
   };
 
-  Signatures.prototype.set = function(command, types, signature, step, index, permutation, shifts) {
-    var arg, argument, group, i, j, k, keys, next, obj, permutable, property, proto, type, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref, _ref1, _ref2;
-    if (!signature) {
-      for (type in types) {
-        if (proto = (_ref = command[type]) != null ? _ref.prototype : void 0) {
-          this.sign(command[type], types, proto, step);
+  Signatures.prototype.getPermutation = function(args, properties, signature) {
+    var arg, index, result, _i, _j, _len;
+    result = [];
+    for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
+      arg = args[index];
+      if (arg !== null) {
+        result[arg] = properties[index];
+      }
+    }
+    for (index = _j = result.length - 1; _j >= 0; index = _j += -1) {
+      arg = result[index];
+      if (arg == null) {
+        result.splice(index, 1);
+      }
+    }
+    return result;
+  };
+
+  Signatures.prototype.getPositions = function(args) {
+    var index, result, value, _i, _len;
+    result = [];
+    for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
+      value = args[index];
+      if (value != null) {
+        result[value] = index;
+      }
+    }
+    return result;
+  };
+
+  Signatures.prototype.getProperties = function(signature) {
+    var a, arg, definition, properties, property, _i, _j, _len, _len1;
+    if (properties = signature.properties) {
+      return properties;
+    }
+    signature.properties = properties = [];
+    for (_i = 0, _len = signature.length; _i < _len; _i++) {
+      arg = signature[_i];
+      if (arg.push) {
+        for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
+          a = arg[_j];
+          for (property in a) {
+            definition = a[property];
+            properties.push(definition);
+          }
+        }
+      } else {
+        for (property in arg) {
+          definition = arg[property];
+          properties.push(definition);
         }
       }
-      this.sign(command, types, command.prototype, step);
+    }
+    return properties;
+  };
+
+  Signatures.prototype.write = function(args, command, storage, properties, i) {
+    var props, type, _i, _len, _ref;
+    if (i == null) {
+      i = 0;
+    }
+    while ((props = properties[i]) === void 0 && i < args.length) {
+      i++;
+    }
+    if (i === args.length) {
+      if (storage.resolved) {
+        return;
+      }
+      storage.resolved = command;
+      storage.permutation = this.getPositions(args);
+    } else {
+      _ref = properties[i];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        type = _ref[_i];
+        this.write(args, command, storage[type] || (storage[type] = {}), properties, i + 1);
+      }
+    }
+  };
+
+  Signatures.prototype.apply = function(storage, signature) {
+    var property, value;
+    for (property in signature) {
+      value = signature[property];
+      if (typeof value === 'object') {
+        this.apply(storage[property] || (storage[property] = {}), value);
+      } else {
+        storage[property] = value;
+      }
+    }
+  };
+
+  Signatures.prototype.set = function(command, storage, signature, args, permutation, types) {
+    var arg, argument, group, i, j, k, keys, obj, permutable, property, proto, type, _i, _j, _k, _len, _len1, _ref, _ref1;
+    if (!signature.push) {
+      debugger;
+      for (type in types) {
+        console.error('SYBCLASIN LIKE A PRO', type, command[type]);
+        if (proto = (_ref = command[type]) != null ? _ref.prototype : void 0) {
+          this.sign(command[type], storage, proto);
+        }
+      }
+      this.sign(command, storage, command.prototype);
       return;
     }
-    i = index;
+    args || (args = []);
+    i = args.length;
     seeker: {;
     for (_i = 0, _len = signature.length; _i < _len; _i++) {
       arg = signature[_i];
@@ -28447,37 +28544,23 @@ Signatures = (function() {
     }
     };
     if (!argument) {
-      step.resolved = command;
+      this.write(args, command, storage, this.getPermutation(args, this.getProperties(signature)));
       return;
     }
-    if (keys) {
-      if (j != null) {
-        permutation || (permutation = []);
-        permutable = this.isPermutable(arg, property, keys);
-        if (permutable >= 0) {
-          for (i = _k = 0, _ref1 = keys.length; _k < _ref1; i = _k += 1) {
-            if (permutation.indexOf(i) === -1) {
-              if (permutable > 0 || i === index) {
-                _ref2 = arg[keys[index]];
-                for (_l = 0, _len2 = _ref2.length; _l < _len2; _l++) {
-                  type = _ref2[_l];
-                  next = step[type] || (step[type] = {});
-                  this.set(command, types, signature, next, index + 1, permutation.concat(i), shifts);
-                }
-              }
-            }
+    if (keys && (j != null)) {
+      permutation || (permutation = []);
+      permutable = this.isPermutable(arg, property, keys);
+      if (permutable >= 0) {
+        for (i = _k = 0, _ref1 = keys.length; _k < _ref1; i = _k += 1) {
+          if (permutation.indexOf(i) === -1) {
+            this.set(command, storage, signature, args.concat(args.length - j + i), permutation.concat(i));
           }
         }
-        this.set(command, types, signature, step, index + 1, permutation.concat(-1), shifts);
-        return;
       }
+      this.set(command, storage, signature, args.concat(null), permutation.concat(null));
+      return;
     }
-    for (_m = 0, _len3 = argument.length; _m < _len3; _m++) {
-      type = argument[_m];
-      next = step[type] || (step[type] = {});
-      this.set(command, types, signature, next, index + 1, permutation, shifts);
-    }
-    return this;
+    return this.set(command, storage, signature, args.concat(args.length), permutation);
   };
 
   return Signatures;
