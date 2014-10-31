@@ -3,6 +3,7 @@ Abstract = require('./Abstract')
 class Document extends Abstract
   priority: Infinity
   
+  Query:      require('../commands/Query')
   Selector:   require('../commands/Selector')
   Iterator:   require('../commands/Iterator')
   Condition:  require('../commands/Condition')

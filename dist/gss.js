@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-10-29) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-10-31) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20728,10 +20728,10 @@ Condition = (function(_super) {
   Condition.prototype.signature = [
     {
       "if": ['Query', 'Value', 'Constraint'],
-      then: ['Array']
+      then: null
     }, [
       {
-        "else": ['Array']
+        "else": null
       }
     ]
   ];
@@ -20929,7 +20929,7 @@ Iterator = (function(_super) {
 
   Iterator.prototype.signature = [
     {
-      collection: ['Object'],
+      collection: ['Query'],
       body: null
     }
   ];
@@ -20963,7 +20963,7 @@ module.exports = Iterator;
 
 });
 require.register("gss/lib/commands/Query.js", function(exports, require, module){
-var Command, Query, _class, _ref,
+var Command, Query,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -20972,79 +20972,89 @@ Command = require('../concepts/Command');
 Query = (function(_super) {
   __extends(Query, _super);
 
-  function Query() {
-    _ref = _class.apply(this, arguments);
-    return _ref;
-  }
-
   Query.prototype.type = 'Query';
 
-  Query.construct = function() {
-    return function(operation) {
-      var _ref1, _ref2;
-      this.name = this.toString(operation, this.constructor);
-      return this.path = (((_ref1 = operation[1]) != null ? (_ref2 = _ref1.selector) != null ? _ref2.path : void 0 : void 0) || '') + this.name;
-    };
-  };
+  function Query(operation) {
+    this.key = this.path = this.toString(operation);
+  }
 
-  _class = Query.construct();
-
-  Query.prototype.push = function(operation) {
-    var cmd, command, group, i, _i, _j, _ref1, _ref2, _ref3, _ref4;
-    if (!(group = this.group)) {
-      return;
+  Query.prototype.toString = function(operation) {
+    var argument, cmd, index, start, string, _i, _ref, _ref1;
+    if (this.prefix != null) {
+      string = this.prefix;
+    } else {
+      string = operation[0];
     }
-    if (!(command = this.engine.methods[operation[0]])) {
-      return;
+    if (typeof operation[1] === 'object') {
+      start = 2;
     }
-    if (command.group !== group) {
-      return;
-    }
-    for (i = _i = 1, _ref1 = operation.length; 1 <= _ref1 ? _i < _ref1 : _i > _ref1; i = 1 <= _ref1 ? ++_i : --_i) {
-      if (cmd = (_ref2 = operation[i]) != null ? _ref2.command : void 0) {
-        if (cmd.group !== group) {
-          return;
+    for (index = _i = _ref = start || 1, _ref1 = operation.length; _ref <= _ref1 ? _i < _ref1 : _i > _ref1; index = _ref <= _ref1 ? ++_i : --_i) {
+      if (argument = operation[index]) {
+        if (cmd = argument.command) {
+          string += cmd.key;
+        } else {
+          string += argument;
+          if (operation.length - 1 > index) {
+            string += this.separator;
+          }
         }
       }
     }
-    for (i = _j = 1, _ref3 = operation.length; 1 <= _ref3 ? _j < _ref3 : _j > _ref3; i = 1 <= _ref3 ? ++_j : --_j) {
-      if (cmd = (_ref4 = operation[i]) != null ? _ref4.command : void 0) {
-        this.merge(cmd);
+    if (this.suffix) {
+      string += this.suffix;
+    }
+    return string;
+  };
+
+  Query.prototype.push = function(operation) {
+    var arg, cmd, i, index, inherited, match, tag, tags, _i, _j, _k, _l, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    for (index = _i = 1, _ref = operation.length; 1 <= _ref ? _i < _ref : _i > _ref; index = 1 <= _ref ? ++_i : --_i) {
+      if (cmd = (_ref1 = operation[index]) != null ? _ref1.command : void 0) {
+        inherited = this.inherit(cmd, inherited);
       }
     }
-    this.merge(command, operation);
+    if (tags = this.tags) {
+      for (i = _j = 0, _len = tags.length; _j < _len; i = ++_j) {
+        tag = tags[i];
+        match = true;
+        for (index = _k = 1, _ref2 = operation.length; 1 <= _ref2 ? _k < _ref2 : _k > _ref2; index = 1 <= _ref2 ? ++_k : --_k) {
+          if (cmd = (_ref3 = operation[index]) != null ? _ref3.command : void 0) {
+            if (!(((_ref4 = cmd.tags) != null ? _ref4.indexOf(tag) : void 0) > -1)) {
+              match = false;
+              break;
+            }
+          }
+        }
+        if (match) {
+          inherited = false;
+          for (i = _l = 1, _ref5 = operation.length; 1 <= _ref5 ? _l < _ref5 : _l > _ref5; i = 1 <= _ref5 ? ++_l : --_l) {
+            arg = operation[i];
+            if (cmd = arg != null ? arg.command : void 0) {
+              inherited = this.mergers[tag](this, cmd, operation, arg, inherited);
+            }
+          }
+        }
+      }
+    }
     return this;
   };
 
-  Query.prototype.before = function(node, args, engine, operation, continuation, scope) {
-    if (!this.hidden) {
-      return engine.queries.fetch(node, args, operation, continuation, scope);
-    }
-  };
-
-  Query.prototype.after = function(node, args, result, engine, operation, continuation, scope) {
-    if (!this.hidden) {
-      return engine.queries.update(node, args, result, operation, continuation, scope);
-    }
-  };
-
-  Query.prototype.merge = function(command, operation) {
-    var string;
-    if (command === this) {
-      return;
-    }
-    string = this.toString(command, operation);
-    if (operation) {
-      this.tail = operation;
-      this.path += string;
-      this.name += string;
-    } else {
-      this.path += this.separator + string;
-    }
+  Query.prototype.inherit = function(command, inherited) {
+    var path;
     if (command.scoped) {
-      return this.scoped = command.scoped;
+      this.scoped = command.scoped;
     }
+    if (path = command.path) {
+      if (inherited) {
+        this.path += this.separator + path;
+      } else {
+        this.path = path + this.path;
+      }
+    }
+    return true;
   };
+
+  Query.prototype.mergers = {};
 
   return Query;
 
@@ -21060,7 +21070,7 @@ inspired by Slick of mootools fame (shout-out & credits)
 Combinators fetch new elements, while qualifiers filter them.
 */
 
-var Command, Query, Selector, dummy, _class, _class1, _class2, _ref, _ref1, _ref2, _ref3,
+var Command, Query, Selector, dummy, _ref, _ref1, _ref2, _ref3, _ref4, _ref5,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -21076,58 +21086,40 @@ Selector = (function(_super) {
     return _ref;
   }
 
-  Selector.prototype.toString = function(command, operation) {
-    var argument, index, string, _i, _ref1;
-    if (command.prefix) {
-      string = command.prefix;
-    } else {
-      string = operation[0];
-    }
-    for (index = _i = 1, _ref1 = operation.length; 1 <= _ref1 ? _i < _ref1 : _i > _ref1; index = 1 <= _ref1 ? ++_i : --_i) {
-      if (argument = operation[index]) {
-        if (command = argument.command) {
-          string += command.name;
-        } else {
-          string += argument;
-        }
-      }
-    }
-    if (command.suffix) {
-      string += suffix;
-    }
-    return string;
-  };
-
   Selector.prototype.prepare = function(operation, parent) {
-    var group, index, prefix, _base, _ref1;
+    var index, prefix, tags, _base, _ref1;
     prefix = ((parent && operation.name !== ' ') || (operation[0] !== '$combinator' && typeof operation[1] !== 'object')) && ' ' || '';
     switch (operation[0]) {
       case '$tag':
         if ((!parent || operation === ((_ref1 = operation.selector) != null ? _ref1.tail : void 0)) && operation[1][0] !== '$combinator') {
-          group = ' ';
+          tags = ' ';
           index = (operation[2] || operation[1]).toUpperCase();
         }
         break;
       case '$combinator':
-        group = prefix + operation.name;
+        tags = prefix + operation.name;
         index = operation.parent.name === "$tag" && operation.parent[2].toUpperCase() || "*";
         break;
       case '$class':
       case '$pseudo':
       case '$attribute':
       case '$id':
-        group = prefix + operation[0];
+        tags = prefix + operation[0];
         index = operation[2] || operation[1];
     }
-    if (!group) {
+    if (!tags) {
       return;
     }
-    return ((_base = (this[group] || (this[group] = {})))[index] || (_base[index] = [])).push(operation);
+    return ((_base = (this[tags] || (this[tags] = {})))[index] || (_base[index] = [])).push(operation);
   };
 
-  Selector.prototype.separator = ',';
+  Selector.prototype.separator = '';
 
   Selector.prototype.scoped = void 0;
+
+  Selector.prototype.prefix = void 0;
+
+  Selector.prototype.suffix = void 0;
 
   Selector.prototype.key = void 0;
 
@@ -21143,55 +21135,124 @@ Selector = (function(_super) {
 
   Selector.prototype.relative = void 0;
 
+  Selector.prototype.before = function(node, args, engine, operation, continuation, scope) {
+    if (!this.hidden) {
+      return engine.queries.fetch(node, args, operation, continuation, scope);
+    }
+  };
+
+  Selector.prototype.after = function(node, args, result, engine, operation, continuation, scope) {
+    if (!this.hidden) {
+      return engine.queries.update(node, args, result, operation, continuation, scope);
+    }
+  };
+
   return Selector;
 
 })(Query);
+
+Query.prototype.mergers.selector = function(command, other, parent, operation, inherited) {
+  var right, selecting;
+  if (!other.head) {
+    if (other instanceof Query.Combinator && operation[0] !== ' ') {
+      return;
+    }
+  }
+  if (selecting = command instanceof Query.Selecter) {
+    if (!other.selecting) {
+      return;
+    }
+  } else if (other.selecting) {
+    command.selecting = true;
+  }
+  other.head = parent;
+  command.head = parent;
+  command.tail = other.tail || operation;
+  command.tail.head = parent;
+  right = command.selector || command.key;
+  if (inherited) {
+    command.selector = (command.selector || command.key) + command.separator + (other.selector || other.key);
+  } else {
+    command.selector = (other.selector || other.key) + (command.selector || command.key);
+  }
+  return true;
+};
+
+Query.Selecter = (function(_super) {
+  __extends(Selecter, _super);
+
+  function Selecter() {
+    _ref1 = Selecter.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Selecter.prototype.signature = [
+    {
+      query: ['String']
+    }
+  ];
+
+  return Selecter;
+
+})(Selector);
 
 Query.Combinator = (function(_super) {
   __extends(Combinator, _super);
 
   function Combinator() {
-    _ref1 = _class.apply(this, arguments);
-    return _ref1;
+    _ref2 = Combinator.__super__.constructor.apply(this, arguments);
+    return _ref2;
   }
-
-  _class = Query.construct();
 
   Combinator.prototype.signature = [
     [
       {
-        context: ['Node']
+        context: ['Query'],
+        query: ['String']
       }
     ]
   ];
 
   return Combinator;
 
-})(Selector);
+})(Query.Selecter);
 
 Query.Qualifier = (function(_super) {
   __extends(Qualifier, _super);
 
   function Qualifier() {
-    _ref2 = _class1.apply(this, arguments);
-    return _ref2;
+    _ref3 = Qualifier.__super__.constructor.apply(this, arguments);
+    return _ref3;
   }
-
-  _class1 = Query.construct();
 
   Qualifier.prototype.signature = [
     {
-      context: ['Node'],
-      qualifier: ['String']
-    }, [
-      {
-        filter: ['String'],
-        query: ['String']
-      }
-    ]
+      context: ['Query'],
+      matcher: ['String']
+    }
   ];
 
   return Qualifier;
+
+})(Selector);
+
+Query.Search = (function(_super) {
+  __extends(Search, _super);
+
+  function Search() {
+    _ref4 = Search.__super__.constructor.apply(this, arguments);
+    return _ref4;
+  }
+
+  Search.prototype.signature = [
+    {
+      context: ['Query'],
+      matcher: ['String'],
+      query: ['String']
+    }
+  ];
+
+  return Search;
 
 })(Selector);
 
@@ -21199,11 +21260,9 @@ Query.Element = (function(_super) {
   __extends(Element, _super);
 
   function Element() {
-    _ref3 = _class2.apply(this, arguments);
-    return _ref3;
+    _ref5 = Element.__super__.constructor.apply(this, arguments);
+    return _ref5;
   }
-
-  _class2 = Query.construct();
 
   Element.prototype.signature = [];
 
@@ -21214,8 +21273,8 @@ Query.Element = (function(_super) {
 Query.define({
   'class': {
     prefix: '.',
-    group: 'native',
-    Combinator: function(value, engine, operation, continuation, scope) {
+    tags: ['selector'],
+    Selecter: function(value, engine, operation, continuation, scope) {
       return (scope || this.scope).getElementsByClassName(value);
     },
     Qualifier: function(node, value) {
@@ -21225,9 +21284,9 @@ Query.define({
     }
   },
   'tag': {
+    tags: ['selector'],
     prefix: '',
-    group: 'native',
-    Combinator: function(value, engine, operation, continuation, scope) {
+    Selecter: function(value, engine, operation, continuation, scope) {
       return (scope || this.scope).getElementsByTagName(value);
     },
     Qualifier: function(node, value) {
@@ -21238,8 +21297,8 @@ Query.define({
   },
   'id': {
     prefix: '#',
-    group: 'native',
-    Combinator: function(id, engine, operation, continuation, scope) {
+    tags: ['selector'],
+    Selecter: function(id, engine, operation, continuation, scope) {
       if (scope == null) {
         scope = this.scope;
       }
@@ -21252,7 +21311,7 @@ Query.define({
     }
   },
   ' ': {
-    group: 'native',
+    tags: ['selector'],
     Combinator: function(node) {
       return node.getElementsByTagName("*");
     }
@@ -21270,7 +21329,7 @@ Query.define({
     }
   },
   '>': {
-    group: 'native',
+    tags: ['selector'],
     Combinator: function(node) {
       return node.children;
     }
@@ -21281,7 +21340,7 @@ Query.define({
     }
   },
   '+': {
-    group: 'native',
+    tags: ['selector'],
     Combinator: function(node) {
       return node.nextElementSibling;
     }
@@ -21305,7 +21364,7 @@ Query.define({
     }
   },
   '~': {
-    group: 'native',
+    tags: ['selector'],
     Combinator: function(node) {
       var nodes;
       nodes = void 0;
@@ -21352,7 +21411,7 @@ Query.define({
     }
   },
   '::parent': {
-    Element: Query['!>'].Combinator
+    Element: Query['!>'].prototype.Combinator
   },
   '::scope': {
     hidden: true,
@@ -21370,47 +21429,44 @@ Query.define({
 
 Query.define({
   '[=]': {
-    binary: true,
-    quote: true,
-    group: 'native',
+    tags: ['selector'],
     prefix: '[',
-    suffix: ']',
-    Qualifier: function(node, attribute, value) {
+    separator: '="',
+    suffix: '"]',
+    Search: function(node, attribute, value) {
       if (node.getAttribute(attribute) === value) {
         return node;
       }
     }
   },
   '[*=]': {
-    binary: true,
-    quote: true,
+    tags: ['selector'],
     prefix: '[',
-    suffix: ']',
-    group: 'native',
-    Qualifier: function(node, attribute, value) {
-      var _ref4;
-      if (((_ref4 = node.getAttribute(attribute)) != null ? _ref4.indexOf(value) : void 0) > -1) {
+    separator: '*="',
+    suffix: '"]',
+    Search: function(node, attribute, value) {
+      var _ref6;
+      if (((_ref6 = node.getAttribute(attribute)) != null ? _ref6.indexOf(value) : void 0) > -1) {
         return node;
       }
     }
   },
   '[|=]': {
-    binary: true,
-    quote: true,
-    group: 'native',
+    tags: ['selector'],
     prefix: '[',
-    suffix: ']',
-    Qualifier: function(node, attribute, value) {
+    separator: '|="',
+    suffix: '"]',
+    Search: function(node, attribute, value) {
       if (node.getAttribute(attribute) != null) {
         return node;
       }
     }
   },
   '[]': {
-    group: 'native',
+    tags: ['selector'],
     prefix: '[',
     suffix: ']',
-    Qualifier: function(node, attribute) {
+    Search: function(node, attribute) {
       if (node.getAttribute(attribute) != null) {
         return node;
       }
@@ -21431,7 +21487,7 @@ Query.define({
     }
   },
   ':first-child': {
-    group: 'native',
+    tags: ['selector'],
     Combinator: function(node) {
       if (!node.previousElementSibling) {
         return node;
@@ -21439,7 +21495,7 @@ Query.define({
     }
   },
   ':last-child': {
-    group: 'native',
+    tags: ['selector'],
     Combinator: function(node) {
       if (!node.nextElementSibling) {
         return node;
@@ -21501,10 +21557,14 @@ Query.define({
     }
   },
   ',': {
-    group: 'native',
+    tags: ['selector'],
     eager: true,
     signature: null,
-    Default: function(engine, operation, continuation, scope) {
+    separator: ',',
+    toString: function() {
+      return '';
+    },
+    command: function(engine, operation, continuation, scope) {
       var contd, index;
       contd = this.Continuation.getScopePath(scope, continuation) + operation.path;
       if (this.queries.ascending) {
@@ -21537,14 +21597,14 @@ Query.define({
 if (typeof document !== "undefined" && document !== null) {
   dummy = Selector.dummy = document.createElement('_');
   if (!dummy.hasOwnProperty("classList")) {
-    Query['class'].Qualifier = function(node, value) {
+    Query['class'].prototype.Qualifier = function(node, value) {
       if (node.className.split(/\s+/).indexOf(value) > -1) {
         return node;
       }
     };
   }
   if (!dummy.hasOwnProperty("parentElement")) {
-    Query['!>'].Combinator = Selector['::parent'][1] = function(node) {
+    Query['!>'].prototype.Combinator = Selector['::parent'].prototype.Element = function(node) {
       var parent;
       if (parent = node.parentNode) {
         if (parent.nodeType === 1) {
@@ -21554,21 +21614,21 @@ if (typeof document !== "undefined" && document !== null) {
     };
   }
   if (!dummy.hasOwnProperty("nextElementSibling")) {
-    Query['+'].Combinator = function(node) {
+    Query['+'].prototype.Combinator = function(node) {
       while (node = node.nextSibling) {
         if (node.nodeType === 1) {
           return node;
         }
       }
     };
-    Query['!+'].Combinator = function(node) {
+    Query['!+'].prototype.Combinator = function(node) {
       while (node = node.previousSibling) {
         if (node.nodeType === 1) {
           return node;
         }
       }
     };
-    Query['++'].Combinator = function(node) {
+    Query['++'].prototype.Combinator = function(node) {
       var next, nodes, prev;
       nodes = void 0;
       prev = next = node;
@@ -21586,7 +21646,7 @@ if (typeof document !== "undefined" && document !== null) {
       }
       return nodes;
     };
-    Query['~'].Combinator = function(node) {
+    Query['~'].prototype.Combinator = function(node) {
       var nodes;
       nodes = void 0;
       while (node = node.nextSibling) {
@@ -21596,7 +21656,7 @@ if (typeof document !== "undefined" && document !== null) {
       }
       return nodes;
     };
-    Query['!~'].Combinator = function(node) {
+    Query['!~'].prototype.Combinator = function(node) {
       var nodes, prev;
       nodes = void 0;
       prev = node.parentNode.firstChild;
@@ -21608,7 +21668,7 @@ if (typeof document !== "undefined" && document !== null) {
       }
       return nodes;
     };
-    Query['~~'].Combinator = function(node) {
+    Query['~~'].prototype.Combinator = function(node) {
       var nodes, prev;
       nodes = void 0;
       prev = node.parentNode.firstChild;
@@ -21620,7 +21680,7 @@ if (typeof document !== "undefined" && document !== null) {
       }
       return nodes;
     };
-    Query[':first-child'].Qualifier = function(node) {
+    Query[':first-child'].prototype.Qualifier = function(node) {
       var child, parent;
       if (parent = node.parentNode) {
         child = parent.firstChild;
@@ -21632,7 +21692,7 @@ if (typeof document !== "undefined" && document !== null) {
         }
       }
     };
-    Query[':last-child'].Qualifier = function(node) {
+    Query[':last-child'].prototype.Qualifier = function(node) {
       var child, parent;
       if (parent = node.parentNode) {
         child = parent.lastChild;
@@ -21684,33 +21744,31 @@ Source = (function(_super) {
 })(Command);
 
 Source.define({
-  "eval": {
-    command: function(node, type, engine, operation, continuation, scope) {
-      var nodeContinuation, nodeType, rules, source;
-      if (type == null) {
-        type = 'text/gss';
-      }
-      if (node.nodeType) {
-        if (nodeType = node.getAttribute('type')) {
-          type = nodeType;
-        }
-        source = node.textContent || node;
-        if ((nodeContinuation = node._continuation) != null) {
-          engine.queries.clean(nodeContinuation);
-          continuation = nodeContinuation;
-        } else if (!operation) {
-          continuation = engine.Continuation(node.tagName.toLowerCase(), node);
-        } else {
-          continuation = node._continuation = engine.Continuation(continuation || '', null, engine.Continuation.DESCEND);
-        }
-        if (node.getAttribute('scoped') != null) {
-          scope = node.parentNode;
-        }
-      }
-      rules = engine.clone(this.types['_' + type](source));
-      engine.console.row('rules', rules);
-      engine.engine.engine.solve(rules, continuation, scope);
+  "eval": function(node, type, engine, operation, continuation, scope) {
+    var nodeContinuation, nodeType, rules, source;
+    if (type == null) {
+      type = 'text/gss';
     }
+    if (node.nodeType) {
+      if (nodeType = node.getAttribute('type')) {
+        type = nodeType;
+      }
+      source = node.textContent || node;
+      if ((nodeContinuation = node._continuation) != null) {
+        engine.queries.clean(nodeContinuation);
+        continuation = nodeContinuation;
+      } else if (!operation) {
+        continuation = engine.Continuation(node.tagName.toLowerCase(), node);
+      } else {
+        continuation = node._continuation = engine.Continuation(continuation || '', null, engine.Continuation.DESCEND);
+      }
+      if (node.getAttribute('scoped') != null) {
+        scope = node.parentNode;
+      }
+    }
+    rules = engine.clone(this.types['_' + type](source));
+    engine.console.row('rules', rules);
+    engine.engine.engine.solve(rules, continuation, scope);
   },
   "load": function(node, type, engine, operation, continuation, scope) {
     var src, xhr,
@@ -22169,11 +22227,11 @@ Command = (function() {
     if (!(command = operation.command)) {
       match = Command.match(this, operation);
       if (typeof operation[0] === 'string') {
-        if (!match.group || !(command = Command.reduce(this, operation, match))) {
-          command = match.instance || new match(operation);
-          if (!match.key) {
-            match.instance = command;
-          }
+        command = match.instance || new match(operation);
+        if (command.key != null) {
+          command.push(operation);
+        } else {
+          match.instance = command;
         }
       }
       operation.command = command;
@@ -22182,7 +22240,7 @@ Command = (function() {
   }
 
   Command.match = function(engine, operation, parent, index) {
-    var argument, command, i, j, match, signature, type;
+    var Default, argument, command, i, j, match, signature, type;
     operation.parent = parent;
     operation.index = index;
     if (typeof operation[0] === 'string') {
@@ -22198,6 +22256,7 @@ Command = (function() {
       i = -1;
     }
     j = operation.length;
+    Default = void 0;
     while (++i < j) {
       argument = operation[i];
       if (argument != null ? argument.push : void 0) {
@@ -22207,13 +22266,11 @@ Command = (function() {
       }
       if (match = signature[type]) {
         signature = match;
-      } else if (engine.Default) {
-        return engine.Default;
-      } else {
+      } else if (!(Default || (Default = signature.Default || engine.Default))) {
         throw "Unexpected " + type + " in " + operation[0];
       }
     }
-    if (command = signature.resolved) {
+    if (command = Default || signature.resolved) {
       return command;
     } else if (engine.Default) {
       return engine.Default;
@@ -22415,8 +22472,15 @@ Command = (function() {
   };
 
   Command.extend = function(definition, methods) {
-    var Kommand, Prototype, property, value;
-    Kommand = function() {};
+    var Constructor, Kommand, Prototype, property, value;
+    if ((Constructor = this.prototype.constructor) === Command || Constructor.length === 0) {
+      Constructor = void 0;
+    }
+    Kommand = function() {
+      if (Constructor) {
+        return Constructor.apply(this, arguments);
+      }
+    };
     Kommand.__super__ = this;
     Prototype = function() {};
     Prototype.prototype = this.prototype;
@@ -22443,11 +22507,11 @@ Command = (function() {
     }
   };
 
-  Command.reduce = function(operation) {
+  Command.reduce = function(operation, command) {
     var argument, i, _i, _ref, _ref1;
     for (i = _i = 1, _ref = operation.length; 1 <= _ref ? _i < _ref : _i > _ref; i = 1 <= _ref ? ++_i : --_i) {
       if (argument = operation[i]) {
-        if ((_ref1 = argument.command) != null ? typeof _ref1.push === "function" ? _ref1.push(operation) : void 0 : void 0) {
+        if ((_ref1 = argument.command) != null ? typeof _ref1.push === "function" ? _ref1.push(operation, command) : void 0 : void 0) {
           return argument.command;
         }
       }
@@ -22460,7 +22524,7 @@ Command = (function() {
   };
 
   Command.compile = function(engine, command) {
-    var Types, property, proto, signed, value, _base, _base1;
+    var Types, property, proto, value;
     if (!command) {
       for (property in engine) {
         value = engine[property];
@@ -22488,16 +22552,7 @@ Command = (function() {
         if (typeof value === 'function') {
           if ((value != null ? value.prototype : void 0) instanceof Command) {
             if (!property.match(/^[A-Z]/)) {
-              if (!(signed = value.__super__.signed)) {
-                signed = (_base = value.__super__).signed || (_base.signed = {
-                  displayName: property
-                });
-                engine.signatures.set(value, (signed || (signed = {
-                  displayName: property
-                })), value, Types);
-              }
-              engine.signatures.apply((_base1 = engine.signatures)[property] || (_base1[property] = {}), signed);
-              console.log(signed, property);
+              engine.signatures.set(property, value, Types);
             }
           }
         }
@@ -23946,7 +24001,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
           max = Math.max(substyle.depth, max);
           break;
         case "string":
-          Types = this.types || this.Types.prototype;
+          Types = this.types || this.Type.prototype;
           if (type = Types[property]) {
             types.push(type);
             if (initial === void 0) {
@@ -25565,14 +25620,11 @@ Abstract.prototype.Assignment = Command.extend.call(Assignment, {}, {
 });
 
 Abstract.prototype.Assignment.Unsafe = Command.extend.call(Assignment.Unsafe, {}, {
-  'set': {
-    index: ['rule', 'assignment'],
-    command: function(object, property, value, engine, operation, continuation, scope) {
-      if (this.intrinsic) {
-        this.intrinsic.restyle(object || scope, property, value, continuation, operation);
-      } else {
-        this.assumed.set(object || scope, property, value);
-      }
+  'set': function(object, property, value, engine, operation, continuation, scope) {
+    if (this.intrinsic) {
+      this.intrinsic.restyle(object || scope, property, value, continuation, operation);
+    } else {
+      this.assumed.set(object || scope, property, value);
     }
   }
 });
@@ -25982,6 +26034,8 @@ Document = (function(_super) {
   __extends(Document, _super);
 
   Document.prototype.priority = Infinity;
+
+  Document.prototype.Query = require('../commands/Query');
 
   Document.prototype.Selector = require('../commands/Selector');
 
@@ -28331,10 +28385,10 @@ Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Valu
 
 A matched signature returns customized class for an operation that can further 
 pick a sub-class dynamically. Signatures allows special case optimizations and 
-composition to be coded as a structural composition, instead of branching in runtime.
+composition to be implemented structurally, instead of branching in runtime.
 
 Signatures are shared between commands. Dispatcher support css-style 
-typed optional argument groups, but has no support for keywords yet
+typed optional argument groups, but has no support for keywords or repeating groups yet
 */
 
 var Command, Signatures;
@@ -28346,18 +28400,23 @@ Signatures = (function() {
     this.engine = engine;
   }
 
-  Signatures.prototype.sign = function(command, storage, object, step) {
-    var signature, signatures, _i, _len, _results;
+  Signatures.prototype.sign = function(command, object) {
+    var signature, signatures, signed, storage, _i, _len;
+    if (signed = command.__super__.signed) {
+      return signed;
+    }
+    command.__super__.signed = storage = [];
     if (signature = object.signature) {
-      return this.set(command, storage, signature, step);
+      this.get(command, storage, signature);
     } else if (signatures = object.signatures) {
-      _results = [];
       for (_i = 0, _len = signatures.length; _i < _len; _i++) {
         signature = signatures[_i];
-        _results.push(this.set(command, storage, signature, step));
+        this.get(command, storage, signature);
       }
-      return _results;
+    } else {
+      storage.push(['default']);
     }
+    return storage;
   };
 
   Signatures.prototype.permute = function(arg, permutation) {
@@ -28453,61 +28512,79 @@ Signatures = (function() {
     return properties;
   };
 
-  Signatures.prototype.generate = function(combinations, command, storage, positions, properties, i) {
-    var props, type, _i, _len, _ref, _results;
-    if (i == null) {
+  Signatures.prototype.generate = function(combinations, positions, properties, combination) {
+    var i, j, position, props, type, _i, _len, _ref;
+    if (combination) {
+      i = combination.length;
+    } else {
+      combination = [];
+      combinations.push(combination);
       i = 0;
     }
     while ((props = properties[i]) === void 0 && i < properties.length) {
       i++;
     }
     if (i === properties.length) {
-      if (storage.resolved) {
-        return;
-      }
-      return storage.resolved = Command.extend.call(command, {
-        permutation: positions
-      });
+      console.error(properties, positions.slice());
+      combination.push(positions);
     } else {
       _ref = properties[i];
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        type = _ref[_i];
-        _results.push(this.generate(combinations, command, storage, positions, properties, i + 1));
+      for (j = _i = 0, _len = _ref.length; _i < _len; j = ++_i) {
+        type = _ref[j];
+        if (j === 0) {
+          combination.push(type);
+        } else {
+          position = combinations.indexOf(combination);
+          combination = combination.slice(0, i);
+          combination.push(type);
+          combinations.push(combination);
+        }
+        this.generate(combinations, positions, properties, combination);
       }
-      return _results;
     }
+    return combinations;
   };
 
-  Signatures.prototype.write = function(args, command, storage, positions, properties) {
-    var combinations;
-    combinations = [];
-    this.generate(combinations, command, storage, positions, properties);
-  };
-
-  Signatures.prototype.apply = function(storage, signature) {
-    var property, value;
-    for (property in signature) {
-      value = signature[property];
-      if (typeof value === 'object') {
-        this.apply(storage[property] || (storage[property] = {}), value);
+  Signatures.prototype.write = function(command, storage, combination) {
+    var arg, i, _i, _ref;
+    for (i = _i = 0, _ref = combination.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+      if ((arg = combination[i]) === 'default') {
+        storage.Default = command;
       } else {
-        storage[property] = value;
-      }
-    }
-  };
-
-  Signatures.prototype.set = function(command, storage, signature, args, permutation, types) {
-    var arg, argument, group, i, j, k, keys, obj, property, proto, type, _i, _j, _k, _len, _len1, _ref, _ref1;
-    if (!signature.push) {
-      for (type in types) {
-        if (proto = (_ref = command[type]) != null ? _ref.prototype : void 0) {
-          this.sign(command[type], storage, proto);
+        if (i < combination.length - 1) {
+          storage = storage[arg] || (storage[arg] = {});
+        } else {
+          storage.resolved || (storage.resolved = Command.extend.call(command, {
+            permutation: arg
+          }));
         }
       }
-      this.sign(command, storage, command.prototype);
-      return;
     }
+  };
+
+  Signatures.prototype.set = function(property, command, types) {
+    var callback, combination, storage, subcommand, type, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+    storage = this[property] || (this[property] = {});
+    for (type in types) {
+      if (callback = (_ref = command.prototype) != null ? _ref[type] : void 0) {
+        subcommand = types[type].extend(command.prototype);
+        subcommand.command = callback;
+        _ref1 = this.sign(subcommand, subcommand.prototype);
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          combination = _ref1[_i];
+          this.write(subcommand, storage, combination);
+        }
+      }
+    }
+    _ref2 = this.sign(command, command.prototype);
+    for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+      combination = _ref2[_j];
+      this.write(command, storage, combination);
+    }
+  };
+
+  Signatures.prototype.get = function(command, storage, signature, args, permutation) {
+    var arg, argument, group, i, j, k, keys, obj, property, _i, _j, _k, _len, _len1, _ref;
     args || (args = []);
     i = args.length;
     seeker: {;
@@ -28544,20 +28621,20 @@ Signatures = (function() {
     }
     };
     if (!argument) {
-      this.write(args, command, storage, this.getPositions(args), this.getPermutation(args, this.getProperties(signature)));
+      this.generate(storage, this.getPositions(args), this.getPermutation(args, this.getProperties(signature)));
       return;
     }
     if (keys && (j != null)) {
       permutation || (permutation = []);
-      for (i = _k = 0, _ref1 = keys.length; _k < _ref1; i = _k += 1) {
+      for (i = _k = 0, _ref = keys.length; _k < _ref; i = _k += 1) {
         if (permutation.indexOf(i) === -1) {
-          this.set(command, storage, signature, args.concat(args.length - j + i), permutation.concat(i));
+          this.get(command, storage, signature, args.concat(args.length - j + i), permutation.concat(i));
         }
       }
-      this.set(command, storage, signature, args.concat(null), permutation.concat(null));
+      this.get(command, storage, signature, args.concat(null), permutation.concat(null));
       return;
     }
-    return this.set(command, storage, signature, args.concat(args.length));
+    return this.get(command, storage, signature, args.concat(args.length));
   };
 
   return Signatures;

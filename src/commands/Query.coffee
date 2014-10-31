@@ -1,61 +1,66 @@
 Command = require('../concepts/Command')
 
-# Asynchronous reference to object or collection
 class Query extends Command
   type: 'Query'
   
-  @construct: ->
-    return (operation) ->
-      @name = @toString(operation, @constructor)
-      @path = (operation[1]?.selector?.path || '') + @name
+  constructor: (operation) ->
+    @key = @path = @toString(operation)
 
-  constructor: @construct()
-  
+  toString: (operation) ->
+    if @prefix?
+      string = @prefix
+    else
+      string = operation[0]
+    if typeof operation[1] == 'object'
+      start = 2
+    for index in [start || 1 ... operation.length]
+      if argument = operation[index]
+        if cmd = argument.command
+          string += cmd.key
+        else
+          string += argument
+          if operation.length - 1 > index
+            string += @separator
+
+    if @suffix
+      string += @suffix
+
+    return string
+
   push: (operation) ->
-    unless group = @group
-      return 
+    for index in [1 ... operation.length]
+      if cmd = operation[index]?.command
+        inherited = @inherit(cmd, inherited)
 
-    unless command = @engine.methods[operation[0]]
-      return 
+    if tags = @tags
+      for tag, i in tags
+        match = true
+        # Check if all args match the tag
+        for index in [1 ... operation.length]
+          if cmd = operation[index]?.command
+            if !(cmd.tags?.indexOf(tag) > -1)
+              match = false
+              break
 
-    if command.group != group
-      return 
-
-    for i in [1 ... operation.length]
-      if cmd = operation[i]?.command
-        if cmd.group != group
-          return
-
-    for i in [1 ... operation.length]
-      if cmd = operation[i]?.command
-        @merge(cmd)
-
-    @merge(command, operation)
+        # Merge tagged arguments
+        if match
+          inherited = false
+          for i in [1 ... operation.length]
+            arg = operation[i]
+            if cmd = arg?.command 
+              inherited = @mergers[tag](@, cmd, operation, arg, inherited)
 
     return @
   
-    
-  # Check if query was already updated
-  before: (node, args, engine, operation, continuation, scope) ->
-    unless @hidden
-      return engine.queries.fetch(node, args, operation, continuation, scope)
-
-  # Subscribe elements to query 
-  after: (node, args, result, engine, operation, continuation, scope) ->
-    unless @hidden
-      return engine.queries.update(node, args, result, operation, continuation, scope)
-
-
-  merge: (command, operation) ->
-    return if command == @
-    string = @toString(command, operation) 
-    if operation
-      @tail = operation
-      @path += string
-      @name += string
-    else
-      @path += @separator + string
+  inherit: (command, inherited) ->
     if command.scoped
       @scoped = command.scoped
-      
+    if path = command.path
+      if inherited
+        @path += @separator + path
+      else
+        @path = path + @path
+    return true
+
+  mergers: {}
 module.exports = Query

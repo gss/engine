@@ -594,6 +594,8 @@ class Queries
     
 
   # Compare position of two nodes to sort collection in DOM order
+  # Virtual elements make up stable positions within collection,
+  # so dom elements can be permuted only within range between virtual elements
   comparePosition: (a, b, op1, op2) ->
     if op1 != op2
       if op1.index > op2.index

@@ -5,10 +5,11 @@ class Command
     unless command = operation.command
       match = Command.match(@, operation)
       if typeof operation[0] == 'string'
-        if !match.group || !(command = Command.reduce(@, operation, match))
-          command = match.instance || new match(operation)
-          unless match.key
-            match.instance = command
+        command = match.instance || new match(operation)
+        if command.key?
+          command.push(operation)
+        else
+          match.instance = command
       operation.command = command
     
     return command
@@ -28,6 +29,7 @@ class Command
     else
       i = -1
     j = operation.length
+    Default = undefined 
     while ++i < j
       argument = operation[i]
       if argument?.push
@@ -37,11 +39,10 @@ class Command
 
       if match = signature[type]
         signature = match
-      else if engine.Default
-        return engine.Default
-      else
+      else unless (Default ||= signature.Default || engine.Default)
         throw "Unexpected " + type + " in " + operation[0]
-    if command = signature.resolved
+
+    if command = Default || signature.resolved
       return command 
     else if engine.Default
       return engine.Default
@@ -247,8 +248,14 @@ class Command
        
   # Define command subclass
   @extend: (definition, methods) ->
+    
+    if (Constructor = @prototype.constructor) == Command || Constructor.length == 0
+      Constructor = undefined
     Kommand = ->
+      if Constructor
+        Constructor.apply(@, arguments)
     Kommand.__super__ = @
+
     Prototype = ->
     Prototype.prototype = @prototype
     Kommand.prototype = new Prototype
@@ -273,10 +280,10 @@ class Command
     
   
   # Attempt to re-use argument's command for the operation if groups match
-  @reduce: (operation) ->
+  @reduce: (operation, command) ->
     for i in [1 ... operation.length]
       if argument = operation[i]
-        if argument.command?.push?(operation)
+        if argument.command?.push?(operation, command)
           return argument.command
   
   @types:
@@ -304,11 +311,7 @@ class Command
         if typeof value == 'function'
           if value?.prototype instanceof Command
             unless property.match /^[A-Z]/
-              unless signed = value.__super__.signed
-                signed = value.__super__.signed ||= {displayName: property}
-                engine.signatures.set value, (signed ||= {displayName: property}), value, Types
-              engine.signatures.apply engine.signatures[property] ||= {}, signed
-              console.log(signed, property)
+              engine.signatures.set property, value, Types
     @Types = Types
       
     @

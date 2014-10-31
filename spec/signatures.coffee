@@ -10,10 +10,8 @@ describe 'Signatures', ->
 
   
   
-  
+  engine = null
   describe 'dispatched by argument types', ->
-    engine = new GSS
-    engine.abstract.PrimitiveCommand = 
     PrimitiveCommand = GSS::Command.extend {
       signature: [
         left: ['String', 'Value']
@@ -22,8 +20,11 @@ describe 'Signatures', ->
     }, {
       'primitive': () ->
     }
-    
-    engine.compile(true)
+  
+    before ->
+      engine = new GSS
+      engine.abstract.PrimitiveCommand = PrimitiveCommand
+      engine.compile(true)
     
     describe 'with primitive', ->
       it 'should match property function definition', ->
@@ -52,8 +53,6 @@ describe 'Signatures', ->
   
   
   describe 'dispatched with optional arguments', ->
-    engine = new GSS
-    engine.abstract.UnorderedCommand = 
     UnorderedCommand = GSS::Command.extend {
       signature: [[
         left: ['String', 'Value']
@@ -63,7 +62,12 @@ describe 'Signatures', ->
     }, {
       'unordered': () ->
     } 
-    engine.compile(true)
+
+    before ->
+      engine = new GSS
+      engine.abstract.UnorderedCommand = UnorderedCommand
+      
+      engine.compile(true)
     
     describe 'and no required arguments', ->
       it 'should match property function definition', ->
@@ -92,17 +96,18 @@ describe 'Signatures', ->
         expect(engine.abstract.Command(['undeclared', ['+',  ['get', 'test'], 1], 10])).to.be.an.instanceof(engine.abstract.Default)
 
   describe 'optional group with order specific type declaration', ->
-    engine = new GSS
-    engine.abstract.FancyTypes = GSS::Command.extend {
-      signature: [[
-        left: ['String', 'Value']
-        right: ['Number', 'String']
-        mode: ['Number', 'Value']
-      ]]
-    }, {
-      'fancy': () ->
-    } 
-    engine.compile(true)
+    before ->
+      engine = new GSS
+      engine.abstract.FancyTypes = GSS::Command.extend {
+        signature: [[
+          left: ['String', 'Value']
+          right: ['Number', 'String']
+          mode: ['Number', 'Value']
+        ]]
+      }, {
+        'fancy': () ->
+      } 
+      engine.compile(true)
 
 
     it 'should respect type order', ->
@@ -117,8 +122,7 @@ describe 'Signatures', ->
       expect(engine.abstract.Command(['fancy', 'a', 1, 2]).permutation).to.eql([0, 1, 2])
 
   describe 'optional groups and mixed with optional groups', ->
-    engine = new GSS
-    OptionalGroupCommand = engine.abstract.OptionalGroupCommand = GSS::Command.extend {
+    OptionalGroupCommand = GSS::Command.extend {
       signature: [
         left: ['Value', 'String']
         [
@@ -133,9 +137,12 @@ describe 'Signatures', ->
     }, {
       'optional': () ->
     }
- 
-    engine.compile(true)
-    
+  
+    before ->
+      engine = new GSS
+      engine.abstract.OptionalGroupCommand = OptionalGroupCommand
+      engine.compile(true)
+      
     describe 'and no required arguments', ->
       it 'should match property function definition', ->
         expect(engine.abstract.Command(['optional', 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)

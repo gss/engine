@@ -72,14 +72,11 @@ Abstract::Assignment = Command.extend.call Assignment, {},
 
 # Style assignment
 Abstract::Assignment.Unsafe = Command.extend.call Assignment.Unsafe, {},
-  'set':
-    index: ['rule', 'assignment']
-    
-    command: (object, property, value, engine, operation, continuation, scope) ->
-      if @intrinsic
-        @intrinsic.restyle object || scope, property, value, continuation, operation
-      else
-        @assumed.set object || scope, property, value
-      return
+  'set': (object, property, value, engine, operation, continuation, scope) ->
+    if @intrinsic
+      @intrinsic.restyle object || scope, property, value, continuation, operation
+    else
+      @assumed.set object || scope, property, value
+    return
 
 module.exports = Abstract

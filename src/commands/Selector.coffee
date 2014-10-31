@@ -9,25 +9,6 @@ Command = require('../concepts/Command')
 Query   = require('./Query')
 
 class Selector extends Query
-
-  toString: (command, operation) ->
-    if command.prefix
-      string = command.prefix
-    else
-      string = operation[0]
-
-    for index in [1 ... operation.length]
-      if argument = operation[index]
-        if command = argument.command
-          string += command.name
-        else
-          string += argument
-
-    if command.suffix
-      string += suffix
-
-    return string
-
   prepare: (operation, parent) ->
     prefix = ((parent && operation.name != ' ') || 
           (operation[0] != '$combinator' && typeof operation[1] != 'object')) && 
@@ -35,30 +16,36 @@ class Selector extends Query
     switch operation[0]
       when '$tag'
         if (!parent || operation == operation.selector?.tail) && operation[1][0] != '$combinator'
-          group = ' '
+          tags = ' '
           index = (operation[2] || operation[1]).toUpperCase()
       when '$combinator'
-        group = prefix + operation.name
+        tags = prefix + operation.name
         index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
       when '$class', '$pseudo', '$attribute', '$id'
-        group = prefix + operation[0]
+        tags = prefix + operation[0]
         index = (operation[2] || operation[1])
-    return unless group
-    ((@[group] ||= {})[index] ||= []).push operation
+    return unless tags
+    ((@[tags] ||= {})[index] ||= []).push operation
+
     
   # String to be used to join tokens in a list
-  separator: ','
+  separator: ''
   # Does selector start with ::this?
   scoped: undefined
+
+  # Redefined function name for serialized key
+  prefix: undefined
+  # Trailing string for a serialized key
+  suffix: undefined
 
   # String representation of current selector operation
   key: undefined
   # String representation of current selector operation chain
   path: undefined
 
-  # Reference to first operation in group
+  # Reference to first operation in tags
   tail: undefined
-  # Reference to last operation in group
+  # Reference to last operation in tags
   head: undefined
 
   # Does the selector return only one element?
@@ -68,29 +55,73 @@ class Selector extends Query
   
   
   relative: undefined
-  
-class Query.Combinator extends Selector
-  constructor: Query.construct()
-  
-  signature: [
-    [context: ['Node']]
-  ]
-  
-class Query.Qualifier extends Selector
-  constructor: Query.construct()
 
+      
+    
+  # Check if query was already updated
+  before: (node, args, engine, operation, continuation, scope) ->
+    unless @hidden
+      return engine.queries.fetch(node, args, operation, continuation, scope)
+
+  # Subscribe elements to query 
+  after: (node, args, result, engine, operation, continuation, scope) ->
+    unless @hidden
+      return engine.queries.update(node, args, result, operation, continuation, scope)
+
+
+Query::mergers.selector = (command, other, parent, operation, inherited) ->
+  if !other.head
+    # Native selectors cant start with combinator other than whitespace
+    if other instanceof Query.Combinator && operation[0] != ' '
+      return
+
+  # Can't append combinator to qualifying selector selector 
+  if selecting = command instanceof Query.Selecter
+    return unless other.selecting
+  else if other.selecting
+    command.selecting = true
+
+  other.head = parent
+  command.head = parent
+  command.tail = other.tail || operation
+  command.tail.head = parent
+  right = command.selector || command.key
+  if inherited
+    command.selector = (command.selector || command.key) + command.separator + (other.selector || other.key)
+  else
+    command.selector = (other.selector || other.key) + (command.selector || command.key)
+  return true
+
+# Indexed collection
+class Query.Selecter extends Selector
   signature: [
-    context: ['Node']
-    qualifier: ['String']
-    [
-      filter: ['String']
-      query: ['String']
-    ]
+    query: ['String']
+  ]
+
+# Scoped indexed collections
+class Query.Combinator extends Query.Selecter
+  signature: [[
+    context: ['Query']
+    query: ['String']
+  ]]
+
+# Filter elements by key
+class Query.Qualifier extends Selector
+  signature: [
+    context: ['Query']
+    matcher: ['String']
+  ]
+
+# Filter elements by key with value
+class Query.Search extends Selector
+  signature: [
+    context: ['Query']
+    matcher: ['String']
+    query: ['String']
   ]
   
+# Reference to related element
 class Query.Element extends Selector
-  constructor: Query.construct()
-  
   signature: []
   
 Query.define
@@ -98,19 +129,19 @@ Query.define
 
   'class':
     prefix: '.'
-    group: 'native'
+    tags: ['selector']
     
-    Combinator: (value, engine, operation, continuation, scope) ->
+    Selecter: (value, engine, operation, continuation, scope) ->
       return (scope || @scope).getElementsByClassName(value)
       
     Qualifier: (node, value) ->
       return node if node.classList.contains(value)
 
   'tag':
+    tags: ['selector']
     prefix: ''
-    group: 'native'
-    
-    Combinator: (value, engine, operation, continuation, scope) ->
+
+    Selecter: (value, engine, operation, continuation, scope) ->
       return (scope || @scope).getElementsByTagName(value)
     
     Qualifier: (node, value) ->
@@ -120,9 +151,9 @@ Query.define
 
   'id':
     prefix: '#'
-    group: 'native'
+    tags: ['selector']
     
-    Combinator: (id, engine, operation, continuation, scope = @scope) ->
+    Selecter: (id, engine, operation, continuation, scope = @scope) ->
       return scope.getElementById?(id) || node.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
@@ -131,7 +162,7 @@ Query.define
 
   # All descendant elements
   ' ':
-    group: 'native'
+    tags: ['selector']
     
     Combinator: (node) ->
       return node.getElementsByTagName("*")
@@ -147,7 +178,7 @@ Query.define
 
   # All children elements
   '>':
-    group: 'native'
+    tags: ['selector']
     Combinator: (node) -> 
       return node.children
 
@@ -158,7 +189,7 @@ Query.define
 
   # Next element
   '+':
-    group: 'native'
+    tags: ['selector']
     Combinator: (node) ->
       return node.nextElementSibling
 
@@ -179,7 +210,7 @@ Query.define
 
   # All succeeding sibling elements
   '~':
-    group: 'native'
+    tags: ['selector']
     Combinator: (node) ->
       nodes = undefined
       while node = node.nextElementSibling
@@ -218,7 +249,7 @@ Query.define
 
   # Parent element (alias for !> *)
   '::parent':
-    Element: Query['!>'].Combinator
+    Element: Query['!>']::Combinator
 
   # Current engine scope (defaults to document)
   '::scope':
@@ -235,43 +266,40 @@ Query.define
 
 Query.define  
   '[=]':
-    binary: true
-    quote: true
-    group: 'native'
+    tags: ['selector']
     prefix: '['
-    suffix: ']'
-    Qualifier: (node, attribute, value) ->
+    separator: '="'
+    suffix: '"]'
+    Search: (node, attribute, value) ->
       return node if node.getAttribute(attribute) == value
 
   '[*=]':
-    binary: true
-    quote: true
+    tags: ['selector']
     prefix: '['
-    suffix: ']'
-    group: 'native'
-    Qualifier: (node, attribute, value) ->
+    separator: '*="'
+    suffix: '"]'
+    Search: (node, attribute, value) ->
       return node if node.getAttribute(attribute)?.indexOf(value) > -1
 
   '[|=]':
-    binary: true
-    quote: true
-    group: 'native'
+    tags: ['selector']
     prefix: '['
-    suffix: ']'
-    Qualifier: (node, attribute, value) ->
+    separator: '|="'
+    suffix: '"]'
+    Search: (node, attribute, value) ->
       return node if node.getAttribute(attribute)?
 
   '[]':
-    group: 'native'
+    tags: ['selector']
     prefix: '['
     suffix: ']'
-    Qualifier: (node, attribute) ->
+    Search: (node, attribute) ->
       return node if node.getAttribute(attribute)?
 
 
 
-    # Pseudo classes
-  
+# Pseudo classes
+
 Query.define
   ':value':
     Qualifier: (node) ->
@@ -283,12 +311,12 @@ Query.define
       return scope[property]
 
   ':first-child':
-    group: 'native'
+    tags: ['selector']
     Combinator: (node) ->
       return node unless node.previousElementSibling
 
   ':last-child':
-    group: 'native'
+    tags: ['selector']
     Combinator: (node) ->
       return node unless node.nextElementSibling
 
@@ -329,16 +357,21 @@ Query.define
   
   # Comma combines results of multiple selectors without duplicates
   ',':
-    # If all sub-selectors are native, make a single comma separated selector
-    group: 'native'
+    # If all sub-selectors are selector, make a single comma separated selector
+    tags: ['selector']
 
     # Dont let undefined arguments stop execution
     eager: true
 
     signature: null,
+    separator: ','
+
+    # Comma only serializes arguments
+    toString: ->
+      return ''
 
     # Return deduplicated collection of all found elements
-    Default: (engine, operation, continuation, scope) ->
+    command: (engine, operation, continuation, scope) ->
       contd = @Continuation.getScopePath(scope, continuation) + operation.path
       if @queries.ascending
         index = @engine.indexOfTriplet(@queries.ascending, operation, contd, scope) == -1
@@ -369,21 +402,21 @@ if document?
   dummy = Selector.dummy = document.createElement('_')
 
   unless dummy.hasOwnProperty("classList")
-    Query['class'].Qualifier = (node, value) ->
+    Query['class']::Qualifier = (node, value) ->
       return node if node.className.split(/\s+/).indexOf(value) > -1
       
   unless dummy.hasOwnProperty("parentElement") 
-    Query['!>'].Combinator = Selector['::parent'][1] = (node) ->
+    Query['!>']::Combinator = Selector['::parent']::Element = (node) ->
       if parent = node.parentNode
         return parent if parent.nodeType == 1
   unless dummy.hasOwnProperty("nextElementSibling")
-    Query['+'].Combinator = (node) ->
+    Query['+']::Combinator = (node) ->
       while node = node.nextSibling
         return node if node.nodeType == 1
-    Query['!+'].Combinator = (node) ->
+    Query['!+']::Combinator = (node) ->
       while node = node.previousSibling
         return node if node.nodeType == 1
-    Query['++'].Combinator = (node) ->
+    Query['++']::Combinator = (node) ->
       nodes = undefined
       prev = next = node
       while prev = prev.previousSibling
@@ -395,19 +428,19 @@ if document?
           (nodes ||= []).push(next)
           break
       return nodes
-    Query['~'].Combinator = (node) ->
+    Query['~']::Combinator = (node) ->
       nodes = undefined
       while node = node.nextSibling
         (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
-    Query['!~'].Combinator = (node) ->
+    Query['!~']::Combinator = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev && (prev != node)
         (nodes ||= []).push(prev) if prev.nodeType == 1
         prev = prev.nextSibling
       return nodes
-    Query['~~'].Combinator = (node) ->
+    Query['~~']::Combinator = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev
@@ -415,13 +448,13 @@ if document?
           (nodes ||= []).push(prev) 
         prev = prev.nextSibling
       return nodes
-    Query[':first-child'].Qualifier = (node) ->
+    Query[':first-child']::Qualifier = (node) ->
       if parent = node.parentNode
         child = parent.firstChild
         while child && child.nodeType != 1
           child = child.nextSibling
         return node if child == node
-    Query[':last-child'].Qualifier = (node) ->
+    Query[':last-child']::Qualifier = (node) ->
       if parent = node.parentNode
         child = parent.lastChild
         while child && child.nodeType != 1

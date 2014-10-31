@@ -4,7 +4,7 @@ class Iterator extends Command
   type: 'Iterator'
   
   signature: [
-  	collection: ['Object'],
+  	collection: ['Query'],
   	body: null
   ]
   

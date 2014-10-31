@@ -6,10 +6,10 @@ Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Valu
 
 A matched signature returns customized class for an operation that can further 
 pick a sub-class dynamically. Signatures allows special case optimizations and 
-composition to be coded as a structural composition, instead of branching in runtime.
+composition to be implemented structurally, instead of branching in runtime.
 
 Signatures are shared between commands. Dispatcher support css-style 
-typed optional argument groups, but has no support for keywords yet
+typed optional argument groups, but has no support for keywords or repeating groups yet
 ###
 Command = require('../concepts/Command')
 
@@ -18,13 +18,20 @@ class Signatures
   constructor: (@engine) ->
     
   # Register signatures defined in a given object
-  sign: (command, storage, object, step) ->
+  sign: (command, object) ->
+    if signed = command.__super__.signed
+      return signed
+    command.__super__.signed = storage = []
     if signature = object.signature
-      @set command, storage, signature, step
+      @get command, storage, signature
     else if signatures = object.signatures
       for signature in signatures
-        @set command, storage, signature, step
+        @get command, storage, signature
+    else
+      storage.push ['default']
+    return storage
         
+  # Reorder keys within optional group
   permute: (arg, permutation) ->
     keys = Object.keys(arg)
     return keys unless permutation
@@ -87,46 +94,64 @@ class Signatures
           properties.push(definition)
     return properties
 
-  generate: (combinations, command, storage, positions, properties, i = 0) ->
+  # Generate a list of all type paths
+  generate: (combinations, positions, properties, combination) ->
+    if combination
+      i = combination.length
+    else
+      combination = []
+      combinations.push(combination)
+      i = 0
 
     while (props = properties[i]) == undefined && i < properties.length
       i++
 
     if i == properties.length
-      return if storage.resolved
-      storage.resolved = Command.extend.call command,
-        permutation: positions
+      console.error(properties, positions.slice())
+      combination.push positions
     else
-      for type in properties[i]
-        @generate combinations, command, storage, positions, properties, i + 1
-        
+      for type, j in properties[i]
+        if j == 0
+          combination.push(type)
+        else
+          position = combinations.indexOf(combination)
+          combination = combination.slice(0, i)
+          combination.push type
+          combinations.push(combination)
+        @generate combinations, positions, properties, combination
+    return combinations
   # Create actual nested lookup tables for argument types
-  write: (args, command, storage, positions, properties)->
-    combinations = []
-    @generate combinations, command, storage, positions, properties
-
-
+  
+  write: (command, storage, combination)->
+    for i in [0 ... combination.length]
+      if (arg = combination[i]) == 'default'
+        storage.Default = command
+      else
+        if i < combination.length - 1
+          storage = storage[arg] ||= {}
+        else
+          storage.resolved ||= Command.extend.call(command, permutation: arg)
     return
 
   # Write cached lookup tables into a given storage (register method by signature)
-  apply: (storage, signature) ->
-    for property, value of signature
-      if typeof value == 'object'
-        @apply storage[property] ||= {}, value
-      else
-        storage[property] = value
+  set: (property, command, types) ->
+    storage = @[property] ||= {}
+
+    for type of types
+
+      if callback = command.prototype?[type]
+        subcommand = types[type].extend(command.prototype)
+        subcommand.command = callback
+        for combination in @sign(subcommand, subcommand.prototype)
+          @write subcommand, storage, combination
+
+    for combination in @sign(command, command.prototype)
+      @write command, storage, combination
+
     return
     
   # Generate a lookup structure to find method definition by argument signature
-  set: (command, storage, signature, args, permutation, types) ->
-    # Lookup subtype and catch-all signatures
-    unless signature.push
-      for type of types
-        if proto = command[type]?.prototype
-          @sign command[type], storage, proto
-      @sign command, storage, command.prototype
-      return
-
+  get: (command, storage, signature, args, permutation) ->
 
     args ||= []
     i = args.length
@@ -158,7 +183,7 @@ class Signatures
     
     # End of signature
     unless argument
-      @write args, command, storage, @getPositions(args), @getPermutation(args, @getProperties(signature))
+      @generate(storage, @getPositions(args), @getPermutation(args, @getProperties(signature)))
       return
       
     # Permute optional argument within its group
@@ -167,12 +192,12 @@ class Signatures
       
       for i in [0 ... keys.length] by 1
         if permutation.indexOf(i) == -1
-          @set command, storage, signature, args.concat(args.length - j + i), permutation.concat(i)
+          @get command, storage, signature, args.concat(args.length - j + i), permutation.concat(i)
   
-      @set command, storage, signature, args.concat(null), permutation.concat(null)
+      @get command, storage, signature, args.concat(null), permutation.concat(null)
       return
         
     # Register all input types for given arguments
-    @set command, storage, signature, args.concat(args.length)
+    @get command, storage, signature, args.concat(args.length)
 
 module.exports = Signatures

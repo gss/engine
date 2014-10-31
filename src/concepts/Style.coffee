@@ -43,7 +43,7 @@ Style = (definition, name, styles,
           max = Math.max(substyle.depth, max)
         when "string"
           # Predefined value type
-          Types = @types || @Types.prototype
+          Types = @types || @Type.prototype
           if type = Types[property]
             types.push(type)
             if initial == undefined
