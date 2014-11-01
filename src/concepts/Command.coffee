@@ -4,12 +4,11 @@ class Command
   constructor: (operation) ->
     unless command = operation.command
       match = Command.match(@, operation)
-      if typeof operation[0] == 'string'
-        command = match.instance || new match(operation)
-        if command.key?
-          command.push(operation)
-        else
-          match.instance = command
+      command = match.instance || new match(operation)
+      if command.key?
+        command.push(operation)
+      else
+        match.instance = command
       operation.command = command
     
     return command
@@ -18,18 +17,19 @@ class Command
   @match: (engine, operation, parent, index) ->
     operation.parent = parent
     operation.index = index
-    
+
+    # Function call
     if typeof operation[0] == 'string'
       unless signature = engine.signatures[operation[0]]
-        if engine.Default
-          return engine.Default
-        else
+        unless Default = engine.Default
           throw operation[0] + ' is not defined'
       i = 0
+    # List
     else
       i = -1
+      Default = engine.List || Command.List
+
     j = operation.length
-    Default = undefined 
     while ++i < j
       argument = operation[i]
       if argument?.push
@@ -37,46 +37,29 @@ class Command
       else
         type = @types[typeof argument]
 
-      if match = signature[type]
-        signature = match
-      else unless (Default ||= signature.Default || engine.Default)
-        throw "Unexpected " + type + " in " + operation[0]
+      if signature
+        if match = signature[type]
+          signature = match
+        else unless (Default ||= signature.Default)
+          throw "Unexpected " + type + " in " + operation[0]
 
-    if command = Default || signature.resolved
+    if command = Default || signature.resolved || engine.Default
       return command 
-    else if engine.Default
-      return engine.Default
     else
       throw "Too few arguments in" + operation[0]
       
       
-  solve: (engine, operation, continuation, scope = @engine.scope, ascender, ascending) ->
-    # Analyze operation
-    if (command = @) == Command
-      command = engine.Command(operation, !operation.hasOwnProperty('parent'))
-    
-    # Use custom argument evaluator of parent operation if it has one
-    if (solve = operation.parent?.command?.solve)
-      solved = solve.call(engine, operation, continuation, scope, ascender, ascending)
-      return if solved == false
-      if typeof solved == 'string'
-        continuation = solved
-
+  solve: (engine, operation, continuation, scope, ascender, ascending) ->
     # Use a shortcut operation when possible (e.g. native dom query)
-    if @tail
-
-      if (@tail.path == @tail.key || ascender? || 
-          (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) != continuation.indexOf(engine.Continuation.PAIR)))
-        operation = @head
-      else
-        operation = @tail[1]
+    if tail = @tail
+      operation = @jump(engine, tail, continuation, ascender)
 
     # Let engine modify continuation or return cached result
-    if continuation && command.path
+    if continuation && @path
       result = engine.getSolution(operation, continuation, scope)
       switch typeof result
         when 'string'
-          if operation[0] == '$virtual' && result.charAt(0) != engine.Continuation.PAIR
+          if operation[0] == 'virtual' && result.charAt(0) != engine.Continuation.PAIR
             return result
           else
             continuation = result
@@ -90,161 +73,99 @@ class Command
 
     if result == undefined
       # Recursively solve arguments, stop on undefined
-      args = command.descend(engine, operation, continuation, scope, ascender, ascending)
+      args = @descend(engine, operation, continuation, scope, ascender, ascending)
 
       return if args == false
 
-      if operation.name && !command.hidden
-        @engine.console.row(operation, args, continuation || "")
+      @log(args, engine, operation, continuation)
 
-      # Execute function and log it in continuation path
-      if command
-        result = command.execute(engine, operation, continuation, scope, args)
-        continuation = @getContinuation(operation, continuation, scope)
-    # Ascend the execution (fork for each item in collection)
-    return command.ascend(engine, operation, continuation, result, scope, ascender)
+      # Execute command with hooks
+      result = @before(args, engine, operation, continuation, scope)
+      result ?= @execute.apply(@, args)
+      result = @after(args, result, engine, operation, continuation, scope)
 
-  getContinuation: (operation, continuation = '', scope) ->
-    if @key && !@hidden
-      if @scoped && operation.length == 3
-        return continuation + @path
-      else
-        return continuation + @key
-    else
-      return continuation
+    if result?
+      continuation = @continue(engine, operation, continuation, scope)
+      return @ascend(engine, operation, continuation, result, scope, ascender)
 
-  # Get result of executing operation with resolved arguments
-  execute: (engine, operation, continuation, scope, args) ->
-    scope ||= engine.scope
-    # Let context lookup for cached value
-    if @before
-      result = @before(node || scope, args, engine, operation, continuation, scope)
-    
-    # Execute the function
-    if result == undefined
-      result = func.apply(engine, args)
+  continue: (engine, operation, continuation) ->
+    return continuation
 
-    # Let context transform or filter the result
-    if @after
-      result = @after(node || scope, args, result, engine, operation, continuation, scope)
+  # Hook that happens before actual function call
+  # If it returns something, the function will not be called
+  before: ->
 
+  # Hook that happens after function call or succesful before hook
+  # Can transform the returned value
+  after: (result) ->
     return result
+
+  log: (args, engine, operation, continuation) ->
+    engine.console.row(operation, args, continuation || "")
 
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     args = prev = undefined
-    offset = 0
-    for argument, index in operation
-      # Skip function name
-      if index == 0 
-        if typeof argument == 'string'
-          offset = 1
-          continue
-          
+
+    for index in [@start ... operation.length] by 1
       # Use ascending value
-      if ascender == index
-        argument = ascending
+      argument =
+        if ascender == index
+          ascending
+        else
+          operation[index]
 
       # Process function calls and lists
-      else if argument instanceof Array
-        # Leave forking mark in a path when resolving next arguments
+      if command = argument.command
+        # Leave forking/pairing mark in a path when resolving next arguments
         if ascender?
-          contd = engine.Continuation.descend(operation, continuation, ascender)
-        else
-          contd = continuation
-        argument = @solve(argument, contd, scope, undefined, prev)
+          contd = @connect(operation, continuation)
+        argument = command.solve(engine, argument, contd || continuation, scope)
 
-      # Handle undefined argument, usually stop evaluation
-      if argument == undefined
-        command = operation.command
-        if (ascender? || (!engine.eager && command?.eager) )
-          if command?.capture and 
-          (if operation.parent then !command else !offset)
-
-            stopping = true
-          # Lists are allowed to continue execution when they hit undefined
-          else if (command || offset)
+        # Handle undefined argument, usually stop evaluation
+        if argument == undefined
+          unless command.eager || engine.eager
             return false
-            
-        offset += 1
-        continue
-      (args ||= [])[index + offset] = prev = argument
+          else
+            continue
+      
+      (args ||= []).push(argument)
+
+    for i in [0 .. @execute.length - index] by 1
+      args.push arguments[i]
+
     return args
 
-  # Pass control (back) to parent operation. 
+  connect: (engine, operation, continuation) ->
+    return engine.Continuation.get(continuation, null, @PAIR)
+
+  fork: (engine, continuation) ->
+    return engine.Continuation.get(continuation, null, @ASCEND)
+
+  # Pass control to parent operation. 
   # If child op returns DOM collection or node, evaluator recurses for each node.
   # In that case, it discards the descension value stack
   ascend: (engine, operation, continuation, result, scope, ascender) ->
-    if result? 
-      if parent = operation.parent
-        pcommand = engine.Command(parent)
-      if parent && (typeof parent[0] == 'string' || operation.command.noop) && (parent.domain == operation.domain || parent.domain == @engine.document || parent.domain == @engine)
-        # For each node in collection, recurse to a parent with id appended to continuation key
-        if parent && engine.isCollection(result)
-          engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', engine.Continuation.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
-          for item in result
-            contd = engine.Continuation.ascend(continuation, item)
-            @ascend engine, operation, contd, item, scope, operation.index
+    unless parent = operation.parent
+      return
+    if (top = parent.command) instanceof Command.List
+      return
 
-          engine.console.groupEnd()
-          return
-        else 
-          # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-          return if pcommand?.capture?.call(engine, result, operation, continuation, scope, ascender)
+    if parent.domain == operation.domain
+    
+      # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
+      if top.provide?(engine, result, operation, continuation, scope, ascender)
+        return 
 
-          # Topmost unknown commands are returned as results
-          if !operation.command && typeof operation[0] == 'string' && result.length == 1
-            return 
-
-          if !parent.name
-            if result && (!parent ||    # if current command is root
-              (!pcommand &&               # or parent is unknown command
-                (!parent.parent ||        # and parent is a root
-                parent.length == 1) ||    # or a branch with a single item
-                ascender?))               # or if value bubbles up
-
-              if result.length == 1
-                result = result[0]
-              
-              # Return result back to engine
-              return engine.provide result
-
-          else if parent && (ascender? || 
-              ((result.nodeType || operation.command.key) && 
-              (!operation.command.hidden || parent.command.tail == parent)))
-            #if operation.def.mark && continuation != @engine.Continuation.PAIR
-            #  continuation = @engine.Continuation(continuation, null, @engine[operation.def.mark])
-            @solve engine, parent, continuation, scope, operation.index, result
-            return
-
-          return result
-      else if parent && ((typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain))
-        if !continuation && operation[0] == 'get'
-          continuation = operation[3]
-          
-        solution = ['value', result, continuation || '', 
-                    operation.toString()]
-        unless scoped = (scope != engine.scope && scope)
-          if operation[0] == 'get' && operation[4]
-            scoped = engine.identity.solve(operation[4])
-        if operation.exported || scoped
-          solution.push(operation.exported ? null)
-        if scoped
-          solution.push(engine.identity.provide(scoped))
-
-        solution.operation = operation
-        solution.parent    = operation.parent
-        solution.domain    = operation.domain
-        solution.index     = operation.index
-
-        parent[operation.index] = solution
-        engine.engine.provide solution
-        return
+      # Recurse to ascend query result
+      if ascender?
+        top.solve engine, parent, continuation, scope, operation.index, result
       else
-        return engine.provide result
+        return result
 
-    # Ascend without recursion (math, regular functions, constraints)
-    return result
+    # Return partial solution to dispatch to parent command's domain
+    else if (typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain)
+      engine.engine.subsolve(operation, continuation, scope)
        
   # Define command subclass
   @extend: (definition, methods) ->
@@ -281,7 +202,7 @@ class Command
   
   # Attempt to re-use argument's command for the operation if groups match
   @reduce: (operation, command) ->
-    for i in [1 ... operation.length]
+    for i in [1 ... operation.length] by 1
       if argument = operation[i]
         if argument.command?.push?(operation, command)
           return argument.command
@@ -315,5 +236,19 @@ class Command
     @Types = Types
       
     @
-    
-  module.exports = Command
+  
+  @Empty: {}
+  start: 1
+
+class Command.List extends Command
+  start: 0
+  extras: 0
+
+  log: ->
+
+class Command.Default extends Command
+
+
+
+module.exports = Command
+

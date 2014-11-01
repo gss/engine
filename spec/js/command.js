@@ -40,7 +40,7 @@ describe('GSS commands', function() {
   describe('command transformations -', function() {
     it('stay with class & static ids', function() {
       scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
-      engine.solve([['stay', ['get', ['$class', 'box'], 'x']]]);
+      engine.solve([['stay', ['get', ['class', 'box'], 'x']]]);
       return chai.expect(engine.updated.getProblems()).to.eql([[['stay', ['get', '$12322', 'x', '.box$12322']]], [['stay', ['get', '$34222', 'x', '.box$34222']]]]);
     });
     it('multiple stays', function() {

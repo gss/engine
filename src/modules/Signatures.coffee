@@ -107,7 +107,6 @@ class Signatures
       i++
 
     if i == properties.length
-      console.error(properties, positions.slice())
       combination.push positions
     else
       for type, j in properties[i]
@@ -139,9 +138,9 @@ class Signatures
 
     for type of types
 
-      if callback = command.prototype?[type]
-        subcommand = types[type].extend(command.prototype)
-        subcommand.command = callback
+      if execute = command.prototype?[type]
+        subcommand = command[type] ||= types[type].extend(command.prototype)
+        subcommand::execute = execute
         for combination in @sign(subcommand, subcommand.prototype)
           @write subcommand, storage, combination
 

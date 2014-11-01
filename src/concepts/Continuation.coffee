@@ -127,17 +127,6 @@ class Continuation
       path = operation.path
     return path
 
-  ascend: (continuation, item) ->
-    return @get(continuation, item, @ASCEND)
-
-  descend: (operation, continuation, ascender) ->
-    if ascender?
-      mark = operation.def.rule && ascender == 1 && @DESCEND || @PAIR
-      if mark
-        return @get(continuation, null, mark)
-      else
-        return continuation
-
   TrimContinuationRegExp: new RegExp("[" + 
     Continuation::ASCEND + 
     Continuation::DESCEND +

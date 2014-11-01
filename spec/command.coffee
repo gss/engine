@@ -35,7 +35,7 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-          ['stay', ['get', ['$class','box'], 'x']]
+          ['stay', ['get', ['class','box'], 'x']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
           [['stay', ['get', '$12322', 'x', '.box$12322']]]

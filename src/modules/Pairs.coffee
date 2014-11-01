@@ -65,12 +65,7 @@ class Pairs
       contd = @engine.Continuation.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
       if contd.charAt(0) == @engine.Continuation.PAIR
         contd = contd.substring(1)
-      if operation.path.substring(0, 6) == '::this'
-        if (i = contd.lastIndexOf('::this')) > -1
-          relative = contd.substring(i)
-        else
-          relative = '::this' + contd
-      if contd == operation.path || relative == operation.path
+      if contd == operation.path
         if id = continuation.match(@TrailingIDRegExp)
           if id[1].indexOf('"') > -1
             return id[1]

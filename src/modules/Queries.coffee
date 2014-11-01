@@ -126,7 +126,7 @@ class Queries
         parent = watcher
         matched = false
         while parent
-          if parent.path == path || (parent.path?.substring(0, 6) == '::this' && '::this' + path == parent.path)
+          if parent.path == path
             matched = true
             break
           parent = parent.parent
@@ -264,7 +264,7 @@ class Queries
           string = continuation + id
         else
           string = continuation
-        parent.def.release?.call(@engine, node, operation, string, scope)
+        parent.command.release?.call(@engine, node, operation, string, scope)
         
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
@@ -417,27 +417,32 @@ class Queries
       return @[method] result, continuation, operation, scope, needle, recursion, contd
 
   # Filter out known nodes from DOM collections
-  update: (node, args, result = undefined, operation, continuation, scope) ->
-    node ||= @engine.getContext(operation, args, scope, node)
-    path = @engine.Operation.getQueryPath(operation, continuation)
+  update: (args, result = undefined, operation, continuation, scope) ->
+    engine = @engine
+    updating = @updating
+    path = engine.Operation.getQueryPath(operation, continuation)
     old = @get(path)
 
     # Normalize query to reuse results
-    if !operation.def.relative && !operation.marked && 
-            (query = @engine.Operation.getQueryPath(operation, node, scope)) && 
-            @engine.updating.queries?.hasOwnProperty(query)
-      result = @engine.updating.queries[query]
-    if @engine.updating.collections?.hasOwnProperty(path)
-      old = @engine.updating.collections[path]
-    else if !old? && (result && result.length == 0) && continuation
-      old = @get(@engine.Continuation.getCanonicalPath(path))
+    command = operation.command
 
-    isCollection = @engine.isCollection(result)
+    node = if args[0]?.nodeType == 1 then args[0] else scope
+
+    if !command.relative && !command.marked && 
+            (query = engine.Operation.getQueryPath(operation, node, scope)) && 
+            updating.queries?.hasOwnProperty(query)
+      result = updating.queries[query]
+    if engine.collections?.hasOwnProperty(path)
+      old = updating.collections[path]
+    else if !old? && (result && result.length == 0) && continuation
+      old = @get(engine.Continuation.getCanonicalPath(path))
+
+    isCollection = engine.isCollection(result)
 
     # Clean refs of nodes that dont match anymore
     if old
-      if @engine.isCollection(old)
-        if continuation?.charAt(0) == @engine.Continuation.PAIR
+      if engine.isCollection(old)
+        if continuation?.charAt(0) == engine.Continuation.PAIR
           old = @filterByScope(old, scope, operation)
         removed = undefined
         for child, index in old
@@ -448,12 +453,12 @@ class Queries
         if !result
           removed = old
         @clean(path, undefined, operation, scope)
-      else if continuation.charAt(0) == @engine.Continuation.PAIR
+      else if continuation.charAt(0) == engine.Continuation.PAIR
 
         # Subscribe node to the query
-        if id = @engine.identity.provide(node)
+        if id = engine.identity.provide(node)
           watchers = @watchers[id] ||= []
-          if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+          if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
             watchers.push(operation, continuation, scope)
         
         return old
@@ -483,9 +488,9 @@ class Queries
       
     #unless operation.def.capture
       # Subscribe node to the query
-    if id = @engine.identity.provide(node)
+    if id = engine.identity.provide(node)
       watchers = @watchers[id] ||= []
-      if (@engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+      if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         watchers.push(operation, continuation, scope)
     
     if query

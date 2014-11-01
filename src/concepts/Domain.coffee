@@ -21,7 +21,8 @@ State:
 Trigger = require('./Trigger')
 
 class Domain extends Trigger
-  priority: 0  
+  priority: 0
+  strategy: undefined
 
   constructor: (engine, url, values, name) ->
     if !engine || engine instanceof Domain
@@ -117,7 +118,9 @@ class Domain extends Trigger
     if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
       if (result = @bypass(args))
         return result
-        
+
+    @setup() unless @running
+
     transacting = @transact()
 
     if typeof args == 'object' && !args.push
@@ -131,7 +134,12 @@ class Domain extends Trigger
       else
         result = @[strategy].apply(@, arguments)
     else
-      result = @Command(operation).solve(@, operation, continuation, scope, ascending, ascender)
+      if arguments.length == 1
+        operation = arguments[0]
+      else
+        operation = Array.prototype.slice.call(arguments)
+        
+      result = @Command(operation).solve(@, operation, '', @scope)
 
     if @constrained || @unconstrained
       commands = @validate.apply(@, arguments)
@@ -249,8 +257,6 @@ class Domain extends Trigger
 
   # Set key-value pair or merge object
   set: (object, property, value) ->
-    @setup()
-
     path = @engine.Variable.getPath(object, property)
     old = @values[path]
     return if old == value
@@ -692,7 +698,7 @@ class Domain extends Trigger
         Properties = @Properties
         @properties  = new (Properties || Object)
 
-        return Domain::constructor.call(@, engine)
+        return domain::constructor.call(@, engine)
         
       
       EngineDomainWrapper = ->

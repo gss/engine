@@ -16,7 +16,32 @@ class Abstract extends Domain
     super
 
 # Catch-all class for unknown commands    
-Abstract::Default = Command.extend()
+Abstract::Default = Command.Default.extend(
+  extras: 2
+
+  # topmost unknown command returns processed operation back to engine
+  execute: () ->
+    length = arguments.length
+    engine = arguments[length - 2]
+    operation = arguments[length - 1]
+    result = Array.prototype.slice(arguments, 0, -2)
+    result.unshift operation[0]
+    if result.length == 1
+      result = result[0]
+
+    if parent = operation.parent
+      if parent.command instanceof Command.Default
+        return result
+      unless parent.command instanceof Command.List
+        throw "Incorrect command nesting - unknown command can only be on the top level"
+    engine.provide result
+    return
+)
+Abstract::List = Command.List.extend(
+  capture: ->
+
+  execute: ->
+)
 
 # Global variable
 Abstract::Value = Command.extend.call Value
@@ -34,7 +59,7 @@ Abstract::Value.Variable = Command.extend.call Abstract::Value, {
 # Scoped variable
 Abstract::Value.Getter = Command.extend.call Abstract::Value, {
   signature: [
-    object:   ['Query']
+    object:   ['Query', 'Selector']
     property: ['String']
     [tracker: ['String']]
   ]

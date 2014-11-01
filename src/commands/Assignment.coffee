@@ -4,7 +4,7 @@ class Assignment extends Command
   type: 'Assignment'
   
   signature: [
-    [object:   ['Query']]
+    [object:   ['Query', 'Selector']]
     property: ['String']
     value:    ['Value']
   ]
@@ -12,7 +12,7 @@ class Assignment extends Command
 class Assignment.Unsafe extends Assignment
   
   signature: [
-    [object:   ['Query']]
+    [object:   ['Query', 'Selector']]
     property: ['String']
     value:    null
   ]

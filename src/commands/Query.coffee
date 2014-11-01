@@ -4,9 +4,9 @@ class Query extends Command
   type: 'Query'
   
   constructor: (operation) ->
-    @key = @path = @toString(operation)
+    @key = @path = @serialize(operation)
 
-  toString: (operation) ->
+  serialize: (operation) ->
     if @prefix?
       string = @prefix
     else
@@ -61,6 +61,44 @@ class Query extends Command
       else
         @path = path + @path
     return true
+
+  continue: (engine, operation, continuation = '') ->
+    return continuation + (@key || '')
+
+  jump: (engine, tail, continuation, ascender) ->
+    if (tail.path == tail.key || ascender? || 
+        (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) != continuation.indexOf(engine.Continuation.PAIR)))
+      return @head
+    else
+      return @tail[1]
+
+  # Pass control to parent operation. 
+  # 
+  ascend: (engine, operation, continuation, result, scope, ascender) ->
+    unless parent = operation.parent
+      return
+    if (top = parent.command) instanceof Command.List
+      return
+    
+    # For each node in collection, recurse to a parent with id appended to continuation key
+    if engine.isCollection(result)
+      engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', engine.Continuation.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
+      
+      for item in result
+        @ascend engine, operation, @fork(engine, continuation), item, scope, operation.index
+      
+      engine.console.groupEnd()
+    else 
+      # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
+      if top.provide?(engine, result, operation, continuation, scope, ascender)
+        return 
+
+      # Recurse to ascend query result
+      if @key
+        top.solve engine, parent, continuation, scope, operation.index, result
+      else
+        return result
+     
 
   mergers: {}
 module.exports = Query

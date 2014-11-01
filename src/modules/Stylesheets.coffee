@@ -11,7 +11,7 @@ class Stylesheets
   ]
 
   compile: ->
-    @CleanupSelectorRegExp = new RegExp(@engine.Continuation.DESCEND + '::this', 'g')
+    @CleanupSelectorRegExp = new RegExp(@engine.Continuation.DESCEND, 'g')
     @engine.engine.solve 'Document', 'stylesheets', @initialize
     @inline = @engine.queries['style[type*="text/gss"]']
     @remote = @engine.queries['link[type*="text/gss"]']
@@ -181,31 +181,23 @@ class Stylesheets
                 update.push result.substring(0, 11) + selectors + @engine.Continuation.DESCEND + result.substring(11)
               else
                 for bit, index in bits
-                  if groups[index] != bit && '::this' + groups[index] != paths[index] 
-                    if result.substring(0, 6) == '::this'
-                      update.push @getCustomSelector(selectors) + result.substring(6)
-                    else
-                      update.push @getCustomSelector(selectors) + ' ' + result
+                  if groups[index] != bit
+                    update.push @getCustomSelector(selectors) + ' ' + result
                   else 
-                    if result.substring(0, 6) == '::this'
-                      update.push bit + result.substring(6)
-                    else
-                      update.push bit + ' ' + result
+                    update.push bit + ' ' + result
 
             results = update
           # Return all selectors
           else 
 
             results = selectors.split(',').map (path, index) =>
-              if path != groups[index] && '::this' + groups[index] != paths[index]
+              if path != groups[index]
                 @getCustomSelector(selectors)
               else
                 path
         parent = parent.parent
 
       for result, index in results
-        if result.substring(0, 6) == '::this'
-          results[index] = result.substring(6)
         results[index] = results[index].replace(@CleanupSelectorRegExp, '')
       return results
 

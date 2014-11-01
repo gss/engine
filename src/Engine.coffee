@@ -360,6 +360,28 @@ class Engine extends Domain
     else
       return @update.apply(@, arguments)
 
+  # Yield partial solution for expression, dispatch the rest of expression
+  subsolve: (result, operation, continuation, scope) ->
+    if !continuation && operation[0] == 'get'
+      continuation = operation[3]
+      
+    solution = ['value', result, continuation || '', 
+                operation.toString()]
+    unless scoped = (scope != engine.scope && scope)
+      if operation[0] == 'get' && operation[4]
+        scoped = engine.identity.solve(operation[4])
+    if operation.exported || scoped
+      solution.push(operation.exported ? null)
+    if scoped
+      solution.push(engine.identity.provide(scoped))
+
+    solution.operation = operation
+    solution.parent    = operation.parent
+    solution.domain    = operation.domain
+    solution.index     = operation.index
+
+    parent[operation.index] = solution
+    engine.engine.provide solution
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
       workflow.postMessage domain, problems

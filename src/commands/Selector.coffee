@@ -9,6 +9,8 @@ Command = require('../concepts/Command')
 Query   = require('./Query')
 
 class Selector extends Query
+  type: 'Selector'
+  
   prepare: (operation, parent) ->
     prefix = ((parent && operation.name != ' ') || 
           (operation[0] != '$combinator' && typeof operation[1] != 'object')) && 
@@ -59,24 +61,24 @@ class Selector extends Query
       
     
   # Check if query was already updated
-  before: (node, args, engine, operation, continuation, scope) ->
+  before: (args, engine, operation, continuation, scope) ->
     unless @hidden
-      return engine.queries.fetch(node, args, operation, continuation, scope)
+      return engine.queries.fetch(args, operation, continuation, scope)
 
   # Subscribe elements to query 
-  after: (node, args, result, engine, operation, continuation, scope) ->
+  after: (args, result, engine, operation, continuation, scope) ->
     unless @hidden
-      return engine.queries.update(node, args, result, operation, continuation, scope)
+      return engine.queries.update(args, result, operation, continuation, scope)
 
 
-Query::mergers.selector = (command, other, parent, operation, inherited) ->
+Selector::mergers.selector = (command, other, parent, operation, inherited) ->
   if !other.head
     # Native selectors cant start with combinator other than whitespace
-    if other instanceof Query.Combinator && operation[0] != ' '
+    if other instanceof Selector.Combinator && operation[0] != ' '
       return
 
   # Can't append combinator to qualifying selector selector 
-  if selecting = command instanceof Query.Selecter
+  if selecting = command instanceof Selector.Selecter
     return unless other.selecting
   else if other.selecting
     command.selecting = true
@@ -85,46 +87,49 @@ Query::mergers.selector = (command, other, parent, operation, inherited) ->
   command.head = parent
   command.tail = other.tail || operation
   command.tail.head = parent
+  
+  left = other.selector || other.key
   right = command.selector || command.key
-  if inherited
-    command.selector = (command.selector || command.key) + command.separator + (other.selector || other.key)
-  else
-    command.selector = (other.selector || other.key) + (command.selector || command.key)
+  command.selector = 
+    if inherited
+      right + command.separator + left
+    else
+      left + right
   return true
 
 # Indexed collection
-class Query.Selecter extends Selector
+class Selector.Selecter extends Selector
   signature: [
     query: ['String']
   ]
 
 # Scoped indexed collections
-class Query.Combinator extends Query.Selecter
+class Selector.Combinator extends Selector.Selecter
   signature: [[
-    context: ['Query']
+    context: ['Selector']
     query: ['String']
   ]]
 
 # Filter elements by key
-class Query.Qualifier extends Selector
+class Selector.Qualifier extends Selector
   signature: [
-    context: ['Query']
+    context: ['Selector']
     matcher: ['String']
   ]
 
 # Filter elements by key with value
-class Query.Search extends Selector
+class Selector.Search extends Selector
   signature: [
-    context: ['Query']
+    context: ['Selector']
     matcher: ['String']
     query: ['String']
   ]
   
 # Reference to related element
-class Query.Element extends Selector
+class Selector.Element extends Selector
   signature: []
   
-Query.define
+Selector.define
   # Live collections
 
   'class':
@@ -132,7 +137,7 @@ Query.define
     tags: ['selector']
     
     Selecter: (value, engine, operation, continuation, scope) ->
-      return (scope || @scope).getElementsByClassName(value)
+      return scope.getElementsByClassName(value)
       
     Qualifier: (node, value) ->
       return node if node.classList.contains(value)
@@ -142,7 +147,7 @@ Query.define
     prefix: ''
 
     Selecter: (value, engine, operation, continuation, scope) ->
-      return (scope || @scope).getElementsByTagName(value)
+      return scope.getElementsByTagName(value)
     
     Qualifier: (node, value) ->
       return node if value == '*' || node.tagName == value.toUpperCase()
@@ -179,6 +184,7 @@ Query.define
   # All children elements
   '>':
     tags: ['selector']
+
     Combinator: (node) -> 
       return node.children
 
@@ -211,6 +217,7 @@ Query.define
   # All succeeding sibling elements
   '~':
     tags: ['selector']
+
     Combinator: (node) ->
       nodes = undefined
       while node = node.nextElementSibling
@@ -239,21 +246,25 @@ Query.define
       return nodes
 
 
-Query.define
+Selector.define
   # Pseudo elements
   '::this':
     hidden: true
-    mark: 'ASCEND'
+    log: ->
+
     Element: (engine, operation, continuation, scope) ->
       return scope
 
+    continue: (engine, operation, continuation) ->
+      return continuation
+
+
   # Parent element (alias for !> *)
   '::parent':
-    Element: Query['!>']::Combinator
+    Element: Selector['!>']::Combinator
 
   # Current engine scope (defaults to document)
-  '::scope':
-    hidden: true
+  '::root':
     Element: (engine, operation, continuation, scope) ->
       return engine.scope
 
@@ -264,7 +275,7 @@ Query.define
       return '::window' 
   
 
-Query.define  
+Selector.define  
   '[=]':
     tags: ['selector']
     prefix: '['
@@ -300,7 +311,7 @@ Query.define
 
 # Pseudo classes
 
-Query.define
+Selector.define
   ':value':
     Qualifier: (node) ->
       return node.value
@@ -363,11 +374,14 @@ Query.define
     # Dont let undefined arguments stop execution
     eager: true
 
+    # Match all kinds of arguments
     signature: null,
+
+
     separator: ','
 
     # Comma only serializes arguments
-    toString: ->
+    serialize: ->
       return ''
 
     # Return deduplicated collection of all found elements
@@ -382,7 +396,7 @@ Query.define
 
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
-    capture: (result, engine, operation, continuation, scope, ascender) ->
+    provide: (result, engine, operation, continuation, scope, ascender) ->
       contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.path
       engine.queries.add(result, contd, operation.parent, scope, operation, continuation)
       engine.queries.ascending ||= []
@@ -402,21 +416,21 @@ if document?
   dummy = Selector.dummy = document.createElement('_')
 
   unless dummy.hasOwnProperty("classList")
-    Query['class']::Qualifier = (node, value) ->
+    Selector['class']::Qualifier = (node, value) ->
       return node if node.className.split(/\s+/).indexOf(value) > -1
       
   unless dummy.hasOwnProperty("parentElement") 
-    Query['!>']::Combinator = Selector['::parent']::Element = (node) ->
+    Selector['!>']::Combinator = Selector['::parent']::Element = (node) ->
       if parent = node.parentNode
         return parent if parent.nodeType == 1
   unless dummy.hasOwnProperty("nextElementSibling")
-    Query['+']::Combinator = (node) ->
+    Selector['+']::Combinator = (node) ->
       while node = node.nextSibling
         return node if node.nodeType == 1
-    Query['!+']::Combinator = (node) ->
+    Selector['!+']::Combinator = (node) ->
       while node = node.previousSibling
         return node if node.nodeType == 1
-    Query['++']::Combinator = (node) ->
+    Selector['++']::Combinator = (node) ->
       nodes = undefined
       prev = next = node
       while prev = prev.previousSibling
@@ -428,19 +442,19 @@ if document?
           (nodes ||= []).push(next)
           break
       return nodes
-    Query['~']::Combinator = (node) ->
+    Selector['~']::Combinator = (node) ->
       nodes = undefined
       while node = node.nextSibling
         (nodes ||= []).push(node) if node.nodeType == 1
       return nodes
-    Query['!~']::Combinator = (node) ->
+    Selector['!~']::Combinator = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev && (prev != node)
         (nodes ||= []).push(prev) if prev.nodeType == 1
         prev = prev.nextSibling
       return nodes
-    Query['~~']::Combinator = (node) ->
+    Selector['~~']::Combinator = (node) ->
       nodes = undefined
       prev = node.parentNode.firstChild
       while prev
@@ -448,13 +462,13 @@ if document?
           (nodes ||= []).push(prev) 
         prev = prev.nextSibling
       return nodes
-    Query[':first-child']::Qualifier = (node) ->
+    Selector[':first-child']::Qualifier = (node) ->
       if parent = node.parentNode
         child = parent.firstChild
         while child && child.nodeType != 1
           child = child.nextSibling
         return node if child == node
-    Query[':last-child']::Qualifier = (node) ->
+    Selector[':last-child']::Qualifier = (node) ->
       if parent = node.parentNode
         child = parent.lastChild
         while child && child.nodeType != 1
