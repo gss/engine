@@ -25,8 +25,8 @@ Updater = (engine) ->
 
       # Analyze variable
       if arg[0] == 'get'
-        vardomain = @Variable.getDomain(arg)
-        path = arg.property = @Variable.getPath(arg[1], arg[2])
+        vardomain = @getVariableDomain(@, arg)
+        path = arg[1]
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         effects = new Update vardomain, [arg]
@@ -316,8 +316,8 @@ Update.prototype =
             if arg.push
               if arg[0] == 'get'
                 if !arg.domain || arg.domain.displayName == other.displayName
-                  @setVariable(problem, arg.property, arg)
-                  @setVariable(exp, arg.property, arg)
+                  @setVariable(problem, arg[1], arg)
+                  @setVariable(exp, arg[1], arg)
 
               else if arg.variables
                 for prop, value of arg.variables
@@ -346,7 +346,7 @@ Update.prototype =
       problems.exported = true
       problems.parent = undefined
       result.push(problems)
-      path = @engine.Variable.getPath(problems[1], problems[2])
+      path = @getPath(problems[1], problems[2])
       exports = (@exports ||= {})[path] ||= []
       exports.push domain
       imports = (@imports ||= [])

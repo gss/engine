@@ -19,7 +19,7 @@ Numeric.Value            = Value.extend()
 Numeric.Value.Solution   = Value.Solution.extend()
 Numeric.Value.Variable   = Value.Variable.extend {group: 'linear'},
   get: (path, tracker, scoped, engine, operation, continuation, scope) ->
-    domain = engine.Variable.getDomain(operation, true, true)
+    domain = engine.getVariableDomain(operation, true, true)
     if !domain || domain.priority < 0
       domain = engine
     else if domain != engine

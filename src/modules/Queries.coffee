@@ -419,7 +419,7 @@ class Queries
   # Filter out known nodes from DOM collections
   update: (args, result = undefined, operation, continuation, scope) ->
     engine = @engine
-    updating = @updating
+    updating = engine.updating
     path = engine.Operation.getQueryPath(operation, continuation)
     old = @get(path)
 

@@ -109,37 +109,32 @@ class Domain extends Trigger
       @variables[name] = continuation
     return result
   
-  solve: (args) ->
-    return unless args
+  solve: (operation, continuation, scope) ->
+    return unless operation
 
     if @disconnected
       @mutations?.disconnect(true)
 
     if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
-      if (result = @bypass(args))
+      if (result = @bypass(operation))
         return result
 
     @setup() unless @running
 
     transacting = @transact()
 
-    if typeof args == 'object' && !args.push
+    if typeof operation == 'object' && !operation.push
       if @domain == @engine
-        @assumed.merge args
+        @assumed.merge operation
       else
-        @merge args
+        @merge operation
     else if strategy = @strategy
       if (object = @[strategy]).solve
         result = object.solve.apply(object, arguments) || {}
       else
         result = @[strategy].apply(@, arguments)
     else
-      if arguments.length == 1
-        operation = arguments[0]
-      else
-        operation = Array.prototype.slice.call(arguments)
-        
-      result = @Command(operation).solve(@, operation, '', @scope)
+      result = @Command(operation).solve(@, operation, continuation || '', scope || @scope)
 
     if @constrained || @unconstrained
       commands = @validate.apply(@, arguments)
@@ -187,7 +182,7 @@ class Domain extends Trigger
 
   watch: (object, property, operation, continuation, scope) ->
     @setup()
-    path = @engine.Variable.getPath(object, property)
+    path = @getPath(object, property)
     if @engine.indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @observers[continuation] ||= []
       observers.push(operation, path, scope)
@@ -208,7 +203,7 @@ class Domain extends Trigger
     return @get(path)
 
   unwatch: (object, property, operation, continuation, scope) ->
-    path = @engine.Variable.getPath(object, property)
+    path = @getPath(object, property)
     observers = @observers[continuation]
     index = @engine.indexOfTriplet observers, operation, path, scope
     observers.splice index, 3
@@ -235,7 +230,7 @@ class Domain extends Trigger
             delete @objects[id]
 
   get: (object, property) ->
-    return @values[@engine.Variable.getPath(object, property)]
+    return @values[@getPath(object, property)]
 
   merge: (object) ->
     # merge objects/domains
@@ -257,7 +252,7 @@ class Domain extends Trigger
 
   # Set key-value pair or merge object
   set: (object, property, value) ->
-    path = @engine.Variable.getPath(object, property)
+    path = @getPath(object, property)
     old = @values[path]
     return if old == value
     if @updating
@@ -446,7 +441,7 @@ class Domain extends Trigger
           if path[3]
             bits = path[3].split(',')
             if bits[0] == 'get'
-              (constraint.substitutions ||= {})[@Variable.getPath(bits[1], bits[2])] = path[1]
+              (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
           @substituted.push(constraint)
         else if @isVariable(path)
           if path.suggest != undefined
@@ -672,6 +667,62 @@ class Domain extends Trigger
       @Maybe.MAYBE = @
       
     return new @Maybe
+
+  getPath: (id, property) ->
+    unless property
+      property = id
+      id = undefined
+    if property.indexOf('[') > -1 || !id
+      return property
+    else
+      if typeof id != 'string'
+        if id.nodeType
+          id = @identity.provide(id)
+        else 
+          id = id.path
+      return id + '[' + property + ']'
+
+
+  # Return domain that should be used to evaluate given variable
+  getVariableDomain: (engine, operation, force, quick) ->
+    if operation.domain && !force
+      return operation.domain
+    [cmd, scope, property] = variable = operation
+    path = @getPath(scope, property)
+    
+    intrinsic = engine.intrinsic
+    if (scope || path.indexOf('[') > -1) && property && intrinsic?.properties[path]?
+      domain = intrinsic
+    else if scope && property && intrinsic?.properties[property] && !intrinsic.properties[property].matcher
+      domain = intrinsic
+    else
+      for d in engine.domains
+        if d.values.hasOwnProperty(path) && (d.priority >= 0 || d.variables[path]) && d.displayName != 'Solved'
+          domain = d
+          break
+        if d.substituted
+          for constraint in d.substituted
+            if constraint.substitutions?[path]
+              domain = d
+              break
+    unless domain
+      if property && (index = property.indexOf('-')) > -1
+        prefix = property.substring(0, index)
+        if (domain = engine[prefix])
+          unless domain instanceof engine.Domain
+            domain = undefined
+
+      unless domain
+        #if scope && property && @intrinsic?.properties[property]
+        #  domain = @intrinsic.maybe()
+        #else
+        if !quick
+          domain = @engine.linear.maybe()
+    if variable && !force
+      variable.domain = domain
+    return domain
+    
+      
 
   # Make Domain class inherit given engine instance. Crazy huh
   # Overloads parts of the world (methods, variables, observers)

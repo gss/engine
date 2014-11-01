@@ -162,7 +162,7 @@ class Engine extends Domain
       # Substituted part of expression
       if expressions[4]
         exp = parent[index] = expressions[3].split(',')
-        path = @Variable.getPath(exp[1], exp[2])
+        path = @getPath(exp[1], exp[2])
       # Updates for substituted variables
       else if !expressions[3]
         path = expressions[2]
@@ -382,6 +382,7 @@ class Engine extends Domain
 
     parent[operation.index] = solution
     engine.engine.provide solution
+
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
       workflow.postMessage domain, problems

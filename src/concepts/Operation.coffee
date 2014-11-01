@@ -46,7 +46,7 @@ class Operation
 
   getDomain: (operation, domain) ->
     if typeof operation[0] == 'string'
-      if !domain.methods[operation[0]]
+      if !domain.linear.signatures[operation[0]]
         return @engine.linear.maybe()
       for arg in operation
         if arg.domain && arg.domain.priority > domain.priority && arg.domain < 0

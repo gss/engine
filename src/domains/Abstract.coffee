@@ -17,14 +17,16 @@ class Abstract extends Domain
 
 # Catch-all class for unknown commands    
 Abstract::Default = Command.Default.extend(
-  extras: 2
+  extras: 4
 
   # topmost unknown command returns processed operation back to engine
   execute: () ->
     length = arguments.length
-    engine = arguments[length - 2]
-    operation = arguments[length - 1]
-    result = Array.prototype.slice(arguments, 0, -2)
+    engine = arguments[length - 4]
+    operation = arguments[length - 3]
+    continuation = arguments[length - 2]
+    scope = arguments[length - 1]
+    result = Array.prototype.slice.call(arguments, 0, -4)
     result.unshift operation[0]
     if result.length == 1
       result = result[0]
@@ -34,7 +36,8 @@ Abstract::Default = Command.Default.extend(
         return result
       unless parent.command instanceof Command.List
         throw "Incorrect command nesting - unknown command can only be on the top level"
-    engine.provide result
+    
+    engine.provide ['track', continuation, scope, result]
     return
 )
 Abstract::List = Command.List.extend(
@@ -48,33 +51,23 @@ Abstract::Value = Command.extend.call Value
 Abstract::Value.Variable = Command.extend.call Abstract::Value, {
   signature: [
     property: ['String']
-    [tracker: ['String']]
   ],
 }, 
-  'get': (property, tracker, engine, operation, continuation, scope) ->
-    continuation = engine.Continuation(continuation || tracker || '')
-
-    return ['get', property, continuation, engine.identity.provide(scope)]
+  'get': (property, engine, operation, continuation, scope) ->
+    return ['get', property]
     
 # Scoped variable
 Abstract::Value.Getter = Command.extend.call Abstract::Value, {
   signature: [
     object:   ['Query', 'Selector']
     property: ['String']
-    [tracker: ['String']]
   ]
 },
-  'get': (object, property, tracker, engine, operation, continuation, scope) -> 
-    if object.nodeType
-      object = engine.identity.provide(object)
-      
-    continuation = engine.Continuation(continuation || tracker || '')
-      
+  'get': (object, property, engine, operation, continuation, scope) ->
     if prop = engine.properties[property]
       unless prop.matcher
         return prop.call(engine, object, continuation)
-
-    return ['get', engine.getPath(id, property), continuation, engine.identity.provide(scope)]
+    return ['get', engine.getPath(object, property)]
   
 # Proxy math for axioms
 Abstract::Value.Expression = Command.extend.call Value.Expression, {},

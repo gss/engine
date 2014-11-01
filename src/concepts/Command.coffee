@@ -1,9 +1,9 @@
 # Return command definition (or instance) for given operation
 # by arguments type signature. 
 class Command 
-  constructor: (operation) ->
+  constructor: (operation, parent, index) ->
     unless command = operation.command
-      match = Command.match(@, operation)
+      match = Command.match(@, operation, parent, index)
       command = match.instance || new match(operation)
       if command.key?
         command.push(operation)
@@ -33,7 +33,7 @@ class Command
     while ++i < j
       argument = operation[i]
       if argument?.push
-        type = engine.Command(argument).type
+        type = engine.Command(argument, operation, i).type
       else
         type = @types[typeof argument]
 
@@ -97,7 +97,7 @@ class Command
 
   # Hook that happens after function call or succesful before hook
   # Can transform the returned value
-  after: (result) ->
+  after: (args, result) ->
     return result
 
   log: (args, engine, operation, continuation) ->
@@ -131,7 +131,7 @@ class Command
       
       (args ||= []).push(argument)
 
-    for i in [0 .. @execute.length - index] by 1
+    for i in [0 ... @extras ? @execute.length - index + 1] by 1
       args.push arguments[i]
 
     return args
@@ -148,24 +148,24 @@ class Command
   ascend: (engine, operation, continuation, result, scope, ascender) ->
     unless parent = operation.parent
       return
-    if (top = parent.command) instanceof Command.List
+
+    if (top = parent.command).constructor == Command.List
       return
 
-    if parent.domain == operation.domain
-    
-      # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-      if top.provide?(engine, result, operation, continuation, scope, ascender)
-        return 
-
-      # Recurse to ascend query result
-      if ascender?
-        top.solve engine, parent, continuation, scope, operation.index, result
-      else
-        return result
-
     # Return partial solution to dispatch to parent command's domain
-    else if (typeof parent[0] == 'string' || operation.exported) && (parent.domain != operation.domain)
+    if parent.domain != operation.domain
       engine.engine.subsolve(operation, continuation, scope)
+      return
+    
+    # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
+    if top.provide?(engine, result, operation, continuation, scope, ascender)
+      return 
+
+    # Recurse to ascend query result
+    if ascender?
+      top.solve engine, parent, continuation, scope, operation.index, result
+    else
+      return result
        
   # Define command subclass
   @extend: (definition, methods) ->
@@ -181,13 +181,12 @@ class Command
     Prototype.prototype = @prototype
     Kommand.prototype = new Prototype
     
-    # Define given properties on a prototype  
+
     for property, value of definition
-      Kommand.prototype[property] = value
+      Kommand::[property] = value
       
     if methods
       Command.define.call(Kommand, methods)
-      
     return Kommand
       
   # Define subclasses for given methods
@@ -196,6 +195,8 @@ class Command
       for property, value of name
         Command.define.call(@, property, value)
     else
+      if typeof options == 'function'
+        options = {execute: options}
       @[name] = Command.extend.call(@, options)
     return
     

@@ -11,6 +11,10 @@ Query   = require('./Query')
 class Selector extends Query
   type: 'Selector'
   
+  constructor: (operation) ->
+    @key = @path = @serialize(operation)
+
+
   prepare: (operation, parent) ->
     prefix = ((parent && operation.name != ' ') || 
           (operation[0] != '$combinator' && typeof operation[1] != 'object')) && 
