@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-11-01) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-11-03) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20007,7 +20007,7 @@ Engine = (function(_super) {
         case 'object':
           if (argument.nodeType) {
             if (this.Command) {
-              Engine[Engine.identity.provide(argument)] = this;
+              Engine[Engine.identity["yield"](argument)] = this;
               this.scope = scope = argument;
             } else {
               scope = argument;
@@ -20084,7 +20084,7 @@ Engine = (function(_super) {
           }
         }
       }
-      return this.provide(e.data);
+      return this["yield"](e.data);
     },
     error: function(e) {
       throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
@@ -20151,12 +20151,12 @@ Engine = (function(_super) {
       this.updating.each(this.resolve, this, result);
     }
     if (expressions.length) {
-      return this.provide(expressions);
+      return this["yield"](expressions);
     }
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, provided, providing, reason, restyled, solution, source, workflow, _base, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
+    var arg, args, index, name, old, onlyRemoving, problematic, providing, reason, restyled, solution, source, workflow, yieldd, _base, _i, _len, _ref, _ref1, _ref2, _ref3, _ref4;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -20216,17 +20216,17 @@ Engine = (function(_super) {
       _ref1.onBeforeSolve();
     }
     if (providing) {
-      while (provided = this.providing) {
+      while (yieldd = this.providing) {
         this.providing = null;
         if ((_ref2 = args[0]) != null ? _ref2.index : void 0) {
-          if (provided.index == null) {
-            provided.index = args[0].index;
+          if (yieldd.index == null) {
+            yieldd.index = args[0].index;
           }
-          if (provided.parent == null) {
-            provided.parent = args[0].parent;
+          if (yieldd.parent == null) {
+            yieldd.parent = args[0].parent;
           }
         }
-        this.update(provided);
+        this.update(yieldd);
       }
       this.providing = void 0;
     }
@@ -20320,10 +20320,10 @@ Engine = (function(_super) {
     return this.updated.solution;
   };
 
-  Engine.prototype.provide = function(solution) {
+  Engine.prototype["yield"] = function(solution) {
     var _base, _ref;
     if (solution.operation) {
-      return this.engine.updating.provide(solution);
+      return this.engine.updating["yield"](solution);
     }
     if (!solution.push) {
       return ((_ref = this.updating) != null ? _ref.each(this.resolve, this, solution) : void 0) || this.onSolve();
@@ -20353,14 +20353,14 @@ Engine = (function(_super) {
       solution.push((_ref = operation.exported) != null ? _ref : null);
     }
     if (scoped) {
-      solution.push(engine.identity.provide(scoped));
+      solution.push(engine.identity["yield"](scoped));
     }
     solution.operation = operation;
     solution.parent = operation.parent;
     solution.domain = operation.domain;
     solution.index = operation.index;
     parent[operation.index] = solution;
-    return engine.engine.provide(solution);
+    return engine.engine["yield"](solution);
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
@@ -20693,7 +20693,7 @@ module.exports = Assignment;
 
 });
 require.register("gss/lib/commands/Block.js", function(exports, require, module){
-var Block, Command, _ref,
+var Block, Command, _ref, _ref1,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -20720,7 +20720,7 @@ Block = (function(_super) {
 })(Command);
 
 Block.define({
-  "scoped": {
+  'scoped': {
     solve: function(engine, operation, continuation, scope, ascender, ascending) {
       if (operation.index === 2 && !ascender && (ascending != null)) {
         this._solve(engine, operation, continuation, ascending, operation);
@@ -20729,6 +20729,29 @@ Block.define({
     }
   }
 });
+
+Block.Meta = (function(_super) {
+  __extends(Meta, _super);
+
+  function Meta() {
+    _ref1 = Meta.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Meta.prototype.signature = [
+    {
+      data: ['Object'],
+      body: ['Any']
+    }
+  ];
+
+  Meta.prototype.execute = function(data) {
+    return data;
+  };
+
+  return Meta;
+
+})(Block);
 
 module.exports = Block;
 
@@ -20838,7 +20861,7 @@ Condition = (function(_super) {
     }
   };
 
-  Condition.prototype.provide = function(result, engine, operation, continuation, scope) {
+  Condition.prototype["yield"] = function(result, engine, operation, continuation, scope) {
     if (operation.index === 1) {
       if (continuation != null) {
         this.update(engine, operation.parent[1], engine.Continuation(continuation, null, engine.Continuation.DESCEND), scope, void 0, result);
@@ -20879,8 +20902,8 @@ Constraint = (function(_super) {
 
   Constraint.prototype.signature = [
     {
-      left: ['Value'],
-      right: ['Value']
+      left: ['Value', 'Number'],
+      right: ['Value', 'Number']
     }, [
       {
         strength: ['String'],
@@ -20954,7 +20977,7 @@ Iterator = (function(_super) {
     }
   ];
 
-  Iterator.prototype.provide = function(engine, result, operation, continuation, scope, ascender) {
+  Iterator.prototype["yield"] = function(engine, result, operation, continuation, scope, ascender) {
     if (operation.index === 1) {
       operation[2].command.solve(engine, operation, continuation, ascending, operation);
       return false;
@@ -21078,7 +21101,7 @@ Query = (function(_super) {
     return continuation + (this.key || '');
   };
 
-  Query.prototype.jump = function(engine, tail, continuation, ascender) {
+  Query.prototype.jump = function(tail, engine, continuation, ascender) {
     if (tail.path === tail.key || (ascender != null) || (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) !== continuation.indexOf(engine.Continuation.PAIR))) {
       return this.head;
     } else {
@@ -21098,11 +21121,11 @@ Query = (function(_super) {
       engine.console.group('%s \t\t\t\t%O\t\t\t%c%s', engine.Continuation.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation);
       for (_i = 0, _len = result.length; _i < _len; _i++) {
         item = result[_i];
-        this.ascend(engine, operation, this.fork(engine, continuation), item, scope, operation.index);
+        this.ascend(engine, operation, this.fork(engine, continuation, item), item, scope, operation.index);
       }
       return engine.console.groupEnd();
     } else {
-      if (typeof top.provide === "function" ? top.provide(engine, result, operation, continuation, scope, ascender) : void 0) {
+      if (typeof top["yield"] === "function" ? top["yield"](engine, result, operation, continuation, scope, ascender) : void 0) {
         return;
       }
       if (this.key) {
@@ -21110,6 +21133,20 @@ Query = (function(_super) {
       } else {
         return result;
       }
+    }
+  };
+
+  Query.prototype.getPath = function(engine, operation, continuation) {
+    if (continuation) {
+      if (continuation.nodeType) {
+        return engine.identity["yield"](continuation) + ' ' + this.path;
+      } else if (operation.marked && operation.arity === 2) {
+        return continuation + this.path;
+      } else {
+        return continuation + this.key;
+      }
+    } else {
+      return this.key;
     }
   };
 
@@ -21634,7 +21671,7 @@ Selector.define({
       }
       return this.queries[contd];
     },
-    provide: function(result, engine, operation, continuation, scope, ascender) {
+    "yield": function(result, engine, operation, continuation, scope, ascender) {
       var contd, _base;
       contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.path;
       engine.queries.add(result, contd, operation.parent, scope, operation, continuation);
@@ -22108,22 +22145,11 @@ Value.Variable = (function(_super) {
 
   Variable.prototype.signature = [
     {
-      property: ['String'],
-      tracker: ['String'],
-      scoped: ['String']
+      property: ['String']
     }
   ];
 
   function Variable() {}
-
-  Variable.prototype.after = function(engine, node, args, result, operation, continuation, scope) {
-    if (result.length > 0) {
-      if (result.length > 1) {
-        this.paths = result.splice(1);
-      }
-      return result[0];
-    }
-  };
 
   Variable.prototype.isVariable = true;
 
@@ -22201,8 +22227,38 @@ Value.Solution.define({
 module.exports = Value;
 
 });
+require.register("gss/lib/commands/Call.js", function(exports, require, module){
+var Call, Command, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('../concepts/Command');
+
+Call = (function(_super) {
+  __extends(Call, _super);
+
+  function Call() {
+    _ref = Call.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Call.prototype.type = 'Call';
+
+  Call.prototype.signature = [
+    {
+      value: ['Value']
+    }
+  ];
+
+  return Call;
+
+})(Command);
+
+module.exports = Call;
+
+});
 require.register("gss/lib/concepts/Command.js", function(exports, require, module){
-var Command, _ref, _ref1,
+var Command,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -22211,7 +22267,10 @@ Command = (function() {
     var command, match;
     if (!(command = operation.command)) {
       match = Command.match(this, operation, parent, index);
-      command = match.instance || new match(operation);
+      if (!(command = match.instance)) {
+        command = new match(operation);
+        Command.optimize(match);
+      }
       if (command.key != null) {
         command.push(operation);
       } else {
@@ -22223,19 +22282,29 @@ Command = (function() {
   }
 
   Command.match = function(engine, operation, parent, index) {
-    var Default, argument, command, i, j, match, signature, type;
+    var Default, argument, command, first, i, j, match, signature, type;
     operation.parent = parent;
     operation.index = index;
-    if (typeof operation[0] === 'string') {
-      if (!(signature = engine.signatures[operation[0]])) {
-        if (!(Default = engine.Default)) {
-          throw operation[0] + ' is not defined';
+    first = operation[0];
+    i = -1;
+    switch (typeof first) {
+      case 'string':
+        if (!(signature = engine.signatures[first])) {
+          if (!(Default = engine.Default)) {
+            throw new Error(first + ' is not defined');
+          }
         }
-      }
-      i = 0;
-    } else {
-      i = -1;
-      Default = engine.List || Command.List;
+        i = 0;
+        break;
+      case 'object':
+        type = this.typeOfObject(first);
+        if (!(signature = engine.signatures[type.toLowerCase()])) {
+          if (!(Default = engine[type] || Command[type])) {
+            throw new Error(type + ' can\'t be called');
+          }
+        } else {
+          i = 0;
+        }
     }
     j = operation.length;
     while (++i < j) {
@@ -22246,41 +22315,52 @@ Command = (function() {
         type = this.types[typeof argument];
       }
       if (signature) {
-        if (match = signature[type]) {
+        if (match = signature[type] || signature.Any) {
           signature = match;
-        } else if (!(Default || (Default = signature.Default))) {
-          throw "Unexpected " + type + " in " + operation[0];
+        } else if (!(Default || (Default = signature.Default || engine.Default))) {
+          throw new Error("Unexpected " + type + " in " + operation[0]);
         }
       }
     }
-    if (command = Default || signature.resolved || engine.Default) {
+    if (command = Default || (signature != null ? signature.resolved : void 0) || engine.Default) {
       return command;
     } else {
-      throw "Too few arguments in" + operation[0];
+      throw new Error("Too few arguments in " + operation[0]);
     }
+  };
+
+  Command.prototype["continue"] = function(engine, operation, continuation) {
+    return continuation;
+  };
+
+  Command.prototype.before = function() {};
+
+  Command.prototype.after = function(args, result) {
+    return result;
+  };
+
+  Command.prototype.log = function(args, engine, operation, continuation) {
+    return engine.console.row(operation[0], args, continuation || "");
   };
 
   Command.prototype.solve = function(engine, operation, continuation, scope, ascender, ascending) {
     var args, result, tail;
-    if (tail = this.tail) {
-      operation = this.jump(engine, tail, continuation, ascender);
+    if (tail = operation.tail) {
+      operation = this.jump(tail, engine, operation, continuation, scope, ascender);
     }
-    if (continuation && this.path) {
-      result = engine.getSolution(operation, continuation, scope);
-      switch (typeof result) {
-        case 'string':
-          if (operation[0] === 'virtual' && result.charAt(0) !== engine.Continuation.PAIR) {
-            return result;
-          } else {
-            continuation = result;
-            result = void 0;
-          }
-          break;
-        case 'object':
+    switch (typeof (result = this.retrieve(engine, operation, continuation, scope))) {
+      case 'string':
+        if (operation[0] === 'virtual' && result.charAt(0) !== engine.Continuation.PAIR) {
           return result;
-        case 'boolean':
-          return;
-      }
+        } else {
+          continuation = result;
+          result = void 0;
+        }
+        break;
+      case 'object':
+        return result;
+      case 'boolean':
+        return;
     }
     if (result === void 0) {
       args = this.descend(engine, operation, continuation, scope, ascender, ascending);
@@ -22300,75 +22380,69 @@ Command = (function() {
     }
   };
 
-  Command.prototype["continue"] = function(engine, operation, continuation) {
-    return continuation;
-  };
-
-  Command.prototype.before = function() {};
-
-  Command.prototype.after = function(args, result) {
-    return result;
-  };
-
-  Command.prototype.log = function(args, engine, operation, continuation) {
-    return engine.console.row(operation, args, continuation || "");
-  };
-
   Command.prototype.descend = function(engine, operation, continuation, scope, ascender, ascending) {
-    var args, argument, command, contd, i, index, prev, _i, _j, _ref, _ref1, _ref2, _ref3;
-    args = prev = void 0;
-    for (index = _i = _ref = this.start, _ref1 = operation.length; _i < _ref1; index = _i += 1) {
+    var args, argument, command, contd, i, index, _i, _j, _ref, _ref1, _ref2;
+    for (index = _i = 1, _ref = operation.length; _i < _ref; index = _i += 1) {
       argument = ascender === index ? ascending : operation[index];
       if (command = argument.command) {
         if (ascender != null) {
-          contd = this.connect(operation, continuation);
+          contd = this.connect(engine, operation, continuation, scope, args);
         }
         argument = command.solve(engine, argument, contd || continuation, scope);
         if (argument === void 0) {
-          if (!(command.eager || engine.eager)) {
-            return false;
-          } else {
-            continue;
-          }
+          return false;
         }
       }
-      (args || (args = [])).push(argument);
+      if (!args) {
+        args = Array(operation.length - 1 + this.padding);
+      }
+      args[this.permutation[index - 1]] = argument;
     }
-    for (i = _j = 0, _ref2 = (_ref3 = this.extras) != null ? _ref3 : this.execute.length - index + 1; _j < _ref2; i = _j += 1) {
+    for (i = _j = 0, _ref1 = (_ref2 = this.extras) != null ? _ref2 : this.execute.length - index + 1; _j < _ref1; i = _j += 1) {
       args.push(arguments[i]);
     }
     return args;
   };
 
-  Command.prototype.connect = function(engine, operation, continuation) {
-    return engine.Continuation.get(continuation, null, this.PAIR);
-  };
-
-  Command.prototype.fork = function(engine, continuation) {
-    return engine.Continuation.get(continuation, null, this.ASCEND);
-  };
-
   Command.prototype.ascend = function(engine, operation, continuation, result, scope, ascender) {
     var parent, top;
-    if (!(parent = operation.parent)) {
-      return;
-    }
-    if ((top = parent.command).constructor === Command.List) {
+    if (!((parent = operation.parent) && (top = parent.command))) {
       return;
     }
     if (parent.domain !== operation.domain) {
       engine.engine.subsolve(operation, continuation, scope);
       return;
     }
-    if (typeof top.provide === "function" ? top.provide(engine, result, operation, continuation, scope, ascender) : void 0) {
+    if (typeof top["yield"] === "function" ? top["yield"](engine, result, operation, continuation, scope, ascender) : void 0) {
       return;
     }
-    if (ascender != null) {
-      return top.solve(engine, parent, continuation, scope, operation.index, result);
-    } else {
+    if (ascender == null) {
       return result;
     }
+    return top.solve(engine, parent, continuation, scope, operation.index, result);
   };
+
+  Command.prototype.connect = function(engine, operation, continuation) {
+    return engine.Continuation.get(continuation, null, this.PAIR);
+  };
+
+  Command.prototype.fork = function(engine, continuation, item) {
+    return engine.Continuation.get(continuation + engine.identity["yield"](item), null, this.ASCEND);
+  };
+
+  Command.prototype.jump = function(engine, operation) {
+    return operation;
+  };
+
+  Command.prototype.execute = function() {};
+
+  Command.prototype.retrieve = function() {};
+
+  Command.prototype.permutation = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+  Command.prototype.padding = 0;
+
+  Command.prototype.extras = void 0;
 
   Command.extend = function(definition, methods) {
     var Constructor, Kommand, Prototype, property, value;
@@ -22384,6 +22458,8 @@ Command = (function() {
     Prototype = function() {};
     Prototype.prototype = this.prototype;
     Kommand.prototype = new Prototype;
+    Kommand.extend = Command.extend;
+    Kommand.define = Command.define;
     for (property in definition) {
       value = definition[property];
       Kommand.prototype[property] = value;
@@ -22422,9 +22498,34 @@ Command = (function() {
     }
   };
 
+  Command.optimize = function(command) {
+    var property, prototype, _results;
+    prototype = command.prototype;
+    _results = [];
+    for (property in prototype) {
+      if (!prototype.hasOwnProperty(property)) {
+        _results.push(prototype[property] = prototype[property]);
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  };
+
   Command.types = {
     'string': 'String',
-    'number': 'Number'
+    'number': 'Number',
+    'object': 'Object'
+  };
+
+  Command.typeOfObject = function(object) {
+    if (object.nodeType) {
+      return 'Node';
+    }
+    if (object.push) {
+      return 'List';
+    }
+    return 'Object';
   };
 
   Command.compile = function(engine, command) {
@@ -22456,7 +22557,7 @@ Command = (function() {
         if (typeof value === 'function') {
           if ((value != null ? value.prototype : void 0) instanceof Command) {
             if (!property.match(/^[A-Z]/)) {
-              engine.signatures.set(property, value, Types);
+              engine.Signatures.set(engine.signatures, property, value, Types);
             }
           }
         }
@@ -22468,8 +22569,6 @@ Command = (function() {
 
   Command.Empty = {};
 
-  Command.prototype.start = 1;
-
   return Command;
 
 })();
@@ -22477,16 +22576,25 @@ Command = (function() {
 Command.List = (function(_super) {
   __extends(List, _super);
 
-  function List() {
-    _ref = List.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  List.prototype.start = 0;
+  function List() {}
 
   List.prototype.extras = 0;
 
   List.prototype.log = function() {};
+
+  List.prototype["yield"] = function() {
+    return true;
+  };
+
+  List.prototype.descend = function(engine, operation, continuation, scope, ascender, ascending) {
+    var argument, command, _i, _len;
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      argument = operation[_i];
+      if (command = argument != null ? argument.command : void 0) {
+        command.solve(engine, argument, continuation, scope);
+      }
+    }
+  };
 
   return List;
 
@@ -22495,12 +22603,18 @@ Command.List = (function(_super) {
 Command.Default = (function(_super) {
   __extends(Default, _super);
 
-  function Default() {
-    _ref1 = Default.__super__.constructor.apply(this, arguments);
-    return _ref1;
-  }
+  function Default() {}
 
   return Default;
+
+})(Command);
+
+Command.Object = (function(_super) {
+  __extends(Object, _super);
+
+  function Object() {}
+
+  return Object;
 
 })(Command);
 
@@ -22525,7 +22639,7 @@ Continuation = (function() {
       if (!path && !value) {
         return '';
       }
-      return path + (value && engine.identity.provide(value) || '') + suffix;
+      return path + (value && engine.identity["yield"](value) || '') + suffix;
     };
     Kontinuation.engine = engine;
     Kontinuation.get = Kontinuation;
@@ -22593,7 +22707,7 @@ Continuation = (function() {
     }
     bits = continuation.split(this.DESCEND);
     if (scope && this.engine.scope !== scope) {
-      id = this.engine.identity.provide(scope);
+      id = this.engine.identity["yield"](scope);
       prev = bits[bits.length - 2];
       if (prev && prev.substring(prev.length - id.length) !== id) {
         last = bits[bits.length - 1];
@@ -22859,7 +22973,7 @@ Domain = (function(_super) {
       result = this.apply(result);
     }
     if (commands) {
-      this.engine.provide(commands);
+      this.engine["yield"](commands);
     }
     if (this.disconnected) {
       if ((_ref3 = this.mutations) != null) {
@@ -22872,14 +22986,14 @@ Domain = (function(_super) {
     return result || commited;
   };
 
-  Domain.prototype.provide = function(solution, value) {
+  Domain.prototype["yield"] = function(solution, value) {
     if (solution instanceof Domain) {
       return this.merge(solution);
     } else if (this.domain) {
-      this.engine.engine.provide(solution);
+      this.engine.engine["yield"](solution);
       return;
     } else {
-      this.engine.provide(solution);
+      this.engine["yield"](solution);
       return;
     }
     return true;
@@ -23612,7 +23726,7 @@ Domain = (function(_super) {
     } else {
       if (typeof id !== 'string') {
         if (id.nodeType) {
-          id = this.identity.provide(id);
+          id = this.identity["yield"](id);
         } else {
           id = id.path;
         }
@@ -23852,20 +23966,6 @@ Operation = (function() {
       operation = operation.parent;
     }
     return operation;
-  };
-
-  Operation.prototype.getQueryPath = function(operation, continuation) {
-    if (continuation) {
-      if (continuation.nodeType) {
-        return this.engine.identity.provide(continuation) + ' ' + operation.path;
-      } else if (operation.marked && operation.arity === 2) {
-        return continuation + operation.path;
-      } else {
-        return continuation + (operation.key || operation.path);
-      }
-    } else {
-      return operation.key;
-    }
   };
 
   return Operation;
@@ -24710,7 +24810,7 @@ Updater = function(engine) {
       foreign = true;
       update = new this.update([domain !== true && domain || null], [problem]);
     }
-    if (typeof problem[0] === 'string') {
+    if (!(problem[0] instanceof Array)) {
       index = update.wrap(problem, parent);
       if (index != null) {
         update.connect(index);
@@ -24762,7 +24862,7 @@ Update.prototype = {
     }
     return parent;
   },
-  provide: function(solution) {
+  "yield": function(solution) {
     var domain, i, index, operation, p, parent, problems, root, _i, _len, _ref, _ref1;
     if ((operation = solution.operation).exported) {
       return;
@@ -24802,7 +24902,7 @@ Update.prototype = {
     }
   },
   merge: function(from, to, parent) {
-    var constraint, domain, exported, glob, globals, globs, i, other, prob, probs, prop, result, solution, _i, _j, _k, _l, _len, _len1, _len2, _ref;
+    var constraint, constraints, domain, exported, glob, globals, globs, i, other, prob, probs, prop, result, solution, _i, _j, _k, _l, _len, _len1, _len2;
     domain = this.domains[from];
     if (domain.frame) {
       return;
@@ -24859,9 +24959,10 @@ Update.prototype = {
     }
     result = this.problems[to];
     this.setVariables(result, probs, other);
-    exported = domain["export"]();
-    result.push.apply(result, exported);
-    this.setVariables(result, exported, other);
+    if (exported = domain["export"]()) {
+      result.push.apply(result, exported);
+      this.setVariables(result, exported, other);
+    }
     for (_k = 0, _len2 = probs.length; _k < _len2; _k++) {
       prob = probs[_k];
       if (result.indexOf(prob) === -1) {
@@ -24880,10 +24981,11 @@ Update.prototype = {
     }
     this.domains.splice(from, 1);
     this.problems.splice(from, 1);
-    _ref = domain.constraints;
-    for (_l = _ref.length - 1; _l >= 0; _l += -1) {
-      constraint = _ref[_l];
-      domain.unconstrain(constraint, void 0, true);
+    if (constraints = domain.constraints) {
+      for (_l = constraints.length - 1; _l >= 0; _l += -1) {
+        constraint = constraints[_l];
+        domain.unconstrain(constraint, void 0, true);
+      }
     }
     if ((i = this.engine.domains.indexOf(domain)) > -1) {
       this.engine.domains.splice(i, 1);
@@ -25424,7 +25526,7 @@ Update.prototype = {
     }
   },
   getProblems: function(callback, bind) {
-    return GSS.clone(this.problems);
+    return GSS.prototype.clone(this.problems);
   },
   index: -1
 };
@@ -25481,7 +25583,7 @@ Numeric.Value.Variable = Value.Variable.extend({
       if (domain.structured) {
         clone = ['get', null, path, engine.Continuation(continuation || "")];
         if (scope && scope !== engine.scope) {
-          clone.push(engine.identity.provide(scope));
+          clone.push(engine.identity["yield"](scope));
         }
         clone.parent = operation.parent;
         clone.index = operation.index;
@@ -25570,18 +25672,22 @@ Abstract.prototype.Default = Command.Default.extend({
         throw "Incorrect command nesting - unknown command can only be on the top level";
       }
     }
-    engine.provide(['track', continuation, scope, result]);
+    engine["yield"]([
+      {
+        key: continuation
+      }, result
+    ]);
   }
 });
 
 Abstract.prototype.List = Command.List.extend({
   capture: function() {},
-  execute: function() {}
+  execute: function(result) {}
 });
 
-Abstract.prototype.Value = Command.extend.call(Value);
+Abstract.prototype.Value = Value.extend();
 
-Abstract.prototype.Value.Variable = Command.extend.call(Abstract.prototype.Value, {
+Abstract.prototype.Value.Variable = Abstract.prototype.Value.extend({
   signature: [
     {
       property: ['String']
@@ -25593,7 +25699,7 @@ Abstract.prototype.Value.Variable = Command.extend.call(Abstract.prototype.Value
   }
 });
 
-Abstract.prototype.Value.Getter = Command.extend.call(Abstract.prototype.Value, {
+Abstract.prototype.Value.Getter = Abstract.prototype.Value.extend({
   signature: [
     {
       object: ['Query', 'Selector'],
@@ -25612,7 +25718,7 @@ Abstract.prototype.Value.Getter = Command.extend.call(Abstract.prototype.Value, 
   }
 });
 
-Abstract.prototype.Value.Expression = Command.extend.call(Value.Expression, {}, {
+Abstract.prototype.Value.Expression = Value.Expression.extend({}, {
   '+': function(left, right) {
     return ['+', left, right];
   },
@@ -25627,13 +25733,13 @@ Abstract.prototype.Value.Expression = Command.extend.call(Value.Expression, {}, 
   }
 });
 
-Abstract.prototype.Assignment = Command.extend.call(Assignment, {}, {
+Abstract.prototype.Assignment = Assignment.extend({}, {
   '=': function(object, name, value) {
     return this.assumed.set(object, name, value);
   }
 });
 
-Abstract.prototype.Assignment.Unsafe = Command.extend.call(Assignment.Unsafe, {}, {
+Abstract.prototype.Assignment.Unsafe = Assignment.Unsafe.extend({}, {
   'set': function(object, property, value, engine, operation, continuation, scope) {
     if (this.intrinsic) {
       this.intrinsic.restyle(object || scope, property, value, continuation, operation);
@@ -25758,7 +25864,7 @@ Intrinsic = (function(_super) {
     var computed, id, old;
     if ((old = element.currentStyle) == null) {
       computed = (this.computed || (this.computed = {}));
-      id = this.identity.provide(element);
+      id = this.identity["yield"](element);
       old = computed[id];
       if (force || (old == null)) {
         return computed[id] = window.getComputedStyle(element);
@@ -25830,7 +25936,7 @@ Intrinsic = (function(_super) {
         }
       }
     }
-    path = this.Variable.getPath(element, 'intrinsic-' + property);
+    path = this.engine.getPath(element, 'intrinsic-' + property);
     if ((_ref1 = this.watchers) != null ? _ref1[path] : void 0) {
       return;
     }
@@ -26103,7 +26209,7 @@ Document = (function(_super) {
       if (e == null) {
         e = '::window';
       }
-      id = e.target && this.identity.provide(e.target) || e;
+      id = e.target && this.identity["yield"](e.target) || e;
       if (this.resizer == null) {
         if (e.target && this.updating) {
           if (this.updating.resizing) {
@@ -26135,7 +26241,7 @@ Document = (function(_super) {
       if (e == null) {
         e = '::window';
       }
-      id = e.target && this.identity.provide(e.target) || e;
+      id = e.target && this.identity["yield"](e.target) || e;
       return this.solve(id + ' scrolled', function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
@@ -26216,7 +26322,7 @@ module.exports = Document;
 
 });
 require.register("gss/lib/domains/Linear.js", function(exports, require, module){
-var Command, Constraint, Domain, Linear, Value, _ref,
+var Block, Call, Command, Constraint, Domain, Linear, Value, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -26227,6 +26333,10 @@ Command = require('../concepts/Command');
 Value = require('../commands/Value');
 
 Constraint = require('../commands/Constraint');
+
+Block = require('../commands/Block');
+
+Call = require('../commands/Call');
 
 Linear = (function(_super) {
   __extends(Linear, _super);
@@ -26252,7 +26362,7 @@ Linear = (function(_super) {
     }
   };
 
-  Linear.prototype.provide = function(result) {
+  Linear.prototype["yield"] = function(result) {
     this.constrain(result);
   };
 
@@ -26333,15 +26443,6 @@ Linear = (function(_super) {
     });
   };
 
-  Linear.prototype.stay = function() {
-    var arg, _i, _len;
-    this.suggested = true;
-    for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-      arg = arguments[_i];
-      this.solver.addStay(arg);
-    }
-  };
-
   Linear.prototype.strength = function(strength, byDefault) {
     if (byDefault == null) {
       byDefault = 'medium';
@@ -26357,7 +26458,7 @@ Linear = (function(_super) {
 
 })(Domain);
 
-Linear.Constraint = Command.extend.call(Constraint, {}, {
+Linear.prototype.Constraint = Command.extend.call(Constraint, {}, {
   '==': function(left, right, strength, weight) {
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight));
   },
@@ -26375,14 +26476,14 @@ Linear.Constraint = Command.extend.call(Constraint, {}, {
   }
 });
 
-Linear.Value = Value.extend();
+Linear.prototype.Value = Value.extend();
 
-Linear.Value.Solution = Value.Solution.extend();
+Linear.prototype.Value.Solution = Value.Solution.extend();
 
-Linear.Value.Variable = Value.Variable.extend({
+Linear.prototype.Value.Variable = Value.Variable.extend({
   group: 'linear'
 }, {
-  get: function(path, tracker, engine, operation, continuation, scope) {
+  get: function(path, engine, operation) {
     var constrain, variable, _i, _len, _ref1;
     variable = engine.declare(path, operation);
     if (variable.constraints) {
@@ -26395,11 +26496,11 @@ Linear.Value.Variable = Value.Variable.extend({
         }
       }
     }
-    return [path, tracker || ''];
+    return variable;
   }
 });
 
-Linear.Value.Expression = Value.Expression.extend({
+Linear.prototype.Value.Expression = Value.Expression.extend({
   group: 'linear'
 }, {
   '+': function(left, right) {
@@ -26413,6 +26514,27 @@ Linear.Value.Expression = Value.Expression.extend({
   },
   '/': function(left, right) {
     return c.divide(left, right);
+  }
+});
+
+Linear.prototype.Block = Block.extend();
+
+Linear.prototype.Block.Meta = Block.Meta.extend({
+  signature: [
+    {
+      body: ['Any']
+    }
+  ]
+}, {
+  'object': function(constraint, engine, operation) {
+    return engine.constrain(constraint, operation[1], operation[0]);
+  }
+});
+
+Linear.prototype.Call = Call.extend({}, {
+  'stay': function(value, engine, operation) {
+    engine.suggested = true;
+    engine.solver.addStay(value);
   }
 });
 
@@ -26543,7 +26665,7 @@ Positions = (function() {
     this.engine = engine;
   }
 
-  Positions.prototype.provide = function(id, property, value, positioning) {
+  Positions.prototype["yield"] = function(id, property, value, positioning) {
     var element, last, path;
     if (id == null) {
       path = property;
@@ -26583,7 +26705,7 @@ Positions = (function() {
       for (path in data) {
         value = data[path];
         if (value !== void 0) {
-          this.provide(null, path, value, positioning);
+          this["yield"](null, path, value, positioning);
         }
       }
     }
@@ -26592,7 +26714,7 @@ Positions = (function() {
       styles = positioning[id];
       for (prop in styles) {
         value = styles[prop];
-        this.provide(id, prop, value);
+        this["yield"](id, prop, value);
       }
     }
     if ((_ref1 = this.engine.mutations) != null) {
@@ -26967,7 +27089,7 @@ Queries = (function() {
     }
     if (typeof id === 'object') {
       node = id;
-      id = this.engine.identity.provide(id);
+      id = this.engine.identity["yield"](id);
     } else {
       if (id.indexOf('"') > -1) {
         node = id;
@@ -27065,17 +27187,17 @@ Queries = (function() {
         if ((_ref2 = this.engine.updating) != null) {
           _ref2.remove(contd);
         }
-        this.engine.provide(['remove', contd]);
+        this.engine["yield"](['remove', contd]);
       }
     }
     return true;
   };
 
-  Queries.prototype.fetch = function(node, args, operation, continuation, scope) {
-    var query, _ref, _ref1;
-    node || (node = this.engine.getContext(operation, args, scope, node));
-    query = this.engine.Operation.getQueryPath(operation, node);
-    return (_ref = this.engine.updating) != null ? (_ref1 = _ref.queries) != null ? _ref1[query] : void 0 : void 0;
+  Queries.prototype.fetch = function(args, operation, continuation, scope) {
+    var node, query, _ref, _ref1, _ref2;
+    node = ((_ref = args[0]) != null ? _ref.nodeType : void 0) === 1 ? args[0] : scope;
+    query = operation.command.getPath(this.engine, operation, node);
+    return (_ref1 = this.engine.updating) != null ? (_ref2 = _ref1.queries) != null ? _ref2[query] : void 0 : void 0;
   };
 
   Queries.prototype.chain = function(left, right, continuation) {
@@ -27175,11 +27297,11 @@ Queries = (function() {
     }
     engine = this.engine;
     updating = engine.updating;
-    path = engine.Operation.getQueryPath(operation, continuation);
+    path = operation.command.getPath(engine, operation, continuation);
     old = this.get(path);
     command = operation.command;
     node = ((_ref = args[0]) != null ? _ref.nodeType : void 0) === 1 ? args[0] : scope;
-    if (!command.relative && !command.marked && (query = engine.Operation.getQueryPath(operation, node, scope)) && ((_ref1 = updating.queries) != null ? _ref1.hasOwnProperty(query) : void 0)) {
+    if (!command.relative && !command.marked && (query = operation.command.getPath(engine, operation, node, scope)) && ((_ref1 = updating.queries) != null ? _ref1.hasOwnProperty(query) : void 0)) {
       result = updating.queries[query];
     }
     if ((_ref2 = engine.collections) != null ? _ref2.hasOwnProperty(path) : void 0) {
@@ -27208,7 +27330,7 @@ Queries = (function() {
         }
         this.clean(path, void 0, operation, scope);
       } else if (continuation.charAt(0) === engine.Continuation.PAIR) {
-        if (id = engine.identity.provide(node)) {
+        if (id = engine.identity["yield"](node)) {
           watchers = (_base = this.watchers)[id] || (_base[id] = []);
           if (engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
             watchers.push(operation, continuation, scope);
@@ -27241,7 +27363,7 @@ Queries = (function() {
     } else {
       this.updateCollections(operation, path, scope, added, removed, void 0, continuation);
     }
-    if (id = engine.identity.provide(node)) {
+    if (id = engine.identity["yield"](node)) {
       watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
       if (engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
         watchers.push(operation, continuation, scope);
@@ -27279,7 +27401,7 @@ Queries = (function() {
 
   Queries.prototype.match = function(node, group, qualifier, changed, continuation) {
     var change, contd, groupped, id, index, operation, path, scope, watchers, _i, _j, _len, _len1;
-    if (!(id = this.engine.identity.provide(node))) {
+    if (!(id = this.engine.identity["yield"](node))) {
       return;
     }
     if (!(watchers = this.watchers[id])) {
@@ -27607,13 +27729,13 @@ Mutations = (function() {
             _ref5 = node.classList || node.className.split(/\s+/);
             for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
               kls = _ref5[_r];
-              this.index(update, ' $class', kls);
+              this.index(update, ' class', kls);
             }
             break;
           case 'id':
-            this.index(update, ' $id', attribute.value);
+            this.index(update, ' id', attribute.value);
         }
-        this.index(update, ' $attribute', attribute.name);
+        this.index(update, ' attribute', attribute.name);
       }
       prev = next = node;
       while (prev = prev.previousSibling) {
@@ -27628,10 +27750,10 @@ Mutations = (function() {
         }
       }
       if (!prev) {
-        this.index(update, ' $pseudo', 'first-child');
+        this.index(update, ' pseudo', 'first-child');
       }
       if (!next) {
-        this.index(update, ' $pseudo', 'last-child');
+        this.index(update, ' pseudo', 'last-child');
       }
       this.index(update, ' +', child.tagName);
     }
@@ -27729,10 +27851,10 @@ Mutations = (function() {
     }
     parent = target;
     while (parent) {
-      $attribute = target === parent && '$attribute' || ' $attribute';
+      $attribute = target === parent && 'attribute' || ' attribute';
       this.engine.queries.match(parent, $attribute, name, target);
       if ((changed != null ? changed.length : void 0) && name === 'class') {
-        $class = target === parent && '$class' || ' $class';
+        $class = target === parent && 'class' || ' class';
         for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
           kls = changed[_k];
           this.engine.queries.match(parent, $class, kls, target);
@@ -27924,7 +28046,7 @@ Pairs = (function() {
     var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, pair, removed, rightNew, rightOld, sid, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
-    sid = this.engine.identity.provide(scope);
+    sid = this.engine.identity["yield"](scope);
     leftOld = this.engine.updating.collections.hasOwnProperty(left) ? this.engine.queries.filterByScope(this.engine.updating.collections[left], scope) : this.engine.queries.filterByScope(a, scope);
     rightOld = this.engine.updating.collections.hasOwnProperty(right) ? this.engine.queries.filterByScope(this.engine.updating.collections[right], scope) : this.engine.queries.filterByScope(b, scope);
     leftNew = this.engine.queries.filterByScope(a, scope, operation);
@@ -27963,11 +28085,11 @@ Pairs = (function() {
       }
       contd = left;
       if (!leftOld.single) {
-        contd += this.engine.identity.provide(pair[0]);
+        contd += this.engine.identity["yield"](pair[0]);
       }
       contd += right;
       if (!rightOld.single) {
-        contd += this.engine.identity.provide(pair[1]);
+        contd += this.engine.identity["yield"](pair[1]);
       }
       cleaned.push(contd);
     }
@@ -27976,11 +28098,11 @@ Pairs = (function() {
       pair = added[_l];
       contd = left;
       if (!leftNew.single) {
-        contd += this.engine.identity.provide(pair[0]);
+        contd += this.engine.identity["yield"](pair[0]);
       }
       contd += right;
       if (!rightNew.single) {
-        contd += this.engine.identity.provide(pair[1]);
+        contd += this.engine.identity["yield"](pair[1]);
       }
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
@@ -28003,7 +28125,7 @@ Pairs = (function() {
     if (cleaning) {
       this.clean(left, scope, operation);
     }
-    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity.provide(scope) + left + right);
+    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity["yield"](scope) + left + right);
   };
 
   Pairs.prototype.clean = function(left, scope, operation) {
@@ -28397,7 +28519,7 @@ Signatures = (function() {
     this.engine = engine;
   }
 
-  Signatures.prototype.sign = function(command, object) {
+  Signatures.sign = function(command, object) {
     var signature, signatures, signed, storage, _i, _len;
     if (signed = command.__super__.signed) {
       return signed;
@@ -28416,7 +28538,7 @@ Signatures = (function() {
     return storage;
   };
 
-  Signatures.prototype.permute = function(arg, permutation) {
+  Signatures.permute = function(arg, permutation) {
     var group, i, index, j, keys, position, values, _i, _j, _k, _l, _len, _len1, _ref, _ref1, _ref2;
     keys = Object.keys(arg);
     if (!permutation) {
@@ -28447,7 +28569,7 @@ Signatures = (function() {
     return group;
   };
 
-  Signatures.prototype.getPermutation = function(args, properties) {
+  Signatures.getPermutation = function(args, properties) {
     var arg, index, result, _i, _j, _len;
     result = [];
     for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
@@ -28465,7 +28587,7 @@ Signatures = (function() {
     return result;
   };
 
-  Signatures.prototype.getPositions = function(args) {
+  Signatures.getPositions = function(args) {
     var arg, index, result, value, _i, _j, _len;
     result = [];
     for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
@@ -28483,7 +28605,7 @@ Signatures = (function() {
     return result;
   };
 
-  Signatures.prototype.getProperties = function(signature) {
+  Signatures.getProperties = function(signature) {
     var a, arg, definition, properties, property, _i, _j, _len, _len1;
     if (properties = signature.properties) {
       return properties;
@@ -28509,7 +28631,7 @@ Signatures = (function() {
     return properties;
   };
 
-  Signatures.prototype.generate = function(combinations, positions, properties, combination) {
+  Signatures.generate = function(combinations, positions, properties, combination, length) {
     var i, j, position, props, type, _i, _len, _ref;
     if (combination) {
       i = combination.length;
@@ -28522,6 +28644,7 @@ Signatures = (function() {
       i++;
     }
     if (i === properties.length) {
+      combination.length = length;
       combination.push(positions);
     } else {
       _ref = properties[i];
@@ -28535,32 +28658,34 @@ Signatures = (function() {
           combination.push(type);
           combinations.push(combination);
         }
-        this.generate(combinations, positions, properties, combination);
+        this.generate(combinations, positions, properties, combination, length);
       }
     }
     return combinations;
   };
 
-  Signatures.prototype.write = function(command, storage, combination) {
-    var arg, i, _i, _ref;
+  Signatures.write = function(command, storage, combination) {
+    var arg, i, last, _i, _ref;
     for (i = _i = 0, _ref = combination.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
       if ((arg = combination[i]) === 'default') {
         storage.Default = command;
       } else {
-        if (i < combination.length - 1) {
+        last = combination.length - 1;
+        if (arg !== void 0 && i < last) {
           storage = storage[arg] || (storage[arg] = {});
         } else {
           storage.resolved || (storage.resolved = Command.extend.call(command, {
-            permutation: arg
+            permutation: combination[last],
+            padding: last - i
           }));
         }
       }
     }
   };
 
-  Signatures.prototype.set = function(property, command, types) {
+  Signatures.set = function(signatures, property, command, types) {
     var combination, execute, storage, subcommand, type, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-    storage = this[property] || (this[property] = {});
+    storage = signatures[property] || (signatures[property] = {});
     for (type in types) {
       if (execute = (_ref = command.prototype) != null ? _ref[type] : void 0) {
         subcommand = command[type] || (command[type] = types[type].extend(command.prototype));
@@ -28579,7 +28704,7 @@ Signatures = (function() {
     }
   };
 
-  Signatures.prototype.get = function(command, storage, signature, args, permutation) {
+  Signatures.get = function(command, storage, signature, args, permutation) {
     var arg, argument, group, i, j, k, keys, obj, property, _i, _j, _k, _len, _len1, _ref;
     args || (args = []);
     i = args.length;
@@ -28617,7 +28742,7 @@ Signatures = (function() {
     }
     };
     if (!argument) {
-      this.generate(storage, this.getPositions(args), this.getPermutation(args, this.getProperties(signature)));
+      this.generate(storage, this.getPositions(args), this.getPermutation(args, this.getProperties(signature)), void 0, args.length);
       return;
     }
     if (keys && (j != null)) {
@@ -28648,7 +28773,7 @@ Identity = (function() {
 
   Identity.uid = 0;
 
-  Identity.prototype.provide = function(object, generate) {
+  Identity.prototype["yield"] = function(object, generate) {
     var id, uid;
     if (typeof object === 'string') {
       if (object.charAt(0) !== '$') {
@@ -28687,7 +28812,7 @@ Identity = (function() {
   };
 
   Identity.prototype.find = function(object) {
-    return this.provide(object, false);
+    return this["yield"](object, false);
   };
 
   return Identity;
@@ -29156,6 +29281,8 @@ Console = (function() {
       return obj._gss_id;
     } else if (obj.toString !== Object.prototype.toString) {
       return obj.toString();
+    } else if (obj.displayName) {
+      return obj.displayName;
     } else {
       return JSON.stringify(obj);
     }
@@ -29281,12 +29408,12 @@ Exporter = (function() {
     if ((scope = this.scope).nodeType === 9) {
       scope = this.scope.body;
     }
-    this.identity.provide(scope);
+    this.identity["yield"](scope);
     _ref = scope.getElementsByTagName('*');
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       element = _ref[_i];
       if (element.tagName !== 'SCRIPT' && (element.tagName !== 'STYLE' || ((_ref1 = element.getAttribute('type')) != null ? _ref1.indexOf('gss') : void 0) > -1)) {
-        this.identity.provide(element);
+        this.identity["yield"](element);
       }
     }
     if (window.Sizes) {
@@ -35099,6 +35226,7 @@ module.exports = {
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
     "lib/commands/Value.js", 
+    "lib/commands/Call.js", 
 
     "lib/concepts/Command.js",
     "lib/concepts/Continuation.js",

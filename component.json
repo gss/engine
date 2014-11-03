@@ -23,6 +23,7 @@
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
     "lib/commands/Value.js", 
+    "lib/commands/Call.js", 
 
     "lib/concepts/Command.js",
     "lib/concepts/Continuation.js",

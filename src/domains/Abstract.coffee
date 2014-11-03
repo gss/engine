@@ -37,18 +37,20 @@ Abstract::Default = Command.Default.extend(
       unless parent.command instanceof Command.List
         throw "Incorrect command nesting - unknown command can only be on the top level"
     
-    engine.provide ['track', continuation, scope, result]
+    # 
+    engine.yield [key: continuation, result]
     return
 )
 Abstract::List = Command.List.extend(
   capture: ->
 
-  execute: ->
+  execute: (result) ->
+    #
 )
 
 # Global variable
-Abstract::Value = Command.extend.call Value
-Abstract::Value.Variable = Command.extend.call Abstract::Value, {
+Abstract::Value = Value.extend()
+Abstract::Value.Variable = Abstract::Value.extend {
   signature: [
     property: ['String']
   ],
@@ -57,7 +59,7 @@ Abstract::Value.Variable = Command.extend.call Abstract::Value, {
     return ['get', property]
     
 # Scoped variable
-Abstract::Value.Getter = Command.extend.call Abstract::Value, {
+Abstract::Value.Getter = Abstract::Value.extend {
   signature: [
     object:   ['Query', 'Selector']
     property: ['String']
@@ -70,7 +72,7 @@ Abstract::Value.Getter = Command.extend.call Abstract::Value, {
     return ['get', engine.getPath(object, property)]
   
 # Proxy math for axioms
-Abstract::Value.Expression = Command.extend.call Value.Expression, {},
+Abstract::Value.Expression = Value.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]
     
@@ -84,12 +86,12 @@ Abstract::Value.Expression = Command.extend.call Value.Expression, {},
     ['*', left, right]
   
 # Constant definition
-Abstract::Assignment = Command.extend.call Assignment, {},
+Abstract::Assignment = Assignment.extend {},
   '=': (object, name, value) ->
     @assumed.set(object, name, value)
 
 # Style assignment
-Abstract::Assignment.Unsafe = Command.extend.call Assignment.Unsafe, {},
+Abstract::Assignment.Unsafe = Assignment.Unsafe.extend {},
   'set': (object, property, value, engine, operation, continuation, scope) ->
     if @intrinsic
       @intrinsic.restyle object || scope, property, value, continuation, operation

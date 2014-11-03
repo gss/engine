@@ -45,7 +45,7 @@ class Document extends Abstract
 
   events:
     resize: (e = '::window') ->
-      id = e.target && @identity.provide(e.target) || e
+      id = e.target && @identity.yield(e.target) || e
 
       unless @resizer?
         if e.target && @updating
@@ -68,7 +68,7 @@ class Document extends Abstract
       , 20
       
     scroll: (e = '::window') ->
-      id = e.target && @identity.provide(e.target) || e
+      id = e.target && @identity.yield(e.target) || e
       @solve id + ' scrolled', ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")

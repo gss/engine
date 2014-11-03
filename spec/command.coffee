@@ -38,8 +38,8 @@ describe 'GSS commands', ->
           ['stay', ['get', ['class','box'], 'x']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
-          [['stay', ['get', '$12322', 'x', '.box$12322']]]
-          [['stay', ['get', '$34222', 'x', '.box$34222']]]
+          [[key: '.box$12322', ['stay', ['get', '$12322[x]']]]]
+          [[key: '.box$34222', ['stay', ['get', '$34222[x]']]]]
         ]
     
     it 'multiple stays', ->
@@ -49,18 +49,18 @@ describe 'GSS commands', ->
       """
       engine
       engine.solve [
-          ['stay', ['get', ['$class','box']  , 'x'    ]]
-          ['stay', ['get', ['$class','box']  , 'y'    ]]
-          ['stay', ['get', ['$class','block'], 'width']]
+          ['stay', ['get', ['class','box']  , 'x'    ]]
+          ['stay', ['get', ['class','box']  , 'y'    ]]
+          ['stay', ['get', ['class','block'], 'width']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
           # break up stays to allow multiple plural queries
-          [['stay', ['get', '$12322','x'    ,'.box$12322'  ]]]
-          [['stay', ['get', '$34222','x'    ,'.box$34222'  ]]] 
-          [['stay', ['get', '$12322','y'    ,'.box$12322'  ]]]          
-          [['stay', ['get', '$34222','y'    ,'.box$34222'  ]]]
-          [['stay', ['get', '$12322','width','.block$12322']]]          
-          [['stay', ['get', '$34222','width','.block$34222']]]
+          [[key: '.box$12322'  , ['stay', ['get', '$12322[x]'    ]]]]
+          [[key: '.box$34222'  , ['stay', ['get', '$34222[x]'    ]]]]
+          [[key: '.box$12322'  , ['stay', ['get', '$12322[y]'    ]]]]         
+          [[key: '.box$34222'  , ['stay', ['get', '$34222[y]'    ]]]]
+          [[key: '.block$12322', ['stay', ['get', '$12322[width]']]]]         
+          [[key: '.block$34222', ['stay', ['get', '$34222[width]']]]]
         ]
     
     it 'eq with class and tracker', ->
@@ -69,13 +69,13 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-        ['==', ['get', ['$class','box'], 'width'],['get','grid-col']]
+        ['==', ['get', ['class','box'], 'width'],['get','grid-col']]
         ['==', 100,['get','grid-col']]
       ], '%'
       chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
-        ['==', ['get','$12322','width','%.box$12322'],['get', "", 'grid-col',"%.box$12322"]]
-        ['==', ['get','$34222','width','%.box$34222'],['get', "", 'grid-col',"%.box$34222"]]
-        ['==', 100, ['get', "", 'grid-col',"%"]]
+        [key: '%.box$12322', ['==', ['get','$12322[width]'],['get', 'grid-col']]]
+        [key: '%.box$34222', ['==', ['get','$34222[width]'],['get', 'grid-col']]]
+        [key: '%',           ['==', 100, ['get', 'grid-col']]]
       ]]
         
     
@@ -85,25 +85,25 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-        ['==', ['get',['$class','box'],'width'],['get','grid-col']]
+        ['==', ['get',['class','box'],'width'], ['get','grid-col']]
         ['==', 100, ['get','grid-col']]
       ]
-      expect(engine.updated.getProblems()).to.eql [[
-        ['==', ['get','$12322','width','.box$12322'],['get', '', 'grid-col',".box$12322"]]
-        ['==', ['get','$34222','width','.box$34222'],['get', '', 'grid-col',".box$34222"]]
-        ['==', 100,['get', '', 'grid-col', ""]]
+      chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
+        [key: '.box$12322', ['==', ['get','$12322[width]'],['get', 'grid-col']]]
+        [key: '.box$34222', ['==', ['get','$34222[width]'],['get', 'grid-col']]]
+        [key: '',           ['==', 100, ['get', 'grid-col']]]
       ]]
 
     it 'lte for class & id selectos', (done) ->
       window.$engine = engine
 
       engine.solve [
-        ['<=',['get',['$class','box'],'width'],['get',['$id','box1'],'width']]
+        ['<=',['get',['class','box'],'width'],['get',['id','box1'],'width']]
       ], (solution) ->
         expect(engine.updated.getProblems()).to.eql [[
-          ['<=',['get', '$box1' , 'width','.box$box1→#box1'],['get','$box1','width','.box$box1→#box1']]
-          ['<=',['get', '$34222', 'width','.box$34222→#box1'],['get','$box1','width','.box$34222→#box1']]
-          ['<=',['get', '$35346', 'width','.box$35346→#box1'],['get','$box1','width','.box$35346→#box1']]
+          [key: '.box$box1→#box1' , ['<=',['get', '$box1[width]' ],['get','$box1[width]']]]
+          [key: '.box$34222→#box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
+          [key: '.box$35346→#box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
         ]]
         box2 = engine.$id("34222")
         box2.parentNode.removeChild(box2)

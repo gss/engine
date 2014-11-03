@@ -7,18 +7,10 @@ class Value.Variable extends Value
 
   signature: [
     property: ['String']
-    tracker:  ['String']
-    scoped:   ['String']
   ]
   
   constructor: ->
     
-  after: (engine, node, args, result, operation, continuation, scope) ->
-    if result.length > 0
-      if result.length > 1
-        @paths = result.splice(1)
-      return result[0]
-  
   isVariable: true
       
   continuations: undefined

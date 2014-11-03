@@ -171,7 +171,27 @@ describe 'Signatures', ->
         expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
         expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test', 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
 
-describe '', ->
-  1
+  describe 'dispatched with object as callee', ->
+    ObjectCommand = GSS::Command.extend {
+      signature: [
+        left: ['Value', 'String']
+        [
+          c: ['Number']
+        ]
+      ]
+    }, {
+      'object': (a,b,c) ->
+        return [a,b,c]
+    }
+    
+    before ->
+      engine = new GSS
+      engine.abstract.ObjectCommand = ObjectCommand
+      engine.compile(true)
+
+    it 'should dispatch command', ->
+      z = {title: 'God Object'}
+      expect(engine.abstract.Command([z, 1, 'v'])).to.not.be.an.instanceof ObjectCommand.object
+      expect(engine.abstract.Command([z, 'v', 1])).to.be.an.instanceof ObjectCommand.object
 
 

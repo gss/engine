@@ -123,7 +123,7 @@ class Pairs
     a = @engine.queries.get(left)
     b = @engine.queries.get(right)
 
-    sid = @engine.identity.provide(scope)
+    sid = @engine.identity.yield(scope)
 
     leftOld =
       if @engine.updating.collections.hasOwnProperty(left)
@@ -169,20 +169,20 @@ class Pairs
       continue if !pair[0] || !pair[1]
       contd = left
       unless leftOld.single
-        contd += @engine.identity.provide(pair[0])
+        contd += @engine.identity.yield(pair[0])
       contd += right
       unless rightOld.single
-        contd += @engine.identity.provide(pair[1])
+        contd += @engine.identity.yield(pair[1])
       cleaned.push(contd)
     
     solved = []
     for pair in added
       contd = left
       unless leftNew.single
-        contd += @engine.identity.provide(pair[0])
+        contd += @engine.identity.yield(pair[0])
       contd += right
       unless rightNew.single
-        contd += @engine.identity.provide(pair[1])
+        contd += @engine.identity.yield(pair[1])
 
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
@@ -202,7 +202,7 @@ class Pairs
     if cleaning
       @clean(left, scope, operation)
 
-    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.provide(scope) + left + right)
+    @engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], @engine.identity.yield(scope) + left + right)
 
   clean: (left, scope, operation) ->  
     if pairs = @paths?[left]

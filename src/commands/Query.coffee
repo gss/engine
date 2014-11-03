@@ -65,7 +65,7 @@ class Query extends Command
   continue: (engine, operation, continuation = '') ->
     return continuation + (@key || '')
 
-  jump: (engine, tail, continuation, ascender) ->
+  jump: (tail, engine, continuation, ascender) ->
     if (tail.path == tail.key || ascender? || 
         (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) != continuation.indexOf(engine.Continuation.PAIR)))
       return @head
@@ -85,12 +85,12 @@ class Query extends Command
       engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', engine.Continuation.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
       
       for item in result
-        @ascend engine, operation, @fork(engine, continuation), item, scope, operation.index
+        @ascend engine, operation, @fork(engine, continuation, item), item, scope, operation.index
       
       engine.console.groupEnd()
     else 
       # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-      if top.provide?(engine, result, operation, continuation, scope, ascender)
+      if top.yield?(engine, result, operation, continuation, scope, ascender)
         return 
 
       # Recurse to ascend query result
@@ -99,6 +99,18 @@ class Query extends Command
       else
         return result
      
+
+  # Return shared absolute path of a dom query ($id selector) 
+  getPath: (engine, operation, continuation) ->
+    if continuation
+      if continuation.nodeType
+        return engine.identity.yield(continuation) + ' ' + @path
+      else if operation.marked && operation.arity == 2
+        return continuation + @path
+      else
+        return continuation + @key
+    else
+      return @key
 
   mergers: {}
 module.exports = Query

@@ -82,7 +82,7 @@ Updater = (engine) ->
       update = new @update [domain != true && domain || null], [problem]
 
     # Replace arguments updates with parent function update
-    if typeof problem[0] == 'string'
+    unless problem[0] instanceof Array
       index = update.wrap(problem, parent)
 
       if index?
@@ -120,7 +120,7 @@ Update.prototype =
 
 
 
-  provide: (solution) ->
+  yield: (solution) ->
     return if (operation = solution.operation).exported
     parent = operation.parent
     # Provide solution for constraint that was set before
@@ -194,9 +194,10 @@ Update.prototype =
 
     result = @problems[to]
     @setVariables(result, probs, other)
-    exported = domain.export()
-    result.push.apply(result, exported)
-    @setVariables(result, exported, other)
+    if exported = domain.export()
+      result.push.apply(result, exported)
+      @setVariables(result, exported, other)
+
     for prob in probs
       if result.indexOf(prob) == -1
         result.push(prob)
@@ -209,8 +210,9 @@ Update.prototype =
       @engine.updating.apply solution 
     @domains.splice(from, 1)
     @problems.splice(from, 1)
-    for constraint in domain.constraints by -1
-      domain.unconstrain(constraint, undefined, true)
+    if constraints = domain.constraints
+      for constraint in constraints by -1
+        domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
     if @engine.domains.indexOf(other) == -1
@@ -611,7 +613,7 @@ Update.prototype =
     return
 
   getProblems: (callback, bind) ->
-    return GSS.clone @problems
+    return GSS.prototype.clone @problems
 
   index: -1
 

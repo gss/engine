@@ -54,7 +54,7 @@ class Engine extends Domain
         when 'object'
           if argument.nodeType
             if @Command
-              Engine[Engine.identity.provide(argument)] = @
+              Engine[Engine.identity.yield(argument)] = @
               @scope = scope = argument
             else
               scope = argument
@@ -133,7 +133,7 @@ class Engine extends Domain
           else
             return @updating.apply(e.data)
 
-      @provide e.data
+      @yield e.data
 
     # Handle error from worker
     error: (e) ->
@@ -187,7 +187,7 @@ class Engine extends Domain
       @updating.each(@resolve, @, result)
     # Execute given expressions
     if expressions.length
-      @provide expressions
+      @yield expressions
 
   # engine.solve({}) - solve with given constants
   # engine.solve([]) - evaluate commands
@@ -242,12 +242,12 @@ class Engine extends Domain
 
 
     if providing
-      while provided = @providing
+      while yieldd = @providing
         @providing = null
         if args[0]?.index
-          provided.index ?= args[0].index
-          provided.parent ?= args[0].parent
-        @update(provided)
+          yieldd.index ?= args[0].index
+          yieldd.parent ?= args[0].parent
+        @update(yieldd)
       @providing = undefined
 
     if name
@@ -345,9 +345,9 @@ class Engine extends Domain
     return @updated.solution
 
   # Accept solution from a solver and resolve it to verify
-  provide: (solution) ->
+  yield: (solution) ->
     if solution.operation
-      return @engine.updating.provide solution
+      return @engine.updating.yield solution
     if !solution.push
       return @updating?.each(@resolve, @, solution) || @onSolve()
 
@@ -373,7 +373,7 @@ class Engine extends Domain
     if operation.exported || scoped
       solution.push(operation.exported ? null)
     if scoped
-      solution.push(engine.identity.provide(scoped))
+      solution.push(engine.identity.yield(scoped))
 
     solution.operation = operation
     solution.parent    = operation.parent
@@ -381,7 +381,7 @@ class Engine extends Domain
     solution.index     = operation.index
 
     parent[operation.index] = solution
-    engine.engine.provide solution
+    engine.engine.yield solution
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage
@@ -546,7 +546,7 @@ class Engine extends Domain
           return index
     return -1
 
-  # Comile user provided features specific to this engine
+  # Comile user yieldd features specific to this engine
   compile: (state) ->
     if state
       for name of @Domains

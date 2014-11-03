@@ -2,6 +2,8 @@ Domain     = require('../concepts/Domain')
 Command    = require('../concepts/Command')
 Value      = require('../commands/Value')
 Constraint = require('../commands/Constraint')
+Block      = require('../commands/Block')
+Call       = require('../commands/Call')
 
 
 class Linear extends Domain
@@ -21,7 +23,7 @@ class Linear extends Domain
 
       Linear.hack()
 
-  provide: (result) ->
+  yield: (result) ->
     @constrain(result)
     return
 
@@ -83,19 +85,13 @@ class Linear extends Domain
   variable: (name) ->
     return new c.Variable name: name
 
-  stay: ->
-    @suggested = true
-    for arg in arguments
-      @solver.addStay(arg)
-    return
-
   strength: (strength, byDefault = 'medium') ->
     return strength && c.Strength[strength] || c.Strength[byDefault]
 
   weight: (weight) ->
     return weight
 
-Linear.Constraint = Command.extend.call Constraint, {},
+Linear::Constraint = Command.extend.call Constraint, {},
   '==': (left, right, strength, weight) ->
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))
 
@@ -111,19 +107,19 @@ Linear.Constraint = Command.extend.call Constraint, {},
   '>': (left, right, strength, weight, engine) ->
     return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
 
-Linear.Value            = Value.extend()
-Linear.Value.Solution   = Value.Solution.extend()
-Linear.Value.Variable   = Value.Variable.extend {group: 'linear'},
-  get: (path, tracker, engine, operation, continuation, scope) ->
+Linear::Value            = Value.extend()
+Linear::Value.Solution   = Value.Solution.extend()
+Linear::Value.Variable   = Value.Variable.extend {group: 'linear'},
+  get: (path, engine, operation) ->
     variable = engine.declare(path, operation)
     if variable.constraints
       for constrain in variable.constraints
         if constrain.domain && constrain.domain.frame && constrain.domain.frame != engine.frame
           delete engine.added[absolute]
           return variable.value 
-    return [path, tracker || '']
+    return variable
     
-Linear.Value.Expression = Value.Expression.extend {group: 'linear'},
+Linear::Value.Expression = Value.Expression.extend {group: 'linear'},
 
   '+': (left, right) ->
     return c.plus(left, right)
@@ -136,6 +132,21 @@ Linear.Value.Expression = Value.Expression.extend {group: 'linear'},
 
   '/': (left, right) ->
     return c.divide(left, right)
+
+Linear::Block = Block.extend()
+Linear::Block.Meta = Block.Meta.extend {
+  signature: [
+    body: ['Any']
+  ]
+}, 
+  'object': (constraint, engine, operation) ->
+    engine.constrain(constraint, operation[1], operation[0])
+
+Linear::Call = Call.extend {},
+  'stay': (value, engine, operation) ->
+    engine.suggested = true;
+    engine.solver.addStay(value)
+    return 
 
 # Phantom js doesnt enforce order of numerical keys in plain objects.
 # The hack enforces arrays as base structure.

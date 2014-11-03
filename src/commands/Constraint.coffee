@@ -4,8 +4,8 @@ class Constraint extends Command
   type: 'Constraint'
   
   signature: [
-  	left:     ['Value'],
-  	right:    ['Value']
+  	left:     ['Value', 'Number'],
+  	right:    ['Value', 'Number']
   	[
   		strength: ['String']
   		weight:   ['Number']

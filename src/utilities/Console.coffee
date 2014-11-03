@@ -22,6 +22,8 @@ class Console
       obj._gss_id
     else if obj.toString != Object.prototype.toString
       obj.toString()
+    else if obj.displayName
+      return obj.displayName
     else
       JSON.stringify(obj)
 

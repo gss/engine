@@ -2,7 +2,7 @@ class Identity
   @uid: 0
   
   # Get or generate uid for a given object.
-  provide: (object, generate) ->
+  yield: (object, generate) ->
     if typeof object == 'string'
       if object.charAt(0) != '$'
         return '$' + object
@@ -33,6 +33,6 @@ class Identity
 
   # Get id if given object has one
   find: (object) ->
-    return @provide(object, false)
+    return @yield(object, false)
 
 module.exports = Identity

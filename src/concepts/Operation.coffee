@@ -70,17 +70,5 @@ class Operation
     return operation
 
 
-  # Return shared absolute path of a dom query ($id selector) 
-  getQueryPath: (operation, continuation) ->
-    if continuation
-      if continuation.nodeType
-        return @engine.identity.provide(continuation) + ' ' + operation.path
-      else if operation.marked && operation.arity == 2
-        return continuation + operation.path
-      else
-        return continuation + (operation.key || operation.path)
-    else
-      return operation.key
-
 
 module.exports = Operation

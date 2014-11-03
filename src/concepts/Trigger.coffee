@@ -1,4 +1,4 @@
-# Simple event trigger that provides `handleEvent` interface
+# Simple event trigger that yields `handleEvent` interface
 # and calls `on<event>` function on the object if defined
 
 

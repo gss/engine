@@ -18,7 +18,7 @@ class Signatures
   constructor: (@engine) ->
     
   # Register signatures defined in a given object
-  sign: (command, object) ->
+  @sign: (command, object) ->
     if signed = command.__super__.signed
       return signed
     command.__super__.signed = storage = []
@@ -32,7 +32,7 @@ class Signatures
     return storage
         
   # Reorder keys within optional group
-  permute: (arg, permutation) ->
+  @permute: (arg, permutation) ->
     keys = Object.keys(arg)
     return keys unless permutation
     values = Object.keys(arg)
@@ -58,7 +58,7 @@ class Signatures
     return group
 
   # Return array of key names for current permutation
-  getPermutation: (args, properties) ->
+  @getPermutation: (args, properties) ->
     result = []
     for arg, index in args
       unless arg == null
@@ -69,7 +69,7 @@ class Signatures
     return result
 
   # Return array with positions for given argument signature
-  getPositions: (args) ->
+  @getPositions: (args) ->
     result = []
     for value, index in args
       if value?
@@ -80,7 +80,7 @@ class Signatures
     return result
 
   # Return array of keys for a full list of arguments
-  getProperties: (signature) ->
+  @getProperties: (signature) ->
     if properties = signature.properties
       return properties
     signature.properties = properties = []
@@ -95,7 +95,7 @@ class Signatures
     return properties
 
   # Generate a list of all type paths
-  generate: (combinations, positions, properties, combination) ->
+  @generate: (combinations, positions, properties, combination, length) ->
     if combination
       i = combination.length
     else
@@ -105,8 +105,8 @@ class Signatures
 
     while (props = properties[i]) == undefined && i < properties.length
       i++
-
     if i == properties.length
+      combination.length = length
       combination.push positions
     else
       for type, j in properties[i]
@@ -117,24 +117,28 @@ class Signatures
           combination = combination.slice(0, i)
           combination.push type
           combinations.push(combination)
-        @generate combinations, positions, properties, combination
+        @generate combinations, positions, properties, combination, length
     return combinations
   # Create actual nested lookup tables for argument types
   
-  write: (command, storage, combination)->
+  @write: (command, storage, combination)->
     for i in [0 ... combination.length]
       if (arg = combination[i]) == 'default'
         storage.Default = command
       else
-        if i < combination.length - 1
+        last = combination.length - 1
+        if arg != undefined && i < last
           storage = storage[arg] ||= {}
         else
-          storage.resolved ||= Command.extend.call(command, permutation: arg)
+          storage.resolved ||= Command.extend.call(command, 
+            permutation: combination[last], 
+            padding: last - i
+          )
     return
 
   # Write cached lookup tables into a given storage (register method by signature)
-  set: (property, command, types) ->
-    storage = @[property] ||= {}
+  @set: (signatures, property, command, types) ->
+    storage = signatures[property] ||= {}
 
     for type of types
 
@@ -150,7 +154,7 @@ class Signatures
     return
     
   # Generate a lookup structure to find method definition by argument signature
-  get: (command, storage, signature, args, permutation) ->
+  @get: (command, storage, signature, args, permutation) ->
 
     args ||= []
     i = args.length
@@ -182,7 +186,7 @@ class Signatures
     
     # End of signature
     unless argument
-      @generate(storage, @getPositions(args), @getPermutation(args, @getProperties(signature)))
+      @generate(storage, @getPositions(args), @getPermutation(args, @getProperties(signature)), undefined, args.length)
       return
       
     # Permute optional argument within its group

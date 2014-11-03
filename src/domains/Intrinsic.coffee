@@ -35,7 +35,7 @@ class Intrinsic extends Numeric
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
       computed = (@computed ||= {})
-      id = @identity.provide(element)
+      id = @identity.yield(element)
       old = computed[id]
       if force || !old?
         return computed[id] = window.getComputedStyle(element)
@@ -85,7 +85,7 @@ class Intrinsic extends Numeric
             if @stylesheets.solve stylesheet, operation, @Continuation(continuation), element, property, value
               return
 
-    path = @Variable.getPath(element, 'intrinsic-' + property)
+    path = @engine.getPath(element, 'intrinsic-' + property)
     if @watchers?[path]
       return
     element.style[camel] = value

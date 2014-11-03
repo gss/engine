@@ -248,7 +248,7 @@ class Queries
   remove: (id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
       node = id
-      id = @engine.identity.provide(id)
+      id = @engine.identity.yield(id)
     else
       if id.indexOf('"') > -1
         node = id
@@ -339,14 +339,14 @@ class Queries
           @engine.unbypass(contd)
 
         @engine.updating?.remove(contd)
-        @engine.provide(['remove', contd])
+        @engine.yield(['remove', contd])
     return true
 
   # If a query selects element from some other node than current scope
   # Maybe somebody else calculated it already
-  fetch: (node, args, operation, continuation, scope) ->
-    node ||= @engine.getContext(operation, args, scope, node)
-    query = @engine.Operation.getQueryPath(operation, node)
+  fetch: (args, operation, continuation, scope) ->
+    node = if args[0]?.nodeType == 1 then args[0] else scope
+    query = operation.command.getPath(@engine, operation, node)
     return @engine.updating?.queries?[query]
 
   chain: (left, right, continuation) ->
@@ -420,7 +420,7 @@ class Queries
   update: (args, result = undefined, operation, continuation, scope) ->
     engine = @engine
     updating = engine.updating
-    path = engine.Operation.getQueryPath(operation, continuation)
+    path = operation.command.getPath(engine, operation, continuation)
     old = @get(path)
 
     # Normalize query to reuse results
@@ -429,7 +429,7 @@ class Queries
     node = if args[0]?.nodeType == 1 then args[0] else scope
 
     if !command.relative && !command.marked && 
-            (query = engine.Operation.getQueryPath(operation, node, scope)) && 
+            (query = operation.command.getPath(engine, operation, node, scope)) && 
             updating.queries?.hasOwnProperty(query)
       result = updating.queries[query]
     if engine.collections?.hasOwnProperty(path)
@@ -456,7 +456,7 @@ class Queries
       else if continuation.charAt(0) == engine.Continuation.PAIR
 
         # Subscribe node to the query
-        if id = engine.identity.provide(node)
+        if id = engine.identity.yield(node)
           watchers = @watchers[id] ||= []
           if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
             watchers.push(operation, continuation, scope)
@@ -488,7 +488,7 @@ class Queries
       
     #unless operation.def.capture
       # Subscribe node to the query
-    if id = engine.identity.provide(node)
+    if id = engine.identity.yield(node)
       watchers = @watchers[id] ||= []
       if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         watchers.push(operation, continuation, scope)
@@ -520,7 +520,7 @@ class Queries
 
   # Check if a node observes this qualifier or combinator
   match: (node, group, qualifier, changed, continuation) ->
-    return unless id = @engine.identity.provide(node)
+    return unless id = @engine.identity.yield(node)
     return unless watchers = @watchers[id]
     if continuation
       path = @engine.Continuation.getCanonicalPath(continuation)

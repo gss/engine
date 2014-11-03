@@ -26,7 +26,7 @@ Numeric.Value.Variable   = Value.Variable.extend {group: 'linear'},
       if domain.structured
         clone = ['get', null, path, engine.Continuation(continuation || "")]
         if scope && scope != engine.scope
-          clone.push(engine.identity.provide(scope))
+          clone.push(engine.identity.yield(scope))
         clone.parent = operation.parent
         clone.index = operation.index
         clone.domain = domain

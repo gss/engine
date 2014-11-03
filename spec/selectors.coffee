@@ -8,10 +8,10 @@ describe 'Selectors', ->
     
   describe 'dispatched by argument types', ->
     it 'should create command instance for each operation', ->
-      expect(engine.document.Command(['tag', 'div'])).to.be.an.instanceof(engine.document.Query.Selecter)
+      expect(engine.document.Command(['tag', 'div'])).to.be.an.instanceof(engine.document.Selector.Selecter)
       expect(engine.document.Command(['tag', 'div'])).to.be.an.instanceof(engine.document.Selector)
-      expect(engine.document.Command(['tag', 'div'])).to.be.an.instanceof(engine.document.Query)
-      expect(engine.document.Command(['tag', ['tag', 'div'], 'div'])).to.be.an.instanceof(engine.document.Query.Qualifier)
+      expect(engine.document.Command(['tag', 'div'])).to.be.an.instanceof(engine.document.Selector)
+      expect(engine.document.Command(['tag', ['tag', 'div'], 'div'])).to.be.an.instanceof(engine.document.Selector.Qualifier)
 
     it 'should have absolute and relative path set for each command', ->
       expect(engine.document.Command(['tag', 'div']).path).to.eql('div')

@@ -132,11 +132,11 @@ class Mutations
         switch attribute.name
           when 'class'
             for kls in node.classList || node.className.split(/\s+/)
-              @index update, ' $class', kls
+              @index update, ' class', kls
           when 'id'
-            @index update, ' $id', attribute.value
+            @index update, ' id', attribute.value
 
-        @index update, ' $attribute', attribute.name
+        @index update, ' attribute', attribute.name
       prev = next = node  
       while prev = prev.previousSibling
         if prev.nodeType == 1
@@ -146,8 +146,8 @@ class Mutations
         if next.nodeType == 1
           break
 
-      @index update, ' $pseudo', 'first-child' unless prev
-      @index update, ' $pseudo', 'last-child' unless next
+      @index update, ' pseudo', 'first-child' unless prev
+      @index update, ' pseudo', 'last-child' unless next
       @index update, ' +', child.tagName
 
     parent = target
@@ -207,10 +207,10 @@ class Mutations
 
     parent = target
     while parent
-      $attribute = target == parent && '$attribute' || ' $attribute'
+      $attribute = target == parent && 'attribute' || ' attribute'
       @engine.queries.match(parent, $attribute, name, target)
       if changed?.length && name == 'class'
-        $class = target == parent && '$class' || ' $class'
+        $class = target == parent && 'class' || ' class'
         for kls in changed
           @engine.queries.match(parent, $class, kls, target)
       break if parent == @engine.scope

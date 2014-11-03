@@ -13,7 +13,7 @@ class Continuation
       if path
         path = path.replace(Kontinuation.TrimContinuationRegExp, '')
       return '' if !path && !value
-      return path + (value && engine.identity.provide(value) || '') + suffix
+      return path + (value && engine.identity.yield(value) || '') + suffix
 
     Kontinuation.engine = engine
     Kontinuation.get = Kontinuation
@@ -99,7 +99,7 @@ class Continuation
     return '' unless continuation
     bits = continuation.split(@DESCEND)
     if scope && @engine.scope != scope
-      id = @engine.identity.provide(scope)
+      id = @engine.identity.yield(scope)
       prev = bits[bits.length - 2]
       # Ugh
       if prev && prev.substring(prev.length - id.length) != id

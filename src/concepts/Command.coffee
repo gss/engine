@@ -4,7 +4,9 @@ class Command
   constructor: (operation, parent, index) ->
     unless command = operation.command
       match = Command.match(@, operation, parent, index)
-      command = match.instance || new match(operation)
+      unless command = match.instance
+        command = new match(operation)
+        Command.optimize(match)
       if command.key?
         command.push(operation)
       else
@@ -19,15 +21,21 @@ class Command
     operation.index = index
 
     # Function call
-    if typeof operation[0] == 'string'
-      unless signature = engine.signatures[operation[0]]
-        unless Default = engine.Default
-          throw operation[0] + ' is not defined'
-      i = 0
-    # List
-    else
-      i = -1
-      Default = engine.List || Command.List
+    first = operation[0]
+    i = -1
+    switch typeof first
+      when 'string'
+        unless signature = engine.signatures[first]
+          unless Default = engine.Default
+            throw new Error first + ' is not defined'
+        i = 0
+      when 'object'
+        type = @typeOfObject(first)
+        unless signature = engine.signatures[type.toLowerCase()]
+          unless Default = engine[type] || Command[type]
+            throw new Error type + ' can\'t be called'
+        else
+          i = 0
 
     j = operation.length
     while ++i < j
@@ -38,38 +46,53 @@ class Command
         type = @types[typeof argument]
 
       if signature
-        if match = signature[type]
+        if match = signature[type] || signature.Any
           signature = match
-        else unless (Default ||= signature.Default)
-          throw "Unexpected " + type + " in " + operation[0]
+        else unless (Default ||= signature.Default || engine.Default)
+          throw new Error "Unexpected " + type + " in " + operation[0]
 
-    if command = Default || signature.resolved || engine.Default
+
+    if command = Default || signature?.resolved || engine.Default
       return command 
     else
-      throw "Too few arguments in" + operation[0]
+      throw new Error "Too few arguments in " + operation[0]
       
       
+  continue: (engine, operation, continuation) ->
+    return continuation
+
+  # Hook that happens before actual function call
+  # If it returns something, the function will not be called
+  before: ->
+
+  # Hook that happens after function call or succesful before hook
+  # Can transform the returned value
+  after: (args, result) ->
+    return result
+
+  # Provide logging for an action
+  log: (args, engine, operation, continuation) ->
+    engine.console.row(operation[0], args, continuation || "")
+
   solve: (engine, operation, continuation, scope, ascender, ascending) ->
     # Use a shortcut operation when possible (e.g. native dom query)
-    if tail = @tail
-      operation = @jump(engine, tail, continuation, ascender)
+    if tail = operation.tail
+      operation = @jump(tail, engine, operation, continuation, scope, ascender)
 
     # Let engine modify continuation or return cached result
-    if continuation && @path
-      result = engine.getSolution(operation, continuation, scope)
-      switch typeof result
-        when 'string'
-          if operation[0] == 'virtual' && result.charAt(0) != engine.Continuation.PAIR
-            return result
-          else
-            continuation = result
-            result = undefined
-            
-        when 'object'
-          return result 
+    switch typeof (result = @retrieve(engine, operation, continuation, scope))
+      when 'string'
+        if operation[0] == 'virtual' && result.charAt(0) != engine.Continuation.PAIR
+          return result
+        else
+          continuation = result
+          result = undefined
           
-        when 'boolean'
-          return
+      when 'object'
+        return result 
+        
+      when 'boolean'
+        return
 
     if result == undefined
       # Recursively solve arguments, stop on undefined
@@ -88,26 +111,9 @@ class Command
       continuation = @continue(engine, operation, continuation, scope)
       return @ascend(engine, operation, continuation, result, scope, ascender)
 
-  continue: (engine, operation, continuation) ->
-    return continuation
-
-  # Hook that happens before actual function call
-  # If it returns something, the function will not be called
-  before: ->
-
-  # Hook that happens after function call or succesful before hook
-  # Can transform the returned value
-  after: (args, result) ->
-    return result
-
-  log: (args, engine, operation, continuation) ->
-    engine.console.row(operation, args, continuation || "")
-
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    args = prev = undefined
-
-    for index in [@start ... operation.length] by 1
+    for index in [1 ... operation.length] by 1
       # Use ascending value
       argument =
         if ascender == index
@@ -115,59 +121,75 @@ class Command
         else
           operation[index]
 
-      # Process function calls and lists
       if command = argument.command
         # Leave forking/pairing mark in a path when resolving next arguments
         if ascender?
-          contd = @connect(operation, continuation)
+          contd = @connect(engine, operation, continuation, scope, args)
+
+        # Evaluate argument
         argument = command.solve(engine, argument, contd || continuation, scope)
 
-        # Handle undefined argument, usually stop evaluation
-        if argument == undefined
-          unless command.eager || engine.eager
-            return false
-          else
-            continue
-      
-      (args ||= []).push(argument)
+        return false if argument == undefined
+          
+      # Place argument at position enforced by signature
+      unless args
+        args = Array(operation.length - 1 + @padding)
+      args[@permutation[index - 1]] = argument
 
+    # Methods that accept more arguments than signature receive extra meta information
     for i in [0 ... @extras ? @execute.length - index + 1] by 1
       args.push arguments[i]
 
     return args
 
-  connect: (engine, operation, continuation) ->
-    return engine.Continuation.get(continuation, null, @PAIR)
-
-  fork: (engine, continuation) ->
-    return engine.Continuation.get(continuation, null, @ASCEND)
-
   # Pass control to parent operation. 
-  # If child op returns DOM collection or node, evaluator recurses for each node.
-  # In that case, it discards the descension value stack
   ascend: (engine, operation, continuation, result, scope, ascender) ->
-    unless parent = operation.parent
-      return
-
-    if (top = parent.command).constructor == Command.List
+    unless (parent = operation.parent) && (top = parent.command)
       return
 
     # Return partial solution to dispatch to parent command's domain
     if parent.domain != operation.domain
       engine.engine.subsolve(operation, continuation, scope)
       return
-    
-    # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-    if top.provide?(engine, result, operation, continuation, scope, ascender)
+
+    # Hook parent command to capture yielded value 
+    if top.yield?(engine, result, operation, continuation, scope, ascender)
       return 
 
-    # Recurse to ascend query result
-    if ascender?
-      top.solve engine, parent, continuation, scope, operation.index, result
-    else
+    # Return value without recursion
+    unless ascender?
       return result
-       
-  # Define command subclass
+
+    # Recurse to ascend query result
+    return top.solve engine, parent, continuation, scope, operation.index, result
+
+  connect: (engine, operation, continuation) ->
+    return engine.Continuation.get(continuation, null, @PAIR)
+
+  fork: (engine, continuation, item) ->
+    return engine.Continuation.get(continuation + engine.identity.yield(item), null, @ASCEND)
+
+  # Return different operation
+  jump: (engine, operation) ->
+    return operation
+
+  # Do something with arguments
+  execute: ->
+
+  # Retrieve cached result
+  retrieve: ->
+
+  # Map to reorder arguments
+  permutation: [0 ... 10]
+
+  # Add this nubmer of undefineds at the end of argument list
+  padding: 0
+
+  # Number of extra arguments (max 6: engine, operation, continuation, scope, ascender, ascending)
+  # Computed automatically for each command by checking `.length` of `@execute` callback
+  extras: undefined
+
+  # Define command subclass, and its class and instance properties
   @extend: (definition, methods) ->
     
     if (Constructor = @prototype.constructor) == Command || Constructor.length == 0
@@ -181,12 +203,15 @@ class Command
     Prototype.prototype = @prototype
     Kommand.prototype = new Prototype
     
+    Kommand.extend = Command.extend
+    Kommand.define = Command.define
 
     for property, value of definition
       Kommand::[property] = value
       
     if methods
       Command.define.call(Kommand, methods)
+
     return Kommand
       
   # Define subclasses for given methods
@@ -208,9 +233,23 @@ class Command
         if argument.command?.push?(operation, command)
           return argument.command
   
+  @optimize: (command) ->
+    prototype = command::
+    for property of prototype
+      unless prototype.hasOwnProperty(property)
+        prototype[property] = prototype[property]
+
   @types:
     'string': 'String'
     'number': 'Number'
+    'object': 'Object'
+
+  @typeOfObject: (object) ->
+    if object.nodeType
+      return 'Node'
+    if object.push
+      return 'List'
+    return 'Object'
   
   # Find defined command signatures in the engine and register their methods
   @compile: (engine, command) ->
@@ -233,22 +272,35 @@ class Command
         if typeof value == 'function'
           if value?.prototype instanceof Command
             unless property.match /^[A-Z]/
-              engine.signatures.set property, value, Types
+              engine.Signatures.set engine.signatures, property, value, Types
     @Types = Types
       
     @
   
   @Empty: {}
-  start: 1
 
 class Command.List extends Command
-  start: 0
+  constructor: ->
   extras: 0
 
   log: ->
 
-class Command.Default extends Command
+  # Capture results and do nothing with them
+  yield: ->
+    return true
 
+  # Fast descender for lists that doesnt build argument list
+  descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    for argument in operation
+      if command = argument?.command
+        command.solve(engine, argument, continuation, scope)
+    return
+
+class Command.Default extends Command
+  constructor: ->
+
+class Command.Object extends Command
+  constructor: ->
 
 
 module.exports = Command

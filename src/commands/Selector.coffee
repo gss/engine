@@ -400,7 +400,7 @@ Selector.define
 
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
-    provide: (result, engine, operation, continuation, scope, ascender) ->
+    yield: (result, engine, operation, continuation, scope, ascender) ->
       contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.path
       engine.queries.add(result, contd, operation.parent, scope, operation, continuation)
       engine.queries.ascending ||= []

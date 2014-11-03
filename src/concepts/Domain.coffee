@@ -149,7 +149,7 @@ class Domain extends Trigger
       result = @apply(result)
 
     if commands
-      @engine.provide commands
+      @engine.yield commands
 
     if @disconnected
       @mutations?.connect(true)
@@ -159,14 +159,14 @@ class Domain extends Trigger
 
     return result || commited
 
-  provide: (solution, value) ->
+  yield: (solution, value) ->
     if solution instanceof Domain
       return @merge solution
     else if @domain
-      @engine.engine.provide solution
+      @engine.engine.yield solution
       return 
     else
-      @engine.provide solution
+      @engine.yield solution
       return 
     return true
 
@@ -677,7 +677,7 @@ class Domain extends Trigger
     else
       if typeof id != 'string'
         if id.nodeType
-          id = @identity.provide(id)
+          id = @identity.yield(id)
         else 
           id = id.path
       return id + '[' + property + ']'
@@ -721,7 +721,6 @@ class Domain extends Trigger
     if variable && !force
       variable.domain = domain
     return domain
-    
       
 
   # Make Domain class inherit given engine instance. Crazy huh

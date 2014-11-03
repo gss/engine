@@ -8,7 +8,7 @@ another solver pass
 class Positions
   constructor: (@engine) -> 
 
-  provide: (id, property, value, positioning) ->
+  yield: (id, property, value, positioning) ->
     # parse $id[property] as [id, property]
     unless id?
       path = property
@@ -37,7 +37,7 @@ class Positions
     if data
       for path, value of data
         unless value == undefined
-          @provide null, path, value, positioning
+          @yield null, path, value, positioning
 
     # Adjust positioning styles to respect element offsets 
     @engine.intrinsic.each(node, @placehold, null, null, null, positioning, !!data)
@@ -45,7 +45,7 @@ class Positions
     # Set new positions in bulk (Reflow)
     for id, styles of positioning
       for prop, value of styles
-        @provide id, prop, value
+        @yield id, prop, value
 
     @engine.mutations?.connect(true)
     return data
