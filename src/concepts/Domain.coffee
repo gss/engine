@@ -54,7 +54,6 @@ class Domain extends Trigger
       @paths       = {}
       @objects     = {} if @structured
       @substituted = []
-      @constraints = []
       @values       = {} unless @hasOwnProperty('values')
       if !hidden && @domain != @engine
         if @domains.indexOf(@) == -1
@@ -109,13 +108,13 @@ class Domain extends Trigger
       @variables[name] = continuation
     return result
   
-  solve: (operation, continuation, scope) ->
+  solve: (operation, continuation, scope, ascender, ascending) ->
     return unless operation
 
     if @disconnected
       @mutations?.disconnect(true)
 
-    if @MAYBE && arguments.length == 1 && typeof args[0] == 'string'
+    if @MAYBE && arguments.length == 1 && typeof operation[0] == 'string'
       if (result = @bypass(operation))
         return result
 
@@ -134,7 +133,7 @@ class Domain extends Trigger
       else
         result = @[strategy].apply(@, arguments)
     else
-      result = @Command(operation).solve(@, operation, continuation || '', scope || @scope)
+      result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
     if @constrained || @unconstrained
       commands = @validate.apply(@, arguments)
@@ -416,47 +415,32 @@ class Domain extends Trigger
       #    @removeConstraint constraint
       #  return stack
 
+      #for path in constraint.paths
+      #  if path[0] == 'value'
+      #    for other, i in @constraints by -1
+      #      unless other == constraint
+      #        if stack = @reconstrain other, constraint
+      #          break
+      #
+      #unless stack?
+      #  for other, i in @substituted by -1
+      #    unless other == constraint
+      #      if stack = @reconstrain other, constraint
+      #        break
+      #return if stack
 
-  constrain: (constraint) ->
-    if constraint.paths
-      stack = undefined
-      for path in constraint.paths
-        if path[0] == 'value'
-          for other, i in @constraints by -1
-            unless other == constraint
-              if stack = @reconstrain other, constraint
-                break
-
-      unless stack?
-        for other, i in @substituted by -1
-          unless other == constraint
-            if stack = @reconstrain other, constraint
-              break
-      return if stack
-
-      for path in constraint.paths
-        if typeof path == 'string'
-          (@paths[path] ||= []).push(constraint)
-        else if path[0] == 'value'
-          if path[3]
-            bits = path[3].split(',')
-            if bits[0] == 'get'
-              (constraint.substitutions ||= {})[@getPath(bits[1], bits[2])] = path[1]
-          @substituted.push(constraint)
-        else if @isVariable(path)
-          if path.suggest != undefined
-            suggest = path.suggest
-            delete path.suggest
-            @suggest path, suggest, 'require'
-
-          length = (path.constraints ||= []).push(constraint)
-
-    if typeof (name = constraint[0]) == 'string'
-      @[constraint[0]]?.apply(@, Array.prototype.slice.call(constraint, 1))
-      return true
-    constraint.domain = @
-
-    @constraints.push(constraint)
+  constrain: (constraint, operation, meta) ->
+    constraint.operation = operation
+    constraint.path = meta.key
+    (@paths[constraint.path] ||= []).push(constraint)
+    for path, op of constraint.variables
+      if variable = op.command
+        if variable.suggest != undefined
+          suggest = variable.suggest
+          delete variable.suggest
+          @suggest variable, suggest, 'require'
+    
+    (@constraints ||= []).push(constraint)
     (@constrained ||= []).push(constraint)
 
     #if stack
@@ -475,34 +459,25 @@ class Domain extends Trigger
 
   unconstrain: (constraint, continuation, moving) ->
     @constraints.splice(@constraints.indexOf(constraint), 1)
-    
-    for path in constraint.paths
-      if typeof path == 'string'
-        if group = @paths[path]
-          for other, index in group by -1
-            if other == constraint
-              group.splice(index, 1)
-          unless group.length
-            delete @paths[path]
-      else if path[0] == 'value'
-        @substituted.splice(@substituted.indexOf(constraint))
-      else
-        if path.editing
-          path.suggest = path.value
+
+    for path, op of constraint.variables
+      if variable = op.command
+        if variable.editing
+          variable.suggest = variable.value
           @unedit(path)
-        index = path.constraints.indexOf(constraint)
-        if index > -1
-          path.constraints.splice(index, 1)
+          
+        variable.constraints.splice(variable.constraints.indexOf(constraint), 1)
         if !@hasConstraint(path)
           @undeclare(path, moving)
-        if path.operations
+          
+        if variable.operations
           for op, index in path.operations by -1
             while op
               if op == constraint.operation
                 path.operations.splice(index, 1)
                 break
               op = op.parent
-
+              
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)
     else
@@ -547,21 +522,21 @@ class Domain extends Trigger
     groups ||= []
     for constraint in constraints
       groupped = undefined
-      if constraint.paths
-        for group in groups by -1
-          for other in group
-            if other.paths
-              for variable in other.paths
-                if typeof variable != 'string'
-                  if constraint.paths.indexOf(variable) > -1
-                    if groupped && groupped != group
-                      groupped.push.apply(groupped, group)
-                      groups.splice(groups.indexOf(group), 1)
-                    else
-                      groupped = group
-                    break
-            if groups.indexOf(group) == -1
+      vars = constraint.operation.variables
+      
+      for group in groups by -1
+        for other in group
+          others = other.operation.variables
+          for path of vars
+            if others[path]
+              if groupped && groupped != group
+                groupped.push.apply(groupped, group)
+                groups.splice(groups.indexOf(group), 1)
+              else
+                groupped = group
               break
+          if groups.indexOf(group) == -1
+            break
       unless groupped
         groups.push(groupped = [])
       groupped.push(constraint)
@@ -626,7 +601,7 @@ class Domain extends Trigger
 
     @merge result, true
 
-    if @constraints.length == 0
+    if @constraints?.length == 0
       if (index = @engine.domains.indexOf(@)) > -1
         @engine.domains.splice(index, 1)
 
@@ -654,8 +629,9 @@ class Domain extends Trigger
     return
 
   export: ->
-    for constraint in @constraints when constraint.operation
-      constraint.operation
+    if @constraints
+      for constraint in @constraints when constraint.operation
+        constraint.operation
       
   # Return a lazy that may later be promoted to a domain 
   maybe: () ->
@@ -664,7 +640,7 @@ class Domain extends Trigger
       Base.prototype = @
       @Maybe = ->
       @Maybe.prototype = new Base
-      @Maybe.MAYBE = @
+      @Maybe.prototype.MAYBE = @
       
     return new @Maybe
 

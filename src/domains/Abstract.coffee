@@ -38,7 +38,7 @@ Abstract::Default = Command.Default.extend(
         throw "Incorrect command nesting - unknown command can only be on the top level"
     
     # 
-    engine.yield [key: continuation, result]
+    engine.yield [key: engine.Continuation.get(continuation), result]
     return
 )
 Abstract::List = Command.List.extend(

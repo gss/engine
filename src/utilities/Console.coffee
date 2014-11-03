@@ -37,6 +37,7 @@ class Console
   row: (a, b, c) ->
     return if @level < 1
     a = a.name || a
+    return if typeof a != 'string'
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
     if document?
       breakpoint = String(@stringify([b,c])).replace /\r?\n+|\r|\s+/g, ' '

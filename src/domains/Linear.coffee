@@ -92,7 +92,7 @@ class Linear extends Domain
     return weight
 
 Linear::Constraint = Command.extend.call Constraint, {},
-  '==': (left, right, strength, weight) ->
+  '==': (left, right, strength, weight, engine) ->
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))
 
   '<=': (left, right, strength, weight, engine) ->

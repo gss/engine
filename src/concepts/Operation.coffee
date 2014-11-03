@@ -65,7 +65,7 @@ class Operation
 
 
   getRoot: (operation) ->
-    while !operation.def.noop
+    while !(operation.command instanceof @engine.Command.Default)
       operation = operation.parent
     return operation
 

@@ -432,7 +432,7 @@ class Queries
             (query = operation.command.getPath(engine, operation, node, scope)) && 
             updating.queries?.hasOwnProperty(query)
       result = updating.queries[query]
-    if engine.collections?.hasOwnProperty(path)
+    if updating.collections?.hasOwnProperty(path)
       old = updating.collections[path]
     else if !old? && (result && result.length == 0) && continuation
       old = @get(engine.Continuation.getCanonicalPath(path))
@@ -459,6 +459,7 @@ class Queries
         if id = engine.identity.yield(node)
           watchers = @watchers[id] ||= []
           if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+            operation.command.prepare(operation)
             watchers.push(operation, continuation, scope)
         
         return old
@@ -491,6 +492,7 @@ class Queries
     if id = engine.identity.yield(node)
       watchers = @watchers[id] ||= []
       if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
+        operation.command.prepare(operation)
         watchers.push(operation, continuation, scope)
     
     if query
@@ -524,8 +526,9 @@ class Queries
     return unless watchers = @watchers[id]
     if continuation
       path = @engine.Continuation.getCanonicalPath(continuation)
+    
     for operation, index in watchers by 3
-      if groupped = operation[group]
+      if groupped = operation.command[group]
         contd = watchers[index + 1]
         continue if path && path != @engine.Continuation.getCanonicalPath(contd)
         scope = watchers[index + 2]

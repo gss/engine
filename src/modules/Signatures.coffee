@@ -130,7 +130,9 @@ class Signatures
         if arg != undefined && i < last
           storage = storage[arg] ||= {}
         else
-          storage.resolved ||= Command.extend.call(command, 
+          if command.prototype.hasOwnProperty('mergers')
+            debugger
+          storage.resolved ||= command.extend(
             permutation: combination[last], 
             padding: last - i
           )
@@ -143,10 +145,12 @@ class Signatures
     for type of types
 
       if execute = command.prototype?[type]
-        subcommand = command[type] ||= types[type].extend(command.prototype)
-        subcommand::execute = execute
-        for combination in @sign(subcommand, subcommand.prototype)
-          @write subcommand, storage, combination
+        Prototype = types[type].extend()
+        for own property, value of command.prototype
+          Prototype::[property] = value
+        Prototype::execute = execute
+        for combination in @sign(types[type], Prototype.prototype)
+          @write Prototype, storage, combination
 
     for combination in @sign(command, command.prototype)
       @write command, storage, combination

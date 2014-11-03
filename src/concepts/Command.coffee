@@ -6,7 +6,7 @@ class Command
       match = Command.match(@, operation, parent, index)
       unless command = match.instance
         command = new match(operation)
-        Command.optimize(match)
+        #Command.optimize(match)
       if command.key?
         command.push(operation)
       else
@@ -17,8 +17,9 @@ class Command
   
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index) ->
-    operation.parent = parent
-    operation.index = index
+    if parent && operation instanceof Array
+      operation.parent = parent
+      operation.index = index
 
     # Function call
     first = operation[0]
@@ -109,7 +110,7 @@ class Command
 
     if result?
       continuation = @continue(engine, operation, continuation, scope)
-      return @ascend(engine, operation, continuation, result, scope, ascender)
+      return @ascend(engine, operation, continuation, result, scope, ascender, ascending)
 
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
@@ -143,31 +144,31 @@ class Command
     return args
 
   # Pass control to parent operation. 
-  ascend: (engine, operation, continuation, result, scope, ascender) ->
+  ascend: (engine, operation, continuation, result, scope, ascender, ascending) ->
     unless (parent = operation.parent) && (top = parent.command)
-      return
-
-    # Return partial solution to dispatch to parent command's domain
-    if parent.domain != operation.domain
-      engine.engine.subsolve(operation, continuation, scope)
       return
 
     # Hook parent command to capture yielded value 
     if top.yield?(engine, result, operation, continuation, scope, ascender)
       return 
 
-    # Return value without recursion
-    unless ascender?
-      return result
-
-    # Recurse to ascend query result
-    return top.solve engine, parent, continuation, scope, operation.index, result
+    # Return partial solution to dispatch to parent command's domain
+    if parent.domain != operation.domain
+      engine.engine.subsolve(operation, continuation, scope)
+      return
+      
+    if ascending?
+      # Recurse to ascend query result
+      return top.solve engine, parent, continuation, scope, operation.index, result
+    
+    return result
 
   connect: (engine, operation, continuation) ->
-    return engine.Continuation.get(continuation, null, @PAIR)
+    debugger
+    return engine.Continuation.get(continuation, null, engine.Continuation.PAIR)
 
   fork: (engine, continuation, item) ->
-    return engine.Continuation.get(continuation + engine.identity.yield(item), null, @ASCEND)
+    return engine.Continuation.get(continuation + engine.identity.yield(item), null, engine.Continuation.ASCEND)
 
   # Return different operation
   jump: (engine, operation) ->
@@ -210,7 +211,7 @@ class Command
       Kommand::[property] = value
       
     if methods
-      Command.define.call(Kommand, methods)
+      Kommand.define(methods)
 
     return Kommand
       
@@ -221,8 +222,10 @@ class Command
         Command.define.call(@, property, value)
     else
       if typeof options == 'function'
+        if name == 'class'
+          debugger
         options = {execute: options}
-      @[name] = Command.extend.call(@, options)
+      @[name] = @extend(options)
     return
     
   
@@ -265,19 +268,28 @@ class Command
       if property.match /^[A-Z]/
         if value?.prototype instanceof Command
           Types[property] = value
-          @compile engine, value
+          @compile(engine, value)
             
     for property, value of command
       if value != Command[property] && property != '__super__'
-        if typeof value == 'function'
-          if value?.prototype instanceof Command
-            unless property.match /^[A-Z]/
-              engine.Signatures.set engine.signatures, property, value, Types
+        if value?.prototype instanceof Command
+          unless property.match /^[A-Z]/
+            engine.Signatures.set(engine.signatures, property, value, Types)
+            if engine.helps
+              engine.engine[property] = Helper(engine, property)
     @Types = Types
       
     @
   
   @Empty: {}
+
+  @Helper: (engine, name) ->
+    signature = engine.signatures[name] 
+    base = [name]
+    engine[name] ||= ->
+      args = Array.prototype.slice.call(arguments)
+      command = Command.match(engine, base.concat(args))
+      return command.execute.apply(command, args)
 
 class Command.List extends Command
   constructor: ->

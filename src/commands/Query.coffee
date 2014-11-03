@@ -112,5 +112,11 @@ class Query extends Command
     else
       return @key
 
+  retrieve: (engine, operation, continuation, scope) ->
+    unless @hidden
+      return engine.pairs.getSolution(operation, continuation, scope)
+      
+  prepare: ->
+    
   mergers: {}
 module.exports = Query

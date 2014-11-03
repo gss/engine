@@ -296,7 +296,7 @@ class Inspector
 
     for domain in @engine.domains
       if String(domain.uid) == String(id)
-        @panel.innerHTML = domain.constraints.map (constraint) =>
+        @panel.innerHTML = domain.constraints?.map (constraint) =>
           @toExpressionString(constraint.operation)
         .filter (string) ->
           return true unless props
@@ -442,10 +442,11 @@ class Inspector
 
     total = 0
     innerHTML = domains.map (d) => 
-      Debugger.uid ||= 0
-      d.uid ||= ++Debugger.uid
-      total += d.constraints.length
-      """<domain for="#{d.uid}" #{@engine.console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{d.constraints.length}</domain>"""
+      Inspector.uid ||= 0
+      d.uid ||= ++Inspector.uid
+      length = d.constraints?.length || 0
+      total += length
+      """<domain for="#{d.uid}" #{@engine.console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{length}</domain>"""
     .join('')
     innerHTML += '<label> = <strong>' + total + '</strong></label>'
     @list.innerHTML = innerHTML

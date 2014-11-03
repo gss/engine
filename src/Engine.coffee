@@ -519,10 +519,6 @@ class Engine extends Domain
     if location.search.indexOf('export=') > -1
       @preexport()
 
-  getSolution: (operation, continuation, scope) ->
-    if operation.def.serialized && (!operation.def.hidden || operation.parent.def.serialized)
-      return @engine.pairs.getSolution(operation, continuation, scope)
-
   # Hook: Should interpreter iterate returned object?
   # (yes, if it's a collection of objects or empty array)
   isCollection: (object) ->

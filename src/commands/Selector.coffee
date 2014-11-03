@@ -16,22 +16,10 @@ class Selector extends Query
 
 
   prepare: (operation, parent) ->
-    prefix = ((parent && operation.name != ' ') || 
-          (operation[0] != '$combinator' && typeof operation[1] != 'object')) && 
-          ' ' || ''
-    switch operation[0]
-      when '$tag'
-        if (!parent || operation == operation.selector?.tail) && operation[1][0] != '$combinator'
-          tags = ' '
-          index = (operation[2] || operation[1]).toUpperCase()
-      when '$combinator'
-        tags = prefix + operation.name
-        index = operation.parent.name == "$tag" && operation.parent[2].toUpperCase() || "*"
-      when '$class', '$pseudo', '$attribute', '$id'
-        tags = prefix + operation[0]
-        index = (operation[2] || operation[1])
-    return unless tags
-    ((@[tags] ||= {})[index] ||= []).push operation
+    prefix = @getIndexPrefix(operation, parent)
+    name = @getIndex(operation, parent)
+    suffix = @getIndexSuffix(operation, parent)
+    ((@[prefix + name] ||= {})[suffix] ||= []).push operation
 
     
   # String to be used to join tokens in a list
@@ -73,7 +61,15 @@ class Selector extends Query
   after: (args, result, engine, operation, continuation, scope) ->
     unless @hidden
       return engine.queries.update(args, result, operation, continuation, scope)
+  
+  getIndex: (operation) ->
+    return operation[0]
 
+  getIndexPrefix: (operation, parent) ->
+    return parent && ' ' || ''
+
+  getIndexSuffix: (operation) ->
+    return operation[2] || operation[1]
 
 Selector::mergers.selector = (command, other, parent, operation, inherited) ->
   if !other.head
@@ -102,27 +98,33 @@ Selector::mergers.selector = (command, other, parent, operation, inherited) ->
   return true
 
 # Indexed collection
-class Selector.Selecter extends Selector
+Selector.Selecter = Selector.extend
   signature: [
     query: ['String']
   ]
+  
+  getIndexPrefix: ->
+    return ' '
 
 # Scoped indexed collections
-class Selector.Combinator extends Selector.Selecter
+Selector.Selecter.Combinator = Selector.Selecter.extend
   signature: [[
     context: ['Selector']
     query: ['String']
   ]]
+  
+  getIndex: (operation) ->
+    return operation.parent.name == "$tag" && operation.parent[2] || "*"
 
 # Filter elements by key
-class Selector.Qualifier extends Selector
+Selector.Qualifier = Selector.extend
   signature: [
     context: ['Selector']
     matcher: ['String']
   ]
 
 # Filter elements by key with value
-class Selector.Search extends Selector
+Selector.Search = Selector.extend
   signature: [
     context: ['Selector']
     matcher: ['String']
@@ -130,7 +132,7 @@ class Selector.Search extends Selector
   ]
   
 # Reference to related element
-class Selector.Element extends Selector
+Selector.Element = Selector.extend
   signature: []
   
 Selector.define
@@ -163,7 +165,7 @@ Selector.define
     tags: ['selector']
     
     Selecter: (id, engine, operation, continuation, scope = @scope) ->
-      return scope.getElementById?(id) || node.querySelector('[id="' + id + '"]')
+      return scope.getElementById?(id) || scope.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
       return node if node.id == value
@@ -173,9 +175,13 @@ Selector.define
   ' ':
     tags: ['selector']
     
-    Combinator: (node) ->
-      return node.getElementsByTagName("*")
-
+    Combinator: 
+      execute: (node) ->
+        return node.getElementsByTagName("*")
+      
+      getIndexPrefix: ->
+        return ''
+        
   # All parent elements
   '!':
     Combinator: (node) ->

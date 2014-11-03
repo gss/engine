@@ -43,15 +43,12 @@ class Pairs
     # Attempt pairing
     last = continuation.lastIndexOf(@engine.Continuation.PAIR)
     if last > 0
-      parent = operation
-      while parent = parent.parent
-        break if parent.def.noop
       # Found right side
       first = continuation.indexOf(@engine.Continuation.PAIR) 
       if first == 0 && last == continuation.length - 1 && @onRight(operation, continuation, scope)?
         return false
       # Found left side, rewrite continuation
-      else if operation.def.serialized
+      else
         prev = -1
         while (index = continuation.indexOf(@engine.Continuation.PAIR, prev + 1)) > -1
           if result = @getSolution(operation, continuation.substring(prev || 0, index), scope, true)
@@ -65,7 +62,7 @@ class Pairs
       contd = @engine.Continuation.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
       if contd.charAt(0) == @engine.Continuation.PAIR
         contd = contd.substring(1)
-      if contd == operation.path
+      if contd == operation.command.path
         if id = continuation.match(@TrailingIDRegExp)
           if id[1].indexOf('"') > -1
             return id[1]
