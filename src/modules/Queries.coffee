@@ -283,7 +283,7 @@ class Queries
         @unobserve(id, ref, undefined, undefined, ref)
 
       if recursion != continuation
-        if (removed != null || !parent?.def.release)
+        if (removed != null || !parent?.command.release)
           @updateCollections operation, continuation, scope, recursion, node, continuation, contd
         if @engine.isCollection(collection) && removed != false
           @clean(continuation + id)
@@ -296,18 +296,15 @@ class Queries
 
 
   clean: (path, continuation, operation, scope, bind, contd) ->
-    if path.def
-      if path.marked && path.arity == 2
-        path = (continuation || '') + (path.uid || '') + (path.path || '')
-      else
-        path = (continuation || '') + (path.uid || '') + (path.key || '')
+    if command = path.command
+      path = (continuation || '') + (command.uid || '') + (command.key || '')
     continuation = path if bind
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
       @each 'remove', result, path, operation, scope, operation, false, contd
 
-    if scope && operation.def.cleaning
+    if scope && operation.command.cleaning
       @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     @engine.solved.remove(path)

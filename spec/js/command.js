@@ -164,21 +164,45 @@ describe('GSS commands', function() {
             ]
           ]
         ]);
-        box2 = engine.$id("34222");
+        box2 = engine.id("34222");
         box2.parentNode.removeChild(box2);
         return engine.then(function(solution) {
           expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222', '.box$34222→#box1'], [['remove', '.box$34222→#box1']]]);
           scope.appendChild(box2);
           return engine.then(function(solution) {
             var box1;
-            expect(engine.updated.getProblems()).to.eql([[['<=', ['get', '$34222', 'width', '.box$34222→#box1'], ['get', '$box1', 'width', '.box$34222→#box1']]]]);
-            box1 = engine.$id("box1");
+            expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: '.box$34222→#box1'
+                  }, ['<=', ['get', '$34222[width]'], ['get', '$box1[width]']]
+                ]
+              ]
+            ]);
+            box1 = engine.id("box1");
             box1.parentNode.removeChild(box1);
             return engine.then(function(solution) {
               expect(engine.updated.getProblems()).to.eql([['remove', '.box$box1', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1'], [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]]);
               scope.appendChild(box1);
               return engine.then(function(solution) {
-                expect(engine.updated.getProblems()).to.eql([[['<=', ['get', '$35346', 'width', '.box$35346→#box1'], ['get', '$box1', 'width', '.box$35346→#box1']], ['<=', ['get', '$34222', 'width', '.box$34222→#box1'], ['get', '$box1', 'width', '.box$34222→#box1']], ['<=', ['get', '$box1', 'width', '.box$box1→#box1'], ['get', '$box1', 'width', '.box$box1→#box1']]]]);
+                expect(engine.updated.getProblems()).to.eql([
+                  [
+                    [
+                      {
+                        key: '.box$35346→#box1'
+                      }, ['<=', ['get', '$35346[width]'], ['get', '$box1[width]']]
+                    ], [
+                      {
+                        key: '.box$34222→#box1'
+                      }, ['<=', ['get', '$34222[width]'], ['get', '$box1[width]']]
+                    ], [
+                      {
+                        key: '.box$box1→#box1'
+                      }, ['<=', ['get', '$box1[width]'], ['get', '$box1[width]']]
+                    ]
+                  ]
+                ]);
                 return done();
               });
             });
@@ -189,7 +213,7 @@ describe('GSS commands', function() {
     });
     it('intrinsic-width with class', function(done) {
       engine.once('solve', function(solution) {});
-      engine.solve([['==', ['get', ['$class', 'box'], 'width'], ['get', ['$class', 'box'], 'intrinsic-width']]], function(solution) {
+      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['class', 'box'], 'intrinsic-width']]], function(solution) {
         var box0;
         chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['get', '$12322', 'intrinsic-width', '.box$12322'], ['get', '$34222', 'intrinsic-width', '.box$34222'], ['get', '$35346', 'intrinsic-width', '.box$35346']], [['==', ['get', '$12322', 'width', '.box$12322'], ["value", 111, '.box$12322', "get,$12322,intrinsic-width,.box$12322"]]], [['==', ['get', '$34222', 'width', '.box$34222'], ["value", 222, '.box$34222', "get,$34222,intrinsic-width,.box$34222"]]], [['==', ['get', '$35346', 'width', '.box$35346'], ["value", 333, '.box$35346', "get,$35346,intrinsic-width,.box$35346"]]]]));
         expect(solution).to.eql({
@@ -213,7 +237,7 @@ describe('GSS commands', function() {
       return scope.innerHTML = "<div style=\"width:111px;\" class=\"box\" id=\"12322\">One</div>\n<div style=\"width:222px;\" class=\"box\" id=\"34222\">One</div>\n<div style=\"width:333px;\" class=\"box\" id=\"35346\">One</div>";
     });
     it('.box[width] == ::window[width]', function(done) {
-      engine.solve([['==', ['get', ['$class', 'box'], 'width'], ['get', ['$reserved', 'window'], 'width']]]);
+      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['$reserved', 'window'], 'width']]]);
       engine.then(function() {
         chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['get', '::window', 'width', ".box$12322"]], [['==', ['get', '$12322', 'width', '.box$12322'], ['value', window.innerWidth, ".box$12322", 'get,::window,width,.box$12322']]]]));
         return done();
@@ -243,7 +267,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$class', 'box'], 'x'], 100]]);
+        engine.solve([['==', ['get', ['class', 'box'], 'x'], 100]]);
         return scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
       });
       it('removed from dom', function(done) {
@@ -254,7 +278,7 @@ describe('GSS commands', function() {
           count++;
           if (count === 1) {
             chai.expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$12322', 'x', '.box$12322'], 100]], [['==', ['get', '$34222', 'x', '.box$34222'], 100]]]);
-            res = engine.$id('34222');
+            res = engine.id('34222');
             return res.parentNode.removeChild(res);
           } else if (count === 2) {
             chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222']]);
@@ -263,7 +287,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$class', 'box'], 'x'], 100]]);
+        engine.solve([['==', ['get', ['class', 'box'], 'x'], 100]]);
         return scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
       });
       return it('removed from selector', function(done) {
@@ -274,7 +298,7 @@ describe('GSS commands', function() {
           count++;
           if (count === 1) {
             chai.expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$12322', 'x', '.box$12322'], 100]], [['==', ['get', '$34222', 'x', '.box$34222'], 100]]]);
-            el = engine.$id('34222');
+            el = engine.id('34222');
             return el.setAttribute('class', '');
           } else if (count === 2) {
             chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222']]);
@@ -283,7 +307,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$class', 'box'], 'x'], 100]]);
+        engine.solve([['==', ['get', ['class', 'box'], 'x'], 100]]);
         return scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
       });
     });
@@ -295,7 +319,7 @@ describe('GSS commands', function() {
         listener = function(e) {
           count++;
           if (count === 1) {
-            el = engine.$id('box1');
+            el = engine.id('box1');
             return el.setAttribute('style', "width:1110px");
           } else if (count === 2) {
             chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 1110, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 1110, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
@@ -305,7 +329,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$class', 'box'], 'height'], ['get', ['$id', 'box1'], 'intrinsic-width']]]);
+        engine.solve([['==', ['get', ['class', 'box'], 'height'], ['get', ['id', 'box1'], 'intrinsic-width']]]);
         return scope.innerHTML = "<div style=\"width:111px;\" id=\"box1\" class=\"box\" >One</div>\n<div style=\"width:222px;\" id=\"box2\" class=\"box\" >One</div>";
       });
       it('element resized by inserting child', function(done) {
@@ -314,7 +338,7 @@ describe('GSS commands', function() {
         listener = function(e) {
           count++;
           if (count === 1) {
-            return engine.$id('box1').innerHTML = "<div style=\"width:111px;\"></div>";
+            return engine.id('box1').innerHTML = "<div style=\"width:111px;\"></div>";
           } else if (count === 2) {
             chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
             engine.removeEventListener('solve', listener);
@@ -322,7 +346,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$class', 'box'], 'height'], ['get', ['$id', 'box1'], 'intrinsic-width']]]);
+        engine.solve([['==', ['get', ['class', 'box'], 'height'], ['get', ['id', 'box1'], 'intrinsic-width']]]);
         return scope.innerHTML = "<div style=\"display:inline-block;\" id=\"box1\" class=\"box\">One</div>\n<div style=\"width:222px;\" id=\"box2\" class=\"box\">One</div>";
       });
       return it('element resized by changing text', function(done) {
@@ -332,7 +356,7 @@ describe('GSS commands', function() {
         listener = function(e) {
           count++;
           if (count === 1) {
-            el = engine.$id('box1');
+            el = engine.id('box1');
             return el.innerHTML = "<div style=\"width:111px;\"></div>";
           } else if (count === 2) {
             chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
@@ -344,7 +368,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$class', 'box'], 'height'], ['get', ['$id', 'box1'], 'intrinsic-width']]]);
+        engine.solve([['==', ['get', ['class', 'box'], 'height'], ['get', ['id', 'box1'], 'intrinsic-width']]]);
         return scope.innerHTML = "<div style=\"display:inline-block\" id=\"box1\" class=\"box\" >One</div>\n<div style=\"width:222px;\" id=\"box2\" class=\"box\" >One</div>";
       });
     });
@@ -356,12 +380,12 @@ describe('GSS commands', function() {
         listener = function(e) {
           count++;
           if (count === 1) {
-            expect(engine.$id("p-text").style.height).to.eql("");
+            expect(engine.id("p-text").style.height).to.eql("");
             expect(engine.values["$p-text[width]"]).to.eql(100);
             expect(engine.values["$p-text[x-height]"] > 400).to.eql(true);
             expect(engine.values["$p-text[x-height]"] % 16).to.eql(0);
             expect(engine.values["$p-text[x-height]"] % 16).to.eql(0);
-            return engine.$id("p-text").innerHTML = "Booyaka";
+            return engine.id("p-text").innerHTML = "Booyaka";
           } else if (count === 2) {
             expect(engine.values["$p-text[width]"]).to.eql(100);
             expect(engine.values["$p-text[x-height]"]).to.eql(16);
@@ -371,7 +395,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['$id', 'p-text'], 'width'], 100], ['==', ['get', ['$id', 'p-text'], 'x-height'], ['get', ['$id', 'p-text'], 'intrinsic-height']]]);
+        engine.solve([['==', ['get', ['id', 'p-text'], 'width'], 100], ['==', ['get', ['id', 'p-text'], 'x-height'], ['get', ['id', 'p-text'], 'intrinsic-height']]]);
         return scope.innerHTML = "<p id=\"p-text\" style=\"font-size:16px; line-height:16px; font-family:Helvetica;\">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>";
       });
     });
@@ -380,7 +404,7 @@ describe('GSS commands', function() {
         var el;
         el = null;
         window.$engine = engine;
-        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['$id', 'thing1'], 'width'], 100], ['rule', ['$class', 'thing'], ['==', ['get', ['$reserved', 'this'], 'width'], ['+', ['get', ['$pseudo', ['$reserved', 'this'], 'previous'], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
+        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['id', 'thing1'], 'width'], 100], ['rule', ['class', 'thing'], ['==', ['get', ['$reserved', 'this'], 'width'], ['+', ['get', ['$pseudo', ['$reserved', 'this'], 'previous'], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
         engine.once('solve', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           chai.expect(engine.values["$thing2[width]"]).to.eql(140);
@@ -395,7 +419,7 @@ describe('GSS commands', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           return done();
         });
-        engine.solve([['==', ['get', ['$id', 'thing1'], 'x'], 10], ['==', ['get', ['$id', 'thing2'], 'x'], 110], ['rule', ['$class', 'thing'], ['==', ['get', ['$pseudo', ['$reserved', 'this'], 'previous'], 'right'], ['get', ['$reserved', 'this'], 'x']]]]);
+        engine.solve([['==', ['get', ['id', 'thing1'], 'x'], 10], ['==', ['get', ['id', 'thing2'], 'x'], 110], ['rule', ['class', 'thing'], ['==', ['get', ['$pseudo', ['$reserved', 'this'], 'previous'], 'right'], ['get', ['$reserved', 'this'], 'x']]]]);
         scope.innerHTML = "<div id=\"thing1\" class=\"thing\"></div>\n<div id=\"thing2\" class=\"thing\"></div>";
         return el = null;
       });

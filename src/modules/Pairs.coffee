@@ -184,7 +184,8 @@ class Pairs
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
       else
-        @engine.document.solve operation.parent, contd + @engine.Continuation.PAIR, scope, undefined, true
+        op = operation.parent
+        @engine.document.solve op, contd + @engine.Continuation.PAIR, scope, true
       
         
     for contd in cleaned

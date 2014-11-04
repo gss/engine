@@ -100,7 +100,7 @@ class Intrinsic extends Numeric
     return
 
   get: (object, property, continuation) ->
-    path = @Variable.getPath(object, property)
+    path = @engine.getPath(object, property)
 
     if (prop = @properties[path])?
       if typeof prop == 'function'
@@ -135,7 +135,7 @@ class Intrinsic extends Numeric
     @engine.updating.reflown = @scope
 
   verify: (object, property, continuation) ->
-    path = @Variable.getPath(object, property)
+    path = @engine.getPath(object, property)
     if @values.hasOwnProperty(path)
       @set(null, path, @get(null, path, continuation))
 
@@ -190,7 +190,7 @@ class Intrinsic extends Numeric
     if (node = @identity.solve(id)) && node.nodeType == 1
       if property.indexOf('intrinsic-') > -1
         property = property.substring(10)
-      if @engine.values[@Variable.getPath(id, property)] != undefined
+      if @engine.values[@engine.getPath(id, property)] != undefined
         node.style[property] = ''
 
   update: (node, x, y, full) ->
@@ -239,4 +239,5 @@ class Intrinsic extends Numeric
 
   
   url: null
+
 module.exports = Intrinsic

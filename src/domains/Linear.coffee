@@ -146,7 +146,19 @@ Linear::Call = Call.extend {},
   'stay': (value, engine, operation) ->
     engine.suggested = true;
     engine.solver.addStay(value)
-    return 
+    return
+
+Linear::Call.Unsafe = Call.Unsafe.extend {
+  extras: 1
+},
+
+  'remove': ->
+    args = Array.prototype.slice.call(arguments)
+    engine = args.pop()
+    engine.remove.apply(engine, remove)
+
+
+
 
 # Phantom js doesnt enforce order of numerical keys in plain objects.
 # The hack enforces arrays as base structure.

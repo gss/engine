@@ -130,8 +130,6 @@ class Signatures
         if arg != undefined && i < last
           storage = storage[arg] ||= {}
         else
-          if command.prototype.hasOwnProperty('mergers')
-            debugger
           storage.resolved ||= command.extend(
             permutation: combination[last], 
             padding: last - i

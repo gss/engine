@@ -6,6 +6,20 @@ class Query extends Command
   constructor: (operation) ->
     @key = @path = @serialize(operation)
 
+  # Pass control to parent operation (possibly multiple times)
+  # For each node in collection, fork continuation with element id
+  ascend: (engine, operation, continuation, result, scope, ascender) ->
+    if parent = operation.parent
+      if engine.isCollection(result)
+        for node in result
+          unless parent.command.yield?(engine, node, operation, continuation, scope, ascender)
+            parent.command.solve(engine, parent, @fork(engine, continuation, node), scope, parent.indexOf(operation), node)
+        return
+      else 
+        unless parent.command.yield?(engine, result, operation, continuation, scope, ascender)
+          return parent.command.solve(engine, parent, continuation, scope, parent.indexOf(operation), result)
+          
+     
   serialize: (operation) ->
     if @prefix?
       string = @prefix
@@ -13,13 +27,14 @@ class Query extends Command
       string = operation[0]
     if typeof operation[1] == 'object'
       start = 2
-    for index in [start || 1 ... operation.length]
+    length = operation.length
+    for index in [start || 1 ... length]
       if argument = operation[index]
         if cmd = argument.command
           string += cmd.key
         else
           string += argument
-          if operation.length - 1 > index
+          if length - 1 > index
             string += @separator
 
     if @suffix
@@ -72,33 +87,6 @@ class Query extends Command
     else
       return @tail[1]
 
-  # Pass control to parent operation. 
-  # 
-  ascend: (engine, operation, continuation, result, scope, ascender) ->
-    unless parent = operation.parent
-      return
-    if (top = parent.command) instanceof Command.List
-      return
-    
-    # For each node in collection, recurse to a parent with id appended to continuation key
-    if engine.isCollection(result)
-      engine.console.group '%s \t\t\t\t%O\t\t\t%c%s', engine.Continuation.ASCEND, operation.parent, 'font-weight: normal; color: #999', continuation
-      
-      for item in result
-        @ascend engine, operation, @fork(engine, continuation, item), item, scope, operation.index
-      
-      engine.console.groupEnd()
-    else 
-      # Some operations may capture its arguments (e.g. comma captures nodes by subselectors)
-      if top.yield?(engine, result, operation, continuation, scope, ascender)
-        return 
-
-      # Recurse to ascend query result
-      if @key
-        top.solve engine, parent, continuation, scope, operation.index, result
-      else
-        return result
-     
 
   # Return shared absolute path of a dom query ($id selector) 
   getPath: (engine, operation, continuation) ->

@@ -7,4 +7,8 @@ class Call extends Command
     value: ['Value']
   ]
 
+class Call.Unsafe extends Call
+
+  signature: null
+
 module.exports = Call

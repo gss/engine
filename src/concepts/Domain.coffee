@@ -47,11 +47,11 @@ class Domain extends Trigger
   setup: (hidden = @immutable) ->
     @variables   ||= {}
     @bypassers   ||= {}
-    unless @hasOwnProperty('signatures')
+    unless @hasOwnProperty('watchers')
       @Operation   = new @Operation.constructor(@) 
       @watchers    = {}
       @observers   = {}
-      @paths       = {}
+      @paths     ||= {}
       @objects     = {} if @structured
       @substituted = []
       @values       = {} unless @hasOwnProperty('values')
@@ -291,7 +291,7 @@ class Domain extends Trigger
           if watcher.parent.domain == domain
             domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined || undefined, watcher.index || undefined, value
           else
-            @evaluator.ascend watcher, watchers[index + 1], value, watchers[index + 2]
+            watcher.command.ascend domain, watcher, watchers[index + 1], value, watchers[index + 2]
   
     return if domain.immutable
 
@@ -323,7 +323,7 @@ class Domain extends Trigger
             if frame
               d = op.domain
               op.domain = domain
-              domain.evaluator.ascend op, undefined, value, undefined, undefined, op.index
+              domain.evaluator.ascend op, undefined, value, undefined, undefined, op.parent.indexOf(parent)
               op.domain = d
             else
               @update(@Operation.sanitize(@Operation.ascend(op)))
@@ -343,10 +343,10 @@ class Domain extends Trigger
     if @unconstrained
       for constraint in @unconstrained
         @removeConstraint(constraint)
-        for path in constraint.paths
-          if path.constraints
-            if !@hasConstraint(path)
-              @nullify(path)
+        for path of constraint.operation.variables
+          if variable = @variables[path]
+            if !@hasConstraint(variable)
+              @nullify(variable)
     if @constrained
       for constraint in @constrained
         @addConstraint(constraint)
@@ -433,13 +433,14 @@ class Domain extends Trigger
     constraint.operation = operation
     constraint.path = meta.key
     (@paths[constraint.path] ||= []).push(constraint)
-    for path, op of constraint.variables
+    for path, op of operation.variables
       if variable = op.command
         if variable.suggest != undefined
           suggest = variable.suggest
           delete variable.suggest
           @suggest variable, suggest, 'require'
-    
+      (@variables[path].constraints ||= []).push(constraint)
+        
     (@constraints ||= []).push(constraint)
     (@constrained ||= []).push(constraint)
 
@@ -448,35 +449,30 @@ class Domain extends Trigger
     #  for constraint in stack
     #    @addConstraint constraint
 
-  hasConstraint: (path) ->
-    used = false
-    for other in path.constraints
+  hasConstraint: (variable) ->
+    for other in variable.constraints
       if @constraints.indexOf(other) > -1
-        used = true
-        break
-    return used
+        return true
+    return
 
 
   unconstrain: (constraint, continuation, moving) ->
     @constraints.splice(@constraints.indexOf(constraint), 1)
+    group = @paths[constraint.path]
+    group.splice(group.indexOf(constraint, 1))
 
-    for path, op of constraint.variables
+    for path, op of constraint.operation.variables
       if variable = op.command
         if variable.editing
           variable.suggest = variable.value
           @unedit(path)
+        
+      object = @variables[path]
+      object.constraints.splice(object.constraints.indexOf(constraint), 1)
+
+      if !@hasConstraint(object)
+        @undeclare(object, moving)
           
-        variable.constraints.splice(variable.constraints.indexOf(constraint), 1)
-        if !@hasConstraint(path)
-          @undeclare(path, moving)
-          
-        if variable.operations
-          for op, index in path.operations by -1
-            while op
-              if op == constraint.operation
-                path.operations.splice(index, 1)
-                break
-              op = op.parent
               
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)
@@ -484,17 +480,13 @@ class Domain extends Trigger
       (@unconstrained ||= []).push(constraint)
 
 
-  declare: (name, operation) ->
+  declare: (name) ->
     if name
       unless variable = @variables[name]
         variable = @variables[name] = @variable(name)
       if @nullified && @nullified[name]
         delete @nullified[name]
       (@added ||= {})[name] = variable
-      if operation
-        ops = variable.operations ||= []
-        if ops.indexOf(operation)
-          ops.push(operation)
     else
       variable = @variable('suggested_' + Math.random())
     return variable
@@ -610,22 +602,23 @@ class Domain extends Trigger
 
 
   remove: ->
-    for path in arguments
-      for contd in @Continuation.getVariants(path)
-        if observers = @observers[contd]
-          while observers[0]
-            @unwatch(observers[1], undefined, observers[0], contd, observers[2])
-      
-      if constraints = @paths[path]
-        for constraint in constraints by -1
-          if @isConstraint(constraint)
+    debugger
+    if observers = @observers
+      for path in arguments
+        for contd in @Continuation.getVariants(path)
+          if observer = observers[contd]
+            while observer[0]
+              @unwatch(observer[1], undefined, observer[0], contd, observer[2])
+        
+        if constraints = @paths[path]
+          for constraint in constraints by -1
             @unconstrain(constraint, path)
 
-      if @constrained
-        for constraint in @constrained
-          if constraint.paths.indexOf(path) > -1
-            @unconstrain(constraint)
-            break
+        if @constrained
+          for constraint in @constrained
+            if constraint.path == path
+              @unconstrain(constraint)
+              break
     return
 
   export: ->
@@ -663,13 +656,14 @@ class Domain extends Trigger
   getVariableDomain: (engine, operation, force, quick) ->
     if operation.domain && !force
       return operation.domain
-    [cmd, scope, property] = variable = operation
-    path = @getPath(scope, property)
+    path = operation[1]
+    if (i = path.indexOf('[')) > -1
+      property = path.substring(i + 1, path.length - 1)
     
     intrinsic = engine.intrinsic
-    if (scope || path.indexOf('[') > -1) && property && intrinsic?.properties[path]?
+    if property && intrinsic?.properties[path]?
       domain = intrinsic
-    else if scope && property && intrinsic?.properties[property] && !intrinsic.properties[property].matcher
+    else if property && intrinsic?.properties[property] && !intrinsic.properties[property].matcher
       domain = intrinsic
     else
       for d in engine.domains
@@ -694,8 +688,6 @@ class Domain extends Trigger
         #else
         if !quick
           domain = @engine.linear.maybe()
-    if variable && !force
-      variable.domain = domain
     return domain
       
 
