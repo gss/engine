@@ -46,7 +46,7 @@ class Command
         if match = signature[type] || signature.Any
           signature = match
         else unless (Default ||= signature.Default || engine.Default)
-          throw new Error "Unexpected `" + type + "` in " + operation[0]
+          throw new Error "Unexpected `" + type + "` in `" + operation[0] + '` of ' + engine.displayName + ' domain'
 
 
     if command = Default || signature?.resolved || engine.Default
@@ -72,12 +72,14 @@ class Command
     engine.console.row(operation[0], args, continuation || "")
 
   solve: (engine, operation, continuation, scope, ascender, ascending) ->
+    domain = operation.domain || engine
+    
     # Use a shortcut operation when possible (e.g. native dom query)
     if tail = operation.tail
-      operation = @jump(tail, engine, operation, continuation, scope, ascender)
+      operation = @jump(tail, domain, operation, continuation, scope, ascender)
 
     # Let engine modify continuation or return cached result
-    switch typeof (result = @retrieve(engine, operation, continuation, scope))
+    switch typeof (result = @retrieve(domain, operation, continuation, scope))
       when 'string'
         if operation[0] == 'virtual' && result.charAt(0) != engine.Continuation.PAIR
           return result
@@ -93,19 +95,19 @@ class Command
 
     if result == undefined
       # Recursively solve arguments, stop on undefined
-      args = @descend(engine, operation, continuation, scope, ascender, ascending)
+      args = @descend(domain, operation, continuation, scope, ascender, ascending)
 
       return if args == false
 
-      @log(args, engine, operation, continuation)
+      @log(args, domain, operation, continuation)
 
       # Execute command with hooks
-      result = @before(args, engine, operation, continuation, scope)
+      result = @before(args, domain, operation, continuation, scope)
       result ?= @execute.apply(@, args)
-      result = @after(args, result, engine, operation, continuation, scope)
+      result = @after(args, result, domain, operation, continuation, scope)
 
     if result?
-      continuation = @continue(engine, operation, continuation, scope)
+      continuation = @continue(domain, operation, continuation, scope)
       return @ascend(engine, operation, continuation, result, scope, ascender, ascending)
 
   # Evaluate operation arguments in order, break on undefined
@@ -119,8 +121,7 @@ class Command
           operation[index]
 
       if command = argument.command
-        unless argument.parent
-          argument.parent = operation
+        argument.parent ||= operation
           
         # Leave forking/pairing mark in a path when resolving next arguments
         if ascender?
@@ -138,29 +139,33 @@ class Command
 
     # Methods that accept more arguments than signature receive extra meta information
     for i in [0 ... @extras ? @execute.length - index + 1] by 1
-      args.push arguments[i]
+      (args ||= []).push arguments[i]
 
     return args
 
   # Pass control to parent operation. 
   ascend: (engine, operation, continuation, result, scope, ascender, ascending) ->
-    unless (parent = operation.parent)
-      return
+    if (parent = operation.parent)
 
-    if top = parent.command
-      # Hook parent command to capture yielded value 
-      if top.yield?(engine, result, operation, continuation, scope, ascender)
-        return 
+      top = parent.command
 
-    # Return partial solution to dispatch to parent command's domain
-    if parent.domain != operation.domain
-      @transfer(engine, parent, continuation, scope, ascender, ascending, top)
-      return
+      # Return partial solution to dispatch to parent command's domain
+      if domain = operation.domain
+
+        if (wrapper = parent.domain) && wrapper != domain && wrapper != engine
+          @transfer(operation.domain, parent, continuation, scope, ascender, ascending, top)
+          return
+        
+      if top
+        # Hook parent command to capture yielded value 
+        if yielded = top.yield?(engine, result, operation, continuation, scope, ascender)
+          return if yielded == true
+          return yielded
+
+      if ascender?
+        # Recurse to ascend query result
+        return top.solve(parent.domain || engine, parent, continuation, scope, parent.indexOf(operation), result)
       
-    if ascender?
-      # Recurse to ascend query result
-      return top.solve(engine, parent, continuation, scope, parent.indexOf(operation), result)
-    
     return result
 
   # Write meta data for a foreign domain
@@ -173,7 +178,7 @@ class Command
       parent = operation
       while parent.parent.domain == parent.domain
         parent = parent.parent
-      @update([parent])
+      engine.updating.push(parent, parent.domain)
 
 
   getMeta: (operation) ->
@@ -240,8 +245,6 @@ class Command
         Command.define.call(@, property, value)
     else
       if typeof options == 'function'
-        if name == 'class'
-          debugger
         options = {execute: options}
       @[name] = @extend(options)
     return
@@ -321,10 +324,12 @@ class Command.List extends Command
 
   # Fast descender for lists that doesnt build argument list
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    for argument in operation
+    for argument, index in operation
+      argument.parent ?= operation
       if command = argument?.command
         command.solve(engine, argument, continuation, scope)
     return
+
 
 class Command.Default extends Command
   constructor: ->

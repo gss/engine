@@ -11,13 +11,10 @@ class Value.Variable extends Value
   
   constructor: ->
     
-  isVariable: true
-      
-  continuations: undefined
-  variables: undefined
-  paths: undefined
-  
-  
+  before: (args, engine, operation, continuation, scope) ->
+    if (value = scope?.values?[args[0]])?
+      return value
+
 # Algebraic expression
 class Value.Expression extends Value
   
@@ -26,32 +23,45 @@ class Value.Expression extends Value
     right: ['Value', 'Number']
   ]
 
+Value.Expression.algebra = 
+  '+': (left, right) ->
+    return c.plus(left, right)
+
+  '-': (left, right) ->
+    return c.minus(left, right)
+
+  '*': (left, right) ->
+    return c.times(left, right)
+
+  '/': (left, right) ->
+    return c.divide(left, right)
+    
+Value.Expression.define Value.Expression.algebra
+
+  
 # Substituted expression or variable 
-class Value.Solution extends Value
+class Value.Expression.Constant extends Value.Expression
   
   signature: [
-    property: ['String']
-    contd:    ['String']
-    value:    ['Number']
+    left:  ['Number']
+    right: ['Number']
   ]
 
-Value.Solution.define 
-  got: (property, contd, value, engine, operation, continuation, scope) ->
-    if engine.suggest && engine.solver
-      variable = (operation.parent.suggestions ||= {})[operation.index]
-      unless variable
-        Domain::Methods.uids ||= 0
-        uid = ++Domain::Methods.uids
-        variable = operation.parent.suggestions[operation.index] ||= engine.declare(null, operation)
-        variable.suggest = value
-        variable.operation = operation
+Value.Expression.Constant.define Value.Expression.algebra
 
-        @constrained ||= []
-      return variable
+Value.Expression.define
+  '+': (left, right) ->
+    return c.plus(left, right)
 
-    if !continuation && contd
-      return engine.solve operation.parent, contd, engine.identity.solve(scoped), operation.index, value
-    return value
+  '-': (left, right) ->
+    return c.minus(left, right)
+
+  '*': (left, right) ->
+    return c.times(left, right)
+
+  '/': (left, right) ->
+    return c.divide(left, right)
+
   
 module.exports = Value
   

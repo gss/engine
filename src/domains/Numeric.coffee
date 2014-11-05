@@ -16,7 +16,6 @@ class Numeric extends Domain
   url: null
 
 Numeric::Value            = Value.extend()
-Numeric::Value.Solution   = Value.Solution.extend()
 Numeric::Value.Variable   = Value.Variable.extend {group: 'linear'},
   get: (path, engine, operation, continuation, scope) ->
     return engine.watch(null, path, operation, engine.Continuation(continuation || ""), scope)
@@ -41,19 +40,6 @@ Numeric::Value.Variable   = Value.Variable.extend {group: 'linear'},
   #  scoped = scope
 
 
-Numeric::Value.Expression = Value.Expression.extend {group: 'linear'},
-
-  "+": (left, right) ->
-    return left + right
-
-  "-": (left, right) ->
-    return left - right
-
-  "*": (left, right) ->
-    return left * right
-
-  "/": (left, right) ->
-    return left / right
-    
+Numeric::Value.Expression = Value.Expression.extend()
     
 module.exports = Numeric

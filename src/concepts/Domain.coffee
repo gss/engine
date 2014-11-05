@@ -44,21 +44,18 @@ class Domain extends Trigger
     else
       return @find.apply(@, arguments)
 
-  setup: (hidden = @immutable) ->
-    @variables   ||= {}
-    @bypassers   ||= {}
-    unless @hasOwnProperty('watchers')
-      @Operation   = new @Operation.constructor(@) 
-      @watchers    = {}
-      @observers   = {}
-      @paths     ||= {}
-      @objects     = {} if @structured
-      @substituted = []
-      @values       = {} unless @hasOwnProperty('values')
-      if !hidden && @domain != @engine
-        if @domains.indexOf(@) == -1
-          @domains.push(@)
-      @MAYBE       = undefined
+  setup: () ->
+    unless @hasOwnProperty('values')
+      @values      = {}
+      if @MAYBE
+        @Operation   ||= new @Operation.constructor(@) 
+        @paths       = {}
+        @domains.push(@)
+        @MAYBE     = undefined
+      else
+        @watchers    = {}
+        @observers   = {}
+        @objects     = {} if @structured
 
   unbypass: (path, result) ->
     if bypassers = @bypassers[path]
@@ -76,50 +73,26 @@ class Domain extends Trigger
     return result
 
   # Dont solve system with a single variable+constant constraint 
-  bypass: (operation) ->
-    name = undefined
-    for prop, variable of operation.variables
-      if variable.domain.displayName == @displayName
-        return if name
-        name = prop
-
-    primitive = continuation = fallback = undefined
-    for arg in operation
-      if arg?.push
-        if arg[0] == 'get'
-          if continuation != undefined
-            return
-          continuation = arg[3] ? null
-        else if arg[0] == 'value'
-          fallback ?= arg[2]
-          value = arg[1]
-      else if typeof arg == 'number'
-        primitive ?= arg
-
-    unless value?
-      value = primitive
-
+  bypass: (name, operation, continuation, scope) ->
+    variable = operation.variables[name]
+    parent = variable
+    while parent != operation[1]
+      break unless parent
+      parent = parent.parent
+    value = parent == operation[1] && operation[2] || operation[1]
+    if typeof value != 'number'
+      value = value.command.solve @, value, continuation, scope
+      if typeof value != 'number'
+        return
     result = {}
-    continuation ?= fallback
     result[name] = value
     
     if !@variables[name] || @variables[name].constraints?.length == 0
-      (@bypassers[continuation] ||= []).push operation
-      @variables[name] = continuation
+      (@bypassers[scope.key] ||= []).push operation
+      @variables[name] = scope.key
     return result
   
   solve: (operation, continuation, scope, ascender, ascending) ->
-    return unless operation
-
-    if @disconnected
-      @mutations?.disconnect(true)
-
-    if @MAYBE && arguments.length == 1 && typeof operation[0] == 'string'
-      if (result = @bypass(operation))
-        return result
-
-    @setup() unless @running
-
     transacting = @transact()
 
     if typeof operation == 'object' && !operation.push
@@ -140,18 +113,16 @@ class Domain extends Trigger
       @restruct()
 
       if commands == false
-        if @disconnected
-          @mutations?.connect(true)
+        if transacting
+          return @commit()
         return
 
-    if result = @perform?.apply(@, arguments)
-      result = @apply(result)
+    unless typeof result == 'object'
+      if result = @perform?.apply(@, arguments)
+        result = @apply(result)
 
     if commands
       @engine.yield commands
-
-    if @disconnected
-      @mutations?.connect(true)
 
     if transacting
       commited = @commit()
@@ -173,6 +144,10 @@ class Domain extends Trigger
     @setup()
     unless @changes && @hasOwnProperty('changes')
       @changes = {}
+      if @disconnected
+        @mutations?.disconnect(true)
+
+    
 
   commit: ->
     changes = @changes
@@ -265,35 +240,22 @@ class Domain extends Trigger
       delete @values[path]
     # notify subscribers
     if @updating
-      @engine.callback(@, path, value)
+      @callback(path, value)
     else
       @engine.solve @displayName || 'GSS', (domain) ->
-        @callback(domain, path, value)
+        domain.callback(path, value)
       , @
 
     return value
 
 
-  callback: (domain, path, value) ->
-    if watchers = domain.watchers?[path]
+  callback: (path, value) ->
+    if watchers = @watchers?[path]
       for watcher, index in watchers by 3
         break unless watcher
-        if watcher.domain != domain || !value?
-          # Re-evaluate expression
-          if watcher.parent[watcher.index] != watcher
-            watcher.parent[watcher.index] = watcher
-          root = @Operation.ascend(watcher, domain)
-          if root.parent.def?.domain
-            @update([@[root.parent.def.domain]], [@Operation.sanitize(root)])
-          else if value != undefined
-            @update([@Operation.sanitize(root)])
-        else
-          if watcher.parent.domain == domain
-            domain.solve watcher.parent, watchers[index + 1], watchers[index + 2] || undefined || undefined, watcher.index || undefined, value
-          else
-            watcher.command.ascend domain, watcher, watchers[index + 1], value, watchers[index + 2]
+        watcher.command.ascend(@, watcher, watchers[index + 1], value, watchers[index + 2])
   
-    return if domain.immutable
+    return if @immutable
 
     if @workers
       for url, worker of @workers
@@ -307,27 +269,23 @@ class Domain extends Trigger
     #if exports = @updating?.exports?[path]
     #  for domain in exports
     #    @update(domain, [['value', value, path]])
-
-    if (variable = @variables[path]) && domain.priority > 0
+    ###
+    if (variable = @variables[path])
       frame = undefined
       if variable.constraints
         for constraint in variable.constraints
-          if frame = constraint.domain.frame
+          if frame = constraint.operation.domain.frame
             break
-      for op in variable.operations
-        if !watchers || watchers.indexOf(op) == -1
-          if value == null
-            while op.domain == domain
-              op = op.parent
-          if op && op.domain != domain
-            if frame
-              d = op.domain
-              op.domain = domain
-              domain.evaluator.ascend op, undefined, value, undefined, undefined, op.parent.indexOf(parent)
-              op.domain = d
-            else
-              @update(@Operation.sanitize(@Operation.ascend(op)))
-
+      for constraint in variable.constraints
+        if watcher = constraint.operation
+          if (variable = watcher.variables[path])?.domain == @
+            debugger
+            if true#!watchers || watchers.indexOf(variable) == -1
+              if op = @Operation.ascend(watcher)
+                if (first = op[0]) && !first.push
+                  (first.values ||= {})[path] = value
+                @engine.update([op.domain], [op])
+    ###
     return
 
   # Export values in a plain object. Use for tests only
@@ -460,6 +418,8 @@ class Domain extends Trigger
     @constraints.splice(@constraints.indexOf(constraint), 1)
     group = @paths[constraint.path]
     group.splice(group.indexOf(constraint, 1))
+    if group.length == 0
+      delete @paths[constraint.path]
 
     for path, op of constraint.operation.variables
       if variable = op.command
@@ -602,23 +562,22 @@ class Domain extends Trigger
 
 
   remove: ->
-    debugger
-    if observers = @observers
-      for path in arguments
+    for path in arguments
+      if @observers
         for contd in @Continuation.getVariants(path)
-          if observer = observers[contd]
+          if observer = @observers[contd]
             while observer[0]
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
-        
-        if constraints = @paths[path]
-          for constraint in constraints by -1
-            @unconstrain(constraint, path)
+      
+      if constraints = @paths?[path]
+        for constraint in constraints by -1
+          @unconstrain(constraint, path)
 
-        if @constrained
-          for constraint in @constrained
-            if constraint.path == path
-              @unconstrain(constraint)
-              break
+      if @constrained
+        for constraint in @constrained
+          if constraint.path == path
+            @unconstrain(constraint)
+            break
     return
 
   export: ->

@@ -22,8 +22,9 @@ class Intrinsic extends Numeric
 
   Properties:     ((Dimensions, Styles) ->
                     Properties = ->
-                    Properties.prototype = new Dimensions
                     for property, value of Styles::
+                      Properties::[property] = value
+                    for property, value of Dimensions::
                       Properties::[property] = value
                     return Properties
                   )(require('../properties/Dimensions'),
@@ -96,7 +97,7 @@ class Intrinsic extends Numeric
   perform: ->
     if arguments.length < 4
       @console.row('measure', arguments[0], arguments[1])
-      @each @scope, @update
+      @each @scope, @measure
     return
 
   get: (object, property, continuation) ->
@@ -193,7 +194,7 @@ class Intrinsic extends Numeric
       if @engine.values[@engine.getPath(id, property)] != undefined
         node.style[property] = ''
 
-  update: (node, x, y, full) ->
+  measure: (node, x, y, full) ->
     return unless @objects
     if id = node._gss_id
       if properties = @objects[id]

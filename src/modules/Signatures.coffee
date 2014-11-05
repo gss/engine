@@ -19,9 +19,9 @@ class Signatures
     
   # Register signatures defined in a given object
   @sign: (command, object) ->
-    if signed = command.__super__.signed
+    if signed = command.signed
       return signed
-    command.__super__.signed = storage = []
+    command.signed = storage = []
     if signature = object.signature
       @get command, storage, signature
     else if signatures = object.signatures

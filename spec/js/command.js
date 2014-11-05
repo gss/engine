@@ -215,7 +215,36 @@ describe('GSS commands', function() {
       engine.once('solve', function(solution) {});
       engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['class', 'box'], 'intrinsic-width']]], function(solution) {
         var box0;
-        chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['get', '$12322', 'intrinsic-width', '.box$12322'], ['get', '$34222', 'intrinsic-width', '.box$34222'], ['get', '$35346', 'intrinsic-width', '.box$35346']], [['==', ['get', '$12322', 'width', '.box$12322'], ["value", 111, '.box$12322', "get,$12322,intrinsic-width,.box$12322"]]], [['==', ['get', '$34222', 'width', '.box$34222'], ["value", 222, '.box$34222', "get,$34222,intrinsic-width,.box$34222"]]], [['==', ['get', '$35346', 'width', '.box$35346'], ["value", 333, '.box$35346', "get,$35346,intrinsic-width,.box$35346"]]]]));
+        chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+          [['get', '$12322[intrinsic-width]'], ['get', '$34222[intrinsic-width]'], ['get', '$35346[intrinsic-width]']], [
+            [
+              {
+                key: '.box$12322',
+                values: {
+                  '$12322[intrinsic-width]': 111
+                }
+              }, ['==', ['get', '$12322[width]'], ['get', '$12322[intrinsic-width]']]
+            ]
+          ], [
+            [
+              {
+                key: '.box$34222',
+                values: {
+                  '$34222[intrinsic-width]': 222
+                }
+              }, ['==', ['get', '$34222[width]'], ['get', '$34222[intrinsic-width]']]
+            ]
+          ], [
+            [
+              {
+                key: '.box$35346',
+                values: {
+                  '$35346[intrinsic-width]': 333
+                }
+              }, ['==', ['get', '$35346[width]'], ['get', '$35346[intrinsic-width]']]
+            ]
+          ]
+        ]));
         expect(solution).to.eql({
           "$12322[intrinsic-width]": 111,
           "$12322[width]": 111,
@@ -230,24 +259,91 @@ describe('GSS commands', function() {
         box0 = scope.getElementsByClassName('box')[0];
         box0.parentNode.removeChild(box0);
         return engine.once('solve', function() {
-          chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([["remove", ".box$12322"]]));
+          chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([["remove", ".box$12322"], [["remove", ".box$12322"]]]));
           return done();
         });
       });
       return scope.innerHTML = "<div style=\"width:111px;\" class=\"box\" id=\"12322\">One</div>\n<div style=\"width:222px;\" class=\"box\" id=\"34222\">One</div>\n<div style=\"width:333px;\" class=\"box\" id=\"35346\">One</div>";
     });
     it('.box[width] == ::window[width]', function(done) {
-      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['$reserved', 'window'], 'width']]]);
+      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['::window'], 'width']]]);
       engine.then(function() {
-        chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['get', '::window', 'width', ".box$12322"]], [['==', ['get', '$12322', 'width', '.box$12322'], ['value', window.innerWidth, ".box$12322", 'get,::window,width,.box$12322']]]]));
+        chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+          [['get', '::window[width]']], [
+            [
+              {
+                key: '.box$12322',
+                values: {
+                  '::window[width]': window.innerWidth
+                }
+              }, ['==', ['get', '$12322[width]'], ['get', '::window[width]']]
+            ]
+          ]
+        ]));
         return done();
       });
       return scope.innerHTML = "<div style=\"width:111px;\" class=\"box\" id=\"12322\">One</div>";
     });
     return it('::window props', function() {
       scope.innerHTML = "";
-      engine.solve([['==', ['get', 'xxx'], ['get', ['$reserved', 'window'], 'x']], ['<=', ['get', 'yyy'], ['get', ['$reserved', 'window'], 'y']], ['<=', ['get', 'yay'], ['get', ['$reserved', 'window'], 'y']], ['>=', ['get', 'hhh'], ['get', ['$reserved', 'window'], 'height']], ['>=', ['get', 'hah'], ['get', ['$reserved', 'window'], 'height']], ['<=', ['get', 'www'], ['get', ['$reserved', 'window'], 'width']]]);
-      return chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([[["get", "::window", "x", ""], ["get", "::window", "y", ""], ["get", "::window", "y", ""], ["get", "::window", "height", ""], ["get", "::window", "height", ""], ["get", "::window", "width", ""]], [['==', ['get', '', 'xxx', ''], ['value', 0, '', 'get,::window,x,']]], [['<=', ['get', '', 'yyy', ''], ['value', 0, '', 'get,::window,y,']]], [['<=', ['get', '', 'yay', ''], ['value', 0, '', 'get,::window,y,']]], [['>=', ['get', '', 'hhh', ''], ['value', window.innerHeight, '', 'get,::window,height,']]], [['>=', ['get', '', 'hah', ''], ['value', window.innerHeight, '', 'get,::window,height,']]], [['<=', ['get', '', 'www', ''], ['value', window.innerWidth, '', 'get,::window,width,']]]]));
+      engine.solve([['==', ['get', 'xxx'], ['get', ['::window'], 'x']], ['<=', ['get', 'yyy'], ['get', ['::window'], 'y']], ['<=', ['get', 'yay'], ['get', ['::window'], 'y']], ['>=', ['get', 'hhh'], ['get', ['::window'], 'height']], ['>=', ['get', 'hah'], ['get', ['::window'], 'height']], ['<=', ['get', 'www'], ['get', ['::window'], 'width']]]);
+      return chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+        [["get", "::window[x]"], ["get", "::window[y]"], ["get", "::window[y]"], ["get", "::window[height]"], ["get", "::window[height]"], ["get", "::window[width]"]], [
+          [
+            {
+              key: '',
+              values: {
+                '::window[x]': 0
+              }
+            }, ['==', ['get', 'xxx'], ['get', '::window[x]']]
+          ]
+        ], [
+          [
+            {
+              key: '',
+              values: {
+                '::window[y]': 0
+              }
+            }, ['<=', ['get', 'yyy'], ['get', '::window[y]']]
+          ]
+        ], [
+          [
+            {
+              key: '',
+              values: {
+                '::window[y]': 0
+              }
+            }, ['<=', ['get', 'yay'], ['get', '::window[y]']]
+          ]
+        ], [
+          [
+            {
+              key: '',
+              values: {
+                '::window[height]': window.innerHeight
+              }
+            }, ['>=', ['get', 'hhh'], ['get', '::window[height]']]
+          ]
+        ], [
+          [
+            {
+              key: '',
+              values: {
+                '::window[height]': window.innerHeight
+              }
+            }, ['>=', ['get', 'hah'], ['get', '::window[height]']]
+          ]
+        ], [
+          [
+            {
+              key: '',
+              values: {
+                '::window[width]': window.innerWidth
+              }
+            }, ['<=', ['get', 'www'], ['get', '::window[width]']]
+          ]
+        ]
+      ]));
     });
   });
   return describe('live command spawning -', function() {
@@ -258,10 +354,32 @@ describe('GSS commands', function() {
         listener = function(e) {
           count++;
           if (count === 1) {
-            expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$12322', 'x', '.box$12322'], 100]], [['==', ['get', '$34222', 'x', '.box$34222'], 100]]]);
+            expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: '.box$12322'
+                  }, ['==', ['get', '$12322[x]'], 100]
+                ]
+              ], [
+                [
+                  {
+                    key: '.box$34222'
+                  }, ['==', ['get', '$34222[x]'], 100]
+                ]
+              ]
+            ]);
             return scope.insertAdjacentHTML('beforeend', '<div class="box" id="35346">One</div>');
           } else if (count === 2) {
-            expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$35346', 'x', '.box$35346'], 100]]]);
+            expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: '.box$35346'
+                  }, ['==', ['get', '$35346[x]'], 100]
+                ]
+              ]
+            ]);
             engine.removeEventListener('solve', listener);
             return done();
           }
@@ -277,7 +395,21 @@ describe('GSS commands', function() {
           var res;
           count++;
           if (count === 1) {
-            chai.expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$12322', 'x', '.box$12322'], 100]], [['==', ['get', '$34222', 'x', '.box$34222'], 100]]]);
+            chai.expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: '.box$12322'
+                  }, ['==', ['get', '$12322[x]'], 100]
+                ]
+              ], [
+                [
+                  {
+                    key: '.box$34222'
+                  }, ['==', ['get', '$34222[x]'], 100]
+                ]
+              ]
+            ]);
             res = engine.id('34222');
             return res.parentNode.removeChild(res);
           } else if (count === 2) {
@@ -297,7 +429,21 @@ describe('GSS commands', function() {
           var el;
           count++;
           if (count === 1) {
-            chai.expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$12322', 'x', '.box$12322'], 100]], [['==', ['get', '$34222', 'x', '.box$34222'], 100]]]);
+            chai.expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: '.box$12322'
+                  }, ['==', ['get', '$12322[x]'], 100]
+                ]
+              ], [
+                [
+                  {
+                    key: '.box$34222'
+                  }, ['==', ['get', '$34222[x]'], 100]
+                ]
+              ]
+            ]);
             el = engine.id('34222');
             return el.setAttribute('class', '');
           } else if (count === 2) {
@@ -322,7 +468,27 @@ describe('GSS commands', function() {
             el = engine.id('box1');
             return el.setAttribute('style', "width:1110px");
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 1110, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 1110, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
+            chai.expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: ".box$box1→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 1100
+                    }
+                  }, ["==", ["get", "$box1[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ], [
+                [
+                  {
+                    key: ".box$box2→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 1100
+                    }
+                  }, ["==", ["get", "$box2[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ]
+            ]);
             chai.expect(engine.values['$box2[height]']).to.equal(1110);
             engine.removeEventListener('solve', listener);
             return done();

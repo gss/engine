@@ -107,13 +107,16 @@ class Engine extends Domain
     # Alias engine.values from solved domain
     @values = @solved.values
 
+    @variables   = {}
+    @bypassers   = {}
 
-    unless window?
-      @strategy = 'substitute'
-    else if @scope
-      @strategy = 'document'
-    else
-      @strategy = 'abstract'
+    @strategy = 
+      unless window?
+        'substitute'
+      else if @scope
+        'document'
+      else
+        'abstract'
 
     return @
 
@@ -244,9 +247,6 @@ class Engine extends Domain
     if providing
       while yieldd = @providing
         @providing = null
-        if args[0]?.index
-          yieldd.index ?= args[0].index
-          yieldd.parent ?= args[0].parent
         @update(yieldd)
       @providing = undefined
 
@@ -284,7 +284,7 @@ class Engine extends Domain
       @intrinsic.changes = {}
       scope = @updating.reflown || @scope
       @updating.reflown = undefined
-      @intrinsic?.each(scope, @intrinsic.update)
+      @intrinsic?.each(scope, @intrinsic.measure)
       @updating.apply @intrinsic.changes
       @intrinsic.changes = undefined
 
@@ -460,7 +460,7 @@ class Engine extends Domain
             continue if index == 0
             if other.paths[path]
               locals.push(path)
-            else if other.observers[path]
+            else if other.observers?[path]
               other.remove(path)
         if other.changes
           for property, value of other.changes
@@ -513,6 +513,7 @@ class Engine extends Domain
   # Compile initial domains and shared engine features 
   precompile: ->
     @Domain.compile(@Domains,   @)
+    @intrinsic?.compile(true)
     @update = Engine::Update.compile(@)
     @mutations?.connect(true)
 

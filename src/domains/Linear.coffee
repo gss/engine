@@ -45,18 +45,17 @@ class Linear extends Domain
     @solver.removeConstraint(constraint)
 
   unedit: (variable) ->
-    if variable.editing
+    if @editing?[variable.name]
       if cei = @solver._editVarMap.get(variable)
         @solver.removeColumn(cei.editMinus)
         @solver._editVarMap.delete(variable)
       super
 
   edit: (variable, strength, weight, continuation) ->
-    unless constraint = variable.editing
+    unless @editing?[variable.name]
       constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
-      constraint.paths = [variable]
       @addConstraint constraint
-      variable.editing = constraint
+      (@editing ||= {})[variable.name] = constraint
       @constrained ||= []
     
     return constraint
@@ -68,12 +67,7 @@ class Linear extends Domain
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'
       unless variable = @variables[path]
-        if continuation
-          variable = @declare(path)
-          variables = (@variables[continuation] ||= [])
-          variables.push(variable)
-        else
-          return @verify path, value
+        variable = @declare(path)
     else
       variable = path
 
@@ -91,7 +85,14 @@ class Linear extends Domain
   weight: (weight) ->
     return weight
 
-Linear::Constraint = Command.extend.call Constraint, {},
+# Capture values coming from other domains
+Linear.Mixin =
+  yield: (engine, result, operation, continuation, scope, ascender) ->
+    if typeof result == 'number'
+      return operation.parent.domain.suggest operation[1], result
+
+
+Linear::Constraint = Command.extend.call Constraint, Linear.Mixin,
   '==': (left, right, strength, weight, engine) ->
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))
 
@@ -107,9 +108,9 @@ Linear::Constraint = Command.extend.call Constraint, {},
   '>': (left, right, strength, weight, engine) ->
     return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
 
-Linear::Value            = Value.extend()
-Linear::Value.Solution   = Value.Solution.extend()
-Linear::Value.Variable   = Value.Variable.extend {group: 'linear'},
+
+Linear::Value            = Value.extend(Linear.Mixin)
+Linear::Value.Variable   = Value.Variable.extend Linear.Mixin,
   get: (path, engine, operation) ->
     variable = engine.declare(path, operation)
     if variable.constraints
@@ -119,28 +120,30 @@ Linear::Value.Variable   = Value.Variable.extend {group: 'linear'},
           return variable.value 
     return variable
     
-Linear::Value.Expression = Value.Expression.extend {group: 'linear'},
-
-  '+': (left, right) ->
-    return c.plus(left, right)
-
-  '-': (left, right) ->
-    return c.minus(left, right)
-
-  '*': (left, right) ->
-    return c.times(left, right)
-
-  '/': (left, right) ->
-    return c.divide(left, right)
-
+Linear::Value.Expression = Value.Expression
 Linear::Block = Block.extend()
 Linear::Block.Meta = Block.Meta.extend {
   signature: [
     body: ['Any']
   ]
 }, 
-  'object': (constraint, engine, operation) ->
-    engine.constrain(constraint, operation[1], operation[0])
+  'object': 
+    execute: (constraint, engine, operation) ->
+      if constraint
+        if !constraint.hashCode
+          return constraint
+        if constraint
+          engine.constrain(constraint, operation[1], operation[0])
+
+    descend: (engine, operation) -> 
+      operation[1].parent = operation
+      operation[1].index = 1
+      [
+        operation[1].command.solve(engine, operation[1], '', operation[0])
+        engine, 
+        operation
+      ]
+
 
 Linear::Call = Call.extend {},
   'stay': (value, engine, operation) ->

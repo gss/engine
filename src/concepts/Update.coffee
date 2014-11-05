@@ -19,13 +19,13 @@ Updater = (engine) ->
     # Process arguments
     for arg, index in problem
       continue unless arg?.push
-      arg.parent ?= problem
-      arg.index  ?= index
+      if typeof problem[0] == 'string'
+        arg.parent = problem
       offset = 0
 
       # Analyze variable
       if arg[0] == 'get'
-        vardomain = @getVariableDomain(@, arg)
+        arg.domain ||= vardomain = @getVariableDomain(@, arg)
         path = arg[1]
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
@@ -37,7 +37,7 @@ Updater = (engine) ->
           property = bypassers[bypasser]
           i = 0
           while op = property[i]
-            if op.variables[path]
+            if (variable = op.variables[path])# && variable.domain.displayName == domain.displayName
               effects.push [op], [vardomain], true
               property.splice(i, 1)
             else 
@@ -299,6 +299,7 @@ Update.prototype =
               exps[i - 1] = problem
             else 
               exps.splice(--i, 1)
+
             problem.domain = other
 
         if other
@@ -424,6 +425,8 @@ Update.prototype =
         if variables = @problems[index].variables
           for property of problems.variables
             if variable = variables[property]
+              if property.indexOf('intrinsic') > -1
+                debugger
               if variable.domain?.displayName == domain.displayName
                 if domain.frame == other.frame
                   if other.constraints?.length > domain.constraints?.length || position > index

@@ -44,9 +44,6 @@ class Selector extends Query
 
   # Does the selector return only one element?
   singular: undefined
-  # Is it a "free" selector like ::this or ::scope?
-  hidden: undefined
-  
   
   relative: undefined
 
@@ -54,13 +51,11 @@ class Selector extends Query
     
   # Check if query was already updated
   before: (args, engine, operation, continuation, scope) ->
-    unless @hidden
-      return engine.queries.fetch(args, operation, continuation, scope)
+    return engine.queries.fetch(args, operation, continuation, scope)
 
   # Subscribe elements to query 
   after: (args, result, engine, operation, continuation, scope) ->
-    unless @hidden
-      return engine.queries.update(args, result, operation, continuation, scope)
+    return engine.queries.update(args, result, operation, continuation, scope)
   
   getIndex: (operation) ->
     return operation[0]
@@ -107,7 +102,7 @@ Selector.Selecter = Selector.extend
     return ' '
 
 # Scoped indexed collections
-Selector.Selecter.Combinator = Selector.Selecter.extend
+Selector.Combinator = Selector.Selecter.extend
   signature: [[
     context: ['Selector']
     query: ['String']
@@ -134,6 +129,15 @@ Selector.Search = Selector.extend
 # Reference to related element
 Selector.Element = Selector.extend
   signature: []
+
+  before: ->
+    return
+
+  after: (args, result) ->
+    return result
+
+  serialize: ->
+    return ''
   
 Selector.define
   # Live collections
@@ -259,7 +263,6 @@ Selector.define
 Selector.define
   # Pseudo elements
   '::this':
-    hidden: true
     log: ->
 
     Element: (engine, operation, continuation, scope) ->
