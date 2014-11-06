@@ -25,19 +25,16 @@ class Value.Expression extends Value
 
 Value.Expression.algebra = 
   '+': (left, right) ->
-    return c.plus(left, right)
+    return left + right
 
   '-': (left, right) ->
-    return c.minus(left, right)
+    return left - right
 
   '*': (left, right) ->
-    return c.times(left, right)
+    return left * right
 
   '/': (left, right) ->
-    return c.divide(left, right)
-    
-Value.Expression.define Value.Expression.algebra
-
+    return left / right
   
 # Substituted expression or variable 
 class Value.Expression.Constant extends Value.Expression

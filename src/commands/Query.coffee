@@ -8,7 +8,7 @@ class Query extends Command
 
   # Pass control to parent operation (possibly multiple times)
   # For each node in collection, fork continuation with element id
-  ascend: (engine, operation, continuation, result, scope, ascender) ->
+  ascend: (engine, operation, continuation, scope, result, ascender) ->
     if parent = operation.parent
       if engine.isCollection(result)
         for node in result

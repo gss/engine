@@ -336,18 +336,18 @@ Selector.define
 
   ':first-child':
     tags: ['selector']
-    Combinator: (node) ->
+    Selecter: (node) ->
       return node unless node.previousElementSibling
 
   ':last-child':
     tags: ['selector']
-    Combinator: (node) ->
+    Selecter: (node) ->
       return node unless node.nextElementSibling
 
 
   ':next':
     relative: true
-    Combinator: (node, engine, operation, continuation, scope) ->
+    Selecter: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
@@ -355,7 +355,7 @@ Selector.define
 
   ':previous':
     relative: true
-    Combinator: (node, engine, operation, continuation, scope) ->
+    Selecter: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if index == -1 || !index
@@ -373,7 +373,7 @@ Selector.define
   ':first':
     relative: true
     singular: true
-    Qualifier: (node, engine, operation, continuation, scope) ->
+    Selecter: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index?

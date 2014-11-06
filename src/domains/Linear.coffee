@@ -45,15 +45,13 @@ class Linear extends Domain
     @solver.removeConstraint(constraint)
 
   unedit: (variable) ->
-    if @editing?[variable.name]
-      if cei = @solver._editVarMap.get(variable)
-        @solver.removeColumn(cei.editMinus)
-        @solver._editVarMap.delete(variable)
-      super
+    if constraint = @editing?['%' + variable.name]
+      @removeConstraint(constraint)
 
   edit: (variable, strength, weight, continuation) ->
     unless @editing?[variable.name]
       constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
+      constraint.variable = variable
       @addConstraint constraint
       (@editing ||= {})[variable.name] = constraint
       @constrained ||= []
@@ -89,7 +87,7 @@ class Linear extends Domain
 Linear.Mixin =
   yield: (engine, result, operation, continuation, scope, ascender) ->
     if typeof result == 'number'
-      return operation.parent.domain.suggest operation[1], result
+      return operation.parent.domain.suggest '%' + operation.command.toExpression(operation), result
 
 
 Linear::Constraint = Command.extend.call Constraint, Linear.Mixin,
@@ -113,14 +111,23 @@ Linear::Value            = Value.extend(Linear.Mixin)
 Linear::Value.Variable   = Value.Variable.extend Linear.Mixin,
   get: (path, engine, operation) ->
     variable = engine.declare(path, operation)
-    if variable.constraints
-      for constrain in variable.constraints
-        if constrain.domain && constrain.domain.frame && constrain.domain.frame != engine.frame
-          delete engine.added[absolute]
-          return variable.value 
+    engine.unedit(variable)
     return variable
     
-Linear::Value.Expression = Value.Expression
+Linear::Value.Expression = Value.Expression.extend Linear.Mixin,
+  
+  '+': (left, right) ->
+    return c.plus(left, right)
+
+  '-': (left, right) ->
+    return c.minus(left, right)
+
+  '*': (left, right) ->
+    return c.times(left, right)
+
+  '/': (left, right) ->
+    return c.divide(left, right)
+
 Linear::Block = Block.extend()
 Linear::Block.Meta = Block.Meta.extend {
   signature: [

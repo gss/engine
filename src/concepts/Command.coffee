@@ -108,77 +108,87 @@ class Command
 
     if result?
       continuation = @continue(domain, operation, continuation, scope)
-      return @ascend(engine, operation, continuation, result, scope, ascender, ascending)
+      return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
 
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    
     for index in [1 ... operation.length] by 1
+
       # Use ascending value
-      argument =
-        if ascender == index
-          ascending
-        else
-          operation[index]
+      
+      if ascender == index
+        argument = ascending
+      else
+        argument = operation[index]
 
-      if command = argument.command
-        argument.parent ||= operation
-          
-        # Leave forking/pairing mark in a path when resolving next arguments
-        if ascender?
-          contd = @connect(engine, operation, continuation, scope, args)
+        if argument instanceof Array
+          command = argument.command || engine.Command(argument)
+          argument.parent ||= operation
+            
+          # Leave forking/pairing mark in a path when resolving next arguments
+          contd = @connect(engine, operation, continuation, scope, args, ascender)
 
-        # Evaluate argument
-        argument = command.solve(engine, argument, contd || continuation, scope)
+          # Evaluate argument
+          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope)
 
-        return false if argument == undefined
+          if argument == undefined
+            return false
           
       # Place argument at position enforced by signature
       unless args
         args = Array(operation.length - 1 + @padding)
       args[@permutation[index - 1]] = argument
 
-    # Methods that accept more arguments than signature receive extra meta information
+    # Methods that accept more arguments than signature gets extra meta arguments
     for i in [0 ... @extras ? @execute.length - index + 1] by 1
       (args ||= []).push arguments[i]
 
     return args
 
   # Pass control to parent operation. 
-  ascend: (engine, operation, continuation, result, scope, ascender, ascending) ->
+  ascend: (engine, operation, continuation, scope, result, ascender, ascending) ->
+    
     if (parent = operation.parent)
-
-      top = parent.command
 
       # Return partial solution to dispatch to parent command's domain
       if domain = operation.domain
-
         if (wrapper = parent.domain) && wrapper != domain && wrapper != engine
-          @transfer(operation.domain, parent, continuation, scope, ascender, ascending, top)
+          @transfer(operation.domain, parent, continuation, scope, ascender, ascending, parent.command)
           return
         
-      if top
-        # Hook parent command to capture yielded value 
+      # Hook parent command to capture yielded value 
+      if top = parent.command
         if yielded = top.yield?(engine, result, operation, continuation, scope, ascender)
           return if yielded == true
           return yielded
 
+      # Recurse to ascend query result
       if ascender?
-        # Recurse to ascend query result
         return top.solve(parent.domain || engine, parent, continuation, scope, parent.indexOf(operation), result)
       
     return result
+
+  # Reinitialize foreign expression as local to parent domain
+  patch: (engine, operation, continuation, scope) ->
+    op = @sanitize(engine, operation).parent
+    op.command.transfer(engine, op, continuation, scope, undefined, undefined, op.command)
+
 
   # Write meta data for a foreign domain
   transfer: (engine, operation, continuation, scope, ascender, ascending, top) ->
     if meta = @getMeta(operation)
       for path of operation.variables
         if (value = engine.values[path])?
+          debugger
           (meta.values ||= {})[path] = value
+        else if meta.values?[path]
+          delete meta.values[path]
     if top
       parent = operation
-      while parent.parent.domain == parent.domain
+      while parent.parent?.domain == parent.domain
         parent = parent.parent
-      engine.updating.push(parent, parent.domain)
+      engine.updating.push([parent], parent.domain)
 
 
   getMeta: (operation) ->
@@ -187,8 +197,9 @@ class Command
       if parent[0].key?
         return parent[0]
 
-  connect: (engine, operation, continuation) ->
-    return engine.Continuation.get(continuation, null, engine.Continuation.PAIR)
+  connect: (engine, operation, continuation, scope, args, ascender) ->
+    if ascender?
+      return engine.Continuation.get(continuation, null, engine.Continuation.PAIR)
 
   fork: (engine, continuation, item) ->
     return engine.Continuation.get(continuation + engine.identity.yield(item), null, engine.Continuation.ASCEND)
@@ -212,6 +223,36 @@ class Command
   # Number of extra arguments (max 6: engine, operation, continuation, scope, ascender, ascending)
   # Computed automatically for each command by checking `.length` of `@execute` callback
   extras: undefined
+
+  toExpression: (operation, initial) ->
+    switch typeof operation
+      when 'object'
+        switch operation[0]
+          when 'get'
+            return operation[1]
+          else
+            return @toExpression(operation[1]) + operation[0] + @toExpression(operation[2])
+      else
+        return operation
+
+  # Forget command  
+  sanitize: (engine, operation, ascend) ->
+
+    # Clean sub-expressions with the same domain
+    for argument in operation
+      unless ascend == argument
+        if argument?.domain == engine
+          if argument[0] == 'get'
+            return ascend
+          @sanitize(engine, argument, false)
+    
+    operation.domain = operation.command = undefined
+
+    unless ascend == false
+      if operation.parent?.domain == engine
+        return @sanitize(engine, operation.parent, operation)
+
+    return operation
 
   # Define command subclass, and its class and instance properties
   @extend: (definition, methods) ->
@@ -248,15 +289,8 @@ class Command
         options = {execute: options}
       @[name] = @extend(options)
     return
-    
   
-  # Attempt to re-use argument's command for the operation if groups match
-  @reduce: (operation, command) ->
-    for i in [1 ... operation.length] by 1
-      if argument = operation[i]
-        if argument.command?.push?(operation, command)
-          return argument.command
-  
+  # Flatten prototype chain
   @optimize: (command) ->
     prototype = command::
     for property of prototype
@@ -268,6 +302,7 @@ class Command
     'number': 'Number'
     'object': 'Object'
 
+  # Convert native object into lookup string
   @typeOfObject: (object) ->
     if object.nodeType
       return 'Node'
@@ -330,10 +365,11 @@ class Command.List extends Command
         command.solve(engine, argument, continuation, scope)
     return
 
-
+# An optional command for unmatched ast
 class Command.Default extends Command
   constructor: ->
 
+# Command for objects called as functions
 class Command.Object extends Command
   constructor: ->
 

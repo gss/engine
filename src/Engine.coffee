@@ -83,8 +83,6 @@ class Engine extends Domain
     
     @domains      = []
     @domain       = @
-    @properties   = new @Properties(@)
-    @signatures   = new @Signatures(@)
     @inspector    = new @Inspector(@)
     
 
@@ -549,6 +547,8 @@ class Engine extends Domain
       for name of @Domains
         if domain = @[name.toLowerCase()]
           @Command.compile domain
+      @Command.compile(@assumed)
+      @Command.compile(@solved)
         
     @console.compile(@)
     @running = state ? null

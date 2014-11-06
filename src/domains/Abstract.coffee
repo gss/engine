@@ -34,9 +34,6 @@ Abstract::Default = Command.Default.extend(
     if parent = operation.parent
       if parent.command instanceof Command.Default
         return result
-      unless parent.command instanceof Command.List
-        throw "Incorrect command nesting - unknown command can only be on the top level"
-    
     # 
     wrapper = [key: engine.Continuation.get(continuation), result]
     result.parent = wrapper

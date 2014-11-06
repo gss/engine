@@ -37,7 +37,7 @@ Updater = (engine) ->
           property = bypassers[bypasser]
           i = 0
           while op = property[i]
-            if (variable = op.variables[path])# && variable.domain.displayName == domain.displayName
+            if (variable = op.variables[path])
               effects.push [op], [vardomain], true
               property.splice(i, 1)
             else 
@@ -215,8 +215,8 @@ Update.prototype =
         domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
-    if @engine.domains.indexOf(other) == -1
-      @engine.domains.push(other)
+    #if @engine.domains.indexOf(other) == -1
+    #  @engine.domains.push(other)
     return true
 
   # Group expressions
@@ -318,9 +318,9 @@ Update.prototype =
           for arg in problem
             if arg.push
               if arg[0] == 'get'
-                if !arg.domain || arg.domain.displayName == other.displayName
-                  @setVariable(problem, arg[1], arg)
-                  @setVariable(exp, arg[1], arg)
+                #if !arg.domain || arg.domain.displayName == other.displayName
+                @setVariable(problem, arg[1], arg)
+                @setVariable(exp, arg[1], arg)
 
               else if arg.variables
                 for prop, value of arg.variables
@@ -338,9 +338,8 @@ Update.prototype =
     if probs.variables
       variables = result.variables ||= {}
       for property, operation of probs.variables
-        if !operation.domain || operation.domain.displayName == other.displayName
-          operation.domain = other
-          variables[property] = operation
+        #operation.domain = other
+        variables[property] = operation
     return
 
   # Simplify groupped multi-domain expression down to variables

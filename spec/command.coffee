@@ -398,14 +398,14 @@ describe 'GSS commands', ->
                 #  ["get", "$box1[intrinsic-width]"]
                 #],
                 [[
-                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 1100},
+                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 1110},
                   ["==",
                     ["get", "$box1[height]"]
                     ["get", "$box1[intrinsic-width]"]
                   ]
                 ]],
                 [[
-                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 1100},
+                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 1110},
                   ["==",
                     ["get", "$box2[height]"]
                     ["get", "$box1[intrinsic-width]"]
@@ -438,18 +438,20 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             engine.removeEventListener 'solve', listener
             done()
@@ -476,18 +478,20 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             el.innerHTML = ""            
           else if count is 3
@@ -496,18 +500,20 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box1→#box1"]
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
-                [
+                [[
+                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 0},
                   ["==",
-                    ["get", "$box1", "height",          ".box$box1→#box1"]
-                    ["value", 0, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]
+                    ["get", "$box1[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ],
-                [
+                ]],
+                [[
+                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 0},
                   ["==",
-                    ["get", "$box2", "height",          ".box$box2→#box1"]
-                    ["value", 0, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]
+                    ["get", "$box2[height]"]
+                    ["get", "$box1[intrinsic-width]"]
                   ]
-                ]
+                ]]
               ]
             engine.removeEventListener 'solve', listener
             done()
@@ -564,11 +570,11 @@ describe 'GSS commands', ->
             ['class', 'thing'], 
             ['=='
               ['get'
-                ['$reserved', 'this'],
+                ['::this'],
                 'width'],
               ['+',
                 ['get'
-                  ['$pseudo', ['$reserved', 'this'], 'previous'],
+                  [':previous', ['::this']],
                   'width']
                 ['*'
                   ['get', 'hgap'],

@@ -474,7 +474,7 @@ describe('GSS commands', function() {
                   {
                     key: ".box$box1→#box1",
                     values: {
-                      "$box1[intrinsic-width]": 1100
+                      "$box1[intrinsic-width]": 1110
                     }
                   }, ["==", ["get", "$box1[height]"], ["get", "$box1[intrinsic-width]"]]
                 ]
@@ -483,7 +483,7 @@ describe('GSS commands', function() {
                   {
                     key: ".box$box2→#box1",
                     values: {
-                      "$box1[intrinsic-width]": 1100
+                      "$box1[intrinsic-width]": 1110
                     }
                   }, ["==", ["get", "$box2[height]"], ["get", "$box1[intrinsic-width]"]]
                 ]
@@ -506,7 +506,27 @@ describe('GSS commands', function() {
           if (count === 1) {
             return engine.id('box1').innerHTML = "<div style=\"width:111px;\"></div>";
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
+            chai.expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: ".box$box1→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 111
+                    }
+                  }, ["==", ["get", "$box1[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ], [
+                [
+                  {
+                    key: ".box$box2→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 111
+                    }
+                  }, ["==", ["get", "$box2[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ]
+            ]);
             engine.removeEventListener('solve', listener);
             return done();
           }
@@ -525,10 +545,50 @@ describe('GSS commands', function() {
             el = engine.id('box1');
             return el.innerHTML = "<div style=\"width:111px;\"></div>";
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 111, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 111, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
+            chai.expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: ".box$box1→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 111
+                    }
+                  }, ["==", ["get", "$box1[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ], [
+                [
+                  {
+                    key: ".box$box2→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 111
+                    }
+                  }, ["==", ["get", "$box2[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ]
+            ]);
             return el.innerHTML = "";
           } else if (count === 3) {
-            chai.expect(engine.updated.getProblems()).to.eql([[["==", ["get", "$box1", "height", ".box$box1→#box1"], ["value", 0, ".box$box1→#box1", "get,$box1,intrinsic-width,.box$box1→#box1"]]], [["==", ["get", "$box2", "height", ".box$box2→#box1"], ["value", 0, ".box$box2→#box1", "get,$box1,intrinsic-width,.box$box2→#box1"]]]]);
+            chai.expect(engine.updated.getProblems()).to.eql([
+              [
+                [
+                  {
+                    key: ".box$box1→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 0
+                    }
+                  }, ["==", ["get", "$box1[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ], [
+                [
+                  {
+                    key: ".box$box2→#box1",
+                    values: {
+                      "$box1[intrinsic-width]": 0
+                    }
+                  }, ["==", ["get", "$box2[height]"], ["get", "$box1[intrinsic-width]"]]
+                ]
+              ]
+            ]);
             engine.removeEventListener('solve', listener);
             return done();
           }
@@ -570,7 +630,7 @@ describe('GSS commands', function() {
         var el;
         el = null;
         window.$engine = engine;
-        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['id', 'thing1'], 'width'], 100], ['rule', ['class', 'thing'], ['==', ['get', ['$reserved', 'this'], 'width'], ['+', ['get', ['$pseudo', ['$reserved', 'this'], 'previous'], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
+        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['id', 'thing1'], 'width'], 100], ['rule', ['class', 'thing'], ['==', ['get', ['::this'], 'width'], ['+', ['get', [':previous', ['::this']], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
         engine.once('solve', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           chai.expect(engine.values["$thing2[width]"]).to.eql(140);
