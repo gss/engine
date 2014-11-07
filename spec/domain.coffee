@@ -88,6 +88,8 @@ describe 'Domain', ->
         result: -1100
 
 
+
+
     it 'should simplify multiple variables partially', ->
       engine = new GSS({
         a: 555,
@@ -164,8 +166,8 @@ describe 'Domain', ->
         ['==',
           ['get', 'a']
           ['+',
-            ['get', ['$id', 'box0'], 'z']
-            ['get', ['$id', 'box1'], 'intrinsic-width']
+            ['get', ['id', 'box0'], 'z']
+            ['get', ['id', 'box1'], 'intrinsic-width']
           ]
         ]
       ], (solution) ->
@@ -456,15 +458,15 @@ describe 'Domain', ->
         b: 0
         c: 0
 
-      expect(engine.solve [
+      expect(engine.solve([
         ['==', 
           ['get', 'c'],
           ['*', 
             2
-            ['get', 'a', null, 'my_tracker_path']
+            ['get', 'a']
           ]
         ]
-      ]).to.eql
+      ], 'my_tracker_path')).to.eql
         b: 2
         c: 2
         a: 1

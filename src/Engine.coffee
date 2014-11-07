@@ -445,11 +445,6 @@ class Engine extends Domain
           else
             others.push(problem)
      
-      for remove in removes
-        for path, index in remove
-          continue if index == 0
-          @unbypass(path)
-
       for other, i in @domains
         locals = []
         other.changes = undefined

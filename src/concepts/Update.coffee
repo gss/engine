@@ -30,22 +30,6 @@ Updater = (engine) ->
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
         effects = new Update vardomain, [arg]
-
-        # Convert fast-lane constraint into regular constraint
-        if typeof (bypasser = @variables[path]) == 'string'
-          bypassers = @engine.bypassers
-          property = bypassers[bypasser]
-          i = 0
-          while op = property[i]
-            if (variable = op.variables[path])
-              effects.push [op], [vardomain], true
-              property.splice(i, 1)
-            else 
-              i++
-
-          if Object.keys(property).length == 0
-            delete bypassers[bypasser]
-          delete @variables[path]
       else
         # Handle framed expressions
         stringy = true
@@ -195,14 +179,12 @@ Update.prototype =
     result = @problems[to]
     @setVariables(result, probs, other)
     if exported = domain.export()
-      result.push.apply(result, exported)
+      result.push.apply(result, @reify(exported, other, domain))
       @setVariables(result, exported, other)
 
     for prob in probs
       if result.indexOf(prob) == -1
-        result.push(prob)
-      if prob.domain == domain
-        prob.domain = other
+        result.push(@reify(prob, other, domain))
     if domain.nullified
       solution = {}
       for prop of domain.nullified
@@ -266,9 +248,9 @@ Update.prototype =
                     break
                   else if !other.MAYBE
                     @merge n, index
-                    @problems[index].push.apply(@problems[index], @problems[n])
-                    @domains.splice(n, 1)
-                    @problems.splice(n, 1)
+                    #@problems[index].push.apply(@problems[index], @problems[n])
+                    #@domains.splice(n, 1)
+                    #@problems.splice(n, 1)
                     continue
                 if domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)
                   i = j + 1
@@ -309,6 +291,7 @@ Update.prototype =
                 problems = @problems[counter]
                 for arg in problem
                   if (j = problems.indexOf(arg)) > -1
+                    @reify(arg, other, domain)
                     problems.splice(j, 1)
                     if problems.length == 0
                       @problems.splice(counter, 1)
@@ -342,73 +325,25 @@ Update.prototype =
         variables[property] = operation
     return
 
-  # Simplify groupped multi-domain expression down to variables
-  unwrap: (problems, domain, result = []) ->
-    if problems[0] == 'get' 
-      problems.exported = true
-      problems.parent = undefined
-      result.push(problems)
-      path = @getPath(problems[1], problems[2])
-      exports = (@exports ||= {})[path] ||= []
-      exports.push domain
-      imports = (@imports ||= [])
-      index = imports.indexOf(domain)
-      if index == -1
-        index = imports.push(domain) - 1
-      imports.splice(index + 1, 0, path)
-    else
-      problems.domain = domain
-      for problem in problems
-        if problem.push
-          @unwrap(problem, domain, result)
-    return result
-
-
-
   finish: ->
     @time = @engine.console.time(@start)
     @start = undefined
 
-  # Last minute changes to queue before execution
-  optimize: ->
-    @defer()
-
-    @
-
   # change all maybe-domains to this domain
-  reify: (operation, domain) ->
+  reify: (operation, domain, from) ->
     if !operation
       for domain, i in @domains by -1
         break if i == @index
         if domain
-          @reify @problems[i], domain
+          @reify @problems[i], domain, from
     else
-      if operation.domain?.MAYBE
-        operation.domain = domain
       if operation?.push
+        if operation.domain == from
+          operation.domain = domain
         for arg in operation
           if arg?.push
-            @reify arg, domain
-    return
-
-  # Defer substitutions to thread
-  defer: ->
-    for domain, i in @domains by -1
-      break if i == @index
-      for j in [i + 1 ... @domains.length]
-        if (url = @domains[j]?.url) && document?
-          for prob, p in @problems[i] by -1
-            while prob
-              problem = @problems[j]
-              if problem.indexOf(prob) > -1
-                probs = @problems[i][p]
-                unless probs.unwrapped
-                  @problems[i].splice(p--, 1)
-                  probs.unwrapped = @unwrap(probs, @domains[j], [], @problems[j])
-                  @engine.update(probs.unwrapped)
-                break
-              prob = prob.parent
-    return
+            @reify arg, domain, from
+    return operation
 
   connect: (position) ->
     index = @index
@@ -456,25 +391,19 @@ Update.prototype =
           cmds = @problems[position]
           for problem in problems
             exported = undefined
-            if problem.exported
-              for cmd in cmds
-                if cmd[0] == problem[0] && cmd[1] == problem[1] && cmd[2] == problem[2]
-                  if cmd.exported && cmd.parent.domain == problem.parent.domain
-                    exported = true
-                    break
-            unless exported
-              copy = undefined
-              for cmd in cmds
-                if (cmd == problem) || (cmd.parent && cmd.parent == problem.parent && cmd.index == problem.index)
-                  copy = true
 
-              unless copy
-                if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
-                  cmds.unshift problem
-                else
-                  cmds.push problem
-                @setVariables(cmds, problem, other)
-                @reify(problem, other)
+            copy = undefined
+            for cmd in cmds
+              if (cmd == problem) || (cmd.parent && cmd.parent == problem.parent && cmd.index == problem.index)
+                copy = true
+
+            unless copy
+              if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
+                cmds.unshift problem
+              else
+                cmds.push problem
+              @setVariables(cmds, problem, other)
+              @reify(problem, other, domain)
 
           @connect(position)
 
@@ -539,14 +468,11 @@ Update.prototype =
     return unless @problems[@index + 1]
 
      
-    @optimize()
     previous = @domains[@index]
     while (domain = @domains[++@index]) != undefined
       #if ((!previous || previous.priority < 0) && domain?.priority > 0)
       #  @reset()
       previous = domain
-
-      @reify(@problems[@index], domain)
 
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)

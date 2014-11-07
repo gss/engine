@@ -107,7 +107,7 @@ describe('Domain', function() {
       el.innerHTML = "<div id=\"box0\" style=\"width: 50px\"></div>\n<div id=\"box1\" style=\"width: 50px\"></div>";
       document.body.appendChild(el);
       engine = new GSS(el);
-      return engine.solve([['==', ['get', 'a'], ['+', ['get', ['$id', 'box0'], 'z'], ['get', ['$id', 'box1'], 'intrinsic-width']]]], function(solution) {
+      return engine.solve([['==', ['get', 'a'], ['+', ['get', ['id', 'box0'], 'z'], ['get', ['id', 'box1'], 'intrinsic-width']]]], function(solution) {
         expect(solution).to.eql({
           "a": 0,
           "$box0[z]": -50,
@@ -315,7 +315,7 @@ describe('Domain', function() {
         b: 0,
         c: 0
       });
-      expect(engine.solve([['==', ['get', 'c'], ['*', 2, ['get', 'a', null, 'my_tracker_path']]]])).to.eql({
+      expect(engine.solve([['==', ['get', 'c'], ['*', 2, ['get', 'a']]]], 'my_tracker_path')).to.eql({
         b: 2,
         c: 2,
         a: 1

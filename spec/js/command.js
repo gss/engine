@@ -413,7 +413,7 @@ describe('GSS commands', function() {
             res = engine.id('34222');
             return res.parentNode.removeChild(res);
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222']]);
+            chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222'], [['remove', '.box$34222']]]);
             engine.removeEventListener('solve', listener);
             return done();
           }
@@ -447,7 +447,7 @@ describe('GSS commands', function() {
             el = engine.id('34222');
             return el.setAttribute('class', '');
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222']]);
+            chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222'], [['remove', '.box$34222']]]);
             engine.removeEventListener('solve', listener);
             return done();
           }

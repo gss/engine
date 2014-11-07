@@ -172,7 +172,9 @@ class Command
   # Reinitialize foreign expression as local to parent domain
   patch: (engine, operation, continuation, scope, replacement) ->
     op = @sanitize(engine, operation, undefined, replacement).parent
-    op.command.transfer(engine, op, continuation, scope, undefined, undefined, op.command, replacement)
+    domain = replacement || engine
+    op.command.transfer(domain, op, continuation, scope, undefined, undefined, op.command, replacement)
+
 
 
 
@@ -224,7 +226,7 @@ class Command
   # Computed automatically for each command by checking `.length` of `@execute` callback
   extras: undefined
 
-  toExpression: (operation, initial) ->
+  toExpression: (operation) ->
     switch typeof operation
       when 'object'
         switch operation[0]

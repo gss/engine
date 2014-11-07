@@ -12,16 +12,6 @@ class Constraint extends Command
   	]
   ]
 
-  # Check if it's a single constraint over single unconstrained variable
-  # And return the constant part right away without solving
-  descend: (engine, operation, continuation, scope) ->
-    unless operation.parent.parent?.length > 1
-      unless engine.constraints?.length > 0
-        if name = @getConstantName(engine, operation, continuation, scope)
-          if result = engine.bypass(name, operation, continuation, scope)
-            return result
-    return super
-
   # Create a hash that represents substituted variables
   toHash: (meta) ->
     hash = ''
@@ -31,23 +21,21 @@ class Constraint extends Command
     return hash
 
   get: (engine, operation, scope) ->
-    return engine.operations?[operation.hash ||= operation.toString()]?[@toHash(scope)]
+    return engine.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
   
   fetch: (engine, operation) ->
-    if operations = engine.operations?[operation.hash ||= operation.toString()]
+    if operations = engine.operations?[operation.hash ||= @toExpression(operation)]
       for signature, constraint of operations
         if engine.constraints?.indexOf(constraint) > -1
           return constraint
 
   before: (args, engine, operation, continuation, scope) ->
-    # return bypassed solution
-    unless args.push
-      return args
-
     return @get(engine, operation, scope)
   
   after: (args, result, engine, operation, continuation, scope) ->
-    return ((engine.operations ||= {})[operation.hash ||= operation.toString()] ||= {})[@toHash(scope)] ||= result
+    if result.hashCode
+      return ((engine.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(scope)] ||= result
+    return result
 
   # Only one variable bound to static value
   getConstantName: (engine, operation) ->

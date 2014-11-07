@@ -59,41 +59,6 @@ class Domain extends Trigger
         @observers   = {}
         @objects     = {} if @structured
 
-  unbypass: (path, result) ->
-    if bypassers = @bypassers[path]
-      for bypasser in bypassers
-        for key of bypasser.variables
-          delete @variables[key]
-          if @updating.index > -1
-            (result = @updating.effects ||= {})[key] = null
-          else
-            result = {}
-            result[key] = null
-            @updating.apply result
-          break
-      delete @bypassers[path]
-    return result
-
-  # Dont solve system with a single variable+constant constraint 
-  bypass: (name, operation, continuation, scope) ->
-    variable = operation.variables[name]
-    parent = variable
-    while parent != operation[1]
-      break unless parent
-      parent = parent.parent
-    value = parent == operation[1] && operation[2] || operation[1]
-    if typeof value != 'number'
-      value = value.command.solve @, value, continuation, scope
-      if typeof value != 'number'
-        return
-    result = {}
-    result[name] = value
-    
-    if !@variables[name] || @variables[name].constraints?.length == 0
-      (@bypassers[scope.key] ||= []).push operation
-      @variables[name] = scope.key
-    return result
-  
   solve: (operation, continuation, scope, ascender, ascending) ->
     transacting = @transact()
 
@@ -273,6 +238,7 @@ class Domain extends Trigger
           if op.domain?.displayName != @displayName
             if !watchers || watchers.indexOf(op) == -1
               op.command.patch(op.domain, op, undefined, undefined, @)
+              op.command.solve(@, op)
               console.error(123, op, path)
               debugger
 
@@ -320,7 +286,7 @@ class Domain extends Trigger
       if other == constraint
         return
 
-    constraint.operation = operation
+    constraint.operation = operation.parent
     constraint.path = meta.key
     (@paths[constraint.path] ||= []).push(constraint)
 
@@ -505,8 +471,11 @@ class Domain extends Trigger
 
   export: ->
     if @constraints
-      for constraint in @constraints when constraint.operation
-        constraint.operation
+      operations = []
+      for constraint in @constraints
+        if operation = constraint.operation
+          operations.push(operation)
+      return operations
       
   # Return a lazy that may later be promoted to a domain 
   maybe: () ->
