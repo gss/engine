@@ -170,17 +170,17 @@ class Command
     return result
 
   # Reinitialize foreign expression as local to parent domain
-  patch: (engine, operation, continuation, scope) ->
-    op = @sanitize(engine, operation).parent
-    op.command.transfer(engine, op, continuation, scope, undefined, undefined, op.command)
+  patch: (engine, operation, continuation, scope, replacement) ->
+    op = @sanitize(engine, operation, undefined, replacement).parent
+    op.command.transfer(engine, op, continuation, scope, undefined, undefined, op.command, replacement)
+
 
 
   # Write meta data for a foreign domain
-  transfer: (engine, operation, continuation, scope, ascender, ascending, top) ->
-    if meta = @getMeta(operation)
+  transfer: (engine, operation, continuation, scope, ascender, ascending, top, replacement) ->
+    if (meta = @getMeta(operation))
       for path of operation.variables
-        if (value = engine.values[path])?
-          debugger
+        if (value = (replacement || engine).values[path])?
           (meta.values ||= {})[path] = value
         else if meta.values?[path]
           delete meta.values[path]
@@ -236,7 +236,7 @@ class Command
         return operation
 
   # Forget command  
-  sanitize: (engine, operation, ascend) ->
+  sanitize: (engine, operation, ascend, replacement) ->
 
     # Clean sub-expressions with the same domain
     for argument in operation
@@ -245,12 +245,16 @@ class Command
           if argument[0] == 'get'
             return ascend
           @sanitize(engine, argument, false)
-    
+
     operation.domain = operation.command = undefined
+
+    if replacement
+      operation.domain = replacement
+      replacement.Command(operation)
 
     unless ascend == false
       if operation.parent?.domain == engine
-        return @sanitize(engine, operation.parent, operation)
+        return @sanitize(engine, operation.parent, operation, replacement)
 
     return operation
 

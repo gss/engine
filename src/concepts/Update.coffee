@@ -424,8 +424,6 @@ Update.prototype =
         if variables = @problems[index].variables
           for property of problems.variables
             if variable = variables[property]
-              if property.indexOf('intrinsic') > -1
-                debugger
               if variable.domain?.displayName == domain.displayName
                 if domain.frame == other.frame
                   if other.constraints?.length > domain.constraints?.length || position > index

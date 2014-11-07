@@ -49,7 +49,7 @@ class Domain extends Trigger
     unless (@hasOwnProperty('watchers') || @hasOwnProperty('paths'))
       unless @hasOwnProperty('values')
         @values      = {}
-        
+
       if @MAYBE
         @paths       = {}
         @domains.push(@)
@@ -252,16 +252,31 @@ class Domain extends Trigger
 
 
   callback: (path, value) ->
+
+    # Notify watchers
     if watchers = @watchers?[path]
       for watcher, index in watchers by 3
         break unless watcher
+        # Propagate updated value
         if value?
           watcher.command.ascend(@, watcher, watchers[index + 1], watchers[index + 2], value, true)
+        # Remove propagated value and all around it
         else
           watcher.command.patch(@, watcher, watchers[index + 1], watchers[index + 2])
                   
     return if @immutable
 
+    # Substitute variables
+    if variable = @variables[path]
+      for constraint in variable.constraints
+        if op = constraint.operation.variables[path]
+          if op.domain?.displayName != @displayName
+            if !watchers || watchers.indexOf(op) == -1
+              op.command.patch(op.domain, op, undefined, undefined, @)
+              console.error(123, op, path)
+              debugger
+
+    # Notify workers
     if @workers
       for url, worker of @workers
         if values = worker.values
@@ -323,10 +338,12 @@ class Domain extends Trigger
     (@constrained ||= []).push(constraint)
     if other
       @unconstrain(other)
+
   hasConstraint: (variable) ->
     for other in variable.constraints
-      if @constraints.indexOf(other) > -1
-        return true
+      if other.operation.variables[variable.name].domain == @
+        if @constraints.indexOf(other) > -1
+          return true
     return
 
 

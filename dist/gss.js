@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-11-06) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-11-07) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22426,18 +22426,17 @@ Command = (function() {
     return result;
   };
 
-  Command.prototype.patch = function(engine, operation, continuation, scope) {
+  Command.prototype.patch = function(engine, operation, continuation, scope, replacement) {
     var op;
-    op = this.sanitize(engine, operation).parent;
-    return op.command.transfer(engine, op, continuation, scope, void 0, void 0, op.command);
+    op = this.sanitize(engine, operation, void 0, replacement).parent;
+    return op.command.transfer(engine, op, continuation, scope, void 0, void 0, op.command, replacement);
   };
 
-  Command.prototype.transfer = function(engine, operation, continuation, scope, ascender, ascending, top) {
+  Command.prototype.transfer = function(engine, operation, continuation, scope, ascender, ascending, top, replacement) {
     var meta, parent, path, value, _ref, _ref1;
-    if (meta = this.getMeta(operation)) {
+    if ((meta = this.getMeta(operation))) {
       for (path in operation.variables) {
-        if ((value = engine.values[path]) != null) {
-          debugger;
+        if ((value = (replacement || engine).values[path]) != null) {
           (meta.values || (meta.values = {}))[path] = value;
         } else if ((_ref = meta.values) != null ? _ref[path] : void 0) {
           delete meta.values[path];
@@ -22502,7 +22501,7 @@ Command = (function() {
     }
   };
 
-  Command.prototype.sanitize = function(engine, operation, ascend) {
+  Command.prototype.sanitize = function(engine, operation, ascend, replacement) {
     var argument, _i, _len, _ref;
     for (_i = 0, _len = operation.length; _i < _len; _i++) {
       argument = operation[_i];
@@ -22516,9 +22515,13 @@ Command = (function() {
       }
     }
     operation.domain = operation.command = void 0;
+    if (replacement) {
+      operation.domain = replacement;
+      replacement.Command(operation);
+    }
     if (ascend !== false) {
       if (((_ref = operation.parent) != null ? _ref.domain : void 0) === engine) {
-        return this.sanitize(engine, operation.parent, operation);
+        return this.sanitize(engine, operation.parent, operation, replacement);
       }
     }
     return operation;
@@ -23169,7 +23172,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.callback = function(path, value) {
-    var index, url, values, watcher, watchers, worker, _i, _len, _ref, _ref1;
+    var constraint, index, op, url, values, variable, watcher, watchers, worker, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
     if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
@@ -23186,10 +23189,25 @@ Domain = (function(_super) {
     if (this.immutable) {
       return;
     }
+    if (variable = this.variables[path]) {
+      _ref1 = variable.constraints;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        constraint = _ref1[_j];
+        if (op = constraint.operation.variables[path]) {
+          if (((_ref2 = op.domain) != null ? _ref2.displayName : void 0) !== this.displayName) {
+            if (!watchers || watchers.indexOf(op) === -1) {
+              op.command.patch(op.domain, op, void 0, void 0, this);
+              console.error(123, op, path);
+              debugger;
+            }
+          }
+        }
+      }
+    }
     if (this.workers) {
-      _ref1 = this.workers;
-      for (url in _ref1) {
-        worker = _ref1[url];
+      _ref3 = this.workers;
+      for (url in _ref3) {
+        worker = _ref3[url];
         if (values = worker.values) {
           if (values.hasOwnProperty(path)) {
             if (value == null) {
@@ -23278,8 +23296,10 @@ Domain = (function(_super) {
     _ref = variable.constraints;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       other = _ref[_i];
-      if (this.constraints.indexOf(other) > -1) {
-        return true;
+      if (other.operation.variables[variable.name].domain === this) {
+        if (this.constraints.indexOf(other) > -1) {
+          return true;
+        }
       }
     }
   };
@@ -25075,9 +25095,6 @@ Update.prototype = {
         if (variables = this.problems[index].variables) {
           for (property in problems.variables) {
             if (variable = variables[property]) {
-              if (property.indexOf('intrinsic') > -1) {
-                debugger;
-              }
               if (((_ref = variable.domain) != null ? _ref.displayName : void 0) === domain.displayName) {
                 if (domain.frame === other.frame) {
                   if (((_ref1 = other.constraints) != null ? _ref1.length : void 0) > ((_ref2 = domain.constraints) != null ? _ref2.length : void 0) || position > index) {
@@ -26281,7 +26298,6 @@ Linear.prototype.Block.Meta = Block.Meta.extend({
     },
     descend: function(engine, operation) {
       operation[1].parent = operation;
-      operation[1].index = 1;
       return [operation[1].command.solve(engine, operation[1], '', operation[0]), engine, operation];
     }
   }
