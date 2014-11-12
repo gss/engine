@@ -21397,8 +21397,8 @@ Selector.define({
   ' ': {
     tags: ['selector'],
     Combinator: {
-      execute: function(node) {
-        return node.getElementsByTagName("*");
+      execute: function(node, engine, operation, continuation, scope) {
+        return (node || scope).getElementsByTagName("*");
       },
       getIndexPrefix: function() {
         return '';
@@ -21406,10 +21406,10 @@ Selector.define({
     }
   },
   '!': {
-    Combinator: function(node) {
+    Combinator: function(node, engine, operation, continuation, scope) {
       var nodes;
       nodes = void 0;
-      while (node = node.parentNode) {
+      while (node = (node || scope).parentNode) {
         if (node.nodeType === 1) {
           (nodes || (nodes = [])).push(node);
         }
@@ -21500,6 +21500,9 @@ Selector.define({
     },
     "continue": function(engine, operation, continuation) {
       return continuation;
+    },
+    retrieve: function(engine, operation, continuation, scope) {
+      return scope;
     }
   },
   '::parent': {
@@ -21512,6 +21515,9 @@ Selector.define({
     },
     subscope: function(scope, result) {
       return result;
+    },
+    retrieve: function() {
+      return this.execute.apply(this, arguments);
     }
   },
   '::window': {
@@ -22380,7 +22386,10 @@ Command = (function() {
         }
         break;
       case 'object':
-        return result;
+        if (continuation.indexOf(engine.Continuation.PAIR) > -1) {
+          return result;
+        }
+        break;
       case 'boolean':
         return;
     }
@@ -22673,8 +22682,9 @@ Command = (function() {
     return engine[name] || (engine[name] = function() {
       var args, command;
       args = Array.prototype.slice.call(arguments);
-      command = Command.match(engine, base.concat(args));
-      return command.prototype.execute.apply(command.prototype, args.concat(engine, args, '', engine.scope));
+      command = Command.match(engine, base.concat(args)).prototype;
+      args.length = command.permutation.length;
+      return command.execute.apply(command, args.concat(engine, args, '', engine.scope));
     });
   };
 
@@ -23236,14 +23246,17 @@ Domain = (function(_super) {
 
   Domain.prototype.constrain = function(constraint, operation, meta) {
     var definition, op, other, path, suggest, variable, _base, _name, _ref;
-    if (other = operation.command.fetch(this, operation)) {
-      if (other === constraint) {
+    if ((other = operation.command.fetch(this, operation)) === constraint) {
+      if (constraint.paths.indexOf(meta.key) > -1) {
         return;
       }
     }
     constraint.operation = operation.parent;
-    constraint.path = meta.key;
-    ((_base = this.paths)[_name = constraint.path] || (_base[_name] = [])).push(constraint);
+    (constraint.paths || (constraint.paths = [])).push(meta.key);
+    ((_base = this.paths)[_name = meta.key] || (_base[_name] = [])).push(constraint);
+    if (other === constraint) {
+      return;
+    }
     _ref = operation.variables;
     for (path in _ref) {
       op = _ref[path];
@@ -23280,13 +23293,18 @@ Domain = (function(_super) {
 
   Domain.prototype.unconstrain = function(constraint, continuation, moving) {
     var group, i, index, object, op, path, _ref, _ref1, _ref2;
-    index = this.constraints.indexOf(constraint);
-    this.constraints.splice(index, 1);
-    group = this.paths[constraint.path];
+    group = this.paths[continuation];
     group.splice(group.indexOf(constraint, 1));
     if (group.length === 0) {
-      delete this.paths[constraint.path];
+      delete this.paths[continuation];
     }
+    index = constraint.paths.indexOf(continuation);
+    constraint.paths.splice(index, 1);
+    if (constraint.paths.length) {
+      return;
+    }
+    index = this.constraints.indexOf(constraint);
+    this.constraints.splice(index, 1);
     _ref = constraint.operation.variables;
     for (path in _ref) {
       op = _ref[path];
@@ -23494,7 +23512,7 @@ Domain = (function(_super) {
         _ref2 = this.constrained;
         for (_l = 0, _len2 = _ref2.length; _l < _len2; _l++) {
           constraint = _ref2[_l];
-          if (constraint.path === path) {
+          if (constraint.paths.indexOf(path) > -1) {
             this.unconstrain(constraint);
             break;
           }
@@ -26831,6 +26849,12 @@ Queries = (function() {
     }
     if (!shared) {
       this.set(path, void 0);
+    }
+    if (this.mutations) {
+      this.unobserve(this.mutations, path, true);
+    }
+    if (path.indexOf('11') > -1) {
+      debugger;
     }
     this.unobserve(this.engine.scope._gss_id, path);
     if (!result || !this.engine.isCollection(result)) {

@@ -282,14 +282,15 @@ class Domain extends Trigger
 
   constrain: (constraint, operation, meta) ->
 
-    if other = operation.command.fetch(@, operation)
-      if other == constraint
+    if (other = operation.command.fetch(@, operation)) == constraint
+      if constraint.paths.indexOf(meta.key) > -1
         return
 
     constraint.operation = operation.parent
-    constraint.path = meta.key
-    (@paths[constraint.path] ||= []).push(constraint)
+    (constraint.paths ||= []).push(meta.key)
+    (@paths[meta.key] ||= []).push(constraint)
 
+    return if other == constraint
 
     for path, op of operation.variables
       if variable = op.command
@@ -314,12 +315,18 @@ class Domain extends Trigger
 
 
   unconstrain: (constraint, continuation, moving) ->
-    index = @constraints.indexOf(constraint)
-    @constraints.splice(index, 1)
-    group = @paths[constraint.path]
+    group = @paths[continuation]
     group.splice(group.indexOf(constraint, 1))
     if group.length == 0
-      delete @paths[constraint.path]
+      delete @paths[continuation]
+
+    index = constraint.paths.indexOf(continuation)
+    constraint.paths.splice(index, 1)
+    if constraint.paths.length
+      return
+
+    index = @constraints.indexOf(constraint)
+    @constraints.splice(index, 1)
 
     for path, op of constraint.operation.variables
       if object = @variables[path]
@@ -464,7 +471,7 @@ class Domain extends Trigger
 
       if @constrained
         for constraint in @constrained
-          if constraint.path == path
+          if constraint.paths.indexOf(path) > -1
             @unconstrain(constraint)
             break
     return

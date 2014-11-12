@@ -26,7 +26,7 @@ class Selector extends Query
         if argument.command?.head == (parent || @).head
           argument.command.prepare(argument, parent || @)
 
-  # Do an actual DOM lookup
+  # Do an actual DOM lookup by composed native selector
   perform: (engine, operation, continuation, scope, ascender, ascending) ->
     command = operation.command
     selector = command.selector
@@ -211,17 +211,17 @@ Selector.define
     tags: ['selector']
     
     Combinator: 
-      execute: (node) ->
-        return node.getElementsByTagName("*")
+      execute: (node, engine, operation, continuation, scope) ->
+        return (node || scope).getElementsByTagName("*")
       
       getIndexPrefix: ->
         return ''
         
   # All parent elements
   '!':
-    Combinator: (node) ->
+    Combinator: (node, engine, operation, continuation, scope) ->
       nodes = undefined
-      while node = node.parentNode
+      while node = (node || scope).parentNode
         if node.nodeType == 1
           (nodes ||= []).push(node)
       return nodes
@@ -303,6 +303,8 @@ Selector.define
     continue: (engine, operation, continuation) ->
       return continuation
 
+    retrieve: (engine, operation, continuation, scope) ->
+      return scope
 
   # Parent element (alias for !> *)
   '::parent':
@@ -314,13 +316,12 @@ Selector.define
     hidden: true
     Element: (engine, operation, continuation, scope) ->
       return engine.scope
-      
+    
     subscope: (scope, result) ->
       return result
-    
-    
-    #retrieve: (engine) ->
-    #  return engine.scope
+
+    retrieve: ->
+      @execute arguments ...
 
   # Return abstract reference to window
   '::window':

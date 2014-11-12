@@ -388,7 +388,6 @@ describe 'Nested Rules', ->
               ['==', ['get', '$box3[y]'], 100]
             ]]
           ])
-          debugger
           vessel0.setAttribute('class', '')
           expect(box1.style.top).to.eql('100px')
           expect(box3.style.top).to.eql('100px')
@@ -808,7 +807,8 @@ describe 'Nested Rules', ->
                   container.replaceChild(container.firstElementChild, container.lastElementChild)
                   engine.once 'solve', ->
                     expect(stringify(engine.updated.getProblems())).to.eql stringify [  
-                      ["remove", ".group .vessel$vessel11↓ .box:last-child$box2", 
+                      ["remove", 
+                      ".group .vessel$vessel11↓ .box:last-child$box2", 
                       ".group .vessel$vessel11↓ .box:last-child$box5", 
                       ".group .vessel$vessel11↓ .box:last-child$box12", 
                       ".group .vessel$vessel11↓ .box:last-child$box14", 
@@ -816,24 +816,28 @@ describe 'Nested Rules', ->
                       ".group .vessel$vessel1↓ .box:last-child$box12", 
                       ".group .vessel$vessel1↓ .box:last-child$box14"]
                      
+
+                     [["remove", ".group .vessel$vessel11↓ .box:last-child$box2"]],
+                     [["remove", ".group .vessel$vessel11↓ .box:last-child$box5"]],
+
                      [["remove", ".group .vessel$vessel11↓ .box:last-child$box12",
                                  ".group .vessel$vessel1↓ .box:last-child$box12"]],
                                  
                      [["remove", ".group .vessel$vessel11↓ .box:last-child$box14",
                                  ".group .vessel$vessel1↓ .box:last-child$box14"]]
 
-                     [[ "remove", ".group .vessel$vessel11↓ .box:last-child$box2"]],
-
-                     [["remove", ".group .vessel$vessel11↓ .box:last-child$box5"]],
                     ]
                     box2 = container.getElementsByClassName('box')[2]
                     box2.parentNode.removeChild(box2)
-                    
+                    debugger
                     engine.once 'solve', ->
                       expect(stringify(engine.updated.getProblems())).to.eql stringify [
                           ['remove', '.group .vessel$vessel1↓ .box:last-child$box2']
                           [['remove', '.group .vessel$vessel1↓ .box:last-child$box2']]
-                          [['<=',['get', '$box1', 'width', '.group .vessel$vessel1↓ .box:last-child$box1', "$vessel1"], 100]]
+                          [[
+                            key: ".group .vessel$vessel1↓ .box:last-child$box1"
+                            ['<=',['get', '$box1[width]'], 100]
+                          ]]
                         ]
                       vessel = container.getElementsByClassName('vessel')[0]
                       vessel.parentNode.removeChild(vessel)
@@ -844,9 +848,9 @@ describe 'Nested Rules', ->
                           [
                             ['remove', ".group .vessel$vessel1↓ .box:last-child$box5"]
                           ],
-                          #[
-                          #  ['remove', '.group .vessel$vessel1↓ .box:last-child$box1']
-                          #]
+                          [
+                            ['remove', '.group .vessel$vessel1↓ .box:last-child$box1']
+                          ]
                         ]
                         container.innerHTML = ""
                         done()
@@ -855,26 +859,26 @@ describe 'Nested Rules', ->
     describe '1 level w/ ::parent', ->
       it 'should resolve selector on ::parent', (done) ->
         rules = [
-          ['rule', 
-            ['$class'
-              ['$combinator',
-                ['$class',
-                  'group']
-                ' ']
-              'vessel'],
+          ['rule',
+            ['class', 'group']
 
+            ['rule', 
+              ['class', 'vessel']
 
-            ["<=", 
-              ["get",
-                ['$pseudo'
-                  ['$class',
-                    ['$combinator', 
-                      ["$reserved","parent"]
-                      ' ']
-                    'box']
-                  'last-child']
-                'width']
-            100]]]
+              ["<=", 
+                ["get",
+                  [':last-child'
+                    ['class',
+                      [' ', 
+                        ["::parent"]
+                      ]
+                      'box'
+                      ]
+                    ]
+                  'width']
+              100]]
+            ]
+        ]
 
         container.innerHTML =  """
           <div id="group1" class="group">

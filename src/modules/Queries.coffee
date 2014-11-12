@@ -323,9 +323,11 @@ class Queries
       @set path, undefined
 
     # Remove queries in queue and global watchers that match the path 
-    #if @mutations
-    #  @unobserve(@mutations, path, true)
+    if @mutations
+      @unobserve(@mutations, path, true)
 
+    if path.indexOf('11') > -1
+      debugger
     @unobserve(@engine.scope._gss_id, path)
 
     if !result || !@engine.isCollection(result)

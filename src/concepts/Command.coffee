@@ -89,7 +89,8 @@ class Command
           result = undefined
           
       when 'object'
-        return result 
+        if continuation.indexOf(engine.Continuation.PAIR) > -1
+            return result
         
       when 'boolean'
         return
@@ -347,8 +348,9 @@ class Command
     base = [name]
     engine[name] ||= ->
       args = Array.prototype.slice.call(arguments)
-      command = Command.match(engine, base.concat(args))
-      return command::execute.apply(command.prototype, args.concat(engine, args, '', engine.scope))
+      command = Command.match(engine, base.concat(args)).prototype
+      args.length = command.permutation.length
+      return command.execute.apply(command, args.concat(engine, args, '', engine.scope))
 
 class Command.List extends Command
   constructor: ->
