@@ -328,7 +328,7 @@ class Queries
 
     if path.indexOf('11') > -1
       debugger
-    @unobserve(@engine.scope._gss_id, path)
+    #@unobserve(@engine.scope._gss_id, path)
 
     if !result || !@engine.isCollection(result)
       unless path.charAt(0) == @engine.Continuation.PAIR

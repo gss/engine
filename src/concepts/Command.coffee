@@ -56,7 +56,7 @@ class Command
       throw new Error "Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain'
       
       
-  continue: (engine, operation, continuation) ->
+  continue: (result, engine, operation, continuation) ->
     return continuation
 
   # Hook that happens before actual function call
@@ -109,7 +109,7 @@ class Command
       result = @after(args, result, domain, operation, continuation, scope)
 
     if result?
-      continuation = @continue(domain, operation, continuation, scope)
+      continuation = @continue(result, domain, operation, continuation, scope)
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
 
   # Evaluate operation arguments in order, break on undefined

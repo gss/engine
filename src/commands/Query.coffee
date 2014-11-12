@@ -83,8 +83,8 @@ class Query extends Command
         @path = path + @path
     return true
 
-  continue: (engine, operation, continuation = '') ->
-    return continuation + (@key || '')
+  continue: (result, engine, operation, continuation = '') ->
+    return continuation + @key
 
   # Evaluate compound native selector by jumping to either its head or tail
   jump: (engine, operation, continuation, scope, ascender, ascending) ->

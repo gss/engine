@@ -158,18 +158,24 @@ Selector.Search = Selector.extend
 # Reference to related element
 Selector.Element = Selector.extend
   signature: []
-
-  before: ->
-    return
-
-  after: (args, result) ->
+  
+  subscope: (scope, result) ->
     return result
 
-  serialize: ->
-    return ''
+  continue: (result, engine, operation, continuation, scope) ->
+    if result == scope
+      return continuation
+    return continuation + @key
 
-  hidden: true
-  
+  after: (args, result, engine, operation, continuation, scope) ->
+    if result == scope
+      return result
+    return Selector::after.apply(@, arguments)
+  # When used out of selector context, dont build up continuation
+  retrieve: (engine, operation, continuation, scope) ->
+    if @hidden || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))
+      return @execute arguments ...
+
 Selector.define
   # Live collections
 
@@ -294,38 +300,40 @@ Selector.define
 Selector.define
   # Pseudo elements
   '::this':
+
+
+    # Dont look
+    before: ->
+      return
+
+    after: (args, result) ->
+      return result
+
     log: ->
+
+    # Dont leave trace in a continuation path
     hidden: true
 
+    serialize: ->
+      return ''
+
     Element: (engine, operation, continuation, scope) ->
-      return scope
-
-    continue: (engine, operation, continuation) ->
-      return continuation
-
-    retrieve: (engine, operation, continuation, scope) ->
       return scope
 
   # Parent element (alias for !> *)
   '::parent':
-    Element: Selector['!>']::Combinator
+    Element: (engine, operation, continuation, scope) ->
+      return engine.Continuation.getParentScope(scope, continuation)
+
 
   # Current engine scope (defaults to document)
   '::root':
-      
-    hidden: true
     Element: (engine, operation, continuation, scope) ->
+      debugger
       return engine.scope
-    
-    subscope: (scope, result) ->
-      return result
-
-    retrieve: ->
-      @execute arguments ...
 
   # Return abstract reference to window
   '::window':
-    hidden: true
     Element: ->
       return '::window' 
   

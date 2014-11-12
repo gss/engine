@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-11-12) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21120,11 +21119,11 @@ Query = (function(_super) {
     return true;
   };
 
-  Query.prototype["continue"] = function(engine, operation, continuation) {
+  Query.prototype["continue"] = function(result, engine, operation, continuation) {
     if (continuation == null) {
       continuation = '';
     }
-    return continuation + (this.key || '');
+    return continuation + this.key;
   };
 
   Query.prototype.jump = function(engine, operation, continuation, scope, ascender, ascending) {
@@ -21344,14 +21343,26 @@ Selector.Search = Selector.extend({
 
 Selector.Element = Selector.extend({
   signature: [],
-  before: function() {},
-  after: function(args, result) {
+  subscope: function(scope, result) {
     return result;
   },
-  serialize: function() {
-    return '';
+  "continue": function(result, engine, operation, continuation, scope) {
+    if (result === scope) {
+      return continuation;
+    }
+    return continuation + this.key;
   },
-  hidden: true
+  after: function(args, result, engine, operation, continuation, scope) {
+    if (result === scope) {
+      return result;
+    }
+    return Selector.prototype.after.apply(this, arguments);
+  },
+  retrieve: function(engine, operation, continuation, scope) {
+    if (this.hidden || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))) {
+      return this.execute.apply(this, arguments);
+    }
+  }
 });
 
 Selector.define({
@@ -21493,35 +21504,31 @@ Selector.define({
 
 Selector.define({
   '::this': {
+    before: function() {},
+    after: function(args, result) {
+      return result;
+    },
     log: function() {},
     hidden: true,
+    serialize: function() {
+      return '';
+    },
     Element: function(engine, operation, continuation, scope) {
-      return scope;
-    },
-    "continue": function(engine, operation, continuation) {
-      return continuation;
-    },
-    retrieve: function(engine, operation, continuation, scope) {
       return scope;
     }
   },
   '::parent': {
-    Element: Selector['!>'].prototype.Combinator
+    Element: function(engine, operation, continuation, scope) {
+      return engine.Continuation.getParentScope(scope, continuation);
+    }
   },
   '::root': {
-    hidden: true,
     Element: function(engine, operation, continuation, scope) {
+      debugger;
       return engine.scope;
-    },
-    subscope: function(scope, result) {
-      return result;
-    },
-    retrieve: function() {
-      return this.execute.apply(this, arguments);
     }
   },
   '::window': {
-    hidden: true,
     Element: function() {
       return '::window';
     }
@@ -22356,7 +22363,7 @@ Command = (function() {
     }
   };
 
-  Command.prototype["continue"] = function(engine, operation, continuation) {
+  Command.prototype["continue"] = function(result, engine, operation, continuation) {
     return continuation;
   };
 
@@ -22406,7 +22413,7 @@ Command = (function() {
       result = this.after(args, result, domain, operation, continuation, scope);
     }
     if (result != null) {
-      continuation = this["continue"](domain, operation, continuation, scope);
+      continuation = this["continue"](result, domain, operation, continuation, scope);
       return this.ascend(engine, operation, continuation, scope, result, ascender, ascending);
     }
   };
@@ -22841,6 +22848,31 @@ Continuation = (function() {
       path = this.PAIR + path;
     }
     return path;
+  };
+
+  Continuation.prototype.getParentScope = function(scope, continuation) {
+    var bits, id, last, matched;
+    if (!continuation) {
+      return scope._gss_id;
+    }
+    bits = continuation.split(this.DESCEND);
+    while (!(last = bits[bits.length - 1])) {
+      bits.pop();
+    }
+    if (scope && this.engine.scope !== scope) {
+      id = this.engine.identity["yield"](scope);
+      if (last.substring(last.length - id.length) === id) {
+        bits.pop();
+        last = bits[bits.length - 1];
+      }
+    }
+    if (matched = last.match(this.engine.pairs.TrailingIDRegExp)) {
+      if (matched[1].indexOf('"') > -1) {
+        return matched[1];
+      }
+      return this.engine.identity[matched[1]];
+    }
+    return this.engine.queries[bits.join(this.DESCEND)];
   };
 
   Continuation.prototype.concat = function(continuation, command, scope) {
@@ -26856,7 +26888,6 @@ Queries = (function() {
     if (path.indexOf('11') > -1) {
       debugger;
     }
-    this.unobserve(this.engine.scope._gss_id, path);
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.Continuation.PAIR) {
         contd = this.engine.Continuation(path);
@@ -27640,18 +27671,13 @@ Pairs = (function() {
         contd = contd.substring(1);
       }
       if (contd === operation.command.path) {
-        if (contd === '::root') {
-          debugger;
-          return this.engine.scope;
-        } else {
-          if (id = continuation.match(this.TrailingIDRegExp)) {
-            if (id[1].indexOf('"') > -1) {
-              return id[1];
-            }
-            return this.engine.identity[id[1]];
-          } else {
-            return this.engine.queries[continuation];
+        if (id = continuation.match(this.TrailingIDRegExp)) {
+          if (id[1].indexOf('"') > -1) {
+            return id[1];
           }
+          return this.engine.identity[id[1]];
+        } else {
+          return this.engine.queries[continuation];
         }
       }
     }

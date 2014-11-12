@@ -101,7 +101,7 @@ class Continuation
     if scope && @engine.scope != scope
       id = @engine.identity.yield(scope)
       prev = bits[bits.length - 2]
-      # Ugh
+      # Ugh #1
       if prev && prev.substring(prev.length - id.length) != id
         last = bits[bits.length - 1]
         if (index = last.indexOf(id + @ASCEND)) > -1
@@ -111,7 +111,31 @@ class Continuation
     if continuation.charAt(0) == @PAIR
       path = @PAIR + path
     return path
+
+  getParentScope: (scope, continuation) ->
+    return scope._gss_id unless continuation
     
+    bits = continuation.split(@DESCEND)
+
+    until last = bits[bits.length - 1]
+      bits.pop()
+
+    if scope && @engine.scope != scope
+      id = @engine.identity.yield(scope)
+      # Ugh #1
+      if last.substring(last.length - id.length) == id
+        bits.pop()
+        last = bits[bits.length - 1]
+    
+    if matched = last.match(@engine.pairs.TrailingIDRegExp)
+      if matched[1].indexOf('"') > -1
+        return matched[1]
+      return @engine.identity[matched[1]]
+
+    return @engine.queries[bits.join(@DESCEND)]
+
+
+
 
   # Return path for given operation
   concat: (continuation, command, scope) ->

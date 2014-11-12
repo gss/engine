@@ -63,16 +63,12 @@ class Pairs
       if contd.charAt(0) == @engine.Continuation.PAIR
         contd = contd.substring(1)
       if contd == operation.command.path
-        if contd == '::root'
-          debugger
-          return @engine.scope
+        if id = continuation.match(@TrailingIDRegExp)
+          if id[1].indexOf('"') > -1
+            return id[1]
+          return @engine.identity[id[1]]
         else
-          if id = continuation.match(@TrailingIDRegExp)
-            if id[1].indexOf('"') > -1
-              return id[1]
-            return @engine.identity[id[1]]
-          else
-            return @engine.queries[continuation]
+          return @engine.queries[continuation]
       
     return
 
