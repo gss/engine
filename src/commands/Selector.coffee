@@ -19,7 +19,31 @@ class Selector extends Query
     prefix = @getIndexPrefix(operation, parent)
     name = @getIndex(operation, parent)
     suffix = @getIndexSuffix(operation, parent)
-    ((@[prefix + name] ||= {})[suffix] ||= []).push operation
+    (((parent || @)[prefix + name] ||= {})[suffix] ||= []).push operation
+    
+    if @tail
+      for argument in operation
+        if argument.command?.tail == (parent || @).tail
+          argument.command.prepare(argument, parent || @)
+
+  # Do an actual DOM lookup
+  perform: (engine, operation, continuation, scope, ascender, ascending) ->
+    command = operation.command
+    selector = command.selector
+    args = [
+      if ascender?
+        ascending
+      else
+        scope
+
+      selector
+    ]
+    command.log(args, engine, operation, continuation, scope)
+    result  = command.before(args, engine, operation, continuation, scope)
+    result ?= args[0].querySelectorAll(args[1])
+    if result  = command.after(args, result, engine, operation, continuation, scope)
+      return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
+
 
     
   # String to be used to join tokens in a list
@@ -47,10 +71,8 @@ class Selector extends Query
   
   relative: undefined
 
-      
-    
   # Check if query was already updated
-  before: (args, engine, operation, continuation, scope) ->
+  before: (args, engine, operation, continuation, scope, ascender, ascending) ->
     return engine.queries.fetch(args, operation, continuation, scope)
 
   # Subscribe elements to query 
@@ -61,9 +83,10 @@ class Selector extends Query
     return operation[0]
 
   getIndexPrefix: (operation, parent) ->
-    return parent && ' ' || ''
+    return (parent || @selecting) && ' ' || ''
 
   getIndexSuffix: (operation) ->
+    console.log(operation)
     return operation[2] || operation[1]
 
 Selector::mergers.selector = (command, other, parent, operation, inherited) ->
@@ -73,15 +96,15 @@ Selector::mergers.selector = (command, other, parent, operation, inherited) ->
       return
 
   # Can't append combinator to qualifying selector selector 
-  if selecting = command instanceof Selector.Selecter
+  if selecting = command.selecting
     return unless other.selecting
   else if other.selecting
-    command.selecting = true
+    command.selecting ||= true
 
   other.head = parent
   command.head = parent
-  command.tail = other.tail || operation
-  command.tail.head = parent
+  command.tail = other.tail ||= operation
+  command.tail.command.head = parent
   
   left = other.selector || other.key
   right = command.selector || command.key
@@ -98,6 +121,8 @@ Selector.Selecter = Selector.extend
     query: ['String']
   ]
   
+  selecting: true
+
   getIndexPrefix: ->
     return ' '
 
@@ -105,12 +130,16 @@ Selector.Selecter = Selector.extend
 Selector.Combinator = Selector.Selecter.extend
   signature: [[
     context: ['Selector']
-    query: ['String']
+    #query: ['String']
   ]]
   
-  getIndex: (operation) ->
-    return operation.parent.name == "$tag" && operation.parent[2] || "*"
+  getIndexSuffix: (operation) ->
+    return operation.parent[0] == 'tag' && operation.parent[2].toUpperCase() || "*"
 
+  getIndexPrefix: (operation, parent)->
+    return parent && ' ' || ''
+    
+    
 # Filter elements by key
 Selector.Qualifier = Selector.extend
   signature: [
@@ -138,6 +167,8 @@ Selector.Element = Selector.extend
 
   serialize: ->
     return ''
+
+  hidden: true
   
 Selector.define
   # Live collections
@@ -168,7 +199,7 @@ Selector.define
     prefix: '#'
     tags: ['selector']
     
-    Selecter: (id, engine, operation, continuation, scope = @scope) ->
+    Selecter: (id, engine, operation, continuation, scope = engine.scope) ->
       return scope.getElementById?(id) || scope.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
@@ -199,24 +230,24 @@ Selector.define
   '>':
     tags: ['selector']
 
-    Combinator: (node) -> 
-      return node.children
+    Combinator: (node, engine, operation, continuation, scope) ->
+      return (node || scope).children
 
   # Parent element
   '!>':
-    Combinator: (node) ->
-      return node.parentElement
+    Combinator: (node, engine, operation, continuation, scope) ->
+      return (node || scope).parentElement
 
   # Next element
   '+':
     tags: ['selector']
-    Combinator: (node) ->
-      return node.nextElementSibling
+    Combinator: (node, engine, operation, continuation, scope) ->
+      return (node || scope).nextElementSibling
 
   # Previous element
   '!+':
-    Combinator: (node) ->
-      return node.previousElementSibling
+    Combinator: (node, engine, operation, continuation, scope) ->
+      return (node || scope).previousElementSibling
 
   # All direct sibling elements
   '++':
@@ -264,6 +295,7 @@ Selector.define
   # Pseudo elements
   '::this':
     log: ->
+    hidden: true
 
     Element: (engine, operation, continuation, scope) ->
       return scope
@@ -278,8 +310,17 @@ Selector.define
 
   # Current engine scope (defaults to document)
   '::root':
+      
+    hidden: true
     Element: (engine, operation, continuation, scope) ->
       return engine.scope
+      
+    subscope: (scope, result) ->
+      return result
+    
+    
+    #retrieve: (engine) ->
+    #  return engine.scope
 
   # Return abstract reference to window
   '::window':
@@ -331,8 +372,8 @@ Selector.define
     watch: "oninput"
 
   ':get':
-    Combinator: (property, engine, operation, continuation, scope) ->
-      return scope[property]
+    Qualifier: (node, property, engine, operation, continuation, scope) ->
+      return node[property]
 
   ':first-child':
     tags: ['selector']
@@ -384,12 +425,8 @@ Selector.define
     # If all sub-selectors are selector, make a single comma separated selector
     tags: ['selector']
 
-    # Dont let undefined arguments stop execution
-    eager: true
-
     # Match all kinds of arguments
     signature: null,
-
 
     separator: ','
 
@@ -397,20 +434,11 @@ Selector.define
     serialize: ->
       return ''
 
-    # Return deduplicated collection of all found elements
-    command: (engine, operation, continuation, scope) ->
-      contd = @Continuation.getScopePath(scope, continuation) + operation.path
-      if @queries.ascending
-        index = @engine.indexOfTriplet(@queries.ascending, operation, contd, scope) == -1
-        if index > -1
-          @queries.ascending.splice(index, 3)
-
-      return @queries[contd]
-
     # Recieve a single element found by one of sub-selectors
     # Duplicates are stored separately, they dont trigger callbacks
+    # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
-      contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.path
+      contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.command.path
       engine.queries.add(result, contd, operation.parent, scope, operation, continuation)
       engine.queries.ascending ||= []
       if engine.indexOfTriplet(engine.queries.ascending, operation.parent, contd, scope) == -1
@@ -420,10 +448,23 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.path
+      contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.command.path
       engine.queries.remove(result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
+    
+    # Evaluate arguments without stopping on undefined
+    descend: (engine, operation, continuation, scope, ascender, ascending) ->
+      for index in [1 ... operation.length] by 1
+        if (argument = operation[index]) instanceof Array
+          command = argument.command || engine.Command(argument)
+          argument.parent ||= operation
+          
+          # Leave forking/pairing mark in a path when resolving next arguments
+          contd = @connect(engine, operation, continuation, scope, undefined, ascender)
 
+          # Evaluate argument
+          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope)
+      return Array.prototype.slice.call(arguments, 0, 4)
 if document?
   # Add shims for IE<=8 that dont support some DOM properties
   dummy = Selector.dummy = document.createElement('_')
@@ -475,7 +516,7 @@ if document?
           (nodes ||= []).push(prev) 
         prev = prev.nextSibling
       return nodes
-    Selector[':first-child']::Qualifier = (node) ->
+    Selector[':first-child']::Selecter = (node) ->
       if parent = node.parentNode
         child = parent.firstChild
         while child && child.nodeType != 1

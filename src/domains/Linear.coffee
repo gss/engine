@@ -46,7 +46,12 @@ class Linear extends Domain
 
   unedit: (variable) ->
     if constraint = @editing?['%' + variable.name]
-      @removeConstraint(constraint)
+
+      cei = @solver._editVarMap.get(constraint.variable);
+      @solver.removeColumn(cei.editMinus);
+      @solver._editVarMap.delete(constraint.variable);
+
+      #@removeConstraint(constraint)
 
   edit: (variable, strength, weight, continuation) ->
     unless @editing?[variable.name]
@@ -87,7 +92,7 @@ class Linear extends Domain
 Linear.Mixin =
   yield: (engine, result, operation, continuation, scope, ascender) ->
     if typeof result == 'number'
-      return operation.parent.domain.suggest '%' + operation.command.toExpression(operation), result
+      return operation.parent.domain.suggest('%' + operation.command.toExpression(operation), result, 'require')
 
 
 Linear::Constraint = Command.extend.call Constraint, Linear.Mixin,

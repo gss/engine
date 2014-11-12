@@ -35,7 +35,10 @@ Abstract::Default = Command.Default.extend(
       if parent.command instanceof Command.Default
         return result
     # 
-    wrapper = [key: engine.Continuation.get(continuation), result]
+    meta = key: engine.Continuation.get(continuation)
+    if scope != engine.scope
+      meta.scope = engine.identity.yield(scope)
+    wrapper = [meta, result]
     result.parent = wrapper
     engine.yield wrapper
     return
@@ -62,7 +65,7 @@ Abstract::Value.Variable = Abstract::Value.extend {
 # Scoped variable
 Abstract::Value.Getter = Abstract::Value.extend {
   signature: [
-    object:   ['Query', 'Selector']
+    object:   ['Query', 'Selector', 'String']
     property: ['String']
   ]
 },
@@ -72,7 +75,7 @@ Abstract::Value.Getter = Abstract::Value.extend {
         return prop.call(engine, object, continuation)
     return ['get', engine.getPath(object, property)]
   
-# Proxy math for axioms
+# `xy math for axioms
 Abstract::Value.Expression = Value.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]

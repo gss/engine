@@ -38,6 +38,7 @@ class Command
     while ++i < j
       argument = operation[i]
       if argument?.push
+        argument.parent ?= operation
         type = engine.Command(argument, operation, i).type
       else
         type = @types[typeof argument]
@@ -71,12 +72,12 @@ class Command
   log: (args, engine, operation, continuation) ->
     engine.console.row(operation[0], args, continuation || "")
 
-  solve: (engine, operation, continuation, scope, ascender, ascending) ->
+  solve: (engine, operation, continuation, scope, ascender, ascending) -> 
     domain = operation.domain || engine
     
     # Use a shortcut operation when possible (e.g. native dom query)
-    if tail = operation.tail
-      operation = @jump(tail, domain, operation, continuation, scope, ascender)
+    if @head# && @head != operation
+      return @jump(domain, operation, continuation, scope, ascender, ascending)
 
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope))
@@ -112,7 +113,6 @@ class Command
 
   # Evaluate operation arguments in order, break on undefined
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    
     for index in [1 ... operation.length] by 1
 
       # Use ascending value
@@ -131,18 +131,16 @@ class Command
 
           # Evaluate argument
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope)
-
+            
           if argument == undefined
             return false
           
       # Place argument at position enforced by signature
-      unless args
-        args = Array(operation.length - 1 + @padding)
-      args[@permutation[index - 1]] = argument
-
+      (args || args = Array(operation.length - 1 + @padding))[@permutation[index - 1]] = argument
+    
     # Methods that accept more arguments than signature gets extra meta arguments
     for i in [0 ... @extras ? @execute.length - index + 1] by 1
-      (args ||= []).push arguments[i]
+      (args ||= Array(operation.length - 1 + @padding)).push arguments[i]
 
     return args
 
@@ -159,7 +157,7 @@ class Command
         
       # Hook parent command to capture yielded value 
       if top = parent.command
-        if yielded = top.yield?(engine, result, operation, continuation, scope, ascender)
+        if yielded = top.yield?(result, engine, operation, continuation, scope, ascender)
           return if yielded == true
           return yielded
 
@@ -206,9 +204,8 @@ class Command
   fork: (engine, continuation, item) ->
     return engine.Continuation.get(continuation + engine.identity.yield(item), null, engine.Continuation.ASCEND)
 
-  # Return different operation
-  jump: (engine, operation) ->
-    return operation
+  # Return alternative operation to process
+  jump: ->
 
   # Do something with arguments
   execute: ->
@@ -366,7 +363,6 @@ class Command.List extends Command
   # Fast descender for lists that doesnt build argument list
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     for argument, index in operation
-      argument.parent ?= operation
       if command = argument?.command
         command.solve(engine, argument, continuation, scope)
     return

@@ -29,8 +29,6 @@ class Domain extends Trigger
       @engine       = engine if engine
       @displayName  = name   if name
       @url          = url    if url
-      unless @hasOwnProperty('values')
-        @values       = {}
       @signatures   = new @Signatures(@)
       @merge(values)         if values
       super
@@ -46,6 +44,8 @@ class Domain extends Trigger
       return @find.apply(@, arguments)
 
   setup: () ->
+    return if @engine == @
+      
     unless (@hasOwnProperty('watchers') || @hasOwnProperty('paths'))
       unless @hasOwnProperty('values')
         @values      = {}
@@ -538,12 +538,13 @@ class Domain extends Trigger
     for own name, domain of domains
       continue if domain.condition?.call(engine) == false
       EngineDomain = engine[name] = (object) ->
+        @values = {}
+        
         if object
           for property, value of object
             @values = {} unless @hasOwnProperty 'values'
             @values[property] = value
 
-        @domain      = @
 
         unless @events == engine.events
           events = {}

@@ -241,7 +241,6 @@ class Engine extends Domain
     @queries?.onBeforeSolve()
     @pairs?.onBeforeSolve()
 
-
     if providing
       while yieldd = @providing
         @providing = null

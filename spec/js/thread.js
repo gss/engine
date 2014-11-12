@@ -90,6 +90,7 @@ describe('Cassowary Thread', function() {
     return done();
   });
   it('intrinsic var is immutable with suggestion', function() {
+    debugger;
     var thread;
     thread = new GSS({
       'intrinsic-width': 100
@@ -103,7 +104,8 @@ describe('Cassowary Thread', function() {
   it('tracking & removing by get tracker', function(done) {
     var thread;
     thread = new GSS();
-    thread.solve([['==', ['get', 'x', '', 'x-tracker'], 100, 'strong'], ['==', ['get', 'x'], 10, 'weak']]);
+    thread.solve([['==', ['get', 'x'], 100, 'strong']], 'x-tracker');
+    thread.solve([['==', ['get', 'x'], 10, 'weak']]);
     chai.expect(thread.values).to.eql({
       "x": 100
     });
@@ -117,7 +119,7 @@ describe('Cassowary Thread', function() {
     it('varexp - right', function() {
       var thread;
       thread = new GSS();
-      thread.solve([['==', ['get', '$112', 'x', '.box'], 10], ['==', ['get', '$112', 'right', '.box'], 100]]);
+      thread.solve([['==', ['get', '$112[x]'], 10], ['==', ['get', '$112', 'right'], 100]]);
       return expect(thread.values).to.eql({
         "$112[x]": 10,
         "$112[width]": 90
@@ -126,7 +128,7 @@ describe('Cassowary Thread', function() {
     it('varexp - center-x', function() {
       var thread;
       thread = new GSS();
-      thread.solve([['==', ['get', '$112', 'x', '.box'], 10], ['==', ['get', '$112', 'center-x', '.box'], 110]]);
+      thread.solve([['==', ['get', '$112[x]'], 10], ['==', ['get', '$112', 'center-x'], 110]]);
       return expect(thread.values).to.eql({
         "$112[x]": 10,
         "$112[width]": 200
@@ -135,7 +137,7 @@ describe('Cassowary Thread', function() {
     it('varexp - bottom', function() {
       var thread;
       thread = new GSS();
-      thread.solve([['==', ['get', '$112', 'height', '.box'], 10], ['==', ['get', '$112', 'bottom', '.box'], 100]]);
+      thread.solve([['==', ['get', '$112[height]'], 10], ['==', ['get', '$112', 'bottom'], 100]]);
       return expect(thread.values).to.eql({
         "$112[height]": 10,
         "$112[y]": 90
@@ -144,7 +146,7 @@ describe('Cassowary Thread', function() {
     return it('varexp - center-y', function() {
       var thread;
       thread = new GSS();
-      thread.solve([['==', ['get', '$112', 'height', '.box'], 100], ['==', ['get', '$112', 'center-y', '.box'], 51]]);
+      thread.solve([['==', ['get', '$112[height]'], 100], ['==', ['get', '$112', 'center-y'], 51]]);
       return expect(thread.values).to.eql({
         "$112[height]": 100,
         "$112[y]": 1
@@ -155,8 +157,9 @@ describe('Cassowary Thread', function() {
     it('tracking by path', function() {
       var thread;
       thread = new GSS(document.createElement('div'));
-      thread.solve([['==', ['get', '$222', 'line-height'], 1.6], ['==', ['get', '$112', 'x', '.box'], 10], ['==', ['get', '$112', 'right', '.box'], 100]]);
-      expect(thread.updated.solution).to.eql({
+      thread.solve([['==', ['get', '$222[line-height]'], 1.6]]);
+      thread.solve([['==', ['get', '$112[x]'], 10], ['==', ['get', '$112', 'right'], 100]], '.box');
+      expect(thread.values).to.eql({
         "$222[line-height]": 1.6,
         "$112[x]": 10,
         "$112[width]": 90
@@ -170,11 +173,12 @@ describe('Cassowary Thread', function() {
     return it('tracking by selector', function() {
       var thread;
       thread = new GSS();
-      thread.solve([['==', ['get', '$112', 'x', '.big-box'], 1000, 'required'], ['==', ['get', '$112', 'x', '.box'], 50, 'strong']]);
+      thread.solve([['==', ['get', '$112[x]'], 50, 'strong']], '.box$112');
+      thread.solve([['==', ['get', '$112[x]'], 1000, 'required']], '.big-box$112');
       expect(thread.updated.solution).to.eql({
         "$112[x]": 1000
       });
-      thread.solve([['remove', '.big-box']]);
+      thread.solve([['remove', '.big-box$112']]);
       return expect(thread.updated.solution).to.eql({
         "$112[x]": 50
       });

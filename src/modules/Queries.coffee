@@ -36,12 +36,11 @@ class Queries
             if old.indexOf(item) > -1
               collection.splice(i, 1)
         if collection?.length
-          @engine.document.ascend @ascending[index], contd, collection, @ascending[index + 2]
+          op = @ascending[index]
+          @engine.document.Command(op).ascend(@engine.document, op, contd, @ascending[index + 2], collection)
         index += 3
       @ascending = undefined
     @
-
-
 
   addMatch: (node, continuation) ->
     return unless node.nodeType == 1
@@ -49,6 +48,7 @@ class Queries
       continuation = continuation.substring(index + 1)
     continuation = @engine.Continuation.getCanonicalSelector(continuation)
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.Continuation.DESCEND))
+  
   removeMatch: (node, continuation) ->
     return unless node.nodeType == 1
     if matches = node.getAttribute('matches')
@@ -264,7 +264,7 @@ class Queries
           string = continuation + id
         else
           string = continuation
-        parent.command.release?.call(@engine, node, operation, string, scope)
+        parent.command.release?(node, @engine, operation, string, scope)
         
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
@@ -297,7 +297,7 @@ class Queries
 
   clean: (path, continuation, operation, scope, bind, contd) ->
     if command = path.command
-      path = (continuation || '') + (command.uid || '') + (command.key || '')
+      path = (continuation || '') + (command.uid || '') + (command.selector || command.key || '')
     continuation = path if bind
     result = @get(path)
     
@@ -323,8 +323,8 @@ class Queries
       @set path, undefined
 
     # Remove queries in queue and global watchers that match the path 
-    if @mutations
-      @unobserve(@mutations, path, true)
+    #if @mutations
+    #  @unobserve(@mutations, path, true)
 
     @unobserve(@engine.scope._gss_id, path)
 

@@ -12,13 +12,21 @@ class Query extends Command
     if parent = operation.parent
       if engine.isCollection(result)
         for node in result
-          unless parent.command.yield?(engine, node, operation, continuation, scope, ascender)
-            parent.command.solve(engine, parent, @fork(engine, continuation, node), scope, parent.indexOf(operation), node)
+          contd = @fork(engine, continuation, node)
+          unless parent.command.yield?(node, engine, operation, contd, scope, ascender)
+            parent.command.solve(engine, parent, contd, scope, parent.indexOf(operation), node)
         return
-      else 
-        unless parent.command.yield?(engine, result, operation, continuation, scope, ascender)
-          return parent.command.solve(engine, parent, continuation, scope, parent.indexOf(operation), result)
+      else
+        
           
+        unless parent.command.yield?(result, engine, operation, continuation, scope, ascender)
+          if @hidden && !(subscope = @subscope(scope, result))
+            return result
+          else
+            return parent.command.solve(engine, parent, continuation, subscope || scope, parent.indexOf(operation), result)
+          
+  subscope: (scope, result) ->
+    return
      
   serialize: (operation) ->
     if @prefix?
@@ -46,6 +54,7 @@ class Query extends Command
     for index in [1 ... operation.length]
       if cmd = operation[index]?.command
         inherited = @inherit(cmd, inherited)
+
 
     if tags = @tags
       for tag, i in tags
@@ -80,13 +89,17 @@ class Query extends Command
   continue: (engine, operation, continuation = '') ->
     return continuation + (@key || '')
 
-  jump: (tail, engine, continuation, ascender) ->
-    if (tail.path == tail.key || ascender? || 
-        (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) != continuation.indexOf(engine.Continuation.PAIR)))
-      return @head
-    else
-      return @tail[1]
+  # Evaluate compound native selector by jumping to either its head or tail
+  jump: (engine, operation, continuation, scope, ascender, ascending) ->
+    tail = @tail
 
+    # Let it descend quickly
+    if tail[1]?.command?.key? && !ascender? && 
+          (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) == continuation.indexOf(engine.Continuation.PAIR))
+      return tail[1].command.solve(engine, tail[1], continuation, scope)
+
+
+    return @perform(engine, @head, continuation, scope, ascender, ascending)
 
   # Return shared absolute path of a dom query ($id selector) 
   getPath: (engine, operation, continuation) ->
@@ -96,9 +109,9 @@ class Query extends Command
       else if operation.marked && operation.arity == 2
         return continuation + @path
       else
-        return continuation + @key
+        return continuation + (@selector || @key)
     else
-      return @key
+      return (@selector || @key)
 
   retrieve: (engine, operation, continuation, scope) ->
     unless @hidden

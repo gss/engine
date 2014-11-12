@@ -146,7 +146,11 @@ class Signatures
         Prototype = types[type].extend()
         for own property, value of command.prototype
           Prototype::[property] = value
-        Prototype::execute = execute
+        if typeof execute == 'object'
+          for property, value of execute
+            Prototype::[property] = value
+        else
+          Prototype::execute = execute
         for combination in @sign(types[type], Prototype.prototype)
           @write Prototype, storage, combination
 
