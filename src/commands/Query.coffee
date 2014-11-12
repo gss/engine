@@ -20,10 +20,7 @@ class Query extends Command
         
           
         unless parent.command.yield?(result, engine, operation, continuation, scope, ascender)
-          if @hidden && !(subscope = @subscope(scope, result))
-            return result
-          else
-            return parent.command.solve(engine, parent, continuation, subscope || scope, parent.indexOf(operation), result)
+          return parent.command.solve(engine, parent, continuation, @subscope(scope, result) || scope, parent.indexOf(operation), result)
           
   subscope: (scope, result) ->
     return
@@ -95,7 +92,7 @@ class Query extends Command
 
     # Let it descend quickly
     if tail[1]?.command?.key? && !ascender? && 
-          (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) == continuation.indexOf(engine.Continuation.PAIR))
+          (continuation.lastIndexOf(engine.Continuation.PAIR) == continuation.indexOf(engine.Continuation.PAIR))
       return tail[1].command.solve(engine, tail[1], continuation, scope)
 
 

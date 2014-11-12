@@ -23,7 +23,7 @@ class Selector extends Query
     
     if @tail
       for argument in operation
-        if argument.command?.tail == (parent || @).tail
+        if argument.command?.head == (parent || @).head
           argument.command.prepare(argument, parent || @)
 
   # Do an actual DOM lookup

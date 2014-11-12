@@ -21023,7 +21023,7 @@ Query = (function(_super) {
   }
 
   Query.prototype.ascend = function(engine, operation, continuation, scope, result, ascender) {
-    var contd, node, parent, subscope, _base, _base1, _i, _len;
+    var contd, node, parent, _base, _base1, _i, _len;
     if (parent = operation.parent) {
       if (engine.isCollection(result)) {
         for (_i = 0, _len = result.length; _i < _len; _i++) {
@@ -21035,11 +21035,7 @@ Query = (function(_super) {
         }
       } else {
         if (!(typeof (_base1 = parent.command)["yield"] === "function" ? _base1["yield"](result, engine, operation, continuation, scope, ascender) : void 0)) {
-          if (this.hidden && !(subscope = this.subscope(scope, result))) {
-            return result;
-          } else {
-            return parent.command.solve(engine, parent, continuation, subscope || scope, parent.indexOf(operation), result);
-          }
+          return parent.command.solve(engine, parent, continuation, this.subscope(scope, result) || scope, parent.indexOf(operation), result);
         }
       }
     }
@@ -21134,7 +21130,7 @@ Query = (function(_super) {
   Query.prototype.jump = function(engine, operation, continuation, scope, ascender, ascending) {
     var tail, _ref, _ref1;
     tail = this.tail;
-    if ((((_ref = tail[1]) != null ? (_ref1 = _ref.command) != null ? _ref1.key : void 0 : void 0) != null) && (ascender == null) && (continuation && continuation.lastIndexOf(engine.Continuation.PAIR) === continuation.indexOf(engine.Continuation.PAIR))) {
+    if ((((_ref = tail[1]) != null ? (_ref1 = _ref.command) != null ? _ref1.key : void 0 : void 0) != null) && (ascender == null) && (continuation.lastIndexOf(engine.Continuation.PAIR) === continuation.indexOf(engine.Continuation.PAIR))) {
       return tail[1].command.solve(engine, tail[1], continuation, scope);
     }
     return this.perform(engine, this.head, continuation, scope, ascender, ascending);
@@ -21205,7 +21201,7 @@ Selector = (function(_super) {
       _results = [];
       for (_i = 0, _len = operation.length; _i < _len; _i++) {
         argument = operation[_i];
-        if (((_ref = argument.command) != null ? _ref.tail : void 0) === (parent || this).tail) {
+        if (((_ref = argument.command) != null ? _ref.head : void 0) === (parent || this).head) {
           _results.push(argument.command.prepare(argument, parent || this));
         } else {
           _results.push(void 0);
@@ -22475,7 +22471,7 @@ Command = (function() {
     }
     if (top) {
       parent = operation;
-      while (((_ref1 = parent.parent) != null ? _ref1.domain : void 0) === parent.domain) {
+      while (((_ref1 = parent.parent) != null ? _ref1.domain : void 0) === parent.domain && !(parent.parent.command instanceof Command.List)) {
         parent = parent.parent;
       }
       return engine.updating.push([parent], parent.domain);
@@ -26107,7 +26103,7 @@ Linear = (function(_super) {
 })(Domain);
 
 Linear.Mixin = {
-  "yield": function(engine, result, operation, continuation, scope, ascender) {
+  "yield": function(result, engine, operation, continuation, scope, ascender) {
     if (typeof result === 'number') {
       return operation.parent.domain.suggest('%' + operation.command.toExpression(operation), result, 'require');
     }

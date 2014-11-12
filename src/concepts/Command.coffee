@@ -186,7 +186,7 @@ class Command
           delete meta.values[path]
     if top
       parent = operation
-      while parent.parent?.domain == parent.domain
+      while parent.parent?.domain == parent.domain && !(parent.parent.command instanceof Command.List)
         parent = parent.parent
       engine.updating.push([parent], parent.domain)
 

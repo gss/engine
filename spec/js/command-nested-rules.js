@@ -291,6 +291,7 @@ describe('Nested Rules', function() {
               ]
             ]
           ]));
+          debugger;
           vessel0.setAttribute('class', '');
           expect(box1.style.top).to.eql('100px');
           expect(box3.style.top).to.eql('100px');

@@ -90,7 +90,7 @@ class Linear extends Domain
 
 # Capture values coming from other domains
 Linear.Mixin =
-  yield: (engine, result, operation, continuation, scope, ascender) ->
+  yield: (result, engine, operation, continuation, scope, ascender) ->
     if typeof result == 'number'
       return operation.parent.domain.suggest('%' + operation.command.toExpression(operation), result, 'require')
 
