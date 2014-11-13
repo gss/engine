@@ -2,6 +2,7 @@ assert = chai.assert
 expect = chai.expect
 
 stringify = (o) ->
+  return o
   return JSON.stringify o, 1, 1
 
 $  = () ->
@@ -21,18 +22,20 @@ describe 'End - to - End', ->
   container = null
   
   beforeEach ->
-    engine = GSS.engines.root
     container = document.createElement 'div'
     $('#fixtures').appendChild container
+    window.$engine = engine = new GSS(container)
     
   afterEach ->
     remove(container)
     
+
+
   
   # Config
   # ===========================================================
   
-  describe 'config', ->
+  xdescribe 'config', ->
   
     describe 'defaultStrength: strong', ->
     
@@ -42,11 +45,11 @@ describe 'End - to - End', ->
       
         listen = (e) ->     
           expect(engine.vars).to.eql 
-            "[m]": 2
+            "m": 2
           GSS.config.defaultStrength = oldDefault
           done()     
                      
-        engine.once 'solved', listen
+        engine.once 'solve', listen
     
         container.innerHTML =  """
             <style type="text/gss">
@@ -68,7 +71,7 @@ describe 'End - to - End', ->
           GSS.config.fractionalPixels = true
           done()     
                      
-        engine.once 'solved', listen
+        engine.once 'solve', listen
     
         container.innerHTML =  """
             <div id="nofractional"></div>
@@ -83,56 +86,86 @@ describe 'End - to - End', ->
   # ===========================================================
   
   describe 'Vanilla CSS', ->  
+    getSource = (style) ->
+      Array.prototype.slice.call(style.sheet.rules).map (rule) ->
+        return rule.cssText.replace(/^\s+|\s+$|\n|\t|\s*({|}|:|;)\s*|(\s+)/g, '$1$2')
+      .join('\n')
     
     describe 'just CSS', ->
       engine = null
     
-      it 'should dump', (done) ->
-        engine = GSS(container)
+      it 'should dump and clean', (done) ->
         container.innerHTML =  """
           <style type="text/gss" scoped>
             #css-only-dump {
               height: 100px;
             }
           </style>
+          <div id="css-only-dump"></div>
           """
-        listener = (e) ->
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal "#css-only-dump{height:100px;}"
-          done()
-        engine.once 'solved', listener    
+        engine.once 'solve', (e) ->
+          expect(getSource(engine.$tag('style')[1])).to.equal "#css-only-dump{height:100px;}"
+
+          dumper = engine.$id('css-only-dump')
+          dumper.parentNode.removeChild(dumper)
+          engine.once 'solve', (e) ->
+            expect(getSource(engine.$tag('style')[1])).to.equal ""
+
+            done()   
     
     describe 'CSS + CCSS', ->
       engine = null
     
       it 'should dump', (done) ->
-        engine = GSS(container)
         container.innerHTML =  """
-          <div id="css-simple-dump"></div>
+          <div class="css-simple-dump"></div>
           <style type="text/gss" scoped>
-            #css-simple-dump {
+            .css-simple-dump {
               width: == 100;
               height: 100px;
             }
           </style>
           """
-        listener = (e) ->           
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal "#css-simple-dump{height:100px;}"
-          done()
-        engine.once 'solved', listener
+        engine.once 'solve', (e) ->   
+          expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+
+          dump = engine.$class('css-simple-dump')[0]
+          clone = dump.cloneNode()
+          dump.parentNode.appendChild(clone)
+
+          engine.once 'solve', (e) ->  
+            expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+            dump.parentNode.removeChild(dump)
+
+            engine.once 'solve', (e) ->  
+              expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+              clone.parentNode.removeChild(clone)
+
+              engine.once 'solve', (e) ->  
+                expect(getSource(engine.$tag('style')[1])).to.equal ""
+                done()
     
     describe 'nested', ->
       engine = null
     
       it 'should dump', (done) ->
-        engine = GSS(container)
         container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
           <style type="text/gss" scoped>
             .outer, .outie {
               #css-inner-dump-1 {
                 width: == 100;
                 height: 100px;
+                z-index: 5;
               }
               .innie-outie {
                 #css-inner-dump-2 {
@@ -141,15 +174,149 @@ describe 'End - to - End', ->
               }
             }
           </style>
+          """
+        engine.once 'solve', ->
+          expect(getSource(engine.$tag('style')[1])).to.equal """
+            .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+            .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
+            """
+
+          el = engine.$class("innie-outie")[1]
+          el.setAttribute('class', 'innie-outie-zzz')
+
+          engine.once 'solve', ->
+            expect(getSource(engine.$tag('style')[1])).to.equal """
+              .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+              """
+            el.setAttribute('class', 'innie-outie')
+
+            engine.once 'solve', ->
+              expect(getSource(engine.$tag('style')[1])).to.equal """
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
+                .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
+                """
+
+              done()
+
+    describe 'custom selectors', ->
+      it 'should dump', (done) ->
+        container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
           <style type="text/gss" scoped>
-            [x] == 500;
+              .innie-outie {
+                !> * {
+                  height: 200px;
+
+                  #css-inner-dump-2 {
+                    z-index: -1;
+                  }
+                }
+              }
           </style>
           """
-        engine.once 'solved', ->
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          expect(engine.cssDump.innerHTML).to.equal ".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;}.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}"
+        engine.once 'solve', ->
+          expect(getSource(engine.$tag('style')[1])).to.equal """
+            [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
+            [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
+            """
+
+          A = engine.$class("innie-outie")[0]
+          B = engine.$class("innie-outie")[1]
+
+          B.setAttribute('class', 'innie-outie-zzz')
+          engine.once 'solve', ->
+            expect(getSource(engine.$tag('style')[1])).to.equal """
+              [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
+              """
+            B.setAttribute('class', 'innie-outie')
+
+            engine.once 'solve', ->
+              expect(getSource(engine.$tag('style')[1])).to.equal """
+                [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
+                [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
+                """
+              A.setAttribute('class', 'innie-outie-zzz')
+
+              engine.once 'solve', ->
+                expect(getSource(engine.$tag('style')[1])).to.equal """
+                  [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
+                  [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
+                  """
+                B.setAttribute('class', 'innie-outie-zzz')
+
+                engine.once 'solve', ->
+                  expect(getSource(engine.$tag('style')[1])).to.equal ""
+
+                  A.setAttribute('class', 'innie-outie')
+
+
+                  engine.once 'solve', ->
+                    expect(getSource(engine.$tag('style')[1])).to.equal """
+                      [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
+                      """
+                    B.setAttribute('class', 'innie-outie')
+
+                    engine.once 'solve', ->
+                      expect(getSource(engine.$tag('style')[1])).to.equal """
+                        [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
+                        [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
+                        """
+                      done()
+    describe 'conditional', ->
+      it 'should dump', (done) ->
+        container.innerHTML =  """
+          <div class="outer">
+            <div class="innie-outie">
+              <div id="css-inner-dump-1"></div>
+            </div>
+          </div>
+          <div class="outie">
+            <div class="innie-outie">
+              <div id="css-inner-dump-2"></div>
+            </div>
+          </div>
+          <style type="text/gss" scoped>
+            .outer, .outie {
+              @if [A] > 0 {
+                .innie-outie {
+                  #css-inner-dump-2 {
+                    height: 200px;
+                  }
+                }
+              }
+              
+              #css-inner-dump-1 {
+                z-index: 5;
+
+                @if [B] > 0 {
+                  height: 200px;
+                }
+              }
+            }
+          </style>
+          """
+        engine.once 'solve', ->
+          expect(getSource(engine.$tag('style')[1])).to.equal """
+            .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+            """
+          #engine.solve
+          #  A: 1
+          #, ->
+          #  expect(getSource(engine.$tag('style')[1])).to.equal """
+          #    .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+          #    """
           done()
-  
+
+
   
   # CCSS
   # ===========================================================      
@@ -157,7 +324,14 @@ describe 'End - to - End', ->
   describe "CCSS", ->
   
     describe 'expression chain', ->  
-      it 'should compute values', (done) ->                                 
+      it 'should compute values', (done) ->  
+        engine.once 'solve', (e) ->     
+          expect(engine.values).to.eql 
+            "c": 10
+            "x": 0
+            "y": 500
+            "z": 510
+          done()                               
         container.innerHTML =  """
             <style type="text/gss">              
               [c] == 10 !require;
@@ -167,13 +341,6 @@ describe 'End - to - End', ->
               0 <= [z] == [c] + [y] !strong100;
             </style>
           """
-        engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql 
-            "[c]": 10
-            "[x]": 0
-            "[y]": 500
-            "[z]": 510
-          done()
           
     describe 'expression chain w/ queryBound connector', ->  
       it 'should be ok', (done) ->                                 
@@ -184,9 +351,9 @@ describe 'End - to - End', ->
               0 <= #billy[x] == [grid];
             </style>
           """
-        engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql 
-            "[grid]": 36
+        engine.once 'solve', (e) ->     
+          expect(engine.values).to.eql 
+            "grid": 36
             "$billy[x]": 36
           done()
     
@@ -197,12 +364,12 @@ describe 'End - to - End', ->
             <style type="text/gss">              
               #non-pixel {
                 z-index: == 10;
-                opacity: == 0.5;
+                opacity: == .5;
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          style = document.getElementById('non-pixel').style          
+        engine.once 'solve', (e) ->
+          style = document.getElementById('non-pixel').style      
           assert (Number(style['z-index']) is 10) or (Number(style['zIndex']) is 10), 'correct z-index'
           assert Number(style['opacity']) is .5, 'correct opacity'
           done()
@@ -227,19 +394,764 @@ describe 'End - to - End', ->
             
             </style>
           """
-        engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql 
-            "[w]": 100
-            "[igap]": 3
-            "[ogap]": 10
-            "[md]": 20
-            "[span3]": 66
-            "[blah]": 70
-            "[blah2]": 70
-            "[md2]": 71 / 4
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "w": 100
+            "igap": 3
+            "ogap": 10
+            "md": 20
+            "span3": 66
+            "blah": 70
+            "blah2": 70
+            "md2": 71 / 4
           done()
-    
-    describe 'balanced plural selectors', -> 
+
+    describe 'scoped order dependent selectors', ->
+      it 'should deliver', ->
+        container = document.createElement('div')
+        container.style.left = 0
+        container.style.top = 0
+        container.style.position = 'absolute'
+        window.$engine = engine = new GSS(container)
+        document.body.appendChild(container)
+        container.innerHTML = """
+          <article id="article1">
+            <section id="section11">
+              <p id="p111"></p>
+              <p id="p112"></p>
+            </section>
+            <section id="section12">
+              <p id="p121"></p>
+              <p id="p122"></p>
+            </section>
+          </article>
+          <article id="article2">
+            <section id="section21">
+              <p id="p211"></p>
+              <p id="p212"></p>
+            </section>
+            <section id="section22">
+              <p id="p221"></p>
+              <p id="p222"></p>
+            </section>
+          </article>
+
+          <style type="text/gss">
+            p {
+              height: == 50;
+              width: == 50;
+            }
+
+            article {
+              @h |(& section)-...| in(::);
+
+              section {
+                @h |(& p)...| in(::);
+              }
+            }
+          </style>
+        """
+        engine.then ->
+          1
+
+    describe 'simpliest order dependent selectors', ->
+      it 'should work in global scope', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss">             
+              (.a:first)[left] == 111;              
+              (.a:last)[left] == 222;
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div> 
+            <div id="a3" class="a"></div> 
+        """
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[x]": 111,
+            "$a3[x]": 222,
+
+          container.appendChild(engine.$id('a1'))
+          engine.once 'solve', ->
+          
+            expect(engine.values).to.eql
+              "$a2[x]": 111,
+              "$a1[x]": 222,
+
+            container.innerHTML = ""
+            engine.once 'solve', ->
+              expect(engine.values).to.eql {}
+              done()
+
+      it 'should work in a css rule', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              .a {
+                (&:next)[left] == 666;
+                (&:previous)[left] == 111;
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div> 
+        """
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[x]": 111,
+            "$a2[x]": 666
+
+          container.appendChild(engine.$id('a1'))
+          engine.once 'solve', ->
+          
+            expect(engine.values).to.eql
+              "$a1[x]": 666,
+              "$a2[x]": 111
+
+            container.innerHTML = ""
+            engine.once 'solve', ->
+              expect(engine.values).to.eql {}
+              done()
+
+    describe 'simple order dependent selectors', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              .a {
+                (&:first)[left] == 0;
+                &[width] == 100;
+                (&:previous)[right] == &[left];
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div> 
+        """
+        engine
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100,
+            "$a1[x]": 0,
+            "$a2[x]": 100,
+            "$a3[x]": 200,
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+          engine.once 'solve', ->
+            expect(engine.values).to.eql
+              "$a1[width]": 100,
+              "$a2[width]": 100,
+              "$a1[x]": 0,
+              "$a2[x]": 100,
+            engine.scope.appendChild(a3)
+
+            engine.once 'solve', ->
+              expect(engine.values).to.eql
+                "$a1[width]": 100,
+                "$a2[width]": 100,
+                "$a3[width]": 100,
+                "$a1[x]": 0,
+                "$a2[x]": 100,
+                "$a3[x]": 200,
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+
+              engine.once 'solve', ->
+                expect(engine.values).to.eql
+                  "$a2[width]": 100,
+                  "$a3[width]": 100,
+                  "$a2[x]": 0,
+                  "$a3[x]": 100,
+                engine.scope.appendChild(a1)
+
+                engine.once 'solve', ->
+                  expect(engine.values).to.eql
+                    "$a1[width]": 100,
+                    "$a2[width]": 100,
+                    "$a3[width]": 100,
+                    "$a2[x]": 0,
+                    "$a3[x]": 100,
+                    "$a1[x]": 200,
+                  a3 = engine.$id('a3')
+                  a3.parentNode.removeChild(a3)
+                  engine.once 'solve', ->
+                    expect(engine.values).to.eql
+                      "$a1[width]": 100,
+                      "$a2[width]": 100,
+                      "$a2[x]": 0,
+                      "$a1[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+                    engine.once 'solve', ->
+                      expect(engine.values).to.eql {}
+
+                      done()
+    describe 'intrinsic properties', ->
+      it 'should bind to scrolling', (done) ->
+        engine.once 'solve', (e) ->
+          expect(stringify engine.values).to.eql stringify
+            "$scroller[scroll-top]": 0
+            "$floater[x]": 0
+
+          engine.once 'solve', (e) ->
+            expect(stringify engine.values).to.eql stringify
+              "$scroller[scroll-top]": 20
+              "$floater[x]": 20
+
+            done()
+
+          engine.$id('scroller').scrollTop = 20
+        container.innerHTML =  """
+          <style>
+            #scroller {
+              height: 50px;
+              overflow: scroll;
+              font-size: 100px;
+            }
+          </style>
+          <style type="text/gss"> 
+            #floater[x] == #scroller[scroll-top]
+          </style>
+          <div class="a" id="scroller">content</div>
+          <div class="b" id="floater"></div>
+        """
+    describe 'css binding', ->
+      describe 'simple', ->
+        describe 'numerical properties', ->
+          it 'should compute value when there is no regular value set', (done) ->                                 
+            engine.once 'solve', (e) ->
+              expect(stringify engine.values).to.eql stringify
+                "$b1[z-index]": 3
+              done()
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    position: relative;
+                    z-index: 2;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  #b1[z-index] == #a1[intrinsic-z-index] + 1;
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+
+          it 'should use inline value', (done) ->                                 
+            engine.once 'solve', (e) ->
+              expect(stringify engine.values).to.eql stringify
+                "$b1[z-index]": 3
+              done()
+            container.innerHTML =  """
+                <style type="text/gss"> 
+                  #b1[z-index] == #a1[intrinsic-z-index] + 1;
+                </style>
+                <div class="a" id="a1" style="z-index: 2"></div>
+                <div class="b" id="b1"></div>
+              """
+
+        describe 'length properties', ->
+          it 'should compute linear equasions', (done) ->                                 
+            engine.once 'solve', (e) ->
+              expect(stringify engine.values).to.eql stringify
+                "$b1[border-left-width]": -2
+              done()
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    border: 2px solid #000;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  #b1[border-left-width] == -1 * #a1[intrinsic-border-top-width];
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+
+          xit 'should simplify non-linear equasions to linear', (done) ->                                 
+            count = 0
+            listener = (e) ->
+              if ++count == 1
+                expect(stringify engine.values).to.eql stringify
+                  "multiplier": 2
+                  "$b1[border-left-width]": 4
+                engine.solve 
+                  multiplier: 3
+              else if count == 2
+                expect(stringify engine.values).to.eql stringify
+                  "multiplier": 3
+                  "$b1[border-left-width]": 6
+                engine.$id('a1').style.border = '3px solid #000'
+              else if count == 3
+                expect(stringify engine.values).to.eql stringify
+                  "multiplier": 3
+                  "$b1[border-left-width]": 9
+                engine.removeEventListener('solve', listener)
+                done()
+            engine.addEventListener 'solve', listener
+
+
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    border: 2px solid #000;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  [multiplier] == 2;
+                  #b1[border-left-width] == [multiplier] * #a1[intrinsic-border-top-width];
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+
+          xit 'should detect non-linearity deep in expression', (done) ->                                 
+            count = 0
+            listener = (e) ->
+              if ++count == 1
+                expect(stringify engine.values).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 2
+                  "multiplier": 2
+                  "$b1[border-left-width]": 6
+                engine.values.suggest 'multiplier', 3
+              else if count == 2
+                expect(stringify engine.values).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 2
+                  "multiplier": 3
+                  "$b1[border-left-width]": 9
+                engine.$id('a1').style.border = '3px solid #000'
+              else if count == 3
+                expect(stringify engine.values).to.eql stringify
+                  "$a1[intrinsic-border-top-width]": 3
+                  "multiplier": 3
+                  "$b1[border-left-width]": 12
+                engine.removeEventListener('solve', listener)
+                done()
+            engine.addEventListener 'solve', listener
+
+
+            container.innerHTML =  """
+                <style>
+                  #a1 {
+                    border: 2px solid #000;
+                  }
+                </style>
+                <style type="text/gss"> 
+                  [multiplier] == 2;
+                  #b1[border-left-width] == [multiplier] * (1 + #a1[intrinsic-border-top-width]);
+                </style>
+                <div class="a" id="a1"></div>
+                <div class="b" id="b1"></div>
+              """
+          
+      xdescribe 'of dimensions', ->
+        describe 'with units other than pixels', ->
+          it 'should use intrinsic value when there is no regular value set', (done) ->                                 
+            container.innerHTML =  """
+                <style type="text/gss"> 
+                  #b1[width] == #a1[width];   
+                  #a2[width] == #b2[width];  
+                </style>
+                <div class="a" id="a1" style="width: 15px; height: 10px"></div>
+                <div class="a" id="a2" style="width: 20px; height: 25px"></div>
+
+                <div class="b" id="b1"></div>
+                <div class="b" id="b2"></div>
+              """
+            engine
+            engine.once 'solve', (e) ->
+              expect(stringify engine.values).to.eql stringify
+                "$a1[width]": 15
+                "$b1[width]": 15
+                "$a2[width]": 20
+                "$b2[width]": 20
+              done()
+
+    describe 'equal simple selector on the both sides', ->
+      it 'should bind elements with itself', (done) ->                            
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              .a {
+                ::[x] == 10;
+              } 
+              .a[y] == .a[x];
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>
+          """
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
+            "$a1[x]": 10
+            "$a2[x]": 10
+            "$a3[x]": 10
+            "$a1[y]": 10
+            "$a2[y]": 10
+            "$a3[y]": 10
+          b3 = engine.$id('b3')
+          done()
+
+    describe 'complex plural selectors on the left', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              (.a !+ .a)[x] == .b[x] == [x];          
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+          """
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+            "$b3[x]": 100
+          b3 = engine.$id('b3')
+          b3.parentNode.removeChild(b3)
+          GSS.console.log(1)
+
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$a2[x]": 100
+              "$b1[x]": 100
+              "$b2[x]": 100
+
+            b2 = engine.$id('b2')
+            b2.parentNode.removeChild(b2)
+            GSS.console.log(1)
+            engine.once 'solve', (e) ->
+              expect(engine.values).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$b1[x]": 100
+              engine.scope.appendChild(b2)
+              engine.once 'solve', (e) ->
+                expect(engine.values).to.eql 
+                  "x": 100
+                  "$a1[x]": 100
+                  "$a2[x]": 100
+                  "$b1[x]": 100
+                  "$b2[x]": 100
+                a1 = engine.$id('a1')
+                a1.parentNode.removeChild(a1)
+                GSS.console.log(1)
+                engine.once 'solve', (e) ->
+                  expect(engine.values).to.eql 
+                    "x": 100
+                    "$a2[x]": 100
+                    "$b1[x]": 100
+                    "$b2[x]": 100
+                  b2 = engine.$id('b2')
+                  b2.parentNode.removeChild(b2)
+                  engine.once 'solve', (e) ->
+                    expect(engine.values).to.eql 
+                      "x": 100
+                      "$a2[x]": 100
+                      "$b1[x]": 100
+                    engine.scope.insertBefore(a1, engine.$id('b1'))
+                    engine.scope.appendChild(b2)
+                    engine.once 'solve', (e) ->
+                      expect(engine.values).to.eql 
+                        "x": 100
+                        "$b1[x]": 100
+                        "$b2[x]": 100
+                        "$a2[x]": 100
+                        "$a3[x]": 100
+                        divs = engine.$tag('div')
+                        while divs[0]
+                          divs[0].parentNode.removeChild(divs[0])
+                        window.zz = true
+                        engine.once 'solve', (e) ->
+                          expect(engine.values).to.eql 
+                            "x": 100
+
+                          engine.scope.innerHTML = ""
+
+                          engine.once 'solve', (e) ->
+                            expect(engine.values).to.eql {}
+                            done()
+
+    describe 'order dependent complex selectors', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss" id="style">                            
+              #style !> > .a {
+                (&:first)[left] == 0;
+                &[width] == 100;
+                (&:previous)[right] == &[left];
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div> 
+        """
+        engine
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100,
+            "$a1[x]": 0,
+            "$a2[x]": 100,
+            "$a3[x]": 200,
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+          engine.once 'solve', ->
+            expect(engine.values).to.eql
+              "$a1[width]": 100,
+              "$a2[width]": 100,
+              "$a1[x]": 0,
+              "$a2[x]": 100,
+            engine.scope.appendChild(a3)
+            engine.once 'solve', ->
+              expect(engine.values).to.eql
+                "$a1[width]": 100,
+                "$a2[width]": 100,
+                "$a3[width]": 100,
+                "$a1[x]": 0,
+                "$a2[x]": 100,
+                "$a3[x]": 200,
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+              engine.once 'solve', ->
+                expect(engine.values).to.eql
+                  "$a2[width]": 100,
+                  "$a3[width]": 100,
+                  "$a2[x]": 0,
+                  "$a3[x]": 100,
+                engine.scope.appendChild(a1)
+
+                engine.once 'solve', ->
+                  expect(engine.values).to.eql
+                    "$a1[width]": 100,
+                    "$a2[width]": 100,
+                    "$a3[width]": 100,
+                    "$a2[x]": 0,
+                    "$a3[x]": 100,
+                    "$a1[x]": 200,
+                  a3 = engine.$id('a3')
+                  a3.parentNode.removeChild(a3)
+
+                  engine.once 'solve', ->
+                    expect(engine.values).to.eql
+                      "$a1[width]": 100,
+                      "$a2[width]": 100,
+                      "$a2[x]": 0,
+                      "$a1[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+                    engine.once 'solve', ->
+                      expect(engine.values).to.eql {}
+
+                      done()
+
+    describe 'order dependent selectors with comma', ->
+      it 'should compute values', (done) ->                        
+        container.innerHTML =  """
+            <style type="text/gss" id="style">                            
+              #a2 ++ .a, #style ~~ .a {
+                (&:first)[left] == 0;
+                &[width] == 100;
+                (&:previous)[right] == &[left];
+              }       
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div> 
+        """
+        engine
+        engine.once 'solve', ->
+          expect(engine.values).to.eql
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100,
+            "$a1[x]": 0,
+            "$a2[x]": 100,
+            "$a3[x]": 200,
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+
+          engine.once 'solve', ->
+            expect(engine.values).to.eql
+              "$a1[width]": 100,
+              "$a2[width]": 100,
+              "$a1[x]": 0,
+              "$a2[x]": 100,
+            engine.scope.appendChild(a3)
+
+            engine.once 'solve', ->
+              expect(engine.values).to.eql
+                "$a1[width]": 100,
+                "$a2[width]": 100,
+                "$a3[width]": 100,
+                "$a1[x]": 0,
+                "$a2[x]": 100,
+                "$a3[x]": 200,
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+
+              engine.once 'solve', ->
+                expect(engine.values).to.eql
+                  "$a2[width]": 100,
+                  "$a3[width]": 100,
+                  "$a2[x]": 0,
+                  "$a3[x]": 100,
+                engine.scope.appendChild(a1)
+
+                engine.once 'solve', ->
+                  expect(engine.values).to.eql
+                    "$a1[width]": 100,
+                    "$a2[width]": 100,
+                    "$a3[width]": 100,
+                    "$a2[x]": 0,
+                    "$a3[x]": 100,
+                    "$a1[x]": 200,
+                  a3 = engine.$id('a3')
+                  a3.parentNode.removeChild(a3)
+
+                  engine.once 'solve', ->
+                    expect(engine.values).to.eql
+                      "$a1[width]": 100,
+                      "$a2[width]": 100,
+                      "$a2[x]": 0,
+                      "$a1[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+                    engine.once 'solve', ->
+                      expect(engine.values).to.eql {}
+
+                      done()
+
+    describe 'complex plural selectors on the right', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              .a[x] == (.b !+ .b)[x] == [x];          
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+          """
+        engine
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+          b3 = engine.$id('b3')
+
+          b3.parentNode.removeChild(b3)
+
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$b1[x]": 100
+            engine.scope.appendChild(b3)
+
+            engine.once 'solve', (e) ->
+              expect(engine.values).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$a2[x]": 100
+                "$b1[x]": 100
+                "$b2[x]": 100
+              divs = engine.$tag('div')
+              while divs[0]
+                divs[0].parentNode.removeChild(divs[0])
+
+              engine.once 'solve', (e) ->
+                expect(engine.values).to.eql 
+                  "x": 100
+                engine.scope.innerHTML = ""
+
+                engine.once 'solve', (e) ->
+                  expect(engine.values).to.eql {}
+                  done()
+
+
+    describe 'complex plural selectors on both sides', -> 
+      it 'should compute values', (done) ->                                 
+        container.innerHTML =  """
+            <style type="text/gss">                            
+              [x] == 100;
+              (.a !+ .a)[x] == (.b !+ .b)[x] == [x];          
+            </style>
+            <div id="a1" class="a"></div>
+            <div id="a2" class="a"></div>
+            <div id="a3" class="a"></div>            
+            <div id="b1" class="b"></div>
+            <div id="b2" class="b"></div>
+            <div id="b3" class="b"></div>
+          """
+        engine
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
+            "$a1[x]": 100
+            "$a2[x]": 100
+            "$b1[x]": 100
+            "$b2[x]": 100
+          b3 = engine.$id('b3')
+          b3.parentNode.removeChild(b3)
+
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$b1[x]": 100
+            engine.scope.appendChild(b3)
+
+            engine.once 'solve', (e) ->
+              expect(engine.values).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$a2[x]": 100
+                "$b1[x]": 100
+                "$b2[x]": 100
+
+              a1 = engine.$id('a1')
+              a1.parentNode.removeChild(a1)
+              engine.once 'solve', (e) ->
+                expect(engine.values).to.eql 
+                  "x": 100
+                  "$a2[x]": 100
+                  "$b1[x]": 100
+                  "$b2[x]": 100
+
+                divs = engine.$tag('div')
+                while divs[0]
+                  divs[0].parentNode.removeChild(divs[0])
+
+                engine.once 'solve', (e) ->
+                  expect(engine.values).to.eql 
+                    "x": 100
+                  engine.scope.innerHTML = ""
+
+                  engine.once 'solve', (e) ->
+                    expect(engine.values).to.eql {}
+                    done()
+
+    describe 'balanced plural selectors', ->
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="a1" class="a"></div>
@@ -253,16 +1165,40 @@ describe 'End - to - End', ->
               .a[x] == .b[x] == [x];              
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
-            "[x]": 100
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
             "$a3[x]": 100
             "$b1[x]": 100
             "$b2[x]": 100
             "$b3[x]": 100
-          done()
+          
+          a3 = engine.$id('a3')
+          a3.parentNode.removeChild(a3)
+
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$a2[x]": 100
+              "$b1[x]": 100
+              "$b2[x]": 100
+              "$b3[x]": 100
+          
+            b1 = engine.$id('b1')
+            b1.parentNode.removeChild(b1)
+            window.zzzz = true
+
+            engine.once 'solve', (e) ->
+              expect(engine.values).to.eql 
+                "x": 100
+                "$a1[x]": 100
+                "$a2[x]": 100
+                "$b2[x]": 100
+                "$b3[x]": 100
+              done()
     
     describe 'WARN: unbalanced plural selectors', ->  
       it 'should compute values', (done) ->                                 
@@ -278,17 +1214,11 @@ describe 'End - to - End', ->
               [x] == 100;
               .a[x] == .b[x] == [x];              
             </style>
-          """
-        warned = false
-        onWarn = (message) ->
-          warned = message.indexOf('.a') > 0 and message.indexOf('.b') > 0
-          if warned 
-            GSS.off 'warn', onWarn          
-        GSS.on 'warn', onWarn
-        engine.once 'display', (e) ->
-          assert warned, "warn message should contain unbalanced selectors"
-          expect(engine.vars).to.eql 
-            "[x]": 100
+          """        
+        engine
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
             "$a3[x]": 100
@@ -296,10 +1226,78 @@ describe 'End - to - End', ->
             "$b2[x]": 100
             "$b3[x]": 100
             "$b4[x]": 100
-          done()        
-    
-    describe 'complex selectors', -> 
-      it 'should compute values', (done) ->                                 
+          a3 = engine.$id('a3')
+          a4 = a3.cloneNode()
+          a4.id = 'a4'
+          a3.parentNode.appendChild(a4)
+
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "x": 100
+              "$a1[x]": 100
+              "$a2[x]": 100
+              "$a3[x]": 100
+              "$a4[x]": 100
+              "$b1[x]": 100
+              "$b2[x]": 100
+              "$b3[x]": 100
+              "$b4[x]": 100
+            a1 = engine.$id('a1')
+            a1.parentNode.removeChild(a1)
+
+            engine.once 'solve', (e) ->
+              expect(engine.values).to.eql 
+                "x": 100
+                "$a2[x]": 100
+                "$a3[x]": 100
+                "$a4[x]": 100
+                "$b1[x]": 100
+                "$b2[x]": 100
+                "$b3[x]": 100
+                "$b4[x]": 100
+              b4 = engine.$id('b4')
+
+              b4.parentNode.removeChild(b4)
+              engine.once 'solve', (e) ->
+                expect(engine.values).to.eql 
+                  "x": 100
+                  "$a2[x]": 100
+                  "$a3[x]": 100
+                  "$a4[x]": 100
+                  "$b1[x]": 100
+                  "$b2[x]": 100
+                  "$b3[x]": 100
+
+                b3 = engine.$id('b3')
+                b3.parentNode.removeChild(b3)
+
+                engine.once 'solve', (e) ->
+                  expect(engine.values).to.eql 
+                    "x": 100
+                    "$a2[x]": 100
+                    "$a3[x]": 100
+                    "$b1[x]": 100
+                    "$b2[x]": 100
+                  a2 = engine.$id('a2')
+                  a2.parentNode.removeChild(a2)
+
+                  engine.once 'solve', (e) ->
+                    expect(engine.values).to.eql 
+                      "x": 100
+                      "$a3[x]": 100
+                      "$a4[x]": 100
+                      "$b1[x]": 100
+                      "$b2[x]": 100
+                    divs = engine.$tag('div')
+                    while divs[0]
+                      divs[0].parentNode.removeChild(divs[0])
+
+                    engine.once 'solve', (e) ->
+                      expect(engine.values).to.eql 
+                        "x": 100
+                      done()
+    xdescribe 'complex selectors', -> 
+      xit 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <section class="section">
               <div id="a1" class="a"></div>
@@ -316,7 +1314,7 @@ describe 'End - to - End', ->
           """
         engine.once 'display', (e) ->
           expect(engine.vars).to.eql 
-            "[x]": 100
+            "x": 100
             "$a1[x]": 100
             "$a2[x]": 100
             "$a3[x]": 100
@@ -332,26 +1330,23 @@ describe 'End - to - End', ->
             <div id="sugar2"></div>
             <style type="text/gss">                            
               #sugar1 {
-                width: 10px !important;
-                height: 10px !important;
+                width: 10px;
+                height: 10px;
                 x: == 5;
                 y: == 5;
-                size: == ::[intrinsic-size];
               }
               #sugar2 {
-                size: == #sugar1[size];
+                size: == #sugar1[intrinsic-size];
               }
               #sugar1[position] == #sugar2[center];              
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
             "$sugar1[x]": 5
             "$sugar1[y]": 5
             "$sugar1[intrinsic-width]": 10
             "$sugar1[intrinsic-height]": 10
-            "$sugar1[width]": 10
-            "$sugar1[height]": 10
             "$sugar2[width]": 10
             "$sugar2[height]": 10
             "$sugar2[x]": 0
@@ -364,32 +1359,34 @@ describe 'End - to - End', ->
             <div id="sync1" class="sync"></div>
             <style type="text/gss">                            
               .sync, .async {
-                width: 100px !important;
+                width: 100px;
                 height: == ::[intrinsic-width];
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
-            "$sync1[intrinsic-width]": 100
-            "$sync1[height]": 100            
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "$sync1[height]": 100
+            "$sync1[intrinsic-width]": 100   
           done()
     
+    # This test was the same as previous, I added a regular box sizing check
     describe 'intrinsic & measure-impacting css in same gss block', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="sync1" class="sync"></div>
-            <style type="text/gss">                            
+            <style type="text/gss" id="style999">                            
               .sync, .async {
-                width: 100px !important;
+                width: 100px;
+                padding-left: 20px;
                 height: == ::[intrinsic-width];
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
-            "$sync1[intrinsic-width]": 100
-            "$sync1[height]": 100            
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "$sync1[height]": 120      
+            "$sync1[intrinsic-width]": 120            
           done()
     
     
@@ -398,31 +1395,30 @@ describe 'End - to - End', ->
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
             <div id="sync1" class="sync"></div>
-            <style type="text/gss">                            
+            <style type="text/gss" id="style555">                            
               .sync, .async {
-                width: 100px !important;
+                width: 100px;
                 height: == ::[intrinsic-width];
-                -test: == 0;
+                test: == 0;
               }
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
-            "$sync1[intrinsic-width]": 100
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
             "$sync1[height]": 100     
-            "$sync1[-test]": 0
+            "$sync1[intrinsic-width]": 100 
+            "$sync1[test]": 0
           # do again
-          GSS._.defer ->
-            container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
-            engine.once 'display', (e) ->
-              expect(engine.vars).to.eql 
-                "$sync1[intrinsic-width]": 100
-                "$sync1[height]": 100
-                "$sync1[-test]": 0
-                "$async1[intrinsic-width]": 100
-                "$async1[height]": 100
-                "$async1[-test]": 0
-              done()
+          container.insertAdjacentHTML('beforeend', '<div id="async1" class="sync"></div>')   
+          engine.once 'solve', (e) ->
+            expect(engine.values).to.eql 
+              "$sync1[height]": 100
+              "$sync1[test]": 0
+              "$sync1[intrinsic-width]": 100 
+              "$async1[height]": 100
+              "$async1[test]": 0
+              "$async1[intrinsic-width]": 100 
+            done()
                   
 
   
@@ -435,18 +1431,13 @@ describe 'End - to - End', ->
   
     describe 'center values', ->  
       it 'should compute values', (done) ->
-        engine.once 'solved', (e) ->     
-          w = (window.innerWidth - GSS.get.scrollbarWidth())
+        engine.once 'solve', (e) ->     
+          w = (window.innerWidth)# - GSS.get.scrollbarWidth())
           cx = w / 2
           h = (window.innerHeight)
           cy = h / 2
-          expect(engine.vars).to.eql 
-            "::window[width]": w
-            "::window[center-x]": cx
-            "[center-x]": cx
-            "::window[height]": h
-            "::window[center-y]": cy            
-            "[center-y]": cy
+          expect(engine.values["center-x"]).to.eql cx
+          expect(engine.values["center-y"]).to.eql cy
           done()                             
         container.innerHTML =  """
             <style type="text/gss">              
@@ -456,18 +1447,13 @@ describe 'End - to - End', ->
           """
     describe 'position values', ->  
       it 'should compute values', (done) ->
-        engine.once 'solved', (e) ->     
-          w = (window.innerWidth - GSS.get.scrollbarWidth())
+        engine.once 'solve', (e) ->
+          w = (window.innerWidth)# - GSS.get.scrollbarWidth())
           h = (window.innerHeight)
-          expect(engine.vars).to.eql 
-            "::window[y]": 0
-            "[top]": 0
-            "::window[width]": w
-            "[right]": w
-            "::window[height]": h
-            "[bottom]": h
-            "::window[x]": 0
-            "[left]": 0
+          expect(engine.values["top"]).to.eql 0
+          expect(engine.values["right"]).to.eql w
+          expect(engine.values["bottom"]).to.eql h
+          expect(engine.values["left"]).to.eql 0
           done()                             
         container.innerHTML =  """
             <style type="text/gss">
@@ -486,16 +1472,12 @@ describe 'End - to - End', ->
     describe "single file", ->
     
       it 'should compute', (done) ->
-        oldDefault = GSS.config.defaultStrength
-        GSS.config.defaultStrength = "strong"
-      
         listen = (e) ->     
-          expect(engine.vars).to.eql 
-            "[external-file]": 1000
-          GSS.config.defaultStrength = oldDefault
+          expect(engine.values).to.eql 
+            "external-file": 1000
           done()     
                      
-        engine.once 'solved', listen
+        engine.once 'solve', listen
     
         container.innerHTML =  """
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
@@ -504,18 +1486,18 @@ describe 'End - to - End', ->
     describe "multiple files", ->
     
       it 'should compute', (done) ->
-        oldDefault = GSS.config.defaultStrength
-        GSS.config.defaultStrength = "strong"
-      
-        listen = (e) ->     
-          expect(engine.vars).to.eql 
-            "[external-file]": 1000
-            "[external-file-2]": 2000
-            "[external-file-3]": 3000
-          GSS.config.defaultStrength = oldDefault
-          done()     
+        counter = 0
+        listen = (e) ->
+          counter++
+          if counter == 3
+            expect(engine.values).to.eql 
+              "external-file": 1000
+              "external-file-2": 2000
+              "external-file-3": 3000
+            engine.removeEventListener 'solve', listen
+            done()     
                      
-        engine.once 'solved', listen
+        engine.addEventListener 'solve', listen
     
         container.innerHTML =  """
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
@@ -538,21 +1520,124 @@ describe 'End - to - End', ->
           <div id="ship"></div>
           <style type="text/gss" scoped>
             #ship {
-              @virtual "mast";
               "mast"[top] == 0;
               "mast"[bottom] == 100;
               "mast"[left] == 10;
               "mast"[right] == 20;
+              &"mast"[z] == 1;
             }
+            #ship[height] == "mast"[height];
           </style>
           """
-        engine.once 'solved', (e) ->
-          expect(stringify(engine.vars)).to.equal stringify
-            '$ship"mast"[y]': 0
-            '$ship"mast"[height]': 100
-            '$ship"mast"[x]': 10
-            '$ship"mast"[width]': 10
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '"mast"[height]': 100
+            '"mast"[x]': 10
+            '"mast"[width]': 10
+            '"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
           done()
+
+    it 'in VFL', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+
+        <div id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></div>
+    
+        <style type="text/gss">
+          [col-gap] == 16;
+          ::scope[size] == ::scope[intrinsic-size];
+          ::scope[left] == 0;
+        
+          @h |("col-1...8")-[col-gap]-...| in(::scope) !require {
+            width: == [col-width] !require;
+          }
+          
+          .box {          
+            @v |(&)| in(::window);
+            &.bar {
+              @h |(&)| in("col-6");
+            }
+            &.foo {
+              @h |(&)| in("col-3");
+            }
+          }
+        </style>
+        
+      """
+      engine.then (solution) ->
+        expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
+
+        engine.$id('box').click()
+
+        engine.then (solution) ->
+          expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
+          done()
+
+
+
+    it 'in comma', (done) ->
+      engine = window.$engine = GSS(container)
+      container.style.width = '400px'
+      container.style.height = '100px'
+      container.innerHTML = """
+        <div id="a1" class="a"></div>
+        <div id="a2" class="a"></div>
+        <div id="b1" class="b"></div>
+        <div id="b2" class="b"></div>
+        <style type="text/gss">
+          "c", .a, "z", .b {
+            &:next[x] == 10;
+          }
+        </style>
+      """
+      engine.then (solution) ->
+        expect(solution).to.eql
+          "$a1[x]": 10
+          "$a2[x]": 10
+          "\"z\"[x]": 10
+          "$b1[x]": 10
+          "$b2[x]": 10
+
+        lefts = 
+          for item in engine.$class('a') by -1
+            item.parentNode.removeChild(item)
+            item
+
+        engine.then (solution) ->
+          expect(solution).to.eql
+            '\"z\"[x]': 10
+            '$a1[x]': null
+            "$a2[x]": null
+
+          for item in lefts by -1
+            engine.scope.insertBefore(item, engine.$id('b2'))
+
+          engine.then (solution) ->
+            expect(solution).to.eql
+              "\"z\"[x]": 10
+              '$a1[x]': 10
+              "$a2[x]": 10
+
+            items = 
+              for item in engine.$tag('div') by -1
+                item.parentNode.removeChild(item)
+                item
+
+            engine.then (solution) ->
+              expect(solution).to.eql
+                '\"z\"[x]': 10
+                '$b1[x]': null
+                "$b2[x]": null
+                '$a1[x]': null
+                "$a2[x]": null
+                done()
+
+
+
   
   
   # VGL
@@ -564,20 +1649,6 @@ describe 'End - to - End', ->
       engine = null
     
       it 'vars', (done) ->
-        engine = GSS(container)
-        container.innerHTML =  """
-          <div id="layout"></div>
-          <style type="text/gss" scoped>
-            #layout {
-              x: == 0;
-              y: == 0;
-              width: == 100;
-              height: == 10;
-              @grid-template a
-                "12";
-            }
-          </style>
-          """
         listener = (e) ->        
           target =           
             '$layout[x]': 0
@@ -596,11 +1667,24 @@ describe 'End - to - End', ->
             '$layout"a-2"[y]': 0
           
           for key, val of target
-            assert(engine.vars[key] is val, "#{engine.vars[key]} should be #{val}")
+            assert(engine.values[key] is val, "#{engine.vars[key]} should be #{val}")
           done()
-        engine.once 'solved', listener
+        engine.once 'solve', listener
+        container.innerHTML =  """
+          <div id="layout"></div>
+          <style type="text/gss" scoped>
+            #layout {
+              x: == 0;
+              y: == 0;
+              width: == 100;
+              height: == 10;
+              @grid-template a
+                "12";
+            }
+          </style>
+          """
     
-    describe 'grid-rows & grid cols', ->
+    xdescribe 'grid-rows & grid cols', ->
       engine = null
       target =
         '$item[x]': 55
@@ -633,7 +1717,7 @@ describe 'End - to - End', ->
         '$layout"c2"[x]': 55
         '$layout"c2"[y]': 0
       
-      describe 'flat', ->
+      xdescribe 'flat', ->
         it ' vars', (done) ->
           engine = GSS(container)
           container.innerHTML =  """
@@ -657,9 +1741,9 @@ describe 'End - to - End', ->
             for key, val of target
               assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
             done()
-          engine.once 'solved', listener
+          engine.once 'solve', listener
       
-      describe 'cross-sheet', ->
+      xdescribe 'cross-sheet', ->
         it ' vars', (done) ->
           engine = GSS(container)
           container.innerHTML =  """
@@ -688,7 +1772,7 @@ describe 'End - to - End', ->
             for key, val of target
               assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
             done()
-          engine.once 'solved', listener
+          engine.once 'solve', listener
       
       ###
       describe 'nested', ->
@@ -713,11 +1797,11 @@ describe 'End - to - End', ->
             </style>
             """
           listener = (e) ->        
-            console.log engine.vars
+            GSS.console.log engine.vars
             for key, val of target
               assert engine.vars[key] is val, "#{key} is #{engine.vars[key]}"
             done()
-          engine.once 'solved', listener
+          engine.once 'solve', listener
       ###
       
   
@@ -726,17 +1810,196 @@ describe 'End - to - End', ->
   # ===========================================================
   
   describe "@if @else", ->
-  
+    describe '|| and :: in condition', ->
+      it 'should compute values', (done) ->
+                     
+        engine.assumed.merge '$button1[t]': 500, '$button2[t]': 400
+
+        engine.once 'solve', ->     
+          expect(engine.values).to.eql 
+            "$button1[x]": 96
+            "$button2[x]": 1
+            "$button1[t]": 500
+            "$button2[t]": 400
+
+          engine.once 'solve', ->
+            expect(engine.values).to.eql 
+              "$button1[x]": 1
+              "$button2[x]": 96
+              "$button1[t]": 400
+              "$button2[t]": 100
+
+            engine.once 'solve', ->
+              expect(engine.values).to.eql 
+                "$button1[x]": 1
+                "$button2[x]": 1
+                "$button1[t]": 400
+                "$button2[t]": 400
+              done()   
+
+            engine.assumed.merge '$button2[t]': 400
+
+          engine.assumed.merge '$button1[t]': 400, '$button2[t]': 100
+
+        container.innerHTML =  """
+            <style type="text/gss">
+              button {
+                @if &[t] >= 450 || &[t] < 250 {          
+                  &[x] == 96;
+                }
+
+                @else {  
+                  &[x] == 1;  
+                }
+              }
+            </style>
+            <button id="button1"></button>
+            <button id="button2"></button>
+          """
+
+    describe '|| over two variables', ->
+      it 'should compute values', (done) ->
+        
+        engine.assumed.merge A: 200, B: 200
+
+        engine.once 'solve', ->     
+          expect(engine.values).to.eql 
+            "A": 200
+            "B": 200
+            "a": 200
+            "b": 200
+            "x": 1
+
+          engine.once 'solve', ->     
+            expect(engine.values).to.eql 
+              "A": 500
+              "B": 200
+              "a": 500
+              "b": 200
+              "x": 96
+
+            engine.once 'solve', ->     
+              expect(engine.values).to.eql 
+                "A": 200
+                "B": 200
+                "a": 200
+                "b": 200
+                "x": 1
+
+              engine.once 'solve', ->     
+                expect(engine.values).to.eql 
+                  "A": 200
+                  "B": 500
+                  "a": 200
+                  "b": 500
+                  "x": 96
+
+                engine.once 'solve', ->     
+                  expect(engine.values).to.eql 
+                    "A": 200
+                    "B": 200
+                    "a": 200
+                    "b": 200
+                    "x": 1
+
+
+                  engine.once 'solve', ->     
+                    expect(engine.values).to.eql 
+                      "A": 500
+                      "B": 500
+                      "a": 500
+                      "b": 500
+                      "x": 96
+
+                    engine.once 'solve', ->     
+                      expect(engine.values).to.eql 
+                        "A": 200
+                        "B": 200
+                        "a": 200
+                        "b": 200
+                        "x": 1
+                      done()
+                      
+                    engine.assumed.merge A: 200, B: 200
+                  engine.assumed.merge A: 500, B: 500
+                engine.assumed.merge B: 200
+              engine.assumed.merge B: 500
+            engine.assumed.merge A: 200
+
+          engine.assumed.merge A: 500
+    
+        container.innerHTML =  """
+            <style type="text/gss">
+            [a] == [A];
+            [b] == [B];
+        
+            @if [a] >= 400 || [b] >= 400 {          
+              [x] == 96;
+            }
+
+            @else {  
+              [x] == 1;  
+            }
+            </style>
+          """
+
+
+    describe '&& over two variables', ->
+      it 'should compute values', (done) ->
+        
+        engine.assumed.merge input: 200
+
+        engine.once 'solve', ->     
+          expect(engine.values).to.eql 
+            "input": 200
+            "t": 500
+            "x": 96
+            "z": 200
+
+          engine.once 'solve', ->     
+            expect(engine.values).to.eql 
+              "input": 500
+              "t": 500
+              "x": 1
+              "z": 500
+
+            engine.once 'solve', ->     
+              expect(engine.values).to.eql 
+                "input": 200
+                "t": 500
+                "x": 96
+                "z": 200
+
+              done()
+            engine.assumed.merge input: 200
+
+          engine.assumed.merge input: 500
+    
+        container.innerHTML =  """
+            <style type="text/gss">
+            [t] == 500;
+            [z] == [input];
+        
+            @if [t] >= 400 && [z] < 450 {          
+              [x] == 96;
+            }
+
+            @else {  
+              [x] == 1;  
+            }
+            </style>
+          """
+
     describe 'flat @if @else w/o queries', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
-            "[t]": 500
-            "[x]": 1
+          expect(engine.values).to.eql 
+            "t": 500
+            "x": 1
           done()     
                      
-        engine.once 'solved', listen
+        engine.once 'solve', listen
     
         container.innerHTML =  """
             <style type="text/gss">
@@ -756,12 +2019,10 @@ describe 'End - to - End', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
-            "[t]": 500
+          expect(engine.values).to.eql 
+            "t": 500
             "$b[width]": 1
-          done()          
-          engine.off 'solved', listen                    
-    
+          done()     
         container.innerHTML =  """
             <div id="b"></div>
             <style type="text/gss">
@@ -784,7 +2045,7 @@ describe 'End - to - End', ->
             }
             </style>
           """
-        engine.once 'solved', listen
+        engine.once 'solve', listen
         
   
 
@@ -792,7 +2053,7 @@ describe 'End - to - End', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.eql 
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 19
             "$box1[height]": 10
@@ -818,7 +2079,7 @@ describe 'End - to - End', ->
           
             </style>
           """
-        engine.once 'solved', listen
+        engine.once 'solve', listen
     
     describe 'and / or @if @else', ->
   
@@ -839,19 +2100,21 @@ describe 'End - to - End', ->
             .box {
               @if ::[width] < 10 and ::[height] < 10 {
                 $state: == 1;
-              }
-              @else ::[width] > 10 and ::[height] > 10 {
-                $state: == 2;
-              }
-              @else ::[width] == 10 or ::[height] == 10 {
-                $state: == 3;
+              } @else {
+                @if ::[width] > 10 and ::[height] > 10 {
+                  $state: == 2;
+                } @else { 
+                  @if ::[width] == 10 or ::[height] == 10 {
+                    $state: == 3;
+                  }
+                }
               }
             }
           
             </style>
           """
-        engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql 
+        engine.once 'solve', (e) ->     
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 11
             "$box3[width]": 10
@@ -882,19 +2145,21 @@ describe 'End - to - End', ->
             .box {
               @if ::[width] + ::[height] < 20 {
                 $state: == 1;
-              }
-              @else ::[width] + ::[height] == 22 {
-                $state: == 2;
-              }
-              @else ::[width] * ::[height] >= 99 {
-                $state: == 3;
-              }
+              } @else {
+                @if ::[width] + ::[height] == 22 {
+                  $state: == 2;
+                } @else {
+                  @if ::[width] * ::[height] >= 99 {
+                    $state: == 3;
+                  }
+                }
+              } 
             }
           
             </style>
           """
-        engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 11
             "$box3[width]": 10
@@ -925,22 +2190,25 @@ describe 'End - to - End', ->
             .box {
               @if (::[width] + ::[height] < 20) and (::[width] == 9) {
                 $state: == 1;
-              }
-              @else (::[width] + ::[height] == 22) and (::[width] == 11) {
-                $state: == 2;
-              }
-              @else (::[width] * ::[height] >= 99) and (::[width] == 999999) {
-                $state: == 4;
-              }
-              @else (::[width] * ::[height] >= 99) and (::[width] == 10) {
-                $state: == 3;
+              } @else {
+                @if (::[width] + ::[height] == 22) and (::[width] == 11) {
+                  $state: == 2;
+                } @else {
+                  @if (::[width] * ::[height] >= 99) and (::[width] == 999999) {
+                    $state: == 4;
+                  } @else {
+                    @if (::[width] * ::[height] >= 99) and (::[width] == 10) {
+                      $state: == 3;
+                    }
+                  }
+                }
               }
             }
           
             </style>
           """
-        engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 11
             "$box3[width]": 10
@@ -954,18 +2222,27 @@ describe 'End - to - End', ->
     
   
     
-    ###
     describe 'TODO!!!! contextual @if @else with vanilla CSS', ->
   
       it 'should compute values', (done) ->
-        listen = (e) ->     
-          expect(engine.vars).to.eql 
-            "$box1[width]": 9
-            "$box2[width]": 19
-          expect(engine.cssDump).to.equal document.getElementById("gss-css-dump-" + engine.id)
-          
-          expect(window.getComputedStyle(document.querySelector("#box1"),null).getPropertyValue("color")).to.equal "rgb(20,30,40)"
-          expect(window.getComputedStyle(document.querySelector("#box2"),null).getPropertyValue("color")).to.equal "rgb(50,50,50)"          
+        listen = (e) ->
+          expect(engine.$id('box1').style.width).to.eql '9px'
+          expect(engine.$id('box2').style.width).to.eql '19px'
+          expect(window.getComputedStyle(engine.$id("box1"),null).
+            getPropertyValue("z-index")).to.equal "auto"
+          expect(window.getComputedStyle(engine.$id("box2"),null).
+            getPropertyValue("z-index")).to.equal "auto"
+
+          expect(window.getComputedStyle(engine.$id("box1"),null).
+            getPropertyValue("margin-top")).to.equal "0px"
+          expect(window.getComputedStyle(engine.$id("box2"),null).
+            getPropertyValue("margin-top")).to.equal "0px" 
+          expect(window.getComputedStyle(engine.$id("box1"),null).
+            getPropertyValue("padding-top")).to.equal "1px"
+          expect(window.getComputedStyle(engine.$id("box2"),null).
+            getPropertyValue("padding-top")).to.equal "1px"     
+          expect(engine.$id("box1").style.zIndex).to.eql '1'
+          expect(engine.$id("box2").style.zIndex).to.eql '2'     
           done()          
     
         container.innerHTML =  """
@@ -977,33 +2254,36 @@ describe 'End - to - End', ->
               #box2[width] == 19;
           
               .box {
+                @if ::scope[intrinsic-width] < 10 {
+                  margin-top: 1px;
+                }
+                @if ::scope[intrinsic-width] > 10 {
+                  padding-top: 1px;
+                }
                 @if ::[width] < 10 {
-                  color: rgb(20,30,40);
+                  z-index: 1;
                 }
                 @else {
-                  color: rgb(50,50,50);
+                  z-index: 2;
                 }
               }
           
             </style>
           """
-        engine.once 'solved', listen
-    ###
+        engine.once 'solve', listen
     
-    ###
-    describe 'TODO!!!! contextual @if @else inner nesting', ->
+    describe 'contextual @if @else inner nesting', ->
       
       # This one will require some serious surgery...
       
       it 'should compute values', (done) ->
         listen = (e) ->
           # TODO
-          expect(engine.vars).to.eql 
+          expect(engine.values).to.eql 
             "$box1[width]": 9
             "$box2[width]": 19
             "$inside2[height]": 20
           done()          
-          engine.off 'solved', listen                    
     
         container.innerHTML =  """
             <div id="box1" class="box">
@@ -1037,14 +2317,13 @@ describe 'End - to - End', ->
           
             </style>
           """
-        engine.once 'solved', listen
-    ###
+        engine.once 'solve', listen
   
     describe 'top level @if @else w/ complex queries', ->
   
       it 'should be ok', (done) ->
         listen = (e) ->     
-          expect(engine.vars).to.be.ok
+          expect(engine.values).to.be.ok
           done()          
       
         container.innerHTML =  """
@@ -1076,15 +2355,15 @@ describe 'End - to - End', ->
             }
             </style>
           """
-        engine.once 'solved', listen
+        engine.once 'solve', listen
     
   
     describe 'top level @if @else w/ nested VFLs', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->             
-          expect(engine.vars).to.eql
-            "[Wwin]":100
+          expect(engine.values).to.eql
+            "Wwin":100
             "$s1[x]":50
             "$s1[width]":1
             "$s2[width]":1
@@ -1100,21 +2379,20 @@ describe 'End - to - End', ->
             @if [Wwin] > 960 {
                         
               #s1[x] == 100;
-              @horizontal [#s1(==10)]-[#s2(==10)] gap(100);
+              @horizontal (#s1(==10))-(#s2(==10)) gap(100);
 
             }
 
             @else {
   
               #s1[x] == 50;
-              @horizontal [#s1(==1)]-[#s2(==1)] gap(5);
+              @horizontal (#s1(==1))-(#s2(==1)) gap(5);
   
             }
             </style>
           """
-        engine.once 'solved', listen    
+        engine.once 'solve', listen    
   
-    ###
     describe '@if @else w/ dynamic VFLs', ->
       it 'should compute values', (done) ->     
         container.innerHTML =  """
@@ -1132,14 +2410,14 @@ describe 'End - to - End', ->
                 y: >= 0;
               }                 
               @if #container[width] > 960 {            
-                @vertical .section;     
+                @vertical (.section)...;     
               } @else {
-                @horizontal .section;     
+                @horizontal (.section)...;     
               }
             </style>
           """
-        engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql
+        engine.once 'solve', (e) ->     
+          expect(engine.values).to.eql
             "$container[width]": 100,
             "$s1[height]": 100,
             "$s2[height]": 100,
@@ -1150,7 +2428,6 @@ describe 'End - to - End', ->
             "$s1[y]": 0,
             "$s2[y]": 0          
           done()
-    ###
   
   
   
@@ -1162,8 +2439,8 @@ describe 'End - to - End', ->
     describe 'simple VFL', ->
   
       it 'should compute values', (done) ->
-        listen = (e) ->     
-          expect(engine.vars).to.eql
+        listen = (solution) ->     
+          expect(solution).to.eql
             "$s1[x]":100
             "$s1[width]":10
             "$s2[width]":10
@@ -1177,17 +2454,17 @@ describe 'End - to - End', ->
             <style type="text/gss">
           
             #s1[x] == 100;
-            @horizontal [#s1(==10)]-[#s2(==10)] gap(100);
+            @horizontal (#s1(==10))-(#s2(==10)) gap(100);
           
             </style>
           """
-        engine.once 'solved', listen
+        engine.once 'solve', listen
 
     describe '[::] VFLs', ->
   
       it 'should compute', (done) ->
-        listen = (e) ->     
-          expect(engine.vars).to.eql      
+        listen = (solution) ->     
+          expect(solution).to.eql      
             "$s1[x]": 20,
             "$container[x]": 10,
             "$s2[x]": 20,
@@ -1203,7 +2480,7 @@ describe 'End - to - End', ->
             <style type="text/gss">                        
                       
               .section {
-                @horizontal |-[::this]-| gap(10) in(#container);
+                @horizontal |-(::this)-| gap(10) in(#container);
               }
             
               #container {
@@ -1213,7 +2490,67 @@ describe 'End - to - End', ->
   
             </style>
           """
-        engine.once 'solved', listen  
+        engine.once 'solve', listen  
+
+      describe 'with selector', ->
+        it 'should compute', (done) ->
+          engine.then (solution) ->     
+            expect(solution).to.eql      
+              "$container[x]": 10,
+              "$container[width]": 100
+              "$p12[x]": 20
+              "$p13[x]": 20
+              "$p22[x]": 20
+              "$p23[x]": 20
+              "$h1[x]":  20
+              "$p12[width]": 80
+              "$p13[width]": 80
+              "$p22[width]": 80
+              "$p23[width]": 80
+              "$h1[width]":  80
+
+            p12 = engine.$id('p12')
+            p12.parentNode.removeChild(p12)
+
+            engine.then (solution) ->  
+              expect(solution).to.eql  
+                "$p12[x]": null
+                "$p12[width]": null
+
+              h1 = engine.$id('h1')
+              h1.parentNode.removeChild(h1)
+              engine.then (solution) ->  
+                expect(solution).to.eql  
+                  "$h1[x]": null
+                  "$h1[width]": null
+
+
+
+                done()          
+      
+          container.innerHTML =  """
+              <div id="s1" class="section">
+                <p id="p11"><p id="p12"><p id="p13">
+              </div>
+              <div id="s2" class="section">
+                <p id="p21"><p id="p22"><p id="p23">
+              </div>
+              <h1 id="h1"></h1>
+              <div id="container"></div>
+              <style type="text/gss">                        
+                        
+                .section {
+                  @h |-(:: p + p, #h1)-| gap(10) in(#container);
+                }
+              
+                #container {
+                  x: == 10;
+                  width: == 100;
+                }
+              </style>       
+          """                 
+    
+
     
     describe 'plural selectors I', ->  
       it 'should compute values', (done) ->                                 
@@ -1229,11 +2566,13 @@ describe 'End - to - End', ->
                 width: == 100;
                 x: == 0;
               }
-              @h |[.a][.b]| in(.cont) chain-width;             
+              @h |(.a)(.b)| in(.cont) {
+                &[width] == &:next[width];
+              }            
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql 
             "$cont1[width]": 100
             "$cont2[width]": 100
             "$cont1[x]": 0            
@@ -1259,13 +2598,15 @@ describe 'End - to - End', ->
             <style type="text/gss">                            
               .cont {
                 width: == 100;
-                x: == 0;
-                @h |[.a][.b]| in(::) chain-width;
+                
+                @h |(.a)(.b)| in(::) {
+                  &[width] == &:next[width];
+                }
               }                           
             </style>
           """
-        engine.once 'display', (e) ->
-          expect(engine.vars).to.eql 
+        engine.once 'solved', (solution) ->
+          expect(solution).to.eql 
             "$cont1[width]": 100
             "$cont1[x]": 0            
             "$a1[x]": 0
@@ -1281,8 +2622,8 @@ describe 'End - to - End', ->
     describe 'Implicit VFL', ->
   
       it 'should compute', (done) ->
-        engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql      
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql      
             "$s1[x]": 0,
             "$s2[x]": 60,
             "$s1[width]": 50,
@@ -1299,21 +2640,20 @@ describe 'End - to - End', ->
                 width: == 50;
               }                        
               
-              @h .implicit gap(10);
+              @h (.implicit)-10-...;
   
             </style>
           """
     
-    ### TODO
     describe 'Implicit VFL w/ containment', ->
   
       it 'should compute', (done) ->
-        engine.once 'solved', (e) ->
-          console.log JSON.stringify engine.vars
-          expect(engine.vars).to.eql      
+        engine.once 'solve', (e) ->
+          GSS.console.log JSON.stringify engine.vars
+          expect(engine.values).to.eql      
             "$s1[x]": 10,
             "$container[x]": 0,
-            "$s2[x]": 40,
+            "$s2[x]": 50,
             "$container[width]": 90,
             "$s1[width]": 30,
             "$s2[width]": 30     
@@ -1324,7 +2664,9 @@ describe 'End - to - End', ->
             <div id="container"></div>
             <style type="text/gss">                        
                       
-              @h .implicit gap(10) in(#container);
+              @h |-(.implicit)-10-...-| outer-gap(10) in(#container) {
+                &[width] == &:next[width];
+              }
             
               #container {
                 x: == 0;
@@ -1333,13 +2675,270 @@ describe 'End - to - End', ->
   
             </style>
           """
-    ###
+    describe 'order specific selectors on the left within rules', ->
+      it 'should do it', (done) ->
+        container.innerHTML = """
+          <style type="text/gss">
+            article {
+              width: == 50;
+              height: == 50;
+              x: >= 0;
+            }
+            #p1[width] == 50;
+            @h (article)... {
+              (&:next p)[width] == (& p)[width];
+            }
+          </style>
+          <article id="article1">
+            <p id="p1"></p>
+          </article>
+          <article id="article1">
+            <p id="p2"></p>
+          </article>
+        """
+        engine.then (solution) ->
+          expect(solution['$p1[width]']).to.eql solution['$p2[width]']
+          done()
+
+    describe 'order specific selectors on the right within rules', ->
+      it 'should do it', (done) ->
+        container.innerHTML = """
+          <style type="text/gss">
+            article {
+              width: == 50;
+              height: == 50;
+              x: >= 0;
+            }
+            #p1[width] == 50;
+            @h (article)... {
+              (& p)[width] == (&:next p)[width];
+            }
+          </style>
+          <article id="article1">
+            <p id="p1"></p>
+          </article>
+          <article id="article1">
+            <p id="p2"></p>
+          </article>
+        """
+        engine.then (solution) ->
+          expect(solution['$p1[width]']).to.eql solution['$p2[width]']
+          done()
+
       
+    describe "context-specific VFL", ->
+      it 'should work', (done) ->
+        container.innerHTML = """
+        <style>
+          article *{
+            padding: 0;
+            margin: 0
+          }
+        </style>
+        <article id="article1">
+          <div class="media"></div>
+          <h2 class="title" id="title1"><span style="display:block; height: 20px; width: 10px"></span></h2>
+          <p class="desc" id="desc1"><span style="display:block; height: 40px; width: 10px"></span></p>
+        </article>
+        <article id="article2">
+          <div class="media"></div>
+          <h2 class="title" id="title2"><span style="display:block; height: 10px; width: 10px"></span></h2>
+          <p class="desc" id="desc2"><span style="display:block; height: 30px; width: 10px"></span></p>
+        </article>
+
+        <style type="text/gss">
+          ::scope[width] == 300;
+          ::scope[left] == 0;
+          ::scope[top] == 0;
+
+          @v |(article)... in(::scope) {
+            height: >= 0;
+          }
+
+          article {
+            @v |
+                -1-
+                (& .title)
+                -2-
+                (& .desc)
+                -3-
+                | 
+                in(&) {
+                  height: == ::[intrinsic-height];
+            }
+          }
+
+        </style>
+        """
+
+        engine.then (solution) ->
+          expectation = 
+            "$article1[height]": 66
+            "$article1[y]": 0
+
+            "$desc1[height]": 40
+            "$title1[height]": 20
+
+            "$title1[y]": 1
+            "$desc1[y]": 23
+
+            "$article2[height]": 46
+            "$article2[y]": 66
+            "$desc2[height]": 30
+            "$desc2[y]": 13 + 66
+            "$title2[height]": 10
+            "$title2[y]": 1 + 66
+          for prop, value of expectation
+            expect(solution[prop]).to.eql value
+
+          article = engine.$id('article1')
+          engine.scope.appendChild(article)
+
+          engine.then (solution) ->
+            expect(solution).to.eql 
+              "$title1[y]": 1 + 46
+              "$desc1[y]": 23 + 46
+ 
+              "$article2[y]": 0
+              "$article1[y]": 46
+              "$desc2[y]": 13
+              "$title2[y]": 1
+
+            article = engine.$id('article2')
+            engine.scope.appendChild(article)
+
+            engine.then (solution) ->
+              expect(solution).to.eql 
+
+                "$article1[y]": 0
+
+                "$title1[y]": 1
+                "$desc1[y]": 23
+
+                "$article2[y]": 66
+                "$desc2[y]": 13 + 66
+                "$title2[y]": 1 + 66
+
+
+              title1 = engine.$id('title1')
+              title1.parentNode.removeChild(title1)
+
+              engine.then (solution) ->
+                expect(solution[''])
+                expect(solution).to.eql
+                  "$article1[height]": 0
+                  "$article2[y]": 0
+                  "$desc1[y]": -43
+                  "$desc2[y]": 13
+                  "$title1[height]": null
+                  "$title1[intrinsic-height]": null
+                  "$title1[y]": null
+                  "$title2[y]": 1
+                engine.scope.innerHTML = ""
+                engine.then ->
+                  expect(engine.values).to.eql {}
+                  done()
+    describe "new VFL input", ->
+      it 'should work', (done) ->
+        container.innerHTML = """
+        <div id="boxA" class="box"></div>
+        <div id="boxB" class="box"></div>
+        <div id="box2" class="box"></div>
+        <div id="box3"></div>
+        <div id="container"></div>
+
+        <style type="text/gss">
+          #container[width] == 300;
+          #container[left] == 0;
+          [gap] >= 0;
+
+          @h |- (.box)-10-... - (#box2) (#box3)-| gap([gap]) in(#container) {
+ 
+            width: == &:next[width]; // replacement for chain-width()
+           
+            top: == ::window[top]; // replacement for chain-top(::window[top])
+          }
+        </style>
+        """
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql 
+            "::window[y]": 0
+            "$box2[width]": 70
+            "$box2[x]": 160
+            "$box2[y]": 0
+            "$box3[width]": 70
+            "$box3[x]": 230
+            "$box3[y]": 0
+            "$boxA[width]": 70
+            "$boxA[x]": 0
+            "$boxA[y]": 0
+            "$boxB[width]": 70
+            "$boxB[x]": 80
+            "$boxB[y]": 0
+            "$container[width]": 300
+            "$container[x]": 0
+            "gap": 0
+          done()
+
+    describe "new VFL output", ->
+      it 'should work', (done) ->
+        container.innerHTML = """
+        <div id="boxA" class="box"></div>
+        <div id="boxB" class="box"></div>
+        <div id="box2" class="box"></div>
+        <div id="box3"></div>
+        <div id="container"></div>
+
+        <style type="text/gss">
+          #container[width] == 300;
+          #container[left] == 0;
+          [gap] >= 0;
+
+          .box, #box2, #box3 {
+            &[width] == (&:next)[width];
+            &[top] == ::window[top];
+          }
+          
+          #container[left] + [gap] == (.box:first)[left];
+           
+          .box {
+            &[right] + 10 == (&:next)[left];
+          }
+
+          (.box:last)[right] + [gap] == (#box2)[left];
+           
+          #box2[right] == #box3[left];
+          #box3[right] + [gap] == #container[right];
+           
+        </style>
+        """
+        GSS.console.profile(1)
+        engine.once 'solve', (solution) ->
+          GSS.console.profileEnd(1)
+          expect(solution).to.eql 
+            "::window[y]": 0
+            "$box2[width]": 70
+            "$box2[x]": 160
+            "$box2[y]": 0
+            "$box3[width]": 70
+            "$box3[x]": 230
+            "$box3[y]": 0
+            "$boxA[width]": 70
+            "$boxA[x]": 0
+            "$boxA[y]": 0
+            "$boxB[width]": 70
+            "$boxB[x]": 80
+            "$boxB[y]": 0
+            "$container[width]": 300
+            "$container[x]": 0
+            "gap": 0
+          done()
+        
     describe '[::] VFLs II', ->
   
       it 'should compute', (done) ->
-        engine.once 'solved', (e) ->     
-          expect(engine.vars).to.eql      
+        engine.once 'solve', (solution) ->     
+          expect(solution).to.eql      
             "$s1[x]": 20,
             "$container[x]": 10,
             "$s2[x]": 20,
@@ -1359,7 +2958,7 @@ describe 'End - to - End', ->
               } 
                      
               .section {
-                @horizontal |-[::this]-| gap(10) in(#container);
+                @horizontal |-(::this)-| gap(10) in(#container);
               }                                           
   
             </style>
@@ -1368,11 +2967,11 @@ describe 'End - to - End', ->
     describe '<points>', ->
   
       it 'should compute', (done) ->
-        engine.once 'solved', (e) ->
-          expect(engine.vars).to.eql                  
+        engine.once 'solve', (solution) ->
+          expect(solution).to.eql                  
             "$container[x]": 10,
             "$container[width]": 100,
-            "[right-edge]": 200,
+            "right-edge": 200,
             "$s1[x]": 70,
             "$s1[width]": 120
             "$s2[x]": 200,
@@ -1391,7 +2990,7 @@ describe 'End - to - End', ->
               
               [right-edge] == 200;
               
-              @h <#container[center-x]>-[#s1]-<[right-edge]> [#s2] < 1000 + 1 > gap(10);     
+              @h <#container[center-x]>-(#s1)-<[right-edge]> (#s2) < 1000 + 1 > gap(10);     
   
             </style>
           """ 
@@ -1404,14 +3003,14 @@ describe 'End - to - End', ->
             <div id="here"></div>
             <div id="container"></div>
             <style type="text/gss">                        
-              @h |-10-[#here]-[#gone]-[#gone2]-[#gone3]-10-|
+              @h |-10-(#here)-(#gone)-(#gone2)-(#gone3)-10-|
                 in(#container)
                 chain-height([but_height] !strong)
                 chain-center-y(#top-nav[center-y]) 
                 !require;                                    
             </style>
           """
-        engine.once 'solved', (e) ->     
+        engine.once 'solve', (e) ->     
           assert true
           done()  
     

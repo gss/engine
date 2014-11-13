@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Helper.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Helper.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Exports given commands as self-contained functions 
+to be used as helpers in user scripts and specs</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-function"><span class="hljs-title">Helper</span> = <span class="hljs-params">(command, scoped, displayName)</span>  -&gt;</span>
+  <span class="hljs-keyword">if</span> displayName == <span class="hljs-string">'_get'</span>
+    <span class="hljs-keyword">debugger</span>
+  <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> command == <span class="hljs-string">'function'</span>
+    func = command
+  <span class="hljs-function"><span class="hljs-title">helper</span> = <span class="hljs-params">(scope)</span> -&gt;</span>
+    args = Array.prototype.slice.call(arguments, <span class="hljs-number">0</span>)
+    length = arguments.length
+    <span class="hljs-keyword">if</span> scoped || command.serialized
+      <span class="hljs-keyword">unless</span> scope &amp;&amp; scope.nodeType
+        scope = <span class="hljs-property">@scope</span> || <span class="hljs-built_in">document</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> command[args.length] == <span class="hljs-string">'string'</span>
+          context = scope
+        <span class="hljs-keyword">else</span>
+          args.unshift(scope)
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> command[args.length - <span class="hljs-number">1</span>] == <span class="hljs-string">'string'</span>
+          context = scope = args.shift()
+
+    <span class="hljs-keyword">unless</span> fn = func
+      <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> (method = command[args.length]) == <span class="hljs-string">'function'</span>
+        fn = method
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-keyword">unless</span> method &amp;&amp; (fn = scope[method])
+          <span class="hljs-keyword">if</span> fn = <span class="hljs-property">@commands</span>[method]
+            context = @
+          <span class="hljs-keyword">else</span>
+            fn = command.command
+            args = [<span class="hljs-literal">null</span>, args[<span class="hljs-number">2</span>], <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, args[<span class="hljs-number">0</span>], args[<span class="hljs-number">1</span>]]
+
+    <span class="hljs-keyword">return</span> fn.apply(context || @, args)
+  <span class="hljs-keyword">if</span> displayName
+    helper.displayName = displayName 
+  <span class="hljs-keyword">return</span> helper
+
+<span class="hljs-built_in">module</span>.exports = Helper</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

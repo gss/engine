@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Expressions.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Expressions.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h3 id="input-expressions">Input: Expressions</h3>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Interepretes given expressions lazily top-down, </p>
+<p>If sub-expression returns nodelist,
+it recursively evaluates expression bottom-up 
+for each element in nodelist</p>
+<p>Document expressions output expressions for solver.
+Solver expressions output and apply constraints.</p>
+<ul>
+<li><strong>Input</strong>: Engine, reads commands</li>
+<li><strong>Output</strong>: Engine, outputs results, leaves unknown commands</li>
+</ul>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+
+Buffer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'../concepts/Buffer'</span>)
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Expressions</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Buffer</span></span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@engine</span>, <span class="hljs-property">@output</span>)</span> -&gt;</span>
+    <span class="hljs-property">@commands</span> = <span class="hljs-property">@engine</span> &amp;&amp; <span class="hljs-property">@engine</span>.commands || @
+    <span class="hljs-property">@input</span> = <span class="hljs-string">'evaluate'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Hook: Output commands in batch</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">push</span>: <span class="hljs-function"><span class="hljs-params">(args, batch)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> args?
+    <span class="hljs-keyword">if</span> (buffer = <span class="hljs-property">@buffer</span>) != <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">unless</span> <span class="hljs-property">@engine</span>.onBuffer &amp;&amp; <span class="hljs-property">@engine</span>.onBuffer(buffer, args, batch) == <span class="hljs-literal">false</span>
+        (buffer || (<span class="hljs-property">@buffer</span> = [])).push args
+      <span class="hljs-keyword">return</span>
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-property">@output</span>.pull.apply(<span class="hljs-property">@output</span>, args)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Output buffered commands</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">flush</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@engine</span>.onFlush
+      added = <span class="hljs-property">@engine</span>.onFlush(<span class="hljs-property">@buffer</span>)
+    buffer = <span class="hljs-property">@buffer</span> &amp;&amp; added &amp;&amp; added.concat(<span class="hljs-property">@buffer</span>) || <span class="hljs-property">@buffer</span> || added
+    <span class="hljs-property">@lastOutput</span> = <span class="hljs-property">@engine</span>.clone buffer
+
+    <span class="hljs-keyword">if</span> buffer
+      <span class="hljs-property">@buffer</span> = <span class="hljs-literal">undefined</span>
+      <span class="hljs-property">@output</span>.pull(buffer)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>else if @buffer == undefined
+ @engine.push()</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">else</span>
+      <span class="hljs-property">@buffer</span> = <span class="hljs-literal">undefined</span>
+    <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>.groupEnd()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Evaluate operation depth first</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">evaluate</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, ascender, ascending)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Analyze operation once</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">unless</span> operation.def
+      <span class="hljs-property">@analyze</span>(operation)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Use custom argument evaluator of parent operation if it has one</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> meta != operation &amp;&amp; (evaluate = operation.parent?.def.evaluate)
+      evaluated = evaluate.call(<span class="hljs-property">@engine</span>, operation, continuation, scope, meta, ascender, ascending)
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> evaluated == <span class="hljs-literal">false</span>
+      <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> evaluated == <span class="hljs-string">'string'</span>
+        continuation = evaluated</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Use a shortcut operation when possible (e.g. native dom query)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> operation.tail
+      operation = <span class="hljs-property">@skip</span>(operation, ascender)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Use computed result by parsing continuation string</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> continuation &amp;&amp; operation.path
+      <span class="hljs-keyword">if</span> (result = <span class="hljs-property">@reuse</span>(operation.path, continuation)) != <span class="hljs-literal">false</span>
+        <span class="hljs-keyword">return</span> result</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Recursively evaluate arguments,stop on undefined</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    args = <span class="hljs-property">@resolve</span>(operation, continuation, scope, meta, ascender, ascending)
+    
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> args == <span class="hljs-literal">false</span>
+
+    <span class="hljs-keyword">if</span> operation.name
+      <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>.row(operation, args, continuation || <span class="hljs-string">""</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Execute function and log it in continuation path</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> operation.def.noop
+      result = args
+    <span class="hljs-keyword">else</span>
+      result = <span class="hljs-property">@execute</span>(operation, continuation, scope, meta, args)
+      contd = continuation
+      continuation = <span class="hljs-property">@engine</span>.getOperationPath(operation, continuation)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Ascend the execution (fork for each item in collection)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-property">@ascend</span>(operation, continuation, result, scope, meta, ascender)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Get result of executing operation with resolved arguments</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">execute</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, args)</span> -&gt;</span>
+    scope ||= <span class="hljs-property">@engine</span>.scope</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Command needs current context (e.g. ::this)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> operation.def.scoped || !args
+      node = scope
+      (args ||= []).unshift scope</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Operation has a context </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> operation.def.meta
+      (args ||= []).push operation, continuation, scope, meta
+    <span class="hljs-keyword">else</span>
+      node = <span class="hljs-property">@engine</span>.getContext(args, operation, scope, node)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Use function, or look up method on the first argument. Falls back to builtin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">unless</span> func = operation.func
+      <span class="hljs-keyword">if</span> method = operation.method
+        <span class="hljs-keyword">if</span> node &amp;&amp; func = node[method]
+          args.shift() <span class="hljs-keyword">if</span> args[<span class="hljs-number">0</span>] == node
+          context = node
+        <span class="hljs-keyword">unless</span> func
+          <span class="hljs-keyword">if</span> !context &amp;&amp; (func = scope[method])
+            context = scope
+          <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> command = <span class="hljs-property">@commands</span>[method]
+            func = <span class="hljs-property">@engine</span>[command.displayName]
+
+    <span class="hljs-keyword">unless</span> func
+      <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> Error(<span class="hljs-string">"Couldn't find method: <span class="hljs-subst">#{operation.method}</span>"</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Let context lookup for cached value</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> onBefore = operation.def.before
+      result = <span class="hljs-property">@engine</span>[onBefore](context || node || scope, args, operation, continuation, scope)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Execute the function</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> result == <span class="hljs-literal">undefined</span>
+      result = func.apply(context || <span class="hljs-property">@engine</span>, args)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Let context transform or filter the result</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> onAfter = operation.def.after
+      result = <span class="hljs-property">@engine</span>[onAfter](context || node || scope, args, result, operation, continuation, scope)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>If it’s NaN, then we’ve done some bad math, leave it to solver</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">unless</span> result == result
+      args.unshift operation.name
+      <span class="hljs-keyword">return</span> args
+      
+    <span class="hljs-keyword">return</span> result</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>Try to read saved results within continuation</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">reuse</span>: <span class="hljs-function"><span class="hljs-params">(path, continuation)</span> -&gt;</span>
+    length = path.length
+    <span class="hljs-keyword">for</span> key <span class="hljs-keyword">in</span> continuation.split(<span class="hljs-property">@engine</span>.RIGHT)
+      bit = key
+      <span class="hljs-keyword">if</span> (index = bit.lastIndexOf(<span class="hljs-property">@engine</span>.DOWN)) &gt; -<span class="hljs-number">1</span>
+        bit = bit.substring(index + <span class="hljs-number">1</span>)
+      <span class="hljs-keyword">if</span> bit == path || bit.substring(<span class="hljs-number">0</span>, path.length) == path
+        <span class="hljs-keyword">if</span> length &lt; bit.length &amp;&amp; bit.charAt(length) == <span class="hljs-string">'$'</span>
+          <span class="hljs-keyword">return</span> <span class="hljs-property">@engine</span>.elements[bit.substring(length)]
+        <span class="hljs-keyword">else</span>
+          <span class="hljs-keyword">return</span> <span class="hljs-property">@engine</span>.queries[key]
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>Evaluate operation arguments in order, break on undefined</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">resolve</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, ascender, ascending)</span> -&gt;</span>
+    args = prev = <span class="hljs-literal">undefined</span>
+    skip = operation.skip
+    shift = <span class="hljs-number">0</span>
+    offset = operation.offset || <span class="hljs-number">0</span>
+    <span class="hljs-keyword">for</span> argument, index <span class="hljs-keyword">in</span> operation
+      <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> offset &gt; index
+      <span class="hljs-keyword">if</span> (!offset &amp;&amp; index == <span class="hljs-number">0</span> &amp;&amp; !operation.def.noop)
+        args = [operation, continuation || operation.path, scope, meta]
+        shift += <span class="hljs-number">3</span>
+        <span class="hljs-keyword">continue</span>
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> ascender == index
+        argument = ascending
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> skip == index
+        shift--
+        <span class="hljs-keyword">continue</span>
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> argument <span class="hljs-keyword">instanceof</span> Array</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>Leave forking mark in a path when resolving next arguments</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> ascender?
+          mark = operation.def.rule &amp;&amp; ascender == <span class="hljs-number">1</span> &amp;&amp; <span class="hljs-property">@engine</span>.DOWN || <span class="hljs-property">@engine</span>.RIGHT
+          <span class="hljs-keyword">if</span> mark
+            contd = <span class="hljs-property">@engine</span>.getContinuation(continuation, <span class="hljs-literal">null</span>, mark)
+          <span class="hljs-keyword">else</span>
+            contd = continuation
+        argument = <span class="hljs-property">@evaluate</span>(argument, contd || continuation, scope, meta, <span class="hljs-literal">undefined</span>, prev)
+      <span class="hljs-keyword">if</span> argument == <span class="hljs-literal">undefined</span>
+        <span class="hljs-keyword">if</span> !operation.def.eager || ascender?
+          <span class="hljs-keyword">if</span> operation.def.capture <span class="hljs-keyword">and</span> 
+          (<span class="hljs-keyword">if</span> operation.parent <span class="hljs-keyword">then</span> operation.def.noop <span class="hljs-keyword">else</span> !operation.name)
+
+            stopping = <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Lists are allowed to continue execution when they hit undefined</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!operation.def.noop || operation.name)
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+            
+        offset += <span class="hljs-number">1</span>
+        <span class="hljs-keyword">continue</span>
+      (args ||= [])[index - offset + shift] = prev = argument
+    <span class="hljs-keyword">return</span> args</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Pass control back to parent operation. 
+If child op returns DOM collection or node, evaluator recurses to do so.
+When recursion unrolls all caller ops are discarded</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">ascend</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, result, scope, meta, ascender)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> result?
+      <span class="hljs-keyword">if</span> (parent = operation.parent) || operation.def.noop</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>For each node in collection, we recurse to a parent op with a distinct continuation key</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> parent &amp;&amp; <span class="hljs-property">@engine</span>.isCollection?(result)
+          <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>.group <span class="hljs-string">'%s \t\t\t\t%o\t\t\t%c%s'</span>, <span class="hljs-property">@engine</span>.UP, operation.parent, <span class="hljs-string">'font-weight: normal; color: #999'</span>, continuation
+          <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> result
+            breadcrumbs = <span class="hljs-property">@engine</span>.getContinuation(continuation, item, <span class="hljs-property">@engine</span>.UP)
+            <span class="hljs-property">@evaluate</span> operation.parent, breadcrumbs, scope, meta, operation.index, item
+
+          <span class="hljs-property">@engine</span>.<span class="hljs-built_in">console</span>.groupEnd()
+          <span class="hljs-keyword">return</span>
+        <span class="hljs-keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>Some operations may capture its arguments (e.g. comma captures nodes by subselectors)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          captured = parent?.def.capture?.call(<span class="hljs-property">@engine</span>, result, operation, continuation, scope, meta)
+          <span class="hljs-keyword">switch</span> captured
+            <span class="hljs-keyword">when</span> <span class="hljs-literal">true</span> <span class="hljs-keyword">then</span> <span class="hljs-keyword">return</span>
+            <span class="hljs-keyword">else</span> 
+              <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> captured == <span class="hljs-string">'string'</span>
+                continuation = captured
+                operation = operation.parent
+                parent = parent.parent</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>Topmost operations produce output
+TODO: Refactor this mess of nested conditions</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>          <span class="hljs-keyword">if</span> operation.def.noop &amp;&amp; operation.name &amp;&amp; result.length == <span class="hljs-number">1</span>
+            <span class="hljs-keyword">return</span> 
+          <span class="hljs-keyword">if</span> operation.def.noop || (parent.def.noop &amp;&amp; !parent.name)
+            <span class="hljs-keyword">if</span> result &amp;&amp; (!parent || (parent.def.noop &amp;&amp; (!parent.parent || parent.length == <span class="hljs-number">1</span>) || ascender?))
+              <span class="hljs-keyword">if</span> result.length == <span class="hljs-number">1</span>
+                result = result[<span class="hljs-number">0</span>]
+              <span class="hljs-keyword">unless</span> meta == <span class="hljs-string">'return'</span>
+                <span class="hljs-keyword">return</span> <span class="hljs-property">@push</span> result
+          <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> parent &amp;&amp; (ascender? || (result.nodeType &amp;&amp; (!operation.def.hidden || parent.tail == parent)))
+            <span class="hljs-property">@evaluate</span> parent, continuation, scope, meta, operation.index, result
+            <span class="hljs-keyword">return</span> 
+          <span class="hljs-keyword">else</span>
+            <span class="hljs-keyword">return</span> result
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">unless</span> meta == <span class="hljs-string">'return'</span> 
+        <span class="hljs-keyword">return</span> <span class="hljs-property">@push</span> result</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>Ascend without recursion (math, regular functions, constraints)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> result</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Advance to a groupped shortcut operation</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">skip</span>: <span class="hljs-function"><span class="hljs-params">(operation, ascender)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> (operation.tail.path == operation.tail.key || ascender?)
+      <span class="hljs-keyword">return</span> operation.tail.shortcut ||= 
+        <span class="hljs-property">@engine</span>.commands[operation.def.group].perform.call(<span class="hljs-property">@engine</span>, operation)
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> operation.tail[<span class="hljs-number">1</span>]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>Process and pollute a single AST node with meta data.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">analyze</span>: <span class="hljs-function"><span class="hljs-params">(operation, parent)</span> -&gt;</span>
+
+    operation.name = operation[<span class="hljs-number">0</span>] <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> operation[<span class="hljs-number">0</span>] == <span class="hljs-string">'string'</span>
+    def = <span class="hljs-property">@commands</span>[operation.name]
+        
+    <span class="hljs-keyword">if</span> parent
+      operation.parent = parent
+      operation.index = parent.indexOf(operation)
+      <span class="hljs-keyword">if</span> parent.bound || parent.def?.bound == operation.index
+        operation.bound = <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-33">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-33">&#182;</a>
+              </div>
+              <p>Handle commands that refer other commands (e.g. [$combinator, node, &gt;])</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    operation.arity = operation.length - <span class="hljs-number">1</span>
+    <span class="hljs-keyword">if</span> def &amp;&amp; def.lookup
+      <span class="hljs-keyword">if</span> operation.arity &gt; <span class="hljs-number">1</span>
+        operation.arity-- 
+        operation.skip = operation.length - operation.arity
+      <span class="hljs-keyword">else</span>
+        operation.skip = <span class="hljs-number">1</span>
+      operation.name = (def.prefix || <span class="hljs-string">''</span>) + operation[operation.skip] + (def.suffix || <span class="hljs-string">''</span>)
+      otherdef = def
+      <span class="hljs-keyword">switch</span> <span class="hljs-keyword">typeof</span> def.lookup
+        <span class="hljs-keyword">when</span> <span class="hljs-string">'function'</span>
+          def = def.lookup.call(@, operation)
+        <span class="hljs-keyword">when</span> <span class="hljs-string">'string'</span>
+          def = <span class="hljs-property">@commands</span>[def.lookup + operation.name]
+        <span class="hljs-keyword">else</span>
+          def = <span class="hljs-property">@commands</span>[operation.name]
+      
+    operation.def = def ||= {<span class="hljs-attribute">noop</span>: <span class="hljs-literal">true</span>}
+
+    <span class="hljs-keyword">for</span> child, index <span class="hljs-keyword">in</span> operation
+      <span class="hljs-keyword">if</span> child <span class="hljs-keyword">instanceof</span> Array
+        <span class="hljs-property">@analyze</span>(child, operation)
+
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> def.noop
+
+    <span class="hljs-keyword">if</span> def.serialized</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-34">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-34">&#182;</a>
+              </div>
+              <p>String representation of operation without complex arguments</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      operation.key  = <span class="hljs-property">@serialize</span>(operation, otherdef, <span class="hljs-literal">false</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-35">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-35">&#182;</a>
+              </div>
+              <p>String representation of operation with all types of arguments</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      operation.path = <span class="hljs-property">@serialize</span>(operation, otherdef)
+
+      <span class="hljs-keyword">if</span> def.group</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-36">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-36">&#182;</a>
+              </div>
+              <p>String representation of operation with arguments filtered by type</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        operation.groupped = <span class="hljs-property">@serialize</span>(operation, otherdef, def.group)
+
+    <span class="hljs-keyword">if</span> def.init
+      <span class="hljs-property">@engine</span>[def.init](operation, <span class="hljs-literal">false</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-37">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-37">&#182;</a>
+              </div>
+              <p>Try predefined command if can’t dispatch by number of arguments</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> def == <span class="hljs-string">'function'</span>
+      func = def
+      operation.offset = <span class="hljs-number">1</span>
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> func = def[operation.arity]
+      operation.offset = <span class="hljs-number">1</span>
+    <span class="hljs-keyword">else</span>
+      func = def.command
+    operation.offset ?= def.offset <span class="hljs-keyword">if</span> def.offset</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-38">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>Command may resolve to method, which will be called on the first argument</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> func == <span class="hljs-string">'string'</span>
+      operation.method = func
+    <span class="hljs-keyword">else</span>
+      operation.func = func
+
+    <span class="hljs-keyword">return</span> operation</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-39">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>Serialize operation to a string with arguments, but without context</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">serialize</span>: <span class="hljs-function"><span class="hljs-params">(operation, otherdef, group)</span> -&gt;</span>
+    def = operation.def
+    prefix = def.prefix || (otherdef &amp;&amp; otherdef.prefix) || (operation.def.noop &amp;&amp; operation.name) || <span class="hljs-string">''</span>
+    suffix = def.suffix || (otherdef &amp;&amp; otherdef.suffix) || <span class="hljs-string">''</span>
+    separator = operation.def.separator
+    
+    after = before = <span class="hljs-string">''</span>
+    <span class="hljs-keyword">for</span> index <span class="hljs-keyword">in</span> [<span class="hljs-number">1</span> ... operation.length]
+      <span class="hljs-keyword">if</span> op = operation[index]
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> op != <span class="hljs-string">'object'</span>
+          after += op
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> op.key &amp;&amp; group != <span class="hljs-literal">false</span>
+          <span class="hljs-keyword">if</span> (group &amp;&amp; (groupper = <span class="hljs-property">@commands</span>[group]))
+            <span class="hljs-keyword">if</span> (op.def.group == group)
+              <span class="hljs-keyword">if</span> tail = op.tail ||= (groupper.condition(op) &amp;&amp; op)
+                operation.groupped = groupper.promise(op, operation)
+                tail.head = operation
+                operation.tail = tail
+                before += (before &amp;&amp; separator || <span class="hljs-string">''</span>) + op.groupped || op.key
+              <span class="hljs-keyword">else</span> <span class="hljs-keyword">continue</span>
+            <span class="hljs-keyword">else</span>
+              group = <span class="hljs-literal">false</span> 
+              <span class="hljs-keyword">continue</span>
+          <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> separator
+            before += (before &amp;&amp; separator || <span class="hljs-string">''</span>) + op.path
+          <span class="hljs-keyword">else</span>
+            before += op.path
+
+    <span class="hljs-keyword">return</span> before + prefix + after + suffix
+
+
+<span class="hljs-built_in">module</span>.exports = Expressions</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

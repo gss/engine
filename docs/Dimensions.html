@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Dimensions.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Dimensions.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Dimensions</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Global variables managed by the engine</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+
+  <span class="hljs-string">'::window'</span>:
+      
+    <span class="hljs-attribute">width</span>:<span class="hljs-function"> -&gt;</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-built_in">window</span>.innerWidth
+
+    <span class="hljs-attribute">height</span>:<span class="hljs-function"> -&gt;</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-built_in">window</span>.innerHeight
+
+    <span class="hljs-attribute">scroll</span>:
+
+      <span class="hljs-attribute">left</span>:<span class="hljs-function"> -&gt;</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">window</span>.pageXOffset || <span class="hljs-built_in">document</span>.documentElement.scrollLeft || <span class="hljs-built_in">document</span>.body.scrollLeft 
+
+      <span class="hljs-attribute">top</span>:<span class="hljs-function"> -&gt;</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-built_in">window</span>.pageYOffset || <span class="hljs-built_in">document</span>.documentElement.scrollTop || <span class="hljs-built_in">document</span>.body.scrollTop 
+
+
+    <span class="hljs-attribute">x</span>: <span class="hljs-number">0</span>
+
+    <span class="hljs-attribute">y</span>: <span class="hljs-number">0</span>
+
+  <span class="hljs-string">'::document'</span>:
+
+    <span class="hljs-attribute">scroll</span>:
+      <span class="hljs-attribute">left</span>: <span class="hljs-string">'::window[scroll-left]'</span>
+      <span class="hljs-attribute">top</span>: <span class="hljs-string">'::window[scroll-top]'</span>
+      
+    <span class="hljs-attribute">x</span>: <span class="hljs-string">'::window[x]'</span>
+    <span class="hljs-attribute">y</span>: <span class="hljs-string">'::window[y]'</span>
+
+  <span class="hljs-attribute">intrinsic</span>:
+
+    <span class="hljs-attribute">height</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.offsetHeight
+
+    <span class="hljs-attribute">width</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.offsetWidth
+
+    <span class="hljs-attribute">y</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      y = <span class="hljs-number">0</span>
+      <span class="hljs-keyword">while</span> element
+        y += element.offsetTop
+        element = element.offsetParent
+        <span class="hljs-keyword">if</span> element == <span class="hljs-property">@scope</span> || !element
+          <span class="hljs-keyword">break</span>
+        <span class="hljs-keyword">if</span> element == <span class="hljs-property">@scope</span>.offsetParent
+          y -= <span class="hljs-property">@scope</span>.offsetTop
+      <span class="hljs-keyword">return</span> y
+
+    <span class="hljs-attribute">x</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      x = <span class="hljs-number">0</span>
+      <span class="hljs-keyword">while</span> element
+        x += element.offsetLeft
+        element = element.offsetParent
+        <span class="hljs-keyword">if</span> element == <span class="hljs-property">@scope</span> || !element
+          <span class="hljs-keyword">break</span>
+        <span class="hljs-keyword">if</span> element == <span class="hljs-property">@scope</span>.offsetParent
+          x -= <span class="hljs-property">@scope</span>.offsetLeft
+      <span class="hljs-keyword">return</span> x
+
+  <span class="hljs-attribute">scroll</span>:
+
+    <span class="hljs-attribute">left</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.scrollLeft
+
+    <span class="hljs-attribute">top</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.scrollTop
+
+    <span class="hljs-attribute">height</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.scrollHeight
+
+    <span class="hljs-attribute">width</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.scrollWidth
+      
+  <span class="hljs-attribute">client</span>:
+
+    <span class="hljs-attribute">left</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.clientLeft
+
+    <span class="hljs-attribute">top</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.clientTop
+
+    <span class="hljs-attribute">height</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.clientHeight
+
+    <span class="hljs-attribute">width</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.clientWidth
+
+  <span class="hljs-attribute">offset</span>:
+
+    <span class="hljs-attribute">left</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.offsetLeft
+
+    <span class="hljs-attribute">top</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.offsetTop
+
+    <span class="hljs-attribute">height</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.offsetHeight
+
+    <span class="hljs-attribute">width</span>: <span class="hljs-function"><span class="hljs-params">(element)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> element.offsetWidth
+
+<span class="hljs-built_in">module</span>.exports = Dimensions</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

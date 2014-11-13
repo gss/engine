@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Transformations.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Transformations.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Transformations</span></span>
+  <span class="hljs-property">@Matrix</span>: <span class="hljs-built_in">require</span>(<span class="hljs-string">'../../vendor/gl-matrix'</span>)
+
+  <span class="hljs-attribute">matrix</span>:<span class="hljs-function"> -&gt;</span>
+
+  <span class="hljs-attribute">matrix3d</span>:<span class="hljs-function"> -&gt;</span>
+
+  <span class="hljs-attribute">_transform</span>: <span class="hljs-function"><span class="hljs-params">(matrix, method, a, b, c)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> matrix.length == <span class="hljs-number">9</span>
+      <span class="hljs-keyword">return</span> mat3[method](matrix, matrix, a, b, c)
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-keyword">return</span> mat4[method](matrix, matrix, a, b, c)
+
+  <span class="hljs-attribute">_transform3d</span>: <span class="hljs-function"><span class="hljs-params">(matrix, method, a, b, c)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> matrix.length == <span class="hljs-number">9</span>
+      matrix = mat4.fromMat3(matrix)
+    <span class="hljs-keyword">return</span> mat4[method](matrix, matrix, a, b, c)
+
+  <span class="hljs-attribute">translate</span>: [
+    <span class="hljs-function"><span class="hljs-params">(matrix, x, y = x)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'translate'</span>, [x, y]
+    <span class="hljs-string">"3d"</span>: <span class="hljs-function"><span class="hljs-params">(matrix, x, y = x, z = <span class="hljs-number">0</span>)</span> -&gt;</span>
+      <span class="hljs-keyword">if</span> z == <span class="hljs-number">0</span>
+        <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'translate'</span>, [x, y]
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-property">@_transform3d</span> matrix, <span class="hljs-string">'translate'</span>, [x, y, z]
+    <span class="hljs-attribute">x</span>: <span class="hljs-function"><span class="hljs-params">(matrix, x)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'translate'</span>, [x, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>]
+    <span class="hljs-attribute">y</span>: <span class="hljs-function"><span class="hljs-params">(matrix, y)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'translate'</span>, [<span class="hljs-number">1</span>, y, <span class="hljs-number">1</span>]
+    <span class="hljs-attribute">z</span>: <span class="hljs-function"><span class="hljs-params">(matrix, z)</span> -&gt;</span>
+      <span class="hljs-property">@_transform3d</span> matrix, <span class="hljs-string">'translate'</span>, [<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, z]
+  ]
+
+  <span class="hljs-attribute">rotate</span>: [
+    <span class="hljs-function"><span class="hljs-params">(matrix, x, y, angle)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'rotate'</span>, [x, y], angle
+    <span class="hljs-string">"3d"</span>: <span class="hljs-function"><span class="hljs-params">(matrix, x, y, z, angle)</span> -&gt;</span>
+      <span class="hljs-property">@_transform3d</span> matrix, <span class="hljs-string">'rotate'</span>, [x, y, z], angle
+    <span class="hljs-attribute">x</span>: <span class="hljs-function"><span class="hljs-params">(matrix, x)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'rotateX'</span>, x
+    <span class="hljs-attribute">y</span>: <span class="hljs-function"><span class="hljs-params">(matrix, y)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'rotateY'</span>, y
+    <span class="hljs-attribute">z</span>: <span class="hljs-function"><span class="hljs-params">(matrix, z)</span> -&gt;</span>
+      <span class="hljs-property">@_transform3d</span> matrix, <span class="hljs-string">'rotateZ'</span>, z
+  ]
+
+  <span class="hljs-attribute">scale</span>: [
+    <span class="hljs-function"><span class="hljs-params">(matrix, x, y = x, z = <span class="hljs-number">1</span>)</span> -&gt;</span>
+      <span class="hljs-keyword">if</span> z == <span class="hljs-number">1</span>
+        <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'scale'</span>, [x, y]
+      <span class="hljs-keyword">else</span>
+        <span class="hljs-property">@_transform3d</span> matrix, <span class="hljs-string">'scale'</span>, [x, y, z]
+    <span class="hljs-attribute">x</span>: <span class="hljs-function"><span class="hljs-params">(matrix, x)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'scale'</span>, [x, <span class="hljs-number">1</span>, <span class="hljs-number">1</span>]
+    <span class="hljs-attribute">y</span>: <span class="hljs-function"><span class="hljs-params">(matrix, y)</span> -&gt;</span>
+      <span class="hljs-property">@_transform</span> matrix, <span class="hljs-string">'scale'</span>, [<span class="hljs-number">1</span>, y, <span class="hljs-number">1</span>]
+    <span class="hljs-attribute">z</span>: <span class="hljs-function"><span class="hljs-params">(matrix, z)</span> -&gt;</span>
+      <span class="hljs-property">@_transform3d</span> matrix, <span class="hljs-string">'scale'</span>, [<span class="hljs-number">1</span>, <span class="hljs-number">1</span>, z]
+  ]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <h1 id="-">#</h1>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">skew</span>: [
+    <span class="hljs-attribute">x</span>:
+    <span class="hljs-attribute">y</span>:
+  ]<span class="hljs-comment">###
+for property, value of Transformations
+  value.invoker = 'transform'
+</span></pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

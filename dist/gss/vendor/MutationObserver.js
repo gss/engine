@@ -352,6 +352,9 @@
 
     addListeners_: function(node) {
       var options = this.options;
+      
+      console.log('add listenezrs')
+      console.log(node.className || 'a', 123)
       if (options.attributes)
         node.addEventListener('DOMAttrModified', this, true);
 
@@ -433,6 +436,7 @@
       e.stopImmediatePropagation();
 
       switch (e.type) {
+        console.error('e.type', e.type)
         case 'DOMAttrModified':
           // http://dom.spec.whatwg.org/#concept-mo-queue-attributes
 

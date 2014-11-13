@@ -33,10 +33,6 @@
 (function(c) {
 "use strict";
 
-var keyCode = function(key) {
-  return key.hashCode;
-};
-
 var copyOwn = function(src, dest) {
   Object.keys(src).forEach(function(x) {
     dest[x] = src[x];

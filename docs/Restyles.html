@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Restyles.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Restyles.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h2 id="output-dom-element-styles">Output: DOM element styles</h2>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  
+Applies style changes <span class="hljs-keyword">in</span> bulk, separates reflows &amp; restyles.
+Revalidates intrinsic measurements, optionally schedules 
+another solver pass</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <h1 id="-">#</h1>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Restyles</span></span>
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(<span class="hljs-property">@engine</span>)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Receive solved styles</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">pull</span>: <span class="hljs-function"><span class="hljs-params">(data)</span> -&gt;</span>
+    <span class="hljs-property">@lastInput</span> = JSON.parse JSON.stringify data
+
+    intrinsic = <span class="hljs-literal">null</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Filter out measurements </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> path, value <span class="hljs-keyword">of</span> data
+      <span class="hljs-keyword">if</span> property = <span class="hljs-property">@engine</span>.getIntrinsicProperty(path)
+        data[path] = <span class="hljs-literal">undefined</span>
+        <span class="hljs-keyword">if</span> property != <span class="hljs-string">'intrinsic-x'</span> &amp;&amp; property != <span class="hljs-string">'intrinsic-y'</span>
+          (intrinsic ||= {})[path] = value
+
+
+    positioning = <span class="hljs-property">@render</span>(data)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Re-measure elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> intrinsic
+      <span class="hljs-keyword">for</span> path, value <span class="hljs-keyword">of</span> intrinsic
+        data[path] = <span class="hljs-property">@set</span>(path, <span class="hljs-literal">undefined</span>, value, positioning, <span class="hljs-literal">true</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Merge data from previous pass</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-property">@data</span>
+      <span class="hljs-keyword">for</span> path, value <span class="hljs-keyword">of</span> <span class="hljs-property">@data</span>
+        <span class="hljs-keyword">if</span> data[path] == <span class="hljs-literal">undefined</span> &amp;&amp; value != <span class="hljs-literal">undefined</span>
+          data[path] = value
+      <span class="hljs-property">@data</span> = <span class="hljs-literal">undefined</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Launch 2nd pass for changed intrinsics if any (Resolve, Restyle, Reflow) </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@data</span> = data
+
+    <span class="hljs-keyword">if</span> suggestions = <span class="hljs-property">@engine</span>.getSuggestions()
+      <span class="hljs-property">@engine</span>.expressions.capture(suggestions.length + <span class="hljs-string">' intrinsics'</span>, suggestions)
+    <span class="hljs-keyword">else</span>
+      <span class="hljs-property">@data</span> = <span class="hljs-literal">undefined</span>
+      <span class="hljs-property">@push</span>(data)
+
+  <span class="hljs-attribute">push</span>: <span class="hljs-function"><span class="hljs-params">(data)</span> -&gt;</span>
+    <span class="hljs-property">@engine</span>.push(data)
+
+  <span class="hljs-attribute">remove</span>: <span class="hljs-function"><span class="hljs-params">(id)</span> -&gt;</span>
+    <span class="hljs-keyword">delete</span> @[id]
+
+  <span class="hljs-attribute">get</span>: <span class="hljs-function"><span class="hljs-params">(path, property, value)</span> -&gt;</span>
+    element = <span class="hljs-property">@engine</span>[path]
+    camel = (<span class="hljs-property">@camelized</span> ||= {})[property] ||= <span class="hljs-property">@engine</span>.camelize(property)
+    style = element.style
+    value = style[camel]
+    <span class="hljs-keyword">if</span> value != <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">return</span> value
+    @
+
+  <span class="hljs-attribute">set</span>: <span class="hljs-function"><span class="hljs-params">(id, property, value, positioning, intrinsic)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>parse $id[property] as [id, property]</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> property == <span class="hljs-literal">undefined</span>
+      path = id
+      last = id.lastIndexOf(<span class="hljs-string">'['</span>)
+      property = path.substring(last + <span class="hljs-number">1</span>, id.length - <span class="hljs-number">1</span>)
+      id = id.substring(<span class="hljs-number">0</span>, last)
+
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> id.charAt(<span class="hljs-number">0</span>) != <span class="hljs-string">':'</span>
+    <span class="hljs-keyword">unless</span> element = <span class="hljs-property">@engine</span>.elements[id]
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> element = <span class="hljs-property">@engine</span>.getElementById(<span class="hljs-property">@engine</span>.scope, id.substring(<span class="hljs-number">1</span>))
+    positioner = <span class="hljs-keyword">this</span>.positioners[property]
+    <span class="hljs-keyword">if</span> positioning &amp;&amp; positioner
+      (positioning[id] ||= {})[property] = value
+    <span class="hljs-keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Re-measure and re-suggest intrinsics if necessary</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> intrinsic
+        <span class="hljs-keyword">return</span> <span class="hljs-property">@engine</span>.measure(element,  property, <span class="hljs-literal">undefined</span>, value)
+        
+      <span class="hljs-keyword">if</span> positioner
+        positioned = positioner(element)
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> positioned == <span class="hljs-string">'string'</span>
+          property = positioned
+      camel = (<span class="hljs-property">@camelized</span> ||= {})[property] ||= <span class="hljs-property">@engine</span>.camelize(property)
+      style = element.style
+      <span class="hljs-keyword">if</span> style[camel] != <span class="hljs-literal">undefined</span>
+        <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> value == <span class="hljs-string">'number'</span> &amp;&amp; (camel != <span class="hljs-string">'zIndex'</span> &amp;&amp; camel != <span class="hljs-string">'opacity'</span>)
+          pixels = Math.round(value) + <span class="hljs-string">'px'</span>
+        <span class="hljs-keyword">if</span> (positioner)
+          <span class="hljs-keyword">if</span> !style[camel]
+            <span class="hljs-keyword">if</span> (style.positioning = (style.positioning || <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>) == <span class="hljs-number">1</span>
+              style.position = <span class="hljs-string">'absolute'</span>
+          <span class="hljs-keyword">else</span> <span class="hljs-keyword">unless</span> value?
+            <span class="hljs-keyword">unless</span> --style.positioning 
+              style.position = <span class="hljs-string">''</span>
+        style[camel] = pixels ? value
+    value
+
+  <span class="hljs-attribute">render</span>: <span class="hljs-function"><span class="hljs-params">(data, node)</span> -&gt;</span>
+    <span class="hljs-property">@engine</span>.queries.disconnect()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Apply changed styles in batch, 
+leave out positioning properties (Restyle/Reflow)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    positioning = {}
+    <span class="hljs-keyword">if</span> data
+      <span class="hljs-keyword">for</span> path, value <span class="hljs-keyword">of</span> data
+        <span class="hljs-keyword">unless</span> value == <span class="hljs-literal">undefined</span>
+          <span class="hljs-property">@set</span>(path, <span class="hljs-literal">undefined</span>, value, positioning)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Adjust positioning styles to respect element offsets </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@adjust</span>(node, <span class="hljs-literal">null</span>, <span class="hljs-literal">null</span>, positioning, <span class="hljs-literal">null</span>, !!data)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Set new positions in bulk (Reflow)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> id, styles <span class="hljs-keyword">of</span> positioning
+      <span class="hljs-keyword">for</span> prop, value <span class="hljs-keyword">of</span> styles
+        <span class="hljs-property">@set</span> id, prop, value
+        
+    <span class="hljs-property">@engine</span>.queries.connect()
+    <span class="hljs-keyword">return</span> positioning</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Position things</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">adjust</span>: <span class="hljs-function"><span class="hljs-params">(parent, x = <span class="hljs-number">0</span>, y = <span class="hljs-number">0</span>, positioning, offsetParent, full)</span> -&gt;</span>
+    scope = <span class="hljs-property">@engine</span>.scope
+    parent ||= scope</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Calculate new offsets for given element and styles</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> offsets = <span class="hljs-property">@placehold</span>(positioning, parent, x, y, full)
+      x += offsets.x || <span class="hljs-number">0</span>
+      y += offsets.y || <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Select all children</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> parent == <span class="hljs-built_in">document</span>
+      parent = <span class="hljs-built_in">document</span>.body
+    children = <span class="hljs-property">@engine</span>.commands[<span class="hljs-string">'$&gt;'</span>][<span class="hljs-number">1</span>](parent);
+
+    <span class="hljs-keyword">if</span> parent.offsetParent == scope
+      x -= scope.offsetLeft
+      y -= scope.offsetTop
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> parent != scope</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>When rendering a positioned element, measure its offsets</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> !offsets &amp;&amp; children?.length &amp;&amp; children[<span class="hljs-number">0</span>].offsetParent == parent
+        x += parent.offsetLeft + parent.clientLeft
+        y += parent.offsetTop + parent.clientTop
+        offsetParent = parent</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Position children</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> children
+      <span class="hljs-keyword">for</span> child <span class="hljs-keyword">in</span> children
+        <span class="hljs-property">@adjust</span>(child, x, y, positioning, offsetParent, full)
+    <span class="hljs-keyword">return</span> positioning</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Calculate offsets according to new values (but dont set anything)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">placehold</span>: <span class="hljs-function"><span class="hljs-params">(positioning, element, x, y, full)</span> -&gt;</span>
+    offsets = <span class="hljs-literal">undefined</span>
+    <span class="hljs-keyword">if</span> uid = element._gss_id</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Adjust newly set positions to respect parent offsets</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      styles = positioning?[uid]
+      <span class="hljs-keyword">if</span> values = <span class="hljs-property">@engine</span>.values
+        <span class="hljs-keyword">if</span> styles?.x == <span class="hljs-literal">undefined</span>
+          <span class="hljs-keyword">if</span> (left = values[uid + <span class="hljs-string">'[x]'</span>])?
+            (styles ||= (positioning[uid] ||= {})).x = left
+        <span class="hljs-keyword">if</span> styles?.y == <span class="hljs-literal">undefined</span>
+          <span class="hljs-keyword">if</span> (top = values[uid + <span class="hljs-string">'[y]'</span>])?
+            (styles ||= (positioning[uid] ||= {})).y = top
+
+      <span class="hljs-keyword">if</span> styles
+        <span class="hljs-keyword">for</span> property, value <span class="hljs-keyword">of</span> styles
+          <span class="hljs-keyword">unless</span> value == <span class="hljs-literal">null</span>
+            <span class="hljs-keyword">switch</span> property
+              <span class="hljs-keyword">when</span> <span class="hljs-string">"x"</span>
+                styles.x = value - x
+                (offsets ||= {}).x = value - x
+              <span class="hljs-keyword">when</span> <span class="hljs-string">"y"</span>
+                styles.y = value - y
+                (offsets ||= {}).y = value - y</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Let other measurements hook up into this batch</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-property">@engine</span>.onMeasure(element, x, y, styles, full)
+
+
+    <span class="hljs-keyword">return</span> offsets
+    
+  <span class="hljs-attribute">positioners</span>:
+    <span class="hljs-attribute">x</span>:<span class="hljs-function"> -&gt;</span> <span class="hljs-string">'left'</span>
+    <span class="hljs-attribute">y</span>:<span class="hljs-function"> -&gt;</span> <span class="hljs-string">'top'</span>
+    
+<span class="hljs-built_in">module</span>.exports = Restyles</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

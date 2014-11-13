@@ -19,20 +19,29 @@ describe "GSS.View", ->
   container = null
   
   beforeEach ->
-    console.log "before"
-    engine = GSS.engines.root
-    #engine = GSS({scope:container})
     container = document.createElement 'div'
+    engine = new GSS(container)
     $('#fixtures').appendChild container
     
   afterEach ->
     console.log "after"
     remove(container)
-    engine.clean()
+    engine.destroy()
   
   describe 'Display Pass percolates downward through unconstrained views', ->
                    
-    it 'before & after', ->
+    it 'before & after', (done) ->
+      onSolved = (e) ->
+        values = e.detail.values
+        assert target1.style['width'] is "88px","width should be 88px"
+        assert target2.style['width'] is "88px","width should be 88px"
+        container.removeEventListener 'solved', onSolved
+        done()
+      container.addEventListener 'solved', onSolved
+      engine.solve [
+          ['==', ['get',['$class', 'target'],   'width'], 88]
+        ]
+
       container.innerHTML = """
         <div>
           <div>
@@ -47,28 +56,12 @@ describe "GSS.View", ->
           </div>
         </div>        
       """            
-      q = document.getElementsByClassName('target')
-      target1 = q[0]
-      target2 = q[1]
+      target1 = engine.$class('target')[0]
+      target2 = engine.$class('target')[1]
       assert target1.style['width'] is "10px"
       assert target2.style['width'] is "10px"
-      ast =
-        selectors: [
-          '#text'
-        ]
-        commands: [
-          ['eq', ['get$','width',['$class', 'target']], ['number',88]]
-        ]
-      onSolved = (e) ->
-        values = e.detail.values
-        assert target1.style['width'] is "88px","width should be 88px"
-        assert target2.style['width'] is "88px","width should be 88px"
-        container.removeEventListener 'solved', onSolved
-        done()
-      container.addEventListener 'solved', onSolved
-      engine.run ast
   
-  describe 'Display passes down translated offsets, matrix3d & view:attach event', ->    
+  describe 'Display passes down translated offsets', ->    
     
     it 'matrix3d & view:attach event', (done) ->
       container.innerHTML = """
@@ -77,79 +70,87 @@ describe "GSS.View", ->
           </div>
         </div>  
       """          
-      ast =
-        selectors: [
-          '#text'
-        ]
-        commands: [
-          ['eq', ['get$','y',['$class','target']], ['number', '100']]
+      ast = [
+          ['==', ['get',['$class','target'],'y'], 100]
         ]        
 
       q = document.getElementsByClassName('target')
       target1 = q[0]
       target2 = q[1]
       
-      GSS.config.defaultMatrixType = 'mat4'
-      didAttach = false
-      
       onSolved = (values) ->
-        values = engine.vars
         assert values['$target1[y]'] is 100, "solved value is 100. #{}"
-        assert values['$target2[y]'] is 100, "solved value is 100. #{}"                
-        m1 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 100, 0, 1)"
-        m2 = "matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)"
-        assert target1.style[GSS._.transformPrefix] is m1,"target1.style[#{GSS._.transformPrefix}] should be 100px, not: #{target1.style[GSS._.transformPrefix]}"        
-        assert target2.style[GSS._.transformPrefix] is m2,"target2.style[#{GSS._.transformPrefix}] should be 0px, not: #{target2.style[GSS._.transformPrefix]}"        
-        assert didAttach, "didnt attach"
+        assert values['$target2[y]'] is 100, "solved value is 0. #{}"   
+        assert target1.style.top == '100px'             
+        assert target2.style.top == '0px'
         done()
-      onViewAttached = (v) ->
-        assert v.id is 'target1' or v.id is 'target2', 'attach to right views'
-        didAttach = true
-      GSS.once 'view:attach', onViewAttached      
       engine.once 'solved', onSolved
-      engine.run ast
+      engine.solve ast
   
+  describe 'Elements can be positioned relative to', ->
+    it 'after solving', (done) ->
+      container.style.position = 'relative'
+
+      ast = ['==', 
+              ['get',
+                ['$id', 'floater'],
+                'y'], 
+              ['+', 
+                ['get',
+                  ['$id', 'anchor'],
+                  'intrinsic-y'], 
+                3]]        
+      
+        
+      engine.once 'solved', ->
+        expect(engine.values['$floater[y]']).to.eql 20
+        engine.$id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;') 
+
+        engine.once 'solved', ->  
+          expect(engine.values['$floater[y]']).to.eql 31        
+          done()
+      engine.solve ast
+      container.innerHTML = """
+        <div id="pusher" style="height: 17px"></div>
+        <div id="anchor" style="height: 10px"></div>
+        <div id="floater"></div>
+      """
+
+
   describe 'Display Pass takes in account parent offsets when requested', ->
               
-    it 'after solving', (done) ->
+    it 'after solving', (done) ->   
+        
+      engine.solve [
+          ['==', ['get',['$class', 'target'],'y'], 100]
+        ]
+      
       
       container.innerHTML = """
-        <div style="border-top: 1px solid black;top:1px; position:absolute;">
-          <div style="border-top: 1px solid black;top:1px; position:absolute;">
-            <div style="border-top: 1px solid black;top:1px; position:absolute;">
-              <div style="border-top: 1px solid black;top:1px; position:absolute;">
-                <div id="target1" class="target" gss-parent-offsets>
+        <div style="border: 1px solid black;top:1px; position:absolute;">
+          <div style="border: 1px solid black;top:1px; position:absolute;">
+            <div style="border: 1px solid black;top:1px; position:absolute;">
+              <div style="border: 1px solid black;top:1px; position:absolute;">
+                <div id="target1" class="target">
                 </div>
               </div>
             </div>
           </div>
         </div>        
-      """
+      """  
 
-      ast =
-        selectors: [
-          '#text'
-        ]
-        commands: [
-          ['eq', ['get$','y',['$class', 'target']], ['number', '100']]
-        ]        
-      
       q = document.getElementsByClassName('target')
       target1 = q[0]      
       
-      GSS.config.defaultMatrixType = 'mat2d'
-      
       onSolved = (e) ->
-        values = engine.vars
-        assert values['$target1[y]'] is 100, "solved value is 100. #{}"
-        m = "matrix(1, 0, 0, 1, 0, 92)"
-        assert target1.style[GSS._.transformPrefix] is m,"wrong: #{target1.style[GSS._.transformPrefix]}"                
+        assert engine.values['$target1[y]'] is 100, "solved value is 100."
+        assert target1.offsetTop == 92, "Top offset should match"        
+        assert target1.offsetLeft == 0, "Left offset should match"                
         done()
-        
-      engine.once 'solved', onSolved
-      engine.run ast
       
-  describe 'printCss', ->
+      engine.once 'solved', onSolved
+      
+  xdescribe 'printCss', ->
     it 'prints css', (done) ->
       container.innerHTML = """
         <style type="text/gss">

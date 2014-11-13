@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Selectors.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Selectors.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h2 id="selectors-with-custom-combinators">Selectors with custom combinators</h2>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>inspired <span class="hljs-keyword">by</span> Slick <span class="hljs-keyword">of</span> mootools fame (shout-out &amp; credits)
+
+Combinators/qualifiers are map/reduce <span class="hljs-keyword">of</span> DOM tree.
+Selectors are parsed into individual functional steps.
+Steps are combined <span class="hljs-keyword">when</span> possible into querySelectorAll calls
+
+<span class="hljs-attribute">Map</span>: If step returns collection, the rest <span class="hljs-keyword">of</span> selector 
+<span class="hljs-keyword">is</span> executed <span class="hljs-keyword">for</span> each element <span class="hljs-keyword">in</span> collection 
+
+<span class="hljs-attribute">Filter</span>: If step returns single element, e.g. it matches qualifier,
+<span class="hljs-keyword">or</span> points to a another element, execution <span class="hljs-keyword">is</span> continued (reduce)
+
+<span class="hljs-attribute">Reduce</span>: Otherwise, the selector branch doesnt match, execution stops.
+
+When it hits the end <span class="hljs-keyword">of</span> selector, parent expression <span class="hljs-keyword">is</span> evaluated 
+<span class="hljs-reserved">with</span> found element.</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <h1 id="-">#</h1>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Selectors</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Return cached for DOM queries that we updated this tick</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">onBeforeQuery</span>: <span class="hljs-function"><span class="hljs-params">(node, args, operation, continuation, scope)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> operation.def.hidden
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@queries</span>.fetch(node, args, operation, continuation, scope)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Observe hits to DOM, subscribe elements to query </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">onQuery</span>: <span class="hljs-function"><span class="hljs-params">(node, args, result, operation, continuation, scope)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> result <span class="hljs-keyword">if</span> operation.def.hidden
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@queries</span>.update(node, args, result, operation, continuation, scope)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Walk through commands in selector to make a dictionary used by Observer</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">onSelector</span>: <span class="hljs-function"><span class="hljs-params">(operation, parent)</span> -&gt;</span>
+    prefix = ((parent &amp;&amp; operation.name != <span class="hljs-string">' '</span>) || 
+              (operation[<span class="hljs-number">0</span>] != <span class="hljs-string">'$combinator'</span> &amp;&amp; <span class="hljs-keyword">typeof</span> operation[<span class="hljs-number">1</span>] != <span class="hljs-string">'object'</span>)) &amp;&amp; 
+              <span class="hljs-string">' '</span> || <span class="hljs-string">''</span>
+    <span class="hljs-keyword">switch</span> operation[<span class="hljs-number">0</span>]
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'$tag'</span>
+        <span class="hljs-keyword">if</span> (!parent || operation == operation.tail) &amp;&amp; operation[<span class="hljs-number">1</span>][<span class="hljs-number">0</span>] != <span class="hljs-string">'$combinator'</span>
+          group = <span class="hljs-string">' '</span>
+          index = (operation[<span class="hljs-number">2</span>] || operation[<span class="hljs-number">1</span>]).toUpperCase()
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'$combinator'</span>
+        group = prefix +  operation.name
+        index = operation.parent.name == <span class="hljs-string">"$tag"</span> &amp;&amp; operation.parent[<span class="hljs-number">2</span>].toUpperCase() || <span class="hljs-string">"*"</span>
+      <span class="hljs-keyword">when</span> <span class="hljs-string">'$class'</span>, <span class="hljs-string">'$pseudo'</span>, <span class="hljs-string">'$attribute'</span>, <span class="hljs-string">'$id'</span>
+        group = prefix + operation[<span class="hljs-number">0</span>]
+        index = (operation[<span class="hljs-number">2</span>] || operation[<span class="hljs-number">1</span>])
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">unless</span> group
+    (((parent || operation)[group] ||= {})[index] ||= []).push operation</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Remove element by id globally or optionallly from collection</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">remove</span>: <span class="hljs-function"><span class="hljs-params">(id, continuation, operation, scope)</span> -&gt;</span>
+    <span class="hljs-property">@queries</span>.remove(id, continuation, operation, scope)
+    <span class="hljs-keyword">return</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Selector commands</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$first'</span>: 
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-string">"querySelector"</span>
+
+  <span class="hljs-string">'$query'</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-string">"querySelectorAll"</span>
+    <span class="hljs-number">2</span>: <span class="hljs-function"><span class="hljs-params">(node, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> node.webkitMatchesSelector(value)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Create a shortcut operation to get through a group of operations</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-attribute">perform</span>: <span class="hljs-function"><span class="hljs-params">(operation)</span> -&gt;</span>
+      head = operation.head || operation
+      name = operation.def.group
+      shortcut = [name, head.groupped]
+      shortcut.parent = head.parent
+      shortcut.index = head.index
+      shortcut.bound = head.bound <span class="hljs-keyword">if</span> head.bound
+      <span class="hljs-property">@expressions</span>.analyze(shortcut)
+      tail = operation.tail
+      <span class="hljs-keyword">unless</span> <span class="hljs-built_in">global</span> = tail.arity == <span class="hljs-number">1</span> &amp;&amp; tail.length == <span class="hljs-number">2</span>
+        shortcut.splice(<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, tail[<span class="hljs-number">1</span>])
+      op = head
+      <span class="hljs-keyword">while</span> op
+        <span class="hljs-property">@onSelector</span> op, shortcut
+        <span class="hljs-keyword">break</span> <span class="hljs-keyword">if</span> op == tail
+        op = op[<span class="hljs-number">1</span>]
+      <span class="hljs-keyword">if</span> (tail.parent == operation)
+        <span class="hljs-keyword">unless</span> <span class="hljs-built_in">global</span>
+          shortcut.splice(<span class="hljs-number">1</span>, <span class="hljs-number">0</span>, tail[<span class="hljs-number">1</span>])
+      <span class="hljs-keyword">return</span> shortcut</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Add <em> to a combinator at the end of native selector (e.g. <code>+</code> transforms to `+ </em>`)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-attribute">promise</span>: <span class="hljs-function"><span class="hljs-params">(operation, parent)</span> -&gt;</span>
+      promise = operation.groupped
+      <span class="hljs-keyword">if</span> operation.tail
+        <span class="hljs-keyword">if</span> operation[<span class="hljs-number">0</span>] == <span class="hljs-string">'$combinator'</span> &amp;&amp; (parent[<span class="hljs-number">0</span>] == <span class="hljs-string">'$combinator'</span> || parent[<span class="hljs-number">0</span>] == <span class="hljs-string">','</span>)
+          promise += <span class="hljs-string">"*"</span>
+      <span class="hljs-keyword">return</span> promise</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Native selectors cant start with a non-space combinator or qualifier</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-attribute">condition</span>: <span class="hljs-function"><span class="hljs-params">(operation)</span> -&gt;</span>
+      <span class="hljs-keyword">if</span> operation[<span class="hljs-number">0</span>] == <span class="hljs-string">'$combinator'</span>
+        <span class="hljs-keyword">if</span> operation.name != <span class="hljs-string">' '</span>
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> operation.arity == <span class="hljs-number">2</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Live collections</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$class'</span>:
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">'.'</span>
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-string">"getElementsByClassName"</span>
+    <span class="hljs-number">2</span>: <span class="hljs-function"><span class="hljs-params">(node, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> node.classList.contains(value)
+
+  <span class="hljs-string">'$tag'</span>:
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">''</span>
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-string">"getElementsByTagName"</span>
+    <span class="hljs-number">2</span>: <span class="hljs-function"><span class="hljs-params">(node, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> value == <span class="hljs-string">'*'</span> || node.tagName == value.toUpperCase()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>DOM Lookups</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$id'</span>:
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">'#'</span>
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-string">"getElementById"</span>
+    <span class="hljs-number">2</span>: <span class="hljs-function"><span class="hljs-params">(node, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> node.id == value</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Live collections index their nodes by id in NodeList object
+We use a single document.all-like collection on sub-engines
+But numeric ids need workaround: Keys are set, but not values
+So we fall back to querySelect </p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'getElementById'</span>: <span class="hljs-function"><span class="hljs-params">(node, id = node)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> !(found = <span class="hljs-property">@all</span>[id]) &amp;&amp; isFinite(parseInt(id))
+      <span class="hljs-keyword">return</span> (node.nodeType &amp;&amp; node || <span class="hljs-property">@scope</span>).querySelector(<span class="hljs-string">'[id="'</span> + id + <span class="hljs-string">'"]'</span>)
+    <span class="hljs-keyword">return</span> found
+
+  <span class="hljs-string">'$virtual'</span>:
+    <span class="hljs-attribute">scoped</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">serialized</span>: <span class="hljs-literal">false</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-property">@identify</span>(node) + <span class="hljs-string">'"'</span> + value + <span class="hljs-string">'"'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Filters</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$nth'</span>:
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">':nth('</span>
+    <span class="hljs-attribute">suffix</span>: <span class="hljs-string">')'</span>
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(node, divisor, comparison)</span> -&gt;</span>
+      nodes = []
+      <span class="hljs-keyword">for</span> i, node <span class="hljs-keyword">in</span> node
+        <span class="hljs-keyword">if</span> i % parseInt(divisor) == parseInt(comparison)
+          nodes.push(nodes)
+      <span class="hljs-keyword">return</span> nodes</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>CSS Combinators with reversals</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$combinator'</span>:
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">''</span>
+    <span class="hljs-attribute">type</span>: <span class="hljs-string">'combinator'</span>
+    <span class="hljs-attribute">lookup</span>: <span class="hljs-string">'$'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>All descendant elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$ '</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node.getElementsByTagName(<span class="hljs-string">"*"</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>All parent elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$!'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      nodes = <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">while</span> node = node.parentNode
+        <span class="hljs-keyword">if</span> node.nodeType == <span class="hljs-number">1</span>
+          (nodes ||= []).push(node)
+      <span class="hljs-keyword">return</span> nodes</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>All children elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$&gt;'</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span> 
+      <span class="hljs-keyword">return</span> node.children</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>Parent element</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$!&gt;'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node.parentElement</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>Next element</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$+'</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node.nextElementSibling</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>Previous element</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$!+'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node.previousElementSibling</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>All direct sibling elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$++'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      nodes = <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">if</span> prev = node.previousElementSibling
+        (nodes ||= []).push(prev)
+      <span class="hljs-keyword">if</span> next = node.nextElementSibling
+        (nodes ||= []).push(next)
+      <span class="hljs-keyword">return</span> nodes</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>All succeeding sibling elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$~'</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      nodes = <span class="hljs-literal">undefined</span>
+      <span class="hljs-keyword">while</span> node = node.nextElementSibling
+        (nodes ||= []).push(node)
+      <span class="hljs-keyword">return</span> nodes</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>All preceeding sibling elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$!~'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      nodes = <span class="hljs-literal">undefined</span>
+      prev = node.parentNode.firstElementChild
+      <span class="hljs-keyword">while</span> prev != node
+        (nodes ||= []).push(prev)
+        prev = prev.nextElementSibling
+      <span class="hljs-keyword">return</span> nodes</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>All sibling elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'$~~'</span>:
+    <span class="hljs-number">1</span>:<span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      nodes = <span class="hljs-literal">undefined</span>
+      prev = node.parentNode.firstElementChild
+      <span class="hljs-keyword">while</span> prev
+        <span class="hljs-keyword">if</span> prev != node
+          (nodes ||= []).push(prev) 
+        prev = prev.nextElementSibling
+      <span class="hljs-keyword">return</span> nodes</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Pseudo elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$reserved'</span>:
+    <span class="hljs-attribute">type</span>: <span class="hljs-string">'combinator'</span>
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">'::'</span>
+    <span class="hljs-attribute">lookup</span>: <span class="hljs-literal">true</span>
+
+  <span class="hljs-string">'::this'</span>:
+    <span class="hljs-attribute">scoped</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">hidden</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-27">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+              <p>Parent element (alias for !&gt; *)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'::parent'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$!&gt;'</span>][<span class="hljs-number">1</span>]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-28">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
+              <p>Current engine scope (defaults to document)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'::scope'</span>:
+    <span class="hljs-attribute">hidden</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-property">@scope</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-29">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>Return abstract reference to window</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-string">'::window'</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-string">'::window'</span> 
+
+
+  <span class="hljs-string">'$attribute'</span>:
+    <span class="hljs-attribute">lookup</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-attribute">type</span>: <span class="hljs-string">'qualifier'</span>
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">'['</span>
+    <span class="hljs-attribute">suffix</span>: <span class="hljs-string">']'</span>
+    <span class="hljs-attribute">serialize</span>:<span class="hljs-function"> -&gt;</span> <span class="hljs-function"><span class="hljs-params">(operation, args)</span> -&gt;</span>
+      name = operation.name
+      <span class="hljs-keyword">return</span> (args[<span class="hljs-number">1</span>]) + name.substring(<span class="hljs-number">1</span>, name.length - <span class="hljs-number">1</span>) + <span class="hljs-string">'"'</span> + (args[<span class="hljs-number">2</span>] || <span class="hljs-string">''</span>) + <span class="hljs-string">'"'</span>
+
+  <span class="hljs-string">'[=]'</span>: <span class="hljs-function"><span class="hljs-params">(node, attribute, value, operator)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> node.getAttribute(attribute) == value
+
+  <span class="hljs-string">'[*=]'</span>: <span class="hljs-function"><span class="hljs-params">(node, attribute, value, operator)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span>  node.getAttribute(attribute)?.indexOf(value) &gt; -<span class="hljs-number">1</span>
+  
+  <span class="hljs-string">'[|=]'</span>: <span class="hljs-function"><span class="hljs-params">(node, attribute, value, operator)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span>  node.getAttribute(attribute)?
+  
+  <span class="hljs-string">'[]'</span>: <span class="hljs-function"><span class="hljs-params">(node, attribute, value, operator)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span>  node.getAttribute(attribute)?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-30">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>Pseudo classes</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-string">'$pseudo'</span>: 
+    <span class="hljs-attribute">type</span>: <span class="hljs-string">'qualifier'</span>
+    <span class="hljs-attribute">prefix</span>: <span class="hljs-string">':'</span>
+    <span class="hljs-attribute">lookup</span>: <span class="hljs-literal">true</span>
+
+  <span class="hljs-string">':value'</span>:
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node.value
+    <span class="hljs-attribute">watch</span>: <span class="hljs-string">"oninput"</span>
+
+  <span class="hljs-string">':get'</span>:
+    <span class="hljs-number">2</span>: <span class="hljs-function"><span class="hljs-params">(node, property)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node[property]
+
+  <span class="hljs-string">':first-child'</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">unless</span> node.previousElementSibling
+
+  <span class="hljs-string">':last-child'</span>:
+    <span class="hljs-attribute">group</span>: <span class="hljs-string">'$query'</span>
+    <span class="hljs-number">1</span>: <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">unless</span> node.nextElementSibling
+
+  <span class="hljs-string">':next'</span>:
+    <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
+      collection = <span class="hljs-property">@queries</span>.get path
+      index = collection?.indexOf(node)
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> !index? || index == -<span class="hljs-number">1</span> || index == collection.length - <span class="hljs-number">1</span>
+      <span class="hljs-keyword">return</span> collection[index + <span class="hljs-number">1</span>]
+
+  <span class="hljs-string">':previous'</span>:
+    <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
+      collection = <span class="hljs-property">@queries</span>.get path
+      index = collection?.indexOf(node)
+      <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> index == -<span class="hljs-number">1</span> || !index
+      <span class="hljs-keyword">return</span> collection[index - <span class="hljs-number">1</span>]
+
+  <span class="hljs-string">':last'</span>:
+    <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
+      collection = <span class="hljs-property">@queries</span>.get path
+      index = collection?.indexOf(node)
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> !index? || index == collection.length - <span class="hljs-number">1</span>
+
+  <span class="hljs-string">':first'</span>:
+    <span class="hljs-attribute">relative</span>: <span class="hljs-literal">true</span>
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, node)</span> -&gt;</span>
+      path = <span class="hljs-property">@getContinuation</span>(<span class="hljs-property">@getCanonicalPath</span>(continuation))
+      collection = <span class="hljs-property">@queries</span>.get path
+      index = collection?.indexOf(node)
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> index == <span class="hljs-number">0</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-31">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+              <p>Set up custom trigger for all selector operations
+to filter out old elements from collections</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">for</span> property, command <span class="hljs-keyword">of</span> <span class="hljs-attribute">Selectors</span>::
+  <span class="hljs-keyword">if</span> <span class="hljs-keyword">typeof</span> command == <span class="hljs-string">'object'</span> &amp;&amp; command.serialized != <span class="hljs-literal">false</span>
+    command.before = <span class="hljs-string">'_onBeforeQuery'</span>
+    command.after = <span class="hljs-string">'_onQuery'</span>
+    command.init = <span class="hljs-string">'_onSelector'</span>
+    command.serialized = <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-32">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-32">&#182;</a>
+              </div>
+              <p>Add shims for IE&lt;=8 that dont support some DOM properties</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>dummy = (<span class="hljs-property">@GSS</span> || <span class="hljs-property">@Engine</span> || Selectors).dummy = <span class="hljs-built_in">document</span>.createElement(<span class="hljs-string">'_'</span>)
+
+<span class="hljs-keyword">unless</span> dummy.hasOwnProperty(<span class="hljs-string">"parentElement"</span>) 
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$!&gt;'</span>][<span class="hljs-number">1</span>] = <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'::parent'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> parent = node.parentNode
+      <span class="hljs-keyword">return</span> parent <span class="hljs-keyword">if</span> parent.nodeType == <span class="hljs-number">1</span>
+<span class="hljs-keyword">unless</span> dummy.hasOwnProperty(<span class="hljs-string">"nextElementSibling"</span>)
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$+'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    <span class="hljs-keyword">while</span> node = node.nextSibling
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> node.nodeType == <span class="hljs-number">1</span>
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$!+'</span>][<span class="hljs-number">1</span>] =<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">while</span> node = node.previousSibling
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> node.nodeType == <span class="hljs-number">1</span>
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$++'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    nodes = <span class="hljs-literal">undefined</span>
+    <span class="hljs-keyword">while</span> prev = node.previousSibling
+      <span class="hljs-keyword">if</span> prev.nodeType == <span class="hljs-number">1</span>
+        (nodes ||= []).push(prev)
+        <span class="hljs-keyword">break</span>
+    <span class="hljs-keyword">while</span> next = node.nextSibling
+      <span class="hljs-keyword">if</span> next.nodeType == <span class="hljs-number">1</span>
+        (nodes ||= []).push(next)
+        <span class="hljs-keyword">break</span>
+    <span class="hljs-keyword">return</span> nodes;
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$~'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    nodes = <span class="hljs-literal">undefined</span>
+    <span class="hljs-keyword">while</span> node = node.nextSibling
+      (nodes ||= []).push(node) <span class="hljs-keyword">if</span> node.nodeType == <span class="hljs-number">1</span>
+    <span class="hljs-keyword">return</span> nodes
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$!~'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    nodes = <span class="hljs-literal">undefined</span>
+    prev = node.parentNode.firstChild
+    <span class="hljs-keyword">while</span> prev != node
+      (nodes ||= []).push(prev) <span class="hljs-keyword">if</span> pref.nodeType == <span class="hljs-number">1</span>
+      node = node.nextSibling
+    <span class="hljs-keyword">return</span> nodes
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">'$~~'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    nodes = <span class="hljs-literal">undefined</span>
+    prev = node.parentNode.firstChild
+    <span class="hljs-keyword">while</span> prev
+      <span class="hljs-keyword">if</span> prev != node &amp;&amp; prev.nodeType == <span class="hljs-number">1</span>
+        (nodes ||= []).push(prev) 
+      prev = prev.nextSibling
+    <span class="hljs-keyword">return</span> nodes
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">':first-child'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> parent = node.parentNode
+      child = parent.firstChild
+      <span class="hljs-keyword">while</span> child &amp;&amp; child.nodeType != <span class="hljs-number">1</span>
+        child = child.nextSibling
+      <span class="hljs-keyword">return</span> node <span class="hljs-keyword">if</span> child == node
+  <span class="hljs-attribute">Selectors</span>::[<span class="hljs-string">':last-child'</span>][<span class="hljs-number">1</span>] = <span class="hljs-function"><span class="hljs-params">(node)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> parent = node.parentNode
+      child = parent.lastChild
+      <span class="hljs-keyword">while</span> child &amp;&amp; child.nodeType != <span class="hljs-number">1</span>
+        child = child.previousSibling
+      <span class="hljs-keyword">return</span> child == node
+
+
+<span class="hljs-built_in">module</span>.exports = Selectors</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

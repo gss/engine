@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Units.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Units.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Units</span></span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Static lengths</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-attribute">px</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> value
+
+  <span class="hljs-attribute">pt</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> value
+
+  <span class="hljs-attribute">cm</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](value, <span class="hljs-number">37.8</span>)
+
+  <span class="hljs-attribute">mm</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](value, <span class="hljs-number">3.78</span>)
+
+  <span class="hljs-attribute">in</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](value, <span class="hljs-number">96</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Rotations</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-attribute">deg</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](value, (Math.PI / <span class="hljs-number">180</span>))
+
+  <span class="hljs-attribute">grad</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@deg</span>(@[<span class="hljs-string">'/'</span>](value, <span class="hljs-number">360</span> / <span class="hljs-number">400</span>))
+
+  <span class="hljs-attribute">turn</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@deg</span>(@[<span class="hljs-string">'*'</span>](value, <span class="hljs-number">360</span>))
+
+  <span class="hljs-attribute">rad</span>: <span class="hljs-function"><span class="hljs-params">(value)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> value</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Dynamic lengths</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+  <span class="hljs-attribute">em</span>: 
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](<span class="hljs-property">@get</span>(scope, <span class="hljs-string">'font-size'</span>, continuation), value)
+  
+  <span class="hljs-attribute">rem</span>: 
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](<span class="hljs-property">@get</span>(<span class="hljs-string">'::window'</span>, <span class="hljs-string">'font-size'</span>, continuation), value)
+
+  <span class="hljs-attribute">vw</span>: 
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](@[<span class="hljs-string">'/'</span>](<span class="hljs-property">@get</span>(<span class="hljs-string">'::window'</span>, <span class="hljs-string">'width'</span>, continuation), <span class="hljs-number">100</span>), value)
+
+  <span class="hljs-attribute">vh</span>: 
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](@[<span class="hljs-string">'/'</span>](<span class="hljs-property">@get</span>(<span class="hljs-string">'::window'</span>, <span class="hljs-string">'height'</span>, continuation), <span class="hljs-number">100</span>), value)
+
+  <span class="hljs-attribute">vmin</span>: 
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](@[<span class="hljs-string">'/'</span>](<span class="hljs-property">@get</span>(<span class="hljs-string">'::window'</span>, <span class="hljs-string">'min'</span>, continuation), <span class="hljs-number">100</span>), value)
+    
+  <span class="hljs-attribute">vmax</span>: 
+    <span class="hljs-attribute">command</span>: <span class="hljs-function"><span class="hljs-params">(operation, continuation, scope, meta, value)</span> -&gt;</span>
+      <span class="hljs-keyword">return</span> @[<span class="hljs-string">'*'</span>](@[<span class="hljs-string">'/'</span>](<span class="hljs-property">@get</span>(<span class="hljs-string">'::window'</span>, <span class="hljs-string">'max'</span>, continuation), <span class="hljs-number">100</span>), value)
+
+<span class="hljs-built_in">module</span>.exports = Units</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

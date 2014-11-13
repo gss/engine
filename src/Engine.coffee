@@ -1,753 +1,613 @@
-if !GSS? then throw new Error "GSS object needed for Engine"
+### Base class: Engine
 
-_ = GSS._
+Engine is a base class for scripting environments.
+It initializes and orchestrates all moving parts.
 
-TIME = () ->
-  if GSS.config.perf
-    console.time arguments...
-    
-TIME_END = () ->
-  if GSS.config.perf
-    console.timeEnd arguments...
+It includes interpreter that operates in defined constraint domains.
+Each domain has its own command set, that extends engine defaults. ###
 
-LOG = () ->
-  GSS.deblog "Engine", arguments...
 
-GSS.engines = engines = []
-engines.byId = {}
-engines.root = null
+# Little shim for require.js so we dont have to carry it around
+@require ||= (string) ->
+  if string == 'cassowary'
+    return c
+  bits = string.replace('', '').split('/')
+  return this[bits[bits.length - 1]]
+@module ||= {}
 
-class Engine extends GSS.EventTrigger
+Native          = require('./methods/Native')
+Events          = require('./concepts/Events')
+Domain          = require('./concepts/Domain')
+Domain.Events ||= Native::mixin(Domain, Events)
 
-  constructor: (o={}) ->
-    super    
-    {@scope, @workerURL, @vars, @getter, @is_root, @useWorker} = o
-    
-    @vars = {} unless @vars
-    @clauses = null
-    
-    if !GSS.config.useWorker
-      @useWorker = false
-    else      
-      @useWorker = true unless @useWorker?
-    @worker    = null
-    @workerCommands = []
-    @workerMessageHistory = []
-    @workerURL = GSS.config.worker unless @workerURL
+class Engine extends Domain.Events
 
-    if @scope 
-      if @scope.tagName is "HEAD" then @scope = document          
-      @id = GSS.setupScopeId @scope # id is always gssid of scope
-      if @scope is GSS.Getter.getRootScope()
-        @queryScope = document
-      else
-        @queryScope = @scope
-    else
-      @id = GSS.uid()
-      @queryScope = document
-      
-    @getter    = new GSS.Getter(@scope) unless @getter    
-    @commander = new GSS.Commander(@)    
-    @lastWorkerCommands = null        
+  Identity:     require('./concepts/Identity')
+  Evaluator:    require('./concepts/Evaluator')
+  Operation:    require('./concepts/Operation')
+  Variable:     require('./concepts/Variable')
+  Method:       require('./concepts/Method')
+  Property:     require('./concepts/Property')
+  Console:      require('./concepts/Console')
+  Debugger:     require('./concepts/Debugger')
+  Update:       require('./concepts/Update')
+  Continuation: require('./concepts/Continuation')
+
+  Properties:   require('./properties/Axioms')
+ 
+  Methods:      Native
+
+  Domains: 
+    Abstract:   require('./domains/Abstract')
+    Document:   require('./domains/Document')
+    Intrinsic:  require('./domains/Intrinsic')
+    Numeric:    require('./domains/Numeric')
+    Linear:     require('./domains/Linear')
+    Finite:     require('./domains/Finite')
+    Boolean:    require('./domains/Boolean')
+
+
+  constructor: () -> #(scope, url, data)
+    for argument, index in arguments
+      continue unless argument
+      switch typeof argument
+        when 'object'
+          if argument.nodeType
+            if @Evaluator
+              Engine[Engine.identity.provide(argument)] = @
+              @scope = scope = argument
+            else
+              scope = argument
+              while scope
+                if id = Engine.identity.find(scope)
+                  if engine = Engine[id]
+                    return engine
+                break unless scope.parentNode
+                scope = scope.parentNode
+          else
+            assumed = argument
+        when 'string', 'boolean'
+          url = argument
+
+    # **GSS()** creates new Engine at the root, 
+    # if there is no engine assigned to it yet
+    unless @Evaluator
+      return new Engine(arguments[0], arguments[1], arguments[2])
+
+    # Create instance own objects and context objects.
+    # Context objects are contain non-callable 
+    # definitions of commands and properties.
+    # Definitions are compiled into functions 
+    # right before first commands are executed
+    super(@, url)
     
-    @cssDump = null
-    
-    GSS.engines.push @
-    engines.byId[@id] = @
-    
-    @_Hierarchy_setup()
-    
-    @_Queries_setup()
-    
-    @_StyleSheets_setup()
-        
-    LOG "constructor() @", @
-    @
-        
-      
-  getVarsById: (vars) ->
-    if GSS.config.processBeforeSet then vars = GSS.config.processBeforeSet(vars)
-    varsById = _.varsByViewId(_.filterVarsForDisplay(vars))
-  
-  getQueryScopeById: (id) ->
-    if id
-      GSS.getById(id)
-    else
-      @queryScope
-  
-  # Hierarchy
-  # ------------------------------------------------
-  
-  isDescendantOf: (engine) ->
-    parentEngine = @parentEngine
-    while parentEngine
-      if parentEngine is engine
-        return true
-      parentEngine = parentEngine.parentEngine
-    return false
-  
-  _Hierarchy_setup: -> 
-    @childEngines = [] 
-    @parentEngine = null    
-    if @is_root
-      engines.root = @
+    @domain       = @
+    @properties   = new @Properties(@)
+    @methods      = new @Methods(@)
+    @evaluator    = new @Evaluator(@)
+    @debugger     = new @Debugger(@)
+
+    @precompile()
+ 
+    @Operation    = new @Operation(@)
+    @Variable     = new @Variable(@)
+    @Continuation = @Continuation.new(@)
+
+    @assumed = new @Numeric(assumed)
+    @assumed.displayName = 'Assumed'
+    @assumed.setup()
+
+    @solved = new @Boolean
+    @solved.displayName = 'Solved'
+    @solved.eager = true
+    @solved.setup()
+
+    @values = @solved.values
+
+
+    unless window?
+      @strategy = 'substitute'
     else if @scope
-      @parentEngine = GSS.get.nearestEngine @scope, true            
+      @strategy = 'document'
     else
-      @parentEngine = engines.root
-    if !@parentEngine and !@is_root then throw new Error "ParentEngine missing, WTF"
-    @parentEngine?.childEngines.push @
-  
-  _Hierarchy_destroy: ->        
-    # update engine hierarchy
-    @parentEngine.childEngines.splice(@parentEngine.childEngines.indexOf(@),1)
-    @parentEngine = null        
-  
-  
-  # Commands
-  # ------------------------------------------------
-  
-  is_running: false
-  
-  run: (asts) ->
-    LOG @id,".run(asts)",asts
-    if asts instanceof Array
-      for ast in asts        
-        @_run ast
-    else 
-      @_run asts          
-      
-  _run: (ast) ->    
-    # digests & transforms commands into @workerCommands    
-    @commander.execute ast
-    #if ast.commands      
-    #  @commander.execute ast.commands              
-  
-  load: ->    
-    if !@scope then throw new Error "can't load scopeless engine"
-    if @is_running
-      @clean()
-    for sheet in @styleSheets
-      sheet.execute()
-  
-  #load: (asts) ->
-  #  for s in GSS.styleSheets
-  #    if s.engine is @
-        
-  
-  reset: () =>
-    # Load commands from style nodes.    
-    LOG @id,".reset()"
-    if !@scope then throw new Error "can't reset scopeless engine"
-    
-    # keep styleSheets around...
-    styleSheets = @styleSheets
-    
-    if @is_running
-      @clean()    
-      
-    @styleSheets = styleSheets
-    for sheet in styleSheets
-      sheet.reset()
-    
-    @setNeedsUpdate true    
-    @
-  
-  registerCommands: (commands) ->
-    for command in commands
-      @registerCommand command
-    
-  registerCommand: (command) ->
-    # TODO: treat commands as strings and check cache for dups?
-    @workerCommands.push command
-    
-    @setNeedsLayout true
-    @
-            
-  # StyleSheets
-  # ------------------------------------------------
-  
-  _StyleSheets_setup: ->
-    @styleSheets = []
-  
-  addStyleSheet: (sheet) ->
-    @setNeedsUpdate(true)
-    @styleSheets.push sheet
-  
-  
-  # Update pass
-  # ------------------------------------------------
-  #
-  # - waits for stylesheets to fully load
-  # - installs commands from stylesheets
-  # - then tells childEngines to do same
-  
-  needsUpdate: false
-  
-  setNeedsUpdate: (bool) ->
-    if bool
-      GSS.setNeedsUpdate true
-      @needsUpdate = true
-    else      
-      @needsUpdate = false
-  
-  updateIfNeeded: () ->
-    if @needsUpdate
-      @_whenReadyForUpdate =>
-        for sheet in @styleSheets
-          sheet.install()
-        @updateChildrenIfNeeded()
-      @setNeedsUpdate false
-    else
-      @updateChildrenIfNeeded()
-  
-  _whenReadyForUpdate: (cb) ->
-    loadingCount = 0
-    for sheet in @styleSheets
-      if sheet.isLoading
-        loadingCount++
-        sheet.once "loaded", =>
-          loadingCount--
-          if loadingCount is 0 then cb.call @
-    if loadingCount is 0 then cb.call @
-    @    
-  
-  updateChildrenIfNeeded: ->
-    for child in @childEngines
-      child.updateIfNeeded()
-  
-  
-  # Layout pass
-  # ------------------------------------------------
-  #
-  # - solvers solve
-      
-  needsLayout: false
-  
-  setNeedsLayout: (bool) ->
-    #LOG @id,".setNeedsLayout( #{bool} )"
-    if bool 
-      if !@needsLayout
-        GSS.setNeedsLayout true
-        @needsLayout = true
-    else
-      @needsLayout = false
-  
-  _beforeLayoutCalls:null
-  
-  layout: () ->
-    #LOG @id,".layout()"
-    @hoistedTrigger "beforeLayout", @
-    @is_running = true
-    TIME "#{@id} LAYOUT & DISPLAY"
-    
-    # When is best time to dump css?
-    # - unless marshall in vanilla css, should dump here so measurements get it?
-    @dumpCSSIfNeeded()
-    
-    @solve()
-    @setNeedsLayout false
-    #@hoistedTrigger "afterLayout", @
-    
-  layoutIfNeeded: () ->    
-    #LOG @id,".layoutIfNeeded()"
-    # if commands were found & executed
-    if @needsLayout # @workerCommands.length > 0
-      #@waitingToLayoutSubtree = true
-      @layout()      
-    #else if !@waitingToLayoutSubtree
-    #  @layoutSubTreeIfNeeded()
-    @layoutSubTreeIfNeeded()
-  
-  waitingToLayoutSubtree: false
-  
-  layoutSubTreeIfNeeded: () ->
-    @waitingToLayoutSubtree = false
-    for child in @childEngines
-      child.layoutIfNeeded()
-  
-  
-  # Display pass
-  # ------------------------------------------------
-  #
-  # - write to dom
-  # 
-  
-  needsDisplay: false
-  
-  setNeedsDisplay: (bool) ->    
-    if bool
-      GSS.setNeedsDisplay true
-      @needsDisplay = true
-    else
-      @needsDisplay = false
-  
-  ###
-  displayIfNeeded: () ->
-    LOG @, "displayIfNeeded"
-    if @needsDisplay #@workerCommands.length > 0
-      @display(@vars)      
-      @setNeedsDisplay false
-    for child in @childEngines
-      child.displayIfNeeded()
-  ###
-   
-  display: (data, forceViewCacheById=false) ->
-    vars = data.values
-    LOG @id,".display()"
-    @hoistedTrigger "beforeDisplay", @        
-    GSS.unobserve()
-    
-    varsById = @getVarsById(vars)
-    
-    # batch potential DOM reads
-    needsToDisplayViews = false
-    for id, obj of varsById
-      needsToDisplayViews = true
-      if forceViewCacheById
-        el = document.getElementById(id)
-        if el
-          GSS.setupId el
-      GSS.View.byId[id]?.updateValues?(obj)      
-    
-    # write clauses to html.classes    
-    if data.clauses
-      @updateClauses data.clauses
-    
-    # When is best time to dump css?
-    # - unless marshall in vanilla css in view.display, should dump earlier
-    #@dumpCSSIfNeeded()
-    
-    # batch DOM writes top -> down
-    if needsToDisplayViews
-      if @scope 
-        GSS.get.view(@scope).displayIfNeeded()
-    # else, w/o scope, engine does not write, just read    
-    
-    if !@isMeasuring and @needsMeasure
-      @measureIfNeeded()      
-      # just in case measuring didn't need cause 2nd layout pass
-      @_didDisplay() if !@needsLayout        
-    else
-      # stops potential infinite measure loop
-      @_didDisplay()
-          
-    GSS.observe()
-    @dispatchedTrigger "solved", {values:vars}
-    TIME_END "#{@id} LAYOUT & DISPLAY"
-        
-    #@layoutSubTreeIfNeeded()    
-    
-    @
-  
-  _didDisplay: ->
-    @trigger "display"      
-    GSS.onDisplay()
-    @isMeasuring = false
-  
-  forceDisplay: (vars) ->
-  
-  updateClauses: (clauses) ->
-    html = GSS.html
-    old = @clauses
-    nue = clauses
-    if old
-      for clause in old
-        if nue.indexOf(clause) is -1
-          html.classList.remove clause
-      for clause in nue        
-        if old.indexOf(clause) is -1
-          html.classList.add clause
-    else
-      for clause in nue
-        html.classList.add clause
-    @clauses = nue
-    
-  
-  # Measurement
-  # ------------------------------------------------
-  
-  isMeasuring: false
-  
-  needsMeasure: false
-  
-  setNeedsMeasure: (bool) ->    
-    if bool
-      @needsMeasure = true
-    else
-      @needsMeasure = false
-  
-  measureIfNeeded: ->
-    # TODO: 
-    # - validate only when intrinsic opposites change?
-    # - batch validations?
-    if @needsMeasure
-      @isMeasuring = true
-      @needsMeasure = false
-      @measure()
-      
-  measure: ->
-    @commander.validateMeasures()
-  
-  measureByGssId: (id, prop) ->    
-    el = GSS.getById id
-    val = @getter.measure(el, prop)
-    LOG @id,".measureByGssId()", id, prop, val
-    return val
-    
-  
-  # Worker
-  # ------------------------------------------------
-  
-  solve: () ->
-    if @useWorker then @solveWithWorker() else @solveWithoutWorker()
-    
-  solveWithWorker: () ->
-    LOG @id,".solveWithWorker()", @workerCommands
-    workerMessage = {commands:@workerCommands}
-    @workerMessageHistory.push workerMessage
-    unless @worker
-      @worker = new Worker @workerURL
-      @worker.addEventListener "message", @handleWorkerMessage, false
-      @worker.addEventListener "error", @handleError, false
-      workerMessage.config = 
-        defaultStrength: GSS.config.defaultStrength
-        defaultWeight: GSS.config.defaultWeight
-    @worker.postMessage workerMessage
-    # resetWorkerCommands
-    @lastWorkerCommands = @workerCommands
-    @workerCommands = []
-  
-  solveWithoutWorker: () ->
-    LOG @id,".solveWithoutWorker()", @workerCommands
-    workerMessage = {commands:@workerCommands}
-    
-    @workerMessageHistory.push workerMessage
-    unless @worker
-      @worker = new GSS.Thread {
-        defaultStrength: GSS.config.defaultStrength
-        defaultWeight: GSS.config.defaultWeight
-      }
-          
-    # too bad we don't have immutables...
-    @worker.postMessage _.cloneDeep workerMessage
-    
-    # must simulate asynch for life cycle to work
-    _.defer => 
+      @strategy = 'abstract'
+
+    return @
+
+  events:
+    # Receieve message from worker
+    message: (e) ->
+      values = e.target.values ||= {}
+      for property, value of e.data
+        values[property] = value
+      if @updating
+        if @updating.busy.length
+          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+          if (i = @updating.solutions.indexOf(e.target)) > -1
+            @updating.solutions[i] = e.data
+          unless @updating.busy.length
+            return @updating.each(@resolve, @, e.data) || @onSolve()
+          else
+            return @updating.apply(e.data)
+
+      @provide e.data
+
+    # Handle error from worker
+    error: (e) ->
+      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
+
+    destroy: (e) ->
+      if @scope
+        Engine[@scope._gss_id] = undefined
       if @worker
-        @handleWorkerMessage {data:@worker.output()}
-        
-    # resetWorkerCommands
-    @lastWorkerCommands = @workerCommands
-    @workerCommands = []
-  
-  handleWorkerMessage: (message) =>
-    LOG @id,".handleWorkerMessage()",@workerCommands    
-    
-    @vars = message.data.values
-    
-    #@setNeedsDisplay(true)
-    
-    @display(message.data)    
+        @worker.removeEventListener 'message', @eventHandler
+        @worker.removeEventListener 'error', @eventHandler
 
-    #@dispatch "solved", {values:@vars} 
-  
-  handleError: (event) ->
-    return @onError event if @onError
-    throw new Error "#{event.message} (#{event.filename}:#{event.lineno})"
-  
-  _Worker_destroy: () ->
-    if @worker
-      @worker.terminate()
-      @worker = null
-    @workerCommands = null
-    @workerMessageHistory = null
-    @lastWorkerCommands = null
-  
-  _Worker_clean: () ->
-    @workerCommands = []
-    #@workerMessageHistory = [] keep history
-    @lastWorkerCommands = null
-    if @worker
-      @worker.terminate()
-      @worker = null
-    
-  
-  # Queries
-  # ----------------------------------------
-  
-  _Queries_setup: () ->
-    @querySet = new GSS.Query.Set()
-    @querySet.on "update", (o) =>
-      @commander.handleRemoves o.removes
-      @commander.handleSelectorsWithAdds o.selectorsWithAdds
-  
-  getDomQuery: (selector) ->
-    return @querySet.bySelector[selector]
-    
-  registerDomQuery: (o) ->    
-    @querySet.add(o)
-    
-  unregisterDomQuery: (o) ->    
-    @querySet.remove(o)
-    
-  updateQueries: =>
-    @querySet.update()
+  # Import exported variables to thread
+  substitute: (expressions, result, parent, index) ->
+    if result == undefined
+      start = true
+      result = null
+    for expression, i in expressions by -1
+      if expression?.push
+        result = @substitute(expression, result, expressions, i)
+    if expressions[0] == 'remove'
+      @updating.push expressions, null
+      if parent
+        parent.splice(index, 1)
+    if expressions[0] == 'value'
+      # Substituted part of expression
+      if expressions[4]
+        exp = parent[index] = expressions[3].split(',')
+        path = @Variable.getPath(exp[1], exp[2])
+      # Updates for substituted variables
+      else if !expressions[3]
+        path = expressions[2]
+        if parent
+          parent.splice(index, 1)
+        else
+          return []
+      if path && @assumed.values[path] != expressions[1]
+        unless (result ||= {}).hasOwnProperty(path)
+          result[path] = expressions[1]
+        else unless result[path]?
+          delete result[path]
+    unless start
+      if !expressions.length
+        parent.splice(index, 1)
+      return result
+    # Substitute variables next
+    if result
+      @assumed.merge result
+    # Perform remove commands first
+    if @updating
+      @updating.each(@resolve, @, result)
+    # Execute given expressions
+    if expressions.length
+      @provide expressions
 
-  _Queries_destroy: () ->
-    @querySet.destroy()
+  solve: () ->
+    if typeof arguments[0] == 'string'
+      if typeof arguments[1] == 'string'
+        source = arguments[0]
+        reason = arguments[1]
+        index = 2
+      else
+        reason = arguments[0]
+        index = 1
 
-  _Queries_clean: () ->
-    @querySet.clean()
-  
-  # Events
-  # ----------------------------------------
-    
-  hoistedTrigger: (ev,obj) ->
-    # Trigger event on self then GSS.engines.
-    # Allows ev delegation for engine lifecycle.
-    @trigger ev, obj
-    GSS.trigger "engine:"+ev, obj
-  
-  dispatchedTrigger: (e, o, b, c)->
-    @trigger e, o
-    @dispatch e, o, b, c
-  
-  dispatch: (eName, oDetail = {}, bubbles = true, cancelable = true) =>
-    return unless @scope
-    oDetail.engine = @
-    o = {
-      detail:oDetail
-      bubbles: bubbles
-      cancelable: cancelable
-    }
-    e = new CustomEvent eName, o
-    @scope.dispatchEvent e  
-  
-  
-  # CSSDumper
-  # ------------------------------------------------
-  
-  cssToDump: null
-  
-  cssDump: null
-  
-  setupCSSDumpIfNeeded: () ->
-    dumpNode = @scope or document.body
-    if !@cssDump
-      #@scope.insertAdjacentHTML "afterbegin", ""
-      @cssDump = document.createElement "style"
-      @cssDump.id = "gss-css-dump-" + @id 
-      dumpNode.appendChild @cssDump
-      #@cssDump.classList.add("gss-css-dump")     
-  
-  needsDumpCSS: false
-  
-  setNeedsDumpCSS: (bool) ->
-    if bool
-      @setNeedsLayout true
-      @needsDumpCSS = true
+    args = Array.prototype.slice.call(arguments, index || 0)
+
+
+    unless @running
+      @compile(true)
+
+    problematic = undefined
+    for arg, index in args
+      if arg && typeof arg != 'string'
+        if problematic
+          if typeof arg == 'function'
+            @then arg
+            args.splice index, 1
+            break
+        else
+          problematic = arg
+
+    if typeof args[0] == 'object'
+      if name = source || @displayName
+        @console.start(reason || args[0], name)
+    unless old = @updating
+      @engine.updating = new @update
+      @engine.updating.start ?= @engine.time()
+
+    if @providing == undefined
+      @providing = null
+      providing = true
+    if typeof args[0] == 'function'
+      solution = args.shift().apply(@, args) 
     else
-      @needsDumpCSS = false
-  
-  dumpCSSIfNeeded: () ->
-    if @needsDumpCSS
-      @needsDumpCSS = false
-      @setupCSSDumpIfNeeded()
-      css = ""
-      for sheet in @styleSheets
-        sheetCSS = sheet.dumpCSSIfNeeded()
-        css = css + sheetCSS if sheetCSS
-      if css.length > 0
-        @cssDump.innerHTML = css
-      #@cssDump.insertAdjacentHTML "beforeend", @cssToDump
-      #@cssToDump = null
+      solution = Domain::solve.apply(@, args)
 
-  _CSSDumper_clean: () ->
-    @cssDump?.innerHTML = ""
-    #@needsDumpCSS = false
-  
-  _CSSDumper_destroy: () ->
-    #@cssDump?.remove()
-    @needsDumpCSS = false
-    @cssDump = null
-  
-  
-  # Clean
-  # ------------------------------------------------
-  #
-  # clean when scope insides changes, but if scope changes must destroy
-  
-  clean: () ->    
-    LOG @id,".clean()"
-    
-    # event listeners
-    #@offAll()
-    
-    for key, val of @vars
-      delete @vars[key]
+    if solution
+      @updating.apply(solution)
 
-    @setNeedsLayout  false
-    @setNeedsDisplay false
-    @setNeedsLayout  false
-    @setNeedsMeasure false
-    @isMeasuring = false
-    @waitingToLayoutSubtree = false        
-    
-    @commander.clean()
-    @getter.clean?()
-    
-    @_CSSDumper_clean()
-    @_Worker_clean()
-    @_Queries_clean()
-        
-    @
-  
-  # Destruction
-  # ------------------------------------------------
-  
-  is_destroyed: false
-  
-  destroyChildren: () ->
-    for e in @childEngines
-      if !e.is_destroyed
-        e.destroy()
-  
-  destroy: ->
-    LOG @id,".destroy()"
-    @hoistedTrigger "beforeDestroy", @        
-    
-    # release ids
-    GSS._ids_killed([@id]) # TODO(D4): release children node ids?
-    
-    # release children ids
-    if @scope
-      descdendants = GSS.get.descdendantNodes @scope
-      for d in descdendants
-        kill = d._gss_id
-        if kill then GSS._id_killed kill
-    
-    # remove from GSS.engines
-    i = engines.indexOf @
-    if i > -1 then engines.splice(i, 1)
-    delete engines.byId[@id]
-        
-    # cascade destruction?
-    #@destroyChildren()        
-              
-    # event listeners
-    @offAll()
-    
-    @setNeedsLayout  false
-    @setNeedsDisplay false
-    @setNeedsLayout  false
-    @waitingToLayoutSubtree = false    
-    
-    @commander.destroy()    
-    @getter.destroy?()     
-          
-    @vars   = null
-    @clauses = null
-    @ast    = null    
-    @getter = null
-    @scope = null
-    @commander = null    
-    
-    @_Hierarchy_destroy()
-    @_CSSDumper_destroy()
-    @_Worker_destroy()
-    @_Queries_destroy()
-    
-    @is_running   = null
-    @is_destroyed = true
+    @queries?.onBeforeSolve()
+    @pairs?.onBeforeSolve()
+
+
+    if providing
+      while provided = @providing
+        @providing = null
+        if args[0]?.index
+          provided.index ?= args[0].index
+          provided.parent ?= args[0].parent
+        @update(provided)
+      @providing = undefined
+
+    if name
+      @console.end(reason)
+
+    workflow = @updating
+    if workflow.domains.length
+      if old
+        if old != workflow
+          old.push(workflow)
+      if !old || !workflow.busy?.length
+        workflow.each @resolve, @
+      if workflow.busy?.length
+        return workflow
+
+    onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
+    restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
+
+    if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled) 
+      return @onSolve(null, restyled)
+
+  onSolve: (update, restyled) ->
+    # Apply styles
+
+    if solution = update || @updating.solution
+      #if Object.keys(solution).length
+      @applier?.solve(solution)
+    else if !@updating.reflown && !restyled
+      if !@updating.problems.length
+        @updating = undefined
+      return
+
+    if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
+      @intrinsic.changes = {}
+      scope = @updating.reflown || @scope
+      @updating.reflown = undefined
+      @intrinsic?.each(scope, @intrinsic.update)
+      @updating.apply @intrinsic.changes
+      @intrinsic.changes = undefined
+
+    @solved.merge solution
+
+    @pairs?.onBeforeSolve()
+    @updating.reset()
+
+    # Launch another pass here if solutions caused effects
+    # Effects are processed separately, then merged with found solution
+    if effects = @updating.effects
+      @updating.effects = undefined
+    else
+      effects = {}
+
+    effects = @updating.each(@resolve, @, effects)
+    if @updating.busy?.length
+      return effects
       
-    @
+    #return if @requesting
+
+    if effects && Object.keys(effects).length
+      return @onSolve(effects)
+
+    # Fire up solved event if we've had remove commands that 
+    # didnt cause any reactions
+    if (!solution || (!solution.push && !Object.keys(solution).length) || @updating.problems[@updating.index + 1]) &&
+        (@updating.problems.length != 1 || @updating.domains[0] != null) &&
+        !@engine.restyled
+      return 
+
+    if !@updating.problems.length && @updated?.problems.length && !@engine.restyled
+      @updating.finish()
+      @restyled = undefined
+      @updating = undefined
+      return
+    else
+      @updated = @updating
+      @updating.finish()
+      @updating = undefined
+      @restyled = undefined
+
+    @console.info('Solution\t   ', @updated, solution, @solved.values)
+
+    # Trigger events on engine and scope node
+    @triggerEvent('solve', @updated.solution, @updated)
+    if @scope
+      @dispatchEvent(@scope, 'solve', @updated.solution, @updated)
+
+    # Legacy events
+    @triggerEvent('solved', @updated.solution, @updated)
+    if @scope
+      @dispatchEvent(@scope, 'solved', @updated.solution, @updated)
     
-  
-  # Constraint Creation Helpers
-  # ----------------------------------------
-  
-  elVar: (el,key,selector,tracker2) ->
-    gid = "$" + GSS.getId el    
-    # normalize key names
-    if key is 'left'
-      key = 'x'
-    else if key is 'top' 
-      key = 'y'
-    varid = gid+"[#{key}]"
-    #
-    ast = ['get$',key,gid,selector]
-    if tracker2
-      ast.push tracker2
-    return ast
+    @debugger.update(@)
+        
     
-  var: (key) ->    
-    #@registerCommand ['var', key]
-    return ['get',key]
-  
-  varexp: (key, exp, tracker) ->
-    #@registerCommand ['varexp', exp, tracker]
-    return ['get',key]
-  
-  __e: (key) ->
-    if key instanceof Array then return key
-    if !!Number(key) or (Number(key) is 0) then return ['number',key]
-    return @var key
-  
-  _addconstraint: (op,e1,e2,s,w,more) ->
-    e1 = @__e e1
-    e2 = @__e e2
-    command = ['eq', e1, e2]
-    if s then command.push s
-    if w then command.push w
-    if more
-      for m in more
-        command.push m
-    @registerCommand command
-  
-  eq:  (e1,e2,s,w,more) ->
-    @_addconstraint('eq',e1,e2,s,w,more)
-  
-  lte: (e1,e2,s,w,more) ->
-    @_addconstraint('lte',e1,e2,s,w,more)
-  
-  gte: (e1,e2,s,w,more) ->
-    @_addconstraint('gte',e1,e2,s,w,more)
-  
-  suggest: (v, val, strength = 'required') ->    
-    v = @__e v
-    @registerCommand ['suggest', v, ['number', val], strength]
-  
-  stay: (v) ->    
-    v = @__e v
-    @registerCommand ['stay', v]
-  
-  remove: (tracker) ->
-    @registerCommand ['remove', tracker]
-  
-  'number': (num) ->
-    return ['number', num]
+    return @updated.solution
 
-  'plus': (e1, e2) ->
-    e1 = @__e e1
-    e2 = @__e e2
-    return ['plus', e1, e2]
+  # Accept solution from a solver and resolve it to verify
+  provide: (solution) ->
+    if solution.operation
+      return @engine.updating.provide solution
+    if !solution.push
+      return @updating?.each(@resolve, @, solution) || @onSolve()
 
-  'minus' : (e1,e2) ->
-    e1 = @__e e1
-    e2 = @__e e2
-    return ['minus', e1, e2]
+    if @providing != undefined
+      unless @hasOwnProperty('providing')
+        @engine.providing ||= []
 
-  'multiply': (e1,e2) ->
-    e1 = @__e e1
-    e2 = @__e e2
-    return ['multiply', e1, e2]
+      (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
+      return
+    else
+      return @update.apply(@, arguments)
 
-  'divide': (e1,e2,s,w) ->    
-    e1 = @__e e1
-    e2 = @__e e2
-    return ['divide', e1, e2]
+  resolve: (domain, problems, index, workflow) ->
+    if domain && !domain.solve && domain.postMessage
+      workflow.postMessage domain, problems
+      workflow.await(domain.url)
+      return domain
+
+    if (index = workflow.imports?.indexOf(domain)) > -1
+      finish = index
+      imports = []
+      while property = workflow.imports[++finish]
+        break unless typeof property == 'string'
+        if imports.indexOf(property) == -1
+          imports.push(property)
+      workflow.imports.splice(index, finish - index)
+
+      for property in imports
+        if @intrinsic.values.hasOwnProperty(property)
+          value = @intrinsic.values[property]
+        else if workflow.solution?.hasOwnProperty(property)
+          value = workflow.solution[property]
+        else
+          value = @solution?[property]
+
+        if value?
+          problems.push ['value', value, property]
+
+    for problem, index in problems
+      if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
+        problem = problems[index] = problem[0]
+    if problems instanceof Array && problems.length == 1 && problem instanceof Array
+      problems = problem
+    if domain
+      if @providing == undefined
+        @providing = null
+        providing = true
+      @console.start(problems, domain.displayName)
+      result = domain.solve(problems) || undefined
+      if result && result.postMessage
+        workflow.await(result.url)
+      else
+        if providing && @providing
+          workflow.push(@update(@frame || true, @providing))
+          #workflow.optimize()
+
+        if result?.length == 1
+          result = result[0]
+      if providing
+        @providing = undefined
+      @console.end()
+
+    # Broadcast operations without specific domain (e.g. remove)
+    else
+
+      others = []
+      removes = []
+      if problems[0] == 'remove'
+        removes.push problems
+      else
+        for problem in problems
+          if problem[0] == 'remove'
+            removes.push(problem)
+          else
+            others.push(problem)
+     
+      for remove in removes
+        for path, index in remove
+          continue if index == 0
+          @unbypass(path)
+
+      for other, i in @domains
+        locals = []
+        other.changes = undefined
+        for remove in removes
+          for path, index in remove
+            continue if index == 0
+            if other.paths[path]
+              locals.push(path)
+            else if other.observers[path]
+              other.remove(path)
+        if other.changes
+          for property, value of other.changes
+            (result ||= {})[property] = value
+          other.changes = undefined
+
+        if locals.length
+          other.remove.apply(other, locals)
+          locals.unshift 'remove'
+          workflow.push([locals], other, true)
+        if others.length
+          workflow.push(others, other)
+      if typeof problems[0] == 'string'
+        problems = [problems]
+      for url, worker of @workers
+        workflow.push problems, worker
+    return result
+
+
+  # auto-worker url, only works with sync scripts!
+  getWorkerURL: do ->
+    if document?
+      scripts = document.getElementsByTagName('script')
+      src = scripts[scripts.length - 1].src
+      if location.search?.indexOf('log=0') > -1
+        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
+    return (url) ->
+      return typeof url == 'string' && url || src
+
+
+
+  # Initialize new worker and subscribe engine to its events
+  useWorker: (url) ->
+    unless typeof url == 'string' && Worker? && self.onmessage != undefined
+      return
+
+    @worker = @getWorker(url)
+    @worker.url = url
+    @worker.addEventListener 'message', @eventHandler
+    @worker.addEventListener 'error', @eventHandler
+    @solve = (commands) =>
+      @engine.updating ||= new @update
+      @engine.updating.postMessage(@worker, commands)
+      return @worker
+    return @worker
+
+  getWorker: (url) ->
+    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+
+  # Compile initial domains and shared engine features 
+  precompile: ->
+    if @constructor::running == undefined
+      for property, method of @Methods::
+        @constructor::[property] ||= 
+        @constructor[property] ||= Engine::Method(method, property)
+      @constructor::compile()
+    @Domain.compile(@Domains,   @)
+    for name, domain of @Domains
+      if domain::helps
+        for property, method of domain::Methods::
+          @constructor::[property] ||= 
+          @constructor[property] ||= Engine::Method(method, property, name.toLowerCase())
+    @update = Engine::Update.compile(@)
+    @mutations?.connect(true)
+
+    if location.search.indexOf('export=') > -1
+      @preexport()
+
+  preexport: ->
+
+    # Let every element get an ID
+    if (scope = @scope).nodeType == 9
+      scope = @scope.body
+    @identity.provide(scope)
+    for element in scope.getElementsByTagName('*')
+      if element.tagName != 'SCRIPT' &&
+          (element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1)
+        @identity.provide(element)
+    if window.Sizes
+      @sizes = []
+      for pairs in window.Sizes
+        for width in pairs[0]
+          for height in pairs[1]
+            @sizes.push(width + 'x' + height)
+    if match = location.search.match(/export=([a-z0-9]+)/)?[1]
+      if match.indexOf('x') > -1
+        [width, height] = match.split('x')
+        baseline = 72
+        width = parseInt(width) * baseline
+        height = parseInt(height) * baseline
+        window.addEventListener 'load', =>
+          localStorage[match] = JSON.stringify(@export())
+          @postexport()
+
+        document.body.style.width = width + 'px'
+        @intrinsic.properties['::window[height]'] = ->
+          return height
+        @intrinsic.properties['::window[width]'] = ->
+          return width
+
+      else 
+        if match == 'true'
+          localStorage.clear()
+          @postexport()
+
+  postexport: ->
+    for size in @sizes
+      unless localStorage[size]
+        location.search = location.search.replace(/[&?]export=([a-z0-9])+/, '') + '?export=' + size
+        return
+    result = {}
+    for property, value of localStorage
+      if property.match(/^\d+x\d+$/)
+        result[property] = JSON.parse(value)
+    document.write(JSON.stringify(result))
+
+  export: ->
+    values = {}
+    for path, value of @values
+      if (index = path.indexOf('[')) > -1 && path.indexOf('"') == -1
+        property = @camelize(path.substring(index + 1, path.length - 1))
+        id = path.substring(0, index)
+        if property == 'x' || property == 'y' || document.body.style[property] != undefined
+          unless @values[id + '[intrinsic-' + property + ']']?
+            values[path] = Math.ceil(value)
+    values.stylesheets = @stylesheets.export() 
+    return values
+
+  generate: ->
+
+
+  # Comile user provided features specific to this engine
+  compile: (state) ->
+    methods    = @methods    || @Methods::
+    properties = @properties || @Properties::
+    @Method  .compile(methods,    @)
+    @Property.compile(properties, @)
+    
+    @console.compile(@)
+
+    @running = state ? null
+    
+    @triggerEvent('compile', @)
+
+  # Hook: Should interpreter iterate returned object?
+  # (yes, if it's a collection of objects or empty array)
+  isCollection: (object) ->
+    if object && object.length != undefined && !object.substring && !object.nodeType
+      return true if object.isCollection
+      switch typeof object[0]
+        when "object"
+          return object[0].nodeType
+        when "undefined"
+          return object.length == 0
   
-  
 
-module.exports = Engine
+Engine.Continuation = Engine::Continuation
+
+# Identity and console modules are shared between engines
+Engine.identity = Engine::identity = new Engine::Identity
+Engine.console  = Engine::console  = new Engine::Console
+
+Engine.Engine   = Engine
+Engine.Domain   = Engine::Domain   = Domain
+Engine.mixin    = Engine::mixin    = Native::mixin
+Engine.time     = Engine::time     = Native::time
+Engine.clone    = Engine::clone    = Native::clone
+
+# Listen for message in worker to initialize engine on demand
+if !self.window && self.onmessage != undefined
+  self.addEventListener 'message', (e) ->
+    engine = Engine.messenger ||= Engine()
+    changes = engine.assumed.changes = {}
+    solution = engine.solve(e.data) || {}
+    engine.assumed.changes = undefined
+    for property, value of changes
+      solution[property] = value
+    postMessage(solution)
+module.exports = @GSS = Engine

@@ -4,12 +4,13 @@
  * license that can be found in the LICENSE file.
  */
 
+if (typeof window != 'undefined')
 (function(global) {
 
   var registrationsTable = new WeakMap();
 
   // We use setImmediate or postMessage for our future callback.
-  var setImmediate = window.msSetImmediate;
+  var setImmediate = window.msSetImmediate || window.setImmediate;
 
   // Use post message to emulate setImmediate.
   if (!setImmediate) {
@@ -352,6 +353,7 @@
 
     addListeners_: function(node) {
       var options = this.options;
+      
       if (options.attributes)
         node.addEventListener('DOMAttrModified', this, true);
 

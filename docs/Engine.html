@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Engine.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docs.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page">
+            
+              
+              <a class="source" href="Document.html">
+                Document.coffee
+              </a>
+            
+              
+              <a class="source" href="Engine.html">
+                Engine.coffee
+              </a>
+            
+              
+              <a class="source" href="Parser.html">
+                Parser.coffee
+              </a>
+            
+              
+              <a class="source" href="Solver.html">
+                Solver.coffee
+              </a>
+            
+              
+              <a class="source" href="Algebra.html">
+                Algebra.coffee
+              </a>
+            
+              
+              <a class="source" href="Constraints.html">
+                Constraints.coffee
+              </a>
+            
+              
+              <a class="source" href="Conventions.html">
+                Conventions.coffee
+              </a>
+            
+              
+              <a class="source" href="Measurements.html">
+                Measurements.coffee
+              </a>
+            
+              
+              <a class="source" href="Native.html">
+                Native.coffee
+              </a>
+            
+              
+              <a class="source" href="Rules.html">
+                Rules.coffee
+              </a>
+            
+              
+              <a class="source" href="Selectors.html">
+                Selectors.coffee
+              </a>
+            
+              
+              <a class="source" href="Transformations.html">
+                Transformations.coffee
+              </a>
+            
+              
+              <a class="source" href="Types.html">
+                Types.coffee
+              </a>
+            
+              
+              <a class="source" href="Units.html">
+                Units.coffee
+              </a>
+            
+              
+              <a class="source" href="Buffer.html">
+                Buffer.coffee
+              </a>
+            
+              
+              <a class="source" href="Command.html">
+                Command.coffee
+              </a>
+            
+              
+              <a class="source" href="Console.html">
+                Console.coffee
+              </a>
+            
+              
+              <a class="source" href="EventTrigger.html">
+                EventTrigger.coffee
+              </a>
+            
+              
+              <a class="source" href="Helper.html">
+                Helper.coffee
+              </a>
+            
+              
+              <a class="source" href="Property.html">
+                Property.coffee
+              </a>
+            
+              
+              <a class="source" href="Style.html">
+                Style.coffee
+              </a>
+            
+              
+              <a class="source" href="Expressions.html">
+                Expressions.coffee
+              </a>
+            
+              
+              <a class="source" href="Queries.html">
+                Queries.coffee
+              </a>
+            
+              
+              <a class="source" href="Values.html">
+                Values.coffee
+              </a>
+            
+              
+              <a class="source" href="Restyles.html">
+                Restyles.coffee
+              </a>
+            
+              
+              <a class="source" href="Solutions.html">
+                Solutions.coffee
+              </a>
+            
+              
+              <a class="source" href="Dimensions.html">
+                Dimensions.coffee
+              </a>
+            
+              
+              <a class="source" href="Equasions.html">
+                Equasions.coffee
+              </a>
+            
+              
+              <a class="source" href="Styles.html">
+                Styles.coffee
+              </a>
+            
+          </div>
+        </li>
+      </ul>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>Engine.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Engine is a base class for scripting environments.
+It includes interpreter that can be used with provided functions
+Acts as a faux-pipe that evaluates Expressions
+routes it through submodules to solve equasions and set styles
+Engine is the GSS global variable</p>
+
+            </div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Combine mixins</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-title">include</span> = -&gt;</span>
+  <span class="hljs-function"><span class="hljs-title">Context</span> = <span class="hljs-params">(<span class="hljs-property">@engine</span>)</span> -&gt;</span>
+  <span class="hljs-keyword">for</span> mixin <span class="hljs-keyword">in</span> arguments
+    <span class="hljs-keyword">for</span> name, fn <span class="hljs-keyword">of</span> <span class="hljs-attribute">mixin</span>::
+      <span class="hljs-attribute">Context</span>::[name] = fn
+  <span class="hljs-keyword">return</span> Context
+
+EventTrigger = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./concepts/EventTrigger'</span>)
+Buffer       = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./concepts/Buffer'</span>)
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Engine</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">include</span>(<span class="hljs-title">EventTrigger</span>, <span class="hljs-title">Buffer</span>)</span>
+
+  <span class="hljs-attribute">Expressions</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./input/Expressions'</span>)
+  <span class="hljs-attribute">Values</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./input/Values'</span>)
+
+  <span class="hljs-attribute">Commands</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./commands/Conventions'</span>)
+
+  <span class="hljs-attribute">Property</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./concepts/Property'</span>)
+  <span class="hljs-attribute">Command</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./concepts/Command'</span>)
+  <span class="hljs-attribute">Helper</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./concepts/Helper'</span>)
+  <span class="hljs-attribute">Console</span>:
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./concepts/Console'</span>)
+
+  <span class="hljs-attribute">constructor</span>: <span class="hljs-function"><span class="hljs-params">(scope, url)</span> -&gt;</span>
+    <span class="hljs-keyword">if</span> scope &amp;&amp; scope.nodeType</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>new GSS(node) assigns a new Engine.Document to node if it doesnt have one</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> <span class="hljs-property">@Expressions</span>
+        <span class="hljs-keyword">if</span> Document = Engine.Document
+          <span class="hljs-keyword">unless</span> <span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Document
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Document(scope, url)
+
+        Engine[Engine.identify(scope)] = @
+        <span class="hljs-property">@scope</span> = scope
+        <span class="hljs-property">@all</span> = scope.getElementsByTagName(<span class="hljs-string">'*'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>GSS(node) finds nearest parent engine or makes one at root</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">else</span>
+        <span class="hljs-keyword">while</span> scope
+          <span class="hljs-keyword">if</span> id = Engine.recognize(scope)
+            <span class="hljs-keyword">if</span> engine = Engine[id]
+              <span class="hljs-keyword">return</span> engine
+          <span class="hljs-keyword">break</span> <span class="hljs-keyword">unless</span> scope.parentNode
+          scope = scope.parentNode</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>new GSS() creates a new Engine.Solver</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> !scope || <span class="hljs-keyword">typeof</span> scope == <span class="hljs-string">'string'</span>
+      <span class="hljs-keyword">if</span> Engine.Solver &amp;&amp; !(<span class="hljs-keyword">this</span> <span class="hljs-keyword">instanceof</span> Engine.Solver)
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Engine.Solver(<span class="hljs-literal">undefined</span>, <span class="hljs-literal">undefined</span>, scope)
+
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@Expressions</span>
+      <span class="hljs-property">@properties</span>  = <span class="hljs-keyword">new</span> <span class="hljs-property">@Properties</span>(@)  <span class="hljs-keyword">if</span> <span class="hljs-property">@Properties</span>
+      <span class="hljs-property">@commands</span>    = <span class="hljs-keyword">new</span> <span class="hljs-property">@Commands</span>(@)    <span class="hljs-keyword">if</span> <span class="hljs-property">@Commands</span>
+      <span class="hljs-property">@expressions</span> = <span class="hljs-keyword">new</span> <span class="hljs-property">@Expressions</span>(@)
+      <span class="hljs-property">@values</span>      = <span class="hljs-property">@vars</span> = <span class="hljs-keyword">new</span> <span class="hljs-property">@Values</span>(@)
+      <span class="hljs-property">@events</span>      = {}
+      <span class="hljs-property">@input</span>       = <span class="hljs-property">@expressions</span>
+      <span class="hljs-property">@engine</span>      = @
+      <span class="hljs-keyword">return</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>GSS.Document() and GSS() create new GSS.Document on root initially</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> (Engine.Document || Engine)(scope, url)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Hook: Pass output to a subscriber</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">push</span>: <span class="hljs-function"><span class="hljs-params">(data)</span> -&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Unreference removed elements</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> <span class="hljs-property">@removed</span>
+      <span class="hljs-keyword">for</span> id <span class="hljs-keyword">in</span> <span class="hljs-property">@removed</span>
+        <span class="hljs-keyword">delete</span> <span class="hljs-property">@engine</span>.elements[id]
+      <span class="hljs-property">@removed</span> = <span class="hljs-literal">undefined</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Store solutions</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@values</span>.merge data</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Trigger events on engine and scope node</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-property">@triggerEvent</span>(<span class="hljs-string">'solved'</span>, data)
+    <span class="hljs-property">@dispatchEvent</span>(<span class="hljs-property">@scope</span>, <span class="hljs-string">'solved'</span>, data) <span class="hljs-keyword">if</span> <span class="hljs-property">@scope</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Proceed</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">super</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Destroy engine</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">destroy</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@scope</span>
+      Engine[<span class="hljs-property">@scope</span>._gss_id] = <span class="hljs-literal">undefined</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Get or generate uid for a given object.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@identify</span>: <span class="hljs-function"><span class="hljs-params">(object, generate)</span> -&gt;</span>
+    <span class="hljs-keyword">unless</span> id = object._gss_id
+      <span class="hljs-keyword">if</span> object == <span class="hljs-built_in">document</span>
+        id = <span class="hljs-string">"::document"</span>
+      <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> object == <span class="hljs-built_in">window</span>
+        id = <span class="hljs-string">"::window"</span>
+
+      <span class="hljs-keyword">unless</span> generate == <span class="hljs-literal">false</span>
+        object._gss_id = id ||= <span class="hljs-string">"$"</span> + (object.id || ++Engine.uid)
+      <span class="hljs-attribute">Engine</span>::elements[id] = object
+    <span class="hljs-keyword">return</span> id</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Get id if given object has one</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-property">@recognize</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> Engine.identify(object, <span class="hljs-literal">false</span>)
+
+  <span class="hljs-attribute">identify</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> Engine.identify(object)
+
+  <span class="hljs-attribute">recognize</span>: <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span>
+    <span class="hljs-keyword">return</span> Engine.identify(object, <span class="hljs-literal">false</span>)
+
+  <span class="hljs-property">@uid</span>: <span class="hljs-number">0</span>
+  <span class="hljs-attribute">elements</span>: {}
+  <span class="hljs-attribute">engines</span>: {}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Export all commands as underscored functions into engine
+This ensures commands are called in engine context
+Doing so on first run allows commands to be set after init
+Built in commands are compiled on the prototype</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">start</span>:<span class="hljs-function"> -&gt;</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">if</span> <span class="hljs-property">@running</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-property">@constructor</span>::running == <span class="hljs-literal">undefined</span>
+      <span class="hljs-property">@constructor</span>::running = <span class="hljs-literal">null</span>
+      <span class="hljs-property">@constructor</span>::compile()
+    <span class="hljs-property">@compile</span>()
+    <span class="hljs-keyword">return</span> <span class="hljs-property">@running</span> = <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Make helpers, styles and properties callable</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">compile</span>:<span class="hljs-function"> -&gt;</span>
+    commands = (<span class="hljs-property">@commands</span> || <span class="hljs-property">@Commands</span>::)
+    commands.engine ||= @
+    <span class="hljs-keyword">for</span> key, command <span class="hljs-keyword">of</span> commands
+      <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> command == @ || !commands.hasOwnProperty(key)
+      <span class="hljs-keyword">if</span> key.charAt(<span class="hljs-number">0</span>) != <span class="hljs-string">'_'</span>
+        subkey = <span class="hljs-string">'_'</span> + key
+        command = <span class="hljs-property">@Command</span>(command, subkey)
+        @[subkey] ?= command
+
+      @[key] ?= command
+
+    properties = (<span class="hljs-property">@properties</span> || <span class="hljs-property">@Properties</span>::)
+    properties.engine ||= @
+    <span class="hljs-keyword">for</span> key, property <span class="hljs-keyword">of</span> properties
+      <span class="hljs-keyword">continue</span> <span class="hljs-keyword">if</span> property == @ || !properties.hasOwnProperty(key)
+      prop = <span class="hljs-property">@Property</span>(property, key, properties)
+      @[<span class="hljs-string">'_'</span> + key] ?= prop
+
+    <span class="hljs-keyword">for</span> key, property <span class="hljs-keyword">of</span> properties
+      @[<span class="hljs-string">'_'</span> + key] ?= property
+    @
+
+  <span class="hljs-attribute">console</span>: <span class="hljs-property">@console</span> = <span class="hljs-keyword">new</span> <span class="hljs-attribute">Engine</span>::Console
+  <span class="hljs-attribute">time</span>:    <span class="hljs-property">@time</span>    = <span class="hljs-attribute">Engine</span>::Console.time</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Recursively slice arrays</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  <span class="hljs-attribute">clone</span>:   <span class="hljs-property">@clone</span>   = <span class="hljs-function"><span class="hljs-params">(object)</span> -&gt;</span> 
+    <span class="hljs-keyword">if</span> object &amp;&amp; object.map
+      <span class="hljs-keyword">return</span> object.map <span class="hljs-property">@clone</span>, @
+    <span class="hljs-keyword">return</span> object
+
+  <span class="hljs-property">@include</span>: include
+
+<span class="hljs-property">@GSS</span> = Engine
+
+<span class="hljs-built_in">module</span>.exports = Engine</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

@@ -22,9 +22,6 @@ module.exports = ->
     uglify:
       options:
         report: 'min'
-      worker:
-        files:
-          './dist/worker.min.js': ['./dist/worker.js']
       engine:
         files:
           './dist/gss.min.js': ['./dist/gss.js']
@@ -38,8 +35,6 @@ module.exports = ->
           banner: '<%= banner %>'
         files:
           src: [
-            'dist/worker.js'
-            'dist/worker.min.js'
             'dist/gss.js'
             'dist/gss.min.js'
           ]
@@ -76,7 +71,14 @@ module.exports = ->
             level: 'ignore'
           'no_backticks':
             level: 'ignore'
-    
+
+    docco:
+      src:
+        src: ['src/**/*.coffee']
+        options:
+          output: 'docs/'
+          css: 'vendor/docs.css'
+
     # CoffeeScript compilation
     coffee:
       src:
@@ -94,33 +96,8 @@ module.exports = ->
         expand: true
         cwd: 'spec'
         src: ['**.coffee', '**/*.coffee']
-        dest: 'spec'
+        dest: 'spec/js'
         ext: '.js'
-
-    # Worker process concatenation
-    concat:
-      worker:
-        src: ['components/slightlyoff-cassowary.js/bin/c.js', 'lib/Thread.js', 'lib/Worker.js']
-        dest: 'dist/worker.js'
-      ###
-      vendors:
-        options:
-          banner: 'module.exports = function(){'
-          footer: '};'
-        src: ['vendor/c.js', 'vendor/sidetable.js', 'vendor/MutationObserver.js']
-        dest: 'lib/vendor.js'
-      ###
-      ###
-      blob:
-        options:
-          banner: 'module.exports = window.URL.createObjectURL(new Blob(['
-          footer: '],{type:"text/javascript"}));'
-          process: (src, filepath) ->
-            return JSON.stringify(src) # only works with one file
-        src: ['worker/gss-worker.min.js']
-        dest: 'lib/WorkerBlobUrl.js'
-      ###
-        
 
     # Cross-browser testing
     connect:
@@ -167,6 +144,7 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-uglify'
   @loadNpmTasks 'grunt-contrib-clean'
   @loadNpmTasks 'grunt-exec'
+  @loadNpmTasks 'grunt-docco'
   @loadNpmTasks 'grunt-banner'
 
   # Grunt plugins used for testing
@@ -178,8 +156,8 @@ module.exports = ->
   @loadNpmTasks 'grunt-contrib-connect'
   @loadNpmTasks 'grunt-saucelabs'
 
-  @registerTask 'build-fast', ['coffee', 'exec:component_build','concat:worker']
-  @registerTask 'build', ['coffee', 'exec', 'concat:worker', 'uglify:worker', 'uglify:engine', 'usebanner']
+  @registerTask 'build-fast', ['coffee', 'exec:component_build']
+  @registerTask 'build', ['coffee', 'exec', 'uglify:engine', 'usebanner']
   @registerTask 'test', ['coffeelint', 'build', 'phantom']
   @registerTask 'phantom', ['connect', 'mocha_phantomjs']
   @registerTask 'crossbrowser', ['build', 'coffeelint', 'connect', 'mocha_phantomjs', 'saucelabs-mocha']
