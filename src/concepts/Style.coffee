@@ -175,7 +175,7 @@ class Shorthand
         if !expression
           types = styles[key].types
           for type in types
-            if type.displayName == '_Integer' || type.displayName == '_Float'
+            if type.displayName == 'Integer' || type.displayName == 'Float'
               return operation
           if operation != 0
             operation = Math.floor(operation) + 'px'

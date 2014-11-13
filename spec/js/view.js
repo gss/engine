@@ -42,10 +42,10 @@ describe("GSS.View", function() {
         return done();
       };
       container.addEventListener('solved', onSolved);
-      engine.solve([['==', ['get', ['$class', 'target'], 'width'], 88]]);
+      engine.solve([['==', ['get', ['class', 'target'], 'width'], 88]]);
       container.innerHTML = "<div>\n  <div>\n    <div style=\"width:10px;\" class=\"target\">\n      <div>\n        <div>\n          <div style=\"width:10px;\" class=\"target\">\n          </div>\n        </div>\n      </div>\n    </div>\n  </div>\n</div>        ";
-      target1 = engine.$class('target')[0];
-      target2 = engine.$class('target')[1];
+      target1 = engine["class"]('target')[0];
+      target2 = engine["class"]('target')[1];
       assert(target1.style['width'] === "10px");
       return assert(target2.style['width'] === "10px");
     });
@@ -54,7 +54,7 @@ describe("GSS.View", function() {
     return it('matrix3d & view:attach event', function(done) {
       var ast, onSolved, q, target1, target2;
       container.innerHTML = "<div id=\"target1\" class=\"target\">\n  <div id=\"target2\" class=\"target\">\n  </div>\n</div>  ";
-      ast = [['==', ['get', ['$class', 'target'], 'y'], 100]];
+      ast = [['==', ['get', ['class', 'target'], 'y'], 100]];
       q = document.getElementsByClassName('target');
       target1 = q[0];
       target2 = q[1];
@@ -73,10 +73,10 @@ describe("GSS.View", function() {
     return it('after solving', function(done) {
       var ast;
       container.style.position = 'relative';
-      ast = ['==', ['get', ['$id', 'floater'], 'y'], ['+', ['get', ['$id', 'anchor'], 'intrinsic-y'], 3]];
+      ast = ['==', ['get', ['id', 'floater'], 'y'], ['+', ['get', ['id', 'anchor'], 'intrinsic-y'], 3]];
       engine.once('solved', function() {
         expect(engine.values['$floater[y]']).to.eql(20);
-        engine.$id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;');
+        engine.id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;');
         return engine.once('solved', function() {
           expect(engine.values['$floater[y]']).to.eql(31);
           return done();
@@ -89,7 +89,7 @@ describe("GSS.View", function() {
   describe('Display Pass takes in account parent offsets when requested', function() {
     return it('after solving', function(done) {
       var onSolved, q, target1;
-      engine.solve([['==', ['get', ['$class', 'target'], 'y'], 100]]);
+      engine.solve([['==', ['get', ['class', 'target'], 'y'], 100]]);
       container.innerHTML = "<div style=\"border: 1px solid black;top:1px; position:absolute;\">\n  <div style=\"border: 1px solid black;top:1px; position:absolute;\">\n    <div style=\"border: 1px solid black;top:1px; position:absolute;\">\n      <div style=\"border: 1px solid black;top:1px; position:absolute;\">\n        <div id=\"target1\" class=\"target\">\n        </div>\n      </div>\n    </div>\n  </div>\n</div>        ";
       q = document.getElementsByClassName('target');
       target1 = q[0];

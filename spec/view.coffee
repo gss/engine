@@ -36,7 +36,7 @@ describe "GSS.View", ->
         done()
       container.addEventListener 'solved', onSolved
       engine.solve [
-          ['==', ['get',['$class', 'target'],   'width'], 88]
+          ['==', ['get',['class', 'target'],   'width'], 88]
         ]
 
       container.innerHTML = """
@@ -53,8 +53,8 @@ describe "GSS.View", ->
           </div>
         </div>        
       """            
-      target1 = engine.$class('target')[0]
-      target2 = engine.$class('target')[1]
+      target1 = engine.class('target')[0]
+      target2 = engine.class('target')[1]
       assert target1.style['width'] is "10px"
       assert target2.style['width'] is "10px"
   
@@ -68,7 +68,7 @@ describe "GSS.View", ->
         </div>  
       """          
       ast = [
-          ['==', ['get',['$class','target'],'y'], 100]
+          ['==', ['get',['class','target'],'y'], 100]
         ]        
 
       q = document.getElementsByClassName('target')
@@ -90,18 +90,18 @@ describe "GSS.View", ->
 
       ast = ['==', 
               ['get',
-                ['$id', 'floater'],
+                ['id', 'floater'],
                 'y'], 
               ['+', 
                 ['get',
-                  ['$id', 'anchor'],
+                  ['id', 'anchor'],
                   'intrinsic-y'], 
                 3]]        
       
         
       engine.once 'solved', ->
         expect(engine.values['$floater[y]']).to.eql 20
-        engine.$id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;') 
+        engine.id('pusher').setAttribute('style', 'padding-top: 11px; height: 17px;') 
 
         engine.once 'solved', ->  
           expect(engine.values['$floater[y]']).to.eql 31        
@@ -119,7 +119,7 @@ describe "GSS.View", ->
     it 'after solving', (done) ->   
         
       engine.solve [
-          ['==', ['get',['$class', 'target'],'y'], 100]
+          ['==', ['get',['class', 'target'],'y'], 100]
         ]
       
       

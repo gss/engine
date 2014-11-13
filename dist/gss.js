@@ -24175,7 +24175,7 @@ Shorthand = (function() {
           types = styles[key].types;
           for (_j = 0, _len = types.length; _j < _len; _j++) {
             type = types[_j];
-            if (type.displayName === '_Integer' || type.displayName === '_Float') {
+            if (type.displayName === 'Integer' || type.displayName === 'Float') {
               return operation;
             }
           }
