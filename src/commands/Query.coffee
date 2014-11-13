@@ -17,11 +17,12 @@ class Query extends Command
             parent.command.solve(engine, parent, contd, scope, parent.indexOf(operation), node)
         return
       else
-        
-          
         unless parent.command.yield?(result, engine, operation, continuation, scope, ascender)
-          return parent.command.solve(engine, parent, continuation, @subscope(scope, result) || scope, parent.indexOf(operation), result)
-          
+          if ascender? || !@hidden
+            return parent.command.solve(engine, parent, continuation, @subscope(scope, result) || scope, parent.indexOf(operation), result)
+          else
+            return result
+            
   subscope: (scope, result) ->
     return
      

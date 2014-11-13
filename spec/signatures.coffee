@@ -171,6 +171,54 @@ describe 'Signatures', ->
         expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test'])).to.not.be.an.instanceof(OptionalGroupCommand.optional)
         expect(engine.abstract.Command(['optional', ['+',  ['get', 'test'], 1], 'test', 10])).to.be.an.instanceof(OptionalGroupCommand.optional)
 
+  describe 'dispatched subclassed with dynamic condition', ->
+
+    WrapperCommand = GSS::Command.extend {
+      signature: [
+        left: ['DynamicCommand']
+        right: ['Number']
+      ]
+    }, {
+      'wrapper': (a) ->
+        return ['wrapper', a]
+    }
+
+
+    DynamicCommand = GSS::Command.extend {
+      type: 'DynamicCommand'
+      signature: []
+    }, {
+      'dynamic': (a) ->
+        return [666]
+    }
+
+    DynamicCommand.Positive = DynamicCommand.extend {
+      condition: (engine, operation) ->
+        return operation.parent[2] > 0
+
+    }
+
+    DynamicCommand.Negative = DynamicCommand.extend {
+      condition: (engine, operation) ->
+        return operation.parent[2] < 0
+    }
+    
+    before ->
+      engine = new GSS
+      engine.abstract.WrapperCommand = WrapperCommand
+      engine.abstract.DynamicCommand = DynamicCommand
+      engine.compile(true)
+
+    it 'should dispatch command', ->
+      engine.abstract.Command(cmd = ['wrapper', ['dynamic'], 0])
+      expect(cmd[1].command).to.be.an.instanceof DynamicCommand.dynamic
+      engine.abstract.Command(cmd = ['wrapper', ['dynamic'], +1])
+      expect(cmd[1].command).to.be.an.instanceof DynamicCommand.Positive
+      engine.abstract.Command(cmd = ['wrapper', ['dynamic'], -1])
+      expect(cmd[1].command).to.be.an.instanceof DynamicCommand.Negative
+      
+
+
   describe 'dispatched with object as callee', ->
     ObjectCommand = GSS::Command.extend {
       signature: [

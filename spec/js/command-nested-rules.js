@@ -515,13 +515,15 @@ describe('Nested Rules', function() {
             [
               [
                 {
-                  key: ".group .vessel$vessel1↓::root .box:last-child$box2"
+                  key: ".group .vessel$vessel1↓::root .box:last-child$box2",
+                  scope: '$vessel1'
                 }, ['<=', ['get', '$box2[width]'], 100]
               ]
             ], [
               [
                 {
-                  key: ".group .vessel$vessel1↓::root .box:last-child$box4"
+                  key: ".group .vessel$vessel1↓::root .box:last-child$box4",
+                  scope: '$vessel1'
                 }, ['<=', ['get', '$box4[width]'], 100]
               ]
             ]
@@ -535,7 +537,8 @@ describe('Nested Rules', function() {
               ["remove", ".group .vessel$vessel1↓::root .box:last-child$box4"], [["remove", ".group .vessel$vessel1↓::root .box:last-child$box4"]], [
                 [
                   {
-                    key: ".group .vessel$vessel1↓::root .box:last-child$box5"
+                    key: ".group .vessel$vessel1↓::root .box:last-child$box5",
+                    scope: '$vessel1'
                   }, ['<=', ['get', '$box5[width]'], 100]
                 ]
               ]
@@ -549,13 +552,15 @@ describe('Nested Rules', function() {
                   [
                     [
                       {
-                        key: ".group .vessel$vessel1↓::root .box:last-child$box2"
+                        key: ".group .vessel$vessel1↓::root .box:last-child$box2",
+                        scope: '$vessel1'
                       }, ['<=', ['get', '$box2[width]'], 100]
                     ]
                   ], [
                     [
                       {
-                        key: ".group .vessel$vessel1↓::root .box:last-child$box5"
+                        key: ".group .vessel$vessel1↓::root .box:last-child$box5",
+                        scope: '$vessel1'
                       }, ['<=', ['get', '$box5[width]'], 100]
                     ]
                   ]
@@ -566,33 +571,39 @@ describe('Nested Rules', function() {
                     [
                       [
                         {
-                          key: '.group .vessel$vessel11↓::root .box:last-child$box2'
+                          key: '.group .vessel$vessel11↓::root .box:last-child$box2',
+                          scope: '$vessel11'
                         }, ['<=', ['get', '$box2[width]'], 100]
                       ]
                     ], [
                       [
                         {
-                          key: '.group .vessel$vessel11↓::root .box:last-child$box5'
+                          key: '.group .vessel$vessel11↓::root .box:last-child$box5',
+                          scope: '$vessel11'
                         }, ['<=', ['get', '$box5[width]'], 100]
                       ]
                     ], [
                       [
                         {
-                          key: '.group .vessel$vessel11↓::root .box:last-child$box12'
+                          key: '.group .vessel$vessel11↓::root .box:last-child$box12',
+                          scope: '$vessel11'
                         }, ['<=', ['get', '$box12[width]'], 100]
                       ], [
                         {
-                          key: '.group .vessel$vessel1↓::root .box:last-child$box12'
+                          key: '.group .vessel$vessel1↓::root .box:last-child$box12',
+                          scope: '$vessel1'
                         }, ['<=', ['get', '$box12[width]'], 100]
                       ]
                     ], [
                       [
                         {
-                          key: '.group .vessel$vessel11↓::root .box:last-child$box14'
+                          key: '.group .vessel$vessel11↓::root .box:last-child$box14',
+                          scope: '$vessel11'
                         }, ['<=', ['get', '$box14[width]'], 100]
                       ], [
                         {
-                          key: '.group .vessel$vessel1↓::root .box:last-child$box14'
+                          key: '.group .vessel$vessel1↓::root .box:last-child$box14',
+                          scope: '$vessel1'
                         }, ['<=', ['get', '$box14[width]'], 100]
                       ]
                     ]
@@ -610,7 +621,8 @@ describe('Nested Rules', function() {
                         ['remove', '.group .vessel$vessel1↓::root .box:last-child$box2'], [['remove', '.group .vessel$vessel1↓::root .box:last-child$box2']], [
                           [
                             {
-                              key: ".group .vessel$vessel1↓::root .box:last-child$box1"
+                              key: ".group .vessel$vessel1↓::root .box:last-child$box1",
+                              scope: '$vessel1'
                             }, ['<=', ['get', '$box1[width]'], 100]
                           ]
                         ]
@@ -645,35 +657,101 @@ describe('Nested Rules', function() {
         window.$engine = engine = new GSS(container);
         engine.once('solve', function() {
           var newLast;
-          expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['<=', ['get', '$box2', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box2", "$vessel1"], 100]], [['<=', ['get', '$box4', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box4", "$vessel1"], 100]]]));
+          expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+            [
+              [
+                {
+                  key: ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box2",
+                  scope: "$vessel1"
+                }, ['<=', ['get', '$box2[width]'], 100]
+              ]
+            ], [
+              [
+                {
+                  key: ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box4",
+                  scope: "$vessel1"
+                }, ['<=', ['get', '$box4[width]'], 100]
+              ]
+            ]
+          ]));
           newLast = document.createElement('div');
           newLast.id = 'box5';
           newLast.className = 'box';
           container.firstElementChild.appendChild(newLast);
           return engine.once('solve', function() {
-            expect(stringify(engine.updated.getProblems())).to.eql(stringify([["remove", ".group .vessel$vessel1↓::parent .box:last-child$box4"], [['<=', ['get', '$box5', 'width', '.group .vessel$vessel1↓::parent .box:last-child$box5', "$vessel1"], 100]]]));
+            expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+              ["remove", ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box4"], [["remove", ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box4"]], [
+                [
+                  {
+                    key: ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box5",
+                    scope: "$vessel1"
+                  }, ['<=', ['get', '$box5[width]'], 100]
+                ]
+              ]
+            ]));
             container.firstElementChild.setAttribute('class', '');
             return engine.once('solve', function() {
-              expect(stringify(engine.updated.getProblems())).to.eql(stringify([['remove', '.group .vessel$vessel1↓::parent .box:last-child$box2', '.group .vessel$vessel1↓::parent .box:last-child$box5', '.group .vessel$vessel1↓::parent', ".group .vessel$vessel1"]]));
+              expect(stringify(engine.updated.getProblems())).to.eql(stringify([['remove', '.group$group1↓.vessel$vessel1↓::parent .box:last-child$box2', '.group$group1↓.vessel$vessel1↓::parent .box:last-child$box5', '.group$group1↓.vessel$vessel1↓::parent', ".group$group1↓.vessel$vessel1", ".group$group1"], [['remove', '.group$group1↓.vessel$vessel1↓::parent .box:last-child$box2']], [['remove', '.group$group1↓.vessel$vessel1↓::parent .box:last-child$box5']]]));
               container.firstElementChild.setAttribute('class', 'group');
               return engine.once('solve', function() {
-                expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['<=', ['get', '$box2', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box2", "$vessel1"], 100]], [['<=', ['get', '$box5', 'width', ".group .vessel$vessel1↓::parent .box:last-child$box5", "$vessel1"], 100]]]));
+                expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+                  [
+                    [
+                      {
+                        key: ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box2",
+                        scope: "$vessel1"
+                      }, ['<=', ['get', '$box2[width]'], 100]
+                    ]
+                  ], [
+                    [
+                      {
+                        key: ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box5",
+                        scope: "$vessel1"
+                      }, ['<=', ['get', '$box5[width]'], 100]
+                    ]
+                  ]
+                ]));
                 container.appendChild(clone);
                 return engine.once('solve', function() {
-                  expect(stringify(engine.updated.getProblems())).to.eql(stringify([[['<=', ['get', '$box12', 'width', ".group .vessel$vessel11↓::parent .box:last-child$box12", "$vessel11"], 100]], [['<=', ['get', '$box14', 'width', ".group .vessel$vessel11↓::parent .box:last-child$box14", "$vessel11"], 100]]]));
+                  expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+                    [
+                      [
+                        {
+                          key: ".group$group11↓.vessel$vessel11↓::parent .box:last-child$box12",
+                          scope: "$vessel11"
+                        }, ['<=', ['get', '$box12[width]'], 100]
+                      ]
+                    ], [
+                      [
+                        {
+                          key: ".group$group11↓.vessel$vessel11↓::parent .box:last-child$box14",
+                          scope: "$vessel11"
+                        }, ['<=', ['get', '$box14[width]'], 100]
+                      ]
+                    ]
+                  ]));
                   container.replaceChild(container.firstElementChild, container.lastElementChild);
                   return engine.once('solve', function() {
                     var box2;
-                    expect(stringify(engine.updated.getProblems())).to.eql(stringify([['remove', '.group .vessel$vessel11↓::parent .box:last-child$box12', '.group .vessel$vessel11↓::parent .box:last-child$box14', '.group .vessel$vessel11↓::parent', ".group .vessel$vessel11"]]));
+                    expect(stringify(engine.updated.getProblems())).to.eql(stringify([['remove', '.group$group11↓.vessel$vessel11↓::parent .box:last-child$box12', '.group$group11↓.vessel$vessel11↓::parent .box:last-child$box14', '.group$group11↓.vessel$vessel11↓::parent', ".group$group11↓.vessel$vessel11", ".group$group11"], [['remove', '.group$group11↓.vessel$vessel11↓::parent .box:last-child$box12']], [['remove', '.group$group11↓.vessel$vessel11↓::parent .box:last-child$box14']]]));
                     box2 = container.getElementsByClassName('box')[2];
                     box2.parentNode.removeChild(box2);
                     return engine.once('solve', function() {
                       var vessel;
-                      expect(stringify(engine.updated.getProblems())).to.eql(stringify([["remove", ".group .vessel$vessel1↓::parent .box:last-child$box2"], [['<=', ['get', '$box1', 'width', '.group .vessel$vessel1↓::parent .box:last-child$box1', "$vessel1"], 100]]]));
+                      expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+                        ["remove", ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box2"], [["remove", ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box2"]], [
+                          [
+                            {
+                              key: ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box1",
+                              scope: "$vessel1"
+                            }, ['<=', ['get', '$box1[width]'], 100]
+                          ]
+                        ]
+                      ]));
                       vessel = container.getElementsByClassName('vessel')[0];
                       vessel.parentNode.removeChild(vessel);
                       return engine.once('solve', function() {
-                        expect(stringify(engine.updated.getProblems())).to.eql(stringify([['remove', '.group .vessel$vessel1↓::parent .box:last-child$box1', ".group .vessel$vessel1↓::parent .box:last-child$box5", ".group .vessel$vessel1↓::parent", ".group .vessel$vessel1"]]));
+                        expect(stringify(engine.updated.getProblems())).to.eql(stringify([['remove', '.group$group1↓.vessel$vessel1↓::parent .box:last-child$box1', ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box5", ".group$group1↓.vessel$vessel1↓::parent", ".group$group1↓.vessel$vessel1"], [['remove', ".group$group1↓.vessel$vessel1↓::parent .box:last-child$box5"]], [['remove', '.group$group1↓.vessel$vessel1↓::parent .box:last-child$box1']]]));
                         container.innerHTML = "";
                         return done();
                       });
@@ -689,13 +767,21 @@ describe('Nested Rules', function() {
       });
       it('should handle mix of global and local selector', function(done) {
         var rules;
-        rules = [['rule', ['$class', ['$combinator', ['$class', 'vessel'], ' '], 'box'], ["<=", ["get", ["$reserved", "this"], "width"], ["get", ["$id", "vessel1"], "width"]]]];
+        rules = [['rule', ['class', [' ', ['class', 'vessel']], 'box'], ["<=", ["get", ["::this"], "width"], ["get", ["id", [' ', ['::root']], "vessel1"], "width"]]]];
         GSS.console.info('.vessel .box { ::[width] == #vessel1[width] } ');
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div id=\"vessel1\" class=\"vessel\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         engine = new GSS(container);
         engine.once('solve', function() {
           var vessel1;
-          expect(stringify(engine.updated.getProblems())).to.eql(stringify([[["<=", ["get", "$box1", "width", ".vessel .box$box1↓#vessel1", "$box1"], ["get", "$vessel1", "width", ".vessel .box$box1↓#vessel1", "$box1"]], ["<=", ["get", "$box2", "width", ".vessel .box$box2↓#vessel1", "$box2"], ["get", "$vessel1", "width", ".vessel .box$box2↓#vessel1", "$box2"]]]]));
+          expect(stringify(engine.updated.getProblems())).to.eql(stringify([
+            [
+              [
+                {
+                  key: ".vessel .box$box1↓::root #vessel1$vessel1"
+                }, ["<=", ["get", "$box1", "width", ".vessel .box$box1↓#vessel1", "$box1"], ["get", "$vessel1", "width", ".vessel .box$box1↓#vessel1", "$box1"]]
+              ], ["<=", ["get", "$box2", "width", ".vessel .box$box2↓#vessel1", "$box2"], ["get", "$vessel1", "width", ".vessel .box$box2↓#vessel1", "$box2"]]
+            ]
+          ]));
           vessel1 = engine.$id('vessel1');
           vessel1.parentNode.removeChild(vessel1);
           return engine.once('solve', function() {

@@ -119,8 +119,9 @@ class Signatures
           combinations.push(combination)
         @generate combinations, positions, properties, combination, length
     return combinations
+
   # Create actual nested lookup tables for argument types
-  
+  # The exit node may be an array of subtypes
   @write: (command, storage, combination)->
     for i in [0 ... combination.length]
       if (arg = combination[i]) == 'default'
@@ -130,29 +131,41 @@ class Signatures
         if arg != undefined && i < last
           storage = storage[arg] ||= {}
         else
-          storage.resolved ||= command.extend(
-            permutation: combination[last], 
-            padding: last - i
-          )
+          method = command::condition && 'unshift' || 'push'
+          variant = command.extend 
+              permutation: combination[last], 
+              padding: last - i
+
+          if resolved = storage.resolved
+            if variant::condition
+              (resolved::conditions ||= [resolved]).splice(-1, 0, variant)
+            else
+              if resolved::condition
+                variant::conditions = resolved::conditions || [resolved]
+                storage.resolved = variant
+          else
+            storage.resolved = variant
+
     return
 
   # Write cached lookup tables into a given storage (register method by signature)
   @set: (signatures, property, command, types) ->
     storage = signatures[property] ||= {}
 
-    for type of types
-
-      if execute = command.prototype?[type]
-        Prototype = types[type].extend()
-        for own property, value of command.prototype
-          Prototype::[property] = value
-        if typeof execute == 'object'
-          for property, value of execute
+    for type, subcommand of types
+      if proto = command.prototype
+        if (execute = proto?[type])
+          Prototype = subcommand.extend()
+          for own property, value of proto
             Prototype::[property] = value
-        else
-          Prototype::execute = execute
-        for combination in @sign(types[type], Prototype.prototype)
-          @write Prototype, storage, combination
+          if typeof execute == 'object'
+            for property, value of execute
+              Prototype::[property] = value
+          else
+            Prototype::execute = execute
+            
+          for combination in @sign(subcommand, Prototype.prototype)
+            @write Prototype, storage, combination
 
     for combination in @sign(command, command.prototype)
       @write command, storage, combination

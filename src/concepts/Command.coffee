@@ -14,6 +14,9 @@ class Command
       operation.command = command
     
     return command
+
+  @subtype: (engine, operation, types) ->
+
   
   # Process arguments and match appropriate command
   @match: (engine, operation, parent, index) ->
@@ -51,10 +54,27 @@ class Command
 
 
     if command = Default || signature?.resolved || engine.Default
-      return command 
+      unless parent
+        Command.descend(command, engine, operation)
+      return command
     else
       throw new Error "Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain'
-      
+  
+  # Choose a sub type for command    
+  @descend: (command, engine, operation) ->
+    for argument in operation
+      if cmd = argument.command
+        if conditions = cmd.conditions
+          for type in conditions
+            if type::condition(engine, argument, cmd)
+              unless cmd = type.instance
+                cmd = new type(argument)
+              argument.command = cmd
+              unless cmd.key?
+                type.instance = cmd
+              break
+        Command.descend(cmd, engine, argument)
+    return command
       
   continue: (result, engine, operation, continuation) ->
     return continuation
@@ -69,8 +89,8 @@ class Command
     return result
 
   # Provide logging for an action
-  log: (args, engine, operation, continuation) ->
-    engine.console.row(operation[0], args, continuation || "")
+  log: (args, engine, operation, continuation, scope, name) ->
+    engine.console.row(name || operation[0], args, continuation || "")
 
   solve: (engine, operation, continuation, scope, ascender, ascending) -> 
     domain = operation.domain || engine
@@ -82,7 +102,7 @@ class Command
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope))
       when 'string'
-        if operation[0] == 'virtual' && result.charAt(0) != engine.Continuation.PAIR
+        if @stringy && result.charAt(0) != engine.Continuation.PAIR
           return result
         else
           continuation = result
@@ -272,8 +292,8 @@ class Command
     Prototype.prototype = @prototype
     Kommand.prototype = new Prototype
     
-    Kommand.extend = Command.extend
-    Kommand.define = Command.define
+    Kommand.extend   = Command.extend
+    Kommand.define   = Command.define
 
     for property, value of definition
       Kommand::[property] = value

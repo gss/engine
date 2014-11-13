@@ -326,8 +326,6 @@ class Queries
     if @mutations
       @unobserve(@mutations, path, true)
 
-    if path.indexOf('11') > -1
-      debugger
     #@unobserve(@engine.scope._gss_id, path)
 
     if !result || !@engine.isCollection(result)

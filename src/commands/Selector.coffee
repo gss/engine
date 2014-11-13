@@ -38,7 +38,7 @@ class Selector extends Query
 
       selector
     ]
-    command.log(args, engine, operation, continuation, scope)
+    command.log(args, engine, operation, continuation, scope, 'qsa')
     result  = command.before(args, engine, operation, continuation, scope)
     result ?= args[0].querySelectorAll(args[1])
     if result  = command.after(args, result, engine, operation, continuation, scope)
@@ -158,24 +158,27 @@ Selector.Search = Selector.extend
 # Reference to related element
 Selector.Element = Selector.extend
   signature: []
-  
-  subscope: (scope, result) ->
-    return result
 
-  continue: (result, engine, operation, continuation, scope) ->
-    if result == scope
-      return continuation
-    return continuation + @key
-
-  after: (args, result, engine, operation, continuation, scope) ->
-    if result == scope
-      return result
-    return Selector::after.apply(@, arguments)
   # When used out of selector context, dont build up continuation
   retrieve: (engine, operation, continuation, scope) ->
-    if @hidden || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))
+    if @hidden || continuation.substr(- @key.length) == @key || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))
       return @execute arguments ...
 
+# Optimized element reference outside of selector context
+Selector.Reference = Selector.Element.extend
+  
+  condition: (engine, operation) ->
+    return !(operation.parent.command instanceof Selector)
+
+  continue: ->
+    return continuation
+
+  after: ->
+    return result
+
+  retrieve: ->
+    return @execute arguments ...
+  
 Selector.define
   # Live collections
 
@@ -320,22 +323,32 @@ Selector.define
     Element: (engine, operation, continuation, scope) ->
       return scope
 
+    Reference: (engine, operation, continuation, scope) ->
+      return scope
+
   # Parent element (alias for !> *)
   '::parent':
     Element: (engine, operation, continuation, scope) ->
+      return engine.Continuation.getParentScope(scope, continuation)
+
+    Reference: (engine, operation, continuation, scope) ->
       return engine.Continuation.getParentScope(scope, continuation)
 
 
   # Current engine scope (defaults to document)
   '::root':
     Element: (engine, operation, continuation, scope) ->
-      debugger
+      return engine.scope
+
+    Reference: (engine, operation, continuation, scope) ->
       return engine.scope
 
   # Return abstract reference to window
   '::window':
-    Element: ->
+    Reference: ->
       return '::window' 
+      
+    stringy: true
   
 
 Selector.define  

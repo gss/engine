@@ -21034,7 +21034,11 @@ Query = (function(_super) {
         }
       } else {
         if (!(typeof (_base1 = parent.command)["yield"] === "function" ? _base1["yield"](result, engine, operation, continuation, scope, ascender) : void 0)) {
-          return parent.command.solve(engine, parent, continuation, this.subscope(scope, result) || scope, parent.indexOf(operation), result);
+          if ((ascender != null) || !this.hidden) {
+            return parent.command.solve(engine, parent, continuation, this.subscope(scope, result) || scope, parent.indexOf(operation), result);
+          } else {
+            return result;
+          }
         }
       }
     }
@@ -21215,7 +21219,7 @@ Selector = (function(_super) {
     command = operation.command;
     selector = command.selector;
     args = [ascender != null ? ascending : scope, selector];
-    command.log(args, engine, operation, continuation, scope);
+    command.log(args, engine, operation, continuation, scope, 'qsa');
     result = command.before(args, engine, operation, continuation, scope);
     if (result == null) {
       result = args[0].querySelectorAll(args[1]);
@@ -21343,25 +21347,25 @@ Selector.Search = Selector.extend({
 
 Selector.Element = Selector.extend({
   signature: [],
-  subscope: function(scope, result) {
-    return result;
-  },
-  "continue": function(result, engine, operation, continuation, scope) {
-    if (result === scope) {
-      return continuation;
-    }
-    return continuation + this.key;
-  },
-  after: function(args, result, engine, operation, continuation, scope) {
-    if (result === scope) {
-      return result;
-    }
-    return Selector.prototype.after.apply(this, arguments);
-  },
   retrieve: function(engine, operation, continuation, scope) {
-    if (this.hidden || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))) {
+    if (this.hidden || continuation.substr(-this.key.length) === this.key || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))) {
       return this.execute.apply(this, arguments);
     }
+  }
+});
+
+Selector.Reference = Selector.Element.extend({
+  condition: function(engine, operation) {
+    return !(operation.parent.command instanceof Selector);
+  },
+  "continue": function() {
+    return continuation;
+  },
+  after: function() {
+    return result;
+  },
+  retrieve: function() {
+    return this.execute.apply(this, arguments);
   }
 });
 
@@ -21515,23 +21519,32 @@ Selector.define({
     },
     Element: function(engine, operation, continuation, scope) {
       return scope;
+    },
+    Reference: function(engine, operation, continuation, scope) {
+      return scope;
     }
   },
   '::parent': {
     Element: function(engine, operation, continuation, scope) {
       return engine.Continuation.getParentScope(scope, continuation);
+    },
+    Reference: function(engine, operation, continuation, scope) {
+      return engine.Continuation.getParentScope(scope, continuation);
     }
   },
   '::root': {
     Element: function(engine, operation, continuation, scope) {
-      debugger;
+      return engine.scope;
+    },
+    Reference: function(engine, operation, continuation, scope) {
       return engine.scope;
     }
   },
   '::window': {
-    Element: function() {
+    Reference: function() {
       return '::window';
-    }
+    },
+    stringy: true
   }
 });
 
@@ -22314,6 +22327,8 @@ Command = (function() {
     return command;
   }
 
+  Command.subtype = function(engine, operation, types) {};
+
   Command.match = function(engine, operation, parent, index) {
     var Default, argument, command, first, i, j, match, signature, type;
     first = operation[0];
@@ -22357,10 +22372,39 @@ Command = (function() {
       }
     }
     if (command = Default || (signature != null ? signature.resolved : void 0) || engine.Default) {
+      if (!parent) {
+        Command.descend(command, engine, operation);
+      }
       return command;
     } else {
       throw new Error("Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain');
     }
+  };
+
+  Command.descend = function(command, engine, operation) {
+    var argument, cmd, conditions, type, _i, _j, _len, _len1;
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      argument = operation[_i];
+      if (cmd = argument.command) {
+        if (conditions = cmd.conditions) {
+          for (_j = 0, _len1 = conditions.length; _j < _len1; _j++) {
+            type = conditions[_j];
+            if (type.prototype.condition(engine, argument, cmd)) {
+              if (!(cmd = type.instance)) {
+                cmd = new type(argument);
+              }
+              argument.command = cmd;
+              if (cmd.key == null) {
+                type.instance = cmd;
+              }
+              break;
+            }
+          }
+        }
+        Command.descend(cmd, engine, argument);
+      }
+    }
+    return command;
   };
 
   Command.prototype["continue"] = function(result, engine, operation, continuation) {
@@ -22373,8 +22417,8 @@ Command = (function() {
     return result;
   };
 
-  Command.prototype.log = function(args, engine, operation, continuation) {
-    return engine.console.row(operation[0], args, continuation || "");
+  Command.prototype.log = function(args, engine, operation, continuation, scope, name) {
+    return engine.console.row(name || operation[0], args, continuation || "");
   };
 
   Command.prototype.solve = function(engine, operation, continuation, scope, ascender, ascending) {
@@ -22385,7 +22429,7 @@ Command = (function() {
     }
     switch (typeof (result = this.retrieve(domain, operation, continuation, scope))) {
       case 'string':
-        if (operation[0] === 'virtual' && result.charAt(0) !== engine.Continuation.PAIR) {
+        if (this.stringy && result.charAt(0) !== engine.Continuation.PAIR) {
           return result;
         } else {
           continuation = result;
@@ -26885,9 +26929,6 @@ Queries = (function() {
     if (this.mutations) {
       this.unobserve(this.mutations, path, true);
     }
-    if (path.indexOf('11') > -1) {
-      debugger;
-    }
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.engine.Continuation.PAIR) {
         contd = this.engine.Continuation(path);
@@ -28370,7 +28411,7 @@ Signatures = (function() {
   };
 
   Signatures.write = function(command, storage, combination) {
-    var arg, i, last, _i, _ref;
+    var arg, i, last, method, resolved, variant, _base, _i, _ref;
     for (i = _i = 0, _ref = combination.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
       if ((arg = combination[i]) === 'default') {
         storage.Default = command;
@@ -28379,45 +28420,60 @@ Signatures = (function() {
         if (arg !== void 0 && i < last) {
           storage = storage[arg] || (storage[arg] = {});
         } else {
-          storage.resolved || (storage.resolved = command.extend({
+          method = command.prototype.condition && 'unshift' || 'push';
+          variant = command.extend({
             permutation: combination[last],
             padding: last - i
-          }));
+          });
+          if (resolved = storage.resolved) {
+            if (variant.prototype.condition) {
+              ((_base = resolved.prototype).conditions || (_base.conditions = [resolved])).splice(-1, 0, variant);
+            } else {
+              if (resolved.prototype.condition) {
+                variant.prototype.conditions = resolved.prototype.conditions || [resolved];
+                storage.resolved = variant;
+              }
+            }
+          } else {
+            storage.resolved = variant;
+          }
         }
       }
     }
   };
 
   Signatures.set = function(signatures, property, command, types) {
-    var Prototype, combination, execute, storage, type, value, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var Prototype, combination, execute, proto, storage, subcommand, type, value, _i, _j, _len, _len1, _ref, _ref1;
     storage = signatures[property] || (signatures[property] = {});
     for (type in types) {
-      if (execute = (_ref = command.prototype) != null ? _ref[type] : void 0) {
-        Prototype = types[type].extend();
-        _ref1 = command.prototype;
-        for (property in _ref1) {
-          if (!__hasProp.call(_ref1, property)) continue;
-          value = _ref1[property];
-          Prototype.prototype[property] = value;
-        }
-        if (typeof execute === 'object') {
-          for (property in execute) {
-            value = execute[property];
+      subcommand = types[type];
+      if (proto = command.prototype) {
+        if ((execute = proto != null ? proto[type] : void 0)) {
+          Prototype = subcommand.extend();
+          for (property in proto) {
+            if (!__hasProp.call(proto, property)) continue;
+            value = proto[property];
             Prototype.prototype[property] = value;
           }
-        } else {
-          Prototype.prototype.execute = execute;
-        }
-        _ref2 = this.sign(types[type], Prototype.prototype);
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          combination = _ref2[_i];
-          this.write(Prototype, storage, combination);
+          if (typeof execute === 'object') {
+            for (property in execute) {
+              value = execute[property];
+              Prototype.prototype[property] = value;
+            }
+          } else {
+            Prototype.prototype.execute = execute;
+          }
+          _ref = this.sign(subcommand, Prototype.prototype);
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            combination = _ref[_i];
+            this.write(Prototype, storage, combination);
+          }
         }
       }
     }
-    _ref3 = this.sign(command, command.prototype);
-    for (_j = 0, _len1 = _ref3.length; _j < _len1; _j++) {
-      combination = _ref3[_j];
+    _ref1 = this.sign(command, command.prototype);
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      combination = _ref1[_j];
       this.write(command, storage, combination);
     }
   };
