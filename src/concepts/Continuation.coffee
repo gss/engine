@@ -127,11 +127,14 @@ class Continuation
         bits.pop()
         last = bits[bits.length - 1]
     
+    unless last?
+      return @engine.scope
+
     if matched = last.match(@engine.pairs.TrailingIDRegExp)
       if matched[1].indexOf('"') > -1
         return matched[1]
       return @engine.identity[matched[1]]
-
+      
     return @engine.queries[bits.join(@DESCEND)]
 
 

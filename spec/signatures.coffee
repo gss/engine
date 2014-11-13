@@ -193,12 +193,14 @@ describe 'Signatures', ->
     }
 
     DynamicCommand.Positive = DynamicCommand.extend {
+      kind: 'auto'
       condition: (engine, operation) ->
         return operation.parent[2] > 0
 
     }
 
     DynamicCommand.Negative = DynamicCommand.extend {
+      kind: 'auto'
       condition: (engine, operation) ->
         return operation.parent[2] < 0
     }

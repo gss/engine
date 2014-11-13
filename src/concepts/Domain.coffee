@@ -304,7 +304,7 @@ class Domain extends Trigger
     (@constraints ||= []).push(constraint)
     (@constrained ||= []).push(constraint)
     if other
-      @unconstrain(other)
+      @unconstrain(other, meta.key)
 
   hasConstraint: (variable) ->
     for other in variable.constraints
@@ -315,15 +315,25 @@ class Domain extends Trigger
 
 
   unconstrain: (constraint, continuation, moving) ->
-    group = @paths[continuation]
-    group.splice(group.indexOf(constraint, 1))
-    if group.length == 0
-      delete @paths[continuation]
+    # Unconstrain by specific continuation
+    if continuation
+      index = constraint.paths.indexOf(continuation)
+      constraint.paths.splice(index, 1)
 
-    index = constraint.paths.indexOf(continuation)
-    constraint.paths.splice(index, 1)
-    if constraint.paths.length
-      return
+      group = @paths[continuation]
+      group.splice(group.indexOf(constraint, 1))
+      if group.length == 0
+        delete @paths[continuation]
+
+      if constraint.paths.length
+        return
+    # Unconstrain all paths
+    else
+      for path in constraint.paths
+        group = @paths[path]
+        group.splice(group.indexOf(constraint, 1))
+        if group.length == 0
+          delete @paths[path]
 
     index = @constraints.indexOf(constraint)
     @constraints.splice(index, 1)

@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-11-13) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21034,7 +21035,7 @@ Query = (function(_super) {
         }
       } else {
         if (!(typeof (_base1 = parent.command)["yield"] === "function" ? _base1["yield"](result, engine, operation, continuation, scope, ascender) : void 0)) {
-          if ((ascender != null) || !this.hidden) {
+          if ((ascender != null) || !this.hidden || !this.reference) {
             return parent.command.solve(engine, parent, continuation, this.subscope(scope, result) || scope, parent.indexOf(operation), result);
           } else {
             return result;
@@ -21143,8 +21144,6 @@ Query = (function(_super) {
     if (continuation) {
       if (continuation.nodeType) {
         return engine.identity["yield"](continuation) + ' ' + this.path;
-      } else if (operation.marked && operation.arity === 2) {
-        return continuation + this.path;
       } else {
         return continuation + (this.selector || this.key);
       }
@@ -21154,9 +21153,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.retrieve = function(engine, operation, continuation, scope) {
-    if (!this.hidden) {
-      return engine.pairs.getSolution(operation, continuation, scope);
-    }
+    return engine.pairs.getSolution(operation, continuation, scope);
   };
 
   Query.prototype.prepare = function() {};
@@ -21346,19 +21343,15 @@ Selector.Search = Selector.extend({
 });
 
 Selector.Element = Selector.extend({
-  signature: [],
-  retrieve: function(engine, operation, continuation, scope) {
-    if (this.hidden || continuation.substr(-this.key.length) === this.key || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))) {
-      return this.execute.apply(this, arguments);
-    }
-  }
+  signature: []
 });
 
 Selector.Reference = Selector.Element.extend({
+  kind: 'Element',
   condition: function(engine, operation) {
     return !(operation.parent.command instanceof Selector);
   },
-  "continue": function() {
+  "continue": function(result, engine, operation, continuation) {
     return continuation;
   },
   after: function() {
@@ -21366,7 +21359,8 @@ Selector.Reference = Selector.Element.extend({
   },
   retrieve: function() {
     return this.execute.apply(this, arguments);
-  }
+  },
+  reference: true
 });
 
 Selector.define({
@@ -21520,23 +21514,17 @@ Selector.define({
     Element: function(engine, operation, continuation, scope) {
       return scope;
     },
-    Reference: function(engine, operation, continuation, scope) {
-      return scope;
+    retrieve: function() {
+      return this.execute.apply(this, arguments);
     }
   },
   '::parent': {
     Element: function(engine, operation, continuation, scope) {
       return engine.Continuation.getParentScope(scope, continuation);
-    },
-    Reference: function(engine, operation, continuation, scope) {
-      return engine.Continuation.getParentScope(scope, continuation);
     }
   },
   '::root': {
     Element: function(engine, operation, continuation, scope) {
-      return engine.scope;
-    },
-    Reference: function(engine, operation, continuation, scope) {
       return engine.scope;
     }
   },
@@ -21681,6 +21669,7 @@ Selector.define({
     tags: ['selector'],
     signature: null,
     separator: ',',
+    execute: function() {},
     serialize: function() {
       return '';
     },
@@ -22454,10 +22443,11 @@ Command = (function() {
       if (result == null) {
         result = this.execute.apply(this, args);
       }
-      result = this.after(args, result, domain, operation, continuation, scope);
+      if (result = this.after(args, result, domain, operation, continuation, scope)) {
+        continuation = this["continue"](result, domain, operation, continuation, scope);
+      }
     }
     if (result != null) {
-      continuation = this["continue"](result, domain, operation, continuation, scope);
       return this.ascend(engine, operation, continuation, scope, result, ascender, ascending);
     }
   };
@@ -22559,8 +22549,6 @@ Command = (function() {
   };
 
   Command.prototype.jump = function() {};
-
-  Command.prototype.execute = function() {};
 
   Command.prototype.retrieve = function() {};
 
@@ -22750,6 +22738,8 @@ Command.List = (function(_super) {
 
   List.prototype.extras = 0;
 
+  List.prototype.execute = function() {};
+
   List.prototype.log = function() {};
 
   List.prototype["yield"] = function() {
@@ -22909,6 +22899,9 @@ Continuation = (function() {
         bits.pop();
         last = bits[bits.length - 1];
       }
+    }
+    if (last == null) {
+      return this.engine.scope;
     }
     if (matched = last.match(this.engine.pairs.TrailingIDRegExp)) {
       if (matched[1].indexOf('"') > -1) {
@@ -23350,7 +23343,7 @@ Domain = (function(_super) {
     (this.constraints || (this.constraints = [])).push(constraint);
     (this.constrained || (this.constrained = [])).push(constraint);
     if (other) {
-      return this.unconstrain(other);
+      return this.unconstrain(other, meta.key);
     }
   };
 
@@ -23368,24 +23361,36 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.unconstrain = function(constraint, continuation, moving) {
-    var group, i, index, object, op, path, _ref, _ref1, _ref2;
-    group = this.paths[continuation];
-    group.splice(group.indexOf(constraint, 1));
-    if (group.length === 0) {
-      delete this.paths[continuation];
-    }
-    index = constraint.paths.indexOf(continuation);
-    constraint.paths.splice(index, 1);
-    if (constraint.paths.length) {
-      return;
+    var group, i, index, object, op, path, _i, _len, _ref, _ref1, _ref2, _ref3;
+    if (continuation) {
+      index = constraint.paths.indexOf(continuation);
+      constraint.paths.splice(index, 1);
+      group = this.paths[continuation];
+      group.splice(group.indexOf(constraint, 1));
+      if (group.length === 0) {
+        delete this.paths[continuation];
+      }
+      if (constraint.paths.length) {
+        return;
+      }
+    } else {
+      _ref = constraint.paths;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        path = _ref[_i];
+        group = this.paths[path];
+        group.splice(group.indexOf(constraint, 1));
+        if (group.length === 0) {
+          delete this.paths[path];
+        }
+      }
     }
     index = this.constraints.indexOf(constraint);
     this.constraints.splice(index, 1);
-    _ref = constraint.operation.variables;
-    for (path in _ref) {
-      op = _ref[path];
+    _ref1 = constraint.operation.variables;
+    for (path in _ref1) {
+      op = _ref1[path];
       if (object = this.variables[path]) {
-        if ((i = (_ref1 = object.constraints) != null ? _ref1.indexOf(constraint) : void 0) > -1) {
+        if ((i = (_ref2 = object.constraints) != null ? _ref2.indexOf(constraint) : void 0) > -1) {
           object.constraints.splice(i, 1);
           if (!this.hasConstraint(object)) {
             this.undeclare(object, moving);
@@ -23393,7 +23398,7 @@ Domain = (function(_super) {
         }
       }
     }
-    if ((i = (_ref2 = this.constrained) != null ? _ref2.indexOf(constraint) : void 0) > -1) {
+    if ((i = (_ref3 = this.constrained) != null ? _ref3.indexOf(constraint) : void 0) > -1) {
       return this.constrained.splice(i, 1);
     } else {
       return (this.unconstrained || (this.unconstrained = [])).push(constraint);
@@ -27642,6 +27647,7 @@ Pairs = (function() {
     left = this.engine.Continuation.getCanonicalPath(continuation);
     parent = this.engine.Operation.getRoot(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
+      debugger;
       this.lefts.push(parent, left, scope);
       contd = this.engine.Continuation.PAIR;
       return this.engine.Continuation.PAIR;
@@ -27687,7 +27693,8 @@ Pairs = (function() {
   Pairs.prototype.getSolution = function(operation, continuation, scope, single) {
     var contd, first, id, index, last, prev, result;
     last = continuation.lastIndexOf(this.engine.Continuation.PAIR);
-    if (last > 0) {
+    if (last > 0 && !operation.command.reference) {
+      debugger;
       first = continuation.indexOf(this.engine.Continuation.PAIR);
       if (first === 0 && last === continuation.length - 1 && (this.onRight(operation, continuation, scope) != null)) {
         return false;
@@ -28411,7 +28418,7 @@ Signatures = (function() {
   };
 
   Signatures.write = function(command, storage, combination) {
-    var arg, i, last, method, resolved, variant, _base, _i, _ref;
+    var arg, i, last, resolved, variant, _base, _i, _ref;
     for (i = _i = 0, _ref = combination.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
       if ((arg = combination[i]) === 'default') {
         storage.Default = command;
@@ -28420,14 +28427,16 @@ Signatures = (function() {
         if (arg !== void 0 && i < last) {
           storage = storage[arg] || (storage[arg] = {});
         } else {
-          method = command.prototype.condition && 'unshift' || 'push';
           variant = command.extend({
             permutation: combination[last],
             padding: last - i
           });
           if (resolved = storage.resolved) {
             if (variant.prototype.condition) {
-              ((_base = resolved.prototype).conditions || (_base.conditions = [resolved])).splice(-1, 0, variant);
+              if (resolved.prototype.condition && !resolved.prototype.conditions) {
+                resolved.prototype.conditions = [resolved];
+              }
+              ((_base = resolved.prototype).conditions || (_base.conditions = [])).push(variant);
             } else {
               if (resolved.prototype.condition) {
                 variant.prototype.conditions = resolved.prototype.conditions || [resolved];
@@ -28443,12 +28452,12 @@ Signatures = (function() {
   };
 
   Signatures.set = function(signatures, property, command, types) {
-    var Prototype, combination, execute, proto, storage, subcommand, type, value, _i, _j, _len, _len1, _ref, _ref1;
+    var Prototype, combination, execute, kind, proto, storage, subcommand, type, value, _i, _j, _len, _len1, _ref, _ref1;
     storage = signatures[property] || (signatures[property] = {});
     for (type in types) {
       subcommand = types[type];
       if (proto = command.prototype) {
-        if ((execute = proto != null ? proto[type] : void 0)) {
+        if ((execute = proto[type]) || ((kind = subcommand.prototype.kind) && ((kind === 'auto') || (execute = proto[kind])))) {
           Prototype = subcommand.extend();
           for (property in proto) {
             if (!__hasProp.call(proto, property)) continue;
@@ -28460,7 +28469,7 @@ Signatures = (function() {
               value = execute[property];
               Prototype.prototype[property] = value;
             }
-          } else {
+          } else if (execute) {
             Prototype.prototype.execute = execute;
           }
           _ref = this.sign(subcommand, Prototype.prototype);

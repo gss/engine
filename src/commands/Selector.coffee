@@ -159,18 +159,15 @@ Selector.Search = Selector.extend
 Selector.Element = Selector.extend
   signature: []
 
-  # When used out of selector context, dont build up continuation
-  retrieve: (engine, operation, continuation, scope) ->
-    if @hidden || continuation.substr(- @key.length) == @key || ((!continuation || continuation.match(engine.Continuation.TrimContinuationRegExp)) && !(operation.parent.command instanceof Selector))
-      return @execute arguments ...
-
 # Optimized element reference outside of selector context
 Selector.Reference = Selector.Element.extend
   
+  kind: 'Element'
+
   condition: (engine, operation) ->
     return !(operation.parent.command instanceof Selector)
 
-  continue: ->
+  continue: (result, engine, operation, continuation) ->
     return continuation
 
   after: ->
@@ -178,6 +175,8 @@ Selector.Reference = Selector.Element.extend
 
   retrieve: ->
     return @execute arguments ...
+
+  reference: true
   
 Selector.define
   # Live collections
@@ -323,24 +322,18 @@ Selector.define
     Element: (engine, operation, continuation, scope) ->
       return scope
 
-    Reference: (engine, operation, continuation, scope) ->
-      return scope
+    retrieve: ->
+      return @execute arguments ...
 
   # Parent element (alias for !> *)
   '::parent':
     Element: (engine, operation, continuation, scope) ->
       return engine.Continuation.getParentScope(scope, continuation)
 
-    Reference: (engine, operation, continuation, scope) ->
-      return engine.Continuation.getParentScope(scope, continuation)
-
 
   # Current engine scope (defaults to document)
   '::root':
     Element: (engine, operation, continuation, scope) ->
-      return engine.scope
-
-    Reference: (engine, operation, continuation, scope) ->
       return engine.scope
 
   # Return abstract reference to window
@@ -451,6 +444,8 @@ Selector.define
     signature: null,
 
     separator: ','
+
+    execute: ->
 
     # Comma only serializes arguments
     serialize: ->

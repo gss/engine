@@ -8,6 +8,7 @@ class Pairs
     left = @engine.Continuation.getCanonicalPath(continuation)
     parent = @engine.Operation.getRoot(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
+      debugger
       @lefts.push parent, left, scope
       contd = @engine.Continuation.PAIR
       return @engine.Continuation.PAIR
@@ -42,7 +43,8 @@ class Pairs
   getSolution: (operation, continuation, scope, single) ->
     # Attempt pairing
     last = continuation.lastIndexOf(@engine.Continuation.PAIR)
-    if last > 0
+    if last > 0 && !operation.command.reference
+      debugger
       # Found right side
       first = continuation.indexOf(@engine.Continuation.PAIR) 
       if first == 0 && last == continuation.length - 1 && @onRight(operation, continuation, scope)?

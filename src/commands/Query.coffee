@@ -18,7 +18,7 @@ class Query extends Command
         return
       else
         unless parent.command.yield?(result, engine, operation, continuation, scope, ascender)
-          if ascender? || !@hidden
+          if ascender? || !@hidden || !@reference
             return parent.command.solve(engine, parent, continuation, @subscope(scope, result) || scope, parent.indexOf(operation), result)
           else
             return result
@@ -104,16 +104,13 @@ class Query extends Command
     if continuation
       if continuation.nodeType
         return engine.identity.yield(continuation) + ' ' + @path
-      else if operation.marked && operation.arity == 2
-        return continuation + @path
       else
         return continuation + (@selector || @key)
     else
       return (@selector || @key)
 
   retrieve: (engine, operation, continuation, scope) ->
-    unless @hidden
-      return engine.pairs.getSolution(operation, continuation, scope)
+    return engine.pairs.getSolution(operation, continuation, scope)
       
   prepare: ->
     

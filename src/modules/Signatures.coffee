@@ -131,14 +131,15 @@ class Signatures
         if arg != undefined && i < last
           storage = storage[arg] ||= {}
         else
-          method = command::condition && 'unshift' || 'push'
           variant = command.extend 
               permutation: combination[last], 
               padding: last - i
 
           if resolved = storage.resolved
             if variant::condition
-              (resolved::conditions ||= [resolved]).splice(-1, 0, variant)
+              if resolved::condition && !resolved::conditions
+                resolved::conditions = [resolved]
+              (resolved::conditions ||= []).push(variant)
             else
               if resolved::condition
                 variant::conditions = resolved::conditions || [resolved]
@@ -154,15 +155,21 @@ class Signatures
 
     for type, subcommand of types
       if proto = command.prototype
-        if (execute = proto?[type])
+        # Command has a handler for this subtype
+        if (execute = proto[type]) || 
+            # Subtype explicitly subscribes to command type handler 
+            ((kind = subcommand::kind) && 
+              ((kind == 'auto') || 
+                (execute = proto[kind])))
           Prototype = subcommand.extend()
           for own property, value of proto
             Prototype::[property] = value
           if typeof execute == 'object'
             for property, value of execute
               Prototype::[property] = value
-          else
+          else if execute
             Prototype::execute = execute
+
             
           for combination in @sign(subcommand, Prototype.prototype)
             @write Prototype, storage, combination

@@ -126,10 +126,10 @@ class Command
       # Execute command with hooks
       result = @before(args, domain, operation, continuation, scope)
       result ?= @execute.apply(@, args)
-      result = @after(args, result, domain, operation, continuation, scope)
+      if result = @after(args, result, domain, operation, continuation, scope)
+        continuation = @continue(result, domain, operation, continuation, scope)
 
     if result?
-      continuation = @continue(result, domain, operation, continuation, scope)
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
 
   # Evaluate operation arguments in order, break on undefined
@@ -229,7 +229,7 @@ class Command
   jump: ->
 
   # Do something with arguments
-  execute: ->
+  #execute: ->
 
   # Retrieve cached result
   retrieve: ->
@@ -376,13 +376,15 @@ class Command.List extends Command
   constructor: ->
   extras: 0
 
+  execute: ->
+
   log: ->
 
-  # Capture results and do nothing with them
+  # Capture results and do nothing with them to stop propagation
   yield: ->
     return true
 
-  # Fast descender for lists that doesnt build argument list
+  # Fast descender for lists - doesnt build evaluated list of arguments
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     for argument, index in operation
       if command = argument?.command
