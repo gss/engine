@@ -75,7 +75,7 @@ Abstract::Value.Getter = Abstract::Value.extend {
         return prop.call(engine, object, continuation)
     return ['get', engine.getPath(object, property)]
   
-# `xy math for axioms
+# Proxy math for axioms
 Abstract::Value.Expression = Value.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]
