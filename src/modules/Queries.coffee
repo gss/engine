@@ -587,10 +587,10 @@ class Queries
   getScopedCollection: (operation, continuation, scope) ->
     path = @engine.Continuation(@engine.Continuation.getCanonicalPath(continuation))
     collection = @get(path)
-    if operation[1].marked
-      collection = @filterByScope collection, scope
-    else if operation[1].def.mark
-      collection = @filterByScope collection, @getParentScope(continuation, operation)
+    #if operation[1].marked
+    #  collection = @filterByScope collection, scope
+    #else if operation[1].def.mark
+    collection = @filterByScope collection, @getParentScope(continuation, operation)
     return collection
     
 

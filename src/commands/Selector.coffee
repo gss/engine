@@ -397,13 +397,13 @@ Selector.define
 
   ':last-child':
     tags: ['selector']
-    Selecter: (node) ->
+    Combinator: (node) ->
       return node unless node.nextElementSibling
 
 
   ':next':
     relative: true
-    Selecter: (node, engine, operation, continuation, scope) ->
+    Combinator: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
@@ -411,7 +411,7 @@ Selector.define
 
   ':previous':
     relative: true
-    Selecter: (node, engine, operation, continuation, scope) ->
+    Combinator: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if index == -1 || !index

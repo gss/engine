@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-11-13) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-11-14) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21605,7 +21605,7 @@ Selector.define({
   },
   ':last-child': {
     tags: ['selector'],
-    Selecter: function(node) {
+    Combinator: function(node) {
       if (!node.nextElementSibling) {
         return node;
       }
@@ -21613,7 +21613,7 @@ Selector.define({
   },
   ':next': {
     relative: true,
-    Selecter: function(node, engine, operation, continuation, scope) {
+    Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
@@ -21625,7 +21625,7 @@ Selector.define({
   },
   ':previous': {
     relative: true,
-    Selecter: function(node, engine, operation, continuation, scope) {
+    Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
@@ -27252,11 +27252,7 @@ Queries = (function() {
     var collection, path;
     path = this.engine.Continuation(this.engine.Continuation.getCanonicalPath(continuation));
     collection = this.get(path);
-    if (operation[1].marked) {
-      collection = this.filterByScope(collection, scope);
-    } else if (operation[1].def.mark) {
-      collection = this.filterByScope(collection, this.getParentScope(continuation, operation));
-    }
+    collection = this.filterByScope(collection, this.getParentScope(continuation, operation));
     return collection;
   };
 
