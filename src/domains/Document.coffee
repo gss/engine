@@ -4,8 +4,6 @@ class Document extends Abstract
   priority: Infinity
   
   Selector:   require('../commands/Selector')
-  Iterator:   require('../commands/Iterator')
-  Condition:  require('../commands/Condition')
   Source:     require('../commands/Source')
               
   Queries:    require('../modules/Queries')

@@ -608,10 +608,10 @@ describe 'GSS commands', ->
             ['class','thing'],
             ['=='
               ['get'
-                ['$pseudo', ['$reserved', 'this'], 'previous'],
+                [':previous', ['::this']],
                 'right']
               ['get'
-                ['$reserved', 'this'],
+                ['::this'],
                 'x']
             ]
           ]

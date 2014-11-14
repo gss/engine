@@ -1,11 +1,12 @@
-# Transforms variables into tracked variables
-
+# Find, produce and observe variables
 Domain     = require('../concepts/Domain'
 Command    = require('../concepts/Command'))
 
 Value      = require('../commands/Value')
 Constraint = require('../commands/Constraint')
 Assignment = require('../commands/Assignment')
+Condition  = require('../commands/Condition')
+Iterator   = require('../commands/Iterator')
 
 class Abstract extends Domain
   url: undefined
@@ -16,41 +17,45 @@ class Abstract extends Domain
     super
 
 # Catch-all class for unknown commands    
-Abstract::Default = Command.Default.extend(
+Abstract::Default = Command.Default.extend
+  extras: 2
+
+  execute: (args..., engine, operation) ->
+    debugger
+    args.unshift operation[0]
+    return args
+
+# Topmost unknown command returns processed operation back to engine
+Abstract::Default.Top = Abstract::Default.extend
+
+  condition: (engine, operation) ->
+    if parent = operation.parent
+      if parent.command instanceof Abstract::Default
+        return false
+    return true
+    
   extras: 4
 
-  # topmost unknown command returns processed operation back to engine
-  execute: () ->
-    length = arguments.length
-    engine = arguments[length - 4]
-    operation = arguments[length - 3]
-    continuation = arguments[length - 2]
-    scope = arguments[length - 1]
-    result = Array.prototype.slice.call(arguments, 0, -4)
-    result.unshift operation[0]
-    if result.length == 1
-      result = result[0]
-
-    if parent = operation.parent
-      if parent.command instanceof Command.Default
-        return result
-    # 
+  execute: (args..., engine, operation, continuation, scope) ->
+    args.unshift operation[0]
     meta = key: engine.Continuation.get(continuation)
     if scope != engine.scope
       meta.scope = engine.identity.yield(scope)
-    wrapper = [meta, result]
-    result.parent = wrapper
+    wrapper = [meta, args]
+    args.parent = wrapper
     engine.yield wrapper
     return
-)
 
+Abstract::Default::variants = [Abstract::Default.Top]
 
-Abstract::List = Command.List.extend(
-  capture: ->
+# Asynchronous block
+Abstract::Iterator = Iterator
 
-  execute: (result) ->
-    #
-)
+# Conditional blocks
+Abstract::Condition = Condition
+
+# Array of commands, stops command propagation
+Abstract::List = Command.List
 
 # Global variable
 Abstract::Value = Value.extend()
@@ -75,7 +80,6 @@ Abstract::Value.Getter = Abstract::Value.extend {
         return prop.call(engine, object, continuation)
     return ['get', engine.getPath(object, property)]
   
-# Proxy math for axioms
 Abstract::Value.Expression = Value.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]
@@ -88,6 +92,7 @@ Abstract::Value.Expression = Value.Expression.extend {},
   
   '*': (left, right) ->
     ['*', left, right]
+  
   
 # Constant definition
 Abstract::Assignment = Assignment.extend {},

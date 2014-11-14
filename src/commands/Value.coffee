@@ -46,18 +46,6 @@ class Value.Expression.Constant extends Value.Expression
 
 Value.Expression.Constant.define Value.Expression.algebra
 
-Value.Expression.define
-  '+': (left, right) ->
-    return c.plus(left, right)
-
-  '-': (left, right) ->
-    return c.minus(left, right)
-
-  '*': (left, right) ->
-    return c.times(left, right)
-
-  '/': (left, right) ->
-    return c.divide(left, right)
 
   
 module.exports = Value

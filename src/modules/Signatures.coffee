@@ -121,7 +121,8 @@ class Signatures
     return combinations
 
   # Create actual nested lookup tables for argument types
-  # The exit node may be an array of subtypes
+  # When multiple commands share same output node, 
+  # they may register to choose type conditionally
   @write: (command, storage, combination)->
     for i in [0 ... combination.length]
       if (arg = combination[i]) == 'default'
@@ -136,13 +137,16 @@ class Signatures
               padding: last - i
 
           if resolved = storage.resolved
+            proto = resolved::
             if variant::condition
-              if resolved::condition && !resolved::conditions
-                resolved::conditions = [resolved]
-              (resolved::conditions ||= []).push(variant)
+              unless proto.hasOwnProperty('variants')
+                proto.variants = proto.variants?.slice() || []
+                if proto.condition
+                  proto.variants.push(resolved)
+              proto.variants.push(variant)
             else
-              if resolved::condition
-                variant::conditions = resolved::conditions || [resolved]
+              if proto.condition
+                variant::variants = proto.variants?.slice() || [resolved]
                 storage.resolved = variant
           else
             storage.resolved = variant

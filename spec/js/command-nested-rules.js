@@ -1045,7 +1045,7 @@ describe('Nested Rules', function() {
     return describe('basic', function() {
       return it('step 1', function(done) {
         var counter, listener, rules;
-        rules = [['==', ['get', 'big'], 500], ['==', ['get', 'med'], 50], ['==', ['get', 'small'], 5], ['==', ['get', 'target-width'], 900], ['rule', ['$class', ['$combinator', ['$class', 'vessel'], ' '], 'box'], ['if', ['>=', ['get', 'target-width'], 960], ['==', ["get", ["$reserved", "this"], "width"], ["get", "big"]], [['if', ['>=', ['get', 'target-width'], 500], ['==', ["get", ["$reserved", "this"], 'width'], ["get", "med"]], ['==', ["get", ["$reserved", "this"], 'width'], ["get", "small"]]]]]]];
+        rules = [['==', ['get', 'big'], 500], ['==', ['get', 'med'], 50], ['==', ['get', 'small'], 5], ['==', ['get', 'target-width'], 900], ['rule', ['class', [' ', ['class', 'vessel']], 'box'], ['if', ['>=', ['get', 'target-width'], 960], ['==', ["get", ["::this"], "width"], ["get", "big"]], [['if', ['>=', ['get', 'target-width'], 500], ['==', ["get", ["::this"], 'width'], ["get", "med"]], ['==', ["get", ["::this"], 'width'], ["get", "small"]]]]]]];
         counter = 0;
         listener = function(e) {
           var k;

@@ -1391,25 +1391,24 @@ describe 'Nested Rules', ->
           ['==',['get','target-width'], 900]
 
           ['rule', 
-            ['$class',
-              ['$combinator'
-                ['$class', 'vessel']
-                ' ']
+            ['class',
+              [' '
+                ['class', 'vessel']]
               'box']
 
             ['if',
               ['>=',                 
                 ['get', 'target-width']
                 960]
-              ['==', ["get",["$reserved","this"],"width"], ["get","big"]]
+              ['==', ["get",["::this"],"width"], ["get","big"]]
               [
                 ['if',
                   ['>=',                     
                     ['get', 'target-width']
                     500]
-                  ['==', ["get",["$reserved","this"], 'width'],["get","med"]]
+                  ['==', ["get",["::this"], 'width'],["get","med"]]
 
-                  ['==', ["get",["$reserved","this"], 'width'], ["get","small"]]
+                  ['==', ["get",["::this"], 'width'], ["get","small"]]
                 ]
               ]
             ]

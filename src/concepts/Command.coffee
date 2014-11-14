@@ -6,7 +6,8 @@ class Command
       match = Command.match(@, operation, parent, index)
       unless command = match.instance
         command = new match(operation)
-        #Command.optimize(match)
+      unless parent
+        command = Command.descend(command, @, operation)
       if command.key?
         command.push(operation)
       else
@@ -54,25 +55,23 @@ class Command
 
 
     if command = Default || signature?.resolved || engine.Default
-      unless parent
-        Command.descend(command, engine, operation)
       return command
     else
       throw new Error "Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain'
   
   # Choose a sub type for command    
   @descend: (command, engine, operation) ->
+    if variants = command.variants
+      for type in variants
+        if type::condition(engine, operation, command)
+          unless command = type.instance
+            command = new type(operation)
+          operation.command = command
+          unless command.key?
+            type.instance = command
+          break
     for argument in operation
       if cmd = argument.command
-        if conditions = cmd.conditions
-          for type in conditions
-            if type::condition(engine, argument, cmd)
-              unless cmd = type.instance
-                cmd = new type(argument)
-              argument.command = cmd
-              unless cmd.key?
-                type.instance = cmd
-              break
         Command.descend(cmd, engine, argument)
     return command
       
@@ -160,8 +159,10 @@ class Command
       (args || args = Array(operation.length - 1 + @padding))[@permutation[index - 1]] = argument
     
     # Methods that accept more arguments than signature gets extra meta arguments
-    for i in [0 ... @extras ? @execute.length - index + 1] by 1
-      (args ||= Array(operation.length - 1 + @padding)).push arguments[i]
+    extras = @extras ? @execute.length - index + 1
+    if extras > 0
+      for i in [0 ... extras] by 1
+        (args ||= Array(operation.length - 1 + @padding)).push arguments[i]
 
     return args
 
@@ -313,13 +314,6 @@ class Command
         options = {execute: options}
       @[name] = @extend(options)
     return
-  
-  # Flatten prototype chain
-  @optimize: (command) ->
-    prototype = command::
-    for property of prototype
-      unless prototype.hasOwnProperty(property)
-        prototype[property] = prototype[property]
 
   @types:
     'string': 'String'
@@ -393,10 +387,12 @@ class Command.List extends Command
 
 # An optional command for unmatched ast
 class Command.Default extends Command
+  type: 'Default'
   constructor: ->
 
 # Command for objects called as functions
 class Command.Object extends Command
+  type: 'List'
   constructor: ->
 
 

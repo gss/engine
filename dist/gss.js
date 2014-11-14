@@ -20751,10 +20751,10 @@ Condition = (function(_super) {
   Condition.prototype.signature = [
     {
       "if": ['Query', 'Selector', 'Value', 'Constraint'],
-      then: null
+      then: ['Any']
     }, [
       {
-        "else": null
+        "else": ['Any']
       }
     ]
   ];
@@ -22231,21 +22231,6 @@ Value.Expression.Constant = (function(_super) {
 
 Value.Expression.Constant.define(Value.Expression.algebra);
 
-Value.Expression.define({
-  '+': function(left, right) {
-    return c.plus(left, right);
-  },
-  '-': function(left, right) {
-    return c.minus(left, right);
-  },
-  '*': function(left, right) {
-    return c.times(left, right);
-  },
-  '/': function(left, right) {
-    return c.divide(left, right);
-  }
-});
-
 module.exports = Value;
 
 });
@@ -22306,6 +22291,9 @@ Command = (function() {
       if (!(command = match.instance)) {
         command = new match(operation);
       }
+      if (!parent) {
+        command = Command.descend(command, this, operation);
+      }
       if (command.key != null) {
         command.push(operation);
       } else {
@@ -22361,9 +22349,6 @@ Command = (function() {
       }
     }
     if (command = Default || (signature != null ? signature.resolved : void 0) || engine.Default) {
-      if (!parent) {
-        Command.descend(command, engine, operation);
-      }
       return command;
     } else {
       throw new Error("Too few arguments in `" + operation[0] + '` for ' + engine.displayName + ' domain');
@@ -22371,25 +22356,25 @@ Command = (function() {
   };
 
   Command.descend = function(command, engine, operation) {
-    var argument, cmd, conditions, type, _i, _j, _len, _len1;
-    for (_i = 0, _len = operation.length; _i < _len; _i++) {
-      argument = operation[_i];
-      if (cmd = argument.command) {
-        if (conditions = cmd.conditions) {
-          for (_j = 0, _len1 = conditions.length; _j < _len1; _j++) {
-            type = conditions[_j];
-            if (type.prototype.condition(engine, argument, cmd)) {
-              if (!(cmd = type.instance)) {
-                cmd = new type(argument);
-              }
-              argument.command = cmd;
-              if (cmd.key == null) {
-                type.instance = cmd;
-              }
-              break;
-            }
+    var argument, cmd, type, variants, _i, _j, _len, _len1;
+    if (variants = command.variants) {
+      for (_i = 0, _len = variants.length; _i < _len; _i++) {
+        type = variants[_i];
+        if (type.prototype.condition(engine, operation, command)) {
+          if (!(command = type.instance)) {
+            command = new type(operation);
           }
+          operation.command = command;
+          if (command.key == null) {
+            type.instance = command;
+          }
+          break;
         }
+      }
+    }
+    for (_j = 0, _len1 = operation.length; _j < _len1; _j++) {
+      argument = operation[_j];
+      if (cmd = argument.command) {
         Command.descend(cmd, engine, argument);
       }
     }
@@ -22453,7 +22438,7 @@ Command = (function() {
   };
 
   Command.prototype.descend = function(engine, operation, continuation, scope, ascender, ascending) {
-    var args, argument, command, contd, i, index, _i, _j, _ref, _ref1, _ref2;
+    var args, argument, command, contd, extras, i, index, _i, _j, _ref, _ref1;
     for (index = _i = 1, _ref = operation.length; _i < _ref; index = _i += 1) {
       if (ascender === index) {
         argument = ascending;
@@ -22471,8 +22456,11 @@ Command = (function() {
       }
       (args || (args = Array(operation.length - 1 + this.padding)))[this.permutation[index - 1]] = argument;
     }
-    for (i = _j = 0, _ref1 = (_ref2 = this.extras) != null ? _ref2 : this.execute.length - index + 1; _j < _ref1; i = _j += 1) {
-      (args || (args = Array(operation.length - 1 + this.padding))).push(arguments[i]);
+    extras = (_ref1 = this.extras) != null ? _ref1 : this.execute.length - index + 1;
+    if (extras > 0) {
+      for (i = _j = 0; _j < extras; i = _j += 1) {
+        (args || (args = Array(operation.length - 1 + this.padding))).push(arguments[i]);
+      }
     }
     return args;
   };
@@ -22642,20 +22630,6 @@ Command = (function() {
     }
   };
 
-  Command.optimize = function(command) {
-    var property, prototype, _results;
-    prototype = command.prototype;
-    _results = [];
-    for (property in prototype) {
-      if (!prototype.hasOwnProperty(property)) {
-        _results.push(prototype[property] = prototype[property]);
-      } else {
-        _results.push(void 0);
-      }
-    }
-    return _results;
-  };
-
   Command.types = {
     'string': 'String',
     'number': 'Number',
@@ -22763,6 +22737,8 @@ Command.List = (function(_super) {
 Command.Default = (function(_super) {
   __extends(Default, _super);
 
+  Default.prototype.type = 'Default';
+
   function Default() {}
 
   return Default;
@@ -22771,6 +22747,8 @@ Command.Default = (function(_super) {
 
 Command.Object = (function(_super) {
   __extends(Object, _super);
+
+  Object.prototype.type = 'List';
 
   function Object() {}
 
@@ -25367,9 +25345,10 @@ module.exports = Numeric;
 
 });
 require.register("gss/lib/domains/Abstract.js", function(exports, require, module){
-var Abstract, Assignment, Command, Constraint, Domain, Value,
+var Abstract, Assignment, Command, Condition, Constraint, Domain, Iterator, Value,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __slice = [].slice;
 
 Domain = require('../concepts/Domain', Command = require('../concepts/Command'));
 
@@ -25378,6 +25357,10 @@ Value = require('../commands/Value');
 Constraint = require('../commands/Constraint');
 
 Assignment = require('../commands/Assignment');
+
+Condition = require('../commands/Condition');
+
+Iterator = require('../commands/Iterator');
 
 Abstract = (function(_super) {
   __extends(Abstract, _super);
@@ -25396,40 +25379,50 @@ Abstract = (function(_super) {
 })(Domain);
 
 Abstract.prototype.Default = Command.Default.extend({
-  extras: 4,
+  extras: 2,
   execute: function() {
-    var continuation, engine, length, meta, operation, parent, result, scope, wrapper;
-    length = arguments.length;
-    engine = arguments[length - 4];
-    operation = arguments[length - 3];
-    continuation = arguments[length - 2];
-    scope = arguments[length - 1];
-    result = Array.prototype.slice.call(arguments, 0, -4);
-    result.unshift(operation[0]);
-    if (result.length === 1) {
-      result = result[0];
-    }
+    var args, engine, operation, _i;
+    args = 3 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 2) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++];
+    debugger;
+    args.unshift(operation[0]);
+    return args;
+  }
+});
+
+Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
+  condition: function(engine, operation) {
+    var parent;
     if (parent = operation.parent) {
-      if (parent.command instanceof Command.Default) {
-        return result;
+      if (parent.command instanceof Abstract.prototype.Default) {
+        return false;
       }
     }
+    return true;
+  },
+  extras: 4,
+  execute: function() {
+    var args, continuation, engine, meta, operation, scope, wrapper, _i;
+    args = 5 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 4) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++], continuation = arguments[_i++], scope = arguments[_i++];
+    args.unshift(operation[0]);
     meta = {
       key: engine.Continuation.get(continuation)
     };
     if (scope !== engine.scope) {
       meta.scope = engine.identity["yield"](scope);
     }
-    wrapper = [meta, result];
-    result.parent = wrapper;
+    wrapper = [meta, args];
+    args.parent = wrapper;
     engine["yield"](wrapper);
   }
 });
 
-Abstract.prototype.List = Command.List.extend({
-  capture: function() {},
-  execute: function(result) {}
-});
+Abstract.prototype.Default.prototype.variants = [Abstract.prototype.Default.Top];
+
+Abstract.prototype.Iterator = Iterator;
+
+Abstract.prototype.Condition = Condition;
+
+Abstract.prototype.List = Command.List;
 
 Abstract.prototype.Value = Value.extend();
 
@@ -25907,10 +25900,6 @@ Document = (function(_super) {
   Document.prototype.priority = Infinity;
 
   Document.prototype.Selector = require('../commands/Selector');
-
-  Document.prototype.Iterator = require('../commands/Iterator');
-
-  Document.prototype.Condition = require('../commands/Condition');
 
   Document.prototype.Source = require('../commands/Source');
 
@@ -28414,7 +28403,7 @@ Signatures = (function() {
   };
 
   Signatures.write = function(command, storage, combination) {
-    var arg, i, last, resolved, variant, _base, _i, _ref;
+    var arg, i, last, proto, resolved, variant, _i, _ref, _ref1, _ref2;
     for (i = _i = 0, _ref = combination.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
       if ((arg = combination[i]) === 'default') {
         storage.Default = command;
@@ -28428,14 +28417,18 @@ Signatures = (function() {
             padding: last - i
           });
           if (resolved = storage.resolved) {
+            proto = resolved.prototype;
             if (variant.prototype.condition) {
-              if (resolved.prototype.condition && !resolved.prototype.conditions) {
-                resolved.prototype.conditions = [resolved];
+              if (!proto.hasOwnProperty('variants')) {
+                proto.variants = ((_ref1 = proto.variants) != null ? _ref1.slice() : void 0) || [];
+                if (proto.condition) {
+                  proto.variants.push(resolved);
+                }
               }
-              ((_base = resolved.prototype).conditions || (_base.conditions = [])).push(variant);
+              proto.variants.push(variant);
             } else {
-              if (resolved.prototype.condition) {
-                variant.prototype.conditions = resolved.prototype.conditions || [resolved];
+              if (proto.condition) {
+                variant.prototype.variants = ((_ref2 = proto.variants) != null ? _ref2.slice() : void 0) || [resolved];
                 storage.resolved = variant;
               }
             }

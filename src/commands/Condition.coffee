@@ -5,9 +5,9 @@ class Condition extends Command
   
   signature: [
   	if: ['Query', 'Selector', 'Value', 'Constraint'],
-  	then: null, 
+  	then: ['Any'], 
   	[
-  		else: null
+  		else: ['Any']
   	]
   ]
 

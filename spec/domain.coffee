@@ -260,7 +260,7 @@ describe 'Domain', ->
           b: 1001
         done()
 
-  describe 'framed domains', (done) ->
+  xdescribe 'framed domains', (done) ->
     it 'should not merge expressions of a framed domain in worker', ->
       window.$engine = engine =  new GSS true
       problem = [

@@ -645,7 +645,7 @@ describe('GSS commands', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           return done();
         });
-        engine.solve([['==', ['get', ['id', 'thing1'], 'x'], 10], ['==', ['get', ['id', 'thing2'], 'x'], 110], ['rule', ['class', 'thing'], ['==', ['get', ['$pseudo', ['$reserved', 'this'], 'previous'], 'right'], ['get', ['$reserved', 'this'], 'x']]]]);
+        engine.solve([['==', ['get', ['id', 'thing1'], 'x'], 10], ['==', ['get', ['id', 'thing2'], 'x'], 110], ['rule', ['class', 'thing'], ['==', ['get', [':previous', ['::this']], 'right'], ['get', ['::this'], 'x']]]]);
         scope.innerHTML = "<div id=\"thing1\" class=\"thing\"></div>\n<div id=\"thing2\" class=\"thing\"></div>";
         return el = null;
       });

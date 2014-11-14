@@ -183,7 +183,7 @@ describe('Domain', function() {
       });
     });
   });
-  describe('framed domains', function(done) {
+  xdescribe('framed domains', function(done) {
     it('should not merge expressions of a framed domain in worker', function() {
       var problem;
       window.$engine = engine = new GSS(true);
