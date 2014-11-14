@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-11-14) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20306,18 +20307,15 @@ Engine = (function(_super) {
   };
 
   Engine.prototype["yield"] = function(solution) {
-    var _base, _ref;
+    var _ref;
     if (!solution.push) {
       return ((_ref = this.updating) != null ? _ref.each(this.resolve, this, solution) : void 0) || this.onSolve();
     }
     if (this.providing !== void 0) {
-      if (!this.hasOwnProperty('providing')) {
-        (_base = this.engine).providing || (_base.providing = []);
-      }
       (this.providing || (this.providing = [])).push(Array.prototype.slice.call(arguments, 0));
-    } else {
-      return this.update.apply(this, arguments);
+      return;
     }
+    return this.update.apply(this, arguments);
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
@@ -23023,19 +23021,6 @@ Domain = (function(_super) {
     return result || commited;
   };
 
-  Domain.prototype["yield"] = function(solution, value) {
-    if (solution instanceof Domain) {
-      return this.merge(solution);
-    } else if (this.domain) {
-      this.engine.engine["yield"](solution);
-      return;
-    } else {
-      this.engine["yield"](solution);
-      return;
-    }
-    return true;
-  };
-
   Domain.prototype.transact = function() {
     var _ref;
     this.setup();
@@ -23598,8 +23583,8 @@ Domain = (function(_super) {
     }
   };
 
-  Domain.prototype.getVariableDomain = function(engine, operation) {
-    var domain, i, index, intrinsic, op, path, prefix, property, _ref, _ref1, _ref2;
+  Domain.prototype.getVariableDomain = function(engine, operation, Default) {
+    var domain, i, index, intrinsic, op, path, prefix, property, _ref, _ref1, _ref2, _ref3, _ref4;
     if (operation.domain) {
       return operation.domain;
     }
@@ -23607,30 +23592,29 @@ Domain = (function(_super) {
     if ((i = path.indexOf('[')) > -1) {
       property = path.substring(i + 1, path.length - 1);
     }
-    intrinsic = engine.intrinsic;
-    if (property && ((intrinsic != null ? intrinsic.properties[path] : void 0) != null)) {
-      domain = intrinsic;
-    } else if (property && (intrinsic != null ? intrinsic.properties[property] : void 0) && !intrinsic.properties[property].matcher) {
-      domain = intrinsic;
-    } else if (engine.assumed.values.hasOwnProperty(path)) {
-      domain = engine.assumed;
-    } else if (op = (_ref = engine.variables[path]) != null ? (_ref1 = _ref.constraints) != null ? (_ref2 = _ref1[0]) != null ? _ref2.operation : void 0 : void 0 : void 0) {
-      domain = op.domain;
+    if (engine.assumed.values.hasOwnProperty(path)) {
+      return engine.assumed;
+    } else if (property && (intrinsic = (_ref = engine.intrinsic) != null ? _ref.properties : void 0)) {
+      if ((intrinsic[path] != null) || (intrinsic[property] && !intrinsic[property].matcher)) {
+        return engine.intrinsic;
+      }
     }
-    if (!domain) {
-      if (property && (index = property.indexOf('-')) > -1) {
-        prefix = property.substring(0, index);
-        if ((domain = engine[prefix])) {
-          if (!(domain instanceof engine.Domain)) {
-            domain = void 0;
-          }
+    if (property && (index = property.indexOf('-')) > -1) {
+      prefix = property.substring(0, index);
+      if ((domain = engine[prefix])) {
+        if (domain instanceof engine.Domain) {
+          return domain;
         }
       }
-      if (!domain) {
-        domain = this.engine.linear.maybe();
-      }
     }
-    return domain;
+    if (op = (_ref1 = engine.variables[path]) != null ? (_ref2 = _ref1.constraints) != null ? (_ref3 = _ref2[0]) != null ? (_ref4 = _ref3.operation) != null ? _ref4.domain : void 0 : void 0 : void 0 : void 0) {
+      return op;
+    }
+    return this.engine.linear.maybe();
+  };
+
+  Domain.prototype["yield"] = function(solution, value) {
+    return this.engine["yield"](solution);
   };
 
   Domain.compile = function(domains, engine) {
@@ -24534,7 +24518,7 @@ var Update, Updater;
 
 Updater = function(engine) {
   var Update, property, value, _ref;
-  Update = function(problem, domain, parent) {
+  Update = function(problem, domain, parent, Default) {
     var a, arg, d, effects, foreign, index, offset, path, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
     if (this instanceof Update) {
       if (domain != null ? domain.push : void 0) {
@@ -24555,7 +24539,7 @@ Updater = function(engine) {
       }
       offset = 0;
       if (arg[0] === 'get') {
-        arg.domain || (arg.domain = vardomain = this.getVariableDomain(this, arg));
+        arg.domain || (arg.domain = vardomain = this.getVariableDomain(this, arg, Default));
         path = arg[1];
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;

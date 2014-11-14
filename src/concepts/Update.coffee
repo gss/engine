@@ -2,7 +2,7 @@
 # Then evaluate it asynchronously, in order. Re-evaluate side-effects.
 
 Updater = (engine) ->
-  Update = (problem, domain, parent) ->
+  Update = (problem, domain, parent, Default) ->
     # Handle constructor call (e.g. new engine.update)
     if @ instanceof Update
       if domain?.push
@@ -22,7 +22,7 @@ Updater = (engine) ->
 
       # Analyze variable
       if arg[0] == 'get'
-        arg.domain ||= vardomain = @getVariableDomain(@, arg)
+        arg.domain ||= vardomain = @getVariableDomain(@, arg, Default)
         path = arg[1]
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
@@ -68,6 +68,7 @@ Updater = (engine) ->
 
       if index?
         update.connect(index)
+
     # Unroll recursion, solve problems
     if start || foreign
       if @updating

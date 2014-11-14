@@ -347,13 +347,10 @@ class Engine extends Domain
       return @updating?.each(@resolve, @, solution) || @onSolve()
 
     if @providing != undefined
-      unless @hasOwnProperty('providing')
-        @engine.providing ||= []
-
       (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
       return
-    else
-      return @update.apply(@, arguments)
+    
+    return @update.apply(@, arguments)
 
   resolve: (domain, problems, index, workflow) ->
     if domain && !domain.solve && domain.postMessage

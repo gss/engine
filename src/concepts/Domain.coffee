@@ -96,16 +96,6 @@ class Domain extends Trigger
 
     return result || commited
 
-  yield: (solution, value) ->
-    if solution instanceof Domain
-      return @merge solution
-    else if @domain
-      @engine.engine.yield solution
-      return 
-    else
-      @engine.yield solution
-      return 
-    return true
 
   transact: ->
     @setup()
@@ -113,8 +103,6 @@ class Domain extends Trigger
       @changes = {}
       if @disconnected
         @mutations?.disconnect(true)
-
-    
 
   commit: ->
     changes = @changes
@@ -521,33 +509,32 @@ class Domain extends Trigger
 
 
   # Return domain that should be used to evaluate given variable
-  getVariableDomain: (engine, operation) ->
+  getVariableDomain: (engine, operation, Default) ->
     if operation.domain
       return operation.domain
     path = operation[1]
     if (i = path.indexOf('[')) > -1
       property = path.substring(i + 1, path.length - 1)
     
-    intrinsic = engine.intrinsic
-    if property && intrinsic?.properties[path]?
-      domain = intrinsic
-    else if property && intrinsic?.properties[property] && !intrinsic.properties[property].matcher
-      domain = intrinsic
-    else if engine.assumed.values.hasOwnProperty(path)
-      domain = engine.assumed
-    else if op = engine.variables[path]?.constraints?[0]?.operation
-      domain = op.domain
-    unless domain
-      if property && (index = property.indexOf('-')) > -1
-        prefix = property.substring(0, index)
-        if (domain = engine[prefix])
-          unless domain instanceof engine.Domain
-            domain = undefined
+    if engine.assumed.values.hasOwnProperty(path)
+      return engine.assumed
+    else if property && (intrinsic = engine.intrinsic?.properties)
+      if (intrinsic[path]? || (intrinsic[property] && !intrinsic[property].matcher))
+        return engine.intrinsic
+  
+    if property && (index = property.indexOf('-')) > -1
+      prefix = property.substring(0, index)
+      if (domain = engine[prefix])
+        if domain instanceof engine.Domain
+          return domain
 
-      unless domain
-        domain = @engine.linear.maybe()
-    return domain
-      
+    if op = engine.variables[path]?.constraints?[0]?.operation?.domain
+      return op
+
+    return @engine.linear.maybe()      
+
+  yield: (solution, value) ->
+    @engine.yield solution
 
   # Make Domain class inherit given engine instance. Crazy huh
   # Overloads parts of the world (methods, variables, observers)
