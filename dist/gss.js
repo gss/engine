@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-11-14) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20374,7 +20373,7 @@ Engine = (function(_super) {
         workflow.await(result.url);
       } else {
         if (providing && this.providing) {
-          workflow.push(this.update(this.frame || true, this.providing));
+          workflow.push(this.update(this.providing, this.frame || true));
         }
         if ((result != null ? result.length : void 0) === 1) {
           result = result[0];
@@ -24535,18 +24534,17 @@ var Update, Updater;
 
 Updater = function(engine) {
   var Update, property, value, _ref;
-  Update = function(domain, problem, parent) {
+  Update = function(problem, domain, parent) {
     var a, arg, d, effects, foreign, index, offset, path, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
     if (this instanceof Update) {
-      this.domains = domain && (domain.push && domain || [domain]) || [];
+      if (domain != null ? domain.push : void 0) {
+        debugger;
+      }
       this.problems = problem && (domain.push && problem || [problem]) || [];
+      this.domains = domain && (domain.push && domain || [domain]) || [];
       return;
     }
-    if (arguments.length === 1) {
-      problem = domain;
-      domain = void 0;
-      start = true;
-    }
+    start = !parent;
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
       arg = problem[index];
       if (!(arg != null ? arg.push : void 0)) {
@@ -24562,7 +24560,7 @@ Updater = function(engine) {
         if (vardomain.MAYBE && domain && domain !== true) {
           vardomain.frame = domain;
         }
-        effects = new Update(vardomain, [arg]);
+        effects = new Update([arg], vardomain);
       } else {
         stringy = true;
         for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
@@ -24577,14 +24575,14 @@ Updater = function(engine) {
             } else {
               d = domain || true;
             }
-            effects = this.update(d, arg, parent);
+            effects = this.update(arg, d, parent);
             break;
           } else if (typeof a !== 'string') {
             stringy = false;
           }
         }
         if (!effects && typeof (arg != null ? arg[0] : void 0) === 'string' && stringy) {
-          effects = new this.update([null], [arg], parent);
+          effects = new this.update([arg], [null], parent);
         }
       }
       if (effects) {
@@ -24602,7 +24600,7 @@ Updater = function(engine) {
         problem = [problem];
       }
       foreign = true;
-      update = new this.update([domain !== true && domain || null], [problem]);
+      update = new this.update([problem], [domain !== true && domain || null]);
     }
     if (!(problem[0] instanceof Array)) {
       index = update.wrap(problem, parent);
@@ -24639,23 +24637,6 @@ Update = Updater();
 Update.compile = Updater;
 
 Update.prototype = {
-  substitute: function(parent, operation, solution) {
-    var child, index, _i, _len;
-    if (parent === operation) {
-      return solution;
-    }
-    for (index = _i = 0, _len = parent.length; _i < _len; index = ++_i) {
-      child = parent[index];
-      if (child != null ? child.push : void 0) {
-        if (child === operation) {
-          parent[index] = solution;
-        } else {
-          this.substitute(child, operation, solution);
-        }
-      }
-    }
-    return parent;
-  },
   merge: function(from, to, parent) {
     var constraint, constraints, domain, exported, glob, globals, globs, i, other, prob, probs, prop, result, solution, _i, _j, _k, _l, _len, _len1, _len2;
     domain = this.domains[from];

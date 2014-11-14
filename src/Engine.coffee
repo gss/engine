@@ -396,7 +396,7 @@ class Engine extends Domain
         workflow.await(result.url)
       else
         if providing && @providing
-          workflow.push(@update(@frame || true, @providing))
+          workflow.push(@update(@providing, @frame || true))
           #workflow.optimize()
 
         if result?.length == 1

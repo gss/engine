@@ -2,19 +2,16 @@
 # Then evaluate it asynchronously, in order. Re-evaluate side-effects.
 
 Updater = (engine) ->
-  Update = (domain, problem, parent) ->
-    # Handle constructor invocation (e.g. new engine.update)
+  Update = (problem, domain, parent) ->
+    # Handle constructor call (e.g. new engine.update)
     if @ instanceof Update
-      @domains  = domain  && (domain.push && domain  || [domain] ) || []
+      if domain?.push
+        debugger
       @problems = problem && (domain.push && problem || [problem]) || []
+      @domains  = domain  && (domain.push && domain  || [domain] ) || []
       return
 
-    # Handle invokation without specified domain (e.g. engine.update [...])
-    if arguments.length == 1
-      problem = domain
-      domain = undefined
-      start = true
-
+    start = !parent
 
     # Process arguments
     for arg, index in problem
@@ -29,7 +26,7 @@ Updater = (engine) ->
         path = arg[1]
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
-        effects = new Update vardomain, [arg]
+        effects = new Update [arg], vardomain
       else
         # Handle framed expressions
         stringy = true
@@ -42,12 +39,12 @@ Updater = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            effects = @update(d, arg, parent)
+            effects = @update(arg, d, parent)
             break
           else if typeof a != 'string'
             stringy = false
         if !effects && typeof arg?[0] == 'string' && stringy
-          effects = new @update([null], [arg], parent)
+          effects = new @update([arg], [null], parent)
 
       # Merge updates
       if effects
@@ -63,7 +60,7 @@ Updater = (engine) ->
       if typeof problem[0] == 'string'
         problem = [problem]
       foreign = true
-      update = new @update [domain != true && domain || null], [problem]
+      update = new @update [problem], [domain != true && domain || null]
 
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
@@ -90,20 +87,6 @@ Updater = (engine) ->
 Update = Updater()
 Update.compile = Updater
 Update.prototype =
-  substitute: (parent, operation, solution) ->
-    if parent == operation
-      return solution
-    for child, index in parent
-      if child?.push
-        if child == operation 
-          parent[index] = solution
-        else
-          @substitute(child, operation, solution)
-
-    return parent
-
-
-
 
   merge: (from, to, parent) ->
     domain = @domains[from]
