@@ -10,20 +10,6 @@ class Operation
       return new Operation(engine)
     @engine = engine
 
-  sanitize: (exps, soft, parent = exps.parent, index = exps.index) ->
-    if exps[0] == 'value' && exps.operation
-      return parent[index] = @sanitize exps.operation, soft, parent, index
-    for own prop, value of exps
-      unless isFinite(parseInt(prop))
-        unless prop == 'variables'
-          delete exps[prop]
-    for exp, i in exps
-      if exp?.push
-        @sanitize exp, soft, exps, i
-    exps.parent = parent
-    exps.index  = index
-    exps
-
   orphanize: (operation) ->
     if operation.domain
       delete operation.domain

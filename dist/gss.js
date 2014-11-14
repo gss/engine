@@ -20308,9 +20308,6 @@ Engine = (function(_super) {
 
   Engine.prototype["yield"] = function(solution) {
     var _base, _ref;
-    if (solution.operation) {
-      return this.engine.updating["yield"](solution);
-    }
     if (!solution.push) {
       return ((_ref = this.updating) != null ? _ref.each(this.resolve, this, solution) : void 0) || this.onSolve();
     }
@@ -20322,31 +20319,6 @@ Engine = (function(_super) {
     } else {
       return this.update.apply(this, arguments);
     }
-  };
-
-  Engine.prototype.subsolve = function(result, operation, continuation, scope) {
-    var scoped, solution, _ref;
-    if (!continuation && operation[0] === 'get') {
-      continuation = operation[3];
-    }
-    solution = ['value', result, continuation || '', operation.toString()];
-    if (!(scoped = scope !== engine.scope && scope)) {
-      if (operation[0] === 'get' && operation[4]) {
-        scoped = engine.identity.solve(operation[4]);
-      }
-    }
-    if (operation.exported || scoped) {
-      solution.push((_ref = operation.exported) != null ? _ref : null);
-    }
-    if (scoped) {
-      solution.push(engine.identity["yield"](scoped));
-    }
-    solution.operation = operation;
-    solution.parent = operation.parent;
-    solution.domain = operation.domain;
-    solution.index = operation.index;
-    parent[operation.index] = solution;
-    return engine.engine["yield"](solution);
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
@@ -20750,7 +20722,7 @@ Condition = (function(_super) {
 
   Condition.prototype.signature = [
     {
-      "if": ['Query', 'Selector', 'Value', 'Constraint'],
+      "if": ['Query', 'Selector', 'Value', 'Constraint', 'Default'],
       then: ['Any']
     }, [
       {
@@ -20763,7 +20735,7 @@ Condition = (function(_super) {
 
   Condition.prototype.domain = 'solved';
 
-  Condition.prototype.solve = function(engine, operation, continuation, scope, ascender, ascending) {
+  Condition.prototype.execute = function(engine, operation, continuation, scope, ascender, ascending) {
     var arg, condition, _i, _len, _ref1;
     if (this === this.solved) {
       return;
@@ -20837,6 +20809,7 @@ Condition = (function(_super) {
   };
 
   Condition.prototype["yield"] = function(result, engine, operation, continuation, scope) {
+    debugger;
     if (operation.index === 1) {
       if (continuation != null) {
         this.update(engine, operation.parent[1], engine.Continuation(continuation, null, engine.Continuation.DESCEND), scope, void 0, result);
@@ -23730,8 +23703,7 @@ module.exports = Domain;
 
 });
 require.register("gss/lib/concepts/Operation.js", function(exports, require, module){
-var Operation,
-  __hasProp = {}.hasOwnProperty;
+var Operation;
 
 Operation = (function() {
   function Operation(engine) {
@@ -23742,37 +23714,6 @@ Operation = (function() {
     }
     this.engine = engine;
   }
-
-  Operation.prototype.sanitize = function(exps, soft, parent, index) {
-    var exp, i, prop, value, _i, _len;
-    if (parent == null) {
-      parent = exps.parent;
-    }
-    if (index == null) {
-      index = exps.index;
-    }
-    if (exps[0] === 'value' && exps.operation) {
-      return parent[index] = this.sanitize(exps.operation, soft, parent, index);
-    }
-    for (prop in exps) {
-      if (!__hasProp.call(exps, prop)) continue;
-      value = exps[prop];
-      if (!isFinite(parseInt(prop))) {
-        if (prop !== 'variables') {
-          delete exps[prop];
-        }
-      }
-    }
-    for (i = _i = 0, _len = exps.length; _i < _len; i = ++_i) {
-      exp = exps[i];
-      if (exp != null ? exp.push : void 0) {
-        this.sanitize(exp, soft, exps, i);
-      }
-    }
-    exps.parent = parent;
-    exps.index = index;
-    return exps;
-  };
 
   Operation.prototype.orphanize = function(operation) {
     var arg, _i, _len;
@@ -24715,45 +24656,6 @@ Update.prototype = {
     }
     return parent;
   },
-  "yield": function(solution) {
-    var domain, i, index, operation, p, parent, problems, root, _i, _len, _ref, _ref1;
-    if ((operation = solution.operation).exported) {
-      return;
-    }
-    parent = operation.parent;
-    if (domain = parent.domain) {
-      if (((_ref = parent.parent) != null ? _ref.domain : void 0) === domain) {
-        root = solution.domain.Operation.ascend(parent);
-      } else {
-        root = parent;
-      }
-      index = this.domains.indexOf(domain, this.index + 1);
-      if (index === -1) {
-        index += this.domains.push(domain);
-      }
-      if (problems = this.problems[index]) {
-        if (problems.indexOf(root) === -1) {
-          problems.push(root);
-        }
-      } else {
-        this.problems[index] = [root];
-      }
-    } else {
-      _ref1 = this.problems;
-      for (index = _i = 0, _len = _ref1.length; _i < _len; index = ++_i) {
-        problems = _ref1[index];
-        if (index >= this.index) {
-          p = parent;
-          while (p) {
-            if ((i = problems.indexOf(p)) > -1) {
-              this.substitute(problems[i], operation, solution);
-            }
-            p = p.parent;
-          }
-        }
-      }
-    }
-  },
   merge: function(from, to, parent) {
     var constraint, constraints, domain, exported, glob, globals, globs, i, other, prob, probs, prop, result, solution, _i, _j, _k, _l, _len, _len1, _len2;
     domain = this.domains[from];
@@ -24843,7 +24745,7 @@ Update.prototype = {
     return true;
   },
   wrap: function(problem, parent) {
-    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, opdomain, other, previous, problems, probs, prop, strong, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _n, _o, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, other, previous, problems, probs, prop, value, _i, _j, _k, _l, _len, _len1, _len2, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     bubbled = void 0;
     _ref = this.domains;
     for (index = _i = _ref.length - 1; _i >= 0; index = _i += -1) {
@@ -24891,9 +24793,7 @@ Update.prototype = {
                 if (domain !== other && domain.priority < 0 && other.priority < 0) {
                   if (!domain.MAYBE) {
                     if (index < n || ((_ref3 = other.constraints) != null ? _ref3.length : void 0) > ((_ref4 = domain.constraints) != null ? _ref4.length : void 0)) {
-                      if (this.merge(n, index, parent)) {
-                        1;
-                      }
+                      this.merge(n, index, parent);
                     } else {
                       if (!this.merge(index, n, parent)) {
                         exps.splice(--i, 1);
@@ -24919,27 +24819,7 @@ Update.prototype = {
             break;
           }
         }
-        if (other) {
-          opdomain = this.engine.Operation.getDomain(problem, other);
-        }
-        if (opdomain && (opdomain.displayName !== other.displayName)) {
-          if ((index = this.domains.indexOf(opdomain, this.index + 1)) === -1) {
-            index = this.domains.push(opdomain) - 1;
-            this.problems[index] = [problem];
-          } else {
-            this.problems[index].push(problem);
-          }
-          strong = exp.domain && !exp.domain.MAYBE;
-          for (_l = 0, _len1 = exp.length; _l < _len1; _l++) {
-            arg = exp[_l];
-            if (arg.domain && !arg.domain.MAYBE) {
-              strong = true;
-            }
-          }
-          if (!strong) {
-            exps.splice(--i, 1);
-          }
-        } else if (!bubbled) {
+        if (!bubbled) {
           if (problem.indexOf(exps[i - 1]) > -1) {
             bubbled = exps;
             if (exps.indexOf(problem) === -1) {
@@ -24952,13 +24832,13 @@ Update.prototype = {
         }
         if (other) {
           _ref5 = this.domains;
-          for (counter = _m = _ref5.length - 1; _m >= 0; counter = _m += -1) {
+          for (counter = _l = _ref5.length - 1; _l >= 0; counter = _l += -1) {
             domain = _ref5[counter];
             if (domain && (domain !== other || bubbled)) {
               if ((other.MAYBE && domain.MAYBE) || domain.displayName === other.displayName) {
                 problems = this.problems[counter];
-                for (_n = 0, _len2 = problem.length; _n < _len2; _n++) {
-                  arg = problem[_n];
+                for (_m = 0, _len1 = problem.length; _m < _len1; _m++) {
+                  arg = problem[_m];
                   if ((j = problems.indexOf(arg)) > -1) {
                     this.reify(arg, other, domain);
                     problems.splice(j, 1);
@@ -24973,8 +24853,8 @@ Update.prototype = {
           }
         }
         if (bubbled) {
-          for (_o = 0, _len3 = problem.length; _o < _len3; _o++) {
-            arg = problem[_o];
+          for (_n = 0, _len2 = problem.length; _n < _len2; _n++) {
+            arg = problem[_n];
             if (arg.push) {
               if (arg[0] === 'get') {
                 this.setVariable(problem, arg[1], arg);
@@ -25383,7 +25263,6 @@ Abstract.prototype.Default = Command.Default.extend({
   execute: function() {
     var args, engine, operation, _i;
     args = 3 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 2) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++];
-    debugger;
     args.unshift(operation[0]);
     return args;
   }
@@ -25416,7 +25295,19 @@ Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
   }
 });
 
-Abstract.prototype.Default.prototype.variants = [Abstract.prototype.Default.Top];
+Abstract.prototype.Default.Clause = Abstract.prototype.Default.Top.extend({
+  condition: function(engine, operation) {
+    var parent;
+    if (parent = operation.parent) {
+      return parent.command instanceof Abstract.prototype.Condition;
+    }
+  },
+  execute: function() {
+    return console.error(123);
+  }
+});
+
+Abstract.prototype.Default.prototype.variants = [Abstract.prototype.Default.Clause, Abstract.prototype.Default.Top];
 
 Abstract.prototype.Iterator = Iterator;
 

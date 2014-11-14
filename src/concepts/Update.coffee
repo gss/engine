@@ -104,35 +104,6 @@ Update.prototype =
 
 
 
-  yield: (solution) ->
-    return if (operation = solution.operation).exported
-    parent = operation.parent
-    # Provide solution for constraint that was set before
-    if domain = parent.domain
-      if parent.parent?.domain == domain
-        root = solution.domain.Operation.ascend(parent)
-      else
-        root = parent
-      index = @domains.indexOf(domain, @index + 1)
-      if index == -1
-        index += @domains.push(domain)
-      if problems = @problems[index]
-        if problems.indexOf(root) == -1
-          problems.push root
-      else
-        @problems[index] = [root]
-    # Update queued constraint that was not evaluated yet
-    else
-      for problems, index in @problems
-        if index >= @index
-          p = parent
-          while p
-            if (i = problems.indexOf(p)) > -1
-              @substitute(problems[i], operation, solution)
-            p = p.parent
-    return
-
-
 
   merge: (from, to, parent) ->
     domain = @domains[from]
@@ -197,8 +168,6 @@ Update.prototype =
         domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
-    #if @engine.domains.indexOf(other) == -1
-    #  @engine.domains.push(other)
     return true
 
   # Group expressions
@@ -225,18 +194,21 @@ Update.prototype =
             if m > -1
               break
         continue if next
+
+        # Iterate other arguments to join variable graphs
         while (previous = problem[--l]) != undefined
           if previous && previous.push && exps.indexOf(previous) == -1
             for domain, n in @domains by -1
               continue if n == index
               break if n == @index
               probs = @problems[n]
+
               if (j = probs.indexOf(previous)) > -1
                 if domain != other && domain.priority < 0 && other.priority < 0
                   if !domain.MAYBE
+
                     if index < n || other.constraints?.length > domain.constraints?.length
-                      if @merge n, index, parent
-                        1#probs.splice(j, 1)
+                      @merge n, index, parent
                     else
                       unless @merge index, n, parent
                         exps.splice(--i, 1)
@@ -248,9 +220,7 @@ Update.prototype =
                     break
                   else if !other.MAYBE
                     @merge n, index
-                    #@problems[index].push.apply(@problems[index], @problems[n])
-                    #@domains.splice(n, 1)
-                    #@problems.splice(n, 1)
+
                     continue
                 if domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)
                   i = j + 1
@@ -259,22 +229,8 @@ Update.prototype =
                 break
             break
 
-        # Force operation domain
-        if other
-          opdomain = @engine.Operation.getDomain(problem, other)
-        if opdomain && (opdomain.displayName != other.displayName)
-          if (index = @domains.indexOf(opdomain, @index + 1)) == -1
-            index = @domains.push(opdomain) - 1
-            @problems[index] = [problem]
-          else
-            @problems[index].push problem
-          strong = exp.domain && !exp.domain.MAYBE
-          for arg in exp
-            if arg.domain && !arg.domain.MAYBE
-              strong = true
-          unless strong
-            exps.splice(--i, 1)
-        else unless bubbled
+        # Replace that last argument with the given function call
+        unless bubbled
           if problem.indexOf(exps[i - 1]) > -1
             bubbled = exps
             if exps.indexOf(problem) == -1
@@ -284,6 +240,7 @@ Update.prototype =
 
             problem.domain = other
 
+        # Update variables table (???)
         if other
           for domain, counter in @domains by -1
             if domain && (domain != other || bubbled)
@@ -496,6 +453,7 @@ Update.prototype =
 
     return solution || @
 
+  # Save results, check if solvers are caught in the loop of resolving same values
   apply: (result, solution = @solution) ->
     if result != @solution
       solution ||= @solution = {}

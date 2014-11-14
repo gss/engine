@@ -21,7 +21,6 @@ Abstract::Default = Command.Default.extend
   extras: 2
 
   execute: (args..., engine, operation) ->
-    debugger
     args.unshift operation[0]
     return args
 
@@ -33,7 +32,7 @@ Abstract::Default.Top = Abstract::Default.extend
       if parent.command instanceof Abstract::Default
         return false
     return true
-    
+
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
@@ -46,7 +45,18 @@ Abstract::Default.Top = Abstract::Default.extend
     engine.yield wrapper
     return
 
-Abstract::Default::variants = [Abstract::Default.Top]
+# Unrecognized command in conditional clause (any math)
+Abstract::Default.Clause = Abstract::Default.Top.extend
+
+  condition: (engine, operation) ->
+    if parent = operation.parent
+      return parent.command instanceof Abstract::Condition
+
+  execute: ->
+    console.error(123)
+
+# Dynamically check 
+Abstract::Default::variants = [Abstract::Default.Clause, Abstract::Default.Top]
 
 # Asynchronous block
 Abstract::Iterator = Iterator
