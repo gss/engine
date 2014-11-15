@@ -104,12 +104,12 @@ describe 'End - to - End', ->
           <div id="css-only-dump"></div>
           """
         engine.once 'solve', (e) ->
-          expect(getSource(engine.$tag('style')[1])).to.equal "#css-only-dump{height:100px;}"
+          expect(getSource(engine.tag('style')[1])).to.equal "#css-only-dump{height:100px;}"
 
-          dumper = engine.$id('css-only-dump')
+          dumper = engine.id('css-only-dump')
           dumper.parentNode.removeChild(dumper)
           engine.once 'solve', (e) ->
-            expect(getSource(engine.$tag('style')[1])).to.equal ""
+            expect(getSource(engine.tag('style')[1])).to.equal ""
 
             done()   
     
@@ -127,22 +127,22 @@ describe 'End - to - End', ->
           </style>
           """
         engine.once 'solve', (e) ->   
-          expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+          expect(getSource(engine.tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
 
           dump = engine.$class('css-simple-dump')[0]
           clone = dump.cloneNode()
           dump.parentNode.appendChild(clone)
 
           engine.once 'solve', (e) ->  
-            expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+            expect(getSource(engine.tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
             dump.parentNode.removeChild(dump)
 
             engine.once 'solve', (e) ->  
-              expect(getSource(engine.$tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
+              expect(getSource(engine.tag('style')[1])).to.equal ".css-simple-dump{height:100px;}"
               clone.parentNode.removeChild(clone)
 
               engine.once 'solve', (e) ->  
-                expect(getSource(engine.$tag('style')[1])).to.equal ""
+                expect(getSource(engine.tag('style')[1])).to.equal ""
                 done()
     
     describe 'nested', ->
@@ -176,7 +176,7 @@ describe 'End - to - End', ->
           </style>
           """
         engine.once 'solve', ->
-          expect(getSource(engine.$tag('style')[1])).to.equal """
+          expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
             .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
             """
@@ -185,13 +185,13 @@ describe 'End - to - End', ->
           el.setAttribute('class', 'innie-outie-zzz')
 
           engine.once 'solve', ->
-            expect(getSource(engine.$tag('style')[1])).to.equal """
+            expect(getSource(engine.tag('style')[1])).to.equal """
               .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
               """
             el.setAttribute('class', 'innie-outie')
 
             engine.once 'solve', ->
-              expect(getSource(engine.$tag('style')[1])).to.equal """
+              expect(getSource(engine.tag('style')[1])).to.equal """
                 .outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}
                 .outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}
                 """
@@ -224,7 +224,7 @@ describe 'End - to - End', ->
           </style>
           """
         engine.once 'solve', ->
-          expect(getSource(engine.$tag('style')[1])).to.equal """
+          expect(getSource(engine.tag('style')[1])).to.equal """
             [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
             [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
             """
@@ -234,39 +234,39 @@ describe 'End - to - End', ->
 
           B.setAttribute('class', 'innie-outie-zzz')
           engine.once 'solve', ->
-            expect(getSource(engine.$tag('style')[1])).to.equal """
+            expect(getSource(engine.tag('style')[1])).to.equal """
               [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
               """
             B.setAttribute('class', 'innie-outie')
 
             engine.once 'solve', ->
-              expect(getSource(engine.$tag('style')[1])).to.equal """
+              expect(getSource(engine.tag('style')[1])).to.equal """
                 [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
                 [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
                 """
               A.setAttribute('class', 'innie-outie-zzz')
 
               engine.once 'solve', ->
-                expect(getSource(engine.$tag('style')[1])).to.equal """
+                expect(getSource(engine.tag('style')[1])).to.equal """
                   [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
                   [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
                   """
                 B.setAttribute('class', 'innie-outie-zzz')
 
                 engine.once 'solve', ->
-                  expect(getSource(engine.$tag('style')[1])).to.equal ""
+                  expect(getSource(engine.tag('style')[1])).to.equal ""
 
                   A.setAttribute('class', 'innie-outie')
 
 
                   engine.once 'solve', ->
-                    expect(getSource(engine.$tag('style')[1])).to.equal """
+                    expect(getSource(engine.tag('style')[1])).to.equal """
                       [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
                       """
                     B.setAttribute('class', 'innie-outie')
 
                     engine.once 'solve', ->
-                      expect(getSource(engine.$tag('style')[1])).to.equal """
+                      expect(getSource(engine.tag('style')[1])).to.equal """
                         [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"]{height:200px;}
                         [matches~=".innie-outie#{GSS.Continuation.DESCEND}!>*"] #css-inner-dump-2{z-index:-1;}
                         """
@@ -305,13 +305,13 @@ describe 'End - to - End', ->
           </style>
           """
         engine.once 'solve', ->
-          expect(getSource(engine.$tag('style')[1])).to.equal """
+          expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
             """
           #engine.solve
           #  A: 1
           #, ->
-          #  expect(getSource(engine.$tag('style')[1])).to.equal """
+          #  expect(getSource(engine.tag('style')[1])).to.equal """
           #    .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
           #    """
           done()
@@ -470,7 +470,7 @@ describe 'End - to - End', ->
             "$a1[x]": 111,
             "$a3[x]": 222,
 
-          container.appendChild(engine.$id('a1'))
+          container.appendChild(engine.id('a1'))
           engine.once 'solve', ->
           
             expect(engine.values).to.eql
@@ -498,7 +498,7 @@ describe 'End - to - End', ->
             "$a1[x]": 111,
             "$a2[x]": 666
 
-          container.appendChild(engine.$id('a1'))
+          container.appendChild(engine.id('a1'))
           engine.once 'solve', ->
           
             expect(engine.values).to.eql
@@ -533,7 +533,7 @@ describe 'End - to - End', ->
             "$a1[x]": 0,
             "$a2[x]": 100,
             "$a3[x]": 200,
-          a3 = engine.$id('a3')
+          a3 = engine.id('a3')
           a3.parentNode.removeChild(a3)
           engine.once 'solve', ->
             expect(engine.values).to.eql
@@ -551,7 +551,7 @@ describe 'End - to - End', ->
                 "$a1[x]": 0,
                 "$a2[x]": 100,
                 "$a3[x]": 200,
-              a1 = engine.$id('a1')
+              a1 = engine.id('a1')
               a1.parentNode.removeChild(a1)
 
               engine.once 'solve', ->
@@ -570,7 +570,7 @@ describe 'End - to - End', ->
                     "$a2[x]": 0,
                     "$a3[x]": 100,
                     "$a1[x]": 200,
-                  a3 = engine.$id('a3')
+                  a3 = engine.id('a3')
                   a3.parentNode.removeChild(a3)
                   engine.once 'solve', ->
                     expect(engine.values).to.eql
@@ -578,7 +578,7 @@ describe 'End - to - End', ->
                       "$a2[width]": 100,
                       "$a2[x]": 0,
                       "$a1[x]": 100
-                    divs = engine.$tag('div')
+                    divs = engine.tag('div')
                     while divs[0]
                       divs[0].parentNode.removeChild(divs[0])
                     engine.once 'solve', ->
@@ -599,7 +599,7 @@ describe 'End - to - End', ->
 
             done()
 
-          engine.$id('scroller').scrollTop = 20
+          engine.id('scroller').scrollTop = 20
         container.innerHTML =  """
           <style>
             #scroller {
@@ -681,7 +681,7 @@ describe 'End - to - End', ->
                 expect(stringify engine.values).to.eql stringify
                   "multiplier": 3
                   "$b1[border-left-width]": 6
-                engine.$id('a1').style.border = '3px solid #000'
+                engine.id('a1').style.border = '3px solid #000'
               else if count == 3
                 expect(stringify engine.values).to.eql stringify
                   "multiplier": 3
@@ -719,7 +719,7 @@ describe 'End - to - End', ->
                   "$a1[intrinsic-border-top-width]": 2
                   "multiplier": 3
                   "$b1[border-left-width]": 9
-                engine.$id('a1').style.border = '3px solid #000'
+                engine.id('a1').style.border = '3px solid #000'
               else if count == 3
                 expect(stringify engine.values).to.eql stringify
                   "$a1[intrinsic-border-top-width]": 3
@@ -790,7 +790,7 @@ describe 'End - to - End', ->
             "$a1[y]": 10
             "$a2[y]": 10
             "$a3[y]": 10
-          b3 = engine.$id('b3')
+          b3 = engine.id('b3')
           done()
 
     describe 'complex plural selectors on the left', -> 
@@ -815,7 +815,7 @@ describe 'End - to - End', ->
             "$b1[x]": 100
             "$b2[x]": 100
             "$b3[x]": 100
-          b3 = engine.$id('b3')
+          b3 = engine.id('b3')
           b3.parentNode.removeChild(b3)
           GSS.console.log(1)
 
@@ -827,7 +827,7 @@ describe 'End - to - End', ->
               "$b1[x]": 100
               "$b2[x]": 100
 
-            b2 = engine.$id('b2')
+            b2 = engine.id('b2')
             b2.parentNode.removeChild(b2)
             GSS.console.log(1)
             engine.once 'solve', (e) ->
@@ -843,7 +843,7 @@ describe 'End - to - End', ->
                   "$a2[x]": 100
                   "$b1[x]": 100
                   "$b2[x]": 100
-                a1 = engine.$id('a1')
+                a1 = engine.id('a1')
                 a1.parentNode.removeChild(a1)
                 GSS.console.log(1)
                 engine.once 'solve', (e) ->
@@ -852,14 +852,14 @@ describe 'End - to - End', ->
                     "$a2[x]": 100
                     "$b1[x]": 100
                     "$b2[x]": 100
-                  b2 = engine.$id('b2')
+                  b2 = engine.id('b2')
                   b2.parentNode.removeChild(b2)
                   engine.once 'solve', (e) ->
                     expect(engine.values).to.eql 
                       "x": 100
                       "$a2[x]": 100
                       "$b1[x]": 100
-                    engine.scope.insertBefore(a1, engine.$id('b1'))
+                    engine.scope.insertBefore(a1, engine.id('b1'))
                     engine.scope.appendChild(b2)
                     engine.once 'solve', (e) ->
                       expect(engine.values).to.eql 
@@ -868,7 +868,7 @@ describe 'End - to - End', ->
                         "$b2[x]": 100
                         "$a2[x]": 100
                         "$a3[x]": 100
-                        divs = engine.$tag('div')
+                        divs = engine.tag('div')
                         while divs[0]
                           divs[0].parentNode.removeChild(divs[0])
                         window.zz = true
@@ -905,7 +905,7 @@ describe 'End - to - End', ->
             "$a1[x]": 0,
             "$a2[x]": 100,
             "$a3[x]": 200,
-          a3 = engine.$id('a3')
+          a3 = engine.id('a3')
           a3.parentNode.removeChild(a3)
           engine.once 'solve', ->
             expect(engine.values).to.eql
@@ -922,7 +922,7 @@ describe 'End - to - End', ->
                 "$a1[x]": 0,
                 "$a2[x]": 100,
                 "$a3[x]": 200,
-              a1 = engine.$id('a1')
+              a1 = engine.id('a1')
               a1.parentNode.removeChild(a1)
               engine.once 'solve', ->
                 expect(engine.values).to.eql
@@ -940,7 +940,7 @@ describe 'End - to - End', ->
                     "$a2[x]": 0,
                     "$a3[x]": 100,
                     "$a1[x]": 200,
-                  a3 = engine.$id('a3')
+                  a3 = engine.id('a3')
                   a3.parentNode.removeChild(a3)
 
                   engine.once 'solve', ->
@@ -949,7 +949,7 @@ describe 'End - to - End', ->
                       "$a2[width]": 100,
                       "$a2[x]": 0,
                       "$a1[x]": 100
-                    divs = engine.$tag('div')
+                    divs = engine.tag('div')
                     while divs[0]
                       divs[0].parentNode.removeChild(divs[0])
                     engine.once 'solve', ->
@@ -980,7 +980,7 @@ describe 'End - to - End', ->
             "$a1[x]": 0,
             "$a2[x]": 100,
             "$a3[x]": 200,
-          a3 = engine.$id('a3')
+          a3 = engine.id('a3')
           a3.parentNode.removeChild(a3)
 
           engine.once 'solve', ->
@@ -999,7 +999,7 @@ describe 'End - to - End', ->
                 "$a1[x]": 0,
                 "$a2[x]": 100,
                 "$a3[x]": 200,
-              a1 = engine.$id('a1')
+              a1 = engine.id('a1')
               a1.parentNode.removeChild(a1)
 
               engine.once 'solve', ->
@@ -1018,7 +1018,7 @@ describe 'End - to - End', ->
                     "$a2[x]": 0,
                     "$a3[x]": 100,
                     "$a1[x]": 200,
-                  a3 = engine.$id('a3')
+                  a3 = engine.id('a3')
                   a3.parentNode.removeChild(a3)
 
                   engine.once 'solve', ->
@@ -1027,7 +1027,7 @@ describe 'End - to - End', ->
                       "$a2[width]": 100,
                       "$a2[x]": 0,
                       "$a1[x]": 100
-                    divs = engine.$tag('div')
+                    divs = engine.tag('div')
                     while divs[0]
                       divs[0].parentNode.removeChild(divs[0])
                     engine.once 'solve', ->
@@ -1057,7 +1057,7 @@ describe 'End - to - End', ->
             "$a2[x]": 100
             "$b1[x]": 100
             "$b2[x]": 100
-          b3 = engine.$id('b3')
+          b3 = engine.id('b3')
 
           b3.parentNode.removeChild(b3)
 
@@ -1075,7 +1075,7 @@ describe 'End - to - End', ->
                 "$a2[x]": 100
                 "$b1[x]": 100
                 "$b2[x]": 100
-              divs = engine.$tag('div')
+              divs = engine.tag('div')
               while divs[0]
                 divs[0].parentNode.removeChild(divs[0])
 
@@ -1111,7 +1111,7 @@ describe 'End - to - End', ->
             "$a2[x]": 100
             "$b1[x]": 100
             "$b2[x]": 100
-          b3 = engine.$id('b3')
+          b3 = engine.id('b3')
           b3.parentNode.removeChild(b3)
 
           engine.once 'solve', (e) ->
@@ -1129,7 +1129,7 @@ describe 'End - to - End', ->
                 "$b1[x]": 100
                 "$b2[x]": 100
 
-              a1 = engine.$id('a1')
+              a1 = engine.id('a1')
               a1.parentNode.removeChild(a1)
               engine.once 'solve', (e) ->
                 expect(engine.values).to.eql 
@@ -1138,7 +1138,7 @@ describe 'End - to - End', ->
                   "$b1[x]": 100
                   "$b2[x]": 100
 
-                divs = engine.$tag('div')
+                divs = engine.tag('div')
                 while divs[0]
                   divs[0].parentNode.removeChild(divs[0])
 
@@ -1175,7 +1175,7 @@ describe 'End - to - End', ->
             "$b2[x]": 100
             "$b3[x]": 100
           
-          a3 = engine.$id('a3')
+          a3 = engine.id('a3')
           a3.parentNode.removeChild(a3)
 
           engine.once 'solve', (e) ->
@@ -1187,7 +1187,7 @@ describe 'End - to - End', ->
               "$b2[x]": 100
               "$b3[x]": 100
           
-            b1 = engine.$id('b1')
+            b1 = engine.id('b1')
             b1.parentNode.removeChild(b1)
             window.zzzz = true
 
@@ -1226,7 +1226,7 @@ describe 'End - to - End', ->
             "$b2[x]": 100
             "$b3[x]": 100
             "$b4[x]": 100
-          a3 = engine.$id('a3')
+          a3 = engine.id('a3')
           a4 = a3.cloneNode()
           a4.id = 'a4'
           a3.parentNode.appendChild(a4)
@@ -1242,7 +1242,7 @@ describe 'End - to - End', ->
               "$b2[x]": 100
               "$b3[x]": 100
               "$b4[x]": 100
-            a1 = engine.$id('a1')
+            a1 = engine.id('a1')
             a1.parentNode.removeChild(a1)
 
             engine.once 'solve', (e) ->
@@ -1255,7 +1255,7 @@ describe 'End - to - End', ->
                 "$b2[x]": 100
                 "$b3[x]": 100
                 "$b4[x]": 100
-              b4 = engine.$id('b4')
+              b4 = engine.id('b4')
 
               b4.parentNode.removeChild(b4)
               engine.once 'solve', (e) ->
@@ -1268,7 +1268,7 @@ describe 'End - to - End', ->
                   "$b2[x]": 100
                   "$b3[x]": 100
 
-                b3 = engine.$id('b3')
+                b3 = engine.id('b3')
                 b3.parentNode.removeChild(b3)
 
                 engine.once 'solve', (e) ->
@@ -1278,7 +1278,7 @@ describe 'End - to - End', ->
                     "$a3[x]": 100
                     "$b1[x]": 100
                     "$b2[x]": 100
-                  a2 = engine.$id('a2')
+                  a2 = engine.id('a2')
                   a2.parentNode.removeChild(a2)
 
                   engine.once 'solve', (e) ->
@@ -1288,7 +1288,7 @@ describe 'End - to - End', ->
                       "$a4[x]": 100
                       "$b1[x]": 100
                       "$b2[x]": 100
-                    divs = engine.$tag('div')
+                    divs = engine.tag('div')
                     while divs[0]
                       divs[0].parentNode.removeChild(divs[0])
 
@@ -1571,7 +1571,7 @@ describe 'End - to - End', ->
       engine.then (solution) ->
         expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
 
-        engine.$id('box').click()
+        engine.id('box').click()
 
         engine.then (solution) ->
           expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
@@ -1614,7 +1614,7 @@ describe 'End - to - End', ->
             "$a2[x]": null
 
           for item in lefts by -1
-            engine.scope.insertBefore(item, engine.$id('b2'))
+            engine.scope.insertBefore(item, engine.id('b2'))
 
           engine.then (solution) ->
             expect(solution).to.eql
@@ -1623,7 +1623,7 @@ describe 'End - to - End', ->
               "$a2[x]": 10
 
             items = 
-              for item in engine.$tag('div') by -1
+              for item in engine.tag('div') by -1
                 item.parentNode.removeChild(item)
                 item
 
@@ -2226,23 +2226,23 @@ describe 'End - to - End', ->
   
       it 'should compute values', (done) ->
         listen = (e) ->
-          expect(engine.$id('box1').style.width).to.eql '9px'
-          expect(engine.$id('box2').style.width).to.eql '19px'
-          expect(window.getComputedStyle(engine.$id("box1"),null).
+          expect(engine.id('box1').style.width).to.eql '9px'
+          expect(engine.id('box2').style.width).to.eql '19px'
+          expect(window.getComputedStyle(engine.id("box1"),null).
             getPropertyValue("z-index")).to.equal "auto"
-          expect(window.getComputedStyle(engine.$id("box2"),null).
+          expect(window.getComputedStyle(engine.id("box2"),null).
             getPropertyValue("z-index")).to.equal "auto"
 
-          expect(window.getComputedStyle(engine.$id("box1"),null).
+          expect(window.getComputedStyle(engine.id("box1"),null).
             getPropertyValue("margin-top")).to.equal "0px"
-          expect(window.getComputedStyle(engine.$id("box2"),null).
+          expect(window.getComputedStyle(engine.id("box2"),null).
             getPropertyValue("margin-top")).to.equal "0px" 
-          expect(window.getComputedStyle(engine.$id("box1"),null).
+          expect(window.getComputedStyle(engine.id("box1"),null).
             getPropertyValue("padding-top")).to.equal "1px"
-          expect(window.getComputedStyle(engine.$id("box2"),null).
+          expect(window.getComputedStyle(engine.id("box2"),null).
             getPropertyValue("padding-top")).to.equal "1px"     
-          expect(engine.$id("box1").style.zIndex).to.eql '1'
-          expect(engine.$id("box2").style.zIndex).to.eql '2'     
+          expect(engine.id("box1").style.zIndex).to.eql '1'
+          expect(engine.id("box2").style.zIndex).to.eql '2'     
           done()          
     
         container.innerHTML =  """
@@ -2509,7 +2509,7 @@ describe 'End - to - End', ->
               "$p23[width]": 80
               "$h1[width]":  80
 
-            p12 = engine.$id('p12')
+            p12 = engine.id('p12')
             p12.parentNode.removeChild(p12)
 
             engine.then (solution) ->  
@@ -2517,7 +2517,7 @@ describe 'End - to - End', ->
                 "$p12[x]": null
                 "$p12[width]": null
 
-              h1 = engine.$id('h1')
+              h1 = engine.id('h1')
               h1.parentNode.removeChild(h1)
               engine.then (solution) ->  
                 expect(solution).to.eql  
@@ -2791,7 +2791,7 @@ describe 'End - to - End', ->
           for prop, value of expectation
             expect(solution[prop]).to.eql value
 
-          article = engine.$id('article1')
+          article = engine.id('article1')
           engine.scope.appendChild(article)
 
           engine.then (solution) ->
@@ -2804,7 +2804,7 @@ describe 'End - to - End', ->
               "$desc2[y]": 13
               "$title2[y]": 1
 
-            article = engine.$id('article2')
+            article = engine.id('article2')
             engine.scope.appendChild(article)
 
             engine.then (solution) ->
@@ -2820,7 +2820,7 @@ describe 'End - to - End', ->
                 "$title2[y]": 1 + 66
 
 
-              title1 = engine.$id('title1')
+              title1 = engine.id('title1')
               title1.parentNode.removeChild(title1)
 
               engine.then (solution) ->

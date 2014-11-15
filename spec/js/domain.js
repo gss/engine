@@ -153,7 +153,7 @@ describe('Domain', function() {
                 result: 0,
                 x: 0
               });
-              root.removeChild(engine.$id('box0'));
+              root.removeChild(engine.id('box0'));
               return engine.then(function(solution) {
                 GSS.console.info(solution);
                 expect(solution).to.eql({

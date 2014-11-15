@@ -1104,7 +1104,7 @@ describe('Nested Rules', function() {
               "$box2[width]": 5
             }));
             window.xxx = true;
-            return engine.$id('box1').setAttribute('class', '');
+            return engine.id('box1').setAttribute('class', '');
           } else if (counter === 6) {
             expect(stringify(engine.values)).to.eql(stringify({
               "big": 500,
@@ -1113,7 +1113,7 @@ describe('Nested Rules', function() {
               "target-width": 300,
               "$box2[width]": 5
             }));
-            return engine.$id('box2').setAttribute('class', '');
+            return engine.id('box2').setAttribute('class', '');
           } else if (counter === 7) {
             expect(stringify(engine.values)).to.eql(stringify({
               "big": 500,
@@ -1124,7 +1124,7 @@ describe('Nested Rules', function() {
             engine.solved.merge({
               'target-width': 1000
             });
-            return engine.$id('box2').setAttribute('class', 'box');
+            return engine.id('box2').setAttribute('class', 'box');
           } else if (counter === 8) {
             expect(stringify(engine.values)).to.eql(stringify({
               "big": 500,

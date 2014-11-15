@@ -98,8 +98,8 @@ describe 'GSS engine', ->
         ]
         
         it 'before solving the second button should be wider', ->
-          button1 = engine.$id 'button1'
-          button2 = engine.$id 'button2'
+          button1 = engine.id 'button1'
+          button2 = engine.id 'button2'
           expect(button2.getBoundingClientRect().width).to.be.above button1.getBoundingClientRect().width
         
         it 'after solving the buttons should be of equal width', (done) ->
@@ -141,8 +141,8 @@ describe 'GSS engine', ->
           done()
     
         ast = [
-            ['==', ['get',['$tag','h1'],'line-height'], ['get',['$tag','h1'],'font-size']]
-            ['==', ['get',['$tag','h1'],'line-height'], 42]
+            ['==', ['get',['tag','h1'],'line-height'], ['get',['tag','h1'],'font-size']]
+            ['==', ['get',['tag','h1'],'line-height'], 42]
           ]
         
             
@@ -196,8 +196,8 @@ describe 'GSS engine', ->
     
     it 'before solving buttons dont exist', ->
       engine.solve ast
-      button1 = engine.$id 'button1'
-      button2 = engine.$id 'button2'
+      button1 = engine.id 'button1'
+      button2 = engine.id 'button2'
       assert !button1, "button1 doesn't exist"
       assert !button2, "button2 doesn't exist"
     
@@ -219,8 +219,8 @@ describe 'GSS engine', ->
         <button id="button1">One</button>        
       </div>
       """
-      button1 = engine.$id 'button1'
-      button2 = engine.$id 'button2'
+      button1 = engine.id 'button1'
+      button2 = engine.id 'button2'
     
   describe 'Before IDs exist - advanced', ->
     engine = null
@@ -256,11 +256,11 @@ describe 'GSS engine', ->
     
     it 'after solving should have right size', (done) ->
       onSolved = (e) ->
-        w = Math.round(engine.$id("w").getBoundingClientRect().width)
+        w = Math.round(engine.id("w").getBoundingClientRect().width)
         assert w is 200, "w width: #{w}"
-        w = Math.round(engine.$id('b1').getBoundingClientRect().width)
+        w = Math.round(engine.id('b1').getBoundingClientRect().width)
         assert w is 100, "button1 width: #{w}"
-        w = Math.round(engine.$id('b2').getBoundingClientRect().width)
+        w = Math.round(engine.id('b2').getBoundingClientRect().width)
         assert w is 100, "button2 width: #{w}"
         container.removeEventListener 'solved', onSolved
         done()
@@ -425,7 +425,7 @@ describe 'GSS engine', ->
     
       it 'after modified GSS style tag', (done) ->
         engine = GSS(container)
-        styleNode = engine.$id 'gssa'
+        styleNode = engine.id 'gssa'
         styleNode.innerHTML = styleNode.innerText = """
           [
               ["==", ["get", "col-width-11"], 1111]

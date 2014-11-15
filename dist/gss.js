@@ -20604,6 +20604,8 @@ Engine = (function(_super) {
           this.Command.compile(domain);
         }
       }
+      this.Command.compile(this.assumed);
+      this.Command.compile(this.solved);
     }
     this.console.compile(this);
     this.running = state != null ? state : null;

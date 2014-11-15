@@ -1461,7 +1461,7 @@ describe 'Nested Rules', ->
               "$box2[width]":5
             window.xxx = true
 
-            engine.$id('box1').setAttribute('class', '')
+            engine.id('box1').setAttribute('class', '')
           else if counter is 6
             expect(stringify(engine.values)).to.eql stringify
               "big":500
@@ -1469,7 +1469,7 @@ describe 'Nested Rules', ->
               "small":5
               "target-width":300
               "$box2[width]":5
-            engine.$id('box2').setAttribute('class', '')
+            engine.id('box2').setAttribute('class', '')
           else if counter is 7
             expect(stringify(engine.values)).to.eql stringify
               "big":500
@@ -1477,7 +1477,7 @@ describe 'Nested Rules', ->
               "small":5
               "target-width":300
             engine.solved.merge 'target-width': 1000
-            engine.$id('box2').setAttribute('class', 'box')
+            engine.id('box2').setAttribute('class', 'box')
           else if counter is 8
             expect(stringify(engine.values)).to.eql stringify
               "big":500

@@ -615,37 +615,37 @@ describe 'Full page tests', ->
             for expect, value in expectation
               assert(engine.values[expect]).to.eql value
 
-            engine.$id('box1').onclick()
+            engine.id('box1').onclick()
             engine.then (solution) ->
               expect(solution['$box1"zone"[height]']).to.eql null
               expect(solution['$box1"zone"[width]']).to.eql null
               expect(solution['$box1"zone"[x]']).to.eql null
               expect(solution['$box1"zone"[y]']).to.eql null
-              engine.$id('box1').onclick()
+              engine.id('box1').onclick()
               engine.then (solution) ->
                 expect(solution['$box1"zone"[height]']).to.eql 260
                 expect(solution['$box1"zone"[width]']).to.eql 760
                 expect(solution['$box1"zone"[x]']).to.eql 120
                 expect(solution['$box1"zone"[y]']).to.eql 30
-                engine.$id('box2').onclick()
+                engine.id('box2').onclick()
                 engine.then (solution) ->
                   expect(solution['$box2"zone"[height]']).to.eql 260
                   expect(solution['$box2"zone"[width]']).to.eql 720
                   expect(solution['$box2"zone"[x]']).to.eql 140
                   expect(solution['$box2"zone"[y]']).to.eql 350
-                  engine.$id('box2').onclick()
+                  engine.id('box2').onclick()
                   engine.then (solution) ->
                     expect(solution['$box2"zone"[height]']).to.eql null
                     expect(solution['$box2"zone"[width]']).to.eql null
                     expect(solution['$box2"zone"[x]']).to.eql null
                     expect(solution['$box2"zone"[y]']).to.eql null
-                    engine.$id('box3').onclick()
+                    engine.id('box3').onclick()
                     engine.then (solution) ->
                       expect(solution['$box3"zone"[height]']).to.eql null
                       expect(solution['$box3"zone"[width]']).to.eql null
                       expect(solution['$box3"zone"[x]']).to.eql null
                       expect(solution['$box3"zone"[y]']).to.eql null
-                      engine.$id('box3').onclick()
+                      engine.id('box3').onclick()
                       engine.then (solution) ->
                         expect(solution['$box3"zone"[height]']).to.eql 260
                         expect(solution['$box3"zone"[width]']).to.eql 680

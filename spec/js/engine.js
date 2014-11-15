@@ -107,8 +107,8 @@ describe('GSS engine', function() {
         });
         ast = [['==', ['get', ['$id', 'button1'], 'width'], ['get', ['$id', 'button2'], 'width']], ['==', ['get', ['$id', 'button1'], 'width'], 100]];
         it('before solving the second button should be wider', function() {
-          button1 = engine.$id('button1');
-          button2 = engine.$id('button2');
+          button1 = engine.id('button1');
+          button2 = engine.id('button2');
           return expect(button2.getBoundingClientRect().width).to.be.above(button1.getBoundingClientRect().width);
         });
         return it('after solving the buttons should be of equal width', function(done) {
@@ -150,7 +150,7 @@ describe('GSS engine', function() {
           engine.destroy();
           return done();
         });
-        ast = [['==', ['get', ['$tag', 'h1'], 'line-height'], ['get', ['$tag', 'h1'], 'font-size']], ['==', ['get', ['$tag', 'h1'], 'line-height'], 42]];
+        ast = [['==', ['get', ['tag', 'h1'], 'line-height'], ['get', ['tag', 'h1'], 'font-size']], ['==', ['get', ['tag', 'h1'], 'line-height'], 42]];
         it('before solving', function() {
           text1 = container.getElementsByTagName('h1')[0];
           text2 = container.getElementsByTagName('h1')[1];
@@ -200,8 +200,8 @@ describe('GSS engine', function() {
     ast = [['==', ['get', ['$id', 'button2'], 'width'], 222], ['==', ['get', ['$id', 'button1'], 'width'], 111]];
     it('before solving buttons dont exist', function() {
       engine.solve(ast);
-      button1 = engine.$id('button1');
-      button2 = engine.$id('button2');
+      button1 = engine.id('button1');
+      button2 = engine.id('button2');
       assert(!button1, "button1 doesn't exist");
       return assert(!button2, "button2 doesn't exist");
     });
@@ -221,8 +221,8 @@ describe('GSS engine', function() {
       };
       container.addEventListener('solved', onSolved);
       container.innerHTML = "<div>        \n  <button id=\"button2\">Second</button>\n  <button id=\"button1\">One</button>        \n</div>";
-      button1 = engine.$id('button1');
-      return button2 = engine.$id('button2');
+      button1 = engine.id('button1');
+      return button2 = engine.id('button2');
     });
   });
   describe('Before IDs exist - advanced', function() {
@@ -245,11 +245,11 @@ describe('GSS engine', function() {
       var onSolved;
       onSolved = function(e) {
         var w;
-        w = Math.round(engine.$id("w").getBoundingClientRect().width);
+        w = Math.round(engine.id("w").getBoundingClientRect().width);
         assert(w === 200, "w width: " + w);
-        w = Math.round(engine.$id('b1').getBoundingClientRect().width);
+        w = Math.round(engine.id('b1').getBoundingClientRect().width);
         assert(w === 100, "button1 width: " + w);
-        w = Math.round(engine.$id('b2').getBoundingClientRect().width);
+        w = Math.round(engine.id('b2').getBoundingClientRect().width);
         assert(w === 100, "button2 width: " + w);
         container.removeEventListener('solved', onSolved);
         return done();
@@ -396,7 +396,7 @@ describe('GSS engine', function() {
       it('after modified GSS style tag', function(done) {
         var listener, styleNode;
         engine = GSS(container);
-        styleNode = engine.$id('gssa');
+        styleNode = engine.id('gssa');
         styleNode.innerHTML = styleNode.innerText = "[\n    [\"==\", [\"get\", \"col-width-11\"], 1111]\n]  ";
         listener = function(e) {
           var engine2;

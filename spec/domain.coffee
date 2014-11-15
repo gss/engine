@@ -222,7 +222,7 @@ describe 'Domain', ->
               expect(solution).to.eql 
                 result: 0
                 x: 0
-              root.removeChild(engine.$id('box0'))
+              root.removeChild(engine.id('box0'))
               engine.then (solution) ->
                 GSS.console.info(solution)
                 expect(solution).to.eql 

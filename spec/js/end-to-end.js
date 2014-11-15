@@ -81,11 +81,11 @@ describe('End - to - End', function() {
         container.innerHTML = "<style type=\"text/gss\" scoped>\n  #css-only-dump {\n    height: 100px;\n  }\n</style>\n<div id=\"css-only-dump\"></div>";
         return engine.once('solve', function(e) {
           var dumper;
-          expect(getSource(engine.$tag('style')[1])).to.equal("#css-only-dump{height:100px;}");
-          dumper = engine.$id('css-only-dump');
+          expect(getSource(engine.tag('style')[1])).to.equal("#css-only-dump{height:100px;}");
+          dumper = engine.id('css-only-dump');
           dumper.parentNode.removeChild(dumper);
           return engine.once('solve', function(e) {
-            expect(getSource(engine.$tag('style')[1])).to.equal("");
+            expect(getSource(engine.tag('style')[1])).to.equal("");
             return done();
           });
         });
@@ -97,18 +97,18 @@ describe('End - to - End', function() {
         container.innerHTML = "<div class=\"css-simple-dump\"></div>\n<style type=\"text/gss\" scoped>\n  .css-simple-dump {\n    width: == 100;\n    height: 100px;\n  }\n</style>";
         return engine.once('solve', function(e) {
           var clone, dump;
-          expect(getSource(engine.$tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
+          expect(getSource(engine.tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
           dump = engine.$class('css-simple-dump')[0];
           clone = dump.cloneNode();
           dump.parentNode.appendChild(clone);
           return engine.once('solve', function(e) {
-            expect(getSource(engine.$tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
+            expect(getSource(engine.tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
             dump.parentNode.removeChild(dump);
             return engine.once('solve', function(e) {
-              expect(getSource(engine.$tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
+              expect(getSource(engine.tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
               clone.parentNode.removeChild(clone);
               return engine.once('solve', function(e) {
-                expect(getSource(engine.$tag('style')[1])).to.equal("");
+                expect(getSource(engine.tag('style')[1])).to.equal("");
                 return done();
               });
             });
@@ -122,14 +122,14 @@ describe('End - to - End', function() {
         container.innerHTML = "<div class=\"outer\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-1\"></div>\n  </div>\n</div>\n<div class=\"outie\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-2\"></div>\n  </div>\n</div>\n<style type=\"text/gss\" scoped>\n  .outer, .outie {\n    #css-inner-dump-1 {\n      width: == 100;\n      height: 100px;\n      z-index: 5;\n    }\n    .innie-outie {\n      #css-inner-dump-2 {\n        height: 200px;\n      }\n    }\n  }\n</style>";
         return engine.once('solve', function() {
           var el;
-          expect(getSource(engine.$tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}\n.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}");
+          expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}\n.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}");
           el = engine.$class("innie-outie")[1];
           el.setAttribute('class', 'innie-outie-zzz');
           return engine.once('solve', function() {
-            expect(getSource(engine.$tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}");
+            expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}");
             el.setAttribute('class', 'innie-outie');
             return engine.once('solve', function() {
-              expect(getSource(engine.$tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}\n.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}");
+              expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}\n.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}");
               return done();
             });
           });
@@ -141,27 +141,27 @@ describe('End - to - End', function() {
         container.innerHTML = "<div class=\"outer\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-1\"></div>\n  </div>\n</div>\n<div class=\"outie\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-2\"></div>\n  </div>\n</div>\n<style type=\"text/gss\" scoped>\n    .innie-outie {\n      !> * {\n        height: 200px;\n\n        #css-inner-dump-2 {\n          z-index: -1;\n        }\n      }\n    }\n</style>";
         return engine.once('solve', function() {
           var A, B;
-          expect(getSource(engine.$tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+          expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
           A = engine.$class("innie-outie")[0];
           B = engine.$class("innie-outie")[1];
           B.setAttribute('class', 'innie-outie-zzz');
           return engine.once('solve', function() {
-            expect(getSource(engine.$tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}");
+            expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}");
             B.setAttribute('class', 'innie-outie');
             return engine.once('solve', function() {
-              expect(getSource(engine.$tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+              expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
               A.setAttribute('class', 'innie-outie-zzz');
               return engine.once('solve', function() {
-                expect(getSource(engine.$tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+                expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
                 B.setAttribute('class', 'innie-outie-zzz');
                 return engine.once('solve', function() {
-                  expect(getSource(engine.$tag('style')[1])).to.equal("");
+                  expect(getSource(engine.tag('style')[1])).to.equal("");
                   A.setAttribute('class', 'innie-outie');
                   return engine.once('solve', function() {
-                    expect(getSource(engine.$tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}");
+                    expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}");
                     B.setAttribute('class', 'innie-outie');
                     return engine.once('solve', function() {
-                      expect(getSource(engine.$tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+                      expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
                       return done();
                     });
                   });
@@ -176,7 +176,7 @@ describe('End - to - End', function() {
       return it('should dump', function(done) {
         container.innerHTML = "<div class=\"outer\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-1\"></div>\n  </div>\n</div>\n<div class=\"outie\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-2\"></div>\n  </div>\n</div>\n<style type=\"text/gss\" scoped>\n  .outer, .outie {\n    @if [A] > 0 {\n      .innie-outie {\n        #css-inner-dump-2 {\n          height: 200px;\n        }\n      }\n    }\n    \n    #css-inner-dump-1 {\n      z-index: 5;\n\n      @if [B] > 0 {\n        height: 200px;\n      }\n    }\n  }\n</style>";
         return engine.once('solve', function() {
-          expect(getSource(engine.$tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}");
+          expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}");
           return done();
         });
       });
@@ -261,7 +261,7 @@ describe('End - to - End', function() {
             "$a1[x]": 111,
             "$a3[x]": 222
           });
-          container.appendChild(engine.$id('a1'));
+          container.appendChild(engine.id('a1'));
           return engine.once('solve', function() {
             expect(engine.values).to.eql({
               "$a2[x]": 111,
@@ -282,7 +282,7 @@ describe('End - to - End', function() {
             "$a1[x]": 111,
             "$a2[x]": 666
           });
-          container.appendChild(engine.$id('a1'));
+          container.appendChild(engine.id('a1'));
           return engine.once('solve', function() {
             expect(engine.values).to.eql({
               "$a1[x]": 666,
@@ -311,7 +311,7 @@ describe('End - to - End', function() {
             "$a2[x]": 100,
             "$a3[x]": 200
           });
-          a3 = engine.$id('a3');
+          a3 = engine.id('a3');
           a3.parentNode.removeChild(a3);
           return engine.once('solve', function() {
             expect(engine.values).to.eql({
@@ -331,7 +331,7 @@ describe('End - to - End', function() {
                 "$a2[x]": 100,
                 "$a3[x]": 200
               });
-              a1 = engine.$id('a1');
+              a1 = engine.id('a1');
               a1.parentNode.removeChild(a1);
               return engine.once('solve', function() {
                 expect(engine.values).to.eql({
@@ -350,7 +350,7 @@ describe('End - to - End', function() {
                     "$a3[x]": 100,
                     "$a1[x]": 200
                   });
-                  a3 = engine.$id('a3');
+                  a3 = engine.id('a3');
                   a3.parentNode.removeChild(a3);
                   return engine.once('solve', function() {
                     var divs;
@@ -360,7 +360,7 @@ describe('End - to - End', function() {
                       "$a2[x]": 0,
                       "$a1[x]": 100
                     });
-                    divs = engine.$tag('div');
+                    divs = engine.tag('div');
                     while (divs[0]) {
                       divs[0].parentNode.removeChild(divs[0]);
                     }
@@ -390,7 +390,7 @@ describe('End - to - End', function() {
             }));
             return done();
           });
-          return engine.$id('scroller').scrollTop = 20;
+          return engine.id('scroller').scrollTop = 20;
         });
         return container.innerHTML = "<style>\n  #scroller {\n    height: 50px;\n    overflow: scroll;\n    font-size: 100px;\n  }\n</style>\n<style type=\"text/gss\"> \n  #floater[x] == #scroller[scroll-top]\n</style>\n<div class=\"a\" id=\"scroller\">content</div>\n<div class=\"b\" id=\"floater\"></div>";
       });
@@ -444,7 +444,7 @@ describe('End - to - End', function() {
                   "multiplier": 3,
                   "$b1[border-left-width]": 6
                 }));
-                return engine.$id('a1').style.border = '3px solid #000';
+                return engine.id('a1').style.border = '3px solid #000';
               } else if (count === 3) {
                 expect(stringify(engine.values)).to.eql(stringify({
                   "multiplier": 3,
@@ -474,7 +474,7 @@ describe('End - to - End', function() {
                   "multiplier": 3,
                   "$b1[border-left-width]": 9
                 }));
-                return engine.$id('a1').style.border = '3px solid #000';
+                return engine.id('a1').style.border = '3px solid #000';
               } else if (count === 3) {
                 expect(stringify(engine.values)).to.eql(stringify({
                   "$a1[intrinsic-border-top-width]": 3,
@@ -522,7 +522,7 @@ describe('End - to - End', function() {
             "$a2[y]": 10,
             "$a3[y]": 10
           });
-          b3 = engine.$id('b3');
+          b3 = engine.id('b3');
           return done();
         });
       });
@@ -540,7 +540,7 @@ describe('End - to - End', function() {
             "$b2[x]": 100,
             "$b3[x]": 100
           });
-          b3 = engine.$id('b3');
+          b3 = engine.id('b3');
           b3.parentNode.removeChild(b3);
           GSS.console.log(1);
           return engine.once('solve', function(e) {
@@ -552,7 +552,7 @@ describe('End - to - End', function() {
               "$b1[x]": 100,
               "$b2[x]": 100
             });
-            b2 = engine.$id('b2');
+            b2 = engine.id('b2');
             b2.parentNode.removeChild(b2);
             GSS.console.log(1);
             return engine.once('solve', function(e) {
@@ -571,7 +571,7 @@ describe('End - to - End', function() {
                   "$b1[x]": 100,
                   "$b2[x]": 100
                 });
-                a1 = engine.$id('a1');
+                a1 = engine.id('a1');
                 a1.parentNode.removeChild(a1);
                 GSS.console.log(1);
                 return engine.once('solve', function(e) {
@@ -581,7 +581,7 @@ describe('End - to - End', function() {
                     "$b1[x]": 100,
                     "$b2[x]": 100
                   });
-                  b2 = engine.$id('b2');
+                  b2 = engine.id('b2');
                   b2.parentNode.removeChild(b2);
                   return engine.once('solve', function(e) {
                     expect(engine.values).to.eql({
@@ -589,7 +589,7 @@ describe('End - to - End', function() {
                       "$a2[x]": 100,
                       "$b1[x]": 100
                     });
-                    engine.scope.insertBefore(a1, engine.$id('b1'));
+                    engine.scope.insertBefore(a1, engine.id('b1'));
                     engine.scope.appendChild(b2);
                     return engine.once('solve', function(e) {
                       var divs;
@@ -599,7 +599,7 @@ describe('End - to - End', function() {
                         "$b2[x]": 100,
                         "$a2[x]": 100,
                         "$a3[x]": 100
-                      }, divs = engine.$tag('div'), (function() {
+                      }, divs = engine.tag('div'), (function() {
                         var _results;
                         _results = [];
                         while (divs[0]) {
@@ -639,7 +639,7 @@ describe('End - to - End', function() {
             "$a2[x]": 100,
             "$a3[x]": 200
           });
-          a3 = engine.$id('a3');
+          a3 = engine.id('a3');
           a3.parentNode.removeChild(a3);
           return engine.once('solve', function() {
             expect(engine.values).to.eql({
@@ -659,7 +659,7 @@ describe('End - to - End', function() {
                 "$a2[x]": 100,
                 "$a3[x]": 200
               });
-              a1 = engine.$id('a1');
+              a1 = engine.id('a1');
               a1.parentNode.removeChild(a1);
               return engine.once('solve', function() {
                 expect(engine.values).to.eql({
@@ -678,7 +678,7 @@ describe('End - to - End', function() {
                     "$a3[x]": 100,
                     "$a1[x]": 200
                   });
-                  a3 = engine.$id('a3');
+                  a3 = engine.id('a3');
                   a3.parentNode.removeChild(a3);
                   return engine.once('solve', function() {
                     var divs;
@@ -688,7 +688,7 @@ describe('End - to - End', function() {
                       "$a2[x]": 0,
                       "$a1[x]": 100
                     });
-                    divs = engine.$tag('div');
+                    divs = engine.tag('div');
                     while (divs[0]) {
                       divs[0].parentNode.removeChild(divs[0]);
                     }
@@ -718,7 +718,7 @@ describe('End - to - End', function() {
             "$a2[x]": 100,
             "$a3[x]": 200
           });
-          a3 = engine.$id('a3');
+          a3 = engine.id('a3');
           a3.parentNode.removeChild(a3);
           return engine.once('solve', function() {
             expect(engine.values).to.eql({
@@ -738,7 +738,7 @@ describe('End - to - End', function() {
                 "$a2[x]": 100,
                 "$a3[x]": 200
               });
-              a1 = engine.$id('a1');
+              a1 = engine.id('a1');
               a1.parentNode.removeChild(a1);
               return engine.once('solve', function() {
                 expect(engine.values).to.eql({
@@ -757,7 +757,7 @@ describe('End - to - End', function() {
                     "$a3[x]": 100,
                     "$a1[x]": 200
                   });
-                  a3 = engine.$id('a3');
+                  a3 = engine.id('a3');
                   a3.parentNode.removeChild(a3);
                   return engine.once('solve', function() {
                     var divs;
@@ -767,7 +767,7 @@ describe('End - to - End', function() {
                       "$a2[x]": 0,
                       "$a1[x]": 100
                     });
-                    divs = engine.$tag('div');
+                    divs = engine.tag('div');
                     while (divs[0]) {
                       divs[0].parentNode.removeChild(divs[0]);
                     }
@@ -796,7 +796,7 @@ describe('End - to - End', function() {
             "$b1[x]": 100,
             "$b2[x]": 100
           });
-          b3 = engine.$id('b3');
+          b3 = engine.id('b3');
           b3.parentNode.removeChild(b3);
           return engine.once('solve', function(e) {
             expect(engine.values).to.eql({
@@ -814,7 +814,7 @@ describe('End - to - End', function() {
                 "$b1[x]": 100,
                 "$b2[x]": 100
               });
-              divs = engine.$tag('div');
+              divs = engine.tag('div');
               while (divs[0]) {
                 divs[0].parentNode.removeChild(divs[0]);
               }
@@ -846,7 +846,7 @@ describe('End - to - End', function() {
             "$b1[x]": 100,
             "$b2[x]": 100
           });
-          b3 = engine.$id('b3');
+          b3 = engine.id('b3');
           b3.parentNode.removeChild(b3);
           return engine.once('solve', function(e) {
             expect(engine.values).to.eql({
@@ -864,7 +864,7 @@ describe('End - to - End', function() {
                 "$b1[x]": 100,
                 "$b2[x]": 100
               });
-              a1 = engine.$id('a1');
+              a1 = engine.id('a1');
               a1.parentNode.removeChild(a1);
               return engine.once('solve', function(e) {
                 var divs;
@@ -874,7 +874,7 @@ describe('End - to - End', function() {
                   "$b1[x]": 100,
                   "$b2[x]": 100
                 });
-                divs = engine.$tag('div');
+                divs = engine.tag('div');
                 while (divs[0]) {
                   divs[0].parentNode.removeChild(divs[0]);
                 }
@@ -908,7 +908,7 @@ describe('End - to - End', function() {
             "$b2[x]": 100,
             "$b3[x]": 100
           });
-          a3 = engine.$id('a3');
+          a3 = engine.id('a3');
           a3.parentNode.removeChild(a3);
           return engine.once('solve', function(e) {
             var b1;
@@ -920,7 +920,7 @@ describe('End - to - End', function() {
               "$b2[x]": 100,
               "$b3[x]": 100
             });
-            b1 = engine.$id('b1');
+            b1 = engine.id('b1');
             b1.parentNode.removeChild(b1);
             window.zzzz = true;
             return engine.once('solve', function(e) {
@@ -953,7 +953,7 @@ describe('End - to - End', function() {
             "$b3[x]": 100,
             "$b4[x]": 100
           });
-          a3 = engine.$id('a3');
+          a3 = engine.id('a3');
           a4 = a3.cloneNode();
           a4.id = 'a4';
           a3.parentNode.appendChild(a4);
@@ -970,7 +970,7 @@ describe('End - to - End', function() {
               "$b3[x]": 100,
               "$b4[x]": 100
             });
-            a1 = engine.$id('a1');
+            a1 = engine.id('a1');
             a1.parentNode.removeChild(a1);
             return engine.once('solve', function(e) {
               var b4;
@@ -984,7 +984,7 @@ describe('End - to - End', function() {
                 "$b3[x]": 100,
                 "$b4[x]": 100
               });
-              b4 = engine.$id('b4');
+              b4 = engine.id('b4');
               b4.parentNode.removeChild(b4);
               return engine.once('solve', function(e) {
                 var b3;
@@ -997,7 +997,7 @@ describe('End - to - End', function() {
                   "$b2[x]": 100,
                   "$b3[x]": 100
                 });
-                b3 = engine.$id('b3');
+                b3 = engine.id('b3');
                 b3.parentNode.removeChild(b3);
                 return engine.once('solve', function(e) {
                   var a2;
@@ -1008,7 +1008,7 @@ describe('End - to - End', function() {
                     "$b1[x]": 100,
                     "$b2[x]": 100
                   });
-                  a2 = engine.$id('a2');
+                  a2 = engine.id('a2');
                   a2.parentNode.removeChild(a2);
                   return engine.once('solve', function(e) {
                     var divs;
@@ -1019,7 +1019,7 @@ describe('End - to - End', function() {
                       "$b1[x]": 100,
                       "$b2[x]": 100
                     });
-                    divs = engine.$tag('div');
+                    divs = engine.tag('div');
                     while (divs[0]) {
                       divs[0].parentNode.removeChild(divs[0]);
                     }
@@ -1214,7 +1214,7 @@ describe('End - to - End', function() {
       container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      ::scope[size] == ::scope[intrinsic-size];\n      ::scope[left] == 0;\n    \n      @h |(\"col-1...8\")-[col-gap]-...| in(::scope) !require {\n        width: == [col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in(\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in(\"col-3\");\n        }\n      }\n    </style>\n    ";
       return engine.then(function(solution) {
         expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 2);
-        engine.$id('box').click();
+        engine.id('box').click();
         return engine.then(function(solution) {
           expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 5);
           return done();
@@ -1255,7 +1255,7 @@ describe('End - to - End', function() {
           });
           for (_i = lefts.length - 1; _i >= 0; _i += -1) {
             item = lefts[_i];
-            engine.scope.insertBefore(item, engine.$id('b2'));
+            engine.scope.insertBefore(item, engine.id('b2'));
           }
           return engine.then(function(solution) {
             var items;
@@ -1266,7 +1266,7 @@ describe('End - to - End', function() {
             });
             items = (function() {
               var _j, _ref, _results;
-              _ref = engine.$tag('div');
+              _ref = engine.tag('div');
               _results = [];
               for (_j = _ref.length - 1; _j >= 0; _j += -1) {
                 item = _ref[_j];
@@ -1694,16 +1694,16 @@ describe('End - to - End', function() {
       return it('should compute values', function(done) {
         var listen;
         listen = function(e) {
-          expect(engine.$id('box1').style.width).to.eql('9px');
-          expect(engine.$id('box2').style.width).to.eql('19px');
-          expect(window.getComputedStyle(engine.$id("box1"), null).getPropertyValue("z-index")).to.equal("auto");
-          expect(window.getComputedStyle(engine.$id("box2"), null).getPropertyValue("z-index")).to.equal("auto");
-          expect(window.getComputedStyle(engine.$id("box1"), null).getPropertyValue("margin-top")).to.equal("0px");
-          expect(window.getComputedStyle(engine.$id("box2"), null).getPropertyValue("margin-top")).to.equal("0px");
-          expect(window.getComputedStyle(engine.$id("box1"), null).getPropertyValue("padding-top")).to.equal("1px");
-          expect(window.getComputedStyle(engine.$id("box2"), null).getPropertyValue("padding-top")).to.equal("1px");
-          expect(engine.$id("box1").style.zIndex).to.eql('1');
-          expect(engine.$id("box2").style.zIndex).to.eql('2');
+          expect(engine.id('box1').style.width).to.eql('9px');
+          expect(engine.id('box2').style.width).to.eql('19px');
+          expect(window.getComputedStyle(engine.id("box1"), null).getPropertyValue("z-index")).to.equal("auto");
+          expect(window.getComputedStyle(engine.id("box2"), null).getPropertyValue("z-index")).to.equal("auto");
+          expect(window.getComputedStyle(engine.id("box1"), null).getPropertyValue("margin-top")).to.equal("0px");
+          expect(window.getComputedStyle(engine.id("box2"), null).getPropertyValue("margin-top")).to.equal("0px");
+          expect(window.getComputedStyle(engine.id("box1"), null).getPropertyValue("padding-top")).to.equal("1px");
+          expect(window.getComputedStyle(engine.id("box2"), null).getPropertyValue("padding-top")).to.equal("1px");
+          expect(engine.id("box1").style.zIndex).to.eql('1');
+          expect(engine.id("box2").style.zIndex).to.eql('2');
           return done();
         };
         container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n    #box1[width] == 9;\n    #box2[width] == 19;\n\n    .box {\n      @if ::scope[intrinsic-width] < 10 {\n        margin-top: 1px;\n      }\n      @if ::scope[intrinsic-width] > 10 {\n        padding-top: 1px;\n      }\n      @if ::[width] < 10 {\n        z-index: 1;\n      }\n      @else {\n        z-index: 2;\n      }\n    }\n\n  </style>";
@@ -1825,7 +1825,7 @@ describe('End - to - End', function() {
               "$p23[width]": 80,
               "$h1[width]": 80
             });
-            p12 = engine.$id('p12');
+            p12 = engine.id('p12');
             p12.parentNode.removeChild(p12);
             return engine.then(function(solution) {
               var h1;
@@ -1833,7 +1833,7 @@ describe('End - to - End', function() {
                 "$p12[x]": null,
                 "$p12[width]": null
               });
-              h1 = engine.$id('h1');
+              h1 = engine.id('h1');
               h1.parentNode.removeChild(h1);
               return engine.then(function(solution) {
                 expect(solution).to.eql({
@@ -1962,7 +1962,7 @@ describe('End - to - End', function() {
             value = expectation[prop];
             expect(solution[prop]).to.eql(value);
           }
-          article = engine.$id('article1');
+          article = engine.id('article1');
           engine.scope.appendChild(article);
           return engine.then(function(solution) {
             expect(solution).to.eql({
@@ -1973,7 +1973,7 @@ describe('End - to - End', function() {
               "$desc2[y]": 13,
               "$title2[y]": 1
             });
-            article = engine.$id('article2');
+            article = engine.id('article2');
             engine.scope.appendChild(article);
             return engine.then(function(solution) {
               var title1;
@@ -1985,7 +1985,7 @@ describe('End - to - End', function() {
                 "$desc2[y]": 13 + 66,
                 "$title2[y]": 1 + 66
               });
-              title1 = engine.$id('title1');
+              title1 = engine.id('title1');
               title1.parentNode.removeChild(title1);
               return engine.then(function(solution) {
                 expect(solution['']);
