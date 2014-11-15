@@ -284,7 +284,8 @@ class Domain extends Trigger
           delete variable.suggest
           @suggest variable, suggest, 'require'
       if definition = @variables[path]
-        (definition.constraints ||= []).push(constraint)
+        unless definition.constraints?[0]?.operation[0].values?[path]?
+          (definition.constraints ||= []).push(constraint)
         
     (@constraints ||= []).push(constraint)
     (@constrained ||= []).push(constraint)
@@ -301,7 +302,7 @@ class Domain extends Trigger
 
   unconstrain: (constraint, continuation, moving) ->
     # Unconstrain by specific continuation
-    if continuation
+    if continuation?
       index = constraint.paths.indexOf(continuation)
       constraint.paths.splice(index, 1)
 

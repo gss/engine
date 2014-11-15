@@ -20410,7 +20410,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, workflow) {
-    var i, locals, other, others, path, problem, property, providing, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3;
+    var i, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3;
     if (domain && !domain.solve && domain.postMessage) {
       workflow.postMessage(domain, problems);
       workflow.await(domain.url);
@@ -20426,24 +20426,14 @@ Engine = (function(_super) {
       problems = problem;
     }
     if (domain) {
-      if (this.providing === void 0) {
-        this.providing = null;
-        providing = true;
-      }
       this.console.start(problems, domain.displayName);
       result = domain.solve(problems) || void 0;
       if (result && result.postMessage) {
         workflow.await(result.url);
       } else {
-        if (providing && this.providing) {
-          workflow.push(this.update(this.providing, this.frame || true));
-        }
         if ((result != null ? result.length : void 0) === 1) {
           result = result[0];
         }
-      }
-      if (providing) {
-        this.providing = void 0;
       }
       this.console.end();
     } else {
@@ -20940,21 +20930,6 @@ Constraint = (function(_super) {
       return (_base = ((_base1 = (engine.operations || (engine.operations = {})))[_name1 = operation.hash || (operation.hash = this.toExpression(operation))] || (_base1[_name1] = {})))[_name = this.toHash(scope)] || (_base[_name] = result);
     }
     return result;
-  };
-
-  Constraint.prototype.getConstantName = function(engine, operation) {
-    var name, prop, variable, _ref1;
-    _ref1 = operation.variables;
-    for (prop in _ref1) {
-      variable = _ref1[prop];
-      if (variable.domain.displayName === engine.displayName) {
-        if (name) {
-          return;
-        }
-        name = prop;
-      }
-    }
-    return name;
   };
 
   return Constraint;
@@ -23297,7 +23272,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.constrain = function(constraint, operation, meta) {
-    var definition, op, other, path, suggest, variable, _base, _name, _ref;
+    var definition, op, other, path, suggest, variable, _base, _name, _ref, _ref1, _ref2, _ref3;
     if ((other = operation.command.fetch(this, operation)) === constraint) {
       if (constraint.paths.indexOf(meta.key) > -1) {
         return;
@@ -23320,7 +23295,9 @@ Domain = (function(_super) {
         }
       }
       if (definition = this.variables[path]) {
-        (definition.constraints || (definition.constraints = [])).push(constraint);
+        if (((_ref1 = definition.constraints) != null ? (_ref2 = _ref1[0]) != null ? (_ref3 = _ref2.operation[0].values) != null ? _ref3[path] : void 0 : void 0 : void 0) == null) {
+          (definition.constraints || (definition.constraints = [])).push(constraint);
+        }
       }
     }
     (this.constraints || (this.constraints = [])).push(constraint);
@@ -23345,7 +23322,7 @@ Domain = (function(_super) {
 
   Domain.prototype.unconstrain = function(constraint, continuation, moving) {
     var group, i, index, object, op, path, _i, _len, _ref, _ref1, _ref2, _ref3;
-    if (continuation) {
+    if (continuation != null) {
       index = constraint.paths.indexOf(continuation);
       constraint.paths.splice(index, 1);
       group = this.paths[continuation];

@@ -364,22 +364,13 @@ class Engine extends Domain
     if problems instanceof Array && problems.length == 1 && problem instanceof Array
       problems = problem
     if domain
-      if @providing == undefined
-        @providing = null
-        providing = true
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || undefined
       if result && result.postMessage
         workflow.await(result.url)
       else
-        if providing && @providing
-          workflow.push(@update(@providing, @frame || true))
-          #workflow.optimize()
-
         if result?.length == 1
           result = result[0]
-      if providing
-        @providing = undefined
       @console.end()
 
     # Broadcast operations without specific domain (e.g. remove)

@@ -15,7 +15,7 @@ class Iterator extends Command
       op = operation.parent[2]
       op.command.solve engine, op, contd, result
       return true
-  
+
   # Only evaluate first argument when going top down
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     argument = operation[1]

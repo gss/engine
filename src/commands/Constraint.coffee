@@ -37,12 +37,4 @@ class Constraint extends Command
       return ((engine.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(scope)] ||= result
     return result
 
-  # Only one variable bound to static value
-  getConstantName: (engine, operation) ->
-    for prop, variable of operation.variables
-      if variable.domain.displayName == engine.displayName
-        return if name
-        name = prop
-    return name
-
 module.exports = Constraint

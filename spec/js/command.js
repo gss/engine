@@ -167,7 +167,7 @@ describe('GSS commands', function() {
         box2 = engine.id("34222");
         box2.parentNode.removeChild(box2);
         return engine.then(function(solution) {
-          expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222', '.box$34222→#box1'], [['remove', '.box$34222→#box1']]]);
+          expect(engine.updated.getProblems()).to.eql([[['remove', '.box$34222'], ['remove', '.box$34222→#box1']], [['remove', '.box$34222→#box1']]]);
           scope.appendChild(box2);
           return engine.then(function(solution) {
             var box1;
@@ -183,7 +183,7 @@ describe('GSS commands', function() {
             box1 = engine.id("box1");
             box1.parentNode.removeChild(box1);
             return engine.then(function(solution) {
-              expect(engine.updated.getProblems()).to.eql([['remove', '.box$box1', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1'], [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]]);
+              expect(engine.updated.getProblems()).to.eql([[['remove', '.box$box1'], ['remove', '.box$box1→#box1'], ['remove', '.box$35346→#box1'], ['remove', '.box$34222→#box1']], [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]]);
               scope.appendChild(box1);
               return engine.then(function(solution) {
                 expect(engine.updated.getProblems()).to.eql([
@@ -259,7 +259,7 @@ describe('GSS commands', function() {
         box0 = scope.getElementsByClassName('box')[0];
         box0.parentNode.removeChild(box0);
         return engine.once('solve', function() {
-          chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([["remove", ".box$12322"], [["remove", ".box$12322"]]]));
+          chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([[["remove", ".box$12322"]], [["remove", ".box$12322"]]]));
           return done();
         });
       });
@@ -413,7 +413,7 @@ describe('GSS commands', function() {
             res = engine.id('34222');
             return res.parentNode.removeChild(res);
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222'], [['remove', '.box$34222']]]);
+            chai.expect(engine.updated.getProblems()).to.eql([[['remove', '.box$34222']], [['remove', '.box$34222']]]);
             engine.removeEventListener('solve', listener);
             return done();
           }
@@ -447,7 +447,7 @@ describe('GSS commands', function() {
             el = engine.id('34222');
             return el.setAttribute('class', '');
           } else if (count === 2) {
-            chai.expect(engine.updated.getProblems()).to.eql([['remove', '.box$34222'], [['remove', '.box$34222']]]);
+            chai.expect(engine.updated.getProblems()).to.eql([[['remove', '.box$34222']], [['remove', '.box$34222']]]);
             engine.removeEventListener('solve', listener);
             return done();
           }
