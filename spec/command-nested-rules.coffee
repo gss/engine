@@ -61,7 +61,7 @@ describe 'Nested Rules', ->
                   [' ', 
                     ['tag', 
                       ['!', 
-                        ['class',
+                        ['.',
                           ['tag', 
                             ['>', 
                               ['tag', 
@@ -186,9 +186,9 @@ describe 'Nested Rules', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
           ['rule', 
-            ['class',
+            ['.',
               [' '
-                ['class', 'vessel']
+                ['.', 'vessel']
               ]
               'box']
             ['==', 
@@ -228,10 +228,10 @@ describe 'Nested Rules', ->
     describe 'subqueries', ->
       it 'should observe selector on ::', (done) ->
         rules = ["rule",
-                  ["class", "vessel"]
+                  [".", "vessel"]
                   ['==', 
                     ["get",
-                      ["class", 
+                      [".", 
                         [' ', 
                           ["&"]
                           ] 
@@ -345,8 +345,8 @@ describe 'Nested Rules', ->
         rules = [
           'rule', 
           [','
-            ['class', 'vessel']
-            ['id', 'group1']]
+            ['.', 'vessel']
+            ['#', 'group1']]
 
           ['==',
             ['get'
@@ -420,7 +420,7 @@ describe 'Nested Rules', ->
           'rule', 
           [',', 
             ['!>', 
-              ['id', 'box1']]
+              ['#', 'box1']]
             ['tag', 
               ['>']
               'div']]
@@ -616,9 +616,9 @@ describe 'Nested Rules', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
           ['rule', 
-            ['class'
+            ['.'
               [' '
-                ['class'
+                ['.'
                   'vessel']]
               'box'],
             ["<=", ["get", ["&"], "width"], ["get", ["$"], "width"]]
@@ -661,16 +661,16 @@ describe 'Nested Rules', ->
       it 'should resolve selector on $', (done) ->
         rules = 
           ['rule', 
-            ['class'
+            ['.'
               [' ',
-                ['class', 
+                ['.', 
                   'group']]
               'vessel']
 
             ["<=", 
               ["get",
                 [':last-child'
-                  ['class',
+                  ['.',
                     [' ', 
                       ['$']]
                     'box']]
@@ -868,15 +868,15 @@ describe 'Nested Rules', ->
       it 'should resolve selector on ^', (done) ->
         rules = [
           ['rule',
-            ['class', 'group']
+            ['.', 'group']
 
             ['rule', 
-              ['class', 'vessel']
+              ['.', 'vessel']
 
               ["<=", 
                 ["get",
                   [':last-child'
-                    ['class',
+                    ['.',
                       [' ', 
                         ["^"]
                       ]
@@ -1046,15 +1046,15 @@ describe 'Nested Rules', ->
       it 'should handle mix of global and local selector', (done) ->
         rules = [
           ['rule', 
-            ['class'
+            ['.'
               [' ',
-                ['class',
+                ['.',
                   'vessel']]
               'box'],
 
             ["<=", 
               ["get", ["&"], "width"], 
-              ["get", ["id", [' ', ['$']], "vessel1"], "width"]]
+              ["get", ["#", [' ', ['$']], "vessel1"], "width"]]
           ]
         ]
         GSS.console.info('.vessel .box { ::[width] == #vessel1[width] } ')
@@ -1143,9 +1143,9 @@ describe 'Nested Rules', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = [
           ['rule', 
-            ['class'
+            ['.'
               [' ',
-                ['class',
+                ['.',
                   'vessel']]
               'box'],
 
@@ -1183,10 +1183,10 @@ describe 'Nested Rules', ->
       it 'Runs commands from sourceNode', (done) ->
         rules = 
           ['rule', 
-            ['class', 'vessel']
+            ['.', 'vessel']
 
             ['rule', 
-              ['class', 'box']
+              ['.', 'box']
 
               ['<=', ["get",["&"], "x"], 100]
             ]]
@@ -1278,13 +1278,13 @@ describe 'Nested Rules', ->
         rules = 
           ['rule', 
             [','
-              ['class', 'vessel']
-              ['id', 'group1']
+              ['.', 'vessel']
+              ['#', 'group1']
             ]
 
             ['rule', 
               [':last-child',
-                ['class', 'box']]
+                ['.', 'box']]
 
               ['==', ["get",["&"], "x"], 100]
             ]]
@@ -1391,9 +1391,9 @@ describe 'Nested Rules', ->
           ['==',['get','target-width'], 900]
 
           ['rule', 
-            ['class',
+            ['.',
               [' '
-                ['class', 'vessel']]
+                ['.', 'vessel']]
               'box']
 
             ['if',

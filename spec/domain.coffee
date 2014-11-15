@@ -166,8 +166,8 @@ describe 'Domain', ->
         ['==',
           ['get', 'a']
           ['+',
-            ['get', ['id', 'box0'], 'z']
-            ['get', ['id', 'box1'], 'intrinsic-width']
+            ['get', ['#', 'box0'], 'z']
+            ['get', ['#', 'box1'], 'intrinsic-width']
           ]
         ]
       ], (solution) ->
@@ -191,7 +191,7 @@ describe 'Domain', ->
           ['get', 'result', null, 'my_funny_tracker_path']
           ['*',
             ['+'
-              ['get', ['$id', 'box0'], 'intrinsic-width'],
+              ['get', ['#', 'box0'], 'intrinsic-width'],
               1]
             ['get', 'x']]
         ]

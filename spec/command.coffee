@@ -35,7 +35,7 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-          ['stay', ['get', ['class','box'], 'x']]
+          ['stay', ['get', ['.','box'], 'x']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
           [[key: '.box$12322', ['stay', ['get', '$12322[x]']]]]
@@ -49,9 +49,9 @@ describe 'GSS commands', ->
       """
       engine
       engine.solve [
-          ['stay', ['get', ['class','box']  , 'x'    ]]
-          ['stay', ['get', ['class','box']  , 'y'    ]]
-          ['stay', ['get', ['class','block'], 'width']]
+          ['stay', ['get', ['.','box']  , 'x'    ]]
+          ['stay', ['get', ['.','box']  , 'y'    ]]
+          ['stay', ['get', ['.','block'], 'width']]
         ]
       chai.expect(engine.updated.getProblems()).to.eql [
           # break up stays to allow multiple plural queries
@@ -69,7 +69,7 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-        ['==', ['get', ['class','box'], 'width'],['get','grid-col']]
+        ['==', ['get', ['.','box'], 'width'],['get','grid-col']]
         ['==', 100,['get','grid-col']]
       ], '%'
       chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
@@ -85,7 +85,7 @@ describe 'GSS commands', ->
         <div class="box" id="34222">One</div>
       """
       engine.solve [
-        ['==', ['get',['class','box'],'width'], ['get','grid-col']]
+        ['==', ['get',['.','box'],'width'], ['get','grid-col']]
         ['==', 100, ['get','grid-col']]
       ]
       chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [[
@@ -98,7 +98,7 @@ describe 'GSS commands', ->
       window.$engine = engine
 
       engine.solve [
-        ['<=',['get',['class','box'],'width'],['get',['id','box1'],'width']]
+        ['<=',['get',['.','box'],'width'],['get',['#','box1'],'width']]
       ], (solution) ->
         expect(engine.updated.getProblems()).to.eql [[
           [key: '.box$box1→#box1' , ['<=',['get', '$box1[width]' ],['get','$box1[width]']]]
@@ -155,8 +155,8 @@ describe 'GSS commands', ->
 
       engine.solve [
         ['==', 
-          ['get', ['class','box'], 'width'],
-          ['get', ['class','box'], 'intrinsic-width']]
+          ['get', ['.','box'], 'width'],
+          ['get', ['.','box'], 'intrinsic-width']]
       ], (solution) ->
         chai.expect(stringify engine.updated.getProblems()).to.eql stringify  [
           [
@@ -218,7 +218,7 @@ describe 'GSS commands', ->
 
     it '.box[width] == ::window[width]', (done) ->
       engine.solve [
-        ['==', ['get', ['class','box'], 'width'],['get', ['::window'], 'width']]
+        ['==', ['get', ['.','box'], 'width'],['get', ['::window'], 'width']]
       ]
       engine.then ->
         chai.expect(stringify(engine.updated.getProblems())).to.eql stringify [
@@ -317,7 +317,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-            ['==', ['get',['class','box'],'x'], 100]
+            ['==', ['get',['.','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -344,7 +344,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-            ['==', ['get',['class','box'],'x'], 100]
+            ['==', ['get',['.','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -371,7 +371,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-            ['==', ['get',['class','box'],'x'], 100]
+            ['==', ['get',['.','box'],'x'], 100]
           ]
         scope.innerHTML = """
           <div class="box" id="12322">One</div>
@@ -419,7 +419,7 @@ describe 'GSS commands', ->
 
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['class','box'],'height'],['get',['id','box1'],'intrinsic-width']]
+          ['==', ['get',['.','box'],'height'],['get',['#','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="width:111px;" id="box1" class="box" >One</div>
@@ -457,7 +457,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['class','box'],'height'],['get',['id','box1'],'intrinsic-width']]
+          ['==', ['get',['.','box'],'height'],['get',['#','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="display:inline-block;" id="box1" class="box">One</div>
@@ -519,7 +519,7 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['class','box'],'height'],['get',['id','box1'],'intrinsic-width']]
+          ['==', ['get',['.','box'],'height'],['get',['#','box1'],'intrinsic-width']]
         ]
         scope.innerHTML = """
           <div style="display:inline-block" id="box1" class="box" >One</div>
@@ -547,8 +547,8 @@ describe 'GSS commands', ->
             done()
         engine.addEventListener 'solve', listener
         engine.solve [
-          ['==', ['get',['id','p-text'],'width'],  100]
-          ['==', ['get',['id','p-text'],'x-height'], ['get',['id','p-text'],'intrinsic-height']]
+          ['==', ['get',['#','p-text'],'width'],  100]
+          ['==', ['get',['#','p-text'],'x-height'], ['get',['#','p-text'],'intrinsic-height']]
         ]
         scope.innerHTML = """
           <p id="p-text" style="font-size:16px; line-height:16px; font-family:Helvetica;">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>
@@ -564,10 +564,10 @@ describe 'GSS commands', ->
 
         engine.solve [  
           ['==', ['get','hgap'], 20]
-          ['==', ['get',['id','thing1'],'width'], 100]
+          ['==', ['get',['#','thing1'],'width'], 100]
           [
             'rule', 
-            ['class', 'thing'], 
+            ['.', 'thing'], 
             ['=='
               ['get'
                 ['&'],
@@ -602,10 +602,10 @@ describe 'GSS commands', ->
           done()
     
         engine.solve [
-          ['==', ['get',['id','thing1'],'x'], 10]
-          ['==', ['get',['id','thing2'],'x'], 110]
+          ['==', ['get',['#','thing1'],'x'], 10]
+          ['==', ['get',['#','thing2'],'x'], 110]
           ['rule'
-            ['class','thing'],
+            ['.','thing'],
             ['=='
               ['get'
                 [':previous', ['&']],

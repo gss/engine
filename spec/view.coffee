@@ -36,7 +36,7 @@ describe "GSS.View", ->
         done()
       container.addEventListener 'solved', onSolved
       engine.solve [
-          ['==', ['get',['class', 'target'],   'width'], 88]
+          ['==', ['get',['.', 'target'],   'width'], 88]
         ]
 
       container.innerHTML = """
@@ -68,7 +68,7 @@ describe "GSS.View", ->
         </div>  
       """          
       ast = [
-          ['==', ['get',['class','target'],'y'], 100]
+          ['==', ['get',['.','target'],'y'], 100]
         ]        
 
       q = document.getElementsByClassName('target')
@@ -90,11 +90,11 @@ describe "GSS.View", ->
 
       ast = ['==', 
               ['get',
-                ['id', 'floater'],
+                ['#', 'floater'],
                 'y'], 
               ['+', 
                 ['get',
-                  ['id', 'anchor'],
+                  ['#', 'anchor'],
                   'intrinsic-y'], 
                 3]]        
       
@@ -119,7 +119,7 @@ describe "GSS.View", ->
     it 'after solving', (done) ->   
         
       engine.solve [
-          ['==', ['get',['class', 'target'],'y'], 100]
+          ['==', ['get',['.', 'target'],'y'], 100]
         ]
       
       

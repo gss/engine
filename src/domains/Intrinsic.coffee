@@ -49,10 +49,10 @@ class Intrinsic extends Numeric
       when "y"
         property = "top"
 
-    return unless prop = @properties[property]
+    return unless (prop = @properties[property])?.matcher
     camel = @camelize property
     if typeof value != 'string'
-      value = prop.toString(value)
+      value = prop.format(value)
 
     if property == 'left' || property == 'top'
       position = element.style.position

@@ -228,7 +228,6 @@ class Domain extends Trigger
               op.command.patch(op.domain, op, undefined, undefined, @)
               op.command.solve(@, op)
               console.error(123, op, path)
-              debugger
 
     # Notify workers
     if @workers
@@ -258,10 +257,8 @@ class Domain extends Trigger
     if @unconstrained
       for constraint in @unconstrained
         @removeConstraint(constraint)
-        for path of constraint.operation.variables
-          if variable = @variables[path]
-            if !@hasConstraint(variable)
-              @nullify(variable)
+        #debugger
+        #delete @operations[constraint.operation[1]?.hash]
     if @constrained
       for constraint in @constrained
         @addConstraint(constraint)
@@ -355,7 +352,8 @@ class Domain extends Trigger
       if @added?[variable.name]
         delete @added[variable.name]
     if !moving && @values[variable.name] != undefined
-      delete @variables[variable.name]
+      variable.value = 0
+      #delete @variables[variable.name]
 
     delete @values[variable.name]
     @nullify(variable)
@@ -537,7 +535,7 @@ class Domain extends Trigger
     return @engine.linear.maybe()      
 
   yield: (solution, value) ->
-    @engine.yield solution
+    @engine.engine.yield solution
 
   # Make Domain class inherit given engine instance. Crazy huh
   # Overloads parts of the world (methods, variables, observers)

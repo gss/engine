@@ -3,7 +3,7 @@
 Property = (property, reference, properties) ->
   if typeof property == 'object'
     if property.push
-      return properties[path] = @Style(property, reference, properties)
+      return properties[reference] = @Style(property, reference, properties)
     else
       for key, value of property
         if (index = reference.indexOf('[')) > -1

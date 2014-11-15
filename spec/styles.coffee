@@ -58,15 +58,15 @@ describe 'Styles', ->
         1: new doc['background'].initial
           'background-repeat': 'repeat'
         'background-color': 'transparent'
-      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').toString()).to.
+      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').format()).to.
         eql 'no-repeat, repeat transparent'
-      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').toString(
+      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').format(
         "background-image-2": ['url', 'abc']
       )).to.eql 'no-repeat, url(abc) repeat transparent'
-      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').toString(
+      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').format(
         "background-repeat-2": "repeat-y"
       )).to.eql 'no-repeat, repeat-y transparent'
-      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').toString(
+      expect(doc['background'](['no-repeat'], ['repeat'], 'transparent').format(
         "background-position-y-1": "top"
       )).to.eql 'top no-repeat, repeat transparent'
 
@@ -82,15 +82,15 @@ describe 'Styles', ->
           'box-shadow-offset-y': 2
           'box-shadow-color': ['rgba', 1,1,1]
       
-      expect(doc['box-shadow']([1,1,'transparent'], [2,2,['rgba', 1,1,1]]).toString()).to.
+      expect(doc['box-shadow']([1,1,'transparent'], [2,2,['rgba', 1,1,1]]).format()).to.
         eql '1px 1px transparent, 2px 2px rgba(1,1,1)'
       
-      expect(doc['box-shadow']([1,1,'transparent'], [2,2,['rgba', 1,1,1]]).toString(
+      expect(doc['box-shadow']([1,1,'transparent'], [2,2,['rgba', 1,1,1]]).format(
         'box-shadow-offset-x-1': -1
         'box-shadow-offset-y-2': -2
       )).to.eql '-1px 1px transparent, 2px -2px rgba(1,1,1)'
 
-      expect(doc['box-shadow']([1,1,'transparent'], [2,2,['rgba', 1,1,1]]).toString(
+      expect(doc['box-shadow']([1,1,'transparent'], [2,2,['rgba', 1,1,1]]).format(
         'box-shadow-blur-1': ['em', 1]
         'box-shadow-spread-2': ['cm', 2] # adds default blur value
       )).to.eql '1px 1px 1em transparent, 2px 2px 0 2cm rgba(1,1,1)'

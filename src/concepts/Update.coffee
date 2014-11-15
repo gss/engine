@@ -5,8 +5,6 @@ Updater = (engine) ->
   Update = (problem, domain, parent, Default) ->
     # Handle constructor call (e.g. new engine.update)
     if @ instanceof Update
-      if domain?.push
-        debugger
       @problems = problem && (domain.push && problem || [problem]) || []
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
       return

@@ -69,7 +69,6 @@ class Mutations
     # Invalidate sibling observers
     added = []
     removed = []
-    @onCharacterData(target, target)
     for child in mutation.addedNodes
       if child.nodeType == 1 && @filterNode(child) != false
         added.push(child)
@@ -79,6 +78,7 @@ class Mutations
           added.splice index, 1
         else
           removed.push(child)
+    @onCharacterData(target, target)
     changed = added.concat(removed)
     changedTags = []
     for node in changed
@@ -132,9 +132,9 @@ class Mutations
         switch attribute.name
           when 'class'
             for kls in node.classList || node.className.split(/\s+/)
-              @index update, ' class', kls
+              @index update, ' .', kls
           when 'id'
-            @index update, ' id', attribute.value
+            @index update, ' #', attribute.value
 
         @index update, ' attribute', attribute.name
       prev = next = node  
@@ -146,8 +146,8 @@ class Mutations
         if next.nodeType == 1
           break
 
-      @index update, ' pseudo', 'first-child' unless prev
-      @index update, ' pseudo', 'last-child' unless next
+      @index update, ' :', 'first-child' unless prev
+      @index update, ' :', 'last-child' unless next
       @index update, ' +', child.tagName
 
     parent = target
@@ -210,7 +210,7 @@ class Mutations
       $attribute = target == parent && 'attribute' || ' attribute'
       @engine.queries.match(parent, $attribute, name, target)
       if changed?.length && name == 'class'
-        $class = target == parent && 'class' || ' class'
+        $class = target == parent && '.' || ' .'
         for kls in changed
           @engine.queries.match(parent, $class, kls, target)
       break if parent == @engine.scope

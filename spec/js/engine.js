@@ -355,13 +355,27 @@ describe('GSS engine', function() {
       return it('Runs commands from sourceNode', function(done) {
         var listener;
         listener = function(e) {
-          expect(engine.updated.getProblems()).to.eql([[['==', ['get', '$box1', 'x', 'style[type*="text/gss"]$style1↓.box$box1'], 100]], [['==', ['get', '$box2', 'x', 'style[type*="text/gss"]$style1↓.box$box2'], 100]]]);
+          expect(engine.updated.getProblems()).to.eql([
+            [
+              [
+                {
+                  key: 'style[type*="text/gss"]$style1↓.box$box1'
+                }, ['==', ['get', '$box1[x]'], 100]
+              ]
+            ], [
+              [
+                {
+                  key: 'style[type*="text/gss"]$style1↓.box$box2'
+                }, ['==', ['get', '$box2[x]'], 100]
+              ]
+            ]
+          ]);
           container.removeEventListener('solved', listener);
           return done();
         };
         container.addEventListener('solved', listener);
         engine = new GSS(container);
-        return container.innerHTML = "<style type=\"text/gss-ast\" scoped id=\"style1\">\n  [\"==\", [\"get\",[\"$class\", \"box\"],\"x\"], 100]\n</style>\n<div id=\"box1\" class=\"box\"></div>\n<div id=\"box2\" class=\"box\"></div>";
+        return container.innerHTML = "<style type=\"text/gss-ast\" scoped id=\"style1\">\n  [\"==\", [\"get\",[\".\", \"box\"],\"x\"], 100]\n</style>\n<div id=\"box1\" class=\"box\"></div>\n<div id=\"box2\" class=\"box\"></div>";
       });
     });
   });
@@ -397,7 +411,7 @@ describe('GSS engine', function() {
         var listener, styleNode;
         engine = GSS(container);
         styleNode = engine.id('gssa');
-        styleNode.innerHTML = styleNode.innerText = "[\n    [\"==\", [\"get\", \"col-width-11\"], 1111]\n]  ";
+        styleNode.textContent = "[\n    [\"==\", [\"get\", \"col-width-11\"], 1111]\n]  ";
         listener = function(e) {
           var engine2;
           engine2 = GSS(container);

@@ -5,7 +5,7 @@ class Source extends Command
   type: 'Source'
   
   signature: [
-    'source': ['Selector', 'String']
+    'source': ['Selector', 'String', 'Node']
     [
       'type': ['String']
     ]
@@ -39,7 +39,7 @@ Source.define
 
     rules = engine.clone @types[type](source)
     engine.console.row('rules', rules)
-    engine.engine.engine.solve(rules, continuation, scope)
+    engine.engine.solve(rules, continuation, scope)
 
     return
 

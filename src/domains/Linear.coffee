@@ -14,11 +14,16 @@ class Linear extends Domain
   setup: () ->
     super
 
+    unless @operations
+      @constructor::operations = []
+
     unless @hasOwnProperty('solver')
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
       @solver._store = []
-      c.debug = true
+      if @console.level > 1
+        c.debug = true
+        c.trace = true
       c.Strength.require = c.Strength.required
 
       Linear.hack()
@@ -39,9 +44,11 @@ class Linear extends Domain
       return @solver._changed
 
   addConstraint: (constraint) ->
+    console.error('add constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
     @solver.addConstraint(constraint)
 
   removeConstraint: (constraint) ->
+    console.error('remove constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
     @solver.removeConstraint(constraint)
 
   unedit: (variable) ->
@@ -65,7 +72,7 @@ class Linear extends Domain
 
   nullify: (variable) ->
     @solver._externalParametricVars.delete(variable)
-    @solver._externalRows.delete(variable)
+    #@solver._externalRows.delete(variable)
 
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'

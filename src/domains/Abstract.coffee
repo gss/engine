@@ -42,7 +42,6 @@ Abstract::Default.Top = Abstract::Default.extend
       meta.scope = engine.identity.yield(scope)
     wrapper = [meta, args]
     args.parent = wrapper
-    debugger
     engine.update wrapper, undefined, undefined, @fallback?(engine)
     return
 

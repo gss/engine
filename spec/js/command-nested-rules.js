@@ -66,7 +66,7 @@ describe('Nested Rules', function() {
     describe('mixed selectors', function() {
       return it('should support mixed selectors', function(done) {
         var rules;
-        rules = [['==', ["get", [':get', ['tag', [' ', ['tag', ['!', ['class', ['tag', ['>', ['tag', 'header']], 'h2'], 'gizoogle']], 'section']], 'div'], 'parentNode'], "target-size"], 100]];
+        rules = [['==', ["get", [':get', ['tag', [' ', ['tag', ['!', ['.', ['tag', ['>', ['tag', 'header']], 'h2'], 'gizoogle']], 'section']], 'div'], 'parentNode'], "target-size"], 100]];
         container.innerHTML = "<section id=\"s\">\n  <div id=\"d\">\n    <header id=\"h\">\n      <h2 class='gizoogle' id=\"h2\">\n      </h2>\n    </header>\n  </div>\n</section>";
         GSS.console.log(container.innerHTML);
         GSS.console.info("(header > h2.gizoogle ! section div:get('parentNode'))[target-size] == 100");
@@ -137,7 +137,7 @@ describe('Nested Rules', function() {
     describe('1 level zw/ ::', function() {
       return it('Runs commands from sourceNode', function(done) {
         var rules;
-        rules = [['rule', ['class', [' ', ['class', 'vessel']], 'box'], ['==', ["get", ["&"], "x"], 100]]];
+        rules = [['rule', ['.', [' ', ['.', 'vessel']], 'box'], ['==', ["get", ["&"], "x"], 100]]];
         GSS.console.info(".vessel .box { ::[x] == 100 }");
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         engine = new GSS(container);
@@ -167,7 +167,7 @@ describe('Nested Rules', function() {
     describe('subqueries', function() {
       return it('should observe selector on ::', function(done) {
         var box1, box2, rules, vessel0;
-        rules = ["rule", ["class", "vessel"], ['==', ["get", ["class", [' ', ["&"]], "box"], "x"], 100]];
+        rules = ["rule", [".", "vessel"], ['==', ["get", [".", [' ', ["&"]], "box"], "x"], 100]];
         GSS.console.info(".vessel { (:: .box)[x] == 100 }");
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\" id=\"vessel0\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         box1 = container.getElementsByClassName('box')[1];
@@ -266,7 +266,7 @@ describe('Nested Rules', function() {
     describe('1 level w/ multiple selectors and &', function() {
       return it('should combine comma separated native selectors', function(done) {
         var box1, box3, rules, vessel0;
-        rules = ['rule', [',', ['class', 'vessel'], ['id', 'group1']], ['==', ['get', [':first-child', [' ', ['&']]], 'y'], 100]];
+        rules = ['rule', [',', ['.', 'vessel'], ['#', 'group1']], ['==', ['get', [':first-child', [' ', ['&']]], 'y'], 100]];
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\" id=\"vessel0\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div class=\"group\" id=\"group1\">\n  <div id=\"box3\" class=\"box\"></div>\n  <div id=\"box4\" class=\"box\"></div>\n</div>";
         GSS.console.info(".vessel, #group1 { (:: :first-child)[y] == 100 }");
         vessel0 = container.getElementsByClassName('vessel')[0];
@@ -322,7 +322,7 @@ describe('Nested Rules', function() {
     describe('1 level w/ mixed multiple selectors and &', function() {
       return it('should implement comma for non-native selectors', function(done) {
         var box0, box1, box2, box3, box4, group1, rules, vessel0;
-        rules = ['rule', [',', ['!>', ['id', 'box1']], ['tag', ['>'], 'div']], ['==', ['get', [':first-child', [' ', ['&']]], 'y'], 100]];
+        rules = ['rule', [',', ['!>', ['#', 'box1']], ['tag', ['>'], 'div']], ['==', ['get', [':first-child', [' ', ['&']]], 'y'], 100]];
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\" id=\"vessel0\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div class=\"group\" id=\"group1\">\n  <div id=\"box3\" class=\"box\"></div>\n  <div id=\"box4\" class=\"box\"></div>\n</div>";
         GSS.console.info("#box1 !>, > div { (& :first-child)[y] == 100 }");
         vessel0 = container.getElementsByClassName('vessel')[0];
@@ -472,7 +472,7 @@ describe('Nested Rules', function() {
     describe('1 level w/ $', function() {
       return it('Runs commands from sourceNode', function(done) {
         var rules;
-        rules = [['rule', ['class', [' ', ['class', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["$"], "width"]]]];
+        rules = [['rule', ['.', [' ', ['.', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["$"], "width"]]]];
         container.id = 'container0';
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div id=\"vessel1\" class=\"vessel\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         engine = new GSS(container);
@@ -500,7 +500,7 @@ describe('Nested Rules', function() {
     describe('1 level w/ $ and selector', function() {
       return it('should resolve selector on $', function(done) {
         var clone, rules;
-        rules = ['rule', ['class', [' ', ['class', 'group']], 'vessel'], ["<=", ["get", [':last-child', ['class', [' ', ['$']], 'box']], 'width'], 100]];
+        rules = ['rule', ['.', [' ', ['.', 'group']], 'vessel'], ["<=", ["get", [':last-child', ['.', [' ', ['$']], 'box']], 'width'], 100]];
         GSS.console.info('.group .vessel { ($ .box:last-child)[width] == 100 }');
         container.innerHTML = "<div id=\"group1\" class=\"group\">\n  <div id=\"box0\" class=\"box\"></div>\n  <div id=\"vessel1\" class=\"vessel\">\n    <div id=\"box1\" class=\"box\"></div>\n    <div id=\"box2\" class=\"box\"></div>\n  </div>\n  <div id=\"box3\" class=\"box\"></div>\n  <div id=\"box4\" class=\"box\"></div>\n</div>";
         clone = container.cloneNode();
@@ -647,7 +647,7 @@ describe('Nested Rules', function() {
     describe('1 level w/ ^', function() {
       it('should resolve selector on ^', function(done) {
         var clone, rules;
-        rules = [['rule', ['class', 'group'], ['rule', ['class', 'vessel'], ["<=", ["get", [':last-child', ['class', [' ', ["^"]], 'box']], 'width'], 100]]]];
+        rules = [['rule', ['.', 'group'], ['rule', ['.', 'vessel'], ["<=", ["get", [':last-child', ['.', [' ', ["^"]], 'box']], 'width'], 100]]]];
         container.innerHTML = "<div id=\"group1\" class=\"group\">\n  <div id=\"box0\" class=\"box\"></div>\n  <div id=\"vessel1\" class=\"vessel\">\n    <div id=\"box1\" class=\"box\"></div>\n    <div id=\"box2\" class=\"box\"></div>\n  </div>\n  <div id=\"box3\" class=\"box\"></div>\n  <div id=\"box4\" class=\"box\"></div>\n</div>";
         clone = container.cloneNode();
         clone.setAttribute('id', 'container1');
@@ -766,7 +766,7 @@ describe('Nested Rules', function() {
       });
       it('should handle mix of global and local selector', function(done) {
         var rules;
-        rules = [['rule', ['class', [' ', ['class', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["id", [' ', ['$']], "vessel1"], "width"]]]];
+        rules = [['rule', ['.', [' ', ['.', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["#", [' ', ['$']], "vessel1"], "width"]]]];
         GSS.console.info('.vessel .box { ::[width] == #vessel1[width] } ');
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div id=\"vessel1\" class=\"vessel\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         engine = new GSS(container);
@@ -820,7 +820,7 @@ describe('Nested Rules', function() {
       });
       return it('Runs commands from sourceNode', function(done) {
         var rules;
-        rules = [['rule', ['class', [' ', ['class', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["^"], "width"]]]];
+        rules = [['rule', ['.', [' ', ['.', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["^"], "width"]]]];
         GSS.console.info('.vessel .box { ::[width] == ^[width] } ');
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div id=\"vessel1\" class=\"vessel\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         engine = new GSS(container);
@@ -848,7 +848,7 @@ describe('Nested Rules', function() {
     describe('2 level', function() {
       return it('Runs commands from sourceNode', function(done) {
         var box1, rules, vessel0;
-        rules = ['rule', ['class', 'vessel'], ['rule', ['class', 'box'], ['<=', ["get", ["&"], "x"], 100]]];
+        rules = ['rule', ['.', 'vessel'], ['rule', ['.', 'box'], ['<=', ["get", ["&"], "x"], 100]]];
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\" id=\"vessel0\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
         engine = new GSS(container);
         box1 = container.getElementsByClassName('box')[1];
@@ -942,7 +942,7 @@ describe('Nested Rules', function() {
     return describe('2 level /w multiple selectors in parent', function(e) {
       return it('Runs commands from sourceNode', function(done) {
         var box2, rules, vessel0;
-        rules = ['rule', [',', ['class', 'vessel'], ['id', 'group1']], ['rule', [':last-child', ['class', 'box']], ['==', ["get", ["&"], "x"], 100]]];
+        rules = ['rule', [',', ['.', 'vessel'], ['#', 'group1']], ['rule', [':last-child', ['.', 'box']], ['==', ["get", ["&"], "x"], 100]]];
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\" id=\"vessel0\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div class=\"group\" id=\"group1\">\n  <div id=\"box3\" class=\"box\"></div>\n  <div id=\"box4\" class=\"box\"></div>\n</div>";
         box2 = container.getElementsByClassName('box')[2];
         vessel0 = container.getElementsByClassName('vessel')[0];
@@ -1045,7 +1045,7 @@ describe('Nested Rules', function() {
     return describe('basic', function() {
       return it('step 1', function(done) {
         var counter, listener, rules;
-        rules = [['==', ['get', 'big'], 500], ['==', ['get', 'med'], 50], ['==', ['get', 'small'], 5], ['==', ['get', 'target-width'], 900], ['rule', ['class', [' ', ['class', 'vessel']], 'box'], ['if', ['>=', ['get', 'target-width'], 960], ['==', ["get", ["&"], "width"], ["get", "big"]], [['if', ['>=', ['get', 'target-width'], 500], ['==', ["get", ["&"], 'width'], ["get", "med"]], ['==', ["get", ["&"], 'width'], ["get", "small"]]]]]]];
+        rules = [['==', ['get', 'big'], 500], ['==', ['get', 'med'], 50], ['==', ['get', 'small'], 5], ['==', ['get', 'target-width'], 900], ['rule', ['.', [' ', ['.', 'vessel']], 'box'], ['if', ['>=', ['get', 'target-width'], 960], ['==', ["get", ["&"], "width"], ["get", "big"]], [['if', ['>=', ['get', 'target-width'], 500], ['==', ["get", ["&"], 'width'], ["get", "med"]], ['==', ["get", ["&"], 'width'], ["get", "small"]]]]]]];
         counter = 0;
         listener = function(e) {
           var k;

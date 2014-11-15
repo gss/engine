@@ -24,7 +24,7 @@ class Inspector
   update: () ->
     if @engine.console.level > 0
       @domains(@engine.domains)
-    if @engine.console.level > 1 || @rulers
+    if @engine.console.level > 1.5 || @rulers
       @refresh()
 
   stylesheet: ->

@@ -46,7 +46,8 @@ class Command
         type = engine.Command(argument, operation, i).type
       else
         type = @types[typeof argument]
-
+        if type == 'Object'
+          type = @typeOfObject(argument)
       if signature
         if match = signature[type] || signature.Any
           signature = match
@@ -351,6 +352,9 @@ class Command
             engine.Signatures.set(engine.signatures, property, value, Types)
             if engine.helps
               engine.engine[property] = @Helper(engine, property)
+              if aliases = value.prototype.helpers
+                for name in aliases
+                  engine.engine[name] = engine.engine[property]
     @Types = Types
       
     @
@@ -363,7 +367,7 @@ class Command
     engine[name] ||= ->
       args = Array.prototype.slice.call(arguments)
       command = Command.match(engine, base.concat(args)).prototype
-      args.length = command.permutation.length
+      args.length = command.permutation.length + command.padding
       return command.execute.apply(command, args.concat(engine, args, '', engine.scope))
 
 class Command.List extends Command

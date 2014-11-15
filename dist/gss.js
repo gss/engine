@@ -9334,12 +9334,12 @@ module.exports = (function() {
               return {from:from,to:to}
             },
         peg$c236 = function(char) {return char},
-        peg$c237 = function(name) {return ["$tag",name];},
-        peg$c238 = function() {return ["$tag", "*"];},
+        peg$c237 = function(name) {return ["tag",name];},
+        peg$c238 = function() {return ["tag", "*"];},
         peg$c239 = "#",
         peg$c240 = { type: "literal", value: "#", description: "\"#\"" },
-        peg$c241 = function(name) {return g.splatifyIfNeeded('$id',name);},
-        peg$c242 = function(name) {return g.splatifyIfNeeded('$class',name);},
+        peg$c241 = function(name) {return g.splatifyIfNeeded('#',name);},
+        peg$c242 = function(name) {return g.splatifyIfNeeded('.',name);},
         peg$c243 = function(name) {return [name];},
         peg$c244 = "$",
         peg$c245 = { type: "literal", value: "$", description: "\"$\"" },
@@ -9370,9 +9370,9 @@ module.exports = (function() {
         peg$c270 = "::",
         peg$c271 = { type: "literal", value: "::", description: "\"::\"" },
         peg$c272 = function() { return "&"; },
-        peg$c273 = function(name, option) {
-            if (option) {return ["$pseudo",name,option];}
-            return ["$pseudo",name];
+        peg$c273 = function(colons, name, option) {
+            if (option) {return [colons + name,option];}
+            return [colons + name];
           },
         peg$c274 = /^[^)]/,
         peg$c275 = { type: "class", value: "[^)]", description: "[^)]" },
@@ -13951,7 +13951,7 @@ module.exports = (function() {
           }
           if (s3 !== peg$FAILED) {
             peg$reportedPos = s0;
-            s1 = peg$c273(s2, s3);
+            s1 = peg$c273(s1, s2, s3);
             s0 = s1;
           } else {
             peg$currPos = s0;
@@ -20406,10 +20406,6 @@ Engine = (function(_super) {
     if (!solution.push) {
       return ((_ref = this.updating) != null ? _ref.each(this.resolve, this, solution) : void 0) || this.onSolve();
     }
-    if (this.providing !== void 0) {
-      (this.providing || (this.providing = [])).push(Array.prototype.slice.call(arguments, 0));
-      return;
-    }
     return this.update.apply(this, arguments);
   };
 
@@ -21383,8 +21379,8 @@ Selector.Reference = Selector.Element.extend({
 });
 
 Selector.define({
-  'class': {
-    prefix: '.',
+  '.': {
+    helpers: ['class', 'getElementsByClassName'],
     tags: ['selector'],
     Selecter: function(value, engine, operation, continuation, scope) {
       return scope.getElementsByClassName(value);
@@ -21396,6 +21392,7 @@ Selector.define({
     }
   },
   'tag': {
+    helpers: ['getElementsByTagName'],
     tags: ['selector'],
     prefix: '',
     Selecter: function(value, engine, operation, continuation, scope) {
@@ -21407,8 +21404,8 @@ Selector.define({
       }
     }
   },
-  'id': {
-    prefix: '#',
+  '#': {
+    helpers: ['id', 'getElementById'],
     tags: ['selector'],
     Selecter: function(id, engine, operation, continuation, scope) {
       if (scope == null) {
@@ -21672,7 +21669,7 @@ Selector.define({
   ':first': {
     relative: true,
     singular: true,
-    Selecter: function(node, engine, operation, continuation, scope) {
+    Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
@@ -21860,7 +21857,7 @@ Source = (function(_super) {
 
   Source.prototype.signature = [
     {
-      'source': ['Selector', 'String']
+      'source': ['Selector', 'String', 'Node']
     }, [
       {
         'type': ['String']
@@ -21907,7 +21904,7 @@ Source.define({
     }
     rules = engine.clone(this.types[type](source));
     engine.console.row('rules', rules);
-    engine.engine.engine.solve(rules, continuation, scope);
+    engine.engine.solve(rules, continuation, scope);
   },
   "load": function(node, type, engine, operation, continuation, scope) {
     var src, xhr,
@@ -22359,6 +22356,9 @@ Command = (function() {
         type = engine.Command(argument, operation, i).type;
       } else {
         type = this.types[typeof argument];
+        if (type === 'Object') {
+          type = this.typeOfObject(argument);
+        }
       }
       if (signature) {
         if (match = signature[type] || signature.Any) {
@@ -22667,7 +22667,7 @@ Command = (function() {
   };
 
   Command.compile = function(engine, command) {
-    var Types, property, proto, value;
+    var Types, aliases, name, property, proto, value, _i, _len;
     if (!command) {
       for (property in engine) {
         value = engine[property];
@@ -22697,6 +22697,12 @@ Command = (function() {
             engine.Signatures.set(engine.signatures, property, value, Types);
             if (engine.helps) {
               engine.engine[property] = this.Helper(engine, property);
+              if (aliases = value.prototype.helpers) {
+                for (_i = 0, _len = aliases.length; _i < _len; _i++) {
+                  name = aliases[_i];
+                  engine.engine[name] = engine.engine[property];
+                }
+              }
             }
           }
         }
@@ -22716,7 +22722,7 @@ Command = (function() {
       var args, command;
       args = Array.prototype.slice.call(arguments);
       command = Command.match(engine, base.concat(args)).prototype;
-      args.length = command.permutation.length;
+      args.length = command.permutation.length + command.padding;
       return command.execute.apply(command, args.concat(engine, args, '', engine.scope));
     });
   };
@@ -23236,7 +23242,6 @@ Domain = (function(_super) {
               op.command.patch(op.domain, op, void 0, void 0, this);
               op.command.solve(this, op);
               console.error(123, op, path);
-              debugger;
             }
           }
         }
@@ -23272,19 +23277,12 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.restruct = function() {
-    var constraint, path, variable, _i, _j, _len, _len1, _ref, _ref1;
+    var constraint, _i, _j, _len, _len1, _ref, _ref1;
     if (this.unconstrained) {
       _ref = this.unconstrained;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         constraint = _ref[_i];
         this.removeConstraint(constraint);
-        for (path in constraint.operation.variables) {
-          if (variable = this.variables[path]) {
-            if (!this.hasConstraint(variable)) {
-              this.nullify(variable);
-            }
-          }
-        }
       }
     }
     if (this.constrained) {
@@ -23411,7 +23409,7 @@ Domain = (function(_super) {
       }
     }
     if (!moving && this.values[variable.name] !== void 0) {
-      delete this.variables[variable.name];
+      variable.value = 0;
     }
     delete this.values[variable.name];
     this.nullify(variable);
@@ -23667,7 +23665,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype["yield"] = function(solution, value) {
-    return this.engine["yield"](solution);
+    return this.engine.engine["yield"](solution);
   };
 
   Domain.compile = function(domains, engine) {
@@ -23822,7 +23820,7 @@ Property = function(property, reference, properties) {
   var index, key, left, path, right, value, _base;
   if (typeof property === 'object') {
     if (property.push) {
-      return properties[path] = this.Style(property, reference, properties);
+      return properties[reference] = this.Style(property, reference, properties);
     } else {
       for (key in property) {
         value = property[key];
@@ -23938,7 +23936,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
           max = Math.max(substyle.depth, max);
           break;
         case "string":
-          Types = this.types || this.Type.prototype;
+          Types = this.types || this.Type;
           if (type = Types[property]) {
             types.push(type);
             if (initial === void 0) {
@@ -23953,7 +23951,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
               }
               if (storage = Types[type.displayName + 's']) {
                 for (key in storage) {
-                  if (type.call(this, key)) {
+                  if (type.call(Types, key)) {
                     initial = key;
                   }
                   break;
@@ -23997,7 +23995,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
     initial.prototype.styles = styles;
     initial.prototype.properties = properties;
   }
-  matcher.toString = function(value) {
+  matcher.format = function(value) {
     return Shorthand.prototype.toExpressionString(name, value, false, styles);
   };
   return styles[name] = matcher;
@@ -24024,7 +24022,7 @@ Shorthand = (function() {
     string = void 0;
     if (this.style.keys) {
       while (style = this[i = (i != null ? i : -1) + 1]) {
-        string = (string && string + ', ' || '') + style.toString(styles, i + 1);
+        string = (string && string + ', ' || '') + style.format(styles, i + 1);
       }
       pad = this.style.pad;
       _ref = keys = this.properties;
@@ -24563,9 +24561,6 @@ Updater = function(engine) {
   Update = function(problem, domain, parent, Default) {
     var a, arg, d, effects, foreign, index, offset, path, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
     if (this instanceof Update) {
-      if (domain != null ? domain.push : void 0) {
-        debugger;
-      }
       this.problems = problem && (domain.push && problem || [problem]) || [];
       this.domains = domain && (domain.push && domain || [domain]) || [];
       return;
@@ -25298,7 +25293,6 @@ Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
     }
     wrapper = [meta, args];
     args.parent = wrapper;
-    debugger;
     engine.update(wrapper, void 0, void 0, typeof this.fallback === "function" ? this.fallback(engine) : void 0);
   }
 });
@@ -25511,7 +25505,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, first, id, j, parent, path, position, prop, shared, stylesheet, _ref, _ref1;
+    var bits, camel, first, id, j, parent, path, position, prop, shared, stylesheet, _ref, _ref1, _ref2;
     if (value == null) {
       value = '';
     }
@@ -25522,12 +25516,12 @@ Intrinsic = (function(_super) {
       case "y":
         property = "top";
     }
-    if (!(prop = this.properties[property])) {
+    if (!((_ref = (prop = this.properties[property])) != null ? _ref.matcher : void 0)) {
       return;
     }
     camel = this.camelize(property);
     if (typeof value !== 'string') {
-      value = prop.toString(value);
+      value = prop.format(value);
     }
     if (property === 'left' || property === 'top') {
       position = element.style.position;
@@ -25557,7 +25551,7 @@ Intrinsic = (function(_super) {
       first = bits.shift();
       if ((j = first.lastIndexOf('$')) > -1) {
         id = first.substring(j);
-        if (((_ref = (stylesheet = this.identity[id])) != null ? _ref.tagName : void 0) === 'STYLE') {
+        if (((_ref1 = (stylesheet = this.identity[id])) != null ? _ref1.tagName : void 0) === 'STYLE') {
           parent = operation;
           while (parent = parent.parent) {
             if (parent[0] === 'if' && parent[1].marked) {
@@ -25574,7 +25568,7 @@ Intrinsic = (function(_super) {
       }
     }
     path = this.engine.getPath(element, 'intrinsic-' + property);
-    if ((_ref1 = this.watchers) != null ? _ref1[path] : void 0) {
+    if ((_ref2 = this.watchers) != null ? _ref2[path] : void 0) {
       return;
     }
     element.style[camel] = value;
@@ -25985,11 +25979,17 @@ Linear = (function(_super) {
 
   Linear.prototype.setup = function() {
     Linear.__super__.setup.apply(this, arguments);
+    if (!this.operations) {
+      this.constructor.prototype.operations = [];
+    }
     if (!this.hasOwnProperty('solver')) {
       this.solver = new c.SimplexSolver();
       this.solver.autoSolve = false;
       this.solver._store = [];
-      c.debug = true;
+      if (this.console.level > 1) {
+        c.debug = true;
+        c.trace = true;
+      }
       c.Strength.require = c.Strength.required;
       return Linear.hack();
     }
@@ -26014,10 +26014,14 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.addConstraint = function(constraint) {
+    var _ref1;
+    console.error('add constraint', (_ref1 = constraint.operation) != null ? _ref1[1].hash : void 0, constraint.hashCode, constraint);
     return this.solver.addConstraint(constraint);
   };
 
   Linear.prototype.removeConstraint = function(constraint) {
+    var _ref1;
+    console.error('remove constraint', (_ref1 = constraint.operation) != null ? _ref1[1].hash : void 0, constraint.hashCode, constraint);
     return this.solver.removeConstraint(constraint);
   };
 
@@ -26043,8 +26047,7 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.nullify = function(variable) {
-    this.solver._externalParametricVars["delete"](variable);
-    return this.solver._externalRows["delete"](variable);
+    return this.solver._externalParametricVars["delete"](variable);
   };
 
   Linear.prototype.suggest = function(path, value, strength, weight, continuation) {
@@ -26837,12 +26840,12 @@ Queries = (function() {
 
   Queries.prototype.chain = function(left, right, continuation) {
     if (left) {
-      this.match(left, '$pseudo', 'last', void 0, continuation);
-      this.match(left, '$pseudo', 'next', void 0, continuation);
+      this.match(left, ':last', '*', void 0, continuation);
+      this.match(left, ':next', '*', void 0, continuation);
     }
     if (right) {
-      this.match(right, '$pseudo', 'previous', void 0, continuation);
-      return this.match(right, '$pseudo', 'first', void 0, continuation);
+      this.match(right, ':previous', '*', void 0, continuation);
+      return this.match(right, ':first', '*', void 0, continuation);
     }
   };
 
@@ -27273,7 +27276,6 @@ Mutations = (function() {
     var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, removed, tag, update, value, values, _base, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _s, _t, _u, _v;
     added = [];
     removed = [];
-    this.onCharacterData(target, target);
     _ref = mutation.addedNodes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       child = _ref[_i];
@@ -27292,6 +27294,7 @@ Mutations = (function() {
         }
       }
     }
+    this.onCharacterData(target, target);
     changed = added.concat(removed);
     changedTags = [];
     for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
@@ -27362,11 +27365,11 @@ Mutations = (function() {
             _ref5 = node.classList || node.className.split(/\s+/);
             for (_r = 0, _len9 = _ref5.length; _r < _len9; _r++) {
               kls = _ref5[_r];
-              this.index(update, ' class', kls);
+              this.index(update, ' .', kls);
             }
             break;
           case 'id':
-            this.index(update, ' id', attribute.value);
+            this.index(update, ' #', attribute.value);
         }
         this.index(update, ' attribute', attribute.name);
       }
@@ -27383,10 +27386,10 @@ Mutations = (function() {
         }
       }
       if (!prev) {
-        this.index(update, ' pseudo', 'first-child');
+        this.index(update, ' :', 'first-child');
       }
       if (!next) {
-        this.index(update, ' pseudo', 'last-child');
+        this.index(update, ' :', 'last-child');
       }
       this.index(update, ' +', child.tagName);
     }
@@ -27487,7 +27490,7 @@ Mutations = (function() {
       $attribute = target === parent && 'attribute' || ' attribute';
       this.engine.queries.match(parent, $attribute, name, target);
       if ((changed != null ? changed.length : void 0) && name === 'class') {
-        $class = target === parent && 'class' || ' class';
+        $class = target === parent && '.' || ' .';
         for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
           kls = changed[_k];
           this.engine.queries.match(parent, $class, kls, target);
@@ -27525,7 +27528,6 @@ Pairs = (function() {
     left = this.engine.Continuation.getCanonicalPath(continuation);
     parent = this.engine.Operation.getRoot(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
-      debugger;
       this.lefts.push(parent, left, scope);
       contd = this.engine.Continuation.PAIR;
       return this.engine.Continuation.PAIR;
@@ -27572,7 +27574,6 @@ Pairs = (function() {
     var contd, first, id, index, last, prev, result;
     last = continuation.lastIndexOf(this.engine.Continuation.PAIR);
     if (last > 0 && !operation.command.reference) {
-      debugger;
       first = continuation.indexOf(this.engine.Continuation.PAIR);
       if (first === 0 && last === continuation.length - 1 && (this.onRight(operation, continuation, scope) != null)) {
         return false;
@@ -27755,7 +27756,7 @@ Pairs = (function() {
     if (cleaning) {
       this.clean(left, scope, operation);
     }
-    return this.engine.console.row('repair', [[added, removed], [leftNew, rightNew], [leftOld, rightOld]], this.engine.identity["yield"](scope) + left + right);
+    return this.engine.console.row('repair', [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], this.engine.identity["yield"](scope) + left + right);
   };
 
   Pairs.prototype.clean = function(left, scope, operation) {
@@ -27866,7 +27867,6 @@ Stylesheets = (function() {
 
   Stylesheets.prototype.compile = function() {
     this.CleanupSelectorRegExp = new RegExp(this.engine.Continuation.DESCEND, 'g');
-    debugger;
     this.engine.engine.solve('Document', 'stylesheets', this.initialize);
     this.inline = this.engine.queries['style[type*="text/gss"]'];
     this.remote = this.engine.queries['link[type*="text/gss"]'];
@@ -29227,7 +29227,7 @@ Inspector = (function() {
     if (this.engine.console.level > 0) {
       this.domains(this.engine.domains);
     }
-    if (this.engine.console.level > 1 || this.rulers) {
+    if (this.engine.console.level > 1.5 || this.rulers) {
       return this.refresh();
     }
   };

@@ -12,7 +12,6 @@ class Stylesheets
 
   compile: ->
     @CleanupSelectorRegExp = new RegExp(@engine.Continuation.DESCEND, 'g')
-    debugger
     @engine.engine.solve 'Document', 'stylesheets', @initialize
     @inline = @engine.queries['style[type*="text/gss"]']
     @remote = @engine.queries['link[type*="text/gss"]']

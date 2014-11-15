@@ -188,8 +188,8 @@ Selector.Reference = Selector.Element.extend
 Selector.define
   # Live collections
 
-  'class':
-    prefix: '.'
+  '.':
+    helpers: ['class', 'getElementsByClassName']
     tags: ['selector']
     
     Selecter: (value, engine, operation, continuation, scope) ->
@@ -200,6 +200,7 @@ Selector.define
         return node 
 
   'tag':
+    helpers: ['getElementsByTagName']
     tags: ['selector']
     prefix: ''
 
@@ -212,8 +213,8 @@ Selector.define
 
   # DOM Lookups
 
-  'id':
-    prefix: '#'
+  '#':
+    helpers: ['id', 'getElementById']
     tags: ['selector']
     
     Selecter: (id, engine, operation, continuation, scope = engine.scope) ->
@@ -433,13 +434,13 @@ Selector.define
     Combinator: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
-      return if !index?
+      return unless index?
       return node if index == collection.length - 1
 
   ':first':
     relative: true
     singular: true
-    Selecter: (node, engine, operation, continuation, scope) ->
+    Combinator: (node, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index?

@@ -346,9 +346,9 @@ class Engine extends Domain
     if !solution.push
       return @updating?.each(@resolve, @, solution) || @onSolve()
 
-    if @providing != undefined
-      (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
-      return
+    #if @providing != undefined
+    #  (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
+    #  return
     
     return @update.apply(@, arguments)
 

@@ -40,7 +40,7 @@ describe('GSS commands', function() {
   describe('command transformations -', function() {
     it('stay with class & static ids', function() {
       scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
-      engine.solve([['stay', ['get', ['class', 'box'], 'x']]]);
+      engine.solve([['stay', ['get', ['.', 'box'], 'x']]]);
       return chai.expect(engine.updated.getProblems()).to.eql([
         [
           [
@@ -60,7 +60,7 @@ describe('GSS commands', function() {
     it('multiple stays', function() {
       scope.innerHTML = "<div class=\"box block\" id=\"12322\">One</div>\n<div class=\"box block\" id=\"34222\">One</div>";
       engine;
-      engine.solve([['stay', ['get', ['class', 'box'], 'x']], ['stay', ['get', ['class', 'box'], 'y']], ['stay', ['get', ['class', 'block'], 'width']]]);
+      engine.solve([['stay', ['get', ['.', 'box'], 'x']], ['stay', ['get', ['.', 'box'], 'y']], ['stay', ['get', ['.', 'block'], 'width']]]);
       return chai.expect(engine.updated.getProblems()).to.eql([
         [
           [
@@ -103,7 +103,7 @@ describe('GSS commands', function() {
     });
     it('eq with class and tracker', function() {
       scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
-      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', 'grid-col']], ['==', 100, ['get', 'grid-col']]], '%');
+      engine.solve([['==', ['get', ['.', 'box'], 'width'], ['get', 'grid-col']], ['==', 100, ['get', 'grid-col']]], '%');
       return chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
         [
           [
@@ -124,7 +124,7 @@ describe('GSS commands', function() {
     });
     it('eq with class', function() {
       scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
-      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', 'grid-col']], ['==', 100, ['get', 'grid-col']]]);
+      engine.solve([['==', ['get', ['.', 'box'], 'width'], ['get', 'grid-col']], ['==', 100, ['get', 'grid-col']]]);
       return chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
         [
           [
@@ -145,7 +145,7 @@ describe('GSS commands', function() {
     });
     it('lte for class & id selectos', function(done) {
       window.$engine = engine;
-      engine.solve([['<=', ['get', ['class', 'box'], 'width'], ['get', ['id', 'box1'], 'width']]], function(solution) {
+      engine.solve([['<=', ['get', ['.', 'box'], 'width'], ['get', ['#', 'box1'], 'width']]], function(solution) {
         var box2;
         expect(engine.updated.getProblems()).to.eql([
           [
@@ -213,7 +213,7 @@ describe('GSS commands', function() {
     });
     it('intrinsic-width with class', function(done) {
       engine.once('solve', function(solution) {});
-      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['class', 'box'], 'intrinsic-width']]], function(solution) {
+      engine.solve([['==', ['get', ['.', 'box'], 'width'], ['get', ['.', 'box'], 'intrinsic-width']]], function(solution) {
         var box0;
         chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
           [['get', '$12322[intrinsic-width]'], ['get', '$34222[intrinsic-width]'], ['get', '$35346[intrinsic-width]']], [
@@ -266,7 +266,7 @@ describe('GSS commands', function() {
       return scope.innerHTML = "<div style=\"width:111px;\" class=\"box\" id=\"12322\">One</div>\n<div style=\"width:222px;\" class=\"box\" id=\"34222\">One</div>\n<div style=\"width:333px;\" class=\"box\" id=\"35346\">One</div>";
     });
     it('.box[width] == ::window[width]', function(done) {
-      engine.solve([['==', ['get', ['class', 'box'], 'width'], ['get', ['::window'], 'width']]]);
+      engine.solve([['==', ['get', ['.', 'box'], 'width'], ['get', ['::window'], 'width']]]);
       engine.then(function() {
         chai.expect(stringify(engine.updated.getProblems())).to.eql(stringify([
           [['get', '::window[width]']], [
@@ -385,7 +385,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['class', 'box'], 'x'], 100]]);
+        engine.solve([['==', ['get', ['.', 'box'], 'x'], 100]]);
         return scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
       });
       it('removed from dom', function(done) {
@@ -419,7 +419,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['class', 'box'], 'x'], 100]]);
+        engine.solve([['==', ['get', ['.', 'box'], 'x'], 100]]);
         return scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
       });
       return it('removed from selector', function(done) {
@@ -453,7 +453,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['class', 'box'], 'x'], 100]]);
+        engine.solve([['==', ['get', ['.', 'box'], 'x'], 100]]);
         return scope.innerHTML = "<div class=\"box\" id=\"12322\">One</div>\n<div class=\"box\" id=\"34222\">One</div>";
       });
     });
@@ -495,7 +495,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['class', 'box'], 'height'], ['get', ['id', 'box1'], 'intrinsic-width']]]);
+        engine.solve([['==', ['get', ['.', 'box'], 'height'], ['get', ['#', 'box1'], 'intrinsic-width']]]);
         return scope.innerHTML = "<div style=\"width:111px;\" id=\"box1\" class=\"box\" >One</div>\n<div style=\"width:222px;\" id=\"box2\" class=\"box\" >One</div>";
       });
       it('element resized by inserting child', function(done) {
@@ -532,7 +532,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['class', 'box'], 'height'], ['get', ['id', 'box1'], 'intrinsic-width']]]);
+        engine.solve([['==', ['get', ['.', 'box'], 'height'], ['get', ['#', 'box1'], 'intrinsic-width']]]);
         return scope.innerHTML = "<div style=\"display:inline-block;\" id=\"box1\" class=\"box\">One</div>\n<div style=\"width:222px;\" id=\"box2\" class=\"box\">One</div>";
       });
       return it('element resized by changing text', function(done) {
@@ -594,7 +594,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['class', 'box'], 'height'], ['get', ['id', 'box1'], 'intrinsic-width']]]);
+        engine.solve([['==', ['get', ['.', 'box'], 'height'], ['get', ['#', 'box1'], 'intrinsic-width']]]);
         return scope.innerHTML = "<div style=\"display:inline-block\" id=\"box1\" class=\"box\" >One</div>\n<div style=\"width:222px;\" id=\"box2\" class=\"box\" >One</div>";
       });
     });
@@ -621,7 +621,7 @@ describe('GSS commands', function() {
           }
         };
         engine.addEventListener('solve', listener);
-        engine.solve([['==', ['get', ['id', 'p-text'], 'width'], 100], ['==', ['get', ['id', 'p-text'], 'x-height'], ['get', ['id', 'p-text'], 'intrinsic-height']]]);
+        engine.solve([['==', ['get', ['#', 'p-text'], 'width'], 100], ['==', ['get', ['#', 'p-text'], 'x-height'], ['get', ['#', 'p-text'], 'intrinsic-height']]]);
         return scope.innerHTML = "<p id=\"p-text\" style=\"font-size:16px; line-height:16px; font-family:Helvetica;\">Among the sectors most profoundly affected by digitization is the creative sector, which, by the definition of this study, encompasses the industries of book publishing, print publishing, film and television, music, and gaming. The objective of this report is to provide a comprehensive view of the impact digitization has had on the creative sector as a whole, with analyses of its effect on consumers, creators, distributors, and publishers</p>";
       });
     });
@@ -630,7 +630,7 @@ describe('GSS commands', function() {
         var el;
         el = null;
         window.$engine = engine;
-        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['id', 'thing1'], 'width'], 100], ['rule', ['class', 'thing'], ['==', ['get', ['&'], 'width'], ['+', ['get', [':previous', ['&']], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
+        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['#', 'thing1'], 'width'], 100], ['rule', ['.', 'thing'], ['==', ['get', ['&'], 'width'], ['+', ['get', [':previous', ['&']], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
         engine.once('solve', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           chai.expect(engine.values["$thing2[width]"]).to.eql(140);
@@ -645,7 +645,7 @@ describe('GSS commands', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           return done();
         });
-        engine.solve([['==', ['get', ['id', 'thing1'], 'x'], 10], ['==', ['get', ['id', 'thing2'], 'x'], 110], ['rule', ['class', 'thing'], ['==', ['get', [':previous', ['&']], 'right'], ['get', ['&'], 'x']]]]);
+        engine.solve([['==', ['get', ['#', 'thing1'], 'x'], 10], ['==', ['get', ['#', 'thing2'], 'x'], 110], ['rule', ['.', 'thing'], ['==', ['get', [':previous', ['&']], 'right'], ['get', ['&'], 'x']]]]);
         scope.innerHTML = "<div id=\"thing1\" class=\"thing\"></div>\n<div id=\"thing2\" class=\"thing\"></div>";
         return el = null;
       });

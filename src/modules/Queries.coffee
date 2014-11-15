@@ -344,11 +344,11 @@ class Queries
 
   chain: (left, right, continuation) ->
     if left
-      @match(left, '$pseudo', 'last', undefined, continuation)
-      @match(left, '$pseudo', 'next', undefined, continuation)
+      @match(left, ':last', '*', undefined, continuation)
+      @match(left, ':next', '*', undefined, continuation)
     if right
-      @match(right, '$pseudo', 'previous', undefined, continuation)
-      @match(right, '$pseudo', 'first', undefined, continuation)
+      @match(right, ':previous', '*', undefined, continuation)
+      @match(right, ':first', '*', undefined, continuation)
 
   updateCollections: (operation, path, scope, added, removed, recursion, contd) ->
     

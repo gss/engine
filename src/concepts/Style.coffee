@@ -43,7 +43,7 @@ Style = (definition, name, styles,
           max = Math.max(substyle.depth, max)
         when "string"
           # Predefined value type
-          Types = @types || @Type.prototype
+          Types = @types || @Type
           if type = Types[property]
             types.push(type)
             if initial == undefined
@@ -54,7 +54,7 @@ Style = (definition, name, styles,
                     break
               if storage = Types[type.displayName + 's']
                 for key of storage
-                  if type.call(@, key)
+                  if type.call(Types, key)
                     initial = key
                   break
               
@@ -85,7 +85,7 @@ Style = (definition, name, styles,
     initial::properties = properties
 
 
-  matcher.toString    = (value) ->
+  matcher.format    = (value) ->
     return Shorthand::toExpressionString(name, value, false, styles)
 
   return styles[name] = matcher
@@ -107,7 +107,7 @@ class Shorthand
     string = undefined
     if @style.keys
       while style = @[i = (i ? -1) + 1]
-        string = (string && string + ', ' || '') + style.toString(styles, i + 1)
+        string = (string && string + ', ' || '') + style.format(styles, i + 1)
 
       pad = @style.pad
       for key, index in keys = @properties
