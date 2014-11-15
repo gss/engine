@@ -14,13 +14,14 @@ class Selector extends Query
   constructor: (operation) ->
     @key = @path = @serialize(operation)
 
-
+  # Build lookup tables for selector operations to match against mutations
   prepare: (operation, parent) ->
     prefix = @getIndexPrefix(operation, parent)
     name = @getIndex(operation, parent)
     suffix = @getIndexSuffix(operation, parent)
     (((parent || @)[prefix + name] ||= {})[suffix] ||= []).push operation
     
+    # Register every selector step within a composite selector
     if @tail
       for argument in operation
         if argument.command?.head == (parent || @).head
@@ -48,7 +49,7 @@ class Selector extends Query
     
   # String to be used to join tokens in a list
   separator: ''
-  # Does selector start with ::this?
+  # Does selector start with &?
   scoped: undefined
 
   # Redefined function name for serialized key
@@ -79,14 +80,17 @@ class Selector extends Query
   after: (args, result, engine, operation, continuation, scope) ->
     return engine.queries.update(args, result, operation, continuation, scope)
   
-  getIndex: (operation) ->
-    return operation[0]
-
+  # Methods to build mutation lookup keys:
+  # Format is `@[prefix + index][suffix]`
+  # Example: Composite selector `h1>div` will generate 
+  # `@[' >']['DIV']` and `@[' ']['H1']` as lookup structures
   getIndexPrefix: (operation, parent) ->
     return (parent || @selecting) && ' ' || ''
 
+  getIndex: (operation) ->
+    return operation[0]
+  
   getIndexSuffix: (operation) ->
-    console.log(operation)
     return operation[2] || operation[1]
 
 Selector::mergers.selector = (command, other, parent, operation, inherited) ->
@@ -150,7 +154,7 @@ Selector.Qualifier = Selector.extend
 # Filter elements by key with value
 Selector.Search = Selector.extend
   signature: [
-    context: ['Selector']
+    [context: ['Selector']]
     matcher: ['String']
     query: ['String']
   ]
@@ -161,18 +165,21 @@ Selector.Element = Selector.extend
 
 # Optimized element reference outside of selector context
 Selector.Reference = Selector.Element.extend
-  
-  kind: 'Element'
 
   condition: (engine, operation) ->
     return !(operation.parent.command instanceof Selector)
 
-  continue: (result, engine, operation, continuation) ->
-    return continuation
+  # Optimize methods that provide Element signature 
+  kind: 'Element'
 
+  # Invisible in continuation
+  prefix: ''
+
+  # Does not create DOM observer
   after: ->
     return result
 
+  # Bypasses cache and pairing
   retrieve: ->
     return @execute arguments ...
 
@@ -189,7 +196,8 @@ Selector.define
       return scope.getElementsByClassName(value)
       
     Qualifier: (node, value) ->
-      return node if node.classList.contains(value)
+      if node.classList.contains(value)
+        return node 
 
   'tag':
     tags: ['selector']
@@ -199,7 +207,8 @@ Selector.define
       return scope.getElementsByTagName(value)
     
     Qualifier: (node, value) ->
-      return node if value == '*' || node.tagName == value.toUpperCase()
+      if value == '*' || node.tagName == value.toUpperCase()
+        return node 
 
   # DOM Lookups
 
@@ -211,7 +220,8 @@ Selector.define
       return scope.getElementById?(id) || scope.querySelector('[id="' + id + '"]')
       
     Qualifier: (node, value) ->
-      return node if node.id == value
+      if node.id == value
+        return node
 
 
   # All descendant elements
@@ -301,7 +311,7 @@ Selector.define
 
 Selector.define
   # Pseudo elements
-  '::this':
+  '&':
 
 
     # Dont look
@@ -326,13 +336,13 @@ Selector.define
       return @execute arguments ...
 
   # Parent element (alias for !> *)
-  '::parent':
+  '^':
     Element: (engine, operation, continuation, scope) ->
       return engine.Continuation.getParentScope(scope, continuation)
 
 
   # Current engine scope (defaults to document)
-  '::root':
+  '$':
     Element: (engine, operation, continuation, scope) ->
       return engine.scope
 
@@ -491,7 +501,7 @@ if document?
       return node if node.className.split(/\s+/).indexOf(value) > -1
       
   unless dummy.hasOwnProperty("parentElement") 
-    Selector['!>']::Combinator = Selector['::parent']::Element = (node) ->
+    Selector['!>']::Combinator = Selector['^']::Element = (node) ->
       if parent = node.parentNode
         return parent if parent.nodeType == 1
   unless dummy.hasOwnProperty("nextElementSibling")

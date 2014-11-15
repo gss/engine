@@ -5,13 +5,21 @@ class Source extends Command
   type: 'Source'
   
   signature: [
-    'source': ['Object', 'String']
+    'source': ['Selector', 'String']
     [
       'type': ['String']
     ]
   ]
   
   
+      
+  types:
+    "text/gss-ast": (source) ->
+      return JSON.parse(source)
+
+    "text/gss": (source) ->
+      return Parser.parse(source)?.commands
+      
 Source.define
   # Evaluate stylesheet
   "eval": (node, type = 'text/gss', engine, operation, continuation, scope) ->
@@ -29,7 +37,7 @@ Source.define
       if node.getAttribute('scoped')?
         scope = node.parentNode
 
-    rules = engine.clone @types['_' + type](source)
+    rules = engine.clone @types[type](source)
     engine.console.row('rules', rules)
     engine.engine.engine.solve(rules, continuation, scope)
 
@@ -50,12 +58,5 @@ Source.define
       xhr.open('GET', src)
       xhr.send()
       
-      
-  types:
-    "text/gss-ast": (source) ->
-      return JSON.parse(source)
-
-    "text/gss": (source) ->
-      return Parser.parse(source)?.commands
 
 module.exports = Source

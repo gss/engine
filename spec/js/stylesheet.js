@@ -120,8 +120,8 @@ describe('Stylesheet', function() {
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.box, .zox, [matches~=".box,::this.zox,!+.box"] { width: 1px; }']);
-            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .box,::this.zox,!+.box');
+            })()).to.eql(['.box, .zox, [matches~=".box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .box,&.zox,!+.box');
             expect(engine.$id('box1').offsetWidth).to.eql(1);
             return done();
           });
@@ -233,10 +233,10 @@ describe('Stylesheet', function() {
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.outer .box, .outer.zox, [matches~=".outer' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box"] { width: 1px; }']);
-            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box');
+            })()).to.eql(['.outer .box, .outer.zox, [matches~=".outer' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
             expect(engine.$id('box1').offsetWidth).to.eql(1);
-            expect(engine.$id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box');
+            expect(engine.$id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
             expect(engine.$id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -350,10 +350,10 @@ describe('Stylesheet', function() {
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box"] { width: 1px; }']);
-            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box');
+            })()).to.eql(['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
             expect(engine.$id('box1').offsetWidth).to.eql(1);
-            expect(engine.$id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box');
+            expect(engine.$id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
             expect(engine.$id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -467,10 +467,10 @@ describe('Stylesheet', function() {
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box"] { width: 1px; }']);
-            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box');
+            })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.$id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
             expect(engine.$id('box1').offsetWidth).to.eql(1);
-            expect(engine.$id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.Continuation.DESCEND + '.box,::this.zox,!+.box');
+            expect(engine.$id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
             expect(engine.$id('box2').offsetWidth).to.eql(1);
             return done();
           });

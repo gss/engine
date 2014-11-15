@@ -521,7 +521,10 @@ class Domain extends Trigger
     else if property && (intrinsic = engine.intrinsic?.properties)
       if (intrinsic[path]? || (intrinsic[property] && !intrinsic[property].matcher))
         return engine.intrinsic
-  
+    
+    if Default
+      return Default
+      
     if property && (index = property.indexOf('-')) > -1
       prefix = property.substring(0, index)
       if (domain = engine[prefix])
@@ -551,12 +554,8 @@ class Domain extends Trigger
 
 
         unless @events == engine.events
-          events = {}
-          for property, value of @engine.events
-            events[property] = value
-          for property, value of @events
-            events[property] = value
-          @events = events
+          engine.addListeners(@events)
+
         
         @Property.compile @Properties::, @
         Properties = @Properties

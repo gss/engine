@@ -630,7 +630,7 @@ describe('GSS commands', function() {
         var el;
         el = null;
         window.$engine = engine;
-        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['id', 'thing1'], 'width'], 100], ['rule', ['class', 'thing'], ['==', ['get', ['::this'], 'width'], ['+', ['get', [':previous', ['::this']], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
+        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['id', 'thing1'], 'width'], 100], ['rule', ['class', 'thing'], ['==', ['get', ['&'], 'width'], ['+', ['get', [':previous', ['&']], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
         engine.once('solve', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           chai.expect(engine.values["$thing2[width]"]).to.eql(140);
@@ -645,7 +645,7 @@ describe('GSS commands', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           return done();
         });
-        engine.solve([['==', ['get', ['id', 'thing1'], 'x'], 10], ['==', ['get', ['id', 'thing2'], 'x'], 110], ['rule', ['class', 'thing'], ['==', ['get', [':previous', ['::this']], 'right'], ['get', ['::this'], 'x']]]]);
+        engine.solve([['==', ['get', ['id', 'thing1'], 'x'], 10], ['==', ['get', ['id', 'thing2'], 'x'], 110], ['rule', ['class', 'thing'], ['==', ['get', [':previous', ['&']], 'right'], ['get', ['&'], 'x']]]]);
         scope.innerHTML = "<div id=\"thing1\" class=\"thing\"></div>\n<div id=\"thing2\" class=\"thing\"></div>";
         return el = null;
       });

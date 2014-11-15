@@ -235,7 +235,7 @@ class Command
   # Retrieve cached result
   retrieve: ->
 
-  # Map to reorder arguments
+  # Map to reorder arguments, no changes by default
   permutation: [0 ... 10]
 
   # Add this nubmer of undefineds at the end of argument list

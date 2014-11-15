@@ -759,7 +759,7 @@ describe 'GSS engine', ->
         done()
     it "views are recycled *MOSTLY*", (done) ->
       # - margin_of_error should be about 2 for things like document.body
-      # - larger b/c views activated via ::parent queries will not be cleaned up, need more robust GSS.Query
+      # - larger b/c views activated via ^ queries will not be cleaned up, need more robust GSS.Query
       # - async intrinsics also seem to matter...
       # - vies are not cleaned up when removed unless selector is updated!
       margin_of_error = 25 + 5

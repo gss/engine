@@ -556,7 +556,7 @@ class Queries
 
   # temp workaround for inability to 
   getParentScope: (continuation, operation) ->
-    @ScopeSplitterRegExp ||= new RegExp(@engine.Continuation.DESCEND + '|' + @engine.Continuation.ASCEND + '::this', 'g')
+    @ScopeSplitterRegExp ||= new RegExp(@engine.Continuation.DESCEND + '|' + @engine.Continuation.ASCEND + '&', 'g')
 
     bits = continuation.split(@ScopeSplitterRegExp)
     

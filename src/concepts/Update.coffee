@@ -22,7 +22,7 @@ Updater = (engine) ->
 
       # Analyze variable
       if arg[0] == 'get'
-        arg.domain ||= vardomain = @getVariableDomain(@, arg, Default)
+        vardomain = arg.domain ||= @getVariableDomain(@, arg, Default)
         path = arg[1]
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
@@ -39,7 +39,7 @@ Updater = (engine) ->
                 d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
             else
               d = domain || true
-            effects = @update(arg, d, parent)
+            effects = @update(arg, d, parent, Default)
             break
           else if typeof a != 'string'
             stringy = false

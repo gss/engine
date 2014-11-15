@@ -1804,7 +1804,7 @@ describe('End - to - End', function() {
           });
           return done();
         };
-        container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n                    \n            .section {\n              @horizontal |-(::this)-| gap(10) in(#container);\n            }\n          \n            #container {\n              x: == 10;\n              width: == 100;\n            }                        \n\n          </style>";
+        container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n                    \n            .section {\n              @horizontal |-(&)-| gap(10) in(#container);\n            }\n          \n            #container {\n              x: == 10;\n              width: == 100;\n            }                        \n\n          </style>";
         return engine.once('solve', listen);
       });
       return describe('with selector', function() {
@@ -2077,7 +2077,7 @@ describe('End - to - End', function() {
           });
           return done();
         });
-        return container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n          \n            #container {\n              x: == 10;\n              width: == 100;\n            } \n                   \n            .section {\n              @horizontal |-(::this)-| gap(10) in(#container);\n            }                                           \n\n          </style>";
+        return container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n          \n            #container {\n              x: == 10;\n              width: == 100;\n            } \n                   \n            .section {\n              @horizontal |-(&)-| gap(10) in(#container);\n            }                                           \n\n          </style>";
       });
     });
     describe('<points>', function() {

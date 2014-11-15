@@ -6,12 +6,13 @@ class Stylesheets
     @sheets = {}
 
   initialize: [
-    ['eval',  ['$attribute', ['$tag', 'style'], '*=', 'type', 'text/gss']]
-    ['load',  ['$attribute', ['$tag', 'link' ], '*=', 'type', 'text/gss']]
+    ['eval',  ['[*=]', ['tag', 'style'], 'type', 'text/gss']]
+    ['load',  ['[*=]', ['tag', 'link' ], 'type', 'text/gss']]
   ]
 
   compile: ->
     @CleanupSelectorRegExp = new RegExp(@engine.Continuation.DESCEND, 'g')
+    debugger
     @engine.engine.solve 'Document', 'stylesheets', @initialize
     @inline = @engine.queries['style[type*="text/gss"]']
     @remote = @engine.queries['link[type*="text/gss"]']

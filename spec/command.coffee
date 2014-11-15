@@ -570,11 +570,11 @@ describe 'GSS commands', ->
             ['class', 'thing'], 
             ['=='
               ['get'
-                ['::this'],
+                ['&'],
                 'width'],
               ['+',
                 ['get'
-                  [':previous', ['::this']],
+                  [':previous', ['&']],
                   'width']
                 ['*'
                   ['get', 'hgap'],
@@ -608,10 +608,10 @@ describe 'GSS commands', ->
             ['class','thing'],
             ['=='
               ['get'
-                [':previous', ['::this']],
+                [':previous', ['&']],
                 'right']
               ['get'
-                ['::this'],
+                ['&'],
                 'x']
             ]
           ]

@@ -2480,7 +2480,7 @@ describe 'End - to - End', ->
             <style type="text/gss">                        
                       
               .section {
-                @horizontal |-(::this)-| gap(10) in(#container);
+                @horizontal |-(&)-| gap(10) in(#container);
               }
             
               #container {
@@ -2958,7 +2958,7 @@ describe 'End - to - End', ->
               } 
                      
               .section {
-                @horizontal |-(::this)-| gap(10) in(#container);
+                @horizontal |-(&)-| gap(10) in(#container);
               }                                           
   
             </style>

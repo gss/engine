@@ -42,20 +42,21 @@ Abstract::Default.Top = Abstract::Default.extend
       meta.scope = engine.identity.yield(scope)
     wrapper = [meta, args]
     args.parent = wrapper
-    engine.yield wrapper
+    debugger
+    engine.update wrapper, undefined, undefined, @fallback?(engine)
     return
 
-# Unrecognized command in conditional clause (any math)
+# Unrecognized command in conditional clause
 Abstract::Default.Clause = Abstract::Default.Top.extend
 
   condition: (engine, operation) ->
     if parent = operation.parent
       return parent.command instanceof Abstract::Condition
 
-  execute: ->
-    console.error(123)
+  fallback: (engine) ->
+    return engine.solved
 
-# Dynamically check 
+# Register subclasses to be dispatched by condition
 Abstract::Default::variants = [Abstract::Default.Clause, Abstract::Default.Top]
 
 # Asynchronous block
@@ -90,6 +91,7 @@ Abstract::Value.Getter = Abstract::Value.extend {
         return prop.call(engine, object, continuation)
     return ['get', engine.getPath(object, property)]
   
+# Proxy math that passes basic expressions along
 Abstract::Value.Expression = Value.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]
