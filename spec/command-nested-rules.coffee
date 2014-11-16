@@ -837,7 +837,6 @@ describe 'Nested Rules', ->
                     ]
                     box2 = container.getElementsByClassName('box')[2]
                     box2.parentNode.removeChild(box2)
-                    debugger
                     engine.once 'solve', ->
                       expect(stringify(engine.updated.getProblems())).to.eql stringify [
                           [['remove', '.group .vessel$vessel1↓$ .box:last-child$box2']]

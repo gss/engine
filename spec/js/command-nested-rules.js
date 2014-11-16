@@ -607,7 +607,6 @@ describe('Nested Rules', function() {
                     expect(stringify(engine.updated.getProblems())).to.eql(stringify([[["remove", ".group .vessel$vessel11↓$ .box:last-child$box2"], ["remove", ".group .vessel$vessel11↓$ .box:last-child$box5"], ["remove", ".group .vessel$vessel11↓$ .box:last-child$box12"], ["remove", ".group .vessel$vessel11↓$ .box:last-child$box14"], ["remove", ".group .vessel$vessel11↓$"], ["remove", ".group .vessel$vessel11"], ["remove", ".group .vessel$vessel1↓$ .box:last-child$box12"], ["remove", ".group .vessel$vessel1↓$ .box:last-child$box14"]], [["remove", ".group .vessel$vessel11↓$ .box:last-child$box2"]], [["remove", ".group .vessel$vessel11↓$ .box:last-child$box5"]], [["remove", ".group .vessel$vessel11↓$ .box:last-child$box12", ".group .vessel$vessel1↓$ .box:last-child$box12"]], [["remove", ".group .vessel$vessel11↓$ .box:last-child$box14", ".group .vessel$vessel1↓$ .box:last-child$box14"]]]));
                     box2 = container.getElementsByClassName('box')[2];
                     box2.parentNode.removeChild(box2);
-                    debugger;
                     return engine.once('solve', function() {
                       var vessel;
                       expect(stringify(engine.updated.getProblems())).to.eql(stringify([

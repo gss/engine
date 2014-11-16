@@ -25907,7 +25907,6 @@ Document = (function(_super) {
       });
     },
     compile: function() {
-      debugger;
       return this.stylesheets.compile();
     },
     destroy: function() {
@@ -25995,14 +25994,10 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.addConstraint = function(constraint) {
-    var _ref1;
-    console.error('add constraint', (_ref1 = constraint.operation) != null ? _ref1[1].hash : void 0, constraint.hashCode, constraint);
     return this.solver.addConstraint(constraint);
   };
 
   Linear.prototype.removeConstraint = function(constraint) {
-    var _ref1;
-    console.error('remove constraint', (_ref1 = constraint.operation) != null ? _ref1[1].hash : void 0, constraint.hashCode, constraint);
     return this.solver.removeConstraint(constraint);
   };
 

@@ -43,11 +43,11 @@ class Linear extends Domain
       return @solver._changed
 
   addConstraint: (constraint) ->
-    console.error('add constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
+    #console.error('add constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
     @solver.addConstraint(constraint)
 
   removeConstraint: (constraint) ->
-    console.error('remove constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
+    #console.error('remove constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
     @solver.removeConstraint(constraint)
 
   unedit: (variable) ->

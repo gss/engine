@@ -105,7 +105,6 @@ class Document extends Abstract
 
     # Observe and parse stylesheets
     compile: ->
-      debugger
       @stylesheets.compile()
       
     destroy: ->

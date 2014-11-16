@@ -90,7 +90,6 @@ describe('Cassowary Thread', function() {
     return done();
   });
   it('intrinsic var is immutable with suggestion', function() {
-    debugger;
     var thread;
     thread = new GSS({
       'intrinsic-width': 100

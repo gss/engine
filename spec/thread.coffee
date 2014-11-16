@@ -103,7 +103,6 @@ describe 'Cassowary Thread', ->
   
   it 'intrinsic var is immutable with suggestion', () ->
     #c.trace = true
-    debugger
     thread = new GSS
       'intrinsic-width': 100
     thread.solve [
