@@ -30,7 +30,7 @@ class Console
   debug: (exp) ->
     document.location = document.location.toString().replace(/[&?]breakpoint=[^&]+|$/, 
       ((document.location.search.indexOf('?') > -1) && '&' || '?') + 
-      'breakpoint=' + exp.trim())
+      'breakpoint=' + exp.trim().replace(/\r?\n+|\r|\s+/g, ' '))
 
   breakpoint: decodeURIComponent (document?.location.search.match(/breakpoint=([^&]+)/, '') || ['',''])[1]
 
@@ -40,7 +40,8 @@ class Console
     return if typeof a != 'string'
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
     if document?
-      breakpoint = String(@stringify([b,c])).replace /\r?\n+|\r|\s+/g, ' '
+      console.log(b, c)
+      breakpoint = String(@stringify([b,c])).trim().replace /\r?\n+|\r|\s+/g, ' '
       if @breakpoint == a + breakpoint
         debugger
     else 

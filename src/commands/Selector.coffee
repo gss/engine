@@ -93,13 +93,17 @@ class Selector extends Query
   getIndexSuffix: (operation) ->
     return operation[2] || operation[1]
 
+# Logic to combine native selector steps into a single QSA query
 Selector::mergers.selector = (command, other, parent, operation, inherited) ->
   if !other.head
     # Native selectors cant start with combinator other than whitespace
     if other instanceof Selector.Combinator && operation[0] != ' '
       return
 
-  # Can't append combinator to qualifying selector selector 
+  if !command.key && !other.selector && other.key != other.path
+    return
+
+  # Can't append combinator to qualifying selector 
   if selecting = command.selecting
     return unless other.selecting
   else if other.selecting
@@ -158,6 +162,10 @@ Selector.Search = Selector.extend
     matcher: ['String']
     query: ['String']
   ]
+
+Selector.Attribute = Selector.Search.extend
+  getIndex: ->
+    return 'attribute'
   
 # Reference to related element
 Selector.Element = Selector.extend
@@ -361,7 +369,7 @@ Selector.define
     prefix: '['
     separator: '="'
     suffix: '"]'
-    Search: (node, attribute, value) ->
+    Attribute: (node, attribute, value) ->
       return node if node.getAttribute(attribute) == value
 
   '[*=]':
@@ -369,7 +377,7 @@ Selector.define
     prefix: '['
     separator: '*="'
     suffix: '"]'
-    Search: (node, attribute, value) ->
+    Attribute: (node, attribute, value) ->
       return node if node.getAttribute(attribute)?.indexOf(value) > -1
 
   '[|=]':
@@ -377,14 +385,14 @@ Selector.define
     prefix: '['
     separator: '|="'
     suffix: '"]'
-    Search: (node, attribute, value) ->
+    Attribute: (node, attribute, value) ->
       return node if node.getAttribute(attribute)?
 
   '[]':
     tags: ['selector']
     prefix: '['
     suffix: ']'
-    Search: (node, attribute) ->
+    Attribute: (node, attribute) ->
       return node if node.getAttribute(attribute)?
 
 

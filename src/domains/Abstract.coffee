@@ -107,16 +107,16 @@ Abstract::Value.Expression = Value.Expression.extend {},
   
 # Constant definition
 Abstract::Assignment = Assignment.extend {},
-  '=': (object, name, value) ->
-    @assumed.set(object, name, value)
+  '=': (object, name, value, engine) ->
+    engine.assumed.set(object, name, value)
 
 # Style assignment
 Abstract::Assignment.Unsafe = Assignment.Unsafe.extend {},
   'set': (object, property, value, engine, operation, continuation, scope) ->
-    if @intrinsic
-      @intrinsic.restyle object || scope, property, value, continuation, operation
+    if engine.intrinsic
+      engine.intrinsic.restyle object || scope, property, value, continuation, operation
     else
-      @assumed.set object || scope, property, value
+      engine.assumed.set object || scope, property, value
     return
 
 module.exports = Abstract

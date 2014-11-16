@@ -14,7 +14,7 @@ class Assignment.Unsafe extends Assignment
   signature: [
     [object:   ['Query', 'Selector']]
     property: ['String']
-    value:    null
+    value:    ['Any']
   ]
   
 module.exports = Assignment

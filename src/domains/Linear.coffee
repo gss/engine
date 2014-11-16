@@ -14,8 +14,7 @@ class Linear extends Domain
   setup: () ->
     super
 
-    unless @operations
-      @constructor::operations = []
+    @operations ||= []
 
     unless @hasOwnProperty('solver')
       @solver = new c.SimplexSolver()

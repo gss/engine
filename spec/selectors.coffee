@@ -44,3 +44,5 @@ describe 'Selectors', ->
       expect(engine.document.Command([',', ['.', ['tag', 'p'], 'active'], ['tag', 'p']]).path).to.eql('p.active,p')
       expect(engine.document.Command([',', ['.', ['tag', 'p'], 'active'], ['~~', ['tag', 'p']]]).path).to.eql('p.active,p~~')
       expect(engine.document.Command([',', ['.', ['tag', 'p'], 'active'], ['~~', ['tag', 'p']]]).selector).to.eql(undefined)
+
+      expect(engine.document.Command([',', ['.', ['~~'], 'active'], ['.', ['++'], 'active']]).selector).to.eql(undefined)

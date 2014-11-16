@@ -8,6 +8,7 @@ class Source extends Command
     'source': ['Selector', 'String', 'Node']
     [
       'type': ['String']
+      'text': ['String']
     ]
   ]
   
@@ -22,11 +23,11 @@ class Source extends Command
       
 Source.define
   # Evaluate stylesheet
-  "eval": (node, type = 'text/gss', engine, operation, continuation, scope) ->
+  "eval": (node, type = 'text/gss', text, engine, operation, continuation, scope) ->
     if node.nodeType
       if nodeType = node.getAttribute('type')
         type = nodeType
-      source = node.textContent || node 
+      source = text || node.textContent || node 
       if (nodeContinuation = node._continuation)?
         engine.queries.clean(nodeContinuation)
         continuation = nodeContinuation
@@ -45,7 +46,7 @@ Source.define
 
 
   # Load & evaluate stylesheet
-  "load": (node, type, engine, operation, continuation, scope) ->
+  "load": (node, type, method, engine, operation, continuation, scope) ->
       src = node.href || node.src || node
       type ||= node.type || 'text/gss'
       xhr = new XMLHttpRequest()
@@ -53,9 +54,9 @@ Source.define
       xhr.onreadystatechange = =>
         if xhr.readyState == 4 && xhr.status == 200
           --engine.requesting
-          engine.commands.eval.call(@, engine, operation, continuation, scope,
-                                node, type, xhr.responseText, src)
-      xhr.open('GET', src)
+          op = ['eval', node, type, xhr.responseText]
+          engine.Command(op).solve(engine, op, continuation, scope)
+      xhr.open('GET', method && method.toUpperCase() || src)
       xhr.send()
       
 

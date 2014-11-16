@@ -1336,7 +1336,7 @@ describe 'End - to - End', ->
                 y: == 5;
               }
               #sugar2 {
-                size: == #sugar1[intrinsic-size];
+                size: == ($ #sugar1)[intrinsic-size];
               }
               #sugar1[position] == #sugar2[center];              
             </style>

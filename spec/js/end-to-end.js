@@ -1056,7 +1056,7 @@ describe('End - to - End', function() {
     });
     describe('2D sugar', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<div id=\"sugar1\"></div>\n<div id=\"sugar2\"></div>\n<style type=\"text/gss\">                            \n  #sugar1 {\n    width: 10px;\n    height: 10px;\n    x: == 5;\n    y: == 5;\n  }\n  #sugar2 {\n    size: == #sugar1[intrinsic-size];\n  }\n  #sugar1[position] == #sugar2[center];              \n</style>";
+        container.innerHTML = "<div id=\"sugar1\"></div>\n<div id=\"sugar2\"></div>\n<style type=\"text/gss\">                            \n  #sugar1 {\n    width: 10px;\n    height: 10px;\n    x: == 5;\n    y: == 5;\n  }\n  #sugar2 {\n    size: == ($ #sugar1)[intrinsic-size];\n  }\n  #sugar1[position] == #sugar2[center];              \n</style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             "$sugar1[x]": 5,

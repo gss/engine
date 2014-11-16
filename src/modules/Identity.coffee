@@ -4,7 +4,7 @@ class Identity
   # Get or generate uid for a given object.
   yield: (object, generate) ->
     if typeof object == 'string'
-      if object.charAt(0) != '$'
+      if object.charAt(0) != '$' && object.substring(0, 2) != '::'
         return '$' + object
       else
         return object

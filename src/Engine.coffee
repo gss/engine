@@ -102,11 +102,9 @@ class Engine extends Domain
     @solved.eager = true
     @solved.setup()
 
-    # Alias engine.values from solved domain
     @values = @solved.values
 
-    @variables   = {}
-    @bypassers   = {}
+    @variables = {}
 
     @strategy = 
       unless window?

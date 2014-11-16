@@ -216,7 +216,7 @@ class Queries
       if (index = collection.indexOf(node)) > -1
         # Fall back to duplicate with a different key
         if keys
-          negative = if refs then null else false
+          negative = false#if refs then null else false
           return negative if scopes[index] != scope
           return negative if refs.indexOf(paths[index]) == -1
           return negative if keys[index] != needle
@@ -269,18 +269,18 @@ class Queries
       collection = @get(continuation)
       if collection && @engine.isCollection(collection)
         @snapshot continuation, collection
-      r = removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
-      #while r == false
-      #  r = @removeFromCollection(node, continuation, operation, scope, false, contd)
+      
+      removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
         
       @engine.pairs.remove(id, continuation)
 
       # Remove all watchers that match continuation path
       ref = continuation + (collection?.length? && id || '')
-      if ref.charAt(0) == @engine.Continuation.PAIR
-        @unobserve(id, ref, undefined, undefined, ref, scope)
-      else
-        @unobserve(id, ref, undefined, undefined, ref)
+      if removed != false
+        if ref.charAt(0) == @engine.Continuation.PAIR
+          @unobserve(id, ref, undefined, undefined, ref, scope)
+        else
+          @unobserve(id, ref, undefined, undefined, ref)
 
       if recursion != continuation
         if (removed != null || !parent?.command.release)
@@ -326,7 +326,8 @@ class Queries
     if @mutations
       @unobserve(@mutations, path, true)
 
-    #@unobserve(@engine.scope._gss_id, path)
+
+    @unobserve((scope || @engine.scope)._gss_id, path)
 
     if !result || !@engine.isCollection(result)
       unless path.charAt(0) == @engine.Continuation.PAIR

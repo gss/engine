@@ -105,7 +105,7 @@ describe('GSS engine', function() {
           engine.destroy();
           return done();
         });
-        ast = [['==', ['get', ['$id', 'button1'], 'width'], ['get', ['$id', 'button2'], 'width']], ['==', ['get', ['$id', 'button1'], 'width'], 100]];
+        ast = [['==', ['get', ['#', 'button1'], 'width'], ['get', ['#', 'button2'], 'width']], ['==', ['get', ['#', 'button1'], 'width'], 100]];
         it('before solving the second button should be wider', function() {
           button1 = engine.id('button1');
           button2 = engine.id('button2');
@@ -197,7 +197,7 @@ describe('GSS engine', function() {
       engine.destroy();
       return done();
     });
-    ast = [['==', ['get', ['$id', 'button2'], 'width'], 222], ['==', ['get', ['$id', 'button1'], 'width'], 111]];
+    ast = [['==', ['get', ['#', 'button2'], 'width'], 222], ['==', ['get', ['#', 'button1'], 'width'], 111]];
     it('before solving buttons dont exist', function() {
       engine.solve(ast);
       button1 = engine.id('button1');
@@ -240,7 +240,7 @@ describe('GSS engine', function() {
       engine.destroy();
       return done();
     });
-    ast = [['==', ["get", ["$id", "b1"], "right"], ["get", ["$id", "b2"], "x"]], ['==', ["get", ["$id", "w"], "width"], 200], ['==', ["get", ["$id", "w"], "x"], ["get", 'target']], ['==', ["get", ["$id", "b2"], "right"], ["get", ["$id", "w"], "right"]], ['==', ["get", ["$id", "b1"], "x"], ["get", "target"]], ['==', ["get", ["$id", "b1"], "width"], ["get", ["$id", "b2"], "width"]], ['==', ["get", "target"], 0]];
+    ast = [['==', ["get", ["#", "b1"], "right"], ["get", ["#", "b2"], "x"]], ['==', ["get", ["#", "w"], "width"], 200], ['==', ["get", ["#", "w"], "x"], ["get", 'target']], ['==', ["get", ["#", "b2"], "right"], ["get", ["#", "w"], "right"]], ['==', ["get", ["#", "b1"], "x"], ["get", "target"]], ['==', ["get", ["#", "b1"], "width"], ["get", ["#", "b2"], "width"]], ['==', ["get", "target"], 0]];
     return it('after solving should have right size', function(done) {
       var onSolved;
       onSolved = function(e) {
@@ -397,63 +397,52 @@ describe('GSS engine', function() {
         return expect(engine1.scope).to.be.equal(container);
       });
       it('after receives GSS style tag', function(done) {
-        var listener;
         engine1 = GSS(container);
         container.innerHTML = "<style id=\"gssa\" type=\"text/gss-ast\" scoped>\n  [\n    [\"==\", [\"get\", \"col-width-1\"], 111]\n  ]\n</style>";
-        listener = function(e) {
+        return engine1.then(function() {
           expect(engine1.values['col-width-1']).to.equal(111);
-          container.removeEventListener('solved', listener);
           return done();
-        };
-        return container.addEventListener('solved', listener);
+        });
       });
       it('after modified GSS style tag', function(done) {
-        var listener, styleNode;
+        var styleNode;
         engine = GSS(container);
         styleNode = engine.id('gssa');
         styleNode.textContent = "[\n    [\"==\", [\"get\", \"col-width-11\"], 1111]\n]  ";
-        listener = function(e) {
+        return engine.then(function() {
           var engine2;
           engine2 = GSS(container);
           expect(engine1).to.equal(engine2);
           expect(engine1.values['col-width-1']).to.equal(void 0);
           expect(engine1.values['col-width-11']).to.equal(1111);
-          container.removeEventListener('solved', listener);
           return done();
-        };
-        return container.addEventListener('solved', listener);
+        });
       });
       it('after replaced GSS style tag', function(done) {
-        var engine2, listener;
+        var engine2;
         engine2 = GSS(container);
         container.innerHTML = "<style id=\"gssb\" type=\"text/gss-ast\" scoped>\n[\n    [\"==\", [\"get\", \"col-width-2\"], 222]\n]  \n</style>\n<div id=\"box1\" class=\"box\" data-gss-id=\"12322\"></div>";
-        debugger;
-        listener = function(e) {
-          engine2 = GSS(container);
+        return engine2.then(function() {
           assert(engine1 === engine2, "engine is maintained");
           assert(engine2.values['col-width-1'] == null, "engine1.vars['col-width-1'] removed");
           expect(engine2.values['col-width-11']).to.equal(void 0);
           expect(engine2.values['col-width-2']).to.equal(222);
-          container.removeEventListener('solved', listener);
           return done();
-        };
-        return container.addEventListener('solved', listener);
+        });
       });
       it('Engine after container replaced multiple GSS style tags', function(done) {
-        var engine2, listener;
+        var engine2;
         engine2 = GSS(container);
         container.innerHTML = "<style id=\"gssc\" type=\"text/gss-ast\" scoped>\n[\n   [\"==\", [\"get\", \"col-width-3\"], 333]\n]  \n</style>\n<style id=\"gssd\" type=\"text/gss-ast\" scoped>\n[\n   [\"==\", [\"get\", \"col-width-4\"], 444]\n]  \n</style>\n<div id=\"box1\" class=\"box\" data-gss-id=\"12322\"></div>";
-        listener = function(e) {
+        return engine2.then(function() {
           engine2 = GSS(container);
           expect(engine1).to.equal(engine2);
           expect(engine1.values['col-width-1']).to.equal(void 0);
           expect(engine1.values['col-width-2']).to.equal(void 0);
           expect(engine1.values['col-width-3']).to.equal(333);
           expect(engine1.values['col-width-4']).to.equal(444);
-          container.removeEventListener('solved', listener);
           return done();
-        };
-        return container.addEventListener('solved', listener);
+        });
       });
       xit('Engine after container removed', function(done) {
         var wait;
@@ -482,7 +471,7 @@ describe('GSS engine', function() {
     before(function() {
       container = document.createElement('div');
       $('#fixtures').appendChild(container);
-      container.innerHTML = "<section>\n  <div id=\"wrap\" style=\"width:100px;\" data-gss-id=\"999\">\n    <style type=\"text/gss-ast\" scoped>\n    [{\n      \"type\":\"constraint\",\n      \"commands\": [\n        ['==', [\"get$\",\"width\",[\"$id\",\"boo\"]], [\"number\",100]]\n      ]\n    }]\n    </style>\n    <div id=\"boo\" data-gss-id=\"boo\"></div>\n  </div>\n</section>";
+      container.innerHTML = "<section>\n  <div id=\"wrap\" style=\"width:100px;\" data-gss-id=\"999\">\n    <style type=\"text/gss-ast\" scoped>\n    [{\n      \"type\":\"constraint\",\n      \"commands\": [\n        ['==', [\"get$\",\"width\",[\"#\",\"boo\"]], [\"number\",100]]\n      ]\n    }]\n    </style>\n    <div id=\"boo\" data-gss-id=\"boo\"></div>\n  </div>\n</section>";
       containerEngine = GSS(container);
       wrap = document.getElementById('wrap');
       return wrapEngine = GSS(wrap);
@@ -647,7 +636,7 @@ describe('GSS engine', function() {
       container = document.createElement('div');
       container.id = "wrap-container";
       $('#fixtures').appendChild(container);
-      container.innerHTML = "<style type=\"text/gss-ast\" scoped>\n[{\n  \"type\":\"constraint\",\n  \"commands\": [\n    ['==', [\"get$\",\"width\",[\"$id\",\"wrap\"]], [\"number\",69]]\n  ]\n}]\n</style>\n<div id=\"wrap\" style=\"width:100px;\" data-gss-id=\"wrap\">\n  <style type=\"text/gss-ast\" scoped>\n  [{\n    \"type\":\"constraint\",\n    \"commands\": [\n      ['==', [\"get$\",\"width\",[\"$id\",\"boo\"]], [\"get$\",\"width\",[\"$reserved\",\"scope\"]]]\n    ]\n  }]\n  </style>\n  <div id=\"boo\" data-gss-id=\"boo\"></div>\n</div>";
+      container.innerHTML = "<style type=\"text/gss-ast\" scoped>\n[{\n  \"type\":\"constraint\",\n  \"commands\": [\n    ['==', [\"get$\",\"width\",[\"#\",\"wrap\"]], [\"number\",69]]\n  ]\n}]\n</style>\n<div id=\"wrap\" style=\"width:100px;\" data-gss-id=\"wrap\">\n  <style type=\"text/gss-ast\" scoped>\n  [{\n    \"type\":\"constraint\",\n    \"commands\": [\n      ['==', [\"get$\",\"width\",[\"#\",\"boo\"]], [\"get$\",\"width\",[\"$reserved\",\"scope\"]]]\n    ]\n  }]\n  </style>\n  <div id=\"boo\" data-gss-id=\"boo\"></div>\n</div>";
       containerEngine = GSS(container);
       wrap = document.getElementById('wrap');
       return wrapEngine = GSS(wrap);

@@ -93,8 +93,8 @@ describe 'GSS engine', ->
           done()
     
         ast = [
-          ['==', ['get', ['$id','button1'], 'width'], ['get', ['$id','button2'], 'width']]
-          ['==', ['get', ['$id','button1'], 'width'], 100]
+          ['==', ['get', ['#','button1'], 'width'], ['get', ['#','button2'], 'width']]
+          ['==', ['get', ['#','button1'], 'width'], 100]
         ]
         
         it 'before solving the second button should be wider', ->
@@ -190,8 +190,8 @@ describe 'GSS engine', ->
       done()
     
     ast = [
-      ['==', ['get',['$id','button2'],'width'], 222]
-      ['==', ['get',['$id','button1'],'width'], 111]        
+      ['==', ['get',['#','button2'],'width'], 222]
+      ['==', ['get',['#','button1'],'width'], 111]        
     ]
     
     it 'before solving buttons dont exist', ->
@@ -243,13 +243,13 @@ describe 'GSS engine', ->
     
 
     ast = [
-        ['==', ["get", ["$id","b1"], "right"],  ["get",["$id","b2"],"x"]]
-        ['==', ["get", ["$id","w"],  "width"],  200]
-        ['==', ["get", ["$id","w"],  "x"]  ,    ["get",'target']]
-        ['==', ["get", ["$id","b2"], "right"] , ["get",["$id","w"],"right"]] 
+        ['==', ["get", ["#","b1"], "right"],  ["get",["#","b2"],"x"]]
+        ['==', ["get", ["#","w"],  "width"],  200]
+        ['==', ["get", ["#","w"],  "x"]  ,    ["get",'target']]
+        ['==', ["get", ["#","b2"], "right"] , ["get",["#","w"],"right"]] 
         # b2[right] -> 200
-        ['==', ["get", ["$id","b1"], "x"   ] ,  ["get","target"]]        
-        ['==', ["get", ["$id","b1"], "width"] , ["get",["$id","b2"],"width"]]
+        ['==', ["get", ["#","b1"], "x"   ] ,  ["get","target"]]        
+        ['==', ["get", ["#","b1"], "width"] , ["get",["#","b2"],"width"]]
         
         ['==', ["get", "target"], 0]
       ]
@@ -423,11 +423,9 @@ describe 'GSS engine', ->
             ]
           </style>
           """
-        listener = (e) ->
+        engine1.then ->
           expect(engine1.values['col-width-1']).to.equal 111
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       it 'after modified GSS style tag', (done) ->
         engine = GSS(container)
@@ -437,14 +435,12 @@ describe 'GSS engine', ->
               ["==", ["get", "col-width-11"], 1111]
           ]  
         """        
-        listener = (e) ->
+        engine.then ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
           expect(engine1.values['col-width-1']).to.equal undefined
           expect(engine1.values['col-width-11']).to.equal 1111
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       it 'after replaced GSS style tag', (done) ->
         engine2 = GSS(container)
@@ -456,16 +452,13 @@ describe 'GSS engine', ->
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
-        debugger
-        listener = (e) ->
-          engine2 = GSS(container)
+
+        engine2.then ->
           assert engine1 is engine2, "engine is maintained" 
           assert !engine2.values['col-width-1']?, "engine1.vars['col-width-1'] removed" 
           expect(engine2.values['col-width-11']).to.equal undefined
           expect(engine2.values['col-width-2']).to.equal 222
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       it 'Engine after container replaced multiple GSS style tags', (done) ->
         engine2 = GSS(container)
@@ -482,7 +475,7 @@ describe 'GSS engine', ->
           </style>
           <div id="box1" class="box" data-gss-id="12322"></div>
           """
-        listener = (e) ->
+        engine2.then ->
           engine2 = GSS(container)
           expect(engine1).to.equal engine2
           #expect(engine1.styleNode).to.equal document.getElementById 'gssb'
@@ -490,9 +483,7 @@ describe 'GSS engine', ->
           expect(engine1.values['col-width-2']).to.equal undefined
           expect(engine1.values['col-width-3']).to.equal 333
           expect(engine1.values['col-width-4']).to.equal 444
-          container.removeEventListener 'solved', listener
           done()
-        container.addEventListener 'solved', listener
     
       xit 'Engine after container removed', (done) ->
         remove(container)
@@ -525,7 +516,7 @@ describe 'GSS engine', ->
             [{
               "type":"constraint",
               "commands": [
-                ['==', ["get$","width",["$id","boo"]], ["number",100]]
+                ['==', ["get$","width",["#","boo"]], ["number",100]]
               ]
             }]
             </style>
@@ -713,7 +704,7 @@ describe 'GSS engine', ->
           [{
             "type":"constraint",
             "commands": [
-              ['==', ["get$","width",["$id","wrap"]], ["number",69]]
+              ['==', ["get$","width",["#","wrap"]], ["number",69]]
             ]
           }]
           </style>
@@ -722,7 +713,7 @@ describe 'GSS engine', ->
             [{
               "type":"constraint",
               "commands": [
-                ['==', ["get$","width",["$id","boo"]], ["get$","width",["$reserved","scope"]]]
+                ['==', ["get$","width",["#","boo"]], ["get$","width",["$reserved","scope"]]]
               ]
             }]
             </style>

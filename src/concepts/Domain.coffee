@@ -267,13 +267,12 @@ class Domain extends Trigger
 
   constrain: (constraint, operation, meta) ->
 
-    if (other = operation.command.fetch(@, operation)) == constraint
-      if constraint.paths.indexOf(meta.key) > -1
-        return
+    other = operation.command.fetch(@, operation)
 
     constraint.operation = operation.parent
-    (constraint.paths ||= []).push(meta.key)
     (@paths[meta.key] ||= []).push(constraint)
+    if !(constraint.paths?.indexOf(meta.key) > -1)
+      (constraint.paths ||= []).push(meta.key)
 
     return if other == constraint
 
@@ -352,9 +351,9 @@ class Domain extends Trigger
       (@nullified ||= {})[variable.name] = variable
       if @added?[variable.name]
         delete @added[variable.name]
-    if !moving && @values[variable.name] != undefined
-      variable.value = 0
-      #delete @variables[variable.name]
+    #if !moving && @values[variable.name] != undefined
+    #  #variable.value = 0
+    #  #delete @variables[variable.name]
 
     delete @values[variable.name]
     @nullify(variable)
