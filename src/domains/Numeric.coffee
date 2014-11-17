@@ -8,6 +8,7 @@ enables anonymous constraints on immutable values
 Domain  = require('../concepts/Domain')
 Command = require('../concepts/Command')
 Value   = require('../commands/Value')
+Block   = require('../commands/Block')
 
 class Numeric extends Domain
   priority: 10
@@ -40,5 +41,21 @@ Numeric::Value.Expression.define(Value.Expression.algebra)
   #else
   #  scoped = scope
 
+
+Numeric::Block = Block.extend()
+Numeric::Block.Meta = Block.Meta.extend {
+  signature: [
+    body: ['Any']
+  ]
+}, 
+  'object': 
+
+    execute: (result) ->
+      return result
+
+    descend: (engine, operation) -> 
+      meta = operation[0]
+      scope = meta.scope && engine.identity[meta.scope] || engine.scope
+      [operation[1].command.solve(engine, operation[1], '', operation[0])]
     
 module.exports = Numeric

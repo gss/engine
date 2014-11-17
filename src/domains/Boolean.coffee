@@ -32,8 +32,8 @@ Boolean::Constraint = Constraint.extend {},
   ">": (a, b) ->
     return a > b
 
-Boolean::Value = Value.Variable.extend {}, 
-  get: (path, engine) ->
-    return engine.values[path]
+#Boolean::Value = Value.Variable.extend {}, 
+#  get: (path, engine) ->
+#    return engine.values[path]
 
 module.exports = Boolean

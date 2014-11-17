@@ -20819,7 +20819,8 @@ Condition = (function(_super) {
       }
       engine.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + engine.Continuation.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
       if (branch = operation.parent[index]) {
-        result = engine.document.solve(branch, engine.Continuation(path, null, engine.Continuation.DESCEND), scope);
+        debugger;
+        result = engine.Command(branch).solve(engine, branch, engine.Continuation(path, null, engine.Continuation.DESCEND), scope);
       }
       if (switching) {
         if ((_ref1 = engine.pairs) != null) {
@@ -20843,7 +20844,7 @@ Condition = (function(_super) {
         continuation = engine.Continuation(continuation, null, engine.Continuation.DESCEND);
       }
       if (continuation != null) {
-        this.update(engine, operation.parent[1], continuation, scope, void 0, result);
+        this.update(engine.document || engine.abstract, operation.parent[1], continuation, scope, void 0, result);
       }
       return true;
     }
@@ -25168,7 +25169,7 @@ Merges values from all other domains,
 enables anonymous constraints on immutable values
 */
 
-var Command, Domain, Numeric, Value, _ref,
+var Block, Command, Domain, Numeric, Value, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -25177,6 +25178,8 @@ Domain = require('../concepts/Domain');
 Command = require('../concepts/Command');
 
 Value = require('../commands/Value');
+
+Block = require('../commands/Block');
 
 Numeric = (function(_super) {
   __extends(Numeric, _super);
@@ -25205,6 +25208,28 @@ Numeric.prototype.Value.Variable = Value.Variable.extend({}, {
 Numeric.prototype.Value.Expression = Value.Expression.extend();
 
 Numeric.prototype.Value.Expression.define(Value.Expression.algebra);
+
+Numeric.prototype.Block = Block.extend();
+
+Numeric.prototype.Block.Meta = Block.Meta.extend({
+  signature: [
+    {
+      body: ['Any']
+    }
+  ]
+}, {
+  'object': {
+    execute: function(result) {
+      return result;
+    },
+    descend: function(engine, operation) {
+      var meta, scope;
+      meta = operation[0];
+      scope = meta.scope && engine.identity[meta.scope] || engine.scope;
+      return [operation[1].command.solve(engine, operation[1], '', operation[0])];
+    }
+  }
+});
 
 module.exports = Numeric;
 
@@ -25274,9 +25299,12 @@ Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
     if (scope !== engine.scope) {
       meta.scope = engine.identity["yield"](scope);
     }
-    wrapper = [meta, args];
+    wrapper = this.produce(meta, args, operation);
     args.parent = wrapper;
     engine.update(wrapper, void 0, void 0, typeof this.fallback === "function" ? this.fallback(engine) : void 0);
+  },
+  produce: function(meta, args) {
+    return [meta, args];
   }
 });
 
@@ -25284,11 +25312,19 @@ Abstract.prototype.Default.Clause = Abstract.prototype.Default.Top.extend({
   condition: function(engine, operation) {
     var parent;
     if (parent = operation.parent) {
-      return parent.command instanceof Abstract.prototype.Condition;
+      if (parent[1] === operation) {
+        return parent.command instanceof Abstract.prototype.Condition;
+      }
     }
   },
   fallback: function(engine) {
     return engine.solved;
+  },
+  produce: function(meta, args, operation) {
+    var wrapper;
+    wrapper = [meta, args];
+    wrapper.parent = operation.parent;
+    return wrapper;
   }
 });
 
@@ -25418,12 +25454,6 @@ Boolean.prototype.Constraint = Constraint.extend({}, {
   },
   ">": function(a, b) {
     return a > b;
-  }
-});
-
-Boolean.prototype.Value = Value.Variable.extend({}, {
-  get: function(path, engine) {
-    return engine.values[path];
   }
 });
 

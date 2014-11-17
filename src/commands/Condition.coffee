@@ -50,7 +50,8 @@ class Condition extends Command
       engine.engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + engine.Continuation.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
       
       if branch = operation.parent[index]
-        result = engine.document.solve(branch, engine.Continuation(path, null,  engine.Continuation.DESCEND), scope)
+        debugger
+        result = engine.Command(branch).solve(engine, branch, engine.Continuation(path, null,  engine.Continuation.DESCEND), scope)
       if switching
         engine.pairs?.onBeforeSolve()
         engine.queries?.onBeforeSolve()
@@ -68,7 +69,7 @@ class Condition extends Command
       else
         continuation = engine.Continuation(continuation, null, engine.Continuation.DESCEND)
       if continuation?
-        @update(engine, operation.parent[1], continuation, scope, undefined, result)
+        @update(engine.document || engine.abstract, operation.parent[1], continuation, scope, undefined, result)
       return true
       
 Condition.define 'if', {}
