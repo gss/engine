@@ -612,7 +612,7 @@ class Queries
       index = left.index
       while next = op1.parent[++index]
         break if next == right
-        if next[0] == '$virtual'
+        if next[0] == 'virtual'
           return op1.index < op2.index
 
       unless a.nodeType && b.nodeType 

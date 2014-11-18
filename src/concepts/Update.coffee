@@ -215,7 +215,6 @@ Update.prototype =
         if !other.signatures[problem[0]]
           opdomain = Default
         if opdomain && (opdomain.displayName != other.displayName)
-          debugger
           if (j = @domains.indexOf(opdomain, @index + 1)) == -1
             j = @domains.push(opdomain) - 1
             @problems[j] = [problem]

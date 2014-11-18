@@ -29,7 +29,6 @@ class Condition extends Command
     if !!old != !!ascending || (old == undefined && old != ascending)
       #d = engine.pairs.dirty
       unless old == undefined
-        debugger
         engine.solved.remove(path)
         engine.queries.clean(path , continuation, operation.parent, scope)
       

@@ -20794,7 +20794,6 @@ Condition = (function(_super) {
     old = engine.queries[path];
     if (!!old !== !!ascending || (old === void 0 && old !== ascending)) {
       if (old !== void 0) {
-        debugger;
         engine.solved.remove(path);
         engine.queries.clean(path, continuation, operation.parent, scope);
       }
@@ -24760,7 +24759,6 @@ Update.prototype = {
           opdomain = Default;
         }
         if (opdomain && (opdomain.displayName !== other.displayName)) {
-          debugger;
           if ((j = this.domains.indexOf(opdomain, this.index + 1)) === -1) {
             j = this.domains.push(opdomain) - 1;
             this.problems[j] = [problem];
@@ -27131,7 +27129,7 @@ Queries = (function() {
         if (next === right) {
           break;
         }
-        if (next[0] === '$virtual') {
+        if (next[0] === 'virtual') {
           return op1.index < op2.index;
         }
       }
