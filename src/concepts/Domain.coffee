@@ -337,8 +337,8 @@ class Domain extends Trigger
               
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)
-    else
-      (@unconstrained ||= []).push(constraint)
+    else if (@unconstrained ||= []).indexOf(constraint) == -1
+      @unconstrained.push(constraint)
 
 
   declare: (name) ->
@@ -552,11 +552,6 @@ class Domain extends Trigger
           for property, value of object
             @values = {} unless @hasOwnProperty 'values'
             @values[property] = value
-
-
-        unless @events == engine.events
-          engine.addListeners(@events)
-
         
         @Property.compile @Properties::, @
         Properties = @Properties

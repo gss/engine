@@ -172,10 +172,8 @@ Linear::Call.Unsafe = Call.Unsafe.extend {
   extras: 1
 },
 
-  'remove': ->
-    args = Array.prototype.slice.call(arguments)
-    engine = args.pop()
-    engine.remove.apply(engine, remove)
+  'remove': (args ..., engine) ->
+    engine.remove.apply(engine, args)
 
 
 

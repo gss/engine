@@ -70,7 +70,7 @@ class Document extends Abstract
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
 
-    solve: ->
+    
       if @scope.nodeType == 9
         html = @scope.body.parentNode
         klass = html.className
@@ -111,7 +111,6 @@ class Document extends Abstract
       @scope.removeEventListener 'DOMContentLoaded', @
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
-      @events.destroy.apply(@, arguments)
 
   @condition: ->
     @scope?  

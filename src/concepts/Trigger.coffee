@@ -13,7 +13,7 @@ if window?
 
 class Trigger
   constructor: ->
-    @listeners = {}
+    @listeners ||= {}
     @eventHandler = @handleEvent.bind(@)
     @addListeners(@events) if @events
 

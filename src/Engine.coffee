@@ -116,35 +116,6 @@ class Engine extends Domain
 
     return @
 
-  events:
-    # Receieve message from worker
-    message: (e) ->
-      values = e.target.values ||= {}
-      for property, value of e.data
-        values[property] = value
-      if @updating
-        if @updating.busy.length
-          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
-          if (i = @updating.solutions.indexOf(e.target)) > -1
-            @updating.solutions[i] = e.data
-          unless @updating.busy.length
-            return @updating.each(@resolve, @, e.data) || @onSolve()
-          else
-            return @updating.apply(e.data)
-
-      @yield e.data
-
-    # Handle error from worker
-    error: (e) ->
-      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
-
-    destroy: (e) ->
-      if @scope
-        Engine[@scope._gss_id] = undefined
-      if @worker
-        @worker.removeEventListener 'message', @eventHandler
-        @worker.removeEventListener 'error', @eventHandler
-
   # Import exported variables to thread
   substitute: (expressions, result, parent, index) ->
     if result == undefined
@@ -187,6 +158,7 @@ class Engine extends Domain
     # Execute given expressions
     if expressions.length
       @yield expressions
+    return @updating?.solution
 
   # engine.solve({}) - solve with given constants
   # engine.solve([]) - evaluate commands
@@ -430,10 +402,10 @@ class Engine extends Domain
     unless typeof url == 'string' && Worker? && self.onmessage != undefined
       return
 
-    @worker = @getWorker(url)
+    @engine.worker ||= @engine.getWorker(url)
     @worker.url = url
-    @worker.addEventListener 'message', @eventHandler
-    @worker.addEventListener 'error', @eventHandler
+    @worker.addEventListener 'message', @engine.eventHandler
+    @worker.addEventListener 'error', @engine.eventHandler
     @solve = (commands) =>
       @engine.updating ||= new @update
       @engine.updating.postMessage(@worker, commands)

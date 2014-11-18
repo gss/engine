@@ -10,6 +10,36 @@ Iterator   = require('../commands/Iterator')
 
 class Abstract extends Domain
   url: undefined
+
+  events:
+    # Receieve message from worker
+    message: (e) ->
+      values = e.target.values ||= {}
+      for property, value of e.data
+        values[property] = value
+      if @updating
+        if @updating.busy.length
+          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+          if (i = @updating.solutions.indexOf(e.target)) > -1
+            @updating.solutions[i] = e.data
+          unless @updating.busy.length
+            return @updating.each(@resolve, @, e.data) || @onSolve()
+          else
+            return @updating.apply(e.data)
+
+      @yield e.data
+
+    # Handle error from worker
+    error: (e) ->
+      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
+
+    destroy: (e) ->
+      if @scope
+        Engine[@scope._gss_id] = undefined
+      if @worker
+        @worker.removeEventListener 'message', @eventHandler
+        @worker.removeEventListener 'error', @eventHandler
+
   
   constructor: ->
     if @running

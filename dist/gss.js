@@ -20150,46 +20150,8 @@ Engine = (function(_super) {
     return this;
   }
 
-  Engine.prototype.events = {
-    message: function(e) {
-      var i, property, value, values, _base, _ref;
-      values = (_base = e.target).values || (_base.values = {});
-      _ref = e.data;
-      for (property in _ref) {
-        value = _ref[property];
-        values[property] = value;
-      }
-      if (this.updating) {
-        if (this.updating.busy.length) {
-          this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
-          if ((i = this.updating.solutions.indexOf(e.target)) > -1) {
-            this.updating.solutions[i] = e.data;
-          }
-          if (!this.updating.busy.length) {
-            return this.updating.each(this.resolve, this, e.data) || this.onSolve();
-          } else {
-            return this.updating.apply(e.data);
-          }
-        }
-      }
-      return this["yield"](e.data);
-    },
-    error: function(e) {
-      throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
-    },
-    destroy: function(e) {
-      if (this.scope) {
-        Engine[this.scope._gss_id] = void 0;
-      }
-      if (this.worker) {
-        this.worker.removeEventListener('message', this.eventHandler);
-        return this.worker.removeEventListener('error', this.eventHandler);
-      }
-    }
-  };
-
   Engine.prototype.substitute = function(expressions, result, parent, index) {
-    var exp, expression, i, path, start, _i;
+    var exp, expression, i, path, start, _i, _ref;
     if (result === void 0) {
       start = true;
       result = null;
@@ -20239,8 +20201,9 @@ Engine = (function(_super) {
       this.updating.each(this.resolve, this, result);
     }
     if (expressions.length) {
-      return this["yield"](expressions);
+      this["yield"](expressions);
     }
+    return (_ref = this.updating) != null ? _ref.solution : void 0;
   };
 
   Engine.prototype.solve = function() {
@@ -20513,17 +20476,18 @@ Engine = (function(_super) {
   })();
 
   Engine.prototype.useWorker = function(url) {
-    var _this = this;
+    var _base,
+      _this = this;
     if (!(typeof url === 'string' && (typeof Worker !== "undefined" && Worker !== null) && self.onmessage !== void 0)) {
       return;
     }
-    this.worker = this.getWorker(url);
+    (_base = this.engine).worker || (_base.worker = this.engine.getWorker(url));
     this.worker.url = url;
-    this.worker.addEventListener('message', this.eventHandler);
-    this.worker.addEventListener('error', this.eventHandler);
+    this.worker.addEventListener('message', this.engine.eventHandler);
+    this.worker.addEventListener('error', this.engine.eventHandler);
     this.solve = function(commands) {
-      var _base;
-      (_base = _this.engine).updating || (_base.updating = new _this.update);
+      var _base1;
+      (_base1 = _this.engine).updating || (_base1.updating = new _this.update);
       _this.engine.updating.postMessage(_this.worker, commands);
       return _this.worker;
     };
@@ -23320,8 +23284,8 @@ Domain = (function(_super) {
     }
     if ((i = (_ref3 = this.constrained) != null ? _ref3.indexOf(constraint) : void 0) > -1) {
       return this.constrained.splice(i, 1);
-    } else {
-      return (this.unconstrained || (this.unconstrained = [])).push(constraint);
+    } else if ((this.unconstrained || (this.unconstrained = [])).indexOf(constraint) === -1) {
+      return this.unconstrained.push(constraint);
     }
   };
 
@@ -23621,9 +23585,6 @@ Domain = (function(_super) {
             }
             this.values[property] = value;
           }
-        }
-        if (this.events !== engine.events) {
-          engine.addListeners(this.events);
         }
         this.Property.compile(this.Properties.prototype, this);
         Properties = this.Properties;
@@ -24200,7 +24161,7 @@ if (typeof window !== "undefined" && window !== null) {
 
 Trigger = (function() {
   function Trigger() {
-    this.listeners = {};
+    this.listeners || (this.listeners = {});
     this.eventHandler = this.handleEvent.bind(this);
     if (this.events) {
       this.addListeners(this.events);
@@ -25222,6 +25183,44 @@ Abstract = (function(_super) {
 
   Abstract.prototype.url = void 0;
 
+  Abstract.prototype.events = {
+    message: function(e) {
+      var i, property, value, values, _base, _ref;
+      values = (_base = e.target).values || (_base.values = {});
+      _ref = e.data;
+      for (property in _ref) {
+        value = _ref[property];
+        values[property] = value;
+      }
+      if (this.updating) {
+        if (this.updating.busy.length) {
+          this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
+          if ((i = this.updating.solutions.indexOf(e.target)) > -1) {
+            this.updating.solutions[i] = e.data;
+          }
+          if (!this.updating.busy.length) {
+            return this.updating.each(this.resolve, this, e.data) || this.onSolve();
+          } else {
+            return this.updating.apply(e.data);
+          }
+        }
+      }
+      return this["yield"](e.data);
+    },
+    error: function(e) {
+      throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
+    },
+    destroy: function(e) {
+      if (this.scope) {
+        Engine[this.scope._gss_id] = void 0;
+      }
+      if (this.worker) {
+        this.worker.removeEventListener('message', this.eventHandler);
+        return this.worker.removeEventListener('error', this.eventHandler);
+      }
+    }
+  };
+
   function Abstract() {
     if (this.running) {
       this.compile();
@@ -25851,18 +25850,15 @@ Document = (function(_super) {
       }, 20);
     },
     scroll: function(e) {
-      var id;
+      var html, id, klass, _i, _len, _ref, _ref1, _ref2;
       if (e == null) {
         e = '::window';
       }
       id = e.target && this.identity["yield"](e.target) || e;
-      return this.solve(id + ' scrolled', function() {
+      this.solve(id + ' scrolled', function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
       });
-    },
-    solve: function() {
-      var html, id, klass, _i, _len, _ref, _ref1, _ref2;
       if (this.scope.nodeType === 9) {
         html = this.scope.body.parentNode;
         klass = html.className;
@@ -25915,8 +25911,7 @@ Document = (function(_super) {
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
       this.scope.removeEventListener('scroll', this);
-      window.removeEventListener('resize', this);
-      return this.events.destroy.apply(this, arguments);
+      return window.removeEventListener('resize', this);
     }
   };
 
@@ -25936,7 +25931,8 @@ module.exports = Document;
 require.register("gss/lib/domains/Linear.js", function(exports, require, module){
 var Block, Call, Command, Constraint, Domain, Linear, Value, _ref,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __slice = [].slice;
 
 Domain = require('../concepts/Domain');
 
@@ -26155,10 +26151,9 @@ Linear.prototype.Call.Unsafe = Call.Unsafe.extend({
   extras: 1
 }, {
   'remove': function() {
-    var args, engine;
-    args = Array.prototype.slice.call(arguments);
-    engine = args.pop();
-    return engine.remove.apply(engine, remove);
+    var args, engine, _i;
+    args = 2 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 1) : (_i = 0, []), engine = arguments[_i++];
+    return engine.remove.apply(engine, args);
   }
 });
 
