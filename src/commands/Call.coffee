@@ -9,6 +9,6 @@ class Call extends Command
 
 class Call.Unsafe extends Call
 
-  signature: null
+  signature: false
 
 module.exports = Call

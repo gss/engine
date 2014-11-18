@@ -181,18 +181,17 @@ class Queries
 
   # Remove element from collection needlely
   removeFromCollection: (node, continuation, operation, scope, needle, contd) ->
-    return null unless (collection = @get(continuation))?.continuations
+    collection = @get(continuation)
     length = collection.length
     keys = collection.continuations
     paths = collection.paths
     scopes = collection.scopes
     duplicate = null
 
-    if !contd?
-      refs = [undefined]
-    else
-      refs = @engine.Continuation.getVariants(contd)
-
+    #if !contd?
+    #  refs = [undefined]
+    #else
+    refs = @engine.Continuation.getVariants(contd)
     # Dont remove it if element matches more than one selector
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
@@ -217,10 +216,9 @@ class Queries
         # Fall back to duplicate with a different key
         if keys
           negative = false#if refs then null else false
-          return negative if scopes[index] != scope
-          return negative if refs.indexOf(paths[index]) == -1
-          return negative if keys[index] != needle
-          @snapshot continuation, collection
+          return null if scopes[index] != scope
+          return null if refs.indexOf(paths[index]) == -1
+          return null if keys[index] != needle
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -259,34 +257,38 @@ class Queries
 
       collection = @get(continuation)
 
-      if parent = operation?.parent
-        if @engine.isCollection(collection)
-          string = continuation + id
-        else
-          string = continuation
-        parent.command.release?(node, @engine, operation, string, scope)
-        
-      collection = @get(continuation)
       if collection && @engine.isCollection(collection)
         @snapshot continuation, collection
       
-      removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
+        removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
         
-      @engine.pairs.remove(id, continuation)
+      else
+        removed = undefined
 
-      # Remove all watchers that match continuation path
-      ref = continuation + (collection?.length? && id || '')
       if removed != false
+        @engine.pairs.remove(id, continuation)
+
+        if parent = operation?.parent
+          if @engine.isCollection(collection)
+            string = continuation + id
+          else
+            string = continuation
+          parent.command.release?(node, @engine, operation, string, scope)
+          
+      
+        # Remove all watchers that match continuation path
+        ref = continuation + (collection?.length? && id || '')
+
         if ref.charAt(0) == @engine.Continuation.PAIR
           @unobserve(id, ref, undefined, undefined, ref, scope)
         else
           @unobserve(id, ref, undefined, undefined, ref)
 
-      if recursion != continuation
-        if (removed != null || !parent?.command.release)
-          @updateCollections operation, continuation, scope, recursion, node, continuation, contd
-        if @engine.isCollection(collection) && removed != false
-          @clean(continuation + id)
+        if recursion != continuation
+          if removed != false #true#(removed || !parent?.command.release)
+            @updateCollections operation, continuation, scope, recursion, node, continuation, contd
+          if removed
+            @clean(continuation + id)
 
     else if node
       # Detach queries attached to an element when removing element by id
@@ -297,15 +299,15 @@ class Queries
 
   clean: (path, continuation, operation, scope, bind, contd) ->
     if command = path.command
-      path = (continuation || '') + (command.uid || '') + (command.selector || command.key || '')
+      path = (continuation || '') + (operation.uid || '') + (command.selector || command.key || '')
     continuation = path if bind
     result = @get(path)
     
     if (result = @get(path, undefined, true)) != undefined
       @each 'remove', result, path, operation, scope, operation, false, contd
 
-    if scope && operation.command.cleaning
-      @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
+    #if scope && operation.command.cleaning
+    #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     @engine.solved.remove(path)
     @engine.stylesheets?.remove(path)

@@ -11,8 +11,8 @@ class Value.Variable extends Value
   
   constructor: ->
     
-  before: (args, engine, operation, continuation, scope) ->
-    if (value = scope?.values?[args[0]])?
+  before: (args, engine, operation, continuation, scope, ascender, ascending) ->
+    if (value = ascending?.values?[args[0]])?
       return value
 
 # Algebraic expression

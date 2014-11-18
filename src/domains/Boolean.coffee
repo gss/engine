@@ -6,8 +6,14 @@ Constraint = require('../commands/Constraint')
 
 class Boolean extends Numeric
   immutable: true
+
   
-Boolean::Constraint = Constraint.extend {},
+Boolean::Constraint = Constraint.extend {
+  signature: [
+    left:     ['Value', 'Number', 'Constraint'],
+    right:    ['Value', 'Number', 'Constraint']
+  ]
+},
   "&&": (a, b) ->
     return a && b
 
@@ -31,9 +37,5 @@ Boolean::Constraint = Constraint.extend {},
 
   ">": (a, b) ->
     return a > b
-
-#Boolean::Value = Value.Variable.extend {}, 
-#  get: (path, engine) ->
-#    return engine.values[path]
 
 module.exports = Boolean

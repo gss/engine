@@ -24,11 +24,11 @@ class Signatures
     command.signed = storage = []
     if signature = object.signature
       @get command, storage, signature
+    else if signature == false
+      storage.push ['default']
     else if signatures = object.signatures
       for signature in signatures
         @get command, storage, signature
-    else
-      storage.push ['default']
     return storage
         
   # Reorder keys within optional group

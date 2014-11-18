@@ -42,7 +42,10 @@ Abstract::Default.Top = Abstract::Default.extend
       meta.scope = engine.identity.yield(scope)
     wrapper = @produce(meta, args, operation)
     args.parent = wrapper
-    engine.update wrapper, undefined, undefined, @fallback?(engine)
+    if domain = @domain?(engine)
+      wrapper.domain ||= domain
+
+    engine.update wrapper, undefined, undefined, domain
     return
 
   produce: (meta, args)->
@@ -56,7 +59,7 @@ Abstract::Default.Clause = Abstract::Default.Top.extend
       if parent[1] == operation
         return parent.command instanceof Abstract::Condition
 
-  fallback: (engine) ->
+  domain: (engine) ->
     return engine.solved
 
   produce: (meta, args, operation) ->

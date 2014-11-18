@@ -40,7 +40,6 @@ class Console
     return if typeof a != 'string'
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
     if document?
-      console.log(b, c)
       breakpoint = String(@stringify([b,c])).trim().replace /\r?\n+|\r|\s+/g, ' '
       if @breakpoint == a + breakpoint
         debugger

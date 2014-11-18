@@ -353,7 +353,7 @@ describe('Nested Rules', function() {
           box1.parentNode.removeChild(box1);
           return engine.once('solve', function() {
             expect(stringify(engine.updated.getProblems())).to.eql(stringify([
-              [['remove', "#box1!>"], ['remove', "#box1"], ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]], [['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]], [
+              [['remove', "#box1!>,>div$vessel0↓ :first-child$box1"], ['remove', "#box1!>"], ['remove', "#box1"]], [['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]], [
                 [
                   {
                     key: '#box1!>,>div$vessel0↓ :first-child$box2',
@@ -389,7 +389,7 @@ describe('Nested Rules', function() {
               GSS.console.error('box1.remove()');
               return engine.once('solve', function() {
                 expect(stringify(engine.updated.getProblems())).to.eql(stringify([
-                  [['remove', "#box1!>"], ['remove', "#box1"], ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]], [['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]], [
+                  [['remove', "#box1!>,>div$vessel0↓ :first-child$box1"], ['remove', "#box1!>"], ['remove', "#box1"]], [['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]], [
                     [
                       {
                         key: '#box1!>,>div$vessel0↓ :first-child$box2',

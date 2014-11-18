@@ -56,6 +56,6 @@ Numeric::Block.Meta = Block.Meta.extend {
     descend: (engine, operation) -> 
       meta = operation[0]
       scope = meta.scope && engine.identity[meta.scope] || engine.scope
-      [operation[1].command.solve(engine, operation[1], '', operation[0])]
+      [operation[1].command.solve(engine, operation[1], meta.key, scope, undefined, operation[0])]
     
 module.exports = Numeric

@@ -1,6 +1,6 @@
 Command = require('../concepts/Command')
 
-class Query extends Command
+Query = Command.extend
   type: 'Query'
   
   constructor: (operation) ->

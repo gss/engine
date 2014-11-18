@@ -16,46 +16,29 @@ class Condition extends Command
   domain: 'solved'
 
   update: (engine, operation, continuation, scope, ascender, ascending) ->
-    operation.parent.uid ||= '@' + (engine.queries.uid = (engine.queries.uid ||= 0) + 1)
-    path = continuation + operation.parent.uid
-    id = scope._gss_id
-    watchers = engine.queries.watchers[id] ||= []
+
+    watchers = engine.queries.watchers[scope._gss_id] ||= []
     if !watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) == -1
       watchers.push operation.parent, continuation, scope
 
-    condition = ascending && (typeof ascending != 'object' || ascending.length != 0)
-    if @inverted
-      condition = !condition
-      
-    index = condition && 2 || 3
     
+    operation.parent.uid ||= '@' + (engine.queries.uid = (engine.queries.uid || 0) + 1)
+    path = continuation + operation.parent.uid
+
     old = engine.queries[path]
-    if !!old != !!condition || (old == undefined && old != condition)
-      d = engine.pairs.dirty
+    if !!old != !!ascending || (old == undefined && old != ascending)
+      #d = engine.pairs.dirty
       unless old == undefined
-        engine.queries.clean(engine.Continuation(path) , continuation, operation.parent, scope)
-      unless engine.switching
-        switching = engine.switching = true
-
-      engine.queries[path] = condition
-      if switching
-        if !d && (d = engine.pairs.dirty)
-          engine.pairs.onBeforeSolve()
-
-        if engine.updating
-          collections = engine.updating.collections
-          engine.updating.collections = {}
-          engine.updating.previous = collections
-
-      engine.engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (condition && 'if' || 'else') + engine.Continuation.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
-      
-      if branch = operation.parent[index]
         debugger
+        engine.solved.remove(path)
+        engine.queries.clean(path , continuation, operation.parent, scope)
+      
+      engine.queries[path] = ascending
+
+      index = ascending ^ @inverted && 2 || 3
+      engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + engine.Continuation.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
+      if branch = operation.parent[index]
         result = engine.Command(branch).solve(engine, branch, engine.Continuation(path, null,  engine.Continuation.DESCEND), scope)
-      if switching
-        engine.pairs?.onBeforeSolve()
-        engine.queries?.onBeforeSolve()
-        engine.switching = undefined
 
       engine.console.groupEnd(path)
 

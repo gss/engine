@@ -110,7 +110,7 @@ class Command
           
       when 'object'
         if continuation.indexOf(engine.Continuation.PAIR) > -1
-            return result
+          return result
         
       when 'boolean'
         return
@@ -124,10 +124,10 @@ class Command
       @log(args, domain, operation, continuation)
 
       # Execute command with hooks
-      result = @before(args, domain, operation, continuation, scope)
+      result = @before(args, domain, operation, continuation, scope, ascender, ascending)
       result ?= @execute.apply(@, args)
-      if result = @after(args, result, domain, operation, continuation, scope)
-        continuation = @continue(result, domain, operation, continuation, scope)
+      if result = @after(args, result, domain, operation, continuation, scope, ascender, ascending)
+        continuation = @continue(result, domain, operation, continuation, scope, ascender, ascending)
 
     if result?
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
@@ -392,6 +392,13 @@ class Command.List extends Command
 # An optional command for unmatched ast
 class Command.Default extends Command
   type: 'Default'
+
+  extras: 2
+
+  execute: (args..., engine, operation) ->
+    args.unshift operation[0]
+    return args
+    
   constructor: ->
 
 # Command for objects called as functions

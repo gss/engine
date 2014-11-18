@@ -156,7 +156,7 @@ Linear::Block.Meta = Block.Meta.extend {
     descend: (engine, operation) -> 
       operation[1].parent = operation
       [
-        operation[1].command.solve(engine, operation[1], '', operation[0])
+        operation[1].command.solve(engine, operation[1], '', undefined, undefined, operation[0])
         engine, 
         operation
       ]

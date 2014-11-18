@@ -473,9 +473,9 @@ describe 'Nested Rules', ->
 
             expect(stringify(engine.updated.getProblems())).to.eql stringify([
               [
+                ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
                 ['remove', "#box1!>"]
                 ['remove', "#box1"]
-                ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
               ]
               [['remove',  "#box1!>,>div$vessel0↓ :first-child$box1"]]
               [[
@@ -518,9 +518,9 @@ describe 'Nested Rules', ->
               engine.once 'solve', ->
                 expect(stringify(engine.updated.getProblems())).to.eql stringify([
                   [
+                    ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
                     ['remove', "#box1!>"]
                     ['remove', "#box1"]
-                    ['remove', "#box1!>,>div$vessel0↓ :first-child$box1"]
                   ]
                   [['remove',  "#box1!>,>div$vessel0↓ :first-child$box1"]]
                   

@@ -1549,10 +1549,10 @@ describe 'End - to - End', ->
     
         <style type="text/gss">
           [col-gap] == 16;
-          ::scope[size] == ::scope[intrinsic-size];
-          ::scope[left] == 0;
+          $[size] == $[intrinsic-size];
+          $[left] == 0;
         
-          @h |("col-1...8")-[col-gap]-...| in(::scope) !require {
+          @h |("col-1...8")-[col-gap]-...| in($) !require {
             width: == [col-width] !require;
           }
           
@@ -1860,6 +1860,7 @@ describe 'End - to - End', ->
     describe '|| over two variables', ->
       it 'should compute values', (done) ->
         
+        debugger
         engine.assumed.merge A: 200, B: 200
 
         engine.once 'solve', ->     
@@ -2254,10 +2255,10 @@ describe 'End - to - End', ->
               #box2[width] == 19;
           
               .box {
-                @if ::scope[intrinsic-width] < 10 {
+                @if $[intrinsic-width] < 10 {
                   margin-top: 1px;
                 }
-                @if ::scope[intrinsic-width] > 10 {
+                @if $[intrinsic-width] > 10 {
                   padding-top: 1px;
                 }
                 @if ::[width] < 10 {
@@ -2747,11 +2748,11 @@ describe 'End - to - End', ->
         </article>
 
         <style type="text/gss">
-          ::scope[width] == 300;
-          ::scope[left] == 0;
-          ::scope[top] == 0;
+          $[width] == 300;
+          $[left] == 0;
+          $[top] == 0;
 
-          @v |(article)... in(::scope) {
+          @v |(article)... in($) {
             height: >= 0;
           }
 

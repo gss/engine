@@ -100,13 +100,16 @@ class Domain extends Trigger
   transact: ->
     @setup()
     unless @changes && @hasOwnProperty('changes')
-      @changes = {}
       if @disconnected
         @mutations?.disconnect(true)
+      @changes = {}
+
 
   commit: ->
     changes = @changes
     @changes = undefined
+    if @disconnected
+      @mutations?.connect(true)
     return changes
 
   watch: (object, property, operation, continuation, scope) ->
@@ -184,9 +187,9 @@ class Domain extends Trigger
     path = @getPath(object, property)
     old = @values[path]
     return if old == value
-    if @updating
-      @transact()
-      @changes[path] = value ? null
+
+    @transact()
+    @changes[path] = value ? null
 
 
     if value?

@@ -1,6 +1,6 @@
 Command = require('../concepts/Command')
 
-class Constraint extends Command
+Constraint = Command.extend
   type: 'Constraint'
   
   signature: [
@@ -29,12 +29,12 @@ class Constraint extends Command
         if engine.constraints?.indexOf(constraint) > -1
           return constraint
 
-  before: (args, engine, operation, continuation, scope) ->
-    return @get(engine, operation, scope)
+  before: (args, engine, operation, continuation, scope, ascender, ascending) ->
+    return @get(engine, operation, ascending)
   
-  after: (args, result, engine, operation, continuation, scope) ->
+  after: (args, result, engine, operation, continuation, scope, ascender, ascending) ->
     if result.hashCode
-      return ((engine.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(scope)] ||= result
+      return ((engine.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(ascending)] ||= result
     return result
 
 module.exports = Constraint

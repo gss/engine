@@ -411,7 +411,7 @@ Selector.define
 
   ':first-child':
     tags: ['selector']
-    Selecter: (node) ->
+    Combinator: (node) ->
       return node unless node.previousElementSibling
 
   ':last-child':
@@ -460,7 +460,7 @@ Selector.define
     tags: ['selector']
 
     # Match all kinds of arguments
-    signature: null,
+    signature: false
 
     separator: ','
 

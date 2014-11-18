@@ -1211,7 +1211,7 @@ describe('End - to - End', function() {
       engine = window.$engine = GSS(container);
       container.style.width = '400px';
       container.style.height = '100px';
-      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      ::scope[size] == ::scope[intrinsic-size];\n      ::scope[left] == 0;\n    \n      @h |(\"col-1...8\")-[col-gap]-...| in(::scope) !require {\n        width: == [col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in(\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in(\"col-3\");\n        }\n      }\n    </style>\n    ";
+      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |(\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == [col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in(\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in(\"col-3\");\n        }\n      }\n    </style>\n    ";
       return engine.then(function(solution) {
         expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 2);
         engine.id('box').click();
@@ -1459,6 +1459,7 @@ describe('End - to - End', function() {
     });
     describe('|| over two variables', function() {
       return it('should compute values', function(done) {
+        debugger;
         engine.assumed.merge({
           A: 200,
           B: 200
@@ -1706,7 +1707,7 @@ describe('End - to - End', function() {
           expect(engine.id("box2").style.zIndex).to.eql('2');
           return done();
         };
-        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n    #box1[width] == 9;\n    #box2[width] == 19;\n\n    .box {\n      @if ::scope[intrinsic-width] < 10 {\n        margin-top: 1px;\n      }\n      @if ::scope[intrinsic-width] > 10 {\n        padding-top: 1px;\n      }\n      @if ::[width] < 10 {\n        z-index: 1;\n      }\n      @else {\n        z-index: 2;\n      }\n    }\n\n  </style>";
+        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n    #box1[width] == 9;\n    #box2[width] == 19;\n\n    .box {\n      @if $[intrinsic-width] < 10 {\n        margin-top: 1px;\n      }\n      @if $[intrinsic-width] > 10 {\n        padding-top: 1px;\n      }\n      @if ::[width] < 10 {\n        z-index: 1;\n      }\n      @else {\n        z-index: 2;\n      }\n    }\n\n  </style>";
         return engine.once('solve', listen);
       });
     });
@@ -1941,7 +1942,7 @@ describe('End - to - End', function() {
     });
     describe("context-specific VFL", function() {
       return it('should work', function(done) {
-        container.innerHTML = "<style>\n  article *{\n    padding: 0;\n    margin: 0\n  }\n</style>\n<article id=\"article1\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title1\"><span style=\"display:block; height: 20px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc1\"><span style=\"display:block; height: 40px; width: 10px\"></span></p>\n</article>\n<article id=\"article2\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title2\"><span style=\"display:block; height: 10px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc2\"><span style=\"display:block; height: 30px; width: 10px\"></span></p>\n</article>\n\n<style type=\"text/gss\">\n  ::scope[width] == 300;\n  ::scope[left] == 0;\n  ::scope[top] == 0;\n\n  @v |(article)... in(::scope) {\n    height: >= 0;\n  }\n\n  article {\n    @v |\n        -1-\n        (& .title)\n        -2-\n        (& .desc)\n        -3-\n        | \n        in(&) {\n          height: == ::[intrinsic-height];\n    }\n  }\n\n</style>";
+        container.innerHTML = "<style>\n  article *{\n    padding: 0;\n    margin: 0\n  }\n</style>\n<article id=\"article1\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title1\"><span style=\"display:block; height: 20px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc1\"><span style=\"display:block; height: 40px; width: 10px\"></span></p>\n</article>\n<article id=\"article2\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title2\"><span style=\"display:block; height: 10px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc2\"><span style=\"display:block; height: 30px; width: 10px\"></span></p>\n</article>\n\n<style type=\"text/gss\">\n  $[width] == 300;\n  $[left] == 0;\n  $[top] == 0;\n\n  @v |(article)... in($) {\n    height: >= 0;\n  }\n\n  article {\n    @v |\n        -1-\n        (& .title)\n        -2-\n        (& .desc)\n        -3-\n        | \n        in(&) {\n          height: == ::[intrinsic-height];\n    }\n  }\n\n</style>";
         return engine.then(function(solution) {
           var article, expectation, prop, value;
           expectation = {
