@@ -8434,7 +8434,7 @@ parse = function(source) {
 };
 
 vflHook = function(name, terms, commands) {
-  var i, nestedCommand, newCommands, o, prefix, ruleSet, s, selector, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+  var i, nestedCommand, newCommands, o, ruleSet, s, selector, _i, _j, _len, _len1, _ref, _ref1, _ref2;
   if (commands == null) {
     commands = [];
   }
@@ -8450,19 +8450,22 @@ vflHook = function(name, terms, commands) {
     _ref1 = o.selectors;
     for (i = _j = 0, _len1 = _ref1.length; _j < _len1; i = ++_j) {
       selector = _ref1[i];
-      prefix = '';
-      if (selector[0] === "(") {
-        prefix = "(";
-        selector = selector.substr(1, selector.length - 1);
-      }
-      if (selector.indexOf("&") !== 0) {
-        if (selector.indexOf("::") !== 0) {
-          if (selector.indexOf('"') !== 0) {
-            prefix += "::scope ";
-          }
-        }
-      }
-      ruleSet += prefix + selector;
+      /* to prepend ::scope inside parans
+      prefix = ''
+      if selector[0] is "("
+        prefix = "("
+        selector = selector.substr(1,selector.length-1)
+      
+      # prepend selector with ::scope unless
+      if selector.indexOf("&") isnt 0
+        if selector.indexOf("::") isnt 0
+          if selector.indexOf('"') isnt 0
+            prefix += "::scope "
+      
+      ruleSet += prefix + selector
+      */
+
+      ruleSet += selector;
       if (i !== o.selectors.length - 1) {
         ruleSet += ", ";
       }
@@ -20976,7 +20979,7 @@ Query = Command.extend({
     return string;
   },
   push: function(operation) {
-    var arg, cmd, i, index, inherited, match, tag, tags, _i, _j, _k, _l, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var arg, cmd, i, index, inherited, match, tag, tags, _i, _j, _k, _l, _len, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     for (index = _i = 1, _ref = operation.length; 1 <= _ref ? _i < _ref : _i > _ref; index = 1 <= _ref ? ++_i : --_i) {
       if (cmd = (_ref1 = operation[index]) != null ? _ref1.command : void 0) {
         inherited = this.inherit(cmd, inherited);
@@ -20987,8 +20990,8 @@ Query = Command.extend({
         tag = tags[i];
         match = true;
         for (index = _k = 1, _ref2 = operation.length; 1 <= _ref2 ? _k < _ref2 : _k > _ref2; index = 1 <= _ref2 ? ++_k : --_k) {
-          if (cmd = (_ref3 = operation[index]) != null ? _ref3.command : void 0) {
-            if (!(((_ref4 = cmd.tags) != null ? _ref4.indexOf(tag) : void 0) > -1)) {
+          if (cmd = (_ref3 = (arg = operation[index])) != null ? _ref3.command : void 0) {
+            if (!(((_ref4 = cmd.tags) != null ? _ref4.indexOf(tag) : void 0) > -1) || !this.checkers[tag](this, cmd, operation, arg, inherited)) {
               match = false;
               break;
             }
@@ -20996,9 +20999,8 @@ Query = Command.extend({
         }
         if (match) {
           inherited = false;
-          for (i = _l = 1, _ref5 = operation.length; 1 <= _ref5 ? _l < _ref5 : _l > _ref5; i = 1 <= _ref5 ? ++_l : --_l) {
-            arg = operation[i];
-            if (cmd = arg != null ? arg.command : void 0) {
+          for (index = _l = 1, _ref5 = operation.length; 1 <= _ref5 ? _l < _ref5 : _l > _ref5; index = 1 <= _ref5 ? ++_l : --_l) {
+            if (cmd = (_ref6 = (arg = operation[index])) != null ? _ref6.command : void 0) {
               inherited = this.mergers[tag](this, cmd, operation, arg, inherited);
             }
           }
@@ -21050,7 +21052,8 @@ Query = Command.extend({
     return engine.pairs.getSolution(operation, continuation, scope);
   },
   prepare: function() {},
-  mergers: {}
+  mergers: {},
+  checkers: {}
 });
 
 module.exports = Query;
@@ -21159,8 +21162,8 @@ Selector = (function(_super) {
 
 })(Query);
 
-Selector.prototype.mergers.selector = function(command, other, parent, operation, inherited) {
-  var left, right, selecting;
+Selector.prototype.checkers.selector = function(command, other, parent, operation) {
+  var selecting;
   if (!other.head) {
     if (other instanceof Selector.Combinator && operation[0] !== ' ') {
       return;
@@ -21173,7 +21176,18 @@ Selector.prototype.mergers.selector = function(command, other, parent, operation
     if (!other.selecting) {
       return;
     }
-  } else if (other.selecting) {
+  }
+  if (parent[0] === ',') {
+    if ((other.selector || other.key) !== other.path) {
+      return;
+    }
+  }
+  return true;
+};
+
+Selector.prototype.mergers.selector = function(command, other, parent, operation, inherited) {
+  var left, right;
+  if (other.selecting) {
     command.selecting || (command.selecting = true);
   }
   other.head = parent;
@@ -21300,7 +21314,8 @@ Selector.define({
       if (node.id === value) {
         return node;
       }
-    }
+    },
+    singular: true
   },
   ' ': {
     tags: ['selector'],
@@ -21514,6 +21529,9 @@ Selector.define({
     relative: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
+      if (node == null) {
+        node = scope;
+      }
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if ((index == null) || index === -1 || index === collection.length - 1) {
@@ -21526,6 +21544,9 @@ Selector.define({
     relative: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
+      if (node == null) {
+        node = scope;
+      }
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index === -1 || !index) {
@@ -21539,6 +21560,9 @@ Selector.define({
     singular: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
+      if (node == null) {
+        node = scope;
+      }
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index == null) {
@@ -21554,6 +21578,9 @@ Selector.define({
     singular: true,
     Combinator: function(node, engine, operation, continuation, scope) {
       var collection, index;
+      if (node == null) {
+        node = scope;
+      }
       collection = engine.queries.getScopedCollection(operation, continuation, scope);
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index == null) {
@@ -22305,9 +22332,6 @@ Command = (function() {
   Command.prototype.solve = function(engine, operation, continuation, scope, ascender, ascending) {
     var args, domain, result;
     domain = operation.domain || engine;
-    if (this.head) {
-      return this.jump(domain, operation, continuation, scope, ascender, ascending);
-    }
     switch (typeof (result = this.retrieve(domain, operation, continuation, scope))) {
       case 'string':
         if (this.stringy && result.charAt(0) !== engine.Continuation.PAIR) {
@@ -22324,6 +22348,9 @@ Command = (function() {
         break;
       case 'boolean':
         return;
+    }
+    if (this.head) {
+      return this.jump(domain, operation, continuation, scope, ascender, ascending);
     }
     if (result === void 0) {
       args = this.descend(domain, operation, continuation, scope, ascender, ascending);
@@ -22750,7 +22777,7 @@ Continuation = (function() {
     return bits.join(this.DESCEND);
   };
 
-  Continuation.prototype.CanonicalizeRegExp = new RegExp("" + "([^" + Continuation.prototype.PAIR + "])" + "\\$[^" + Continuation.prototype.ASCEND + "]+" + "(?:" + Continuation.prototype.ASCEND + "|$)", "g");
+  Continuation.prototype.CanonicalizeRegExp = new RegExp("" + "([^" + Continuation.prototype.PAIR + ",])" + "\\$[^" + Continuation.prototype.ASCEND + "]+" + "(?:" + Continuation.prototype.ASCEND + "|$)", "g");
 
   Continuation.prototype.getCanonicalSelector = function(selector) {
     selector = selector.trim();
@@ -27496,6 +27523,7 @@ Pairs = (function() {
     left = this.engine.Continuation.getCanonicalPath(continuation);
     parent = this.engine.Operation.getRoot(operation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
+      parent.left = operation;
       this.lefts.push(parent, left, scope);
       contd = this.engine.Continuation.PAIR;
       return this.engine.Continuation.PAIR;
@@ -27506,6 +27534,7 @@ Pairs = (function() {
   };
 
   Pairs.prototype.onRight = function(operation, continuation, scope, left, right) {
+    debugger;
     var index, op, pairs, parent, pushed, _base, _i, _len, _ref;
     right = this.engine.Continuation.getCanonicalPath(continuation.substring(0, continuation.length - 1));
     parent = this.engine.Operation.getRoot(operation);
@@ -27641,14 +27670,23 @@ Pairs = (function() {
   };
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
-    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, sid, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
+    var I, J, a, added, b, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, sid, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     a = this.engine.queries.get(left);
     b = this.engine.queries.get(right);
     sid = this.engine.identity["yield"](scope);
     leftOld = this.engine.updating.collections.hasOwnProperty(left) ? this.engine.queries.filterByScope(this.engine.updating.collections[left], scope) : this.engine.queries.filterByScope(a, scope);
     rightOld = this.engine.updating.collections.hasOwnProperty(right) ? this.engine.queries.filterByScope(this.engine.updating.collections[right], scope) : this.engine.queries.filterByScope(b, scope);
-    leftNew = this.engine.queries.filterByScope(a, scope, operation);
-    rightNew = this.engine.queries.filterByScope(b, scope, operation, true);
+    root = this.engine.Operation.getRoot(operation);
+    if (leftNew = this.engine.queries.filterByScope(a, scope, operation)) {
+      if (root.left.command.singular && (leftNew != null ? leftNew.push : void 0)) {
+        leftNew = leftNew[0];
+      }
+    }
+    if (rightNew = this.engine.queries.filterByScope(b, scope, operation, true)) {
+      if (root.right.command.singular && (rightNew != null ? rightNew.push : void 0)) {
+        rightNew = rightNew[0];
+      }
+    }
     I = Math.max(this.count(leftNew), this.count(rightNew));
     J = Math.max(this.count(leftOld), this.count(rightOld));
     leftNew = this.pad(leftNew, I);
@@ -27669,7 +27707,7 @@ Pairs = (function() {
       }
     }
     if (leftOld.length < leftNew.length) {
-      for (index = _j = _ref = leftOld.length, _ref1 = leftNew.length; _ref <= _ref1 ? _j < _ref1 : _j > _ref1; index = _ref <= _ref1 ? ++_j : --_j) {
+      for (index = _j = _ref = leftOld.length, _ref1 = leftNew.length; _j < _ref1; index = _j += 1) {
         if (rightNew[index]) {
           added.push([leftNew[index], rightNew[index]]);
         }

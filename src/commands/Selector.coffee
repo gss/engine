@@ -93,8 +93,7 @@ class Selector extends Query
   getIndexSuffix: (operation) ->
     return operation[2] || operation[1]
 
-# Logic to combine native selector steps into a single QSA query
-Selector::mergers.selector = (command, other, parent, operation, inherited) ->
+Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head
     # Native selectors cant start with combinator other than whitespace
     if other instanceof Selector.Combinator && operation[0] != ' '
@@ -106,7 +105,18 @@ Selector::mergers.selector = (command, other, parent, operation, inherited) ->
   # Can't append combinator to qualifying selector 
   if selecting = command.selecting
     return unless other.selecting
-  else if other.selecting
+
+  # Comma can only combine multiple native selectors
+  if parent[0] == ','
+    return unless (other.selector || other.key) == other.path
+
+  return true
+
+
+
+# Logic to combine native selector steps into a single QSA query
+Selector::mergers.selector = (command, other, parent, operation, inherited) ->
+  if other.selecting
     command.selecting ||= true
 
   other.head = parent
@@ -231,6 +241,8 @@ Selector.define
     Qualifier: (node, value) ->
       if node.id == value
         return node
+
+    singular: true
 
 
   # All descendant elements
@@ -422,7 +434,7 @@ Selector.define
 
   ':next':
     relative: true
-    Combinator: (node, engine, operation, continuation, scope) ->
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
@@ -430,7 +442,7 @@ Selector.define
 
   ':previous':
     relative: true
-    Combinator: (node, engine, operation, continuation, scope) ->
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if index == -1 || !index
@@ -439,7 +451,7 @@ Selector.define
   ':last':
     relative: true
     singular: true
-    Combinator: (node, engine, operation, continuation, scope) ->
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return unless index?
@@ -448,7 +460,7 @@ Selector.define
   ':first':
     relative: true
     singular: true
-    Combinator: (node, engine, operation, continuation, scope) ->
+    Combinator: (node = scope, engine, operation, continuation, scope) ->
       collection = engine.queries.getScopedCollection(operation, continuation, scope)
       index = collection?.indexOf(node)
       return if !index?

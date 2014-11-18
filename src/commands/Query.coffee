@@ -59,17 +59,16 @@ Query = Command.extend
         match = true
         # Check if all args match the tag
         for index in [1 ... operation.length]
-          if cmd = operation[index]?.command
-            if !(cmd.tags?.indexOf(tag) > -1)
+          if cmd = (arg = operation[index])?.command
+            if !(cmd.tags?.indexOf(tag) > -1) || !@checkers[tag](@, cmd, operation, arg, inherited)
               match = false
               break
 
         # Merge tagged arguments
         if match
           inherited = false
-          for i in [1 ... operation.length]
-            arg = operation[i]
-            if cmd = arg?.command 
+          for index in [1 ... operation.length]
+            if cmd = (arg = operation[index])?.command
               inherited = @mergers[tag](@, cmd, operation, arg, inherited)
 
     return @
@@ -115,4 +114,5 @@ Query = Command.extend
   prepare: ->
     
   mergers: {}
+  checkers: {}
 module.exports = Query

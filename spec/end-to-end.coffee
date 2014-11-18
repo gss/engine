@@ -2481,7 +2481,7 @@ describe 'End - to - End', ->
             <style type="text/gss">                        
                       
               .section {
-                @horizontal |-(&)-| gap(10) in(#container);
+                @horizontal |-(&)-| gap(10) in($ #container);
               }
             
               #container {
@@ -2541,7 +2541,7 @@ describe 'End - to - End', ->
               <style type="text/gss">                        
                         
                 .section {
-                  @h |-(:: p + p, #h1)-| gap(10) in(#container);
+                  @h |-(p + p, $ #h1)-| gap(10) in($ #container);
                 }
               
                 #container {
@@ -2600,7 +2600,7 @@ describe 'End - to - End', ->
               .cont {
                 width: == 100;
                 
-                @h |(.a)(.b)| in(::) {
+                @h |($ .a)($ .b)| in(::) {
                   &[width] == &:next[width];
                 }
               }                           
@@ -2687,13 +2687,13 @@ describe 'End - to - End', ->
             }
             #p1[width] == 50;
             @h (article)... {
-              (&:next p)[width] == (& p)[width];
+              (:next p)[width] == (p)[width];
             }
           </style>
           <article id="article1">
             <p id="p1"></p>
           </article>
-          <article id="article1">
+          <article id="article2">
             <p id="p2"></p>
           </article>
         """

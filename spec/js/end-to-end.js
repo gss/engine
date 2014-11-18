@@ -1805,7 +1805,7 @@ describe('End - to - End', function() {
           });
           return done();
         };
-        container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n                    \n            .section {\n              @horizontal |-(&)-| gap(10) in(#container);\n            }\n          \n            #container {\n              x: == 10;\n              width: == 100;\n            }                        \n\n          </style>";
+        container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n                    \n            .section {\n              @horizontal |-(&)-| gap(10) in($ #container);\n            }\n          \n            #container {\n              x: == 10;\n              width: == 100;\n            }                        \n\n          </style>";
         return engine.once('solve', listen);
       });
       return describe('with selector', function() {
@@ -1845,7 +1845,7 @@ describe('End - to - End', function() {
               });
             });
           });
-          return container.innerHTML = "<div id=\"s1\" class=\"section\">\n  <p id=\"p11\"><p id=\"p12\"><p id=\"p13\">\n</div>\n<div id=\"s2\" class=\"section\">\n  <p id=\"p21\"><p id=\"p22\"><p id=\"p23\">\n</div>\n<h1 id=\"h1\"></h1>\n<div id=\"container\"></div>\n<style type=\"text/gss\">                        \n          \n  .section {\n    @h |-(:: p + p, #h1)-| gap(10) in(#container);\n  }\n\n  #container {\n    x: == 10;\n    width: == 100;\n  }\n</style>       ";
+          return container.innerHTML = "<div id=\"s1\" class=\"section\">\n  <p id=\"p11\"><p id=\"p12\"><p id=\"p13\">\n</div>\n<div id=\"s2\" class=\"section\">\n  <p id=\"p21\"><p id=\"p22\"><p id=\"p23\">\n</div>\n<h1 id=\"h1\"></h1>\n<div id=\"container\"></div>\n<style type=\"text/gss\">                        \n          \n  .section {\n    @h |-(p + p, $ #h1)-| gap(10) in($ #container);\n  }\n\n  #container {\n    x: == 10;\n    width: == 100;\n  }\n</style>       ";
         });
       });
     });
@@ -1873,7 +1873,7 @@ describe('End - to - End', function() {
     });
     describe('plural selectors & in(::)', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<div id=\"cont1\" class=\"cont\"></div>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>            \n<style type=\"text/gss\">                            \n  .cont {\n    width: == 100;\n    \n    @h |(.a)(.b)| in(::) {\n      &[width] == &:next[width];\n    }\n  }                           \n</style>";
+        container.innerHTML = "<div id=\"cont1\" class=\"cont\"></div>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>            \n<style type=\"text/gss\">                            \n  .cont {\n    width: == 100;\n    \n    @h |($ .a)($ .b)| in(::) {\n      &[width] == &:next[width];\n    }\n  }                           \n</style>";
         return engine.once('solved', function(solution) {
           expect(solution).to.eql({
             "$cont1[width]": 100,
@@ -1924,7 +1924,7 @@ describe('End - to - End', function() {
     });
     describe('order specific selectors on the left within rules', function() {
       return it('should do it', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">\n  article {\n    width: == 50;\n    height: == 50;\n    x: >= 0;\n  }\n  #p1[width] == 50;\n  @h (article)... {\n    (&:next p)[width] == (& p)[width];\n  }\n</style>\n<article id=\"article1\">\n  <p id=\"p1\"></p>\n</article>\n<article id=\"article1\">\n  <p id=\"p2\"></p>\n</article>";
+        container.innerHTML = "<style type=\"text/gss\">\n  article {\n    width: == 50;\n    height: == 50;\n    x: >= 0;\n  }\n  #p1[width] == 50;\n  @h (article)... {\n    (:next p)[width] == (p)[width];\n  }\n</style>\n<article id=\"article1\">\n  <p id=\"p1\"></p>\n</article>\n<article id=\"article2\">\n  <p id=\"p2\"></p>\n</article>";
         return engine.then(function(solution) {
           expect(solution['$p1[width]']).to.eql(solution['$p2[width]']);
           return done();

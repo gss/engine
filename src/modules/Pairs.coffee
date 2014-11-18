@@ -8,6 +8,7 @@ class Pairs
     left = @engine.Continuation.getCanonicalPath(continuation)
     parent = @engine.Operation.getRoot(operation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
+      parent.left = operation
       @lefts.push parent, left, scope
       contd = @engine.Continuation.PAIR
       return @engine.Continuation.PAIR
@@ -26,7 +27,6 @@ class Pairs
         left = @lefts[index + 1]
         @watch(operation, continuation, scope, left, right)
     return unless left
-
     left = @engine.Continuation.getCanonicalPath(left)
     pairs = @paths[left] ||= []
     if pairs.indexOf(right) == -1
@@ -134,9 +134,15 @@ class Pairs
       else
         @engine.queries.filterByScope(b, scope)
 
-    leftNew = @engine.queries.filterByScope(a, scope, operation)
+    root = @engine.Operation.getRoot(operation)
+    if leftNew = @engine.queries.filterByScope(a, scope, operation)
+      if root.left.command.singular && leftNew?.push
+        leftNew = leftNew[0]
 
-    rightNew = @engine.queries.filterByScope(b, scope, operation, true)
+    if rightNew = @engine.queries.filterByScope(b, scope, operation, true)
+      if root.right.command.singular && rightNew?.push
+        rightNew = rightNew[0]
+ 
 
     I = Math.max(@count(leftNew), @count(rightNew))
     J = Math.max(@count(leftOld), @count(rightOld))
@@ -157,7 +163,7 @@ class Pairs
         if leftNew[index] && rightNew[index]
           added.push([leftNew[index], rightNew[index]])
     if leftOld.length < leftNew.length
-      for index in [leftOld.length ... leftNew.length]
+      for index in [leftOld.length ... leftNew.length] by 1
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 

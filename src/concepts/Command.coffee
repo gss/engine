@@ -95,10 +95,6 @@ class Command
   solve: (engine, operation, continuation, scope, ascender, ascending) -> 
     domain = operation.domain || engine
     
-    # Use a shortcut operation when possible (e.g. native dom query)
-    if @head# && @head != operation
-      return @jump(domain, operation, continuation, scope, ascender, ascending)
-
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope))
       when 'string'
@@ -114,6 +110,10 @@ class Command
         
       when 'boolean'
         return
+
+    # Use a shortcut operation when possible (e.g. native dom query)
+    if @head# && @head != operation
+      return @jump(domain, operation, continuation, scope, ascender, ascending)
 
     if result == undefined
       # Recursively solve arguments, stop on undefined

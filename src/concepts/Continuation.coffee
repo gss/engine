@@ -78,7 +78,7 @@ class Continuation
     return last if compact
     return bits.join(@DESCEND)
   CanonicalizeRegExp: new RegExp("" +
-    "([^" + Continuation::PAIR + "])" +
+    "([^" + Continuation::PAIR + ",])" +
     "\\$[^" + Continuation::ASCEND + "]+" +
     "(?:" + Continuation::ASCEND + "|$)", "g")
 
