@@ -62,7 +62,7 @@ Updater = (engine) ->
 
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
-      index = update.wrap(problem, parent)
+      index = update.wrap(problem, parent, Default)
 
       if index?
         update.connect(index)
@@ -153,7 +153,7 @@ Update.prototype =
     return true
 
   # Group expressions
-  wrap: (problem, parent) -> 
+  wrap: (problem, parent, Default) -> 
     bubbled = undefined
 
 
@@ -212,7 +212,25 @@ Update.prototype =
             break
 
         # Replace that last argument with the given function call
-        unless bubbled
+        if !other.signatures[problem[0]]
+          opdomain = Default
+        if opdomain && (opdomain.displayName != other.displayName)
+          debugger
+          if (j = @domains.indexOf(opdomain, @index + 1)) == -1
+            j = @domains.push(opdomain) - 1
+            @problems[j] = [problem]
+          else
+            @problems[j].push problem
+          #strong = exp.domain && !exp.domain.MAYBE
+          #for arg in exp
+          #  if arg.domain && !arg.domain.MAYBE
+          #    strong = true
+          #unless strong
+          exps.splice(--i, 1)
+          if exps.length == 0
+            @domains.splice(index, 1)
+            @problems.splice(index, 1)
+        else unless bubbled
           if problem.indexOf(exps[i - 1]) > -1
             bubbled = exps
             if exps.indexOf(problem) == -1

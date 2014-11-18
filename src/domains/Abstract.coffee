@@ -36,12 +36,17 @@ Abstract::Default.Top = Abstract::Default.extend
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
-    args.unshift operation[0]
     meta = key: engine.Continuation.get(continuation)
     if scope != engine.scope
       meta.scope = engine.identity.yield(scope)
+      
+    args.unshift operation[0]
     wrapper = @produce(meta, args, operation)
     args.parent = wrapper
+
+    if @inheriting
+      wrapper.parent = operation.parent
+
     if domain = @domain?(engine)
       wrapper.domain ||= domain
 
@@ -62,10 +67,7 @@ Abstract::Default.Clause = Abstract::Default.Top.extend
   domain: (engine) ->
     return engine.solved
 
-  produce: (meta, args, operation) ->
-    wrapper = [meta, args] 
-    wrapper.parent = operation.parent
-    return wrapper
+  inheriting: true
 
 # Register subclasses to be dispatched by condition
 Abstract::Default::variants = [Abstract::Default.Clause, Abstract::Default.Top]

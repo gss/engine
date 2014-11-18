@@ -24559,7 +24559,7 @@ Updater = function(engine) {
       update = new this.update([problem], [domain !== true && domain || null]);
     }
     if (!(problem[0] instanceof Array)) {
-      index = update.wrap(problem, parent);
+      index = update.wrap(problem, parent, Default);
       if (index != null) {
         update.connect(index);
       }
@@ -24681,8 +24681,8 @@ Update.prototype = {
     }
     return true;
   },
-  wrap: function(problem, parent) {
-    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, other, previous, problems, probs, prop, value, _i, _j, _k, _l, _len, _len1, _len2, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+  wrap: function(problem, parent, Default) {
+    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, opdomain, other, previous, problems, probs, prop, value, _i, _j, _k, _l, _len, _len1, _len2, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     bubbled = void 0;
     _ref = this.domains;
     for (index = _i = _ref.length - 1; _i >= 0; index = _i += -1) {
@@ -24756,7 +24756,23 @@ Update.prototype = {
             break;
           }
         }
-        if (!bubbled) {
+        if (!other.signatures[problem[0]]) {
+          opdomain = Default;
+        }
+        if (opdomain && (opdomain.displayName !== other.displayName)) {
+          debugger;
+          if ((j = this.domains.indexOf(opdomain, this.index + 1)) === -1) {
+            j = this.domains.push(opdomain) - 1;
+            this.problems[j] = [problem];
+          } else {
+            this.problems[j].push(problem);
+          }
+          exps.splice(--i, 1);
+          if (exps.length === 0) {
+            this.domains.splice(index, 1);
+            this.problems.splice(index, 1);
+          }
+        } else if (!bubbled) {
           if (problem.indexOf(exps[i - 1]) > -1) {
             bubbled = exps;
             if (exps.indexOf(problem) === -1) {
@@ -25243,15 +25259,18 @@ Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
   execute: function() {
     var args, continuation, domain, engine, meta, operation, scope, wrapper, _i;
     args = 5 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 4) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++], continuation = arguments[_i++], scope = arguments[_i++];
-    args.unshift(operation[0]);
     meta = {
       key: engine.Continuation.get(continuation)
     };
     if (scope !== engine.scope) {
       meta.scope = engine.identity["yield"](scope);
     }
+    args.unshift(operation[0]);
     wrapper = this.produce(meta, args, operation);
     args.parent = wrapper;
+    if (this.inheriting) {
+      wrapper.parent = operation.parent;
+    }
     if (domain = typeof this.domain === "function" ? this.domain(engine) : void 0) {
       wrapper.domain || (wrapper.domain = domain);
     }
@@ -25274,12 +25293,7 @@ Abstract.prototype.Default.Clause = Abstract.prototype.Default.Top.extend({
   domain: function(engine) {
     return engine.solved;
   },
-  produce: function(meta, args, operation) {
-    var wrapper;
-    wrapper = [meta, args];
-    wrapper.parent = operation.parent;
-    return wrapper;
-  }
+  inheriting: true
 });
 
 Abstract.prototype.Default.prototype.variants = [Abstract.prototype.Default.Clause, Abstract.prototype.Default.Top];
