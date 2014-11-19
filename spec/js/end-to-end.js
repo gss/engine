@@ -508,6 +508,31 @@ describe('End - to - End', function() {
         });
       });
     });
+    describe('temporary bound to intrinsics', function() {
+      return it('should bind elements with itself', function(done) {
+        container.innerHTML = "<style type=\"text/gss\">\n  .a {\n    ::[width] == ::[intrinsic-width];\n  } \n</style>\n<div id=\"a1\" class=\"a\" style=\" display: inline-block;\"><span style=\"width: 100px; display: inline-block;\">3</span></div>\n<div id=\"a2\" class=\"a\" style=\" display: inline-block;\"><span style=\"width: 100px; display: inline-block;\">3</span></div>\n<div id=\"a3\" class=\"a\" style=\" display: inline-block;\"><span style=\"width: 100px; display: inline-block;\">3</span></div>";
+        return engine.once('solve', function(e) {
+          var a1;
+          expect(engine.values).to.eql({
+            "$a1[intrinsic-width]": 100,
+            "$a2[intrinsic-width]": 100,
+            "$a3[intrinsic-width]": 100,
+            "$a1[width]": 100,
+            "$a2[width]": 100,
+            "$a3[width]": 100
+          });
+          a1 = engine.id('a1');
+          a1.parentNode.removeChild(a1);
+          return engine.once('solve', function(e) {
+            expect(engine.updated.solution).to.eql({
+              "$a1[intrinsic-width]": null,
+              "$a1[width]": null
+            });
+            return done();
+          });
+        });
+      });
+    });
     describe('equal simple selector on the both sides', function() {
       return it('should bind elements with itself', function(done) {
         container.innerHTML = "<style type=\"text/gss\">                            \n  [x] == 100;\n  .a {\n    ::[x] == 10;\n  } \n  .a[y] == .a[x];\n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>";
@@ -1211,7 +1236,7 @@ describe('End - to - End', function() {
       engine = window.$engine = GSS(container);
       container.style.width = '400px';
       container.style.height = '100px';
-      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |(\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == [col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in(\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in(\"col-3\");\n        }\n      }\n    </style>\n    ";
+      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      $[col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |(\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
       return engine.then(function(solution) {
         expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 2);
         engine.id('box').click();
@@ -2079,7 +2104,7 @@ describe('End - to - End', function() {
           });
           return done();
         });
-        return container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n          \n            #container {\n              x: == 10;\n              width: == 100;\n            } \n                   \n            .section {\n              @horizontal |-(&)-| gap(10) in(#container);\n            }                                           \n\n          </style>";
+        return container.innerHTML = "          <div id=\"s1\" class=\"section\"></div>\n          <div id=\"s2\" class=\"section\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n          \n            #container {\n              x: == 10;\n              width: == 100;\n            } \n                   \n            .section {\n              @horizontal |-(&)-| gap(10) in($ #container);\n            }                                           \n\n          </style>";
       });
     });
     describe('<points>', function() {

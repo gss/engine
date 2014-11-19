@@ -69,7 +69,7 @@ Abstract::Default.Top = Abstract::Default.extend
     meta = key: engine.Continuation.get(continuation)
     if scope != engine.scope
       meta.scope = engine.identity.yield(scope)
-      
+
     args.unshift operation[0]
     wrapper = @produce(meta, args, operation)
     args.parent = wrapper
@@ -132,6 +132,8 @@ Abstract::Value.Getter = Abstract::Value.extend {
     if prop = engine.properties[property]
       unless prop.matcher
         return prop.call(engine, object, continuation)
+    if engine.getPath(object, property) == '$1[width]'
+      debugger
     return ['get', engine.getPath(object, property)]
   
 # Proxy math that passes basic expressions along

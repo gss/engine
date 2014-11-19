@@ -1,3 +1,4 @@
+/* gss-engine - version 1.0.4-beta (2014-11-19) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21228,6 +21229,18 @@ Selector.Combinator = Selector.Selecter.extend({
   }
 });
 
+Selector.Virtual = Selector.extend({
+  signature: [
+    [
+      {
+        context: ['Selector']
+      }
+    ], {
+      query: ['String']
+    }
+  ]
+});
+
 Selector.Qualifier = Selector.extend({
   signature: [
     {
@@ -21450,6 +21463,19 @@ Selector.define({
       return '::window';
     },
     stringy: true
+  },
+  '$virtual': {
+    Virtual: function(node, value, engine, operation, continuation, scope) {
+      if (node == null) {
+        node = scope;
+      }
+      if (node === engine.scope) {
+        return '$"' + value + '"';
+      } else {
+        return engine.identity.provide(node) + '"' + value + '"';
+      }
+    },
+    prefix: '"'
   }
 });
 
@@ -22336,21 +22362,16 @@ Command = (function() {
     var args, domain, result;
     domain = operation.domain || engine;
     switch (typeof (result = this.retrieve(domain, operation, continuation, scope, ascender, ascending))) {
-      case 'string':
-        if (this.stringy && result.charAt(0) !== engine.Continuation.PAIR) {
-          return result;
-        } else {
-          continuation = result;
-          result = ascending = void 0;
-        }
-        break;
       case 'object':
-        if (continuation.indexOf(engine.Continuation.PAIR) > 0) {
-          return result;
-        }
-        break;
+      case 'string':
+        return result;
       case 'boolean':
-        return;
+        if (result) {
+          result = void 0;
+          continuation = engine.Continuation.getScopePath(scope, continuation);
+        } else {
+          return;
+        }
     }
     if (this.head) {
       return this.jump(domain, operation, continuation, scope, ascender, ascending);
@@ -22464,7 +22485,7 @@ Command = (function() {
   };
 
   Command.prototype.connect = function(engine, operation, continuation, scope, args, ascender) {
-    if (ascender != null) {
+    if ((ascender != null) && continuation[continuation.length - 1] !== engine.Continuation.DESCEND) {
       return engine.Continuation.get(continuation, null, engine.Continuation.PAIR);
     }
   };
@@ -22796,6 +22817,9 @@ Continuation = (function() {
       return '';
     }
     bits = continuation.split(this.DESCEND);
+    if (!bits[bits.length - 1]) {
+      return continuation;
+    }
     if (scope && this.engine.scope !== scope) {
       id = this.engine.identity["yield"](scope);
       prev = bits[bits.length - 2];
@@ -23066,6 +23090,7 @@ Domain = (function(_super) {
     watchers.splice(index, 3);
     if (!watchers.length) {
       delete this.watchers[path];
+      debugger;
       if (this.structured) {
         if ((j = path.indexOf('[')) > -1) {
           id = path.substring(0, j);
@@ -23076,6 +23101,9 @@ Domain = (function(_super) {
           if (this.updating) {
             this.transact();
             this.changes[path] = null;
+            if (!(this.updating.domains.indexOf(this) > this.updating.index)) {
+              this.updating.apply(this.changes);
+            }
           }
           if (this.immediate) {
             this.set(path, null);
@@ -23554,6 +23582,9 @@ Domain = (function(_super) {
         } else {
           id = id.path;
         }
+      }
+      if (id === this.engine.scope._gss_id && property.substring(0, 10) !== 'intrinsic-') {
+        return property;
       }
       return id + '[' + property + ']';
     }
@@ -25157,6 +25188,8 @@ Numeric.prototype.Value = Value.extend();
 
 Numeric.prototype.Value.Variable = Value.Variable.extend({}, {
   get: function(path, engine, operation, continuation, scope) {
+    var _ref1;
+    continuation || (continuation = (_ref1 = this.getMeta(operation)) != null ? _ref1.key : void 0);
     return engine.watch(null, path, operation, engine.Continuation(continuation || ""), scope);
   }
 });
@@ -25359,6 +25392,9 @@ Abstract.prototype.Value.Getter = Abstract.prototype.Value.extend({
       if (!prop.matcher) {
         return prop.call(engine, object, continuation);
       }
+    }
+    if (engine.getPath(object, property) === '$1[width]') {
+      debugger;
     }
     return ['get', engine.getPath(object, property)];
   }
@@ -26746,7 +26782,6 @@ Queries = (function() {
         removed = void 0;
       }
       if (removed !== false) {
-        debugger;
         this.engine.pairs.remove(id, continuation);
         if (parent = operation != null ? operation.parent : void 0) {
           if (this.engine.isCollection(collection)) {
@@ -26792,6 +26827,7 @@ Queries = (function() {
       this.each('remove', result, path, operation, scope, operation, false, contd);
     }
     this.engine.solved.remove(path);
+    this.engine.intrinsic.remove(path);
     if ((_ref = this.engine.stylesheets) != null) {
       _ref.remove(path);
     }
@@ -27137,26 +27173,29 @@ Queries = (function() {
   };
 
   Queries.prototype.comparePosition = function(a, b, op1, op2) {
-    var index, left, next, right;
+    var i, index, j, left, next, parent, right;
     if (op1 !== op2) {
-      if (op1.index > op2.index) {
+      parent = op1.parent;
+      i = parent.indexOf(op1);
+      j = parent.indexOf(op2);
+      if (i > j) {
         left = op2;
         right = op1;
       } else {
         left = op1;
         right = op2;
       }
-      index = left.index;
-      while (next = op1.parent[++index]) {
+      index = i;
+      while (next = parent[++index]) {
         if (next === right) {
           break;
         }
-        if (next[0] === 'virtual') {
-          return op1.index < op2.index;
+        if (next[0] === '$virtual') {
+          return i < j;
         }
       }
       if (!(a.nodeType && b.nodeType)) {
-        return op1.index < op2.index;
+        return i < j;
       }
     }
     if (a.compareDocumentPosition) {
@@ -27519,13 +27558,12 @@ Pairs = (function() {
   }
 
   Pairs.prototype.onLeft = function(operation, parent, continuation, scope) {
-    var contd, left;
+    var left;
     left = this.engine.Continuation.getCanonicalPath(continuation);
     if (this.engine.indexOfTriplet(this.lefts, parent, left, scope) === -1) {
       parent.right = operation;
       this.lefts.push(parent, left, scope);
-      contd = this.engine.Continuation.PAIR;
-      return this.engine.Continuation.getScopePath(scope, continuation);
+      return true;
     } else {
       (this.dirty || (this.dirty = {}))[left] = true;
       return false;
@@ -28446,11 +28484,10 @@ Identity = (function() {
   Identity.prototype["yield"] = function(object, generate) {
     var id, uid;
     if (typeof object === 'string') {
-      if (object.charAt(0) !== '$' && object.substring(0, 2) !== '::') {
+      if (object.charAt(0) !== '$' && object.charAt(0) !== ':') {
         return '$' + object;
-      } else {
-        return object;
       }
+      return object;
     }
     if (!(id = object._gss_id)) {
       if (object === document) {
@@ -28501,25 +28538,25 @@ Axioms = (function() {
   Axioms.prototype.right = function(scope) {
     var id;
     id = this.identity["yield"](scope);
-    return ['+', ['get', id + '[x]'], ['get', id + '[width]']];
+    return ['+', ['get', this.getPath(id, 'x')], ['get', this.getPath(id, 'width')]];
   };
 
   Axioms.prototype.bottom = function(scope, path) {
     var id;
     id = this.identity["yield"](scope);
-    return ['+', ['get', id + '[y]'], ['get', id + '[height]']];
+    return ['+', ['get', this.getPath(id, 'y')], ['get', this.getPath(id, 'height')]];
   };
 
   Axioms.prototype.center = {
     x: function(scope, path) {
       var id;
       id = this.identity["yield"](scope);
-      return ['+', ['get', id + '[x]'], ['/', ['get', id + '[width]'], 2]];
+      return ['+', ['get', this.getPath(id, 'x')], ['/', ['get', this.getPath(id, 'width')], 2]];
     },
     y: function(scope, path) {
       var id;
       id = this.identity["yield"](scope);
-      return ['+', ['get', id + '[y]'], ['/', ['get', id + '[height]'], 2]];
+      return ['+', ['get', this.getPath(id, 'y')], ['/', ['get', this.getPath(id, 'height')], 2]];
     }
   };
 

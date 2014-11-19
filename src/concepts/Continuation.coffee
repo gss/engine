@@ -96,8 +96,11 @@ class Continuation
   # Get path for the scope that triggered the script 
   # (e.g. el matched by css rule)
   getScopePath: (scope, continuation) ->
-    return '' unless continuation
+    unless continuation 
+      return ''
     bits = continuation.split(@DESCEND)
+    unless bits[bits.length - 1]
+      return continuation
     if scope && @engine.scope != scope
       id = @engine.identity.yield(scope)
       prev = bits[bits.length - 2]
@@ -106,6 +109,7 @@ class Continuation
         last = bits[bits.length - 1]
         if (index = last.indexOf(id + @ASCEND)) > -1
           bits.splice(bits.length - 1, 0, last.substring(0, index + id.length))
+    
     bits[bits.length - 1] = ""
     path = bits.join(@DESCEND)
     if continuation.charAt(0) == @PAIR

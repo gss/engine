@@ -766,6 +766,33 @@ describe 'End - to - End', ->
                 "$a2[width]": 20
                 "$b2[width]": 20
               done()
+    describe 'temporary bound to intrinsics', ->
+      it 'should bind elements with itself', (done) ->                            
+        container.innerHTML =  """
+            <style type="text/gss">
+              .a {
+                ::[width] == ::[intrinsic-width];
+              } 
+            </style>
+            <div id="a1" class="a" style=" display: inline-block;"><span style="width: 100px; display: inline-block;">3</span></div>
+            <div id="a2" class="a" style=" display: inline-block;"><span style="width: 100px; display: inline-block;">3</span></div>
+            <div id="a3" class="a" style=" display: inline-block;"><span style="width: 100px; display: inline-block;">3</span></div>
+          """
+        engine.once 'solve', (e) ->
+          expect(engine.values).to.eql 
+            "$a1[intrinsic-width]": 100
+            "$a2[intrinsic-width]": 100
+            "$a3[intrinsic-width]": 100
+            "$a1[width]": 100
+            "$a2[width]": 100
+            "$a3[width]": 100
+          a1 = engine.id('a1')
+          a1.parentNode.removeChild(a1)
+          engine.once 'solve', (e) ->
+            expect(engine.updated.solution).to.eql 
+              "$a1[intrinsic-width]": null
+              "$a1[width]": null
+            done()
 
     describe 'equal simple selector on the both sides', ->
       it 'should bind elements with itself', (done) ->                            
@@ -1548,21 +1575,21 @@ describe 'End - to - End', ->
         <div id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></div>
     
         <style type="text/gss">
-          [col-gap] == 16;
+          $[col-gap] == 16;
           $[size] == $[intrinsic-size];
           $[left] == 0;
         
           @h |("col-1...8")-[col-gap]-...| in($) !require {
-            width: == [col-width] !require;
+            width: == $[col-width] !require;
           }
           
           .box {          
             @v |(&)| in(::window);
             &.bar {
-              @h |(&)| in("col-6");
+              @h |(&)| in($"col-6");
             }
             &.foo {
-              @h |(&)| in("col-3");
+              @h |(&)| in($"col-3");
             }
           }
         </style>
@@ -2960,7 +2987,7 @@ describe 'End - to - End', ->
               } 
                      
               .section {
-                @horizontal |-(&)-| gap(10) in(#container);
+                @horizontal |-(&)-| gap(10) in($ #container);
               }                                           
   
             </style>

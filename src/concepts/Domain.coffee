@@ -146,6 +146,7 @@ class Domain extends Trigger
     watchers.splice index, 3
     unless watchers.length
       delete @watchers[path]
+      debugger
       if @structured
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
@@ -156,6 +157,9 @@ class Domain extends Trigger
           if @updating
             @transact()
             @changes[path] = null
+            unless @updating.domains.indexOf(@) > @updating.index
+
+              @updating.apply(@changes)
           if @immediate
             @set path, null
           if Object.keys(obj).length == 0
@@ -506,6 +510,8 @@ class Domain extends Trigger
           id = @identity.yield(id)
         else 
           id = id.path
+      if id == @engine.scope._gss_id && property.substring(0, 10) != 'intrinsic-'
+        return property
       return id + '[' + property + ']'
 
 

@@ -143,7 +143,7 @@ describe('GSS commands', function() {
         ]
       ]));
     });
-    it('lte for class & id selectos', function(done) {
+    it('lte for class & id selectors', function(done) {
       window.$engine = engine;
       engine.solve([['<=', ['get', ['.', 'box'], 'width'], ['get', ['#', 'box1'], 'width']]], function(solution) {
         var box2;
@@ -151,15 +151,15 @@ describe('GSS commands', function() {
           [
             [
               {
-                key: '.box$box1→#box1'
+                key: '.box$box1→#box1$box1'
               }, ['<=', ['get', '$box1[width]'], ['get', '$box1[width]']]
             ], [
               {
-                key: '.box$34222→#box1'
+                key: '.box$34222→#box1$box1'
               }, ['<=', ['get', '$34222[width]'], ['get', '$box1[width]']]
             ], [
               {
-                key: '.box$35346→#box1'
+                key: '.box$35346→#box1$box1'
               }, ['<=', ['get', '$35346[width]'], ['get', '$box1[width]']]
             ]
           ]
@@ -167,7 +167,7 @@ describe('GSS commands', function() {
         box2 = engine.id("34222");
         box2.parentNode.removeChild(box2);
         return engine.then(function(solution) {
-          expect(engine.updated.getProblems()).to.eql([[['remove', '.box$34222'], ['remove', '.box$34222→#box1']], [['remove', '.box$34222→#box1']]]);
+          expect(engine.updated.getProblems()).to.eql([[['remove', '.box$34222'], ['remove', '.box$34222→#box1$box1']], [['remove', '.box$34222→#box1$box1']]]);
           scope.appendChild(box2);
           return engine.then(function(solution) {
             var box1;
@@ -175,7 +175,7 @@ describe('GSS commands', function() {
               [
                 [
                   {
-                    key: '.box$34222→#box1'
+                    key: '.box$34222→#box1$box1'
                   }, ['<=', ['get', '$34222[width]'], ['get', '$box1[width]']]
                 ]
               ]
@@ -183,22 +183,22 @@ describe('GSS commands', function() {
             box1 = engine.id("box1");
             box1.parentNode.removeChild(box1);
             return engine.then(function(solution) {
-              expect(engine.updated.getProblems()).to.eql([[['remove', '.box$box1'], ['remove', '.box$box1→#box1'], ['remove', '.box$35346→#box1'], ['remove', '.box$34222→#box1']], [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]]);
+              expect(engine.updated.getProblems()).to.eql([[['remove', '.box$box1'], ['remove', '#box1'], ['remove', '.box$box1→#box1$box1'], ['remove', '.box$35346→#box1$box1'], ['remove', '.box$34222→#box1$box1']], [['remove', '.box$box1→#box1$box1', '.box$35346→#box1$box1', '.box$34222→#box1$box1']]]);
               scope.appendChild(box1);
               return engine.then(function(solution) {
                 expect(engine.updated.getProblems()).to.eql([
                   [
                     [
                       {
-                        key: '.box$35346→#box1'
+                        key: '.box$35346→#box1$box1'
                       }, ['<=', ['get', '$35346[width]'], ['get', '$box1[width]']]
                     ], [
                       {
-                        key: '.box$34222→#box1'
+                        key: '.box$34222→#box1$box1'
                       }, ['<=', ['get', '$34222[width]'], ['get', '$box1[width]']]
                     ], [
                       {
-                        key: '.box$box1→#box1'
+                        key: '.box$box1→#box1$box1'
                       }, ['<=', ['get', '$box1[width]'], ['get', '$box1[width]']]
                     ]
                   ]

@@ -94,16 +94,16 @@ describe 'GSS commands', ->
         [key: '',           ['==', 100, ['get', 'grid-col']]]
       ]]
 
-    it 'lte for class & id selectos', (done) ->
+    it 'lte for class & id selectors', (done) ->
       window.$engine = engine
 
       engine.solve [
         ['<=',['get',['.','box'],'width'],['get',['#','box1'],'width']]
       ], (solution) ->
         expect(engine.updated.getProblems()).to.eql [[
-          [key: '.box$box1→#box1' , ['<=',['get', '$box1[width]' ],['get','$box1[width]']]]
-          [key: '.box$34222→#box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
-          [key: '.box$35346→#box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
+          [key: '.box$box1→#box1$box1' , ['<=',['get', '$box1[width]' ],['get','$box1[width]']]]
+          [key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
+          [key: '.box$35346→#box1$box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
         ]]
         box2 = engine.id("34222")
         box2.parentNode.removeChild(box2)
@@ -111,8 +111,8 @@ describe 'GSS commands', ->
         engine.then (solution) ->
 
           expect(engine.updated.getProblems()).to.eql [
-            [['remove', '.box$34222'], ['remove', '.box$34222→#box1']]
-            [['remove', '.box$34222→#box1']]
+            [['remove', '.box$34222'], ['remove', '.box$34222→#box1$box1']]
+            [['remove', '.box$34222→#box1$box1']]
           ]
 
           scope.appendChild(box2)
@@ -120,7 +120,7 @@ describe 'GSS commands', ->
           engine.then (solution) ->
 
             expect(engine.updated.getProblems()).to.eql [
-              [[key: '.box$34222→#box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]]
+              [[key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]]
             ]
 
             box1 = engine.id("box1")
@@ -130,20 +130,21 @@ describe 'GSS commands', ->
 
               expect(engine.updated.getProblems()).to.eql [
                 [
-                  ['remove', '.box$box1'], 
-                  ['remove', '.box$box1→#box1'], 
-                  ['remove', '.box$35346→#box1'], 
-                  ['remove', '.box$34222→#box1']
+                  ['remove', '.box$box1'],
+                  ['remove', '#box1'], 
+                  ['remove', '.box$box1→#box1$box1'], 
+                  ['remove', '.box$35346→#box1$box1'], 
+                  ['remove', '.box$34222→#box1$box1']
                 ]
-                [['remove', '.box$box1→#box1', '.box$35346→#box1', '.box$34222→#box1']]
+                [['remove', '.box$box1→#box1$box1', '.box$35346→#box1$box1', '.box$34222→#box1$box1']]
               ]
               scope.appendChild(box1)
 
               engine.then (solution) ->
                 expect(engine.updated.getProblems()).to.eql [[
-                  [key: '.box$35346→#box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
-                  [key: '.box$34222→#box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
-                  [key: '.box$box1→#box1',  ['<=',['get', '$box1[width]'],['get','$box1[width]']]]
+                  [key: '.box$35346→#box1$box1', ['<=',['get', '$35346[width]'],['get','$box1[width]']]]
+                  [key: '.box$34222→#box1$box1', ['<=',['get', '$34222[width]'],['get','$box1[width]']]]
+                  [key: '.box$box1→#box1$box1',  ['<=',['get', '$box1[width]'],['get','$box1[width]']]]
                 ]]
                 done()
 

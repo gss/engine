@@ -157,6 +157,13 @@ Selector.Combinator = Selector.Selecter.extend
   getIndexPrefix: (operation, parent)->
     return parent && ' ' || ''
     
+Selector.Virtual = Selector.extend
+  signature: [
+    [context: ['Selector']]
+    query: ['String']
+  ]
+
+
     
 # Filter elements by key
 Selector.Qualifier = Selector.extend
@@ -378,6 +385,17 @@ Selector.define
       
     stringy: true
   
+  '$virtual':
+    Virtual: (node = scope, value, engine, operation, continuation, scope) ->
+      if node == engine.scope
+        return '$"' + value + '"'
+      else
+        return engine.identity.provide(node) + '"' + value + '"'
+
+    prefix: '"'
+
+    #after: (args, result) ->
+    #  return result
 
 Selector.define  
   '[=]':

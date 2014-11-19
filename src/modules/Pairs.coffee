@@ -6,12 +6,10 @@ class Pairs
 
   onLeft: (operation, parent, continuation, scope) ->
     left = @engine.Continuation.getCanonicalPath(continuation)
-
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       parent.right = operation
       @lefts.push parent, left, scope
-      contd = @engine.Continuation.PAIR
-      return @engine.Continuation.getScopePath(scope, continuation)
+      return true
     else
       (@dirty ||= {})[left] = true
       return false

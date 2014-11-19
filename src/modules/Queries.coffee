@@ -266,7 +266,6 @@ class Queries
         removed = undefined
 
       if removed != false
-        debugger
         @engine.pairs.remove(id, continuation)
 
         if parent = operation?.parent
@@ -311,6 +310,7 @@ class Queries
     #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     @engine.solved.remove(path)
+    @engine.intrinsic.remove(path)
     @engine.stylesheets?.remove(path)
 
     shared = false
@@ -603,21 +603,24 @@ class Queries
   # so dom elements can be permuted only within range between virtual elements
   comparePosition: (a, b, op1, op2) ->
     if op1 != op2
-      if op1.index > op2.index
+      parent = op1.parent
+      i = parent.indexOf(op1)
+      j = parent.indexOf(op2)
+      if i > j
         left = op2
         right = op1
       else
         left = op1
         right = op2
 
-      index = left.index
-      while next = op1.parent[++index]
+      index = i
+      while next = parent[++index]
         break if next == right
-        if next[0] == 'virtual'
-          return op1.index < op2.index
+        if next[0] == '$virtual'
+          return i < j
 
       unless a.nodeType && b.nodeType 
-        return op1.index < op2.index
+        return i < j
     if a.compareDocumentPosition
       return a.compareDocumentPosition(b) & 4
     return a.sourceIndex < b.sourceIndex

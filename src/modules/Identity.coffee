@@ -4,10 +4,9 @@ class Identity
   # Get or generate uid for a given object.
   yield: (object, generate) ->
     if typeof object == 'string'
-      if object.charAt(0) != '$' && object.substring(0, 2) != '::'
+      if object.charAt(0) != '$' && object.charAt(0) != ':'
         return '$' + object
-      else
-        return object
+      return object
     unless id = object._gss_id
       if object == document
         id = "::document"

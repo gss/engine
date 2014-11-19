@@ -97,19 +97,15 @@ class Command
     
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
-      when 'string'
-        if @stringy && result.charAt(0) != engine.Continuation.PAIR
-          return result
-        else
-          continuation = result
-          result = ascending = undefined
-          
-      when 'object'
-        if continuation.indexOf(engine.Continuation.PAIR) > 0
-          return result
+      when 'object', 'string'
+        return result
         
       when 'boolean'
-        return
+        if result
+          result = undefined
+          continuation = engine.Continuation.getScopePath(scope, continuation)
+        else
+          return
 
     # Use a shortcut operation when possible (e.g. native dom query)
     if @head# && @head != operation
@@ -221,7 +217,7 @@ class Command
         return parent[0]
 
   connect: (engine, operation, continuation, scope, args, ascender) ->
-    if ascender?
+    if ascender? && continuation[continuation.length - 1] != engine.Continuation.DESCEND
       return engine.Continuation.get(continuation, null, engine.Continuation.PAIR)
 
   fork: (engine, continuation, item) ->

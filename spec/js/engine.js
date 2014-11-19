@@ -98,7 +98,8 @@ describe('GSS engine', function() {
           container = document.createElement('div');
           $('#fixtures').appendChild(container);
           container.innerHTML = "<button id=\"button1\">One</button>\n<button id=\"button2\">Second</button>\n<button id=\"button3\">Three</button>\n<button id=\"button4\">4</button>";
-          return engine = new GSS(container, useWorker || void 0);
+          engine = new GSS(container, useWorker || void 0);
+          return engine.compile(true);
         });
         after(function(done) {
           remove(container);

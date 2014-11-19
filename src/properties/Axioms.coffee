@@ -4,19 +4,19 @@ class Axioms
 
   right: (scope) ->
     id = @identity.yield(scope)
-    return ['+', ['get', id + '[x]'], ['get', id + '[width]']]
+    return ['+', ['get', @getPath(id, 'x')], ['get', @getPath(id, 'width')]]
 
   bottom: (scope, path) ->
     id = @identity.yield(scope)
-    return ['+', ['get', id + '[y]'], ['get', id + '[height]']]
+    return ['+', ['get', @getPath(id, 'y')], ['get', @getPath(id, 'height')]]
   
   center:
     x: (scope, path) ->
       id = @identity.yield(scope)
-      return ['+', ['get', id + '[x]'], ['/', ['get', id + '[width]'], 2]]
+      return ['+', ['get', @getPath(id, 'x')], ['/', ['get', @getPath(id, 'width')], 2]]
 
     y: (scope, path) ->
       id = @identity.yield(scope)
-      return ['+', ['get', id + '[y]'], ['/', ['get', id + '[height]'], 2]]
+      return ['+', ['get', @getPath(id, 'y')], ['/', ['get', @getPath(id, 'height')], 2]]
       
 module.exports = Axioms
