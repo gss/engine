@@ -135,6 +135,7 @@ class Signatures
           variant = command.extend 
               permutation: combination[last], 
               padding: last - i
+              definition: command
 
           if resolved = storage.resolved
             proto = resolved::

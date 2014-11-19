@@ -55,7 +55,7 @@ Abstract::Default = Command.Default.extend
     return args
 
 # Topmost unknown command returns processed operation back to engine
-Abstract::Default.Top = Abstract::Default.extend
+Top = Abstract::Default.extend
 
   condition: (engine, operation) ->
     if parent = operation.parent
@@ -74,6 +74,7 @@ Abstract::Default.Top = Abstract::Default.extend
     wrapper = @produce(meta, args, operation)
     args.parent = wrapper
 
+
     if @inheriting
       wrapper.parent = operation.parent
 
@@ -87,7 +88,7 @@ Abstract::Default.Top = Abstract::Default.extend
     return [meta, args] 
 
 # Unrecognized command in conditional clause
-Abstract::Default.Clause = Abstract::Default.Top.extend
+Clause = Top.extend
 
   condition: (engine, operation) ->
     if parent = operation.parent
@@ -100,7 +101,7 @@ Abstract::Default.Clause = Abstract::Default.Top.extend
   inheriting: true
 
 # Register subclasses to be dispatched by condition
-Abstract::Default::variants = [Abstract::Default.Clause, Abstract::Default.Top]
+Abstract::Default::variants = [Clause, Top]
 
 # Asynchronous block
 Abstract::Iterator = Iterator

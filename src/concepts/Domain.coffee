@@ -146,7 +146,6 @@ class Domain extends Trigger
     watchers.splice index, 3
     unless watchers.length
       delete @watchers[path]
-      debugger
       if @structured
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)

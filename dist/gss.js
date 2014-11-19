@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-11-19) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-11-20) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -22257,7 +22257,7 @@ Command = (function() {
       if (command.key != null) {
         command.push(operation);
       } else {
-        match.instance = command;
+        (command.definition || match).instance = command;
       }
       operation.command = command;
     }
@@ -22562,6 +22562,7 @@ Command = (function() {
     Prototype = function() {};
     Prototype.prototype = this.prototype;
     Kommand.prototype = new Prototype;
+    Kommand.prototype.definition = Kommand;
     Kommand.extend = Command.extend;
     Kommand.define = Command.define;
     for (property in definition) {
@@ -23093,7 +23094,6 @@ Domain = (function(_super) {
     watchers.splice(index, 3);
     if (!watchers.length) {
       delete this.watchers[path];
-      debugger;
       if (this.structured) {
         if ((j = path.indexOf('[')) > -1) {
           id = path.substring(0, j);
@@ -25231,7 +25231,7 @@ module.exports = Numeric;
 
 });
 require.register("gss/lib/domains/Abstract.js", function(exports, require, module){
-var Abstract, Assignment, Command, Condition, Constraint, Domain, Iterator, Value,
+var Abstract, Assignment, Clause, Command, Condition, Constraint, Domain, Iterator, Top, Value,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
@@ -25312,7 +25312,7 @@ Abstract.prototype.Default = Command.Default.extend({
   }
 });
 
-Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
+Top = Abstract.prototype.Default.extend({
   condition: function(engine, operation) {
     var parent;
     if (parent = operation.parent) {
@@ -25348,7 +25348,7 @@ Abstract.prototype.Default.Top = Abstract.prototype.Default.extend({
   }
 });
 
-Abstract.prototype.Default.Clause = Abstract.prototype.Default.Top.extend({
+Clause = Top.extend({
   condition: function(engine, operation) {
     var parent;
     if (parent = operation.parent) {
@@ -25363,7 +25363,7 @@ Abstract.prototype.Default.Clause = Abstract.prototype.Default.Top.extend({
   inheriting: true
 });
 
-Abstract.prototype.Default.prototype.variants = [Abstract.prototype.Default.Clause, Abstract.prototype.Default.Top];
+Abstract.prototype.Default.prototype.variants = [Clause, Top];
 
 Abstract.prototype.Iterator = Iterator;
 
@@ -28354,7 +28354,8 @@ Signatures = (function() {
         } else {
           variant = command.extend({
             permutation: combination[last],
-            padding: last - i
+            padding: last - i,
+            definition: command
           });
           if (resolved = storage.resolved) {
             proto = resolved.prototype;

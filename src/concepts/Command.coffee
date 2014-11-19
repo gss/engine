@@ -11,7 +11,7 @@ class Command
       if command.key?
         command.push(operation)
       else
-        match.instance = command
+        (command.definition || match).instance = command
       operation.command = command
     
     return command
@@ -290,6 +290,7 @@ class Command
     Prototype = ->
     Prototype.prototype = @prototype
     Kommand.prototype = new Prototype
+    Kommand.prototype.definition = Kommand
     
     Kommand.extend   = Command.extend
     Kommand.define   = Command.define
