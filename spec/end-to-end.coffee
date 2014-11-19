@@ -1547,11 +1547,11 @@ describe 'End - to - End', ->
           <div id="ship"></div>
           <style type="text/gss" scoped>
             #ship {
-              "mast"[top] == 0;
-              "mast"[bottom] == 100;
-              "mast"[left] == 10;
-              "mast"[right] == 20;
-              &"mast"[z] == 1;
+              $"mast"[top] == 0;
+              $"mast"[bottom] == 100;
+              $"mast"[left] == 10;
+              $"mast"[right] == 20;
+              "mast"[z] == 1;
             }
             #ship[height] == "mast"[height];
           </style>
@@ -1630,7 +1630,7 @@ describe 'End - to - End', ->
           "$b2[x]": 10
 
         lefts = 
-          for item in engine.$class('a') by -1
+          for item in engine.class('a') by -1
             item.parentNode.removeChild(item)
             item
 

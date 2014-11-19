@@ -510,8 +510,10 @@ class Domain extends Trigger
           id = @identity.yield(id)
         else 
           id = id.path
-      if id == @engine.scope._gss_id && property.substring(0, 10) != 'intrinsic-'
+      if id == @engine.scope?._gss_id && property.substring(0, 10) != 'intrinsic-'
         return property
+      if id.substring(0, 2) == '$"'
+        id = id.substring(1)
       return id + '[' + property + ']'
 
 

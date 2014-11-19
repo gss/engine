@@ -21472,7 +21472,7 @@ Selector.define({
       if (node === engine.scope) {
         return '$"' + value + '"';
       } else {
-        return engine.identity.provide(node) + '"' + value + '"';
+        return engine.identity["yield"](node) + '"' + value + '"';
       }
     },
     prefix: '"'
@@ -22364,7 +22364,10 @@ Command = (function() {
     switch (typeof (result = this.retrieve(domain, operation, continuation, scope, ascender, ascending))) {
       case 'object':
       case 'string':
-        return result;
+        if (continuation.indexOf(engine.Continuation.PAIR) > -1 || this.reference) {
+          return result;
+        }
+        break;
       case 'boolean':
         if (result) {
           result = void 0;
@@ -23569,6 +23572,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.getPath = function(id, property) {
+    var _ref;
     if (!property) {
       property = id;
       id = void 0;
@@ -23583,8 +23587,11 @@ Domain = (function(_super) {
           id = id.path;
         }
       }
-      if (id === this.engine.scope._gss_id && property.substring(0, 10) !== 'intrinsic-') {
+      if (id === ((_ref = this.engine.scope) != null ? _ref._gss_id : void 0) && property.substring(0, 10) !== 'intrinsic-') {
         return property;
+      }
+      if (id.substring(0, 2) === '$"') {
+        id = id.substring(1);
       }
       return id + '[' + property + ']';
     }
@@ -25392,9 +25399,6 @@ Abstract.prototype.Value.Getter = Abstract.prototype.Value.extend({
       if (!prop.matcher) {
         return prop.call(engine, object, continuation);
       }
-    }
-    if (engine.getPath(object, property) === '$1[width]') {
-      debugger;
     }
     return ['get', engine.getPath(object, property)];
   }

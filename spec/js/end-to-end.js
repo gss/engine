@@ -1218,7 +1218,7 @@ describe('End - to - End', function() {
       engine = null;
       return it('vars', function(done) {
         engine = GSS(container);
-        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" scoped>\n  #ship {\n    \"mast\"[top] == 0;\n    \"mast\"[bottom] == 100;\n    \"mast\"[left] == 10;\n    \"mast\"[right] == 20;\n    &\"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
+        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" scoped>\n  #ship {\n    $\"mast\"[top] == 0;\n    $\"mast\"[bottom] == 100;\n    $\"mast\"[left] == 10;\n    $\"mast\"[right] == 20;\n    \"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             '"mast"[height]': 100,
@@ -1262,7 +1262,7 @@ describe('End - to - End', function() {
         });
         lefts = (function() {
           var _i, _ref, _results;
-          _ref = engine.$class('a');
+          _ref = engine["class"]('a');
           _results = [];
           for (_i = _ref.length - 1; _i >= 0; _i += -1) {
             item = _ref[_i];

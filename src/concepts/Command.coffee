@@ -98,7 +98,8 @@ class Command
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
       when 'object', 'string'
-        return result
+        if continuation.indexOf(engine.Continuation.PAIR) > -1 || @reference
+          return result
         
       when 'boolean'
         if result

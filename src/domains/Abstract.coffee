@@ -132,8 +132,6 @@ Abstract::Value.Getter = Abstract::Value.extend {
     if prop = engine.properties[property]
       unless prop.matcher
         return prop.call(engine, object, continuation)
-    if engine.getPath(object, property) == '$1[width]'
-      debugger
     return ['get', engine.getPath(object, property)]
   
 # Proxy math that passes basic expressions along

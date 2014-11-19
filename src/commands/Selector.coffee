@@ -390,7 +390,7 @@ Selector.define
       if node == engine.scope
         return '$"' + value + '"'
       else
-        return engine.identity.provide(node) + '"' + value + '"'
+        return engine.identity.yield(node) + '"' + value + '"'
 
     prefix: '"'
 
