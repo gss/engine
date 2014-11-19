@@ -96,16 +96,16 @@ class Command
     domain = operation.domain || engine
     
     # Let engine modify continuation or return cached result
-    switch typeof (result = @retrieve(domain, operation, continuation, scope))
+    switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
       when 'string'
         if @stringy && result.charAt(0) != engine.Continuation.PAIR
           return result
         else
           continuation = result
-          result = undefined
+          result = ascending = undefined
           
       when 'object'
-        if continuation.indexOf(engine.Continuation.PAIR) > -1
+        if continuation.indexOf(engine.Continuation.PAIR) > 0
           return result
         
       when 'boolean'
@@ -151,7 +151,7 @@ class Command
           contd = @connect(engine, operation, continuation, scope, args, ascender)
 
           # Evaluate argument
-          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope)
+          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, undefined, ascending)
             
           if argument == undefined
             return false
@@ -398,7 +398,7 @@ class Command.Default extends Command
   execute: (args..., engine, operation) ->
     args.unshift operation[0]
     return args
-    
+
   constructor: ->
 
 # Command for objects called as functions

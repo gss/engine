@@ -1828,6 +1828,7 @@ describe('End - to - End', function() {
             });
             p12 = engine.id('p12');
             p12.parentNode.removeChild(p12);
+            debugger;
             return engine.then(function(solution) {
               var h1;
               expect(solution).to.eql({
@@ -1873,7 +1874,7 @@ describe('End - to - End', function() {
     });
     describe('plural selectors & in(::)', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<div id=\"cont1\" class=\"cont\"></div>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>            \n<style type=\"text/gss\">                            \n  .cont {\n    width: == 100;\n    \n    @h |($ .a)($ .b)| in(::) {\n      &[width] == &:next[width];\n    }\n  }                           \n</style>";
+        container.innerHTML = "<div id=\"cont1\" class=\"cont\"></div>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>            \n<style type=\"text/gss\">                            \n  .cont {\n    width: == 100;\n    \n    @h |($ .a)($ .b)| in(::) {\n      &[width] == :next[width];\n    }\n  }                           \n</style>";
         return engine.once('solved', function(solution) {
           expect(solution).to.eql({
             "$cont1[width]": 100,
@@ -1942,7 +1943,7 @@ describe('End - to - End', function() {
     });
     describe("context-specific VFL", function() {
       return it('should work', function(done) {
-        container.innerHTML = "<style>\n  article *{\n    padding: 0;\n    margin: 0\n  }\n</style>\n<article id=\"article1\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title1\"><span style=\"display:block; height: 20px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc1\"><span style=\"display:block; height: 40px; width: 10px\"></span></p>\n</article>\n<article id=\"article2\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title2\"><span style=\"display:block; height: 10px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc2\"><span style=\"display:block; height: 30px; width: 10px\"></span></p>\n</article>\n\n<style type=\"text/gss\">\n  $[width] == 300;\n  $[left] == 0;\n  $[top] == 0;\n\n  @v |(article)... in($) {\n    height: >= 0;\n  }\n\n  article {\n    @v |\n        -1-\n        (& .title)\n        -2-\n        (& .desc)\n        -3-\n        | \n        in(&) {\n          height: == ::[intrinsic-height];\n    }\n  }\n\n</style>";
+        container.innerHTML = "<style>\n  article *{\n    padding: 0;\n    margin: 0\n  }\n</style>\n<article id=\"article1\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title1\"><span style=\"display:block; height: 20px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc1\"><span style=\"display:block; height: 40px; width: 10px\"></span></p>\n</article>\n<article id=\"article2\">\n  <div class=\"media\"></div>\n  <h2 class=\"title\" id=\"title2\"><span style=\"display:block; height: 10px; width: 10px\"></span></h2>\n  <p class=\"desc\" id=\"desc2\"><span style=\"display:block; height: 30px; width: 10px\"></span></p>\n</article>\n\n<style type=\"text/gss\">\n  $[width] == 300;\n  $[left] == 0;\n  $[top] == 0;\n\n  @v |(article)... in($) {\n    height: >= 0;\n  }\n\n  article {\n    @v |\n        -1-\n        (.title)\n        -2-\n        (.desc)\n        -3-\n        | \n        in(&) {\n          height: == ::[intrinsic-height];\n    }\n  }\n\n</style>";
         return engine.then(function(solution) {
           var article, expectation, prop, value;
           expectation = {

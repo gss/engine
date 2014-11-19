@@ -87,11 +87,11 @@ class Queries
         @addMatch(node, continuation)
 
       return true
-    else
+    else unless scopes[index] == scope && paths[index] == contd
       duplicates = (collection.duplicates ||= [])
       for dup, index in duplicates
         if dup == node
-          if keys[index] == key && scopes[index] == scope && paths[index] == contd
+          if scopes[index] == scope && paths[index] == contd # && keys[index] == key
             return
       duplicates.push(node)
       keys.push(key)
@@ -196,8 +196,8 @@ class Queries
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
         if dup == node
-          if (refs.indexOf(paths[length + index]) > -1 &&
-              (keys[length + index] == needle)) &&
+          if refs.indexOf(paths[length + index]) > -1 &&
+              #(keys[length + index] == needle) &&
               scopes[length + index] == scope
 
             @snapshot continuation, collection
@@ -218,7 +218,7 @@ class Queries
           negative = false#if refs then null else false
           return null if scopes[index] != scope
           return null if refs.indexOf(paths[index]) == -1
-          return null if keys[index] != needle
+          #return null if keys[index] != needle
           if duplicate?
             duplicates.splice(duplicate, 1)
             paths[index] = paths[duplicate + length]
@@ -266,6 +266,7 @@ class Queries
         removed = undefined
 
       if removed != false
+        debugger
         @engine.pairs.remove(id, continuation)
 
         if parent = operation?.parent
@@ -593,7 +594,7 @@ class Queries
     #if operation[1].marked
     #  collection = @filterByScope collection, scope
     #else if operation[1].def.mark
-    collection = @filterByScope collection, @getParentScope(continuation, operation)
+    #collection = @filterByScope collection, @getParentScope(continuation, operation)
     return collection
     
 

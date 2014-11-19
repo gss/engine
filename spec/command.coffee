@@ -403,14 +403,14 @@ describe 'GSS commands', ->
                 #  ["get", "$box1[intrinsic-width]"]
                 #],
                 [[
-                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 1110},
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 1110},
                   ["==",
                     ["get", "$box1[height]"]
                     ["get", "$box1[intrinsic-width]"]
                   ]
                 ]],
                 [[
-                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 1110},
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 1110},
                   ["==",
                     ["get", "$box2[height]"]
                     ["get", "$box1[intrinsic-width]"]
@@ -444,14 +444,14 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
                 [[
-                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 111},
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
                     ["get", "$box1[height]"]
                     ["get", "$box1[intrinsic-width]"]
                   ]
                 ]],
                 [[
-                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 111},
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
                     ["get", "$box2[height]"]
                     ["get", "$box1[intrinsic-width]"]
@@ -484,14 +484,14 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
                 [[
-                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 111},
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
                     ["get", "$box1[height]"]
                     ["get", "$box1[intrinsic-width]"]
                   ]
                 ]],
                 [[
-                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 111},
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 111},
                   ["==",
                     ["get", "$box2[height]"]
                     ["get", "$box1[intrinsic-width]"]
@@ -506,14 +506,14 @@ describe 'GSS commands', ->
                 #  ["get", "$box1", "intrinsic-width", ".box$box2→#box1"]
                 #],
                 [[
-                  key: ".box$box1→#box1", values: {"$box1[intrinsic-width]": 0},
+                  key: ".box$box1→#box1$box1", values: {"$box1[intrinsic-width]": 0},
                   ["==",
                     ["get", "$box1[height]"]
                     ["get", "$box1[intrinsic-width]"]
                   ]
                 ]],
                 [[
-                  key: ".box$box2→#box1", values: {"$box1[intrinsic-width]": 0},
+                  key: ".box$box2→#box1$box1", values: {"$box1[intrinsic-width]": 0},
                   ["==",
                     ["get", "$box2[height]"]
                     ["get", "$box1[intrinsic-width]"]

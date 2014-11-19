@@ -472,7 +472,7 @@ describe('GSS commands', function() {
               [
                 [
                   {
-                    key: ".box$box1→#box1",
+                    key: ".box$box1→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 1110
                     }
@@ -481,7 +481,7 @@ describe('GSS commands', function() {
               ], [
                 [
                   {
-                    key: ".box$box2→#box1",
+                    key: ".box$box2→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 1110
                     }
@@ -510,7 +510,7 @@ describe('GSS commands', function() {
               [
                 [
                   {
-                    key: ".box$box1→#box1",
+                    key: ".box$box1→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 111
                     }
@@ -519,7 +519,7 @@ describe('GSS commands', function() {
               ], [
                 [
                   {
-                    key: ".box$box2→#box1",
+                    key: ".box$box2→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 111
                     }
@@ -549,7 +549,7 @@ describe('GSS commands', function() {
               [
                 [
                   {
-                    key: ".box$box1→#box1",
+                    key: ".box$box1→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 111
                     }
@@ -558,7 +558,7 @@ describe('GSS commands', function() {
               ], [
                 [
                   {
-                    key: ".box$box2→#box1",
+                    key: ".box$box2→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 111
                     }
@@ -572,7 +572,7 @@ describe('GSS commands', function() {
               [
                 [
                   {
-                    key: ".box$box1→#box1",
+                    key: ".box$box1→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 0
                     }
@@ -581,7 +581,7 @@ describe('GSS commands', function() {
               ], [
                 [
                   {
-                    key: ".box$box2→#box1",
+                    key: ".box$box2→#box1$box1",
                     values: {
                       "$box1[intrinsic-width]": 0
                     }

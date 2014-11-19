@@ -108,8 +108,8 @@ Query = Command.extend
     else
       return (@selector || @key)
 
-  retrieve: (engine, operation, continuation, scope) ->
-    return engine.pairs.getSolution(operation, continuation, scope)
+  retrieve: (engine, operation, continuation, scope, ascender, ascending) ->
+    return engine.pairs.getSolution(operation, continuation, scope, ascender, ascending)
       
   prepare: ->
     

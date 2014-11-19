@@ -317,7 +317,7 @@ class Domain extends Trigger
         return
     # Unconstrain all paths
     else
-      for path in constraint.paths
+      for path in constraint.paths by -1
         group = @paths[path]
         group.splice(group.indexOf(constraint, 1))
         if group.length == 0

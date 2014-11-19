@@ -4,14 +4,14 @@ class Pairs
     @paths = {}
 
 
-  onLeft: (operation, continuation, scope) ->
+  onLeft: (operation, parent, continuation, scope) ->
     left = @engine.Continuation.getCanonicalPath(continuation)
-    parent = @engine.Operation.getRoot(operation)
+
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
-      parent.left = operation
+      parent.right = operation
       @lefts.push parent, left, scope
       contd = @engine.Continuation.PAIR
-      return @engine.Continuation.PAIR
+      return @engine.Continuation.getScopePath(scope, continuation)
     else
       (@dirty ||= {})[left] = true
       return false
@@ -19,9 +19,8 @@ class Pairs
   # Check if operation is pairly bound with another selector
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
-  onRight: (operation, continuation, scope, left, right) ->
+  onRight: (operation, parent, continuation, scope, left, right) ->
     right = @engine.Continuation.getCanonicalPath(continuation.substring(0, continuation.length - 1))
-    parent = @engine.Operation.getRoot(operation)
     for op, index in @lefts by 3
       if op == parent && @lefts[index + 2] == scope
         left = @lefts[index + 1]
@@ -39,23 +38,22 @@ class Pairs
     return unless @paths[continuation]
     (@dirty ||= {})[continuation] = true
     
-  getSolution: (operation, continuation, scope, single) ->
+  getSolution: (operation, continuation, scope, ascender, ascending, single) ->
     # Attempt pairing
     last = continuation.lastIndexOf(@engine.Continuation.PAIR)
-    if last > 0 && !operation.command.reference
+    if last > -1 && !operation.command.reference
       # Found right side
-      first = continuation.indexOf(@engine.Continuation.PAIR) 
-      if first == 0 && last == continuation.length - 1 && @onRight(operation, continuation, scope)?
-        return false
-      # Found left side, rewrite continuation
-      else
-        prev = -1
-        while (index = continuation.indexOf(@engine.Continuation.PAIR, prev + 1)) > -1
-          if result = @getSolution(operation, continuation.substring(prev || 0, index), scope, true)
-            return result
-          prev = index 
-        if first == continuation.length - 1
-          return @onLeft(operation, continuation, scope)
+      prev = -1
+      while (index = continuation.indexOf(@engine.Continuation.PAIR, prev + 1)) > -1
+        if result = @getSolution(operation, continuation.substring(prev + 1, index), scope, ascender, ascending, true)
+          return result
+        prev = index 
+      if last == continuation.length - 1 && ascending
+        parent = @engine.Operation.getRoot(operation)
+        if !parent.right || parent.right == operation
+          return @onLeft(operation, parent, continuation, scope, ascender, ascending)
+        else
+          return @onRight(operation, parent, continuation, scope, ascender, ascending)
     # Fetch saved result if operation path mathes continuation canonical path
     else
       return if continuation.length == 1
@@ -117,32 +115,33 @@ class Pairs
 
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
-    a = @engine.queries.get(left)
-    b = @engine.queries.get(right)
-
-    sid = @engine.identity.yield(scope)
-
-    leftOld =
-      if @engine.updating.collections.hasOwnProperty(left)
-        @engine.queries.filterByScope(@engine.updating.collections[left], scope)
-      else
-        @engine.queries.filterByScope(a, scope)
-
-    rightOld =
-      if @engine.updating.collections.hasOwnProperty(right)
-        @engine.queries.filterByScope(@engine.updating.collections[right], scope)
-      else
-        @engine.queries.filterByScope(b, scope)
-
     root = @engine.Operation.getRoot(operation)
-    if leftNew = @engine.queries.filterByScope(a, scope, operation)
-      if root.left.command.singular && leftNew?.push
-        leftNew = leftNew[0]
+    right = @engine.Continuation.getScopePath(scope, left) + root.right.command.path
+    leftNew = @engine.queries.get(left)
+    rightNew = @engine.queries.get(right)
 
-    if rightNew = @engine.queries.filterByScope(b, scope, operation, true)
-      if root.right.command.singular && rightNew?.push
+    if @engine.updating.collections.hasOwnProperty(left)
+      leftOld = @engine.updating.collections[left]
+    else
+      leftOld = leftNew
+  
+    if @engine.updating.collections.hasOwnProperty(right)
+      rightOld = @engine.updating.collections[right]
+    else
+      rightOld = rightNew
+
+    if operation.command.singular
+      if leftNew?.push
+        leftNew = leftNew[0]
+      if leftOld?.push
+        leftOld = leftOld[0]
+
+    if root.right.command.singular 
+      if rightNew?.push
         rightNew = rightNew[0]
- 
+      if rightOld?.push
+        rightOld = rightOld[0]
+        
 
     I = Math.max(@count(leftNew), @count(rightNew))
     J = Math.max(@count(leftOld), @count(rightOld))
@@ -167,25 +166,26 @@ class Pairs
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
+    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.Continuation.PAIR + ' ' + @engine.identity.yield(scope), [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @engine.Continuation.PAIR + ' ' + right
+      
+
     cleaned = []
     for pair in removed
       continue if !pair[0] || !pair[1]
       contd = left
-      unless leftOld.single
-        contd += @engine.identity.yield(pair[0])
-      contd += right
-      unless rightOld.single
-        contd += @engine.identity.yield(pair[1])
+      contd += @engine.identity.yield(pair[0])
+      contd += @engine.Continuation.PAIR
+      contd += root.right.command.path
+      contd += @engine.identity.yield(pair[1])
       cleaned.push(contd)
     
     solved = []
     for pair in added
       contd = left
-      unless leftNew.single
-        contd += @engine.identity.yield(pair[0])
-      contd += right
-      unless rightNew.single
-        contd += @engine.identity.yield(pair[1])
+      contd += @engine.identity.yield(pair[0])
+      contd += @engine.Continuation.PAIR
+      contd += root.right.command.path
+      contd += @engine.identity.yield(pair[1])
 
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
@@ -206,7 +206,7 @@ class Pairs
     if cleaning
       @clean(left, scope, operation)
 
-    @engine.console.row('repair', [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], @engine.identity.yield(scope) + left + right)
+    @engine.console.groupEnd()
 
   clean: (left, scope, operation) ->  
     if pairs = @paths?[left]
@@ -246,13 +246,11 @@ class Pairs
 
 
   set: (path, result) ->
-    if pairs = @paths?[path]
-      (@dirty ||= {})[path] = true
-    else if path.charAt(0) == @engine.Continuation.PAIR
-      path = @engine.Continuation.getCanonicalPath(path)
-      for left, watchers of @paths
-        if watchers.indexOf(path) > -1
-          (@dirty ||= {})[left] = true
+    path = @engine.Continuation.getCanonicalPath(path)
+    for left, watchers of @paths
+      if watchers.indexOf(path) > -1
+        (@dirty ||= {})[left] = true
+    return
 
   watch: (operation, continuation, scope, left, right) ->
     watchers = @paths[left] ||= []

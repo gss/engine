@@ -2512,6 +2512,7 @@ describe 'End - to - End', ->
 
             p12 = engine.id('p12')
             p12.parentNode.removeChild(p12)
+            debugger
 
             engine.then (solution) ->  
               expect(solution).to.eql  
@@ -2601,7 +2602,7 @@ describe 'End - to - End', ->
                 width: == 100;
                 
                 @h |($ .a)($ .b)| in(::) {
-                  &[width] == &:next[width];
+                  &[width] == :next[width];
                 }
               }                           
             </style>
@@ -2759,9 +2760,9 @@ describe 'End - to - End', ->
           article {
             @v |
                 -1-
-                (& .title)
+                (.title)
                 -2-
-                (& .desc)
+                (.desc)
                 -3-
                 | 
                 in(&) {

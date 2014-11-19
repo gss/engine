@@ -88,7 +88,7 @@ class Selector extends Query
     return (parent || @selecting) && ' ' || ''
 
   getIndex: (operation) ->
-    return operation[0]
+    return @prefix ? operation[0]
   
   getIndexSuffix: (operation) ->
     return operation[2] || operation[1]
@@ -227,7 +227,10 @@ Selector.define
     
     Qualifier: (node, value) ->
       if value == '*' || node.tagName == value.toUpperCase()
-        return node 
+        return node
+
+    getIndexSuffix: (operation) ->
+      return operation[operation.length - 1].toUpperCase() 
 
   # DOM Lookups
 
@@ -366,6 +369,7 @@ Selector.define
   '$':
     Element: (engine, operation, continuation, scope) ->
       return engine.scope
+
 
   # Return abstract reference to window
   '::window':
