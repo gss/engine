@@ -98,7 +98,7 @@ describe('End - to - End', function() {
         return engine.once('solve', function(e) {
           var clone, dump;
           expect(getSource(engine.tag('style')[1])).to.equal(".css-simple-dump{height:100px;}");
-          dump = engine.$class('css-simple-dump')[0];
+          dump = engine["class"]('css-simple-dump')[0];
           clone = dump.cloneNode();
           dump.parentNode.appendChild(clone);
           return engine.once('solve', function(e) {
@@ -123,7 +123,7 @@ describe('End - to - End', function() {
         return engine.once('solve', function() {
           var el;
           expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}\n.outer .innie-outie #css-inner-dump-2, .outie .innie-outie #css-inner-dump-2{height:200px;}");
-          el = engine.$class("innie-outie")[1];
+          el = engine["class"]("innie-outie")[1];
           el.setAttribute('class', 'innie-outie-zzz');
           return engine.once('solve', function() {
             expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{height:100px;z-index:5;}");
@@ -141,27 +141,27 @@ describe('End - to - End', function() {
         container.innerHTML = "<div class=\"outer\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-1\"></div>\n  </div>\n</div>\n<div class=\"outie\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-2\"></div>\n  </div>\n</div>\n<style type=\"text/gss\" scoped>\n    .innie-outie {\n      !> * {\n        height: 200px;\n\n        #css-inner-dump-2 {\n          z-index: -1;\n        }\n      }\n    }\n</style>";
         return engine.once('solve', function() {
           var A, B;
-          expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
-          A = engine.$class("innie-outie")[0];
-          B = engine.$class("innie-outie")[1];
+          expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie!>*\"]{height:200px;}\n[matches~=\".innie-outie!>*\"] #css-inner-dump-2{z-index:-1;}");
+          A = engine["class"]("innie-outie")[0];
+          B = engine["class"]("innie-outie")[1];
           B.setAttribute('class', 'innie-outie-zzz');
           return engine.once('solve', function() {
-            expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}");
+            expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie!>*\"]{height:200px;}");
             B.setAttribute('class', 'innie-outie');
             return engine.once('solve', function() {
-              expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+              expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie!>*\"]{height:200px;}\n[matches~=\".innie-outie!>*\"] #css-inner-dump-2{z-index:-1;}");
               A.setAttribute('class', 'innie-outie-zzz');
               return engine.once('solve', function() {
-                expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+                expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie!>*\"]{height:200px;}\n[matches~=\".innie-outie!>*\"] #css-inner-dump-2{z-index:-1;}");
                 B.setAttribute('class', 'innie-outie-zzz');
                 return engine.once('solve', function() {
                   expect(getSource(engine.tag('style')[1])).to.equal("");
                   A.setAttribute('class', 'innie-outie');
                   return engine.once('solve', function() {
-                    expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}");
+                    expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie!>*\"]{height:200px;}");
                     B.setAttribute('class', 'innie-outie');
                     return engine.once('solve', function() {
-                      expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"]{height:200px;}\n[matches~=\".innie-outie" + GSS.Continuation.DESCEND + "!>*\"] #css-inner-dump-2{z-index:-1;}");
+                      expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".innie-outie!>*\"]{height:200px;}\n[matches~=\".innie-outie!>*\"] #css-inner-dump-2{z-index:-1;}");
                       return done();
                     });
                   });

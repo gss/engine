@@ -20647,6 +20647,24 @@ Assignment.Unsafe = (function(_super) {
     }
   ];
 
+  Unsafe.prototype.advices = [
+    function(engine, operation, command) {
+      var parent, rule;
+      parent = operation;
+      rule = void 0;
+      while (parent.parent) {
+        if (!rule && parent[0] === 'rule') {
+          rule = parent;
+        }
+        parent = parent.parent;
+      }
+      operation.index = parent.rules = (parent.rules || 0) + 1;
+      if (rule) {
+        (rule.properties || (rule.properties = [])).push(operation.index);
+      }
+    }
+  ];
+
   return Unsafe;
 
 })(Assignment);
@@ -20719,7 +20737,7 @@ module.exports = Block;
 
 });
 require.register("gss/lib/commands/Condition.js", function(exports, require, module){
-var Command, Condition, _ref,
+var Command, Condition,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -20727,11 +20745,6 @@ Command = require('../concepts/Command');
 
 Condition = (function(_super) {
   __extends(Condition, _super);
-
-  function Condition() {
-    _ref = Condition.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
 
   Condition.prototype.type = 'Condition';
 
@@ -20750,14 +20763,23 @@ Condition = (function(_super) {
 
   Condition.prototype.domain = 'solved';
 
+  function Condition(operation, engine) {
+    this.key || (this.key = this.serialize(operation, engine));
+  }
+
+  Condition.prototype.push = function() {};
+
+  Condition.prototype.serialize = function(operation, engine) {
+    return engine.Continuation.DESCEND + '@' + this.toExpression(operation[1]);
+  };
+
   Condition.prototype.update = function(engine, operation, continuation, scope, ascender, ascending) {
-    var branch, index, old, path, result, watchers, _base, _base1, _name;
+    var branch, index, old, path, result, watchers, _base, _name;
     watchers = (_base = engine.queries.watchers)[_name = scope._gss_id] || (_base[_name] = []);
     if (!watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) === -1) {
       watchers.push(operation.parent, continuation, scope);
     }
-    (_base1 = operation.parent).uid || (_base1.uid = '@' + (engine.queries.uid = (engine.queries.uid || 0) + 1));
-    path = continuation + operation.parent.uid;
+    path = continuation + this.key;
     old = engine.queries[path];
     if (!!old !== !!ascending || (old === void 0 && old !== ascending)) {
       if (old !== void 0) {
@@ -20909,7 +20931,18 @@ Iterator = (function(_super) {
 
 Iterator.define({
   "rule": {
-    index: 'rules'
+    index: 'rules',
+    advices: [
+      function(engine, operation, command) {
+        var parent;
+        parent = operation;
+        debugger;
+        while (parent.parent) {
+          parent = parent.parent;
+        }
+        operation.index = parent.rules = (parent.rules || 0) + 1;
+      }
+    ]
   },
   "each": {}
 });
@@ -22237,7 +22270,7 @@ Command = (function() {
     if (!(command = operation.command)) {
       match = Command.match(this, operation, parent, index);
       if (!(command = match.instance)) {
-        command = new match(operation);
+        command = new match(operation, this);
       }
       if (!parent) {
         command = Command.descend(command, this, operation);
@@ -22307,20 +22340,26 @@ Command = (function() {
   };
 
   Command.descend = function(command, engine, operation) {
-    var argument, cmd, type, variants, _i, _j, _len, _len1;
-    if (variants = command.variants) {
-      for (_i = 0, _len = variants.length; _i < _len; _i++) {
-        type = variants[_i];
-        if (type.prototype.condition(engine, operation, command)) {
-          if (!(command = type.instance)) {
-            command = new type(operation);
+    var advices, argument, cmd, proto, type, _i, _j, _len, _len1;
+    if (advices = command.advices) {
+      for (_i = 0, _len = advices.length; _i < _len; _i++) {
+        type = advices[_i];
+        if ((proto = type.prototype).condition) {
+          if (!proto.condition(engine, operation, command)) {
+            continue;
           }
-          operation.command = command;
-          if (command.key == null) {
-            type.instance = command;
-          }
-          break;
+        } else {
+          type(engine, operation, command);
+          continue;
         }
+        if (!(command = type.instance)) {
+          command = new type(operation);
+        }
+        operation.command = command;
+        if (command.key == null) {
+          type.instance = command;
+        }
+        break;
       }
     }
     for (_j = 0, _len1 = operation.length; _j < _len1; _j++) {
@@ -22498,13 +22537,14 @@ Command = (function() {
   Command.prototype.toExpression = function(operation) {
     switch (typeof operation) {
       case 'object':
-        switch (operation[0]) {
-          case 'get':
+        if (operation[0] === 'get') {
+          if (operation.length === 2) {
             return operation[1];
-          default:
-            return this.toExpression(operation[1]) + operation[0] + this.toExpression(operation[2]);
+          } else {
+            return this.toExpression(operation[1]) + '[' + this.toExpression(operation[2]) + ']';
+          }
         }
-        break;
+        return this.toExpression(operation[1] || '') + operation[0] + this.toExpression(operation[2] || '');
       default:
         return operation;
     }
@@ -25350,7 +25390,7 @@ Clause = Top.extend({
   inheriting: true
 });
 
-Abstract.prototype.Default.prototype.variants = [Clause, Top];
+Abstract.prototype.Default.prototype.advices = [Clause, Top];
 
 Abstract.prototype.Iterator = Iterator;
 
@@ -25414,6 +25454,7 @@ Abstract.prototype.Assignment = Assignment.extend({}, {
 
 Abstract.prototype.Assignment.Unsafe = Assignment.Unsafe.extend({}, {
   'set': function(object, property, value, engine, operation, continuation, scope) {
+    debugger;
     if (engine.intrinsic) {
       engine.intrinsic.restyle(object || scope, property, value, continuation, operation);
     } else {
@@ -27910,7 +27951,7 @@ Stylesheets = (function() {
     var rule;
     rule = operation;
     while (rule = rule.parent) {
-      if (rule.name === 'rule') {
+      if (rule[0] === 'rule') {
         return rule;
       }
     }
@@ -27932,7 +27973,7 @@ Stylesheets = (function() {
 
   Stylesheets.prototype.getOperation = function(operation, watchers, rule) {
     var needle, other, _i, _len, _ref, _ref1;
-    needle = operation.sourceIndex;
+    needle = operation.index;
     _ref = rule.properties;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       other = _ref[_i];
@@ -27982,11 +28023,11 @@ Stylesheets = (function() {
       return;
     }
     rules = sheet.rules || sheet.cssRules;
-    if (needle !== operation.sourceIndex || value === '') {
+    if (needle !== operation.index || value === '') {
       generated = rules[previous.length];
       generated.style[property] = value;
       next = void 0;
-      if (needle === operation.sourceIndex) {
+      if (needle === operation.index) {
         needle++;
       }
       for (index = _j = needle, _ref = watchers.length; needle <= _ref ? _j < _ref : _j > _ref; index = needle <= _ref ? ++_j : --_j) {
@@ -28012,7 +28053,7 @@ Stylesheets = (function() {
   Stylesheets.prototype.watch = function(operation, continuation, stylesheet) {
     var meta, watchers, _name;
     watchers = this.getWatchers(stylesheet);
-    meta = (watchers[_name = operation.sourceIndex] || (watchers[_name] = []));
+    meta = (watchers[_name = operation.index] || (watchers[_name] = []));
     if (meta.indexOf(continuation) > -1) {
       return;
     }
@@ -28025,7 +28066,7 @@ Stylesheets = (function() {
     if (watchers == null) {
       watchers = this.getWatchers(stylesheet);
     }
-    index = operation.sourceIndex;
+    index = operation.index;
     meta = watchers[index];
     meta.splice(meta.indexOf(continuation), 1);
     observers = watchers[continuation];
@@ -28083,33 +28124,33 @@ Stylesheets = (function() {
   };
 
   Stylesheets.prototype.getSelectors = function(operation) {
-    var bit, bits, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref,
+    var bit, bits, cmd, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref,
       _this = this;
     parent = operation;
     results = wrapped = custom = void 0;
     while (parent) {
-      if (parent.name === 'if') {
-        if (parent.uid) {
-          if (results) {
-            for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
-              result = results[index];
-              if (result.substring(0, 11) !== '[matches~="') {
-                result = this.getCustomSelector(result);
-              }
-              results[index] = result.substring(0, 11) + parent.uid + this.engine.Continuation.DESCEND + result.substring(11);
+      if (parent[0] === 'if') {
+        if (results) {
+          for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
+            result = results[index];
+            if (result.substring(0, 11) !== '[matches~="') {
+              result = this.getCustomSelector(result);
             }
+            results[index] = result.substring(0, 11) + parent.uid + this.engine.Continuation.DESCEND + result.substring(11);
           }
         }
-      } else if (parent.name === 'rule') {
-        selectors = parent[1].path;
+      } else if (parent[0] === 'rule') {
+        cmd = parent[1].command;
+        selectors = cmd.path;
         if (parent[1][0] === ',') {
           paths = parent[1].slice(1).map(function(item) {
-            return !item.marked && item.groupped || item.path;
+            return item.command.selector || item.command.path;
           });
+          groups = ((_ref = cmd.selector) != null ? _ref.split(',') : void 0) || [];
         } else {
-          paths = [parent[1].path];
+          paths = [selectors];
+          groups = [cmd.selector || (cmd.key === cmd.path && cmd.key)];
         }
-        groups = (_ref = parent[1].groupped && parent[1].groupped.split(',')) != null ? _ref : paths;
         if (results != null ? results.length : void 0) {
           bits = selectors.split(',');
           update = [];
@@ -28347,16 +28388,16 @@ Signatures = (function() {
           if (resolved = storage.resolved) {
             proto = resolved.prototype;
             if (variant.prototype.condition) {
-              if (!proto.hasOwnProperty('variants')) {
-                proto.variants = ((_ref1 = proto.variants) != null ? _ref1.slice() : void 0) || [];
+              if (!proto.hasOwnProperty('advices')) {
+                proto.advices = ((_ref1 = proto.advices) != null ? _ref1.slice() : void 0) || [];
                 if (proto.condition) {
-                  proto.variants.push(resolved);
+                  proto.advices.push(resolved);
                 }
               }
-              proto.variants.push(variant);
+              proto.advices.push(variant);
             } else {
               if (proto.condition) {
-                variant.prototype.variants = ((_ref2 = proto.variants) != null ? _ref2.slice() : void 0) || [resolved];
+                variant.prototype.advices = ((_ref2 = proto.advices) != null ? _ref2.slice() : void 0) || [resolved];
                 storage.resolved = variant;
               }
             }

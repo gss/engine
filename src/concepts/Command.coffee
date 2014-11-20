@@ -5,7 +5,7 @@ class Command
     unless command = operation.command
       match = Command.match(@, operation, parent, index)
       unless command = match.instance
-        command = new match(operation)
+        command = new match(operation, @)
       unless parent
         command = Command.descend(command, @, operation)
       if command.key?
@@ -62,15 +62,20 @@ class Command
   
   # Choose a sub type for command    
   @descend: (command, engine, operation) ->
-    if variants = command.variants
-      for type in variants
-        if type::condition(engine, operation, command)
-          unless command = type.instance
-            command = new type(operation)
-          operation.command = command
-          unless command.key?
-            type.instance = command
-          break
+    if advices = command.advices
+      for type in advices
+        if (proto = type::).condition
+          continue unless proto.condition(engine, operation, command)
+        else
+          type(engine, operation, command)
+          continue
+
+        unless command = type.instance
+          command = new type(operation)
+        operation.command = command
+        unless command.key?
+          type.instance = command
+        break
     for argument in operation
       if cmd = argument.command
         Command.descend(cmd, engine, argument)
@@ -246,11 +251,12 @@ class Command
   toExpression: (operation) ->
     switch typeof operation
       when 'object'
-        switch operation[0]
-          when 'get'
+        if operation[0] == 'get'
+          if operation.length == 2
             return operation[1]
           else
-            return @toExpression(operation[1]) + operation[0] + @toExpression(operation[2])
+            return @toExpression(operation[1]) + '[' + @toExpression(operation[2]) + ']'
+        return @toExpression(operation[1] || '') + operation[0] + @toExpression(operation[2] || '')
       else
         return operation
 

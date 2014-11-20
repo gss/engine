@@ -15,6 +15,18 @@ class Condition extends Command
 
   domain: 'solved'
 
+  constructor: (operation, engine) ->
+    @key ||= @serialize(operation, engine)
+
+  push: ->
+
+  serialize: (operation, engine) ->
+    return engine.Continuation.DESCEND + '@' + 
+      #operation[0] + 
+      #'(' + 
+        @toExpression(operation[1]) 
+      #  + ')'
+
   update: (engine, operation, continuation, scope, ascender, ascending) ->
 
     watchers = engine.queries.watchers[scope._gss_id] ||= []
@@ -22,8 +34,7 @@ class Condition extends Command
       watchers.push operation.parent, continuation, scope
 
     
-    operation.parent.uid ||= '@' + (engine.queries.uid = (engine.queries.uid || 0) + 1)
-    path = continuation + operation.parent.uid
+    path = continuation + @key
 
     old = engine.queries[path]
     if !!old != !!ascending || (old == undefined && old != ascending)

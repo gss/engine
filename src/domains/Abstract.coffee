@@ -101,7 +101,7 @@ Clause = Top.extend
   inheriting: true
 
 # Register subclasses to be dispatched by condition
-Abstract::Default::variants = [Clause, Top]
+Abstract::Default::advices = [Clause, Top]
 
 # Asynchronous block
 Abstract::Iterator = Iterator
@@ -158,6 +158,7 @@ Abstract::Assignment = Assignment.extend {},
 # Style assignment
 Abstract::Assignment.Unsafe = Assignment.Unsafe.extend {},
   'set': (object, property, value, engine, operation, continuation, scope) ->
+    debugger
     if engine.intrinsic
       engine.intrinsic.restyle object || scope, property, value, continuation, operation
     else

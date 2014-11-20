@@ -21,7 +21,7 @@ class Stylesheets
   getRule: (operation) ->
     rule = operation
     while rule = rule.parent
-      if rule.name == 'rule'
+      if rule[0] == 'rule'
         return rule
     return
 
@@ -35,7 +35,7 @@ class Stylesheets
     return @watchers[stylesheet._gss_id] ||= []
 
   getOperation: (operation, watchers, rule) ->
-    needle = operation.sourceIndex
+    needle = operation.index
     for other in rule.properties
       if watchers[other]?.length
         needle = other
@@ -71,12 +71,12 @@ class Stylesheets
     rules = sheet.rules || sheet.cssRules
     
 
-    if needle != operation.sourceIndex || value == ''
+    if needle != operation.index || value == ''
       generated = rules[previous.length]
       generated.style[property] = value
 
       next = undefined
-      if needle == operation.sourceIndex
+      if needle == operation.index
         needle++
       for index in [needle ... watchers.length]
         if ops = watchers[index]
@@ -95,7 +95,7 @@ class Stylesheets
   watch: (operation, continuation, stylesheet) ->
     watchers = @getWatchers(stylesheet)
 
-    meta = (watchers[operation.sourceIndex] ||= [])
+    meta = (watchers[operation.index] ||= [])
     if meta.indexOf(continuation) > -1
       return
     (watchers[continuation] ||= []).push(operation)
@@ -104,7 +104,7 @@ class Stylesheets
   unwatch: (operation, continuation, stylesheet, watchers) ->
     watchers ?= @getWatchers(stylesheet)
 
-    index = operation.sourceIndex
+    index = operation.index
 
     meta = watchers[index]
     meta.splice meta.indexOf(continuation), 1
@@ -144,62 +144,62 @@ class Stylesheets
     return @getSelectors(operation).join(', ')
 
   getSelectors: (operation) ->
-      parent = operation
-      results = wrapped = custom = undefined
+    parent = operation
+    results = wrapped = custom = undefined
 
-      # Iterate rules
-      while parent
+    # Iterate rules
+    while parent
 
-        # Append condition id to path
-        if parent.name == 'if'
-          if parent.uid
-            if results
-              for result, index in results
-                if result.substring(0, 11) != '[matches~="'
-                  result = @getCustomSelector(result)
-                results[index] = result.substring(0, 11) + parent.uid + @engine.Continuation.DESCEND + result.substring(11)
-        
-        # Add rule selector to path
-        else if parent.name == 'rule'
-          selectors = parent[1].path
+      # Append condition id to path
+      if parent[0] == 'if'
+        if results
+          for result, index in results
+            if result.substring(0, 11) != '[matches~="'
+              result = @getCustomSelector(result)
+            results[index] = result.substring(0, 11) + parent.uid + @engine.Continuation.DESCEND + result.substring(11)
+      
+      # Add rule selector to path
+      else if parent[0] == 'rule'
+        cmd = parent[1].command
+        selectors = cmd.path
 
-          if parent[1][0] == ','
-            paths = parent[1].slice(1).map (item) -> 
-              return !item.marked && item.groupped || item.path
-          else
-            paths = [parent[1].path]
+        if parent[1][0] == ','
+          paths = parent[1].slice(1).map (item) -> 
+            return item.command.selector || item.command.path
+          groups = cmd.selector?.split(',') || []
+        else
+          paths = [selectors]
+          groups = [cmd.selector || (cmd.key == cmd.path && cmd.key)]
 
-          groups = parent[1].groupped && parent[1].groupped.split(',') ? paths
+        # Prepend selectors with selectors of a parent rule
+        if results?.length
+          bits = selectors.split(',')
 
-          # Prepend selectors with selectors of a parent rule
-          if results?.length
-            bits = selectors.split(',')
+          update = []
+          for result in results
+            if result.substring(0, 11) == '[matches~="'
+              update.push result.substring(0, 11) + selectors + @engine.Continuation.DESCEND + result.substring(11)
+            else
+              for bit, index in bits
+                if groups[index] != bit
+                  update.push @getCustomSelector(selectors) + ' ' + result
+                else 
+                  update.push bit + ' ' + result
 
-            update = []
-            for result in results
-              if result.substring(0, 11) == '[matches~="'
-                update.push result.substring(0, 11) + selectors + @engine.Continuation.DESCEND + result.substring(11)
-              else
-                for bit, index in bits
-                  if groups[index] != bit
-                    update.push @getCustomSelector(selectors) + ' ' + result
-                  else 
-                    update.push bit + ' ' + result
+          results = update
+        # Return all selectors
+        else 
 
-            results = update
-          # Return all selectors
-          else 
+          results = selectors.split(',').map (path, index) =>
+            if path != groups[index]
+              @getCustomSelector(selectors)
+            else
+              path
+      parent = parent.parent
 
-            results = selectors.split(',').map (path, index) =>
-              if path != groups[index]
-                @getCustomSelector(selectors)
-              else
-                path
-        parent = parent.parent
-
-      for result, index in results
-        results[index] = results[index].replace(@CleanupSelectorRegExp, '')
-      return results
+    for result, index in results
+      results[index] = results[index].replace(@CleanupSelectorRegExp, '')
+    return results
 
   getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'

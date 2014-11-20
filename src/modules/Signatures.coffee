@@ -140,14 +140,14 @@ class Signatures
           if resolved = storage.resolved
             proto = resolved::
             if variant::condition
-              unless proto.hasOwnProperty('variants')
-                proto.variants = proto.variants?.slice() || []
+              unless proto.hasOwnProperty('advices')
+                proto.advices = proto.advices?.slice() || []
                 if proto.condition
-                  proto.variants.push(resolved)
-              proto.variants.push(variant)
+                  proto.advices.push(resolved)
+              proto.advices.push(variant)
             else
               if proto.condition
-                variant::variants = proto.variants?.slice() || [resolved]
+                variant::advices = proto.advices?.slice() || [resolved]
                 storage.resolved = variant
           else
             storage.resolved = variant
