@@ -164,7 +164,7 @@ class Pairs
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
-    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.Continuation.PAIR + ' ' + @engine.identity.yield(scope), [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @engine.Continuation.PAIR + ' ' + right
+    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + @engine.identity.yield(scope)
       
 
     cleaned = []

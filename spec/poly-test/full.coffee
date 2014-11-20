@@ -11,11 +11,11 @@ DEMOS =
     <style type="text/gss">
       [md] == 72 !require;
       [md-sub] == 8;
-      ::scope[width] == ::scope[intrinsic-width];
+      $[width] == $[intrinsic-width];
 
 
       .demo {
-        @if ::scope[width] < 500 {
+        @if $[width] < 500 {
           .title {
             margin-top: == [md-sub];
           }
@@ -79,10 +79,10 @@ DEMOS =
     <style type="text/gss">
 
     
-    ::scope[left] == 0;
-    ::scope[top] == 0;
-    ::scope[height] == ::scope[intrinsic-height];
-    ::scope[width] == ::scope[intrinsic-width];
+    $[left] == 0;
+    $[top] == 0;
+    $[height] == $[intrinsic-height];
+    $[width] == $[intrinsic-width];
 
     .box.w-virtual {
       @h |-(&"zone")-| in(&) gap(20);
@@ -95,9 +95,9 @@ DEMOS =
       @v |-(& .innie)-| in(&) gap(20);
     }
 
-    @v |-10-(.box)-20-... in(::scope) {
+    @v |-10-(.box)-20-... in($) {
             
-      @h |~100~(&)~100~| in(::scope);
+      @h |~100~(&)~100~| in($);
       
       &[x] + 20 == &:next[x];
       &[right] - 20 == &:next[right];
@@ -153,34 +153,34 @@ DEMOS =
       header {
         ::[left] == 0;
         // condition inside css rule
-        @if (::scope[intrinsic-width] > ::scope[intrinsic-height]) {
-          ::[width] == ::scope[intrinsic-width] / 4;
+        @if ($[intrinsic-width] > $[intrinsic-height]) {
+          ::[width] == $[intrinsic-width] / 4;
           opacity: 0.5;
         } @else {
-          ::[width] == ::scope[intrinsic-width] / 2;
+          ::[width] == $[intrinsic-width] / 2;
           opacity: 0.75;
         }
       }
       footer {
-        ::[top] == (main)[height]; 
-        ::[height] == ::scope[intrinsic-height] * 2;
+        ::[top] == ($ main)[height]; 
+        ::[height] == $[intrinsic-height] * 2;
       }
 
       aside {
-        ::[left] == (main)[right];
+        ::[left] == ($ main)[right];
         ::[height] == 100;
-        ::[top] == (header)[intrinsic-height] + (header)[intrinsic-y];
+        ::[top] == ($ header)[intrinsic-height] + ($ header)[intrinsic-y];
       }
 
       main {
         // Bind things to scroll position
-        ::[top] == ::scope[scroll-top];// + (header)[intrinsic-y];
-        ::[width] == (aside)[intrinsic-width];
-        ::[left] == (header)[right];
+        ::[top] == $[scroll-top];// + (header)[intrinsic-y];
+        ::[width] == ($ aside)[intrinsic-width];
+        ::[left] == ($ header)[right];
 
         // use intrinsic-height to avoid binding. Should be:
-        // height: :window[height] - (header)[height];
-        ::[height] == ::scope[intrinsic-height] - (header)[intrinsic-height];
+        // height: :window[height] - ($ header)[height];
+        ::[height] == $[intrinsic-height] - ($ header)[intrinsic-height];
       } 
       // Custom combinators
       ul li !~ li {
@@ -197,7 +197,7 @@ DEMOS =
         ::[width] == [li-width];
 
         (&:previous)[right] == &[left];
-        (&:last)[right] == ::scope[intrinsic-width] - 16;
+        (&:last)[right] == $[intrinsic-width] - 16;
         (&:first)[left] == 0;
       }
     </style>
@@ -298,52 +298,52 @@ DEMOS =
         box-shadow: 0 5px 8px hsla(0,0%,0%,.3);  
       }
     </style>
-    <style type="text/gss">
-      /* vars */
-      [gap] == 20 !required;
-      [flex-gap] >= [gap] * 2 !required;
-      [radius] == 10 !required;
-      [outer-radius] == [radius] * 2 !required;
+<style type="text/gss">
+/* vars */
+[gap] == 20 !required;
+[flex-gap] >= [gap] * 2 !required;
+[radius] == 10 !required;
+[outer-radius] == [radius] * 2 !required;
 
-      /* scope-as-window for tests */
-      ::scope[left] == 0;
-      ::scope[top] == 0;
-      ::scope[width] == ::scope[intrinsic-width] !require;
-      ::scope[height] == ::scope[intrinsic-height] !require;
+/* scope-as-window for tests */
+$[left] == 0;
+$[top] == 0;
+$[width] == $[intrinsic-width] !require;
+$[height] == $[intrinsic-height] !require;
 
-      /* elements */
-      #profile-card {      
-        width: == ::scope[intrinsic-width] - 480;            
-        height: == ::scope[intrinsic-height] - 350;
-        center-x: == ::scope[center-x];
-        center-y: == ::scope[center-y];        
-        border-radius: == [outer-radius];
-      }
+/* elements */
+#profile-card {      
+  width: == $[width] - 480;            
+  height: == $[height] - 350;
+  center-x: == $[center-x];
+  center-y: == $[center-y];        
+  border-radius: == [outer-radius];
+}
 
-      #avatar {
-        height: == 160 !required;
-        width: == ::[height];
-        border-radius: == ::[height] / 2;        
-      }
+#avatar {
+  height: == 160 !required;
+  width: == ::[height];
+  border-radius: == ::[height] / 2;        
+}
 
-      #name {
-        height: == ::[intrinsic-height] !required;
-        width: == ::[intrinsic-width] !required;
-      }
+#name {
+  height: == ::[intrinsic-height] !required;
+  width: == ::[intrinsic-width] !required;
+}
 
-      #cover {
-        border-radius: == [radius];
-      }
+#cover {
+  border-radius: == [radius];
+}
 
-      button {
-        width: == ::[intrinsic-width] !required;
-        height: == ::[intrinsic-height] !required;        
-        padding: == [gap];
-        padding-top: == [gap] / 2;
-        padding-bottom: == [gap] / 2;
-        border-radius: == [radius];
-      }
-      
+button {
+  width: == ::[intrinsic-width] !required;
+  height: == ::[intrinsic-height] !required;        
+  padding: == [gap];
+  padding-top: == [gap] / 2;
+  padding-bottom: == [gap] / 2;
+  border-radius: == [radius];
+}
+
 
 @h |~-~(#name)~-~| in(#cover) gap([gap]*2) !strong;
 
@@ -359,7 +359,7 @@ DEMOS =
      |
     in(#cover)
     gap([gap]) outer-gap([flex-gap]) {
-      center-x: == #cover[center-x];
+      center-x: == ($ #cover)[center-x];
   }
 
   @h |-10-(#cover)-10-|
@@ -405,11 +405,11 @@ DEMOS =
     in(#cover)
     gap([gap])
     outer-gap([flex-gap]) !strong {
-      center-x: == #profile-card[center-x];
+      center-x: == ($ #profile-card)[center-x];
   }
 
-  @h |-10-(#cover)-10-| in(#profile-card);
-  @v |-10-(#cover)-10-| in(#profile-card);
+  @h |-10-(#cover)-10-| in(#profile-card) !strong;
+  @v |-10-(#cover)-10-| in(#profile-card) !strong;
 }
 
     </style>
@@ -474,17 +474,17 @@ DEMOS =
     <style type="text/gss">
     // vertical article
       
-    ::scope[left] == 0;
-    ::scope[top] == 0;
-    ::scope[height] == ::scope[intrinsic-height];
-    ::scope[width] == ::scope[intrinsic-width];
+    $[left] == 0;
+    $[top] == 0;
+    $[height] == $[intrinsic-height];
+    $[width] == $[intrinsic-width];
 
-    @if ::scope[intrinsic-width] < ::scope[intrinsic-height] {
+    @if $[intrinsic-width] < $[intrinsic-height] {
       
       [article-gap] >= 16; // centers article
       
       [article-gap] >= 16; // centers article
-      @h |-(article)-| gap([article-gap]) in(::scope) {
+      @h |-(article)-| gap([article-gap]) in($) {
         height: == &[intrinsic-height];
         width: <= 800;        
       }
@@ -494,11 +494,11 @@ DEMOS =
         (article)
         (footer)
         
-        in(::scope);
+        in($);
       
       header, footer {
         height: == 72;
-        @h |(&)| in(article);
+        @h |(&)| in($ article);
       }
     }
     
@@ -507,7 +507,7 @@ DEMOS =
       
       
       [article-gap] >= 16; // centers article
-      @v |-(article)-| gap([article-gap]) in(::scope) {
+      @v |-(article)-| gap([article-gap]) in($) {
         width: == &[intrinsic-width];
         height: <= 600;   
       }
@@ -518,11 +518,11 @@ DEMOS =
         (footer)
         (article)        
         
-        in(::scope);
+        in($);
       
       header, footer {
         width: == 72;
-        @v |(&)| in(article);
+        @v |(&)| in($ article);
       }
     }
 
@@ -532,7 +532,7 @@ DEMOS =
   """
 
 DEMOS.ADAPTIVE_ASPECT_LINEAR = DEMOS.ADAPTIVE_ASPECT.
-  replace('::scope[intrinsic-width] < ::scope[intrinsic-height]', '::scope[width] < ::scope[height]')
+  replace('$[intrinsic-width] < $[intrinsic-height]', '$[width] < $[height]')
 
 
 assert = chai.assert
@@ -676,7 +676,7 @@ describe 'Full page tests', ->
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
             expect(solution['$header[width]']).to.eql(Math.round(640 / 2)) 
 
-            li = engine.$first('ul li:last-child')
+            li = engine.scope.querySelector('ul li:last-child')
             clone = li.cloneNode()
             clone.id = 'li4'
             clone.innerHTML = '4'
@@ -685,7 +685,7 @@ describe 'Full page tests', ->
             engine.then (solution) ->
 
               expect(Math.round(solution['li-width'])).to.eql((640 - 16) / 4)
-              li = engine.$first('ul li:first-child')
+              li = engine.scope.querySelector('ul li:first-child')
               li.parentNode.removeChild(li)
 
               engine.then (solution) ->
@@ -713,7 +713,7 @@ describe 'Full page tests', ->
 
                 html = DEMOS.FACE_DETECTION_SECTION
                 if j == 0
-                  html = html.replace('::scope[width] < 500', '::scope[intrinsic-width] < 500')
+                  html = html.replace('$[width] < 500', '$[intrinsic-width] < 500')
                 container.innerHTML = html
                 container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
         
@@ -722,7 +722,7 @@ describe 'Full page tests', ->
                     '$title[margin-top]': 72
                     '$title[padding-top]': 40
                     '$face-demo[intrinsic-width]': 640
-                    '$face-demo[width]': 640
+                    'width': 640
                     'md': 72
                     'md-sub': 8
                   
@@ -732,7 +732,7 @@ describe 'Full page tests', ->
                     expect(solution['$title[margin-top]']).to.eql 8
                     expect(solution['$title[padding-top]']).to.eql null
                     expect(solution['$face-demo[intrinsic-width]']).to.eql 400
-                    expect(solution['$face-demo[width]']).to.eql 400
+                    expect(solution['width']).to.eql 400
 
 
                     container.innerHTML = ""
@@ -741,7 +741,7 @@ describe 'Full page tests', ->
                       expect(solution).to.eql
                         '$title[margin-top]': null
                         '$face-demo[intrinsic-width]': null
-                        '$face-demo[width]': null
+                        'width': null
                         'md': null
                         'md-sub': null
                       done()

@@ -35,7 +35,6 @@ Iterator.define
     advices: [
       (engine, operation, command) ->
         parent = operation
-        debugger
         while parent.parent
           parent = parent.parent
         operation.index = parent.rules = (parent.rules || 0) + 1

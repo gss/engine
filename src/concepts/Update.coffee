@@ -351,8 +351,8 @@ Update.prototype =
             copy = undefined
             for cmd in cmds
               if (cmd == problem) || (cmd.parent && cmd.parent == problem.parent && cmd.index == problem.index)
-                copy = true
-
+                debugger
+                
             unless copy
               if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
                 cmds.unshift problem

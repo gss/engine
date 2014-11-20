@@ -341,6 +341,8 @@ class Domain extends Trigger
     if (i = @constrained?.indexOf(constraint)) > -1
       @constrained.splice(i, 1)
     else if (@unconstrained ||= []).indexOf(constraint) == -1
+      #if constraint.operation[1].hash == '$message[height]==$message[intrinsic-height]'
+      #  debugger
       @unconstrained.push(constraint)
 
 
@@ -469,20 +471,23 @@ class Domain extends Trigger
       
       if constraints = @paths?[path]
         for constraint in constraints by -1
-          @unconstrain(constraint, path)
+          if constraint
+            @unconstrain(constraint, path)
 
       if @constrained
         for constraint in @constrained
           if constraint.paths.indexOf(path) > -1
-            @unconstrain(constraint)
+            @unconstrain(constraint, path)
             break
     return
 
-  export: ->
+  export: (strings) ->
     if @constraints
       operations = []
       for constraint in @constraints
         if operation = constraint.operation
+          if strings
+            operation = operation[1].hash
           operations.push(operation)
       return operations
       

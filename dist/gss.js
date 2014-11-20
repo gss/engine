@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-11-20) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-11-21) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20774,7 +20774,7 @@ Condition = (function(_super) {
   };
 
   Condition.prototype.update = function(engine, operation, continuation, scope, ascender, ascending) {
-    var branch, index, old, path, result, watchers, _base, _name;
+    var branch, collections, d, index, old, path, result, switching, watchers, _base, _name, _ref;
     watchers = (_base = engine.queries.watchers)[_name = scope._gss_id] || (_base[_name] = []);
     if (!watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) === -1) {
       watchers.push(operation.parent, continuation, scope);
@@ -20786,11 +20786,30 @@ Condition = (function(_super) {
         engine.solved.remove(path);
         engine.queries.clean(path, continuation, operation.parent, scope);
       }
+      if (!engine.switching) {
+        switching = engine.switching = true;
+      }
       engine.queries[path] = ascending;
+      if (switching) {
+        if (!d && (d = engine.pairs.dirty)) {
+          engine.pairs.onBeforeSolve();
+        }
+        if (engine.updating) {
+          collections = engine.updating.collections;
+          engine.updating.collections = {};
+          engine.updating.previous = collections;
+        }
+      }
       index = ascending ^ this.inverted && 2 || 3;
       engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (index === 2 && 'if' || 'else') + engine.Continuation.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
       if (branch = operation.parent[index]) {
         result = engine.Command(branch).solve(engine, branch, engine.Continuation(path, null, engine.Continuation.DESCEND), scope);
+      }
+      if (switching) {
+        if ((_ref = engine.pairs) != null) {
+          _ref.onBeforeSolve();
+        }
+        engine.switching = void 0;
       }
       return engine.console.groupEnd(path);
     }
@@ -20936,7 +20955,6 @@ Iterator.define({
       function(engine, operation, command) {
         var parent;
         parent = operation;
-        debugger;
         while (parent.parent) {
           parent = parent.parent;
         }
@@ -22541,7 +22559,7 @@ Command = (function() {
           if (operation.length === 2) {
             return operation[1];
           } else {
-            return this.toExpression(operation[1]) + '[' + this.toExpression(operation[2]) + ']';
+            return operation[1].command.path + '[' + operation[2] + ']';
           }
         }
         return this.toExpression(operation[1] || '') + operation[0] + this.toExpression(operation[2] || '');
@@ -23556,7 +23574,9 @@ Domain = (function(_super) {
       if (constraints = (_ref1 = this.paths) != null ? _ref1[path] : void 0) {
         for (_k = constraints.length - 1; _k >= 0; _k += -1) {
           constraint = constraints[_k];
-          this.unconstrain(constraint, path);
+          if (constraint) {
+            this.unconstrain(constraint, path);
+          }
         }
       }
       if (this.constrained) {
@@ -23564,7 +23584,7 @@ Domain = (function(_super) {
         for (_l = 0, _len2 = _ref2.length; _l < _len2; _l++) {
           constraint = _ref2[_l];
           if (constraint.paths.indexOf(path) > -1) {
-            this.unconstrain(constraint);
+            this.unconstrain(constraint, path);
             break;
           }
         }
@@ -23572,7 +23592,7 @@ Domain = (function(_super) {
     }
   };
 
-  Domain.prototype["export"] = function() {
+  Domain.prototype["export"] = function(strings) {
     var constraint, operation, operations, _i, _len, _ref;
     if (this.constraints) {
       operations = [];
@@ -23580,6 +23600,9 @@ Domain = (function(_super) {
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         constraint = _ref[_i];
         if (operation = constraint.operation) {
+          if (strings) {
+            operation = operation[1].hash;
+          }
           operations.push(operation);
         }
       }
@@ -24996,7 +25019,7 @@ Update.prototype = {
             for (_k = 0, _len2 = cmds.length; _k < _len2; _k++) {
               cmd = cmds[_k];
               if ((cmd === problem) || (cmd.parent && cmd.parent === problem.parent && cmd.index === problem.index)) {
-                copy = true;
+                debugger;
               }
             }
             if (!copy) {
@@ -25454,7 +25477,6 @@ Abstract.prototype.Assignment = Assignment.extend({}, {
 
 Abstract.prototype.Assignment.Unsafe = Assignment.Unsafe.extend({}, {
   'set': function(object, property, value, engine, operation, continuation, scope) {
-    debugger;
     if (engine.intrinsic) {
       engine.intrinsic.restyle(object || scope, property, value, continuation, operation);
     } else {
@@ -27794,7 +27816,7 @@ Pairs = (function() {
         }
       }
     }
-    this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.Continuation.PAIR + ' ' + this.engine.identity["yield"](scope), [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999', left + ' ' + this.engine.Continuation.PAIR + ' ' + right);
+    this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999', left + ' ' + this.engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + this.engine.identity["yield"](scope));
     cleaned = [];
     for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
       pair = removed[_k];

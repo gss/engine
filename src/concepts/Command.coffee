@@ -255,7 +255,7 @@ class Command
           if operation.length == 2
             return operation[1]
           else
-            return @toExpression(operation[1]) + '[' + @toExpression(operation[2]) + ']'
+            return operation[1].command.path + '[' + operation[2] + ']'
         return @toExpression(operation[1] || '') + operation[0] + @toExpression(operation[2] || '')
       else
         return operation
