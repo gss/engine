@@ -43,7 +43,7 @@ Style = (definition, name, styles,
           max = Math.max(substyle.depth, max)
         when "string"
           # Predefined value type
-          Types = @types || @Type
+          Types = @Type
           if type = Types[property]
             types.push(type)
             if initial == undefined
@@ -54,7 +54,7 @@ Style = (definition, name, styles,
                     break
               if storage = Types[type.displayName + 's']
                 for key of storage
-                  if type.call(Types, key)
+                  if type.call(@, key)
                     initial = key
                   break
               
@@ -103,7 +103,7 @@ class Shorthand
     callback.prototype = @
     return callback
 
-  toString: (styles, number) ->
+  format: (styles, number) ->
     string = undefined
     if @style.keys
       while style = @[i = (i ? -1) + 1]
@@ -131,7 +131,7 @@ class Shorthand
               for index in [keys.indexOf(key) - 1 ... 0] by -1
                 if (k = keys[index]) != previous
                   break if @hasOwnProperty(k)
-                  if types[index] == @styles.engine.Length
+                  if types[index] == @styles.engine.Type.Length
                     expression = @toExpressionString(k, @[k])
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '')
                     previous = k
@@ -162,8 +162,7 @@ class Shorthand
       when 'object'
         name = operation[0]
         engine = @styles.engine
-        units = engine.units || engine.Units.prototype
-        if name == '%' || units[name] || engine.Times[name]
+        if name == '%' || engine.Unit[name] || engine.Type.Times[name]
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('

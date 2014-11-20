@@ -8,11 +8,16 @@ describe 'Styles', ->
   beforeEach ->
     engine ||= new GSS(document.createElement('div'))
     engine.compile()
-    doc = engine.intrinsic.properties
-
+    doc = {}
+    for property, value of engine.intrinsic.properties
+      do (property, value) ->
+        doc[property] = ->
+          value.apply(engine.intrinsic, arguments)
+        doc[property].initial = value.initial
   describe 'simple properties', ->
 
     it 'numeric property', ->
+      debugger
       expect(doc['z-index'](10)).to.eql(10)
       expect(doc['z-index'](10.5)).to.eql(undefined)
       expect(doc['z-index']('ff')).to.eql(undefined)
@@ -129,10 +134,21 @@ describe 'Styles', ->
         'border-right-style': 'dotted'
         'border-bottom-style': 'double'
         'border-left-style': 'ridge'
-
+  describe 'corner shorthands', ->
+    it 'should validate, pad and expand values', ->
+      expect(doc['border-radius'](1)).to.eql new doc['border-radius'].initial
+        "border-top-left-radius": 1,
+        "border-top-right-radius": 1
+        "border-bottom-left-radius": 1
+        "border-bottom-right-radius": 1
+      expect(doc['border-radius'](1, 2)).to.eql new doc['border-radius'].initial
+        "border-top-left-radius": 1,
+        "border-top-right-radius": 2
+        "border-bottom-left-radius": 1
+        "border-bottom-right-radius": 2
+      
   xdescribe 'transformations', ->
     it 'should generate matrix', ->
-      debugger
       engine.solve [
         ['rotateX', ['deg', 10]]
         ['scaleZ', 2]

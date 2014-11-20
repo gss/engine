@@ -22,12 +22,12 @@ Type.define
 
   # Style-specific unquoted word 
   String: (obj) ->
-    if obj instanceof String
+    if typeof obj == 'string'
       return obj
     
   # Array of strings (e.g. font-family)
   Strings: (obj) ->
-    if obj instanceof String || obj instanceof Array
+    if typeof obj == 'string' || obj instanceof Array
       return obj
 
   Timings:
@@ -39,17 +39,17 @@ Type.define
     'step-start':  'step-start'
     'step-end':    'step-end'
   Timing: (obj = 'ease') ->
-    if obj instanceof String
-      if obj = @Timings[obj]
+    if typeof obj == 'string'
+      if obj = @Type.Timings[obj]
         return obj
     else if obj[0] == 'steps' || obj[0] == 'cubic-bezier'
       return obj
 
 
   Length: (obj) ->
-    if obj instanceof Number
+    if typeof obj == 'number'
       return obj
-    if (@units || @Units.prototype)[obj[0]]
+    if @Unit[obj[0]]
       if obj[1] == 0
         return 0
       return obj
@@ -62,38 +62,38 @@ Type.define
   # Keywords for background-position and alike
   Positions: {"top", "bottom", "left", "right"}
   Position: (obj) ->
-    if @Positions[obj]
+    if @Type.Positions[obj]
       return obj
 
   # Length with % unit
   Times: {'s', 'ms', 'm'}
   Time: (obj) ->
-    if @Times[obj[0]]
+    if @Type.Times[obj[0]]
       return obj
 
   Colors: {'transparent', 'hsl', 'rgb', 'hsla', 'rgba', 'hsb'}
   Pseudocolors: {'transparent', 'currentColor'}
   Color: (obj) ->
-    if obj instanceof String
-      if @Pseudocolors[obj]
+    if typeof obj == 'string'
+      if @Type.Pseudocolors[obj]
         return obj
     else
-      if @Colors[obj[0]]
+      if @Type.Colors[obj[0]]
         return obj
 
   Sizes: {'medium', 'xx-small', 'x-small', 'small', 'large', 'x-large', 'xx-large', 'smaller', 'larger' }
   Size: (obj) ->
-    if @Sizes[obj]
+    if @Type.Sizes[obj]
       return obj
 
   Gradients: {'linear-gradient', 'radial-gradient', 'repeating-linear-gradient', 'repeating-radial-gradient'}
   Gradient: (obj) ->
-    if @Gradients[obj[0]]
+    if @Type.Gradients[obj[0]]
       return obj
 
   URLs: {'url', 'src'}
   URL: (obj) ->
-    if @URLs[obj[0]]
+    if @Type.URLs[obj[0]]
       return obj
 
   Property: (obj) ->

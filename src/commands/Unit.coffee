@@ -41,9 +41,7 @@ Unit.define
   rad: (value) ->
     return value
 
-class Unit.Dynamic extends Unit
-  
-Unit.Dynamic.define
+Unit.define
 
   # Dynamic lengths
 

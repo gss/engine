@@ -156,8 +156,11 @@ class Styles
         0]['border-' + side + '-' + type] = 
           Styles::border[0][side][0][0][type]
 
-    if index % 2
-      for i in [1 ... 3] by 2 
-        ((Styles::['border-radius'] ||= [{'pad'}])[0][side] ||= {'pad'})[sides[i + 1]] = ['Length', 'none']
+    unless index % 2 
+      for i in [3 ... 0] by -2 
+        prop = 'border-' + side + '-' + (sides[i]) + '-radius'
+        Styles::[prop] = ['Length', 'none']
+
+        (Styles::['border-radius'] ||= [{'pad'}])[0][prop] = ['Length', 'none']
 
 module.exports = Styles

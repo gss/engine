@@ -22000,7 +22000,7 @@ module.exports = Transformation;
 
 });
 require.register("gss/lib/commands/Unit.js", function(exports, require, module){
-var Command, Unit, _ref, _ref1,
+var Command, Unit, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -22056,19 +22056,7 @@ Unit.define({
   }
 });
 
-Unit.Dynamic = (function(_super) {
-  __extends(Dynamic, _super);
-
-  function Dynamic() {
-    _ref1 = Dynamic.__super__.constructor.apply(this, arguments);
-    return _ref1;
-  }
-
-  return Dynamic;
-
-})(Unit);
-
-Unit.Dynamic.define({
+Unit.define({
   em: function(value, engine, operation, continuation, scope) {
     return this['*'](this.get(scope, 'font-size', continuation), value);
   },
@@ -23899,7 +23887,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
           max = Math.max(substyle.depth, max);
           break;
         case "string":
-          Types = this.types || this.Type;
+          Types = this.Type;
           if (type = Types[property]) {
             types.push(type);
             if (initial === void 0) {
@@ -23914,7 +23902,7 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
               }
               if (storage = Types[type.displayName + 's']) {
                 for (key in storage) {
-                  if (type.call(Types, key)) {
+                  if (type.call(this, key)) {
                     initial = key;
                   }
                   break;
@@ -23980,7 +23968,7 @@ Shorthand = (function() {
     return callback;
   }
 
-  Shorthand.prototype.toString = function(styles, number) {
+  Shorthand.prototype.format = function(styles, number) {
     var expression, i, index, k, key, keys, pad, prefix, previous, string, style, types, value, _i, _j, _len, _ref, _ref1;
     string = void 0;
     if (this.style.keys) {
@@ -24016,7 +24004,7 @@ Shorthand = (function() {
                   if (this.hasOwnProperty(k)) {
                     break;
                   }
-                  if (types[index] === this.styles.engine.Length) {
+                  if (types[index] === this.styles.engine.Type.Length) {
                     expression = this.toExpressionString(k, this[k]);
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
                     previous = k;
@@ -24053,7 +24041,7 @@ Shorthand = (function() {
   };
 
   Shorthand.prototype.toExpressionString = function(key, operation, expression, styles) {
-    var engine, index, name, string, type, types, units, _i, _j, _len, _ref;
+    var engine, index, name, string, type, types, _i, _j, _len, _ref;
     if (styles == null) {
       styles = this.styles;
     }
@@ -24061,8 +24049,7 @@ Shorthand = (function() {
       case 'object':
         name = operation[0];
         engine = this.styles.engine;
-        units = engine.units || engine.Units.prototype;
-        if (name === '%' || units[name] || engine.Times[name]) {
+        if (name === '%' || engine.Unit[name] || engine.Type.Times[name]) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
           string = name + '(';
@@ -24375,12 +24362,12 @@ Type.define({
     }
   },
   String: function(obj) {
-    if (obj instanceof String) {
+    if (typeof obj === 'string') {
       return obj;
     }
   },
   Strings: function(obj) {
-    if (obj instanceof String || obj instanceof Array) {
+    if (typeof obj === 'string' || obj instanceof Array) {
       return obj;
     }
   },
@@ -24397,8 +24384,8 @@ Type.define({
     if (obj == null) {
       obj = 'ease';
     }
-    if (obj instanceof String) {
-      if (obj = this.Timings[obj]) {
+    if (typeof obj === 'string') {
+      if (obj = this.Type.Timings[obj]) {
         return obj;
       }
     } else if (obj[0] === 'steps' || obj[0] === 'cubic-bezier') {
@@ -24406,10 +24393,10 @@ Type.define({
     }
   },
   Length: function(obj) {
-    if (obj instanceof Number) {
+    if (typeof obj === 'number') {
       return obj;
     }
-    if ((this.units || this.Units.prototype)[obj[0]]) {
+    if (this.Unit[obj[0]]) {
       if (obj[1] === 0) {
         return 0;
       }
@@ -24428,7 +24415,7 @@ Type.define({
     "right": "right"
   },
   Position: function(obj) {
-    if (this.Positions[obj]) {
+    if (this.Type.Positions[obj]) {
       return obj;
     }
   },
@@ -24438,7 +24425,7 @@ Type.define({
     'm': 'm'
   },
   Time: function(obj) {
-    if (this.Times[obj[0]]) {
+    if (this.Type.Times[obj[0]]) {
       return obj;
     }
   },
@@ -24455,12 +24442,12 @@ Type.define({
     'currentColor': 'currentColor'
   },
   Color: function(obj) {
-    if (obj instanceof String) {
-      if (this.Pseudocolors[obj]) {
+    if (typeof obj === 'string') {
+      if (this.Type.Pseudocolors[obj]) {
         return obj;
       }
     } else {
-      if (this.Colors[obj[0]]) {
+      if (this.Type.Colors[obj[0]]) {
         return obj;
       }
     }
@@ -24477,7 +24464,7 @@ Type.define({
     'larger': 'larger'
   },
   Size: function(obj) {
-    if (this.Sizes[obj]) {
+    if (this.Type.Sizes[obj]) {
       return obj;
     }
   },
@@ -24488,7 +24475,7 @@ Type.define({
     'repeating-radial-gradient': 'repeating-radial-gradient'
   },
   Gradient: function(obj) {
-    if (this.Gradients[obj[0]]) {
+    if (this.Type.Gradients[obj[0]]) {
       return obj;
     }
   },
@@ -24497,7 +24484,7 @@ Type.define({
     'src': 'src'
   },
   URL: function(obj) {
-    if (this.URLs[obj[0]]) {
+    if (this.Type.URLs[obj[0]]) {
       return obj;
     }
   },
@@ -28701,7 +28688,7 @@ require.register("gss/lib/properties/Styles.js", function(exports, require, modu
 var Styles;
 
 Styles = (function() {
-  var i, index, side, sides, type, _base, _base1, _base2, _base3, _base4, _base5, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
+  var i, index, prop, side, sides, type, _base, _base1, _base2, _base3, _base4, _i, _j, _k, _len, _len1, _name, _ref, _ref1;
 
   function Styles() {}
 
@@ -28950,15 +28937,15 @@ Styles = (function() {
         ]
       ]))[0][+0]['border-' + side + '-' + type] = Styles.prototype.border[0][side][0][0][type];
     }
-    if (index % 2) {
-      for (i = _k = 1; _k < 3; i = _k += 2) {
-        ((_base4 = ((_base5 = Styles.prototype)['border-radius'] || (_base5['border-radius'] = [
+    if (!(index % 2)) {
+      for (i = _k = 3; _k > 0; i = _k += -2) {
+        prop = 'border-' + side + '-' + sides[i] + '-radius';
+        Styles.prototype[prop] = ['Length', 'none'];
+        ((_base4 = Styles.prototype)['border-radius'] || (_base4['border-radius'] = [
           {
             'pad': 'pad'
           }
-        ]))[0])[side] || (_base4[side] = {
-          'pad': 'pad'
-        }))[sides[i + 1]] = ['Length', 'none'];
+        ]))[0][prop] = ['Length', 'none'];
       }
     }
   }

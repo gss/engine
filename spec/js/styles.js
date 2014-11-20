@@ -8,12 +8,26 @@ describe('Styles', function() {
   var doc, engine;
   doc = engine = null;
   beforeEach(function() {
+    var property, value, _ref, _results;
     engine || (engine = new GSS(document.createElement('div')));
     engine.compile();
-    return doc = engine.intrinsic.properties;
+    doc = {};
+    _ref = engine.intrinsic.properties;
+    _results = [];
+    for (property in _ref) {
+      value = _ref[property];
+      _results.push((function(property, value) {
+        doc[property] = function() {
+          return value.apply(engine.intrinsic, arguments);
+        };
+        return doc[property].initial = value.initial;
+      })(property, value));
+    }
+    return _results;
   });
   describe('simple properties', function() {
     it('numeric property', function() {
+      debugger;
       expect(doc['z-index'](10)).to.eql(10);
       expect(doc['z-index'](10.5)).to.eql(void 0);
       return expect(doc['z-index']('ff')).to.eql(void 0);
@@ -146,9 +160,24 @@ describe('Styles', function() {
       }));
     });
   });
+  describe('corner shorthands', function() {
+    return it('should validate, pad and expand values', function() {
+      expect(doc['border-radius'](1)).to.eql(new doc['border-radius'].initial({
+        "border-top-left-radius": 1,
+        "border-top-right-radius": 1,
+        "border-bottom-left-radius": 1,
+        "border-bottom-right-radius": 1
+      }));
+      return expect(doc['border-radius'](1, 2)).to.eql(new doc['border-radius'].initial({
+        "border-top-left-radius": 1,
+        "border-top-right-radius": 2,
+        "border-bottom-left-radius": 1,
+        "border-bottom-right-radius": 2
+      }));
+    });
+  });
   return xdescribe('transformations', function() {
     return it('should generate matrix', function() {
-      debugger;
       engine.solve([['rotateX', ['deg', 10]], ['scaleZ', 2], ['translateY', -2]]);
       return expect(doc['transform']()).to.eql(123);
     });
