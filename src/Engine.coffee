@@ -25,7 +25,6 @@ class Engine extends Domain
   Property:     require('./concepts/Property')
   Update:       require('./concepts/Update')
     
-  Operation:    require('./concepts/Operation')
   Continuation: require('./concepts/Continuation')
 
   Console:      require('./utilities/Console')
@@ -88,7 +87,6 @@ class Engine extends Domain
 
     @precompile()
  
-    @Operation    = new @Operation(@)
     @Continuation = @Continuation.new(@)
 
     # Constant and input values

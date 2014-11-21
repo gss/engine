@@ -4,7 +4,7 @@ class Unit extends Command
   type: 'Unit'
   
   signature: [
-    value: ['Value']
+    value: ['Variable']
   ]
 
 Unit.define

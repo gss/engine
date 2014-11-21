@@ -87,8 +87,8 @@ class Continuation
     selector = selector.trim()
     selector = selector.
       replace(@CanonicalizeSelectorRegExp, ' ').
-      replace(/\s+/g, @DESCEND).
-      replace(@engine.Operation.CleanupSelectorRegExp, '')
+      replace(/\s+/g, @DESCEND)#.
+      #replace(@engine.Operation.CleanupSelectorRegExp, '')
     return selector
   CanonicalizeSelectorRegExp: new RegExp("" +
     "[$][a-z0-9]+[" + Continuation::DESCEND + "]\s*", "gi")

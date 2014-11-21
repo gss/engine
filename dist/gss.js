@@ -20230,8 +20230,6 @@ Engine = (function(_super) {
 
   Engine.prototype.Update = require('./concepts/Update');
 
-  Engine.prototype.Operation = require('./concepts/Operation');
-
   Engine.prototype.Continuation = require('./concepts/Continuation');
 
   Engine.prototype.Console = require('./utilities/Console');
@@ -20300,7 +20298,6 @@ Engine = (function(_super) {
     this.domain = this;
     this.inspector = new this.Inspector(this);
     this.precompile();
-    this.Operation = new this.Operation(this);
     this.Continuation = this.Continuation["new"](this);
     this.assumed = new this.Numeric(assumed);
     this.assumed.displayName = 'Assumed';
@@ -20782,7 +20779,7 @@ Assignment = (function(_super) {
       }
     ], {
       property: ['String'],
-      value: ['Value']
+      value: ['Variable']
     }
   ];
 
@@ -20912,7 +20909,7 @@ Condition = (function(_super) {
 
   Condition.prototype.signature = [
     {
-      "if": ['Query', 'Selector', 'Value', 'Constraint', 'Default'],
+      "if": ['Query', 'Selector', 'Variable', 'Constraint', 'Default'],
       then: ['Any']
     }, [
       {
@@ -21014,8 +21011,8 @@ Constraint = Command.extend({
   type: 'Constraint',
   signature: [
     {
-      left: ['Value', 'Number'],
-      right: ['Value', 'Number']
+      left: ['Variable', 'Number'],
+      right: ['Variable', 'Number']
     }, [
       {
         strength: ['String'],
@@ -21033,13 +21030,23 @@ Constraint = Command.extend({
     }
     return hash;
   },
+  before: function(args, engine, operation, continuation, scope, ascender, ascending) {
+    return this.get(engine, operation, ascending);
+  },
+  after: function(args, result, engine, operation, continuation, scope, ascender, ascending) {
+    var _base, _base1, _base2, _name, _name1;
+    if (result.hashCode) {
+      return (_base = ((_base1 = ((_base2 = engine.linear).operations || (_base2.operations = {})))[_name1 = operation.hash || (operation.hash = this.toExpression(operation))] || (_base1[_name1] = {})))[_name = this.toHash(ascending)] || (_base[_name] = result);
+    }
+    return result;
+  },
   get: function(engine, operation, scope) {
     var _ref, _ref1;
     return (_ref = engine.operations) != null ? (_ref1 = _ref[operation.hash || (operation.hash = this.toExpression(operation))]) != null ? _ref1[this.toHash(scope)] : void 0 : void 0;
   },
   fetch: function(engine, operation) {
     var constraint, operations, signature, _ref, _ref1;
-    if (operations = (_ref = engine.operations) != null ? _ref[operation.hash || (operation.hash = this.toExpression(operation))] : void 0) {
+    if (operations = (_ref = engine.linear.operations) != null ? _ref[operation.hash || (operation.hash = this.toExpression(operation))] : void 0) {
       for (signature in operations) {
         constraint = operations[signature];
         if (((_ref1 = engine.constraints) != null ? _ref1.indexOf(constraint) : void 0) > -1) {
@@ -21048,15 +21055,202 @@ Constraint = Command.extend({
       }
     }
   },
-  before: function(args, engine, operation, continuation, scope, ascender, ascending) {
-    return this.get(engine, operation, ascending);
-  },
-  after: function(args, result, engine, operation, continuation, scope, ascender, ascending) {
-    var _base, _base1, _name, _name1;
-    if (result.hashCode) {
-      return (_base = ((_base1 = (engine.operations || (engine.operations = {})))[_name1 = operation.hash || (operation.hash = this.toExpression(operation))] || (_base1[_name1] = {})))[_name = this.toHash(ascending)] || (_base[_name] = result);
+  declare: function(engine, constraint) {
+    var definition, op, path, _ref, _ref1, _ref2, _ref3, _ref4;
+    _ref = constraint.operations[0].variables;
+    for (path in _ref) {
+      op = _ref[path];
+      if (definition = engine.variables[path]) {
+        if (((_ref1 = definition.constraints) != null ? (_ref2 = _ref1[0]) != null ? (_ref3 = _ref2.operations[0]) != null ? (_ref4 = _ref3.parent.values) != null ? _ref4[path] : void 0 : void 0 : void 0 : void 0) == null) {
+          (definition.constraints || (definition.constraints = [])).push(constraint);
+        }
+      }
     }
-    return result;
+  },
+  undeclare: function(engine, constraint, quick) {
+    var i, object, op, path, _ref, _ref1;
+    _ref = constraint.operations[0].variables;
+    for (path in _ref) {
+      op = _ref[path];
+      if (object = engine.variables[path]) {
+        if ((i = (_ref1 = object.constraints) != null ? _ref1.indexOf(constraint) : void 0) > -1) {
+          object.constraints.splice(i, 1);
+          op.command.undeclare(engine, object, quick);
+        }
+      }
+    }
+  },
+  add: function(constraint, engine, operation, continuation) {
+    var operations, other, _ref;
+    other = this.fetch(engine, operation);
+    operations = constraint.operations || (constraint.operations = (other != null ? other.operations : void 0) || []);
+    if (((_ref = constraint.operations) != null ? _ref.indexOf(operation) : void 0) === -1) {
+      operations.push(operation);
+    }
+    engine.add(continuation, operation);
+    debugger;
+    if (other !== constraint) {
+      this.declare(engine, constraint);
+      this.set(engine, constraint);
+      if (other) {
+        this.undeclare(engine, other, true);
+        this.unset(engine, other);
+        other.operations = void 0;
+      }
+    }
+  },
+  set: function(engine, constraint) {
+    if ((engine.constraints || (engine.constraints = [])).indexOf(constraint) === -1) {
+      engine.constraints.push(constraint);
+      return (engine.constrained || (engine.constrained = [])).push(constraint);
+    }
+  },
+  unset: function(engine, constraint) {
+    var i, index, operation, path, paths, _i, _len, _ref, _ref1, _results;
+    if ((index = engine.constraints.indexOf(constraint)) > -1) {
+      engine.constraints.splice(index, 1);
+    }
+    if ((index = (_ref = engine.constrained) != null ? _ref.indexOf(constraint) : void 0) > -1) {
+      engine.constrained.splice(index, 1);
+    } else {
+      if ((engine.unconstrained || (engine.unconstrained = [])).indexOf(constraint) === -1) {
+        engine.unconstrained.push(constraint);
+      }
+    }
+    _ref1 = constraint.operations;
+    _results = [];
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      operation = _ref1[_i];
+      if (path = operation.parent[0].key) {
+        if (paths = engine.paths[path]) {
+          if ((i = paths.indexOf(operation)) > -1) {
+            paths.splice(i, 1);
+            if (paths.length === 0) {
+              _results.push(delete engine.paths[path]);
+            } else {
+              _results.push(void 0);
+            }
+          } else {
+            _results.push(void 0);
+          }
+        } else {
+          _results.push(void 0);
+        }
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
+  },
+  remove: function(engine, operation, continuation) {
+    var constraint, index, operations;
+    constraint = this.fetch(engine, operation);
+    operations = constraint.operations;
+    if ((index = operations.indexOf(operation)) > -1) {
+      operations.splice(index, 1);
+      if (operations.length === 0) {
+        this.undeclare(engine, constraint);
+      }
+      return this.unset(engine, constraint);
+    }
+  },
+  find: function(engine, variable) {
+    var other, _i, _len, _ref;
+    _ref = variable.constraints;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      other = _ref[_i];
+      if (other.operations[0].variables[variable.name].domain === engine) {
+        if (engine.constraints.indexOf(other) > -1) {
+          return true;
+        }
+      }
+    }
+  },
+  split: function(constraints) {
+    var constraint, group, groupped, groups, other, others, path, vars, _i, _j, _k, _len, _len1;
+    groups = [];
+    for (_i = 0, _len = constraints.length; _i < _len; _i++) {
+      constraint = constraints[_i];
+      groupped = void 0;
+      vars = constraint.operations[0].variables;
+      for (_j = groups.length - 1; _j >= 0; _j += -1) {
+        group = groups[_j];
+        for (_k = 0, _len1 = group.length; _k < _len1; _k++) {
+          other = group[_k];
+          others = other.operations[0].variables;
+          for (path in vars) {
+            if (others[path]) {
+              if (groupped && groupped !== group) {
+                groupped.push.apply(groupped, group);
+                groups.splice(groups.indexOf(group), 1);
+              } else {
+                groupped = group;
+              }
+              break;
+            }
+          }
+          if (groups.indexOf(group) === -1) {
+            break;
+          }
+        }
+      }
+      if (!groupped) {
+        groups.push(groupped = []);
+      }
+      groupped.push(constraint);
+    }
+    return groups;
+  },
+  validate: function(engine) {
+    var arg, args, commands, constraint, equal, group, groups, i, index, ops, separated, shift, _i, _j, _k, _len, _len1, _len2;
+    groups = this.split(engine.constraints).sort(function(a, b) {
+      var al, bl;
+      al = a.length;
+      bl = b.length;
+      return bl - al;
+    });
+    separated = groups.splice(1);
+    commands = [];
+    if (separated.length) {
+      shift = 0;
+      for (index = _i = 0, _len = separated.length; _i < _len; index = ++_i) {
+        group = separated[index];
+        ops = [];
+        for (index = _j = 0, _len1 = group.length; _j < _len1; index = ++_j) {
+          constraint = group[index];
+          this.unset(engine, constraint);
+          if (constraint.operation) {
+            ops.push(constraint.operation);
+          }
+        }
+        if (ops.length) {
+          commands.push(ops);
+        }
+      }
+    }
+    if (commands != null ? commands.length : void 0) {
+      if (commands.length === 1) {
+        commands = commands[0];
+      }
+      args = arguments;
+      if (args.length === 1) {
+        args = args[0];
+      }
+      if (commands.length === args.length) {
+        equal = true;
+        for (i = _k = 0, _len2 = args.length; _k < _len2; i = ++_k) {
+          arg = args[i];
+          if (commands.indexOf(arg) === -1) {
+            equal = false;
+            break;
+          }
+        }
+        if (equal) {
+          throw new Error('Trying to separate what was just added. Means loop. ');
+        }
+      }
+      return engine.Command.orphanize(commands);
+    }
   }
 });
 
@@ -22231,7 +22425,7 @@ Unit = (function(_super) {
 
   Unit.prototype.signature = [
     {
-      value: ['Value']
+      value: ['Variable']
     }
   ];
 
@@ -22293,29 +22487,17 @@ Unit.define({
 module.exports = Unit;
 
 });
-require.register("gss/lib/commands/Value.js", function(exports, require, module){
-var Command, Value, _ref, _ref1, _ref2,
+require.register("gss/lib/commands/Variable.js", function(exports, require, module){
+var Command, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Command = require('../concepts/Command');
 
-Value = (function(_super) {
-  __extends(Value, _super);
-
-  function Value() {
-    _ref = Value.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Value.prototype.type = 'Value';
-
-  return Value;
-
-})(Command);
-
-Value.Variable = (function(_super) {
+Variable = (function(_super) {
   __extends(Variable, _super);
+
+  Variable.prototype.type = 'Variable';
 
   Variable.prototype.signature = [
     {
@@ -22326,36 +22508,60 @@ Value.Variable = (function(_super) {
   function Variable() {}
 
   Variable.prototype.before = function(args, engine, operation, continuation, scope, ascender, ascending) {
-    var value, _ref1;
-    if ((value = ascending != null ? (_ref1 = ascending.values) != null ? _ref1[args[0]] : void 0 : void 0) != null) {
+    var value, _ref;
+    if ((value = ascending != null ? (_ref = ascending.values) != null ? _ref[args[0]] : void 0 : void 0) != null) {
       return value;
     }
   };
 
+  Variable.prototype.declare = function(engine, name) {
+    var variable, variables, _ref;
+    variables = engine.variables;
+    if (!(variable = variables[name])) {
+      variable = variables[name] = engine.variable(name);
+    }
+    if ((_ref = engine.nullified) != null ? _ref[name] : void 0) {
+      delete engine.nullified[name];
+    }
+    (engine.declared || (engine.declared = {}))[name] = variable;
+    return variable;
+  };
+
+  Variable.prototype.undeclare = function(engine, variable, quick) {
+    var _ref;
+    (engine.nullified || (engine.nullified = {}))[variable.name] = variable;
+    if ((_ref = engine.declared) != null ? _ref[variable.name] : void 0) {
+      delete engine.declared[variable.name];
+    }
+    delete engine.values[variable.name];
+    engine.nullify(variable);
+    return engine.unedit(variable);
+  };
+
   return Variable;
 
-})(Value);
+})(Command);
 
-Value.Expression = (function(_super) {
+Variable.Expression = (function(_super) {
   __extends(Expression, _super);
 
   function Expression() {
-    _ref1 = Expression.__super__.constructor.apply(this, arguments);
-    return _ref1;
+    _ref = Expression.__super__.constructor.apply(this, arguments);
+    return _ref;
   }
 
   Expression.prototype.signature = [
     {
-      left: ['Value', 'Number'],
-      right: ['Value', 'Number']
+      left: ['Variable', 'Number'],
+      right: ['Variable', 'Number']
     }
   ];
 
   return Expression;
 
-})(Value);
+})(Variable);
 
-Value.Expression.algebra = {
+Variable.Expression.algebra = {
   '+': function(left, right) {
     return left + right;
   },
@@ -22370,28 +22576,7 @@ Value.Expression.algebra = {
   }
 };
 
-Value.Expression.Constant = (function(_super) {
-  __extends(Constant, _super);
-
-  function Constant() {
-    _ref2 = Constant.__super__.constructor.apply(this, arguments);
-    return _ref2;
-  }
-
-  Constant.prototype.signature = [
-    {
-      left: ['Number'],
-      right: ['Number']
-    }
-  ];
-
-  return Constant;
-
-})(Value.Expression);
-
-Value.Expression.Constant.define(Value.Expression.algebra);
-
-module.exports = Value;
+module.exports = Variable;
 
 });
 require.register("gss/lib/commands/Call.js", function(exports, require, module){
@@ -22413,7 +22598,7 @@ Call = (function(_super) {
 
   Call.prototype.signature = [
     {
-      value: ['Value']
+      value: ['Variable']
     }
   ];
 
@@ -22816,6 +23001,27 @@ Command = (function() {
     return 'Object';
   };
 
+  Command.orphanize = function(operation) {
+    var arg, _i, _len;
+    if (operation.domain) {
+      operation.domain = void 0;
+    }
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      arg = operation[_i];
+      if (arg != null ? arg.push : void 0) {
+        this.orphanize(arg);
+      }
+    }
+    return operation;
+  };
+
+  Command.getRoot = function(operation) {
+    while (!(operation.command instanceof Command.Default)) {
+      operation = operation.parent;
+    }
+    return operation;
+  };
+
   Command.compile = function(engine, command) {
     var Types, aliases, name, property, proto, value, _i, _len;
     if (!command) {
@@ -23017,7 +23223,7 @@ Continuation = (function() {
 
   Continuation.prototype.getCanonicalSelector = function(selector) {
     selector = selector.trim();
-    selector = selector.replace(this.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.DESCEND).replace(this.engine.Operation.CleanupSelectorRegExp, '');
+    selector = selector.replace(this.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.DESCEND);
     return selector;
   };
 
@@ -23198,7 +23404,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.solve = function(operation, continuation, scope, ascender, ascending) {
-    var commands, commited, object, result, strategy, transacting, _ref;
+    var commands, commited, object, ops, result, strategy, transacting, _ref;
     transacting = this.transact();
     if (typeof operation === 'object' && !operation.push) {
       if (this.domain === this.engine) {
@@ -23215,8 +23421,8 @@ Domain = (function(_super) {
     } else {
       result = this.Command(operation).solve(this, operation, continuation || '', scope || this.scope, ascender, ascending);
     }
-    if (this.constrained || this.unconstrained) {
-      commands = this.validate.apply(this, arguments);
+    if (ops = this.constrained || this.unconstrained) {
+      commands = ops[0].operations[0].command.validate(this);
       this.restruct();
       if (commands === false) {
         if (transacting) {
@@ -23385,7 +23591,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.callback = function(path, value) {
-    var constraint, index, op, url, values, variable, watcher, watchers, worker, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var constraint, index, op, operation, url, values, variable, watcher, watchers, worker, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _ref4;
     if (watchers = (_ref = this.watchers) != null ? _ref[path] : void 0) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
@@ -23406,21 +23612,25 @@ Domain = (function(_super) {
       _ref1 = variable.constraints;
       for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
         constraint = _ref1[_j];
-        if (op = constraint.operation.variables[path]) {
-          if (((_ref2 = op.domain) != null ? _ref2.displayName : void 0) !== this.displayName) {
-            if (!watchers || watchers.indexOf(op) === -1) {
-              op.command.patch(op.domain, op, void 0, void 0, this);
-              op.command.solve(this, op);
-              console.error(123, op, path);
+        _ref2 = constraint.operations;
+        for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+          operation = _ref2[_k];
+          if (op = operation.variables[path]) {
+            if (((_ref3 = op.domain) != null ? _ref3.displayName : void 0) !== this.displayName) {
+              if (!watchers || watchers.indexOf(op) === -1) {
+                op.command.patch(op.domain, op, void 0, void 0, this);
+                op.command.solve(this, op);
+                console.error(123, op, path);
+              }
             }
           }
         }
       }
     }
     if (this.workers) {
-      _ref3 = this.workers;
-      for (url in _ref3) {
-        worker = _ref3[url];
+      _ref4 = this.workers;
+      for (url in _ref4) {
+        worker = _ref4[url];
         if (values = worker.values) {
           if (values.hasOwnProperty(path)) {
             if (value == null) {
@@ -23466,211 +23676,13 @@ Domain = (function(_super) {
     return this.unconstrained = void 0;
   };
 
-  Domain.prototype.constrain = function(constraint, operation, meta) {
-    var definition, op, other, path, suggest, variable, _base, _name, _ref, _ref1, _ref2, _ref3, _ref4;
-    other = operation.command.fetch(this, operation);
-    constraint.operation = operation.parent;
-    ((_base = this.paths)[_name = meta.key] || (_base[_name] = [])).push(constraint);
-    if (!(((_ref = constraint.paths) != null ? _ref.indexOf(meta.key) : void 0) > -1)) {
-      (constraint.paths || (constraint.paths = [])).push(meta.key);
-    }
-    if (other === constraint) {
+  Domain.prototype.add = function(path, value) {
+    var group, _base;
+    group = (_base = (this.paths || (this.paths = {})))[path] || (_base[path] = []);
+    if (group.indexOf(value) > -1) {
       return;
     }
-    _ref1 = operation.variables;
-    for (path in _ref1) {
-      op = _ref1[path];
-      if (variable = op.command) {
-        if (variable.suggest !== void 0) {
-          suggest = variable.suggest;
-          delete variable.suggest;
-          this.suggest(variable, suggest, 'require');
-        }
-      }
-      if (definition = this.variables[path]) {
-        if (((_ref2 = definition.constraints) != null ? (_ref3 = _ref2[0]) != null ? (_ref4 = _ref3.operation[0].values) != null ? _ref4[path] : void 0 : void 0 : void 0) == null) {
-          (definition.constraints || (definition.constraints = [])).push(constraint);
-        }
-      }
-    }
-    (this.constraints || (this.constraints = [])).push(constraint);
-    (this.constrained || (this.constrained = [])).push(constraint);
-    if (other) {
-      return this.unconstrain(other, meta.key);
-    }
-  };
-
-  Domain.prototype.hasConstraint = function(variable) {
-    var other, _i, _len, _ref;
-    _ref = variable.constraints;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      other = _ref[_i];
-      if (other.operation.variables[variable.name].domain === this) {
-        if (this.constraints.indexOf(other) > -1) {
-          return true;
-        }
-      }
-    }
-  };
-
-  Domain.prototype.unconstrain = function(constraint, continuation, moving) {
-    var group, i, index, object, op, path, _i, _ref, _ref1, _ref2, _ref3;
-    if (continuation != null) {
-      index = constraint.paths.indexOf(continuation);
-      constraint.paths.splice(index, 1);
-      group = this.paths[continuation];
-      group.splice(group.indexOf(constraint, 1));
-      if (group.length === 0) {
-        delete this.paths[continuation];
-      }
-      if (constraint.paths.length) {
-        return;
-      }
-    } else {
-      _ref = constraint.paths;
-      for (_i = _ref.length - 1; _i >= 0; _i += -1) {
-        path = _ref[_i];
-        group = this.paths[path];
-        group.splice(group.indexOf(constraint, 1));
-        if (group.length === 0) {
-          delete this.paths[path];
-        }
-      }
-    }
-    index = this.constraints.indexOf(constraint);
-    this.constraints.splice(index, 1);
-    _ref1 = constraint.operation.variables;
-    for (path in _ref1) {
-      op = _ref1[path];
-      if (object = this.variables[path]) {
-        if ((i = (_ref2 = object.constraints) != null ? _ref2.indexOf(constraint) : void 0) > -1) {
-          object.constraints.splice(i, 1);
-          if (!this.hasConstraint(object)) {
-            this.undeclare(object, moving);
-          }
-        }
-      }
-    }
-    if ((i = (_ref3 = this.constrained) != null ? _ref3.indexOf(constraint) : void 0) > -1) {
-      return this.constrained.splice(i, 1);
-    } else if ((this.unconstrained || (this.unconstrained = [])).indexOf(constraint) === -1) {
-      return this.unconstrained.push(constraint);
-    }
-  };
-
-  Domain.prototype.declare = function(name) {
-    var variable;
-    if (!(variable = this.variables[name])) {
-      variable = this.variables[name] = this.variable(name);
-    }
-    if (this.nullified && this.nullified[name]) {
-      delete this.nullified[name];
-    }
-    (this.added || (this.added = {}))[name] = variable;
-    return variable;
-  };
-
-  Domain.prototype.undeclare = function(variable, moving) {
-    var _ref;
-    if (moving !== 'reset') {
-      (this.nullified || (this.nullified = {}))[variable.name] = variable;
-      if ((_ref = this.added) != null ? _ref[variable.name] : void 0) {
-        delete this.added[variable.name];
-      }
-    }
-    delete this.values[variable.name];
-    this.nullify(variable);
-    return this.unedit(variable);
-  };
-
-  Domain.prototype.reach = function(constraints, groups) {
-    var constraint, group, groupped, other, others, path, vars, _i, _j, _k, _len, _len1;
-    groups || (groups = []);
-    for (_i = 0, _len = constraints.length; _i < _len; _i++) {
-      constraint = constraints[_i];
-      groupped = void 0;
-      vars = constraint.operation.variables;
-      for (_j = groups.length - 1; _j >= 0; _j += -1) {
-        group = groups[_j];
-        for (_k = 0, _len1 = group.length; _k < _len1; _k++) {
-          other = group[_k];
-          others = other.operation.variables;
-          for (path in vars) {
-            if (others[path]) {
-              if (groupped && groupped !== group) {
-                groupped.push.apply(groupped, group);
-                groups.splice(groups.indexOf(group), 1);
-              } else {
-                groupped = group;
-              }
-              break;
-            }
-          }
-          if (groups.indexOf(group) === -1) {
-            break;
-          }
-        }
-      }
-      if (!groupped) {
-        groups.push(groupped = []);
-      }
-      groupped.push(constraint);
-    }
-    return groups;
-  };
-
-  Domain.prototype.validate = function() {
-    var arg, args, commands, constraint, equal, group, groups, i, index, ops, separated, shift, _i, _j, _k, _len, _len1, _len2;
-    if (this.constrained || this.unconstrained) {
-      groups = this.reach(this.constraints).sort(function(a, b) {
-        var al, bl;
-        al = a.length;
-        bl = b.length;
-        return bl - al;
-      });
-      separated = groups.splice(1);
-      commands = [];
-      if (separated.length) {
-        shift = 0;
-        for (index = _i = 0, _len = separated.length; _i < _len; index = ++_i) {
-          group = separated[index];
-          ops = [];
-          for (index = _j = 0, _len1 = group.length; _j < _len1; index = ++_j) {
-            constraint = group[index];
-            this.unconstrain(constraint, void 0, true);
-            if (constraint.operation) {
-              ops.push(constraint.operation);
-            }
-          }
-          if (ops.length) {
-            commands.push(ops);
-          }
-        }
-      }
-      if (commands != null ? commands.length : void 0) {
-        if (commands.length === 1) {
-          commands = commands[0];
-        }
-        args = arguments;
-        if (args.length === 1) {
-          args = args[0];
-        }
-        if (commands.length === args.length) {
-          equal = true;
-          for (i = _k = 0, _len2 = args.length; _k < _len2; i = ++_k) {
-            arg = args[i];
-            if (commands.indexOf(arg) === -1) {
-              equal = false;
-              break;
-            }
-          }
-          if (equal) {
-            throw new Error('Trying to separate what was just added. Means loop. ');
-          }
-        }
-        return this.Operation.orphanize(commands);
-      }
-    }
+    group.push(value);
   };
 
   Domain.prototype.apply = function(solution) {
@@ -23682,8 +23694,8 @@ Domain = (function(_super) {
         result[path] = value;
       }
     }
-    if (this.added) {
-      _ref1 = this.added;
+    if (this.declared) {
+      _ref1 = this.declared;
       for (path in _ref1) {
         variable = _ref1[path];
         value = (_ref2 = variable.value) != null ? _ref2 : 0;
@@ -23696,7 +23708,7 @@ Domain = (function(_super) {
           }
         }
       }
-      this.added = void 0;
+      this.declared = void 0;
     }
     if (this.nullified) {
       _ref3 = this.nullified;
@@ -23719,7 +23731,7 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.remove = function() {
-    var constraint, constraints, contd, observer, path, _i, _j, _k, _l, _len, _len1, _len2, _ref, _ref1, _ref2;
+    var contd, observer, operation, operations, path, _i, _j, _k, _len, _len1, _ref, _ref1;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
       if (this.observers) {
@@ -23733,22 +23745,10 @@ Domain = (function(_super) {
           }
         }
       }
-      if (constraints = (_ref1 = this.paths) != null ? _ref1[path] : void 0) {
-        for (_k = constraints.length - 1; _k >= 0; _k += -1) {
-          constraint = constraints[_k];
-          if (constraint) {
-            this.unconstrain(constraint, path);
-          }
-        }
-      }
-      if (this.constrained) {
-        _ref2 = this.constrained;
-        for (_l = 0, _len2 = _ref2.length; _l < _len2; _l++) {
-          constraint = _ref2[_l];
-          if (constraint.paths.indexOf(path) > -1) {
-            this.unconstrain(constraint, path);
-            break;
-          }
+      if (operations = (_ref1 = this.paths) != null ? _ref1[path] : void 0) {
+        for (_k = operations.length - 1; _k >= 0; _k += -1) {
+          operation = operations[_k];
+          path.command.remove(this, operation, path);
         }
       }
     }
@@ -23926,37 +23926,6 @@ Operation = (function() {
       }
     }
     return operation;
-  };
-
-  Operation.prototype.getContext = function(operation, args, scope, node) {
-    var index, _ref;
-    index = args[0].def && 4 || 0;
-    if (args.length !== index && ((_ref = args[index]) != null ? _ref.nodeType : void 0)) {
-      return args[index];
-    }
-    if (!operation.bound) {
-      if (operation.def.serialized && operation[1].def && (args[index] != null)) {
-        return args[index];
-      }
-      return this.engine.scope;
-    }
-    return scope;
-  };
-
-  Operation.prototype.getDomain = function(operation, domain) {
-    var arg, _i, _len;
-    if (typeof operation[0] === 'string') {
-      if (!domain.linear.signatures[operation[0]]) {
-        return this.engine.linear.maybe();
-      }
-      for (_i = 0, _len = operation.length; _i < _len; _i++) {
-        arg = operation[_i];
-        if (arg.domain && arg.domain.priority > domain.priority && arg.domain < 0) {
-          return arg.domain;
-        }
-      }
-    }
-    return domain;
   };
 
   Operation.prototype.ascend = function(operation, domain) {
@@ -25365,7 +25334,7 @@ Merges values from all other domains,
 enables anonymous constraints on immutable values
 */
 
-var Block, Command, Domain, Numeric, Value, _ref,
+var Block, Command, Domain, Numeric, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -25373,7 +25342,7 @@ Domain = require('../concepts/Domain');
 
 Command = require('../concepts/Command');
 
-Value = require('../commands/Value');
+Variable = require('../commands/Variable');
 
 Block = require('../commands/Block');
 
@@ -25393,9 +25362,7 @@ Numeric = (function(_super) {
 
 })(Domain);
 
-Numeric.prototype.Value = Value.extend();
-
-Numeric.prototype.Value.Variable = Value.Variable.extend({}, {
+Numeric.prototype.Variable = Variable.extend({}, {
   get: function(path, engine, operation, continuation, scope) {
     var _ref1;
     continuation || (continuation = (_ref1 = this.getMeta(operation)) != null ? _ref1.key : void 0);
@@ -25403,9 +25370,9 @@ Numeric.prototype.Value.Variable = Value.Variable.extend({}, {
   }
 });
 
-Numeric.prototype.Value.Expression = Value.Expression.extend();
+Numeric.prototype.Variable.Expression = Variable.Expression.extend();
 
-Numeric.prototype.Value.Expression.define(Value.Expression.algebra);
+Numeric.prototype.Variable.Expression.define(Variable.Expression.algebra);
 
 Numeric.prototype.Block = Block.extend();
 
@@ -25433,14 +25400,14 @@ module.exports = Numeric;
 
 });
 require.register("gss/lib/domains/Abstract.js", function(exports, require, module){
-var Abstract, Assignment, Clause, Command, Condition, Constraint, Domain, Iterator, Top, Value,
+var Abstract, Assignment, Clause, Command, Condition, Constraint, Domain, Iterator, Top, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
 Domain = require('../concepts/Domain', Command = require('../concepts/Command'));
 
-Value = require('../commands/Value');
+Variable = require('../commands/Variable');
 
 Constraint = require('../commands/Constraint');
 
@@ -25573,9 +25540,7 @@ Abstract.prototype.Condition = Condition;
 
 Abstract.prototype.List = Command.List;
 
-Abstract.prototype.Value = Value.extend();
-
-Abstract.prototype.Value.Variable = Abstract.prototype.Value.extend({
+Abstract.prototype.Variable = Variable.extend({
   signature: [
     {
       property: ['String']
@@ -25587,7 +25552,7 @@ Abstract.prototype.Value.Variable = Abstract.prototype.Value.extend({
   }
 });
 
-Abstract.prototype.Value.Getter = Abstract.prototype.Value.extend({
+Abstract.prototype.Variable.Getter = Abstract.prototype.Variable.extend({
   signature: [
     {
       object: ['Query', 'Selector', 'String'],
@@ -25606,7 +25571,7 @@ Abstract.prototype.Value.Getter = Abstract.prototype.Value.extend({
   }
 });
 
-Abstract.prototype.Value.Expression = Value.Expression.extend({}, {
+Abstract.prototype.Variable.Expression = Variable.Expression.extend({}, {
   '+': function(left, right) {
     return ['+', left, right];
   },
@@ -25641,15 +25606,11 @@ module.exports = Abstract;
 
 });
 require.register("gss/lib/domains/Boolean.js", function(exports, require, module){
-var Boolean, Command, Constraint, Numeric, Value, _ref,
+var Boolean, Constraint, Numeric, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Numeric = require('./Numeric');
-
-Command = require('../concepts/Command');
-
-Value = require('../commands/Value');
 
 Constraint = require('../commands/Constraint');
 
@@ -25670,8 +25631,8 @@ Boolean = (function(_super) {
 Boolean.prototype.Constraint = Constraint.extend({
   signature: [
     {
-      left: ['Value', 'Number', 'Constraint'],
-      right: ['Value', 'Number', 'Constraint']
+      left: ['Variable', 'Number', 'Constraint'],
+      right: ['Variable', 'Number', 'Constraint']
     }
   ]
 }, {
@@ -26201,16 +26162,14 @@ module.exports = Document;
 
 });
 require.register("gss/lib/domains/Linear.js", function(exports, require, module){
-var Block, Call, Command, Constraint, Domain, Linear, Value, _ref,
+var Block, Call, Constraint, Domain, Linear, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
 Domain = require('../concepts/Domain');
 
-Command = require('../concepts/Command');
-
-Value = require('../commands/Value');
+Variable = require('../commands/Variable');
 
 Constraint = require('../commands/Constraint');
 
@@ -26244,10 +26203,6 @@ Linear = (function(_super) {
       c.Strength.require = c.Strength.required;
       return Linear.hack();
     }
-  };
-
-  Linear.prototype["yield"] = function(result) {
-    this.constrain(result);
   };
 
   Linear.prototype.perform = function() {
@@ -26288,7 +26243,6 @@ Linear = (function(_super) {
       constraint.variable = variable;
       this.addConstraint(constraint);
       (this.editing || (this.editing = {}))[variable.name] = constraint;
-      this.constrained || (this.constrained = []);
     }
     return constraint;
   };
@@ -26301,7 +26255,7 @@ Linear = (function(_super) {
     var variable;
     if (typeof path === 'string') {
       if (!(variable = this.variables[path])) {
-        variable = this.declare(path);
+        variable = this.Variable.prototype.declare(this, path);
       }
     } else {
       variable = path;
@@ -26341,7 +26295,7 @@ Linear.Mixin = {
   }
 };
 
-Linear.prototype.Constraint = Command.extend.call(Constraint, Linear.Mixin, {
+Linear.prototype.Constraint = Constraint.extend(Linear.Mixin, {
   '==': function(left, right, strength, weight, engine) {
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight));
   },
@@ -26359,18 +26313,16 @@ Linear.prototype.Constraint = Command.extend.call(Constraint, Linear.Mixin, {
   }
 });
 
-Linear.prototype.Value = Value.extend(Linear.Mixin);
-
-Linear.prototype.Value.Variable = Value.Variable.extend(Linear.Mixin, {
+Linear.prototype.Variable = Variable.extend(Linear.Mixin, {
   get: function(path, engine, operation) {
     var variable;
-    variable = engine.declare(path, operation);
+    variable = this.declare(engine, path);
     engine.unedit(variable);
     return variable;
   }
 });
 
-Linear.prototype.Value.Expression = Value.Expression.extend(Linear.Mixin, {
+Linear.prototype.Variable.Expression = Variable.Expression.extend(Linear.Mixin, {
   '+': function(left, right) {
     return c.plus(left, right);
   },
@@ -26396,14 +26348,7 @@ Linear.prototype.Block.Meta = Block.Meta.extend({
 }, {
   'object': {
     execute: function(constraint, engine, operation) {
-      if (constraint) {
-        if (!constraint.hashCode) {
-          return constraint;
-        }
-        if (constraint) {
-          return engine.constrain(constraint, operation[1], operation[0]);
-        }
-      }
+      return operation[1].command.add(constraint, engine, operation[1], operation[0].key);
     },
     descend: function(engine, operation) {
       operation[1].parent = operation;
@@ -26460,7 +26405,7 @@ module.exports = Linear;
 
 });
 require.register("gss/lib/domains/Finite.js", function(exports, require, module){
-var Command, Constraint, Domain, Finite, Value,
+var Command, Constraint, Domain, Finite, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -26468,7 +26413,7 @@ Domain = require('../concepts/Domain');
 
 Command = require('../concepts/Command');
 
-Value = require('../commands/Value');
+Variable = require('../commands/Variable');
 
 Constraint = require('../commands/Constraint');
 
@@ -26513,15 +26458,11 @@ Finite.Constraint = Constraint.extend({}, {
   }
 });
 
-Finite.Value = Value.extend();
-
-Finite.Value.Solution = Value.extend();
-
-Finite.Value.Variable = Value.Variable.extend({
+Finite.Variable = Variable.extend({
   group: 'finite'
 });
 
-Finite.Value.Expression = Value.Expression.extend({
+Finite.Variable.Expression = Variable.Expression.extend({
   group: 'finite'
 }, {
   '+': function(left, right) {
@@ -26808,7 +26749,7 @@ Queries = (function() {
     }
     while (watcher = watchers[index]) {
       query = watchers[index + 1];
-      if (refs && (refs.indexOf(query) === -1 || (scope && scope !== watchers[index + 2]) || (top && this.engine.Operation.getRoot(watcher) !== top))) {
+      if (refs && (refs.indexOf(query) === -1 || (scope && scope !== watchers[index + 2]) || (top && this.engine.Command.getRoot(watcher) !== top))) {
         index += 3;
         continue;
       }
@@ -26846,14 +26787,14 @@ Queries = (function() {
     length = collection.length;
     result = [];
     if (operation) {
-      operation = this.engine.Operation.getRoot(operation);
+      operation = this.engine.Command.getRoot(operation);
     }
     _ref = collection.scopes;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       s = _ref[index];
       if (s === scope) {
         if (operation && collection.continuations) {
-          top = this.engine.Operation.getRoot(collection.continuations[index]);
+          top = this.engine.Command.getRoot(collection.continuations[index]);
           if (top !== operation) {
             continue;
           }
@@ -27820,7 +27761,7 @@ Pairs = (function() {
         prev = index;
       }
       if (last === continuation.length - 1 && ascending) {
-        parent = this.engine.Operation.getRoot(operation);
+        parent = this.engine.Command.getRoot(operation);
         if (!parent.right || parent.right === operation) {
           return this.onLeft(operation, parent, continuation, scope, ascender, ascending);
         } else {
@@ -27912,7 +27853,7 @@ Pairs = (function() {
 
   Pairs.prototype.solve = function(left, right, operation, scope) {
     var I, J, added, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
-    root = this.engine.Operation.getRoot(operation);
+    root = this.engine.Command.getRoot(operation);
     right = this.engine.Continuation.getScopePath(scope, left) + root.right.command.path;
     leftNew = this.engine.queries.get(left);
     rightNew = this.engine.queries.get(right);
@@ -28019,15 +27960,15 @@ Pairs = (function() {
     var cleaning, contd, i, index, j, op, other, others, pairs, prefix, right, rights, top, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1;
     if (pairs = (_ref = this.paths) != null ? _ref[left] : void 0) {
       rights = [];
-      top = this.engine.Operation.getRoot(operation);
+      top = this.engine.Command.getRoot(operation);
       for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
         op = pairs[index];
-        if (pairs[index + 2] === scope && this.engine.Operation.getRoot(pairs[index + 1]) === top) {
+        if (pairs[index + 2] === scope && this.engine.Command.getRoot(pairs[index + 1]) === top) {
           rights.push(index);
         }
       }
       cleaning = rights.slice();
-      top = this.engine.Operation.getRoot(operation);
+      top = this.engine.Command.getRoot(operation);
       _ref1 = this.paths;
       for (prefix in _ref1) {
         others = _ref1[prefix];
@@ -28379,7 +28320,7 @@ require.register("gss/lib/modules/Signatures.js", function(exports, require, mod
 
 Generate lookup structures to match methods by name and argument type signature
 
-Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Value']['Number']`
+Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Variable']['Number']`
 
 A matched signature returns customized class for an operation that can further 
 pick a sub-class dynamically. Signatures allows special case optimizations and 
@@ -28815,36 +28756,8 @@ Dimensions = (function() {
     width: function(element) {
       return element.offsetWidth;
     },
-    y: function(element) {
-      var y;
-      y = 0;
-      while (element) {
-        y += element.offsetTop;
-        element = element.offsetParent;
-        if (element === this.scope || !element) {
-          break;
-        }
-        if (element === this.scope.offsetParent) {
-          y -= this.scope.offsetTop;
-        }
-      }
-      return y;
-    },
-    x: function(element) {
-      var x;
-      x = 0;
-      while (element) {
-        x += element.offsetLeft;
-        element = element.offsetParent;
-        if (element === this.scope || !element) {
-          break;
-        }
-        if (element === this.scope.offsetParent) {
-          x -= this.scope.offsetLeft;
-        }
-      }
-      return x;
-    }
+    y: function(element) {},
+    x: function(element) {}
   };
 
   Dimensions.prototype.scroll = {
@@ -35152,7 +35065,7 @@ module.exports = {
     "lib/commands/Source.js", 
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
-    "lib/commands/Value.js", 
+    "lib/commands/Variable.js", 
     "lib/commands/Call.js", 
 
     "lib/concepts/Command.js",

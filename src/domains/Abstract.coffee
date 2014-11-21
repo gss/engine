@@ -2,7 +2,7 @@
 Domain     = require('../concepts/Domain'
 Command    = require('../concepts/Command'))
 
-Value      = require('../commands/Value')
+Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 Assignment = require('../commands/Assignment')
 Condition  = require('../commands/Condition')
@@ -113,8 +113,7 @@ Abstract::Condition = Condition
 Abstract::List = Command.List
 
 # Global variable
-Abstract::Value = Value.extend()
-Abstract::Value.Variable = Abstract::Value.extend {
+Abstract::Variable = Variable.extend {
   signature: [
     property: ['String']
   ],
@@ -123,7 +122,7 @@ Abstract::Value.Variable = Abstract::Value.extend {
     return ['get', property]
     
 # Scoped variable
-Abstract::Value.Getter = Abstract::Value.extend {
+Abstract::Variable.Getter = Abstract::Variable.extend {
   signature: [
     object:   ['Query', 'Selector', 'String']
     property: ['String']
@@ -136,7 +135,7 @@ Abstract::Value.Getter = Abstract::Value.extend {
     return ['get', engine.getPath(object, property)]
   
 # Proxy math that passes basic expressions along
-Abstract::Value.Expression = Value.Expression.extend {},
+Abstract::Variable.Expression = Variable.Expression.extend {},
   '+': (left, right) ->
     ['+', left, right]
     

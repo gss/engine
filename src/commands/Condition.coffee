@@ -4,7 +4,7 @@ class Condition extends Command
   type: 'Condition'
   
   signature: [
-  	if: ['Query', 'Selector', 'Value', 'Constraint', 'Default'],
+  	if: ['Query', 'Selector', 'Variable', 'Constraint', 'Default'],
   	then: ['Any'], 
   	[
   		else: ['Any']

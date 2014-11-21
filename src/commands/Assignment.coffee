@@ -6,7 +6,7 @@ class Assignment extends Command
   signature: [
     [object:   ['Query', 'Selector']]
     property: ['String']
-    value:    ['Value']
+    value:    ['Variable']
   ]
   
 class Assignment.Unsafe extends Assignment

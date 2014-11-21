@@ -333,6 +333,19 @@ class Command
       return 'List'
     return 'Object'
   
+  @orphanize: (operation) ->
+    if operation.domain
+      operation.domain = undefined
+    for arg in operation
+      if arg?.push
+        @orphanize arg
+    operation
+
+  @getRoot: (operation) ->
+    while !(operation.command instanceof Command.Default)
+      operation = operation.parent
+    return operation
+
   # Find defined command signatures in the engine and register their methods
   @compile: (engine, command) ->
     unless command

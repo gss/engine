@@ -1,7 +1,5 @@
 
 Numeric    = require('./Numeric')
-Command    = require('../concepts/Command')
-Value      = require('../commands/Value')
 Constraint = require('../commands/Constraint')
 
 class Boolean extends Numeric
@@ -10,8 +8,8 @@ class Boolean extends Numeric
   
 Boolean::Constraint = Constraint.extend {
   signature: [
-    left:     ['Value', 'Number', 'Constraint'],
-    right:    ['Value', 'Number', 'Constraint']
+    left:     ['Variable', 'Number', 'Constraint'],
+    right:    ['Variable', 'Number', 'Constraint']
   ]
 },
   "&&": (a, b) ->

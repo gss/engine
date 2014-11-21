@@ -1,6 +1,5 @@
 Domain     = require('../concepts/Domain')
-Command    = require('../concepts/Command')
-Value      = require('../commands/Value')
+Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 Block      = require('../commands/Block')
 Call       = require('../commands/Call')
@@ -26,10 +25,6 @@ class Linear extends Domain
       c.Strength.require = c.Strength.required
 
       Linear.hack()
-
-  yield: (result) ->
-    @constrain(result)
-    return
 
   perform: ->
     if @constrained
@@ -65,7 +60,6 @@ class Linear extends Domain
       constraint.variable = variable
       @addConstraint constraint
       (@editing ||= {})[variable.name] = constraint
-      @constrained ||= []
     
     return constraint
 
@@ -76,7 +70,7 @@ class Linear extends Domain
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'
       unless variable = @variables[path]
-        variable = @declare(path)
+        variable = @Variable::declare(@, path)
     else
       variable = path
 
@@ -101,7 +95,7 @@ Linear.Mixin =
       return operation.parent.domain.suggest('%' + operation.command.toExpression(operation), result, 'require')
 
 
-Linear::Constraint = Command.extend.call Constraint, Linear.Mixin,
+Linear::Constraint = Constraint.extend Linear.Mixin,
   '==': (left, right, strength, weight, engine) ->
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))
 
@@ -118,14 +112,13 @@ Linear::Constraint = Command.extend.call Constraint, Linear.Mixin,
     return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
 
 
-Linear::Value            = Value.extend(Linear.Mixin)
-Linear::Value.Variable   = Value.Variable.extend Linear.Mixin,
+Linear::Variable = Variable.extend Linear.Mixin,
   get: (path, engine, operation) ->
-    variable = engine.declare(path, operation)
+    variable = @declare(engine, path)
     engine.unedit(variable)
     return variable
     
-Linear::Value.Expression = Value.Expression.extend Linear.Mixin,
+Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
   
   '+': (left, right) ->
     return c.plus(left, right)
@@ -139,6 +132,7 @@ Linear::Value.Expression = Value.Expression.extend Linear.Mixin,
   '/': (left, right) ->
     return c.divide(left, right)
 
+# Handle constraints wrapped into meta constructs provided by Abstract
 Linear::Block = Block.extend()
 Linear::Block.Meta = Block.Meta.extend {
   signature: [
@@ -147,11 +141,8 @@ Linear::Block.Meta = Block.Meta.extend {
 }, 
   'object': 
     execute: (constraint, engine, operation) ->
-      if constraint
-        if !constraint.hashCode
-          return constraint
-        if constraint
-          engine.constrain(constraint, operation[1], operation[0])
+      #return unless constraint.hashCode?
+      operation[1].command.add(constraint, engine, operation[1], operation[0].key)
 
     descend: (engine, operation) -> 
       operation[1].parent = operation
@@ -160,7 +151,6 @@ Linear::Block.Meta = Block.Meta.extend {
         engine, 
         operation
       ]
-
 
 Linear::Call = Call.extend {},
   'stay': (value, engine, operation) ->

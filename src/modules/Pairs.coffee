@@ -47,7 +47,7 @@ class Pairs
           return result
         prev = index 
       if last == continuation.length - 1 && ascending
-        parent = @engine.Operation.getRoot(operation)
+        parent = @engine.Command.getRoot(operation)
         if !parent.right || parent.right == operation
           return @onLeft(operation, parent, continuation, scope, ascender, ascending)
         else
@@ -113,7 +113,7 @@ class Pairs
 
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
-    root = @engine.Operation.getRoot(operation)
+    root = @engine.Command.getRoot(operation)
     right = @engine.Continuation.getScopePath(scope, left) + root.right.command.path
     leftNew = @engine.queries.get(left)
     rightNew = @engine.queries.get(right)
@@ -210,15 +210,15 @@ class Pairs
     if pairs = @paths?[left]
       rights = []
 
-      top = @engine.Operation.getRoot(operation)
+      top = @engine.Command.getRoot(operation)
       for op, index in pairs by 3
-        if pairs[index + 2] == scope && @engine.Operation.getRoot(pairs[index + 1]) == top
+        if pairs[index + 2] == scope && @engine.Command.getRoot(pairs[index + 1]) == top
           rights.push(index)
 
       cleaning = rights.slice()
 
       # clean right part if nobody else is subscribed
-      top = @engine.Operation.getRoot(operation)
+      top = @engine.Command.getRoot(operation)
       for prefix, others of @paths
         for other, i in others by 3
           for index, j in cleaning by -1

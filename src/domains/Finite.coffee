@@ -1,6 +1,6 @@
 Domain     = require('../concepts/Domain')
 Command    = require('../concepts/Command')
-Value      = require('../commands/Value')
+Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 
 class Finite extends Domain
@@ -37,10 +37,8 @@ Finite.Constraint = Constraint.extend {},
   '>': (left, right) ->
     return @solver.gt left, right
 
-Finite.Value            = Value.extend()
-Finite.Value.Solution   = Value.extend()
-Finite.Value.Variable   = Value.Variable.extend {group: 'finite'}
-Finite.Value.Expression = Value.Expression.extend {group: 'finite'},
+Finite.Variable            = Variable.extend {group: 'finite'}
+Finite.Variable.Expression = Variable.Expression.extend {group: 'finite'},
 
   '+': (left, right) ->
     return @solver.plus left, right

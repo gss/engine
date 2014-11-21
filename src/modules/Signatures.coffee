@@ -2,7 +2,7 @@
 
 Generate lookup structures to match methods by name and argument type signature
 
-Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Value']['Number']`
+Signature for `['==', ['get', 'a'], 10]` would be `engine.signatures['==']['Variable']['Number']`
 
 A matched signature returns customized class for an operation that can further 
 pick a sub-class dynamically. Signatures allows special case optimizations and 

@@ -75,8 +75,8 @@ class Domain extends Trigger
     else
       result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
-    if @constrained || @unconstrained
-      commands = @validate.apply(@, arguments)
+    if ops = @constrained || @unconstrained
+      commands = ops[0].operations[0].command.validate(@)
       @restruct()
 
       if commands == false
@@ -228,12 +228,13 @@ class Domain extends Trigger
     # Substitute variables
     if variable = @variables[path]
       for constraint in variable.constraints
-        if op = constraint.operation.variables[path]
-          if op.domain?.displayName != @displayName
-            if !watchers || watchers.indexOf(op) == -1
-              op.command.patch(op.domain, op, undefined, undefined, @)
-              op.command.solve(@, op)
-              console.error(123, op, path)
+        for operation in constraint.operations
+          if op = operation.variables[path]
+            if op.domain?.displayName != @displayName
+              if !watchers || watchers.indexOf(op) == -1
+                op.command.patch(op.domain, op, undefined, undefined, @)
+                op.command.solve(@, op)
+                console.error(123, op, path)
 
     # Notify workers
     if @workers
@@ -271,184 +272,35 @@ class Domain extends Trigger
     @constrained = []
     @unconstrained = undefined
 
-  constrain: (constraint, operation, meta) ->
-
-    other = operation.command.fetch(@, operation)
-
-    constraint.operation = operation.parent
-    (@paths[meta.key] ||= []).push(constraint)
-    if !(constraint.paths?.indexOf(meta.key) > -1)
-      (constraint.paths ||= []).push(meta.key)
-
-    return if other == constraint
-
-    for path, op of operation.variables
-      if variable = op.command
-        if variable.suggest != undefined
-          suggest = variable.suggest
-          delete variable.suggest
-          @suggest variable, suggest, 'require'
-      if definition = @variables[path]
-        unless definition.constraints?[0]?.operation[0].values?[path]?
-          (definition.constraints ||= []).push(constraint)
-        
-    (@constraints ||= []).push(constraint)
-    (@constrained ||= []).push(constraint)
-    if other
-      @unconstrain(other, meta.key)
-
-  hasConstraint: (variable) ->
-    for other in variable.constraints
-      if other.operation.variables[variable.name].domain == @
-        if @constraints.indexOf(other) > -1
-          return true
+  add: (path, value) ->
+    group = (@paths ||= {})[path] ||= []
+    if group.indexOf(value) > -1
+      return 
+    group.push(value)
     return
 
 
-  unconstrain: (constraint, continuation, moving) ->
-    # Unconstrain by specific continuation
-    if continuation?
-      index = constraint.paths.indexOf(continuation)
-      constraint.paths.splice(index, 1)
 
-      group = @paths[continuation]
-      group.splice(group.indexOf(constraint, 1))
-      if group.length == 0
-        delete @paths[continuation]
-
-      if constraint.paths.length
-        return
-    # Unconstrain all paths
-    else
-      for path in constraint.paths by -1
-        group = @paths[path]
-        group.splice(group.indexOf(constraint, 1))
-        if group.length == 0
-          delete @paths[path]
-
-    index = @constraints.indexOf(constraint)
-    @constraints.splice(index, 1)
-
-    for path, op of constraint.operation.variables
-      if object = @variables[path]
-        if (i = object.constraints?.indexOf(constraint)) > -1
-          object.constraints.splice(i, 1)
-
-          if !@hasConstraint(object)
-            @undeclare(object, moving)
-            
-              
-    if (i = @constrained?.indexOf(constraint)) > -1
-      @constrained.splice(i, 1)
-    else if (@unconstrained ||= []).indexOf(constraint) == -1
-      #if constraint.operation[1].hash == '$message[height]==$message[intrinsic-height]'
-      #  debugger
-      @unconstrained.push(constraint)
-
-
-  declare: (name) ->
-    unless variable = @variables[name]
-      variable = @variables[name] = @variable(name)
-    if @nullified && @nullified[name]
-      delete @nullified[name]
-    (@added ||= {})[name] = variable
-    return variable
-
-  undeclare: (variable, moving) ->
-    if moving != 'reset'
-      (@nullified ||= {})[variable.name] = variable
-      if @added?[variable.name]
-        delete @added[variable.name]
-    #if !moving && @values[variable.name] != undefined
-    #  #variable.value = 0
-    #  #delete @variables[variable.name]
-
-    delete @values[variable.name]
-    @nullify(variable)
-    @unedit(variable)
-
-
-
-  reach: (constraints, groups) ->
-    groups ||= []
-    for constraint in constraints
-      groupped = undefined
-      vars = constraint.operation.variables
-      
-      for group in groups by -1
-        for other in group
-          others = other.operation.variables
-          for path of vars
-            if others[path]
-              if groupped && groupped != group
-                groupped.push.apply(groupped, group)
-                groups.splice(groups.indexOf(group), 1)
-              else
-                groupped = group
-              break
-          if groups.indexOf(group) == -1
-            break
-      unless groupped
-        groups.push(groupped = [])
-      groupped.push(constraint)
-    return groups
-
-  validate: () ->
-    if @constrained || @unconstrained
-      groups = @reach(@constraints).sort (a, b) ->
-        al = a.length
-        bl = b.length
-        return bl - al
-
-      separated = groups.splice(1)
-      commands = []
-      if separated.length
-        shift = 0
-        for group, index in separated
-          ops = []
-          for constraint, index in group
-            @unconstrain constraint, undefined, true
-            if constraint.operation
-              ops.push constraint.operation
-          if ops.length
-            commands.push ops
-
-      if commands?.length
-        if commands.length == 1
-          commands = commands[0]
-        args = arguments
-        if args.length == 1
-          args = args[0]
-        if commands.length == args.length
-          equal = true
-          for arg, i in args
-            if commands.indexOf(arg) == -1
-              equal = false
-              break
-          if equal
-            throw new Error 'Trying to separate what was just added. Means loop. '
-        return @Operation.orphanize commands
-        
   apply: (solution) ->
     result = {}
     for path, value of solution
       if !@nullified?[path] && path.charAt(0) != '%'
         result[path] = value
 
-    if @added
-      for path, variable of @added
+    if @declared
+      for path, variable of @declared
         value = variable.value ? 0
         unless @values[path] == value
           if path.charAt(0) != '%'
             result[path] ?= value
             @values[path] = value
-      @added = undefined
+      @declared = undefined
+
     if @nullified
       for path, variable of @nullified
         if path.charAt(0) != '%'
           result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         @nullify variable
-
       @nullified = undefined
 
     @merge result, true
@@ -469,16 +321,10 @@ class Domain extends Trigger
             while observer[0]
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
       
-      if constraints = @paths?[path]
-        for constraint in constraints by -1
-          if constraint
-            @unconstrain(constraint, path)
+      if operations = @paths?[path]
+        for operation in operations by -1
+          path.command.remove(@, operation, path)
 
-      if @constrained
-        for constraint in @constrained
-          if constraint.paths.indexOf(path) > -1
-            @unconstrain(constraint, path)
-            break
     return
 
   export: (strings) ->

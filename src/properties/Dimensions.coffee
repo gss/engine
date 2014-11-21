@@ -49,26 +49,10 @@ class Dimensions
       return element.offsetWidth
 
     y: (element) ->
-      y = 0
-      while element
-        y += element.offsetTop
-        element = element.offsetParent
-        if element == @scope || !element
-          break
-        if element == @scope.offsetParent
-          y -= @scope.offsetTop
-      return y
+      return
 
     x: (element) ->
-      x = 0
-      while element
-        x += element.offsetLeft
-        element = element.offsetParent
-        if element == @scope || !element
-          break
-        if element == @scope.offsetParent
-          x -= @scope.offsetLeft
-      return x
+      return
 
   scroll:
 

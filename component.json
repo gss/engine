@@ -22,7 +22,7 @@
     "lib/commands/Source.js", 
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
-    "lib/commands/Value.js", 
+    "lib/commands/Variable.js", 
     "lib/commands/Call.js", 
 
     "lib/concepts/Command.js",

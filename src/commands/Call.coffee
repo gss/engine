@@ -4,7 +4,7 @@ class Call extends Command
   type: 'Call'
 
   signature: [
-    value: ['Value']
+    value: ['Variable']
   ]
 
 class Call.Unsafe extends Call
