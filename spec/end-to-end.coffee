@@ -1663,7 +1663,23 @@ describe 'End - to - End', ->
                 "$a2[x]": null
                 done()
 
+  describe 'Edge cases', ->
 
+    it 'should handle identical constraints', (done) ->
+      engine.then ->
+        expect(engine.domains.length).to.eql 1
+        expect(engine.domains[0].constraints.length).to.eql 3
+        done()
+      container.innerHTML = """
+        <style type="text/gss">
+          button {
+            $a == 1;
+          }
+        </style>
+        <button id="button1"></button>
+        <button id="button2"></button>
+        <button id="button3"></button>
+      """
 
   
   
@@ -2127,13 +2143,13 @@ describe 'End - to - End', ->
           
             .box {
               @if ::[width] < 10 and ::[height] < 10 {
-                $state: == 1;
+                state: == 1;
               } @else {
                 @if ::[width] > 10 and ::[height] > 10 {
-                  $state: == 2;
+                  state: == 2;
                 } @else { 
                   @if ::[width] == 10 or ::[height] == 10 {
-                    $state: == 3;
+                    state: == 3;
                   }
                 }
               }
@@ -2149,9 +2165,9 @@ describe 'End - to - End', ->
             "$box1[height]": 9
             "$box2[height]": 11
             "$box3[height]": 10
-            "$box1[$state]": 1
-            "$box2[$state]": 2
-            "$box3[$state]": 3
+            "$box1[state]": 1
+            "$box2[state]": 2
+            "$box3[state]": 3
           done()
     
     describe 'arithmetic @if @else', ->
@@ -2172,13 +2188,13 @@ describe 'End - to - End', ->
           
             .box {
               @if ::[width] + ::[height] < 20 {
-                $state: == 1;
+                state: == 1;
               } @else {
                 @if ::[width] + ::[height] == 22 {
-                  $state: == 2;
+                  state: == 2;
                 } @else {
                   @if ::[width] * ::[height] >= 99 {
-                    $state: == 3;
+                    state: == 3;
                   }
                 }
               } 
@@ -2194,9 +2210,9 @@ describe 'End - to - End', ->
             "$box1[height]": 9
             "$box2[height]": 11
             "$box3[height]": 10
-            "$box1[$state]": 1
-            "$box2[$state]": 2
-            "$box3[$state]": 3
+            "$box1[state]": 1
+            "$box2[state]": 2
+            "$box3[state]": 3
           done()
     
     describe 'parans + arithmetic @if @else', ->
@@ -2217,16 +2233,16 @@ describe 'End - to - End', ->
           
             .box {
               @if (::[width] + ::[height] < 20) and (::[width] == 9) {
-                $state: == 1;
+                state: == 1;
               } @else {
                 @if (::[width] + ::[height] == 22) and (::[width] == 11) {
-                  $state: == 2;
+                  state: == 2;
                 } @else {
                   @if (::[width] * ::[height] >= 99) and (::[width] == 999999) {
-                    $state: == 4;
+                    state: == 4;
                   } @else {
                     @if (::[width] * ::[height] >= 99) and (::[width] == 10) {
-                      $state: == 3;
+                      state: == 3;
                     }
                   }
                 }
@@ -2243,9 +2259,9 @@ describe 'End - to - End', ->
             "$box1[height]": 9
             "$box2[height]": 11
             "$box3[height]": 10
-            "$box1[$state]": 1
-            "$box2[$state]": 2
-            "$box3[$state]": 3
+            "$box1[state]": 1
+            "$box2[state]": 2
+            "$box3[state]": 3
           done()
     
   

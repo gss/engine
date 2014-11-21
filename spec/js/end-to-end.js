@@ -1314,6 +1314,16 @@ describe('End - to - End', function() {
       });
     });
   });
+  describe('Edge cases', function() {
+    return it('should handle identical constraints', function(done) {
+      engine.then(function() {
+        expect(engine.domains.length).to.eql(1);
+        expect(engine.domains[0].constraints.length).to.eql(3);
+        return done();
+      });
+      return container.innerHTML = "<style type=\"text/gss\">\n  button {\n    $a == 1;\n  }\n</style>\n<button id=\"button1\"></button>\n<button id=\"button2\"></button>\n<button id=\"button3\"></button>";
+    });
+  });
   describe('VGL', function() {
     describe('grid-template', function() {
       engine = null;
@@ -1661,7 +1671,7 @@ describe('End - to - End', function() {
     });
     describe('and / or @if @else', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <div id=\"box3\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n  #box1[width] == 9;\n  #box2[width] == 11;\n  #box3[width] == 10;\n  #box1[height] == 9;\n  #box2[height] == 11;\n  #box3[height] == 10;\n\n  .box {\n    @if ::[width] < 10 and ::[height] < 10 {\n      $state: == 1;\n    } @else {\n      @if ::[width] > 10 and ::[height] > 10 {\n        $state: == 2;\n      } @else { \n        @if ::[width] == 10 or ::[height] == 10 {\n          $state: == 3;\n        }\n      }\n    }\n  }\n\n  </style>";
+        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <div id=\"box3\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n  #box1[width] == 9;\n  #box2[width] == 11;\n  #box3[width] == 10;\n  #box1[height] == 9;\n  #box2[height] == 11;\n  #box3[height] == 10;\n\n  .box {\n    @if ::[width] < 10 and ::[height] < 10 {\n      state: == 1;\n    } @else {\n      @if ::[width] > 10 and ::[height] > 10 {\n        state: == 2;\n      } @else { \n        @if ::[width] == 10 or ::[height] == 10 {\n          state: == 3;\n        }\n      }\n    }\n  }\n\n  </style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             "$box1[width]": 9,
@@ -1670,9 +1680,9 @@ describe('End - to - End', function() {
             "$box1[height]": 9,
             "$box2[height]": 11,
             "$box3[height]": 10,
-            "$box1[$state]": 1,
-            "$box2[$state]": 2,
-            "$box3[$state]": 3
+            "$box1[state]": 1,
+            "$box2[state]": 2,
+            "$box3[state]": 3
           });
           return done();
         });
@@ -1680,7 +1690,7 @@ describe('End - to - End', function() {
     });
     describe('arithmetic @if @else', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <div id=\"box3\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n  #box1[width] == 9;\n  #box2[width] == 11;\n  #box3[width] == 10;\n  #box1[height] == 9;\n  #box2[height] == 11;\n  #box3[height] == 10;\n\n  .box {\n    @if ::[width] + ::[height] < 20 {\n      $state: == 1;\n    } @else {\n      @if ::[width] + ::[height] == 22 {\n        $state: == 2;\n      } @else {\n        @if ::[width] * ::[height] >= 99 {\n          $state: == 3;\n        }\n      }\n    } \n  }\n\n  </style>";
+        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <div id=\"box3\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n  #box1[width] == 9;\n  #box2[width] == 11;\n  #box3[width] == 10;\n  #box1[height] == 9;\n  #box2[height] == 11;\n  #box3[height] == 10;\n\n  .box {\n    @if ::[width] + ::[height] < 20 {\n      state: == 1;\n    } @else {\n      @if ::[width] + ::[height] == 22 {\n        state: == 2;\n      } @else {\n        @if ::[width] * ::[height] >= 99 {\n          state: == 3;\n        }\n      }\n    } \n  }\n\n  </style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             "$box1[width]": 9,
@@ -1689,9 +1699,9 @@ describe('End - to - End', function() {
             "$box1[height]": 9,
             "$box2[height]": 11,
             "$box3[height]": 10,
-            "$box1[$state]": 1,
-            "$box2[$state]": 2,
-            "$box3[$state]": 3
+            "$box1[state]": 1,
+            "$box2[state]": 2,
+            "$box3[state]": 3
           });
           return done();
         });
@@ -1699,7 +1709,7 @@ describe('End - to - End', function() {
     });
     describe('parans + arithmetic @if @else', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <div id=\"box3\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n  #box1[width] == 9;\n  #box2[width] == 11;\n  #box3[width] == 10;\n  #box1[height] == 9;\n  #box2[height] == 11;\n  #box3[height] == 10;\n\n  .box {\n    @if (::[width] + ::[height] < 20) and (::[width] == 9) {\n      $state: == 1;\n    } @else {\n      @if (::[width] + ::[height] == 22) and (::[width] == 11) {\n        $state: == 2;\n      } @else {\n        @if (::[width] * ::[height] >= 99) and (::[width] == 999999) {\n          $state: == 4;\n        } @else {\n          @if (::[width] * ::[height] >= 99) and (::[width] == 10) {\n            $state: == 3;\n          }\n        }\n      }\n    }\n  }\n\n  </style>";
+        container.innerHTML = "  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n  <div id=\"box3\" class=\"box\"></div>\n  <style type=\"text/gss\">\n\n  #box1[width] == 9;\n  #box2[width] == 11;\n  #box3[width] == 10;\n  #box1[height] == 9;\n  #box2[height] == 11;\n  #box3[height] == 10;\n\n  .box {\n    @if (::[width] + ::[height] < 20) and (::[width] == 9) {\n      state: == 1;\n    } @else {\n      @if (::[width] + ::[height] == 22) and (::[width] == 11) {\n        state: == 2;\n      } @else {\n        @if (::[width] * ::[height] >= 99) and (::[width] == 999999) {\n          state: == 4;\n        } @else {\n          @if (::[width] * ::[height] >= 99) and (::[width] == 10) {\n            state: == 3;\n          }\n        }\n      }\n    }\n  }\n\n  </style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             "$box1[width]": 9,
@@ -1708,9 +1718,9 @@ describe('End - to - End', function() {
             "$box1[height]": 9,
             "$box2[height]": 11,
             "$box3[height]": 10,
-            "$box1[$state]": 1,
-            "$box2[$state]": 2,
-            "$box3[$state]": 3
+            "$box1[state]": 1,
+            "$box2[state]": 2,
+            "$box3[state]": 3
           });
           return done();
         });

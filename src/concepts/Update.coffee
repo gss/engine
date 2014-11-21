@@ -346,20 +346,12 @@ Update.prototype =
         if other == domain || (domain && !domain?.solve && other.url == domain.url)
           cmds = @problems[position]
           for problem in problems
-            exported = undefined
-
-            copy = undefined
-            for cmd in cmds
-              if (cmd == problem) || (cmd.parent && cmd.parent == problem.parent && cmd.index == problem.index)
-                debugger
-                
-            unless copy
-              if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
-                cmds.unshift problem
-              else
-                cmds.push problem
-              @setVariables(cmds, problem, other)
-              @reify(problem, other, domain)
+            if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
+              cmds.unshift problem
+            else
+              cmds.push problem
+            @setVariables(cmds, problem, other)
+            @reify(problem, other, domain)
 
           @connect(position)
 

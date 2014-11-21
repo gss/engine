@@ -478,7 +478,6 @@ describe 'Domain', ->
         c: 0
         a: 1
 
-
     it 'should merge multiple domains', ->
       engine =  new GSS
       # Makes two separate graphs
