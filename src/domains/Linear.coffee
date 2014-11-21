@@ -12,9 +12,6 @@ class Linear extends Domain
 
   setup: () ->
     super
-
-    @operations ||= []
-
     unless @hasOwnProperty('solver')
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
@@ -95,7 +92,22 @@ Linear.Mixin =
       return operation.parent.domain.suggest('%' + operation.command.toExpression(operation), result, 'require')
 
 
-Linear::Constraint = Constraint.extend Linear.Mixin,
+Linear::Constraint = Constraint.extend {
+
+  before: (args, engine, operation, continuation, scope, ascender, ascending) ->
+    return @get(engine, operation, ascending)
+
+  after: (args, result, engine, operation, continuation, scope, ascender, ascending) ->
+    if result.hashCode
+      return ((engine.linear.operations ||= {})[operation.hash ||= @toExpression(operation)] ||= {})[@toHash(ascending)] ||= result
+    return result
+
+  # Get cached operation by expression and set of input variables
+  get: (engine, operation, scope) ->
+    return engine.linear.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
+  
+  yield: Linear.Mixin.yield
+},
   '==': (left, right, strength, weight, engine) ->
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))
 
@@ -141,8 +153,8 @@ Linear::Block.Meta = Block.Meta.extend {
 }, 
   'object': 
     execute: (constraint, engine, operation) ->
-      #return unless constraint.hashCode?
-      operation[1].command.add(constraint, engine, operation[1], operation[0].key)
+      if constraint?.hashCode?
+        operation[1].command.add(constraint, engine, operation[1], operation[0].key)
 
     descend: (engine, operation) -> 
       operation[1].parent = operation

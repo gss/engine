@@ -86,7 +86,7 @@ describe 'Domain', ->
         a: -555
       ).to.eql
         result: -1100
-
+        a: -555
 
 
 
@@ -119,12 +119,14 @@ describe 'Domain', ->
         a: -555
       ).to.eql
         result: -1100
+        a: -555
 
       GSS.console.info('A=1, was 2')
 
       expect(engine.solve
         A: 1
       ).to.eql
+        A: 1
         result: -545
 
     it 'should change variable domain after the fact', ->
@@ -151,8 +153,8 @@ describe 'Domain', ->
       expect(engine.solve
         a: null
       ).to.eql
-        a: -1
-        result: 0
+        result: 1
+        a: 0
 
     it 'should use intrinsic values as known values', ->
       el = document.createElement('div')

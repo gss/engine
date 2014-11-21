@@ -55,7 +55,8 @@ describe('Domain', function() {
       return expect(engine.solve({
         a: -555
       })).to.eql({
-        result: -1100
+        result: -1100,
+        a: -555
       });
     });
     it('should simplify multiple variables partially', function() {
@@ -71,12 +72,14 @@ describe('Domain', function() {
       expect(engine.solve({
         a: -555
       })).to.eql({
-        result: -1100
+        result: -1100,
+        a: -555
       });
       GSS.console.info('A=1, was 2');
       return expect(engine.solve({
         A: 1
       })).to.eql({
+        A: 1,
         result: -545
       });
     });
@@ -97,8 +100,8 @@ describe('Domain', function() {
       return expect(engine.solve({
         a: null
       })).to.eql({
-        a: -1,
-        result: 0
+        result: 1,
+        a: 0
       });
     });
     return it('should use intrinsic values as known values', function() {

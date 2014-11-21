@@ -80,10 +80,12 @@ describe 'Cassowary Thread', ->
     thread.solve 
       pad: 2
     chai.expect(thread.updated.solution).to.eql
+      "pad": 2
       "actual-width": 102
     thread.solve 
       pad: 4
     chai.expect(thread.updated.solution).to.eql
+      "pad": 4
       "actual-width": 104
     done()
   

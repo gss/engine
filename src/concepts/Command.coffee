@@ -256,7 +256,8 @@ class Command
             return operation[1]
           else
             return operation[1].command.path + '[' + operation[2] + ']'
-        return @toExpression(operation[1] || '') + operation[0] + @toExpression(operation[2] || '')
+        str = @toExpression(operation[1] || '') + operation[0] + @toExpression(operation[2] || '')
+        return str
       else
         return operation
 
@@ -266,7 +267,7 @@ class Command
     # Clean sub-expressions with the same domain
     for argument in operation
       unless ascend == argument
-        if argument?.domain == engine
+        if argument.push && argument?.domain == engine
           if argument[0] == 'get'
             return ascend
           @sanitize(engine, argument, false)
@@ -278,8 +279,8 @@ class Command
       replacement.Command(operation)
 
     unless ascend == false
-      if operation.parent?.domain == engine
-        return @sanitize(engine, operation.parent, operation, replacement)
+      if (parent = operation.parent) && parent.domain == engine
+        return @sanitize(engine, parent, operation, replacement)
 
     return operation
 

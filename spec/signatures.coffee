@@ -14,7 +14,7 @@ describe 'Signatures', ->
   describe 'dispatched by argument types', ->
     PrimitiveCommand = GSS::Command.extend {
       signature: [
-        left: ['String', 'Value']
+        left: ['String', 'Variable']
         right: ['Number']
       ]
     }, {
@@ -55,7 +55,7 @@ describe 'Signatures', ->
   describe 'dispatched with optional arguments', ->
     UnorderedCommand = GSS::Command.extend {
       signature: [[
-        left: ['String', 'Value']
+        left: ['String', 'Variable']
         right: ['Number']
         mode: ['Number']
       ]]
@@ -100,9 +100,9 @@ describe 'Signatures', ->
       engine = new GSS
       engine.abstract.FancyTypes = GSS::Command.extend {
         signature: [[
-          left: ['String', 'Value']
+          left: ['String', 'Variable']
           right: ['Number', 'String']
-          mode: ['Number', 'Value']
+          mode: ['Number', 'Variable']
         ]]
       }, {
         'fancy': () ->
@@ -124,7 +124,7 @@ describe 'Signatures', ->
   describe 'optional groups and mixed with optional groups', ->
     OptionalGroupCommand = GSS::Command.extend {
       signature: [
-        left: ['Value', 'String']
+        left: ['Variable', 'String']
         [
           a: ['String']
           b: ['Number']
@@ -224,7 +224,7 @@ describe 'Signatures', ->
   describe 'dispatched with object as callee', ->
     ObjectCommand = GSS::Command.extend {
       signature: [
-        left: ['Value', 'String']
+        left: ['Variable', 'String']
         [
           c: ['Number']
         ]

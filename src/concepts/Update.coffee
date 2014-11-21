@@ -145,9 +145,9 @@ Update.prototype =
       @engine.updating.apply solution 
     @domains.splice(from, 1)
     @problems.splice(from, 1)
-    if constraints = domain.constraints
-      for constraint in constraints by -1
-        domain.unconstrain(constraint, undefined, true)
+    #if constraints = domain.constraints
+    #  for constraint in constraints by -1
+    #    domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
     return true

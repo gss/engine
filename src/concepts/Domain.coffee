@@ -64,9 +64,9 @@ class Domain extends Trigger
 
     if typeof operation == 'object' && !operation.push
       if @domain == @engine
-        @assumed.merge operation
+        result = @assumed.merge operation
       else
-        @merge operation
+        result = @merge operation
     else if strategy = @strategy
       if (object = @[strategy]).solve
         result = object.solve.apply(object, arguments) || {}
@@ -75,8 +75,8 @@ class Domain extends Trigger
     else
       result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
-    if ops = @constrained || @unconstrained
-      commands = ops[0].operations[0].command.validate(@)
+    if @constrained || @unconstrained
+      commands = @Constraint::validate(@)
       @restruct()
 
       if commands == false
@@ -157,7 +157,6 @@ class Domain extends Trigger
             @transact()
             @changes[path] = null
             unless @updating.domains.indexOf(@) > @updating.index
-
               @updating.apply(@changes)
           if @immediate
             @set path, null
@@ -230,8 +229,9 @@ class Domain extends Trigger
       for constraint in variable.constraints
         for operation in constraint.operations
           if op = operation.variables[path]
-            if op.domain?.displayName != @displayName
+            if op.domain && op.domain.displayName != @displayName
               if !watchers || watchers.indexOf(op) == -1
+
                 op.command.patch(op.domain, op, undefined, undefined, @)
                 op.command.solve(@, op)
                 console.error(123, op, path)
@@ -283,8 +283,11 @@ class Domain extends Trigger
 
   apply: (solution) ->
     result = {}
+    nullified = @nullified
+    replaced = @replaced
+
     for path, value of solution
-      if !@nullified?[path] && path.charAt(0) != '%'
+      if !nullified?[path] && !replaced?[path] && path.charAt(0) != '%'
         result[path] = value
 
     if @declared
@@ -295,9 +298,10 @@ class Domain extends Trigger
             result[path] ?= value
             @values[path] = value
       @declared = undefined
+    @replaced = undefined
 
-    if @nullified
-      for path, variable of @nullified
+    if nullified
+      for path, variable of nullified
         if path.charAt(0) != '%'
           result[path] = @assumed.values[path] ? @intrinsic?.values[path] ? null
         @nullify variable
@@ -306,8 +310,9 @@ class Domain extends Trigger
     @merge result, true
 
     if @constraints?.length == 0
-      if (index = @engine.domains.indexOf(@)) > -1
-        @engine.domains.splice(index, 1)
+      debugger
+    #  if (index = @engine.domains.indexOf(@)) > -1
+    #    @engine.domains.splice(index, 1)
 
 
     return result
@@ -322,8 +327,9 @@ class Domain extends Trigger
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
       
       if operations = @paths?[path]
-        for operation in operations by -1
-          path.command.remove(@, operation, path)
+        for operation, i in operations by -1
+          operation.command.remove(@, operation, path)
+          operations.splice(i, 1)
 
     return
 
@@ -331,10 +337,10 @@ class Domain extends Trigger
     if @constraints
       operations = []
       for constraint in @constraints
-        if operation = constraint.operation
-          if strings
-            operation = operation[1].hash
-          operations.push(operation)
+        if ops = constraint.operations
+          for operation in ops
+            console.error('exporting', operation.parent)
+            operations.push(operation.parent)
       return operations
       
   # Return a lazy that may later be promoted to a domain 
@@ -390,7 +396,7 @@ class Domain extends Trigger
         if domain instanceof engine.Domain
           return domain
 
-    if op = engine.variables[path]?.constraints?[0]?.operation?.domain
+    if op = engine.variables[path]?.constraints?[0]?.operations[0]?.domain
       return op
 
     return @engine.linear.maybe()      

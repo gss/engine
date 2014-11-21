@@ -2,7 +2,7 @@ Command = require('../concepts/Command')
 
 class Variable extends Command
   type: 'Variable'
-  
+
   signature: [
     property: ['String']
   ]
@@ -20,15 +20,19 @@ class Variable extends Command
       variable = variables[name] = engine.variable(name)
     if engine.nullified?[name]
       delete engine.nullified[name]
+    if engine.replaced?[name]
+      delete engine.replaced[name]
     (engine.declared ||= {})[name] = variable
     return variable
 
   # Undeclare variable in given domain, outputs "null" once
   undeclare: (engine, variable, quick) ->
-
-    (engine.nullified ||= {})[variable.name] = variable
-    if engine.declared?[variable.name]
-      delete engine.declared[variable.name]
+    if quick
+      (engine.replaced ||= {})[variable.name] = variable
+    else
+      (engine.nullified ||= {})[variable.name] = variable
+      if engine.declared?[variable.name]
+        delete engine.declared[variable.name]
 
     delete engine.values[variable.name]
     engine.nullify(variable)

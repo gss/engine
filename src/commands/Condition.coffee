@@ -47,7 +47,8 @@ class Condition extends Command
       unless engine.switching
         switching = engine.switching = true
 
-
+      if ascending.hashCode
+        debugger
       engine.queries[path] = ascending
       if switching
         if !d && (d = engine.pairs.dirty)
