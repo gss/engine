@@ -52,7 +52,6 @@ class Domain extends Trigger
 
       if @MAYBE
         @paths       = {}
-        @domains.push(@)
         @MAYBE     = undefined
       else
         @watchers    = {}
@@ -261,25 +260,24 @@ class Domain extends Trigger
 
 
   restruct: () ->
-    if @unconstrained
-      for constraint in @unconstrained
-        @removeConstraint(constraint)
-        #debugger
-        #delete @operations[constraint.operation[1]?.hash]
     if @constrained
       for constraint in @constrained
         @addConstraint(constraint)
+        @Constraint::declare @, constraint
     @constrained = []
+
+    if @unconstrained
+      for constraint in @unconstrained
+        @removeConstraint(constraint)
+      for constraint in @unconstrained
+        @Constraint::undeclare(@, constraint)
+
     @unconstrained = undefined
 
   add: (path, value) ->
     group = (@paths ||= {})[path] ||= []
-    if group.indexOf(value) > -1
-      return 
     group.push(value)
     return
-
-
 
   apply: (solution) ->
     result = {}
@@ -309,11 +307,13 @@ class Domain extends Trigger
 
     @merge result, true
 
-    if @constraints?.length == 0
-      debugger
-    #  if (index = @engine.domains.indexOf(@)) > -1
-    #    @engine.domains.splice(index, 1)
-
+    if @constraints
+      if @constraints?.length == 0
+        if (index = @engine.domains.indexOf(@)) > -1
+          @engine.domains.splice(index, 1)
+      else 
+        if @engine.domains.indexOf(@) == -1
+          @engine.domains.push(@)
 
     return result
 
@@ -329,7 +329,6 @@ class Domain extends Trigger
       if operations = @paths?[path]
         for operation, i in operations by -1
           operation.command.remove(@, operation, path)
-          operations.splice(i, 1)
 
     return
 
@@ -339,7 +338,6 @@ class Domain extends Trigger
       for constraint in @constraints
         if ops = constraint.operations
           for operation in ops
-            console.error('exporting', operation.parent)
             operations.push(operation.parent)
       return operations
       

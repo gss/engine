@@ -60,9 +60,11 @@ class Linear extends Domain
     
     return constraint
 
-  nullify: (variable) ->
+  nullify: (variable, full) ->
     @solver._externalParametricVars.delete(variable)
-    #@solver._externalRows.delete(variable)
+    variable.value = 0
+    #if full
+    #  @solver._externalRows.delete(variable)
 
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'

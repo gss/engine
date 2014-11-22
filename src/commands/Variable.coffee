@@ -18,10 +18,10 @@ class Variable extends Command
     variables = engine.variables
     unless variable = variables[name]
       variable = variables[name] = engine.variable(name)
-    if engine.nullified?[name]
-      delete engine.nullified[name]
-    if engine.replaced?[name]
-      delete engine.replaced[name]
+    #if engine.nullified?[name]
+    #  delete engine.nullified[name]
+    #if engine.replaced?[name]
+    #  delete engine.replaced[name]
     (engine.declared ||= {})[name] = variable
     return variable
 

@@ -1274,7 +1274,6 @@ describe('End - to - End', function() {
         return engine.then(function(solution) {
           var _i;
           expect(solution).to.eql({
-            '\"z\"[x]': 10,
             '$a1[x]': null,
             "$a2[x]": null
           });
@@ -1285,7 +1284,6 @@ describe('End - to - End', function() {
           return engine.then(function(solution) {
             var items;
             expect(solution).to.eql({
-              "\"z\"[x]": 10,
               '$a1[x]': 10,
               "$a2[x]": 10
             });
@@ -1302,7 +1300,6 @@ describe('End - to - End', function() {
             })();
             return engine.then(function(solution) {
               return expect(solution).to.eql({
-                '\"z\"[x]': 10,
                 '$b1[x]': null,
                 "$b2[x]": null,
                 '$a1[x]': null,

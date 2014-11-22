@@ -121,13 +121,6 @@ Update.prototype =
               if glob[0] == 'remove'
                 domain.remove.apply(domain, glob.slice(1))
 
-    # Apply removes scheduled for exported domain
-    while prob = probs[i++]
-      if prob[0] == 'remove'
-        domain.remove.apply(domain, prob.slice(1))
-        probs.splice(i, 1)
-      else
-        i++
 
     result = @problems[to]
     @setVariables(result, probs, other)
@@ -145,9 +138,6 @@ Update.prototype =
       @engine.updating.apply solution 
     @domains.splice(from, 1)
     @problems.splice(from, 1)
-    #if constraints = domain.constraints
-    #  for constraint in constraints by -1
-    #    domain.unconstrain(constraint, undefined, true)
     if (i = @engine.domains.indexOf(domain)) > -1
       @engine.domains.splice i, 1
     return true

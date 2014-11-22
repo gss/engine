@@ -20,7 +20,7 @@ class Source extends Command
 
     "text/gss": (source) ->
       return Parser.parse(source)?.commands
-      
+  
 Source.define
   # Evaluate stylesheet
   "eval": (node, type = 'text/gss', text, engine, operation, continuation, scope) ->
@@ -43,6 +43,7 @@ Source.define
     engine.engine.solve(rules, continuation, scope)
 
     return
+
 
 
   # Load & evaluate stylesheet

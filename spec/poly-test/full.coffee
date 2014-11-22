@@ -313,8 +313,8 @@ $[height] == $[intrinsic-height] !require;
 
 /* elements */
 #profile-card {      
-  width: == $[width] - 480;            
-  height: == $[height] - 350;
+  width: == $[width] - 480 !required;            
+  height: == $[height] - 350 !required;
   center-x: == $[center-x];
   center-y: == $[center-y];        
   border-radius: == [outer-radius];
@@ -823,23 +823,23 @@ describe 'Full page tests', ->
 
                   engine.then (solution) ->
                     expect(solution['$article[height]'] > 1500).to.eql true
+                    expect(solution['article-gap']).to.eql 16
                     expect(solution['$article[width]']).to.eql 608
                     expect(solution['$footer[height]']).to.eql 72
                     expect(solution['$footer[width]']).to.eql 608
                     expect(solution['$header[height]']).to.eql 72
                     expect(solution['$header[width]']).to.eql 608
-                    expect(solution['article-gap']).to.eql 16
 
                     container.setAttribute('style', 'height: 640px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
 
                     engine.then (solution) ->
+                      expect(solution['article-gap']).to.eql 20
                       expect(solution['$article[height]']).to.eql 600
                       expect(solution['$article[width]']).to.eql 480
                       expect(solution['$footer[height]']).to.eql 600
                       expect(solution['$footer[width]']).to.eql 72
                       expect(solution['$header[height]']).to.eql 600
                       expect(solution['$header[width]']).to.eql 72
-                      expect(solution['article-gap']).to.eql 20
                       container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
 
                       engine.then (solution) ->

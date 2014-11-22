@@ -31,7 +31,7 @@ Constraint = Command.extend
 
   # Register constraints in variables to handle external mutations
   declare: (engine, constraint) ->
-    for path, op of constraint.operations[0].variables
+    for path, op of constraint.variables
       if definition = engine.variables[path]
         constraints = definition.constraints ||= []
         unless constraints[0]?.operations[0]?.parent.values?[path]?
@@ -41,11 +41,16 @@ Constraint = Command.extend
 
   # Unregister constraint from variables
   undeclare: (engine, constraint, quick) ->
-    for path, op of constraint.operations[0].variables
+    for path, op of constraint.variables
       if object = engine.variables[path]
         if (i = object.constraints?.indexOf(constraint)) > -1
           object.constraints.splice(i, 1)
-          if object.constraints.length == 0
+          matched = false
+          for other in object.constraints
+            if engine.constraints.indexOf(other) > -1 && !other.operations[0].parent[0].values?[path]?
+              matched = true
+              break
+          unless matched
             op.command.undeclare(engine, object, quick)
     return
 
@@ -54,6 +59,7 @@ Constraint = Command.extend
     other = @fetch(engine, operation)
 
     operations = constraint.operations ||= other?.operations || []
+    constraint.variables = operation.variables
     if operations.indexOf(operation) == -1
       for op, i in operations by -1
         if op.hash == operation.hash && op.parent[0].key == continuation
@@ -61,14 +67,11 @@ Constraint = Command.extend
           @unwatch engine, op, continuation
       operations.push(operation)
 
-    engine.add continuation, operation
 
+    @watch engine, operation, continuation
     if other != constraint
       if other
-        @undeclare engine, other, true
         @unset engine, other
-        other.operations = undefined
-      @declare engine, constraint
       @set engine, constraint
 
     
@@ -79,6 +82,8 @@ Constraint = Command.extend
     if (engine.constraints ||= []).indexOf(constraint) == -1
       engine.constraints.push(constraint)
       (engine.constrained ||= []).push(constraint)
+    if (index = engine.unconstrained?.indexOf(constraint)) > -1
+      engine.unconstrained.splice(index, 1)
 
   # Unregister constraint in the domain
   unset: (engine, constraint) ->
@@ -94,21 +99,25 @@ Constraint = Command.extend
         @unwatch(engine, operation, path)
     return
 
-  unwatch: (engine, operation, path) ->
-    if paths = engine.paths[path]
+  unwatch: (engine, operation, continuation) ->
+    if paths = engine.paths[continuation]
       if (i = paths.indexOf(operation)) > -1
         paths.splice(i, 1)
         if paths.length == 0
-          delete engine.paths[path]
+          delete engine.paths[continuation]
+
+  watch: (engine, operation, continuation) ->
+    engine.add continuation, operation
+
   # Remove constraint from domain by tracker string
   remove: (engine, operation, continuation) ->
-    constraint = @fetch(engine, operation)
-    operations = constraint.operations
-    if (index = operations.indexOf(operation)) > -1
-      if operations.length == 1
-        @undeclare(engine, constraint)
-        @unset(engine, constraint)
-      operations.splice(index, 1)
+    if constraint = @fetch(engine, operation)
+      if operations = constraint.operations
+        if (index = operations.indexOf(operation)) > -1
+          operations.splice(index, 1)
+          if operations.length == 0
+            @unset(engine, constraint)
+          @unwatch engine, operation, continuation
 
   # Find constraint in the domain for given variable
   find: (engine, variable) ->

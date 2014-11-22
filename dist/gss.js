@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-11-21) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21045,7 +21044,7 @@ Constraint = Command.extend({
   },
   declare: function(engine, constraint) {
     var constraints, definition, op, path, _ref, _ref1, _ref2, _ref3;
-    _ref = constraint.operations[0].variables;
+    _ref = constraint.variables;
     for (path in _ref) {
       op = _ref[path];
       if (definition = engine.variables[path]) {
@@ -21059,14 +21058,23 @@ Constraint = Command.extend({
     }
   },
   undeclare: function(engine, constraint, quick) {
-    var i, object, op, path, _ref, _ref1;
-    _ref = constraint.operations[0].variables;
+    var i, matched, object, op, other, path, _i, _len, _ref, _ref1, _ref2, _ref3;
+    _ref = constraint.variables;
     for (path in _ref) {
       op = _ref[path];
       if (object = engine.variables[path]) {
         if ((i = (_ref1 = object.constraints) != null ? _ref1.indexOf(constraint) : void 0) > -1) {
           object.constraints.splice(i, 1);
-          if (object.constraints.length === 0) {
+          matched = false;
+          _ref2 = object.constraints;
+          for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+            other = _ref2[_i];
+            if (engine.constraints.indexOf(other) > -1 && (((_ref3 = other.operations[0].parent[0].values) != null ? _ref3[path] : void 0) == null)) {
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
             op.command.undeclare(engine, object, quick);
           }
         }
@@ -21077,6 +21085,7 @@ Constraint = Command.extend({
     var i, op, operations, other, _i;
     other = this.fetch(engine, operation);
     operations = constraint.operations || (constraint.operations = (other != null ? other.operations : void 0) || []);
+    constraint.variables = operation.variables;
     if (operations.indexOf(operation) === -1) {
       for (i = _i = operations.length - 1; _i >= 0; i = _i += -1) {
         op = operations[i];
@@ -21087,21 +21096,22 @@ Constraint = Command.extend({
       }
       operations.push(operation);
     }
-    engine.add(continuation, operation);
+    this.watch(engine, operation, continuation);
     if (other !== constraint) {
       if (other) {
-        this.undeclare(engine, other, true);
         this.unset(engine, other);
-        other.operations = void 0;
       }
-      this.declare(engine, constraint);
       this.set(engine, constraint);
     }
   },
   set: function(engine, constraint) {
+    var index, _ref;
     if ((engine.constraints || (engine.constraints = [])).indexOf(constraint) === -1) {
       engine.constraints.push(constraint);
-      return (engine.constrained || (engine.constrained = [])).push(constraint);
+      (engine.constrained || (engine.constrained = [])).push(constraint);
+    }
+    if ((index = (_ref = engine.unconstrained) != null ? _ref.indexOf(constraint) : void 0) > -1) {
+      return engine.unconstrained.splice(index, 1);
     }
   },
   unset: function(engine, constraint) {
@@ -21124,27 +21134,32 @@ Constraint = Command.extend({
       }
     }
   },
-  unwatch: function(engine, operation, path) {
+  unwatch: function(engine, operation, continuation) {
     var i, paths;
-    if (paths = engine.paths[path]) {
+    if (paths = engine.paths[continuation]) {
       if ((i = paths.indexOf(operation)) > -1) {
         paths.splice(i, 1);
         if (paths.length === 0) {
-          return delete engine.paths[path];
+          return delete engine.paths[continuation];
         }
       }
     }
   },
+  watch: function(engine, operation, continuation) {
+    return engine.add(continuation, operation);
+  },
   remove: function(engine, operation, continuation) {
     var constraint, index, operations;
-    constraint = this.fetch(engine, operation);
-    operations = constraint.operations;
-    if ((index = operations.indexOf(operation)) > -1) {
-      if (operations.length === 1) {
-        this.undeclare(engine, constraint);
-        this.unset(engine, constraint);
+    if (constraint = this.fetch(engine, operation)) {
+      if (operations = constraint.operations) {
+        if ((index = operations.indexOf(operation)) > -1) {
+          operations.splice(index, 1);
+          if (operations.length === 0) {
+            this.unset(engine, constraint);
+          }
+          return this.unwatch(engine, operation, continuation);
+        }
       }
-      return operations.splice(index, 1);
     }
   },
   find: function(engine, variable) {
@@ -22506,16 +22521,10 @@ Variable = (function(_super) {
   };
 
   Variable.prototype.declare = function(engine, name) {
-    var variable, variables, _ref, _ref1;
+    var variable, variables;
     variables = engine.variables;
     if (!(variable = variables[name])) {
       variable = variables[name] = engine.variable(name);
-    }
-    if ((_ref = engine.nullified) != null ? _ref[name] : void 0) {
-      delete engine.nullified[name];
-    }
-    if ((_ref1 = engine.replaced) != null ? _ref1[name] : void 0) {
-      delete engine.replaced[name];
     }
     (engine.declared || (engine.declared = {}))[name] = variable;
     return variable;
@@ -22628,6 +22637,8 @@ var Command,
   __slice = [].slice;
 
 Command = (function() {
+  var _i, _results;
+
   function Command(operation, parent, index) {
     var command, match;
     if (!(command = operation.command)) {
@@ -22844,7 +22855,9 @@ Command = (function() {
     var domain, op;
     op = this.sanitize(engine, operation, void 0, replacement).parent;
     domain = replacement || engine;
-    return op.command.transfer(domain, op, continuation, scope, void 0, void 0, op.command, replacement);
+    if (op.domain !== domain) {
+      return op.command.transfer(domain, op, continuation, scope, void 0, void 0, op.command, replacement);
+    }
   };
 
   Command.prototype.transfer = function(engine, operation, continuation, scope, ascender, ascending, top, replacement) {
@@ -22891,7 +22904,11 @@ Command = (function() {
 
   Command.prototype.retrieve = function() {};
 
-  Command.prototype.permutation = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  Command.prototype.permutation = (function() {
+    _results = [];
+    for (_i = 0; _i < 150; _i++){ _results.push(_i); }
+    return _results;
+  }).apply(this);
 
   Command.prototype.padding = 0;
 
@@ -22916,9 +22933,9 @@ Command = (function() {
   };
 
   Command.prototype.sanitize = function(engine, operation, ascend, replacement) {
-    var argument, parent, _i, _len;
-    for (_i = 0, _len = operation.length; _i < _len; _i++) {
-      argument = operation[_i];
+    var argument, parent, _j, _len;
+    for (_j = 0, _len = operation.length; _j < _len; _j++) {
+      argument = operation[_j];
       if (ascend !== argument) {
         if (argument.push && (argument != null ? argument.domain : void 0) === engine) {
           if (argument[0] === 'get') {
@@ -23002,12 +23019,12 @@ Command = (function() {
   };
 
   Command.orphanize = function(operation) {
-    var arg, _i, _len;
+    var arg, _j, _len;
     if (operation.domain) {
       operation.domain = void 0;
     }
-    for (_i = 0, _len = operation.length; _i < _len; _i++) {
-      arg = operation[_i];
+    for (_j = 0, _len = operation.length; _j < _len; _j++) {
+      arg = operation[_j];
       if (arg != null ? arg.push : void 0) {
         this.orphanize(arg);
       }
@@ -23023,7 +23040,7 @@ Command = (function() {
   };
 
   Command.compile = function(engine, command) {
-    var Types, aliases, name, property, proto, value, _i, _len;
+    var Types, aliases, name, property, proto, value, _j, _len;
     if (!command) {
       for (property in engine) {
         value = engine[property];
@@ -23054,8 +23071,8 @@ Command = (function() {
             if (engine.helps) {
               engine.engine[property] = this.Helper(engine, property);
               if (aliases = value.prototype.helpers) {
-                for (_i = 0, _len = aliases.length; _i < _len; _i++) {
-                  name = aliases[_i];
+                for (_j = 0, _len = aliases.length; _j < _len; _j++) {
+                  name = aliases[_j];
                   engine.engine[name] = engine.engine[property];
                 }
               }
@@ -23391,7 +23408,6 @@ Domain = (function(_super) {
       }
       if (this.MAYBE) {
         this.paths = {};
-        this.domains.push(this);
         return this.MAYBE = void 0;
       } else {
         this.watchers = {};
@@ -23657,36 +23673,39 @@ Domain = (function(_super) {
   };
 
   Domain.prototype.restruct = function() {
-    var constraint, _i, _j, _len, _len1, _ref, _ref1;
-    if (this.unconstrained) {
-      _ref = this.unconstrained;
+    var constraint, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+    if (this.constrained) {
+      _ref = this.constrained;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         constraint = _ref[_i];
-        this.removeConstraint(constraint);
-      }
-    }
-    if (this.constrained) {
-      _ref1 = this.constrained;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        constraint = _ref1[_j];
         this.addConstraint(constraint);
+        this.Constraint.prototype.declare(this, constraint);
       }
     }
     this.constrained = [];
+    if (this.unconstrained) {
+      _ref1 = this.unconstrained;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        constraint = _ref1[_j];
+        this.removeConstraint(constraint);
+      }
+      _ref2 = this.unconstrained;
+      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+        constraint = _ref2[_k];
+        this.Constraint.prototype.undeclare(this, constraint);
+      }
+    }
     return this.unconstrained = void 0;
   };
 
   Domain.prototype.add = function(path, value) {
     var group, _base;
     group = (_base = (this.paths || (this.paths = {})))[path] || (_base[path] = []);
-    if (group.indexOf(value) > -1) {
-      return;
-    }
     group.push(value);
   };
 
   Domain.prototype.apply = function(solution) {
-    var nullified, path, replaced, result, value, variable, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+    var index, nullified, path, replaced, result, value, variable, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
     result = {};
     nullified = this.nullified;
     replaced = this.replaced;
@@ -23724,8 +23743,16 @@ Domain = (function(_super) {
       this.nullified = void 0;
     }
     this.merge(result, true);
-    if (((_ref5 = this.constraints) != null ? _ref5.length : void 0) === 0) {
-      debugger;
+    if (this.constraints) {
+      if (((_ref5 = this.constraints) != null ? _ref5.length : void 0) === 0) {
+        if ((index = this.engine.domains.indexOf(this)) > -1) {
+          this.engine.domains.splice(index, 1);
+        }
+      } else {
+        if (this.engine.domains.indexOf(this) === -1) {
+          this.engine.domains.push(this);
+        }
+      }
     }
     return result;
   };
@@ -23749,7 +23776,6 @@ Domain = (function(_super) {
         for (i = _k = operations.length - 1; _k >= 0; i = _k += -1) {
           operation = operations[i];
           operation.command.remove(this, operation, path);
-          operations.splice(i, 1);
         }
       }
     }
@@ -23765,7 +23791,6 @@ Domain = (function(_super) {
         if (ops = constraint.operations) {
           for (_j = 0, _len1 = ops.length; _j < _len1; _j++) {
             operation = ops[_j];
-            console.error('exporting', operation.parent);
             operations.push(operation.parent);
           }
         }
@@ -24850,14 +24875,6 @@ Update.prototype = {
             }
           }
         }
-      }
-    }
-    while (prob = probs[i++]) {
-      if (prob[0] === 'remove') {
-        domain.remove.apply(domain, prob.slice(1));
-        probs.splice(i, 1);
-      } else {
-        i++;
       }
     }
     result = this.problems[to];
@@ -26242,8 +26259,9 @@ Linear = (function(_super) {
     return constraint;
   };
 
-  Linear.prototype.nullify = function(variable) {
-    return this.solver._externalParametricVars["delete"](variable);
+  Linear.prototype.nullify = function(variable, full) {
+    this.solver._externalParametricVars["delete"](variable);
+    return variable.value = 0;
   };
 
   Linear.prototype.suggest = function(path, value, strength, weight, continuation) {

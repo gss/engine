@@ -196,7 +196,8 @@ class Command
   patch: (engine, operation, continuation, scope, replacement) ->
     op = @sanitize(engine, operation, undefined, replacement).parent
     domain = replacement || engine
-    op.command.transfer(domain, op, continuation, scope, undefined, undefined, op.command, replacement)
+    if op.domain != domain
+      op.command.transfer(domain, op, continuation, scope, undefined, undefined, op.command, replacement)
 
 
 
@@ -239,7 +240,7 @@ class Command
   retrieve: ->
 
   # Map to reorder arguments, no changes by default
-  permutation: [0 ... 10]
+  permutation: [0 ... 150]
 
   # Add this nubmer of undefineds at the end of argument list
   padding: 0

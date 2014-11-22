@@ -326,6 +326,7 @@ class Engine extends Domain
       workflow.await(domain.url)
       return domain
 
+
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
@@ -340,6 +341,7 @@ class Engine extends Domain
         if result?.length == 1
           result = result[0]
       @console.end()
+      
 
     # Broadcast operations without specific domain (e.g. remove)
     else
