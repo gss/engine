@@ -256,9 +256,9 @@ Update.prototype =
     return
 
   splice: (index) ->
-    unless @domains[index].constraints?.length > 0
-      if (i = @engine.domains.indexOf(@domains[index])) > -1
-        @engine.domains.splice i, 1
+    #unless @domains[index].constraints?.length > 0
+    if (i = @engine.domains.indexOf(@domains[index])) > -1
+      @engine.domains.splice i, 1
     @domains.splice(index, 1)
     @problems.splice(index, 1)
 

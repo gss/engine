@@ -142,7 +142,7 @@ Constraint = Command.extend
           return true
 
   # Find groups of constraints that dont reference each other
-  split: (constraints) ->
+  group: (constraints) ->
     groups = []
     for constraint in constraints
       groupped = undefined
@@ -167,8 +167,8 @@ Constraint = Command.extend
     return groups
 
   # Separate independent groups of constraints into multiple domains
-  validate: (engine) ->
-    groups = @split(engine.constraints).sort (a, b) ->
+  split: (engine) ->
+    groups = @group(engine.constraints).sort (a, b) ->
       al = a.length
       bl = b.length
       return bl - al

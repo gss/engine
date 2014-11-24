@@ -75,13 +75,8 @@ class Domain extends Trigger
       result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
     if @constrained || @unconstrained
-      commands = @Constraint::validate(@)
+      commands = @Constraint::split(@)
       @Constraint::reset(@)
-
-      if commands == false
-        if transacting
-          return @commit()
-        return
 
     unless typeof result == 'object'
       if result = @perform?.apply(@, arguments)
