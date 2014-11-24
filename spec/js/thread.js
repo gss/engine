@@ -111,7 +111,24 @@ describe('Cassowary Thread', function() {
     chai.expect(thread.values).to.eql({
       "x": 10
     });
-    return done();
+    done();
+    return describe('simulated cropping demo', function() {
+      thread = new Thread({
+        defaultStrength: "weak"
+      });
+      return it('initial layout', function() {
+        thread.execute({
+          commands: [['suggest', ['get', '[window]'], 1000, 'require'], ['eq', ['get', '[frame-w]'], ['divide', ['get', '[window]'], 10], 'weak'], ['eq', ['get', '[frame-h]'], ['divide', ['get', '[window]'], 10], 'weak'], ['stay', ['get', '[frame-w]'], 'strong'], ['stay', ['get', '[frame-h]'], 'strong'], ['eq', ['get', '[bg-w]'], ['multiply', ['get', '[bg-h]'], 2], 'require'], ['eq', ['get', '[frame-w]'], ['get', '[bg-w]'], 'weak'], ['eq', ['get', '[frame-h]'], ['get', '[bg-h]'], 'weak'], ['lte', ['get', '[frame-w]'], ['get', '[bg-w]'], 'require'], ['lte', ['get', '[frame-h]'], ['get', '[bg-h]'], 'require']]
+        });
+        return expect(thread.getValues()).to.eql({
+          "[window]": 1000,
+          "[frame-w]": 100,
+          "[frame-h]": 100,
+          "[bg-w]": 200,
+          "[bg-h]": 100
+        });
+      });
+    });
   });
   describe('dom prop helpers', function() {
     it('varexp - right', function() {

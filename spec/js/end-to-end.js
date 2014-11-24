@@ -221,6 +221,30 @@ describe('End - to - End', function() {
         });
       });
     });
+    describe('transform props', function() {
+      return it('should be ok', function(done) {
+        container.innerHTML = "<div id=\"transfomer\"></div>\n<style type=\"text/gss\">              \n  #transfomer {                \n    rotate:   == 44;\n    rotate-x: == 45;\n    rotate-y: == 46;\n    rotate-z: == 47;\n    scale:   == 1;\n    scale-x: == 2;\n    scale-y: == 3;\n    scale-z: == 4;\n    translate:   == 10;\n    translate-x: == 20;\n    translate-y: == 30;\n    translate-z: == 40;\n    skew-x: == 100;\n    skew-y: == 200;\n    perspective: == 999;\n  }\n</style>";
+        return engine.once('display', function(e) {
+          var prop, style;
+          style = document.getElementById('transfomer').style;
+          prop = style[GSS._.transformPrefix];
+          console.log(document.getElementById('transfomer'));
+          assert(prop.indexOf('rotate(44deg)') >= 0, 'correct rotate');
+          assert(prop.indexOf('rotateX(45deg)') >= 0, 'correct rotate-x');
+          assert(prop.indexOf('rotateY(46deg)') >= 0, 'correct rotate-y');
+          assert(prop.indexOf('rotateZ(47deg)') >= 0, 'correct rotate-z');
+          assert(prop.indexOf('scale(1)') >= 0, 'correct scale');
+          assert(prop.indexOf('scaleX(2)') >= 0, 'correct scale-x');
+          assert(prop.indexOf('scaleY(3)') >= 0, 'correct scale-y');
+          assert(prop.indexOf('scaleZ(4)') >= 0, 'correct scale-z');
+          assert(prop.indexOf('translate(10px)') >= 0, 'correct translate');
+          assert(prop.indexOf('translateX(20px)') >= 0, 'correct translate-x');
+          assert(prop.indexOf('translateY(30px)') >= 0, 'correct translate-y');
+          assert(prop.indexOf('translateZ(40px)') >= 0, 'correct translate-z');
+          return done();
+        });
+      });
+    });
     describe('order of operations', function() {
       return it('should compute values', function(done) {
         container.innerHTML = "<style type=\"text/gss\">              \n  [w] == 100 !require;\n  [igap] == 3 !require;\n  [ogap] == 10 !require;\n  \n  [md] * 4 == [w] - [ogap] * 2 !require;\n  \n  [span3] == [md] * 3 + [igap] * 2;\n  \n  [blah] == [w] - 10 - 10 - 10;\n  \n  [blah2] == [w] - [ogap] - [ogap] - [ogap];\n  \n  [md2] == ([w] - [ogap] - [ogap] - [igap] * 3) / 4 !require;\n\n</style>";

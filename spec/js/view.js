@@ -1,8 +1,12 @@
-var $, $$, assert, expect, remove;
+var $, $$, assert, expect, remove, stringify;
 
 assert = chai.assert;
 
 expect = chai.expect;
+
+stringify = function(o) {
+  return JSON.stringify(o, 1, 1);
+};
 
 $ = function() {
   return document.querySelector.apply(document, arguments);
@@ -27,6 +31,7 @@ describe("GSS.View", function() {
     return $('#fixtures').appendChild(container);
   });
   afterEach(function() {
+    console.log("after");
     remove(container);
     return engine.destroy();
   });

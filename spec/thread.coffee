@@ -169,21 +169,101 @@ describe 'Cassowary Thread', ->
           "[bg-w]": 200
           "[bg-h]": 100
           
-      it 'screensize changes', () ->        
-        thread.execute
-          commands:[
-            # window
-            ['suggest',['get','[window]'],2000,'require']           
-          ]          
-
-        expect(thread.getValues()).to.eql
-          "[window]": 2000
-          "[frame-w]": 200
-          "[frame-h]": 200
-          "[bg-w]": 400
-          "[bg-h]": 200
-      
+      #it 'screensize changes', () ->        
+      #  thread.execute
+      #    commands:[
+      #      # window
+      #      ['suggest',['get','[window]'],2000,'require']           
+      #    ]          
+      #
+      #  expect(thread.getValues()).to.eql
+      #    "[window]": 2000
+      #    "[frame-w]": 200
+      #    "[frame-h]": 200
+      #    "[bg-w]": 400
+      #    "[bg-h]": 200
   
+  
+  #describe 'Scoped Commands', ->
+  #
+  #  describe 'PENDING: simulated cropping demo', ->
+  #    
+  #    thread = new Thread {
+  #      defaultStrength: "weak"
+  #    }
+  #    
+  #    it 'initial layout', () ->        
+  #      thread.execute
+  #        commands:[
+  #          # window            
+  #          ['suggest',['get','[window]'],1000,'require']
+  #          
+  #          # weak layout
+  #          ['eq',['get','[frame-w]'],['divide',['get','[window]'],10],'weak']
+  #          ['eq',['get','[frame-h]'],['divide',['get','[window]'],10],'weak']           
+  #          
+  #          # cropping
+  #          # -----------------------------------
+  #          
+  #          ['$scope',             
+  #            
+  #            '$frame', # scope id
+  #                          
+  #            [ # commands
+  #            
+  #              # import vars?
+  #              #['stay',['get','[frame-w]'],'strong']
+  #              #['stay',['get','[frame-h]'],'strong']            
+  #          
+  #              # required 2x1 landscape aspect ratio
+  #              ['eq',['get','[bg-w]'],['multiply',['get','[bg-h]'],2],'require']
+  #          
+  #              # bg weakly is size of frame
+  #              ['eq',['get','[frame-w]'],['get','[bg-w]'],'weak']
+  #              ['eq',['get','[frame-h]'],['get','[bg-h]'],'weak']
+  #          
+  #              # bg required to cover frame
+  #              ['lte',['get','[frame-w]'],['get','[bg-w]'],'require']
+  #              ['lte',['get','[frame-h]'],['get','[bg-h]'],'require']
+  #            ]
+  #          ]         
+  #        ]          
+  #      expect(thread.getValues()).to.eql
+  #        "[window]": 1000
+  #        "[frame-w]": 100
+  #        "[frame-h]": 100
+  #        "[bg-w]": 200
+  #        "[bg-h]": 100
+  #        
+  #    it 'screensize changes 1', () ->        
+  #      thread.execute
+  #        commands:[
+  #          # window
+  #          ['suggest',['get','[window]'],2000,'require']           
+  #        ]          
+  #
+  #      expect(thread.getValues()).to.eql
+  #        "[window]": 2000
+  #        "[frame-w]": 200
+  #        "[frame-h]": 200
+  #        "[bg-w]": 400
+  #        "[bg-h]": 200
+  #    
+  #    it 'screensize changes 2', () ->        
+  #      thread.execute
+  #        commands:[
+  #          # window
+  #          ['suggest',['get','[window]'],100,'require']           
+  #        ]          
+  #
+  #      expect(thread.getValues()).to.eql
+  #        "[window]": 100
+  #        "[frame-w]": 10
+  #        "[frame-h]": 10
+  #        "[bg-w]": 20
+  #        "[bg-h]": 10
+  #    
+  #
   
   
   # DOM Prop Helpers

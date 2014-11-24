@@ -13,21 +13,21 @@
     }
   ],
   "devDependencies": {
+    "chai": "~1.9.1",
+    "component": "~0.19.5",
     "grunt": "~0.4.1",
-    "chai": "~1.9.0",
-    "mocha": "~1.17.0",
-    "grunt-contrib-watch": "~0.3.1",
-    "grunt-mocha-phantomjs": "~0.4.0",
-    "grunt-contrib-uglify": "~0.2.1",
+    "grunt-banner": "^0.2.1",
+    "grunt-coffeelint": "0.0.6",
+    "grunt-contrib-clean": "~0.5.0",
     "grunt-contrib-coffee": "~0.7.0",
     "grunt-contrib-concat": "~0.3.0",
-    "grunt-coffeelint": "0.0.6",
-    "grunt-saucelabs": "~5.0.1",
     "grunt-contrib-connect": "~0.3.0",
-    "grunt-contrib-clean": "~0.5.0",
+    "grunt-contrib-uglify": "~0.2.1",
+    "grunt-contrib-watch": "~0.3.1",
     "grunt-exec": "~0.4.0",
-    "component": "~0.19.5",
-    "grunt-banner": "^0.2.1"
+    "grunt-mocha-phantomjs": "~0.5.0",
+    "grunt-saucelabs": "~5.0.1",
+    "mocha": "~1.20.1"
   },
   "keywords": [],
   "scripts": {
