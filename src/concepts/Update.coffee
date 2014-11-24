@@ -210,6 +210,7 @@ Update.prototype =
             @problems[j] = [problem]
           else
             @problems[j].push problem
+          problem.domain = opdomain
           #strong = exp.domain && !exp.domain.MAYBE
           #for arg in exp
           #  if arg.domain && !arg.domain.MAYBE
@@ -455,26 +456,14 @@ Update.prototype =
     return solution
 
   remove: (continuation, problem) ->
-    if problem
-      if (problem[0] == 'value' && problem[2] == continuation) || 
-         (problem[0] == 'get'   && problem[3] == continuation)
-        return true
-      else for arg in problem
-        if arg?.push
-          if @remove continuation, arg
-            return true
-    else
-      index = @index
-      spliced = false
+    for problems, index in @problems by -1
+      for problem, i in problems by -1
+        if problem && problem[0] && problem[0].key == continuation
+          problems.splice(i, 1)
+          if problems.length == 0
+            @problems.splice(index, 1)
+            @domains.splice(index, 1)
 
-
-
-      while problems = @problems[index++]
-        for problem, i in problems by -1
-          if @remove continuation, problem
-            problems.splice(i, 1)
-            if !problems.length
-              spliced = true
     return
 
   getProblems: (callback, bind) ->

@@ -178,8 +178,6 @@ DEMOS =
         ::[width] == ($ aside)[intrinsic-width];
         ::[left] == ($ header)[right];
 
-        // use intrinsic-height to avoid binding. Should be:
-        // height: :window[height] - ($ header)[height];
         ::[height] == $[intrinsic-height] - ($ header)[intrinsic-height];
       } 
       // Custom combinators
