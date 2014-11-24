@@ -341,7 +341,11 @@ class Engine extends Domain
         if result?.length == 1
           result = result[0]
       @console.end()
-      
+      domain.setup()
+      if domain.priority < 0
+        if @domains.indexOf(domain) == -1
+          @domains.push(domain)
+          
 
     # Broadcast operations without specific domain (e.g. remove)
     else
@@ -363,7 +367,7 @@ class Engine extends Domain
         for remove in removes
           for path, index in remove
             continue if index == 0
-            if other.paths[path]
+            if other.paths?[path]
               locals.push(path)
             else if other.observers?[path]
               other.remove(path)

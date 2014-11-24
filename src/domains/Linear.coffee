@@ -34,14 +34,6 @@ class Linear extends Domain
       @solver.resolve()
       return @solver._changed
 
-  addConstraint: (constraint) ->
-    #console.error('add constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
-    @solver.addConstraint(constraint)
-
-  removeConstraint: (constraint) ->
-    #console.error('remove constraint', constraint.operation?[1].hash, constraint.hashCode, constraint)
-    @solver.removeConstraint(constraint)
-
   unedit: (variable) ->
     if constraint = @editing?['%' + variable.name]
 
@@ -55,7 +47,7 @@ class Linear extends Domain
     unless @editing?[variable.name]
       constraint = new c.EditConstraint(variable, @strength(strength, 'strong'), @weight(weight))
       constraint.variable = variable
-      @addConstraint constraint
+      @Constraint::inject @, constraint
       (@editing ||= {})[variable.name] = constraint
     
     return constraint
@@ -64,7 +56,7 @@ class Linear extends Domain
     @solver._externalParametricVars.delete(variable)
     variable.value = 0
     #if full
-    #  @solver._externalRows.delete(variable)
+    #@solver.rows.delete(variable)
 
   suggest: (path, value, strength, weight, continuation) ->
     if typeof path == 'string'
@@ -109,6 +101,13 @@ Linear::Constraint = Constraint.extend {
     return engine.linear.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
   
   yield: Linear.Mixin.yield
+
+  inject: (engine, constraint) ->
+    engine.solver.addConstraint(constraint)
+
+  eject: (engine, constraint) ->
+    engine.solver.removeConstraint(constraint)
+
 },
   '==': (left, right, strength, weight, engine) ->
     return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))

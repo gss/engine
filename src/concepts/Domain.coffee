@@ -76,7 +76,7 @@ class Domain extends Trigger
 
     if @constrained || @unconstrained
       commands = @Constraint::validate(@)
-      @restruct()
+      @Constraint::reset(@)
 
       if commands == false
         if transacting
@@ -259,35 +259,16 @@ class Domain extends Trigger
     return object
 
 
-  restruct: () ->
-    if @constrained
-      for constraint in @constrained
-        @addConstraint(constraint)
-        @Constraint::declare @, constraint
-    @constrained = []
-
-    if @unconstrained
-      for constraint in @unconstrained
-        @removeConstraint(constraint)
-      for constraint in @unconstrained
-        @Constraint::undeclare(@, constraint)
-
-    @unconstrained = undefined
 
   add: (path, value) ->
     group = (@paths ||= {})[path] ||= []
     group.push(value)
     return
 
-  apply: (solution) ->
-    result = {}
+  prepare: (result = {}) ->
+
     nullified = @nullified
     replaced = @replaced
-
-    for path, value of solution
-      if !nullified?[path] && !replaced?[path] && path.charAt(0) != '%'
-        result[path] = value
-
     if @declared
       for path, variable of @declared
         value = variable.value ? 0
@@ -305,7 +286,20 @@ class Domain extends Trigger
         @nullify variable
       @nullified = undefined
 
-    @merge result, true
+    return result
+
+
+  apply: (solution) ->
+    result = {}
+    nullified = @nullified
+    replaced = @replaced
+
+    for path, value of solution
+      if !nullified?[path] && !replaced?[path] && path.charAt(0) != '%'
+        result[path] = value
+
+
+    @merge(@prepare(result, nullified, replaced, @declared), true)
 
     if @constraints
       if @constraints?.length == 0

@@ -1665,7 +1665,8 @@ describe 'End - to - End', ->
     it 'should handle identical constraints', (done) ->
       engine.then ->
         expect(engine.domains.length).to.eql 1
-        expect(engine.domains[0].constraints.length).to.eql 3
+        expect(engine.domains[0].constraints.length).to.eql 1
+        expect(engine.domains[0].constraints[0].operations.length).to.eql 3
         done()
       container.innerHTML = """
         <style type="text/gss">

@@ -860,4 +860,5 @@ describe 'Full page tests', ->
                           engine.then ->
                             expect(engine.values).to.eql {}
                             done()
+                      ###
  

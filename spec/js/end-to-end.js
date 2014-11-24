@@ -1315,7 +1315,8 @@ describe('End - to - End', function() {
     return it('should handle identical constraints', function(done) {
       engine.then(function() {
         expect(engine.domains.length).to.eql(1);
-        expect(engine.domains[0].constraints.length).to.eql(3);
+        expect(engine.domains[0].constraints.length).to.eql(1);
+        expect(engine.domains[0].constraints[0].operations.length).to.eql(3);
         return done();
       });
       return container.innerHTML = "<style type=\"text/gss\">\n  button {\n    $a == 1;\n  }\n</style>\n<button id=\"button1\"></button>\n<button id=\"button2\"></button>\n<button id=\"button3\"></button>";

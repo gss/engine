@@ -93,34 +93,19 @@ Update.prototype =
     other = @domains[to]
     probs = @problems[from]
 
-    # Apply removes from parent update
-    if parent
-      globals = parent.domains.indexOf(null, parent.index + 1)
-      if !domain.MAYBE
-        if globals > -1# && globals < from
-          globs = parent.problems[globals]
-          if typeof globs[0] == 'string'
-            if globs[0] == 'remove'
-              domain.remove.apply(domain, globs.slice(1))
-          else
-            for glob in globs
-              if glob[0] == 'remove'
-                domain.remove.apply(domain, glob.slice(1))
-            
-    # Apply removes from global update
-    if @engine.updating
-      globals = @engine.updating.domains.indexOf(null, @engine.updating.index + 1)
-      if !domain.MAYBE
-        if globals > -1# && globals < from
-          globs = @engine.updating.problems[globals]
-          if typeof globs[0] == 'string'
-            if globs[0] == 'remove'
-              domain.remove.apply(domain, globs.slice(1))
-          else
-            for glob in globs
-              if glob[0] == 'remove'
-                domain.remove.apply(domain, glob.slice(1))
+    unless domain.MAYBE
+      # Apply removes from parent update
+      if parent
+        parent.perform(domain)
+              
+      # Apply removes from global update
+      if @engine.updating
+        @engine.updating.perform(domain)
 
+      if domain.unconstrained
+        domain.Constraint::reset(domain)
+        #domain.perform()
+        @engine.updating.apply domain.prepare()
 
     result = @problems[to]
     @setVariables(result, probs, other)
@@ -136,10 +121,10 @@ Update.prototype =
       for prop of domain.nullified
         (solution ||= {})[prop] = null
       @engine.updating.apply solution 
-    @domains.splice(from, 1)
-    @problems.splice(from, 1)
-    if (i = @engine.domains.indexOf(domain)) > -1
-      @engine.domains.splice i, 1
+
+    @splice from, 1
+    if @engine.domains.indexOf(other) == -1
+      @engine.domains.push(other)
     return true
 
   # Group expressions
@@ -218,8 +203,7 @@ Update.prototype =
           #unless strong
           exps.splice(--i, 1)
           if exps.length == 0
-            @domains.splice(index, 1)
-            @problems.splice(index, 1)
+            @splice index, 1
         else unless bubbled
           if problem.indexOf(exps[i - 1]) > -1
             bubbled = exps
@@ -241,8 +225,7 @@ Update.prototype =
                     @reify(arg, other, domain)
                     problems.splice(j, 1)
                     if problems.length == 0
-                      @problems.splice(counter, 1)
-                      @domains.splice(counter, 1)
+                      @splice counter, 1
 
         if bubbled
           for arg in problem
@@ -271,6 +254,13 @@ Update.prototype =
         #operation.domain = other
         variables[property] = operation
     return
+
+  splice: (index) ->
+    unless @domains[index].constraints?.length > 0
+      if (i = @engine.domains.indexOf(@domains[index])) > -1
+        @engine.domains.splice i, 1
+    @domains.splice(index, 1)
+    @problems.splice(index, 1)
 
   finish: ->
     @time = @engine.console.time(@start)
@@ -438,7 +428,7 @@ Update.prototype =
   # Save results, check if solvers are caught in the loop of resolving same values
   apply: (result, solution = @solution) ->
     if result != @solution
-      solution ||= @solution = {}
+      solution ||= @solution ||= {}
       for property, value of result
         if (redefined = @redefined?[property])
           i = redefined.indexOf(value)
@@ -457,18 +447,28 @@ Update.prototype =
 
   remove: (continuation, problem) ->
     for problems, index in @problems by -1
+      break if index == @index
       for problem, i in problems by -1
         if problem && problem[0] && problem[0].key == continuation
           problems.splice(i, 1)
           if problems.length == 0
-            @problems.splice(index, 1)
-            @domains.splice(index, 1)
-
+            @splice index, 1
     return
 
   getProblems: (callback, bind) ->
     return GSS.prototype.clone @problems
 
+  perform: (domain) -> 
+    globals = @domains.indexOf(null, @index + 1)
+    if globals > -1
+      globs = @problems[globals]
+      if typeof globs[0] == 'string'
+        if globs[0] == 'remove'
+          domain.remove.apply(domain, globs.slice(1))
+      else
+        for glob in globs
+          if glob[0] == 'remove'
+            domain.remove.apply(domain, glob.slice(1))
   index: -1
 
 

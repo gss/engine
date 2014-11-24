@@ -34,6 +34,7 @@ class Variable extends Command
       if engine.declared?[variable.name]
         delete engine.declared[variable.name]
 
+    console.error(variable.name, 'NULLIFY BRO')
     delete engine.values[variable.name]
     engine.nullify(variable)
     engine.unedit(variable)

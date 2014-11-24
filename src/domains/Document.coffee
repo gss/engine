@@ -94,14 +94,14 @@ class Document extends Abstract
       if @running == undefined
         @triggerEvent('DOMContentLoaded')
       @solve 'Document', 'onload', ->
-        @intrinsic.solve([])
+        @solve(['get', ['::window'], 'width'])
     
     load: ->
       if @running == undefined
         @triggerEvent('DOMContentLoaded')
       window.removeEventListener 'load', @
       @solve 'Document', 'onload', ->
-        @intrinsic.solve([])
+        @solve(['get', ['::window'], 'width'])
 
     # Observe and parse stylesheets
     compile: ->

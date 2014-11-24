@@ -77,6 +77,21 @@ Constraint = Command.extend
     
     return
 
+  reset: (engine) ->
+    if engine.constrained
+      for constraint in engine.constrained
+        engine.Constraint::inject engine, constraint
+        engine.Constraint::declare engine, constraint
+      engine.constrained ||= []
+
+    if engine.unconstrained
+      for constraint in engine.unconstrained
+        engine.Constraint::eject engine, constraint
+        engine.Constraint::undeclare engine, constraint
+      engine.constrained ||= []
+
+    engine.unconstrained = undefined
+
   # Register constraint in the domain
   set: (engine, constraint) ->
     if (engine.constraints ||= []).indexOf(constraint) == -1
@@ -131,11 +146,11 @@ Constraint = Command.extend
     groups = []
     for constraint in constraints
       groupped = undefined
-      vars = constraint.operations[0].variables
+      vars = constraint.variables
       
       for group in groups by -1
         for other in group
-          others = other.operations[0].variables
+          others = other.variables
           for path of vars
             if others[path]
               if groupped && groupped != group
