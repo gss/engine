@@ -15,6 +15,6 @@ The main GSS repository provides a [Component](http://component.io/) library han
 
 ## Documentation
 
-**_GSS is heavily under development. Updated documentation coming soon._**
+**_GSS is under heavy development. Updated documentation coming soon._**
 
 Please refer to <http://gridstylesheets.org/> for legacy documentation and usage instructions.
