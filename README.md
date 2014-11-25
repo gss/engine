@@ -12,4 +12,9 @@ GSS supports the following syntaxes for defining layout rules:
 
 The main GSS repository provides a [Component](http://component.io/) library handling both the compilation and application of the layout constraints.
 
-Please refer to <http://gridstylesheets.org/> for documentation and usage instructions.
+
+## Documentation
+
+**_GSS is heavily under development. Updated documentation coming soon._**
+
+Please refer to <http://gridstylesheets.org/> for legacy documentation and usage instructions.
