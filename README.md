@@ -1,4 +1,4 @@
-GSS engine [![Build Status](https://travis-ci.org/the-gss/engine.png?branch=master)](https://travis-ci.org/the-gss/engine)
+GSS engine [![Build Status](https://travis-ci.org/gss/engine.png?branch=master)](https://travis-ci.org/gss/engine)
 ==========
 
 [![Cross-browser testing status](https://saucelabs.com/browser-matrix/gss-engine.svg)](https://saucelabs.com/u/gss-engine)
