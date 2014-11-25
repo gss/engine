@@ -293,8 +293,8 @@ class Domain extends Trigger
       if !nullified?[path] && !replaced?[path] && path.charAt(0) != '%'
         result[path] = value
 
-
-    @merge(@prepare(result, nullified, replaced, @declared), true)
+    result = @prepare(result)
+    @merge(result, true)
 
     if @constraints
       if @constraints?.length == 0

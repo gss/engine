@@ -839,7 +839,6 @@ describe 'Full page tests', ->
                       expect(solution['$header[height]']).to.eql 600
                       expect(solution['$header[width]']).to.eql 72
                       container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
-
                       engine.then (solution) ->
                         expect(solution['$article[height]'] > 1500).to.eql true
                         expect(solution['$article[width]']).to.eql 608

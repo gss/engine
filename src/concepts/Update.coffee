@@ -104,8 +104,9 @@ Update.prototype =
 
       if domain.unconstrained
         domain.Constraint::reset(domain)
-        #domain.perform()
-        @engine.updating.apply domain.prepare()
+        #@engine.updating.apply domain.apply(domain.perform())
+        #debugger
+        #@engine.updating.apply domain.prepare()
 
     result = @problems[to]
     @setVariables(result, probs, other)
@@ -298,7 +299,8 @@ Update.prototype =
             if variable = variables[property]
               if variable.domain?.displayName == domain.displayName
                 if domain.frame == other.frame
-                  if other.constraints?.length > domain.constraints?.length || position > index
+                  constrained = other.constraints && domain.constraints
+                  if (if constrained then other.constraints.length > domain.constraints.length else position > index)
                     @merge position, index
                     position = index
                   else
