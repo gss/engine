@@ -588,13 +588,10 @@ function boot(values) {
   for (var property in values)
     data[property] = values[property];
   document.addEventListener('solve', function(solution) {
-    console.log(solution)
     delete solution.detail.engine
     window.parent.postMessage(solution.detail, location.origin)
   })
   window.engine = GSS(document, data);
-  console.log('boot', document.readyState)
-
 } 
 
 boot()

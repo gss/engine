@@ -266,12 +266,13 @@ class Command
   sanitize: (engine, operation, ascend, replacement) ->
 
     # Clean sub-expressions with the same domain
-    for argument in operation
-      unless ascend == argument
-        if argument.push && argument?.domain == engine
-          if argument[0] == 'get'
-            return ascend
-          @sanitize(engine, argument, false)
+    unless ascend == false
+      for argument in operation
+        unless ascend == argument
+          if argument.push && argument?.domain == engine
+            if argument[0] == 'get'
+              return ascend
+            @sanitize(engine, argument, false, replacement)
 
     operation.domain = operation.command = undefined
 

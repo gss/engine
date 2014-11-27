@@ -1319,7 +1319,7 @@ describe('End - to - End', function() {
         expect(engine.domains[0].constraints[0].operations.length).to.eql(3);
         return done();
       });
-      return container.innerHTML = "<style type=\"text/gss\">\n  button {\n    $a == 1;\n  }\n</style>\n<button id=\"button1\"></button>\n<button id=\"button2\"></button>\n<button id=\"button3\"></button>";
+      return container.innerHTML = "<style type=\"text/gss\">\n  button {\n    $[b] == 1;\n  }\n</style>\n<button id=\"button1\"></button>\n<button id=\"button2\"></button>\n<button id=\"button3\"></button>";
     });
   });
   describe('VGL', function() {

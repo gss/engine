@@ -1671,7 +1671,7 @@ describe 'End - to - End', ->
       container.innerHTML = """
         <style type="text/gss">
           button {
-            $a == 1;
+            $[b] == 1;
           }
         </style>
         <button id="button1"></button>

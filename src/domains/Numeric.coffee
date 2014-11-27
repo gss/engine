@@ -18,7 +18,9 @@ class Numeric extends Domain
 
 Numeric::Variable = Variable.extend {},
   get: (path, engine, operation, continuation, scope) ->
-    continuation ||= @getMeta(operation)?.key
+    if meta = @getMeta(operation)
+      continuation = meta.key
+      scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
     return engine.watch(null, path, operation, engine.Continuation(continuation || ""), scope)
 
 Numeric::Variable.Expression = Variable.Expression.extend()

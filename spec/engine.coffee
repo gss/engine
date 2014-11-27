@@ -43,10 +43,18 @@ describe 'GSS engine', ->
       e.once 'solved', ->
         val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
-        done()
+
+        e.once 'solved', ->
+          val = e.values['x']
+          assert val == undefined, "engine has wrong [x] value: #{val}"
+
+          done()
+        
+        e.solve ['remove', 'tracker']
+
       e.solve [
           ['==', ['get','x'], 222]
-        ]
+        ], 'tracker'
     it 'should destroy', (done)->
       e.destroy()
       done()
@@ -59,10 +67,19 @@ describe 'GSS engine', ->
       e.once 'solved', ->
         val = e.values['x']
         assert val == 222, "engine has wrong [x] value: #{val}"
-        done()
+
+        e.once 'solved', ->
+          val = e.values['x']
+          assert val == undefined, "engine has wrong [x] value: #{val}"
+
+
+          done()
+        
+        e.solve ['remove', 'tracker']
+
       e.solve [
           ['==', ['get','x'], 222]
-        ]
+        ], 'tracker'
     it 'should destroy', (done)->
       e.destroy()
       done()

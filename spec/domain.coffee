@@ -181,7 +181,7 @@ describe 'Domain', ->
 
 
   describe 'solvers in worker', ->
-    xit 'should receieve measurements from document to make substitutions', (done) ->
+    it 'should receieve measurements from document to make substitutions', (done) ->
       root = document.createElement('div')
       root.innerHTML = """
         <div id="box0" style="width: 20px"></div>
@@ -190,39 +190,39 @@ describe 'Domain', ->
       engine =  new GSS(root, true)
       problem = [
         ['=='
-          ['get', 'result', null, 'my_funny_tracker_path']
-          ['*',
+          ['get', 'result']
+          ['-',
             ['+'
               ['get', ['#', 'box0'], 'intrinsic-width'],
               1]
             ['get', 'x']]
         ]
       ]
-      engine.solve problem, (solution) ->
+      engine.solve problem, 'my_funny_tracker_path', (solution) ->
         expect(solution).to.eql 
           "$box0[intrinsic-width]": 20
           result: 0
-          x: 0
+          x: 21
 
         engine.solve
           x: 2
         , (solution) ->
           expect(solution).to.eql 
-            result: 42
+            result: 19
             x: 2
 
           engine.solve
             "x": 3
           , (solution) ->
             expect(solution).to.eql 
-              result: 63
+              result: 18
               x: 3
             engine.solve
               "x": null
             , (solution) ->
               GSS.console.info(solution)
               expect(solution).to.eql 
-                result: 0
+                result: 21
                 x: 0
               root.removeChild(engine.id('box0'))
               engine.then (solution) ->
@@ -234,7 +234,7 @@ describe 'Domain', ->
 
 
 
-                document.body.removeChild(root)
+                #document.body.removeChild(root)
                 done()
 
 

@@ -10,7 +10,7 @@
 Numeric = require('./Numeric')
 
 class Intrinsic extends Numeric
-  priority: 100
+  priority: 1
   structured: true
   immediate: true
   
@@ -187,7 +187,8 @@ class Intrinsic extends Numeric
       if String(num) == String(value) || (num + 'px') == value
         return num
     return value
-
+    
+  # Reset intrinsic style when observed initially
   onWatch: (id, property) ->
     if (node = @identity.solve(id)) && node.nodeType == 1
       if property.indexOf('intrinsic-') > -1

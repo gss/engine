@@ -753,7 +753,6 @@ describe 'Full page tests', ->
 
           container.innerHTML = DEMOS.PROFILE_CARD
           container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
- 
           engine.then (solution) ->
             # phantom gives slightly different measurements
             roughAssert = (a, b, threshold = 15) ->
@@ -765,7 +764,7 @@ describe 'Full page tests', ->
             roughAssert(solution['$follow[y]'], 540)
             roughAssert(solution['$follow[x]'], 329.5)
             roughAssert(solution['flex-gap'], 95)
- 
+        
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
@@ -790,6 +789,7 @@ describe 'Full page tests', ->
                   container.innerHTML = ""
                   engine.then (solution) ->
                     done()
+                    
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
             describe type, ->

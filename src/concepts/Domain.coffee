@@ -153,7 +153,7 @@ class Domain extends Trigger
             unless @updating.domains.indexOf(@) > @updating.index
               @updating.apply(@changes)
           if @immediate
-            @set path, null
+            @solved.set path, null
           if Object.keys(obj).length == 0
             delete @objects[id]
 
@@ -219,25 +219,21 @@ class Domain extends Trigger
     return if @immutable
 
     # Substitute variables
-    if variable = @variables[path]
+    if @priority >= 0 && variable = @variables[path]
       for constraint in variable.constraints
         for operation in constraint.operations
           if op = operation.variables[path]
             if op.domain && op.domain.displayName != @displayName
               if !watchers || watchers.indexOf(op) == -1
-
                 op.command.patch(op.domain, op, undefined, undefined, @)
                 op.command.solve(@, op)
-                console.error(123, op, path)
 
     # Notify workers
-    if @workers
-      for url, worker of @workers
+    if workers = @workers
+      for url, worker of workers
         if values = worker.values
           if values.hasOwnProperty(path)
-            unless value?
-              delete worker.values[path]
-            @update(worker, [['value', value, path]])
+            @update([['value', path, value ? null]], worker)
 
     #while (index = @updating.imports.indexOf(path)) > -1
     #if exports = @updating?.exports?[path]

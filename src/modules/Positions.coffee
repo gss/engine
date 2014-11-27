@@ -20,7 +20,7 @@ class Positions
     return unless id.charAt(0) != ':'
     unless element = @engine.identity[id]
       return if id.indexOf('"') > -1
-      return unless element = document.getElementById(id)
+      return unless element = document.getElementById(id.substring(1))
     
     if positioning && (property == 'x' || property == 'y')
       (positioning[id] ||= {})[property] = value

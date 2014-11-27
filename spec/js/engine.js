@@ -55,9 +55,14 @@ describe('GSS engine', function() {
         var val;
         val = e.values['x'];
         assert(val === 222, "engine has wrong [x] value: " + val);
-        return done();
+        e.once('solved', function() {
+          val = e.values['x'];
+          assert(val === void 0, "engine has wrong [x] value: " + val);
+          return done();
+        });
+        return e.solve(['remove', 'tracker']);
       });
-      return e.solve([['==', ['get', 'x'], 222]]);
+      return e.solve([['==', ['get', 'x'], 222]], 'tracker');
     });
     return it('should destroy', function(done) {
       e.destroy();
@@ -75,9 +80,14 @@ describe('GSS engine', function() {
         var val;
         val = e.values['x'];
         assert(val === 222, "engine has wrong [x] value: " + val);
-        return done();
+        e.once('solved', function() {
+          val = e.values['x'];
+          assert(val === void 0, "engine has wrong [x] value: " + val);
+          return done();
+        });
+        return e.solve(['remove', 'tracker']);
       });
-      return e.solve([['==', ['get', 'x'], 222]]);
+      return e.solve([['==', ['get', 'x'], 222]], 'tracker');
     });
     return it('should destroy', function(done) {
       e.destroy();

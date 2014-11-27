@@ -121,31 +121,31 @@ describe('Domain', function() {
     });
   });
   describe('solvers in worker', function() {
-    xit('should receieve measurements from document to make substitutions', function(done) {
+    it('should receieve measurements from document to make substitutions', function(done) {
       var problem, root;
       root = document.createElement('div');
       root.innerHTML = "<div id=\"box0\" style=\"width: 20px\"></div>";
       document.body.appendChild(root);
       engine = new GSS(root, true);
-      problem = [['==', ['get', 'result', null, 'my_funny_tracker_path'], ['*', ['+', ['get', ['#', 'box0'], 'intrinsic-width'], 1], ['get', 'x']]]];
-      return engine.solve(problem, function(solution) {
+      problem = [['==', ['get', 'result'], ['-', ['+', ['get', ['#', 'box0'], 'intrinsic-width'], 1], ['get', 'x']]]];
+      return engine.solve(problem, 'my_funny_tracker_path', function(solution) {
         expect(solution).to.eql({
           "$box0[intrinsic-width]": 20,
           result: 0,
-          x: 0
+          x: 21
         });
         return engine.solve({
           x: 2
         }, function(solution) {
           expect(solution).to.eql({
-            result: 42,
+            result: 19,
             x: 2
           });
           return engine.solve({
             "x": 3
           }, function(solution) {
             expect(solution).to.eql({
-              result: 63,
+              result: 18,
               x: 3
             });
             return engine.solve({
@@ -153,7 +153,7 @@ describe('Domain', function() {
             }, function(solution) {
               GSS.console.info(solution);
               expect(solution).to.eql({
-                result: 0,
+                result: 21,
                 x: 0
               });
               root.removeChild(engine.id('box0'));
@@ -164,7 +164,6 @@ describe('Domain', function() {
                   "x": null,
                   "result": null
                 });
-                document.body.removeChild(root);
                 return done();
               });
             });

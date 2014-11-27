@@ -45,7 +45,6 @@ class Engine extends Domain
     Finite:     require('./domains/Finite')
     Boolean:    require('./domains/Boolean')
 
-
   constructor: () -> #(scope, url, data)
     for argument, index in arguments
       continue unless argument
@@ -80,6 +79,8 @@ class Engine extends Domain
     # right before first commands are executed
     super(@, url)
     
+    @addListeners(@$events)
+
     @domains      = []
     @domain       = @
     @inspector    = new @Inspector(@)
@@ -92,12 +93,12 @@ class Engine extends Domain
     # Constant and input values
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
+    @assumed.static = true
     @assumed.setup()
 
     # Conditions and final values
     @solved = new @Boolean
     @solved.displayName = 'Solved'
-    @solved.eager = true
     @solved.setup()
 
     @values = @solved.values
@@ -106,7 +107,7 @@ class Engine extends Domain
 
     @strategy = 
       unless window?
-        'substitute'
+        'evaluate'
       else if @scope
         'document'
       else
@@ -114,49 +115,9 @@ class Engine extends Domain
 
     return @
 
-  # Import exported variables to thread
-  substitute: (expressions, result, parent, index) ->
-    if result == undefined
-      start = true
-      result = null
-    for expression, i in expressions by -1
-      if expression?.push
-        result = @substitute(expression, result, expressions, i)
-    if expressions[0] == 'remove'
-      @updating.push expressions, null
-      if parent
-        parent.splice(index, 1)
-    if expressions[0] == 'value'
-      # Substituted part of expression
-      if expressions[4]
-        exp = parent[index] = expressions[3].split(',')
-        path = @getPath(exp[1], exp[2])
-      # Updates for substituted variables
-      else if !expressions[3]
-        path = expressions[2]
-        if parent
-          parent.splice(index, 1)
-        else
-          return []
-      if path && @assumed.values[path] != expressions[1]
-        unless (result ||= {}).hasOwnProperty(path)
-          result[path] = expressions[1]
-        else unless result[path]?
-          delete result[path]
-    unless start
-      if !expressions.length
-        parent.splice(index, 1)
-      return result
-    # Substitute variables next
-    if result
-      @assumed.merge result
-    # Perform remove commands first
-    if @updating
-      @updating.each(@resolve, @, result)
-    # Execute given expressions
-    if expressions.length
-      @yield expressions
-    return @updating?.solution
+  # Evaluate bypassing abstract domain
+  evaluate: (expressions) ->
+    @update(expressions).solution
 
   # engine.solve({}) - solve with given constants
   # engine.solve([]) - evaluate commands
@@ -172,7 +133,6 @@ class Engine extends Domain
         index = 1
 
     args = Array.prototype.slice.call(arguments, index || 0)
-
 
     unless @running
       @compile(true)
@@ -191,6 +151,7 @@ class Engine extends Domain
     if typeof args[0] == 'object'
       if name = source || @displayName
         @console.start(reason || args[0], name)
+
     unless old = @updating
       @engine.updating = new @update
       @engine.updating.start ?= @engine.console.time()
@@ -200,7 +161,7 @@ class Engine extends Domain
       providing = true
     if typeof args[0] == 'function'
       solution = args.shift().apply(@, args) 
-    else
+    else if args[0]?
       solution = Domain::solve.apply(@, args)
 
     if solution
@@ -210,109 +171,103 @@ class Engine extends Domain
     @pairs?.onBeforeSolve()
 
     if providing
-      while yieldd = @providing
-        @providing = null
-        @update(yieldd)
       @providing = undefined
 
     if name
       @console.end(reason)
 
-    workflow = @updating
-    if workflow.domains.length
+    update = @updating
+    if update.domains.length
       if old
-        if old != workflow
-          old.push(workflow)
-      if !old || !workflow.busy?.length
-        workflow.each @resolve, @
-      if workflow.busy?.length
-        return workflow
+        if old != update
+          old.push(update)
+      if !old || !update.busy?.length
+        update.each @resolve, @
+      if update.busy?.length
+        return update
 
-    onlyRemoving = (workflow.problems.length == 1 && workflow.domains[0] == null)
-    restyled = onlyRemoving || (@restyled && !old && !workflow.problems.length)
+    onlyRemoving = (update.problems.length == 1 && update.domains[0] == null)
+    restyled = onlyRemoving || (@restyled && !old && !update.problems.length)
 
-    if @engine == @ && providing && (!workflow.problems[workflow.index + 1] || restyled) 
+    if @engine == @ && providing && (!update.problems[update.index + 1] || restyled) 
       return @onSolve(null, restyled)
 
-  onSolve: (update, restyled) ->
+  onSolve: (solution, restyled) ->
     # Apply styles
-
-    if solution = update || @updating.solution
+    update = @updating
+    if solution ||= update.solution
       #if Object.keys(solution).length
+
+      @fireEvent('apply', solution, update)
       @applier?.solve(solution)
-    else if !@updating.reflown && !restyled
-      if !@updating.problems.length
+    else if !update.reflown && !restyled
+      if !update.problems.length
         @updating = undefined
       return
 
     if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
       @intrinsic.changes = {}
-      scope = @updating.reflown || @scope
-      @updating.reflown = undefined
-      @intrinsic?.each(scope, @intrinsic.measure)
-      @updating.apply @intrinsic.changes
+      #scope = update.reflown || @scope
+      #update.reflown = undefined
+        
+      update.apply @intrinsic.perform()
       @intrinsic.changes = undefined
 
     @solved.merge solution
 
     @pairs?.onBeforeSolve()
-    @updating.reset()
+    update.reset()
 
     # Launch another pass here if solutions caused effects
     # Effects are processed separately, then merged with found solution
-    if effects = @updating.effects
-      @updating.effects = undefined
+    if effects = update.effects
+      update.effects = undefined
     else
       effects = {}
 
-    effects = @updating.each(@resolve, @, effects)
-    if @updating.busy?.length
+    effects = update.each(@resolve, @, effects)
+    if update.busy?.length
       return effects
-      
-    #return if @requesting
 
     if effects && Object.keys(effects).length
       return @onSolve(effects)
 
     # Fire up solved event if we've had remove commands that 
     # didnt cause any reactions
-    if (!solution || (!solution.push && !Object.keys(solution).length) || @updating.problems[@updating.index + 1]) &&
-        (@updating.problems.length != 1 || @updating.domains[0] != null) &&
+    if (!solution || (!solution.push && !Object.keys(solution).length) || update.problems[update.index + 1]) &&
+        (update.problems.length != 1 || update.domains[0] != null) &&
         !@engine.restyled
       return 
 
-    if !@updating.problems.length && @updated?.problems.length && !@engine.restyled
-      @updating.finish()
-      @restyled = undefined
-      @updating = undefined
+    @updating.finish()
+    
+    if !update.problems.length && @updated?.problems.length && !@engine.restyled
+      @restyled = @updating = undefined
       return
     else
-      @updated = @updating
-      @updating.finish()
-      @updating = undefined
-      @restyled = undefined
+      @restyled = @updating = undefined
+      @updated = update
 
     @console.info('Solution\t   ', @updated, solution, @solved.values)
 
     # Trigger events on engine and scope node
-    @triggerEvent('solve', @updated.solution, @updated)
-    if @scope
-      @dispatchEvent(@scope, 'solve', @updated.solution, @updated)
-
-    # Legacy events
-    @triggerEvent('solved', @updated.solution, @updated)
-    if @scope
-      @dispatchEvent(@scope, 'solved', @updated.solution, @updated)
+    @fireEvent 'solve', @updated.solution, @updated
+    @fireEvent 'solved', @updated.solution, @updated
     
     @inspector.update(@)
         
     
     return @updated.solution
 
+  fireEvent: (name, data, object) ->
+    @triggerEvent(name, data, object)
+    if @scope
+      @dispatchEvent(@scope, name, data, object)
+
   # Accept solution from a solver and resolve it to verify
   yield: (solution) ->
     if !solution.push
-      return @updating?.each(@resolve, @, solution) || @onSolve()
+      return @updating?.each(@resolve, @, solution) || @onSolve(solution)
 
     #if @providing != undefined
     #  (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
@@ -320,29 +275,27 @@ class Engine extends Domain
     
     return @update.apply(@, arguments)
 
-  resolve: (domain, problems, index, workflow) ->
+  resolve: (domain, problems, index, update) ->
     if domain && !domain.solve && domain.postMessage
-      workflow.postMessage domain, problems
-      workflow.await(domain.url)
+      update.postMessage domain, problems
+      update.await(domain.url)
       return domain
 
 
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
-    if problems instanceof Array && problems.length == 1 && problem instanceof Array
-      problems = problem
     if domain
       @console.start(problems, domain.displayName)
       result = domain.solve(problems) || undefined
       if result && result.postMessage
-        workflow.await(result.url)
+        update.await(result.url)
       else
         if result?.length == 1
           result = result[0]
       @console.end()
       domain.setup()
-      if domain.priority < 0
+      if domain.priority < 0 && !domain.url
         if @domains.indexOf(domain) == -1
           @domains.push(domain)
           
@@ -361,7 +314,7 @@ class Engine extends Domain
           else
             others.push(problem)
      
-      for other, i in @domains
+      for other, i in [@assumed, @solved].concat(@domains)
         locals = []
         other.changes = undefined
         for remove in removes
@@ -379,45 +332,17 @@ class Engine extends Domain
         if locals.length
           #other.remove.apply(other, locals)
           locals.unshift 'remove'
-          workflow.push([locals], other, true)
+          update.push([locals], other, true)
         if others.length
-          workflow.push(others, other)
+          update.push(others, other)
       if typeof problems[0] == 'string'
         problems = [problems]
       for url, worker of @workers
-        workflow.push problems, worker
+        working = problems.filter (command) ->
+          command[0] != 'remove' || worker.paths?[command[1]]
+
+        update.push working, worker
     return result
-
-
-  # auto-worker url, only works with sync scripts!
-  getWorkerURL: do ->
-    if document?
-      scripts = document.getElementsByTagName('script')
-      src = scripts[scripts.length - 1].src
-      if location.search?.indexOf('log=0') > -1
-        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
-    return (url) ->
-      return typeof url == 'string' && url || src
-
-
-
-  # Initialize new worker and subscribe engine to its events
-  useWorker: (url) ->
-    unless typeof url == 'string' && Worker? && self.onmessage != undefined
-      return
-
-    @engine.worker ||= @engine.getWorker(url)
-    @worker.url = url
-    @worker.addEventListener 'message', @engine.eventHandler
-    @worker.addEventListener 'error', @engine.eventHandler
-    @solve = (commands) =>
-      @engine.updating ||= new @update
-      @engine.updating.postMessage(@worker, commands)
-      return @worker
-    return @worker
-
-  getWorker: (url) ->
-    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
 
   # Compile initial domains and shared engine features 
   precompile: ->
@@ -464,6 +389,107 @@ class Engine extends Domain
     @running = state ? null
     @triggerEvent('compile', @)
   
+
+  # auto-worker url, only works with sync scripts!
+  getWorkerURL: do ->
+    if document?
+      scripts = document.getElementsByTagName('script')
+      src = scripts[scripts.length - 1].src
+      if location.search?.indexOf('log=0') > -1
+        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
+    return (url) ->
+      return typeof url == 'string' && url || src
+
+
+
+  # Initialize new worker and subscribe engine to its events
+  useWorker: (url) ->
+    unless typeof url == 'string' && Worker? && self.onmessage != undefined
+      return
+
+    @engine.worker ||= @engine.getWorker(url)
+    @worker.url = url
+    @worker.addEventListener 'message', @engine.eventHandler
+    @worker.addEventListener 'error', @engine.eventHandler
+    @solve = (commands) =>
+      @engine.updating ||= new @update
+      @engine.updating.postMessage(@worker, commands)
+      return @worker
+    return @worker
+
+  getWorker: (url) ->
+    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+
+  # Worker communications
+  $events:
+    message: (e) ->
+      values = e.target.values ||= {}
+      for property, value of e.data
+        if value?
+          values[property] = value
+        else
+          delete values[property]
+
+      if @updating
+        if @updating.busy.length
+          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+          if (i = @updating.solutions.indexOf(e.target)) > -1
+            @updating.solutions[i] = e.data
+          unless @updating.busy.length
+            return @updating.each(@resolve, @, e.data) || @onSolve(e.data)
+          else
+            return @updating.apply(e.data)
+
+      #@yield e.data
+
+    # Handle error from worker
+    error: (e) ->
+      throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
+
+    destroy: (e) ->
+      if @scope
+        Engine[@scope._gss_id] = undefined
+      if @worker
+        @worker.removeEventListener 'message', @eventHandler
+        @worker.removeEventListener 'error', @eventHandler
+
+  
+
+# Listen for message in worker to initialize engine on demand
+if !self.window && self.onmessage != undefined
+  self.addEventListener 'message', (e) ->
+    unless engine = Engine.messenger
+      engine = Engine.messenger = Engine()
+      engine.compile(true)
+    data = e.data
+    values = undefined
+    commands = []
+    removes = []
+    solution = engine.solve ->
+      if (values = data[0]) && !values.push
+        for command, index in data
+          if index
+            if command[0] == 'remove'
+              removes.push(command)
+            else
+              if command[0]?.key?
+                command[1].parent = command
+              commands.push(command)
+      if removes.length
+        @solve(removes)
+      if values
+        @assumed.merge(values)
+      if commands.length
+        @solve(commands)
+
+    result = {}
+    if values
+      for property, value of values
+        result[property] = value
+      for property, value of solution
+        result[property] = value
+    postMessage(result)
+
 Engine.Continuation = Engine::Continuation
 
 # Identity and console modules are shared between engines
@@ -473,14 +499,4 @@ Engine.console  = Engine::console  = new Engine::Console
 Engine.Engine   = Engine
 Engine.Domain   = Engine::Domain   = Domain
 
-# Listen for message in worker to initialize engine on demand
-if !self.window && self.onmessage != undefined
-  self.addEventListener 'message', (e) ->
-    engine = Engine.messenger ||= Engine()
-    changes = engine.assumed.changes = {}
-    solution = engine.solve(e.data) || {}
-    engine.assumed.changes = undefined
-    for property, value of changes
-      solution[property] = value
-    postMessage(solution)
 module.exports = @GSS = Engine

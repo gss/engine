@@ -24,6 +24,7 @@ Updater = (engine) ->
         path = arg[1]
         if vardomain.MAYBE && domain && domain != true
           vardomain.frame = domain
+
         effects = new Update [arg], vardomain
       else
         # Handle framed expressions
@@ -102,11 +103,9 @@ Update.prototype =
       if @engine.updating
         @engine.updating.perform(domain)
 
+      # Reconfigure solver to release constraints
       if domain.unconstrained
         domain.Constraint::reset(domain)
-        #@engine.updating.apply domain.apply(domain.perform())
-        #debugger
-        #@engine.updating.apply domain.prepare()
 
     result = @problems[to]
     @setVariables(result, probs, other)
@@ -125,7 +124,8 @@ Update.prototype =
 
     @splice from, 1
     if @engine.domains.indexOf(other) == -1
-      @engine.domains.push(other)
+      unless other.url
+        @engine.domains.push(other)
     return true
 
   # Group expressions
@@ -386,8 +386,39 @@ Update.prototype =
 
   terminate: ->
     if @posted
+      #if (i = @domains.indexOf(@engine.intrinsic)) > -1
+      #  if i == @domains.lastIndexOf(@engine.intrinsic)
+      #    @engine.intrinsic.batch()
       for url, message of @posted
-        @engine.workers[url].postMessage(message)
+        worker = @engine.workers[url]
+        paths = (worker.paths ||= {})
+        values = (worker.values ||= {})
+        changes = {}
+        commands = [changes]
+        removes = []
+        for group in message
+          for command in group
+            first = command[0]
+            if first == 'remove'
+              for i in [1 ... command.length]
+                delete paths[command[i]]
+                removes.push(command[i])
+            else if first == 'value'
+              if command[2] != values[command[1]]
+                changes[command[1]] = command[2]
+            else
+              if (path = first.key)?
+                paths[path] = true
+                if constants = first.values
+                  for property, value of constants
+                    if value != values[property]
+                      changes[property] = value
+              commands.push command
+        if removes.length
+          removes.unshift('remove')
+          commands.splice(1, 0, removes)
+
+        worker.postMessage(commands)
         while (i = @busy.indexOf(url)) > -1 && @busy.lastIndexOf(url) != i
           @busy.splice(i, 1)
       @posted = undefined
@@ -444,7 +475,6 @@ Update.prototype =
           if redefined[redefined.length - 1] != value && value?
             redefined.push(value)
         solution[property] = value
-
     return solution
 
   remove: (continuation, problem) ->
