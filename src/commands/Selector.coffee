@@ -39,9 +39,14 @@ class Selector extends Query
 
       selector
     ]
-    command.log(args, engine, operation, continuation, scope, 'qsa')
+    command.log(args, engine, operation, continuation, scope, command.selecting && 'select' || 'match')
     result  = command.before(args, engine, operation, continuation, scope)
-    result ?= args[0].querySelectorAll(args[1])
+    node = args[0]
+    if command.selecting
+      result ?= node.querySelectorAll(args[1])
+    else if (result != node) && node.matches(args[1])
+      result ?= node
+      
     if result  = command.after(args, result, engine, operation, continuation, scope)
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
 
