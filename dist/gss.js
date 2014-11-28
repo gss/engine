@@ -20266,12 +20266,7 @@ Engine = (function(_super) {
       _ref1.onBeforeSolve();
     }
     update.reset();
-    if (effects = update.effects) {
-      update.effects = void 0;
-    } else {
-      effects = {};
-    }
-    effects = update.each(this.resolve, this, effects);
+    effects = update.each(this.resolve, this);
     if ((_ref2 = update.busy) != null ? _ref2.length : void 0) {
       return effects;
     }
@@ -23666,6 +23661,24 @@ Domain = (function(_super) {
     }
   };
 
+  Domain.prototype.transfer = function(update) {
+    var prop, solution;
+    if (update) {
+      update.perform(this);
+    }
+    this.updating.perform(this);
+    if (this.unconstrained) {
+      this.Constraint.prototype.reset(this);
+    }
+    if (this.nullified) {
+      solution = {};
+      for (prop in this.nullified) {
+        (solution || (solution = {}))[prop] = null;
+      }
+      return this.updating.apply(solution);
+    }
+  };
+
   Domain.prototype.maybe = function() {
     var Base;
     if (!this.Maybe) {
@@ -24592,88 +24605,49 @@ module.exports = Type;
 
 });
 require.register("gss/lib/concepts/Update.js", function(exports, require, module){
-var Update, Updater;
+var Update, Updater,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 Updater = function(engine) {
   var Update, property, value, _ref;
   Update = function(problem, domain, parent, Default) {
-    var a, arg, d, effects, foreign, index, offset, path, start, stringy, update, vardomain, _base, _i, _j, _len, _len1;
+    var arg, index, object, start, update, vardomain, _i, _len;
     if (this instanceof Update) {
       this.problems = problem && (domain.push && problem || [problem]) || [];
       this.domains = domain && (domain.push && domain || [domain]) || [];
       return;
     }
-    start = !parent;
+    if (start = !parent) {
+      parent = this.updating;
+    }
+    update = new this.update;
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
       arg = problem[index];
       if (!(arg != null ? arg.push : void 0)) {
         continue;
       }
-      if (typeof problem[0] === 'string') {
-        arg.parent = problem;
-      }
-      offset = 0;
-      if (arg[0] === 'get') {
-        vardomain = arg.domain || (arg.domain = this.getVariableDomain(this, arg, Default));
-        path = arg[1];
-        if (vardomain.MAYBE && domain && domain !== true) {
-          vardomain.frame = domain;
-        }
-        effects = new Update([arg], vardomain);
-      } else {
-        stringy = true;
-        for (_j = 0, _len1 = arg.length; _j < _len1; _j++) {
-          a = arg[_j];
-          if (a != null ? a.push : void 0) {
-            if (arg[0] === 'framed') {
-              if (typeof arg[1] === 'string') {
-                d = arg[1];
-              } else {
-                d = (_base = arg[0]).uid || (_base.uid = (this.uids = (this.uids || (this.uids = 0)) + 1));
-              }
-            } else {
-              d = domain || true;
-            }
-            effects = this.update(arg, d, parent, Default);
-            break;
-          } else if (typeof a !== 'string') {
-            stringy = false;
-          }
-        }
-        if (!effects && typeof (arg != null ? arg[0] : void 0) === 'string' && stringy) {
-          effects = new this.update([arg], [null], parent);
-        }
-      }
-      if (effects) {
-        if (update && update !== effects) {
-          update.push(effects);
+      if (typeof arg[0] === 'string') {
+        arg.parent || (arg.parent = problem);
+        if (arg[0] === 'get') {
+          vardomain = arg.domain || (arg.domain = this.getVariableDomain(this, arg, Default));
+          update.push([arg], vardomain);
         } else {
-          update = effects;
-          parent || (parent = update);
+          this.update(arg, null, update, Default);
         }
+        object = true;
       }
-      effects = void 0;
     }
-    if (!update) {
-      if (typeof problem[0] === 'string') {
-        problem = [problem];
-      }
-      foreign = true;
-      update = new this.update([problem], [domain !== true && domain || null]);
+    if (!object) {
+      update.push([problem], null);
     }
     if (!(problem[0] instanceof Array)) {
       index = update.wrap(problem, parent, Default);
     }
-    if (start || foreign) {
-      if (this.updating) {
-        if (this.updating !== update) {
-          return this.updating.push(update);
-        }
-      } else {
-        return update.each(this.resolve, this.engine);
-      }
+    if (parent) {
+      return parent.push(update);
+    } else {
+      return update.each(this.resolve, this.engine);
     }
-    return update;
   };
   if (this.prototype) {
     _ref = this.prototype;
@@ -24693,54 +24667,46 @@ Update = Updater();
 Update.compile = Updater;
 
 Update.prototype = {
-  merge: function(from, to, parent, reverse) {
-    var domain, exported, other, prob, probs, prop, result, solution, _i, _len;
-    probs = this.problems[from];
-    if (!reverse) {
-      domain = this.domains[from];
-      other = this.domains[to];
-    } else {
-      domain = this.domains[to];
-      other = this.domains[from];
-      this.setVariables(probs, probs, other);
-    }
-    if (!domain.MAYBE) {
-      if (parent) {
-        parent.perform(domain);
-      }
-      if (this.engine.updating) {
-        this.engine.updating.perform(domain);
-      }
-      if (domain.unconstrained) {
-        domain.Constraint.prototype.reset(domain);
-      }
-    }
+  merge: function(from, to, parent) {
+    var domain, exported, method, other, prob, problems, property, result, variable, _i, _j, _len, _len1, _ref;
+    domain = this.domains[from];
+    other = this.domains[to];
+    problems = this.problems[from];
     result = this.problems[to];
-    this.setVariables(result, probs, other);
-    if (exported = domain["export"]()) {
-      result.push.apply(result, this.reify(exported, other, domain));
-      this.setVariables(result, exported, other);
+    if (!domain.MAYBE) {
+      domain.transfer(parent, other);
+      exported = domain["export"]();
     }
-    for (_i = 0, _len = probs.length; _i < _len; _i++) {
-      prob = probs[_i];
+    for (_i = 0, _len = problems.length; _i < _len; _i++) {
+      prob = problems[_i];
       if (result.indexOf(prob) === -1) {
-        result.push(this.reify(prob, other, domain));
+        (exported || (exported = [])).push(prob);
       }
-    }
-    if (domain.nullified) {
-      solution = {};
-      for (prop in domain.nullified) {
-        (solution || (solution = {}))[prop] = null;
-      }
-      this.engine.updating.apply(solution);
     }
     this.splice(from, 1);
-    if (this.engine.domains.indexOf(other) === -1) {
-      if (!other.url) {
-        this.engine.domains.push(other);
+    if (from < to) {
+      method = 'unshift';
+      to--;
+    }
+    if (exported) {
+      result[method || 'push'].apply(result, exported);
+      for (_j = 0, _len1 = exported.length; _j < _len1; _j++) {
+        prob = exported[_j];
+        this.setVariables(result, prob, other);
+      }
+      this.reify(exported, other, domain);
+      _ref = result.variables;
+      for (property in _ref) {
+        variable = _ref[property];
+        if (variable.domain.priority < 0 && variable.domain.displayName === domain.displayName) {
+          (this.variables || (this.variables = {}))[property] = to;
+        }
       }
     }
-    return to - (from < to);
+    if (!other.url && this.engine.domains.indexOf(other) === -1) {
+      this.engine.domains.push(other);
+    }
+    return to;
   },
   wrap: function(problem, parent, Default) {
     var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, opdomain, other, previous, problems, probs, prop, value, _i, _j, _k, _l, _len, _len1, _len2, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
@@ -24905,47 +24871,42 @@ Update.prototype = {
     }
   },
   splice: function(index) {
-    var i;
+    var i, name, variable, _ref;
     if ((i = this.engine.domains.indexOf(this.domains[index])) > -1) {
       this.engine.domains.splice(i, 1);
     }
     this.domains.splice(index, 1);
-    return this.problems.splice(index, 1);
+    this.problems.splice(index, 1);
+    if (this.variables) {
+      _ref = this.variables;
+      for (name in _ref) {
+        variable = _ref[name];
+        if (variable > index) {
+          this.variables[name] = variable - 1;
+        }
+      }
+    }
   },
   finish: function() {
     this.time = this.engine.console.time(this.start);
     return this.start = void 0;
   },
   reify: function(operation, domain, from) {
-    var arg, i, _i, _j, _len, _ref;
-    if (!operation) {
-      _ref = this.domains;
-      for (i = _i = _ref.length - 1; _i >= 0; i = _i += -1) {
-        domain = _ref[i];
-        if (i === this.index) {
-          break;
-        }
-        if (domain) {
-          this.reify(this.problems[i], domain, from);
-        }
-      }
-    } else {
-      if (operation != null ? operation.push : void 0) {
-        if (operation.domain === from) {
-          operation.domain = domain;
-        }
-        for (_j = 0, _len = operation.length; _j < _len; _j++) {
-          arg = operation[_j];
-          if (arg != null ? arg.push : void 0) {
-            this.reify(arg, domain, from);
-          }
-        }
+    var arg, _i, _len;
+    if (operation.domain === from) {
+      operation.domain = domain;
+    }
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      arg = operation[_i];
+      if (arg != null ? arg.push : void 0) {
+        this.reify(arg, domain, from);
       }
     }
     return operation;
   },
-  connect: function(position, result) {
-    var constrained, domain, i, index, other, problems, property, variable, variables, _ref;
+  register: function(variables) {},
+  connect: function(position, inserted) {
+    var condition, connecting, domain, from, i, index, j, offset, other, problems, property, to, variable, variables, _i, _j, _ref, _ref1, _ref2, _ref3;
     index = this.index;
     domain = this.domains[position];
     if (!domain) {
@@ -24953,27 +24914,50 @@ Update.prototype = {
     }
     problems = this.problems[position];
     variables = this.variables || (this.variables = {});
+    connecting = void 0;
+    if (inserted) {
+      for (property in variables) {
+        variable = variables[property];
+        if (variable >= position) {
+          variables[property]++;
+        }
+      }
+    }
     _ref = problems.variables;
     for (property in _ref) {
       variable = _ref[property];
       if (variable.domain.priority < 0 && variable.domain.displayName === domain.displayName) {
-        if (!result && ((i = variables[property]) != null) && (i > index) && (i < position)) {
-          other = this.domains[i];
-          constrained = other.constraints && domain.constraints;
-          if ((constrained ? other.constraints.length > domain.constraints.length : position > i)) {
-            result = this.merge(position, i);
-            this.connect(result, true);
-            return i;
-          } else {
-            result = this.merge(i, position, false, i < position);
-            if (result === 4) {
-              debugger;
+        if (((i = variables[property]) != null) && (i > index) && (i !== position)) {
+          if (__indexOf.call((connecting || (connecting = [])), i) < 0) {
+            j = 0;
+            while (connecting[j] < i) {
+              j++;
             }
-            this.connect(result, true);
-            return position;
+            connecting.splice(j, 0, i);
           }
         } else {
           variables[property] = position;
+        }
+      }
+    }
+    offset = 0;
+    if (connecting) {
+      for (index = _i = 0, _ref1 = connecting.length; _i < _ref1; index = _i += 1) {
+        i = connecting[index];
+        other = this.domains[i];
+        condition = other.constraints && domain.constraints ? other.constraints.length > domain.constraints.length : position > i;
+        if (condition) {
+          from = i;
+          to = position;
+        } else {
+          from = position;
+          to = i;
+        }
+        position = this.merge(from, to);
+        for (j = _j = _ref2 = index + 1, _ref3 = connecting.length; _ref2 <= _ref3 ? _j < _ref3 : _j > _ref3; j = _ref2 <= _ref3 ? ++_j : --_j) {
+          if (connecting[j] >= from) {
+            connecting[j]--;
+          }
         }
       }
     }
@@ -24990,6 +24974,9 @@ Update.prototype = {
     }
     priority = this.domains.length;
     position = this.index + 1;
+    if (domain == null) {
+      debugger;
+    }
     while ((other = this.domains[position]) !== void 0) {
       if (other || !domain) {
         if (other === domain || (domain && !(domain != null ? domain.solve : void 0) && other.url === domain.url)) {
@@ -25004,14 +24991,16 @@ Update.prototype = {
             this.setVariables(cmds, problem, other);
             this.reify(problem, other, domain);
           }
+          this.connect(position);
           return true;
         } else if (other && domain) {
-          if (((other.priority < domain.priority) || (other.priority === domain.priority && other.MAYBE && !domain.MAYBE)) && (!other.frame || other.frame === domain.frame)) {
-            if (priority === this.domains.length) {
-              priority = position;
-            }
+          if (other.priority < domain.priority) {
+            priority = position;
+            break;
+          } else if ((other.priority === domain.priority && other.MAYBE && !domain.MAYBE) && (!other.frame || other.frame === domain.frame)) {
+            priority = position + 1;
           }
-        } else if (!domain) {
+        } else {
           priority--;
         }
       }
@@ -25023,6 +25012,7 @@ Update.prototype = {
     }
     this.insert(priority, domain, problems);
     this.reify(problems, domain);
+    this.connect(priority, true);
     return this;
   },
   insert: function(index, domain, problems) {
@@ -25117,32 +25107,17 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var connected, domain, i, previous, result, _base, _name, _ref, _ref1;
+    var domain, previous, result, _ref, _ref1;
     if (solution) {
       this.apply(solution);
     }
     if (!this.problems[this.index + 1]) {
       return;
     }
-    i = this.index;
-    debugger;
-    while (++i < this.problems.length) {
-      while ((connected = this.connect(i)) != null) {
-        if (connected > i) {
-          --i;
-        } else {
-          i = connected - 1;
-        }
-      }
-    }
     previous = this.domains[this.index];
     while ((domain = this.domains[++this.index]) !== void 0) {
       previous = domain;
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
-      if (this.effects) {
-        this.apply(this.effects, (result = (_base = this.solutions)[_name = this.index] || (_base[_name] = {})));
-        this.effects = void 0;
-      }
       if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
         this.terminate();
         return result;

@@ -219,21 +219,14 @@ class Engine extends Domain
     update.reset()
 
     # Launch another pass here if solutions caused effects
-    # Effects are processed separately, then merged with found solution
-    if effects = update.effects
-      update.effects = undefined
-    else
-      effects = {}
-
-    effects = update.each(@resolve, @, effects)
+    effects = update.each(@resolve, @)
     if update.busy?.length
       return effects
 
     if effects && Object.keys(effects).length
       return @onSolve(effects)
 
-    # Fire up solved event if we've had remove commands that 
-    # didnt cause any reactions
+    # Solved event is fired even for commands that cause side effects
     if (!solution || (!solution.push && !Object.keys(solution).length) || update.problems[update.index + 1]) &&
         (update.problems.length != 1 || update.domains[0] != null) &&
         !@engine.restyled

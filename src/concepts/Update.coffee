@@ -9,74 +9,48 @@ Updater = (engine) ->
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
       return
 
-    start = !parent
+    if start = !parent
+      parent = @updating
+
+    update = new @update
 
     # Process arguments
     for arg, index in problem
       continue unless arg?.push
-      if typeof problem[0] == 'string'
-        arg.parent = problem
-      offset = 0
-
-      # Analyze variable
-      if arg[0] == 'get'
-        vardomain = arg.domain ||= @getVariableDomain(@, arg, Default)
-        path = arg[1]
-        if vardomain.MAYBE && domain && domain != true
-          vardomain.frame = domain
-
-        effects = new Update [arg], vardomain
-      else
-        # Handle framed expressions
-        stringy = true
-        for a in arg
-          if a?.push
-            if arg[0] == 'framed'
-              if typeof arg[1] == 'string'
-                d = arg[1]
-              else
-                d = arg[0].uid ||= (@uids = (@uids ||= 0) + 1)
-            else
-              d = domain || true
-            effects = @update(arg, d, parent, Default)
-            break
-          else if typeof a != 'string'
-            stringy = false
-        if !effects && typeof arg?[0] == 'string' && stringy
-          effects = new @update([arg], [null], parent)
-
-      # Merge updates
-      if effects
-        if update && update != effects
-          update.push(effects)
+      if typeof arg[0] == 'string'
+        arg.parent ||= problem
+        # Variable
+        if arg[0] == 'get'
+          vardomain = arg.domain ||= @getVariableDomain(@, arg, Default)
+          update.push [arg], vardomain
+        # Function call
         else
-          update = effects
-          parent ||= update
-      effects = undefined
+          @update(arg, null, update, Default)
+        object = true
+    unless object
+      update.push [problem], null
 
     # Handle broadcasted commands (e.g. remove)
-    if !update
-      if typeof problem[0] == 'string'
-        problem = [problem]
-      foreign = true
-      update = new @update [problem], [domain != true && domain || null]
+    #if !update
+    #  if typeof problem[0] == 'string'
+    #    problem = [problem]
+    #  foreign = true
+    #  update = new @update [problem], [domain != true && domain || null]
 
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       index = update.wrap(problem, parent, Default)
 
+
       #if index?
       #  update.connect(index)
 
     # Unroll recursion, solve problems
-    if start || foreign
-      if @updating
-        if @updating != update
-          return @updating.push(update)
-      else
-        return update.each @resolve, @engine
-
-    return update
+    
+    if parent
+      return parent.push(update)
+    else
+      return update.each @resolve, @engine
 
   if @prototype
     for property, value of @prototype 
@@ -88,51 +62,43 @@ Update = Updater()
 Update.compile = Updater
 Update.prototype =
 
-  merge: (from, to, parent, reverse) ->
-    probs = @problems[from]
-    unless reverse
-      domain = @domains[from]
-      other = @domains[to]
-    else
-      domain = @domains[to]
-      other = @domains[from]
-      @setVariables(probs, probs, other)
-
+  # Combine two groups in the queue, and their domains if necessary
+  merge: (from, to, parent) ->
+    domain = @domains[from]
+    other = @domains[to]
+    problems = @problems[from]
+    result = @problems[to]
 
     unless domain.MAYBE
-      # Apply removes from parent update
-      if parent
-        parent.perform(domain)
-              
-      # Apply removes from global update
-      if @engine.updating
-        @engine.updating.perform(domain)
+      domain.transfer(parent, other)
+      exported = domain.export()
 
-      # Reconfigure solver to release constraints
-      if domain.unconstrained
-        domain.Constraint::reset(domain)
-
-    result = @problems[to]
-    @setVariables(result, probs, other)
-    if exported = domain.export()
-      result.push.apply(result, @reify(exported, other, domain))
-      @setVariables(result, exported, other)
-
-    for prob in probs
+    for prob in problems
       if result.indexOf(prob) == -1
-        result.push(@reify(prob, other, domain))
-    if domain.nullified
-      solution = {}
-      for prop of domain.nullified
-        (solution ||= {})[prop] = null
-      @engine.updating.apply solution 
+        (exported ||= []).push(prob)
 
     @splice from, 1
-    if @engine.domains.indexOf(other) == -1
-      unless other.url
-        @engine.domains.push(other)
 
-    return to - (from < to)
+    if from < to
+      method = 'unshift'
+      to--
+
+    if exported
+      result[method || 'push'].apply(result, exported)
+
+      for prob in exported
+        @setVariables(result, prob, other)
+
+      @reify(exported, other, domain)
+
+      for property, variable of result.variables
+        if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
+          (@variables ||= {})[property] = to
+
+    if !other.url && @engine.domains.indexOf(other) == -1
+      @engine.domains.push(other)
+
+    return to
 
   # Group expressions
   wrap: (problem, parent, Default) -> 
@@ -269,50 +235,78 @@ Update.prototype =
     @domains.splice(index, 1)
     @problems.splice(index, 1)
 
+    if @variables
+      for name, variable of @variables
+        if variable > index
+          @variables[name] = variable - 1
+    
+    return
+
   finish: ->
     @time = @engine.console.time(@start)
     @start = undefined
 
   # change all maybe-domains to this domain
   reify: (operation, domain, from) ->
-    if !operation
-      for domain, i in @domains by -1
-        break if i == @index
-        if domain
-          @reify @problems[i], domain, from
-    else
-      if operation?.push
-        if operation.domain == from
-          operation.domain = domain
-        for arg in operation
-          if arg?.push
-            @reify arg, domain, from
+    if operation.domain == from
+      operation.domain = domain
+    for arg in operation
+      if arg?.push
+        @reify arg, domain, from
     return operation
 
-  connect: (position, result) ->
+  register: (variables) ->
+
+
+  connect: (position, inserted) ->
     index = @index
     domain = @domains[position]
     return unless domain
     problems = @problems[position]
 
     variables = @variables ||= {}
+    connecting = undefined
+
+    if inserted
+      for property, variable of variables
+        if variable >= position
+          variables[property]++
+
     for property, variable of problems.variables
       if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
-        if !result && (i = variables[property])? && (i > index) && (i < position)
-          other = @domains[i]
-          constrained = other.constraints && domain.constraints
-          if (if constrained then other.constraints.length > domain.constraints.length else position > i)
-            result = @merge(position, i)
-            @connect result, true
-            return i
-          else
-            result = @merge(i, position, false, i < position)
-            debugger if result == 4
-            @connect result, true
-            return position
+        if (i = variables[property])? && (i > index) && (i != position)
+          unless i in (connecting ||= [])
+            j = 0
+            while connecting[j] < i
+              j++
+            connecting.splice j, 0, i
         else
           variables[property] = position
 
+
+    offset = 0
+    if connecting
+      for index in [0 ... connecting.length] by 1
+        i = connecting[index]
+        other = @domains[i]
+        condition = 
+          if other.constraints && domain.constraints
+            other.constraints.length > domain.constraints.length
+          else
+            position > i
+
+        if condition
+          from = i
+          to = position
+        else
+          from = position
+          to = i
+        
+        position = @merge(from, to)
+
+        for j in [index + 1 ... connecting.length]
+          if connecting[j] >= from
+            connecting[j]--
     return
 
   # Merge source update into target update
@@ -323,6 +317,8 @@ Update.prototype =
       return @
     priority = @domains.length
     position = @index + 1
+    unless domain?
+      debugger
     while (other = @domains[position]) != undefined
       if other || !domain
         if other == domain || (domain && !domain?.solve && other.url == domain.url)
@@ -335,17 +331,18 @@ Update.prototype =
             @setVariables(cmds, problem, other)
             @reify(problem, other, domain)
 
-          #@connect(position)
+          @connect(position)
 
           return true
 
         else if other && domain
-          if ((other.priority < domain.priority) || 
-              (other.priority == domain.priority && other.MAYBE && !domain.MAYBE)) && 
+          if (other.priority < domain.priority)
+            priority = position
+            break
+          else if (other.priority == domain.priority && other.MAYBE && !domain.MAYBE) && 
               (!other.frame || other.frame == domain.frame)
-            if priority == @domains.length
-              priority = position
-        else if !domain
+            priority = position + 1
+        else# if !domain || !other
           priority--
       position++
     for problem in problems
@@ -354,7 +351,7 @@ Update.prototype =
     @insert priority, domain, problems
 
     @reify(problems, domain)
-    #@connect(priority)
+    @connect(priority, true)
     return @
 
   insert: (index, domain, problems) ->
@@ -426,34 +423,21 @@ Update.prototype =
           @busy.splice(i, 1)
       @posted = undefined
 
+  # Iterate and execute groupped expressions 
   each: (callback, bind, solution) ->
     if solution
       @apply(solution) 
 
     return unless @problems[@index + 1]
 
-    i = @index
-    debugger
-    while ++i < @problems.length
-      while (connected = @connect(i))?
-        if connected > i
-          --i
-        else
-          i = connected - 1
-     
     previous = @domains[@index]
     while (domain = @domains[++@index]) != undefined
-      #if ((!previous || previous.priority < 0) && domain?.priority > 0)
-      #  @reset()
       previous = domain
 
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
-      if @effects
-        @apply(@effects, (result = @solutions[@index] ||= {}))
-        @effects = undefined
-
+      # Send queued commands to worker
       if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
         @terminate()
         return result
@@ -469,7 +453,7 @@ Update.prototype =
 
     return solution || @
 
-  # Save results, check if solvers are caught in the loop of resolving same values
+  # Save results, check if solvers are caught in a re-solving loop
   apply: (result, solution = @solution) ->
     if result != @solution
       solution ||= @solution ||= {}
@@ -488,6 +472,7 @@ Update.prototype =
         solution[property] = value
     return solution
 
+  # Remove queued commands that match given key
   remove: (continuation, problem) ->
     for problems, index in @problems by -1
       break if index == @index

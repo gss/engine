@@ -325,7 +325,26 @@ class Domain extends Trigger
           for operation in ops
             operations.push(operation.parent)
       return operations
-      
+  
+  # Prepare domain to be consumed by another  
+  transfer: (update) ->
+    # Apply removes from parent update
+    if update
+      update.perform(@)
+            
+    # Apply removes from global update
+    @updating.perform(@)
+
+    # Reconfigure solver to release removed constraints
+    if @unconstrained
+      @Constraint::reset(@)
+
+    if @nullified
+      solution = {}
+      for prop of @nullified
+        (solution ||= {})[prop] = null
+      @updating.apply solution 
+    
   # Return a lazy that may later be promoted to a domain 
   maybe: () ->
     unless @Maybe
