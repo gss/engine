@@ -65,8 +65,8 @@ Updater = (engine) ->
     unless problem[0] instanceof Array
       index = update.wrap(problem, parent, Default)
 
-      if index?
-        update.connect(index)
+      #if index?
+      #  update.connect(index)
 
     # Unroll recursion, solve problems
     if start || foreign
@@ -88,11 +88,16 @@ Update = Updater()
 Update.compile = Updater
 Update.prototype =
 
-  merge: (from, to, parent) ->
-    domain = @domains[from]
-    return if domain.frame
-    other = @domains[to]
+  merge: (from, to, parent, reverse) ->
     probs = @problems[from]
+    unless reverse
+      domain = @domains[from]
+      other = @domains[to]
+    else
+      domain = @domains[to]
+      other = @domains[from]
+      @setVariables(probs, probs, other)
+
 
     unless domain.MAYBE
       # Apply removes from parent update
@@ -126,7 +131,8 @@ Update.prototype =
     if @engine.domains.indexOf(other) == -1
       unless other.url
         @engine.domains.push(other)
-    return true
+
+    return to - (from < to)
 
   # Group expressions
   wrap: (problem, parent, Default) -> 
@@ -168,7 +174,7 @@ Update.prototype =
                     if index < n || other.constraints?.length > domain.constraints?.length
                       @merge n, index, parent
                     else
-                      unless @merge index, n, parent
+                      unless (@merge index, n, parent)?
                         exps.splice(--i, 1)
 
                       other = domain
@@ -283,38 +289,31 @@ Update.prototype =
             @reify arg, domain, from
     return operation
 
-  connect: (position) ->
+  connect: (position, result) ->
     index = @index
     domain = @domains[position]
     return unless domain
     problems = @problems[position]
-    
-    while (other = @domains[++index]) != undefined
-      continue if position == index
-    
-      `connector: {`
-      if other?.displayName == domain.displayName
-        if variables = @problems[index].variables
-          for property of problems.variables
-            if variable = variables[property]
-              if variable.domain?.displayName == domain.displayName
-                if domain.frame == other.frame
-                  constrained = other.constraints && domain.constraints
-                  if (if constrained then other.constraints.length > domain.constraints.length else position > index)
-                    @merge position, index
-                    position = index
-                  else
-                    @merge index, position
-                  if index < position
-                    position--
-                  else
-                    index--
-                  `break connector;`
-                else
-                  framed = domain.frame && domain || other
-    `}`
-    return
 
+    variables = @variables ||= {}
+    for property, variable of problems.variables
+      if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
+        if !result && (i = variables[property])? && (i > index) && (i < position)
+          other = @domains[i]
+          constrained = other.constraints && domain.constraints
+          if (if constrained then other.constraints.length > domain.constraints.length else position > i)
+            result = @merge(position, i)
+            @connect result, true
+            return i
+          else
+            result = @merge(i, position, false, i < position)
+            debugger if result == 4
+            @connect result, true
+            return position
+        else
+          variables[property] = position
+
+    return
 
   # Merge source update into target update
   push: (problems, domain, reverse) ->
@@ -336,7 +335,7 @@ Update.prototype =
             @setVariables(cmds, problem, other)
             @reify(problem, other, domain)
 
-          @connect(position)
+          #@connect(position)
 
           return true
 
@@ -349,14 +348,18 @@ Update.prototype =
         else if !domain
           priority--
       position++
-
-    @domains.splice(priority, 0, domain)
-    @problems.splice(priority, 0, problems)
     for problem in problems
       @setVariables(problems, problem, domain)
+
+    @insert priority, domain, problems
+
     @reify(problems, domain)
-    @connect(priority)
+    #@connect(priority)
     return @
+
+  insert: (index, domain, problems) ->
+    @domains.splice(index, 0, domain)
+    @problems.splice(index, 0, problems)
 
 
   # clean cache by prefix
@@ -429,6 +432,14 @@ Update.prototype =
 
     return unless @problems[@index + 1]
 
+    i = @index
+    debugger
+    while ++i < @problems.length
+      while (connected = @connect(i))?
+        if connected > i
+          --i
+        else
+          i = connected - 1
      
     previous = @domains[@index]
     while (domain = @domains[++@index]) != undefined

@@ -257,7 +257,7 @@ class Command
             return operation[1]
           else
             return operation[1].command.path + '[' + operation[2] + ']'
-        str = @toExpression(operation[1] || '') + operation[0] + @toExpression(operation[2] || '')
+        str = @toExpression(operation[1] ? '') + operation[0] + @toExpression(operation[2] ? '')
         return str
       else
         return operation
