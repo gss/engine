@@ -52,7 +52,7 @@ class Engine extends Domain
         when 'object'
           if argument.nodeType
             if @Command
-              Engine[Engine.identity.yield(argument)] = @
+              Engine[Engine.identity(argument)] = @
               @scope = scope = argument
             else
               scope = argument
@@ -205,11 +205,8 @@ class Engine extends Domain
         @updating = undefined
       return
 
-    if @intrinsic# && (restyled || (solution && Object.keys(solution).length))
+    if @intrinsic
       @intrinsic.changes = {}
-      #scope = update.reflown || @scope
-      #update.reflown = undefined
-        
       update.apply @intrinsic.perform()
       @intrinsic.changes = undefined
 
@@ -278,64 +275,69 @@ class Engine extends Domain
     for problem, index in problems
       if problem instanceof Array && problem.length == 1 && problem[0] instanceof Array
         problem = problems[index] = problem[0]
-    if domain
-      @console.start(problems, domain.displayName)
-      result = domain.solve(problems) || undefined
-      if result && result.postMessage
-        update.await(result.url)
-      else
-        if result?.length == 1
-          result = result[0]
-      @console.end()
-      domain.setup()
-      if domain.priority < 0 && !domain.url
-        if @domains.indexOf(domain) == -1
-          @domains.push(domain)
+    
+    unless domain
+      return @broadcast problems, index, update
+
+    @console.start(problems, domain.displayName)
+    result = domain.solve(problems) || undefined
+    if result && result.postMessage
+      update.await(result.url)
+    else
+      if result?.length == 1
+        result = result[0]
+    @console.end()
+    domain.setup()
+    if domain.priority < 0 && !domain.url
+      if @domains.indexOf(domain) == -1
+        @domains.push(domain)
           
 
     # Broadcast operations without specific domain (e.g. remove)
     else
 
-      others = []
-      removes = []
-      if problems[0] == 'remove'
-        removes.push problems
-      else
-        for problem in problems
-          if problem[0] == 'remove'
-            removes.push(problem)
-          else
-            others.push(problem)
-     
-      for other, i in [@assumed, @solved].concat(@domains)
-        locals = []
-        other.changes = undefined
-        for remove in removes
-          for path, index in remove
-            continue if index == 0
-            if other.paths?[path]
-              locals.push(path)
-            else if other.observers?[path]
-              other.remove(path)
-        if other.changes
-          for property, value of other.changes
-            (result ||= {})[property] = value
-          other.changes = undefined
-
-        if locals.length
-          #other.remove.apply(other, locals)
-          locals.unshift 'remove'
-          update.push([locals], other, true)
-        if others.length
-          update.push(others, other)
-      if typeof problems[0] == 'string'
-        problems = [problems]
-      for url, worker of @workers
-        working = problems.filter (command) ->
-          command[0] != 'remove' || worker.paths?[command[1]]
-
-        update.push working, worker
     return result
+
+  broadcast: (problems, index, update) ->
+    others = []
+    removes = []
+    if problems[0] == 'remove'
+      removes.push problems
+    else
+      for problem in problems
+        if problem[0] == 'remove'
+          removes.push(problem)
+        else
+          others.push(problem)
+   
+    for other, i in [@assumed, @solved].concat(@domains)
+      locals = []
+      other.changes = undefined
+      for remove in removes
+        for path, index in remove
+          continue if index == 0
+          if other.paths?[path]
+            locals.push(path)
+          else if other.observers?[path]
+            other.remove(path)
+      if other.changes
+        for property, value of other.changes
+          (result or result = {})[property] = value
+        other.changes = undefined
+
+      if locals.length
+        #other.remove.apply(other, locals)
+        locals.unshift 'remove'
+        update.push([locals], other, true)
+      if others.length
+        update.push(others, other)
+    if typeof problems[0] == 'string'
+      problems = [problems]
+    for url, worker of @workers
+      working = problems.filter (command) ->
+        command[0] != 'remove' || worker.paths?[command[1]]
+
+      update.push working, worker
 
   # Compile initial domains and shared engine features 
   precompile: ->
@@ -346,30 +348,7 @@ class Engine extends Domain
     if location.search.indexOf('export=') > -1
       @preexport()
 
-  # Hook: Should interpreter iterate returned object?
-  # (yes, if it's a collection of objects or empty array)
-  isCollection: (object) ->
-    if object && object.length != undefined && !object.substring && !object.nodeType
-      return true if object.isCollection
-      switch typeof object[0]
-        when "object"
-          return object[0].nodeType
-        when "undefined"
-          return object.length == 0
-
-  clone: (object) -> 
-    if object && object.map
-      return object.map @clone, @
-    return object
-
-  indexOfTriplet: (array, a, b, c) ->
-    if array
-      for op, index in array by 3
-        if op == a && array[index + 1] == b && array[index + 2] == c
-          return index
-    return -1
-
-  # Comile user yieldd features specific to this engine
+  # Compile all static definitions in the engine
   compile: (state) ->
     if state
       for name of @Domains
@@ -381,7 +360,6 @@ class Engine extends Domain
     @console.compile(@)
     @running = state ? null
     @triggerEvent('compile', @)
-  
 
   # auto-worker url, only works with sync scripts!
   getWorkerURL: do ->
@@ -392,8 +370,6 @@ class Engine extends Domain
         src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
     return (url) ->
       return typeof url == 'string' && url || src
-
-
 
   # Initialize new worker and subscribe engine to its events
   useWorker: (url) ->

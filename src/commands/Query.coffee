@@ -102,7 +102,7 @@ Query = Command.extend
   getPath: (engine, operation, continuation) ->
     if continuation
       if continuation.nodeType
-        return engine.identity.yield(continuation) + ' ' + @path
+        return engine.identity(continuation) + ' ' + @path
       else
         return continuation + (@selector || @key)
     else

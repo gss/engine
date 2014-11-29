@@ -36,7 +36,7 @@ class Intrinsic extends Numeric
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
       computed = (@computed ||= {})
-      id = @identity.yield(element)
+      id = @identity(element)
       old = computed[id]
       if force || !old?
         return computed[id] = window.getComputedStyle(element)

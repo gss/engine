@@ -8,10 +8,7 @@ Updater = (engine) ->
       @problems = problem && (domain.push && problem || [problem]) || []
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
       return
-
-    if start = !parent
-      parent = @updating
-
+    
     update = new @update
 
     # Process arguments
@@ -30,24 +27,12 @@ Updater = (engine) ->
     unless object
       update.push [problem], null
 
-    # Handle broadcasted commands (e.g. remove)
-    #if !update
-    #  if typeof problem[0] == 'string'
-    #    problem = [problem]
-    #  foreign = true
-    #  update = new @update [problem], [domain != true && domain || null]
-
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
       index = update.wrap(problem, parent, Default)
 
-
-      #if index?
-      #  update.connect(index)
-
     # Unroll recursion, solve problems
-    
-    if parent
+    if parent ||= @updating
       return parent.push(update)
     else
       return update.each @resolve, @engine
@@ -61,6 +46,154 @@ Updater = (engine) ->
 Update = Updater()
 Update.compile = Updater
 Update.prototype =
+
+  # Merge given problem-domain pair or update
+  push: (problems, domain, reverse) ->
+    if domain == undefined
+      for domain, index in problems.domains
+        @push problems.problems[index], domain
+      return @
+
+    # Combine with other problems scheduled for this domain
+    if (position = @domains.indexOf(domain, @index + 1)) > -1
+      return @append position, problems, reverse
+
+    # Find an insertion point
+    if reverse || !domain
+      position = @index + 1
+    else
+      position = @domains.length
+      while (other = @domains[position - 1]) && (other.priority < domain.priority)
+        --position
+    @insert(position, domain, problems)
+
+
+  # Add given problems to a problem list at given position
+  append: (position, problems, reverse) ->
+    cmds = @problems[position]
+    domain = @domains[position]
+    if reverse
+      cmds.unshift.apply cmds, problems
+    else
+      cmds.push.apply cmds, problems
+    for problem in problems
+      if domain
+        @setVariables(cmds, problem)
+        @reify(problem, domain)
+    if domain
+      @connect(position)
+
+  # Add new domain/problems pair to the queue
+  insert: (position, domain, problems) ->
+    for problem in problems
+      problem.variables = @setVariables(problems, problem)
+
+    @domains.splice(position, 0, domain)
+    @problems.splice(position, 0, problems)
+
+    @reify(problems, domain)
+    @connect(position, false)
+
+  # Remove domain/problem pair at given index
+  splice: (index) ->
+    if (i = @engine.domains.indexOf(@domains[index])) > -1
+      @engine.domains.splice i, 1
+    @domains.splice(index, 1)
+    @problems.splice(index, 1)
+
+    if @variables
+      for name, variable of @variables
+        if variable > index
+          @variables[name] = variable - 1
+    
+    return
+
+  # Replace queued arguments with their parent function call
+  wrap: (operation, parent, Default) ->
+    positions = undefined
+    for problems, index in @problems
+      if domain = @domains[index]
+        for argument in operation
+          if problems.indexOf(argument) > -1
+            if !other || other.priority > domain.priority
+              position = index
+              other = domain
+            if !positions || positions.indexOf(index) == -1
+              (positions ||= []).push(index)
+
+    return unless positions
+
+    for index, j in positions by -1
+      if @domains[index].displayName != other.displayName
+        positions.splice index, 1
+      else
+        problems = @problems[index]
+        for argument in operation
+          if (i = problems.indexOf(argument)) > -1
+            if index == position && problems.indexOf(operation) == -1
+              problems[i] = operation
+              positions.splice(j, 1)
+            else
+              problems.splice(i, 1)
+
+    if other
+      for argument in operation
+        if argument.push
+          operation.variables = argument.variables = @setVariables(operation, argument, true)
+      @setVariables(@problems[position], operation)
+
+    if positions.length
+      return @connect(position, positions)
+    else
+      return @connect(position)
+
+  # Attempt to find and merge new domains that share variables
+  connect: (target, positions) ->
+    domain = @domains[target]
+    problems = @problems[target]
+    variables = @variables ||= {}
+
+    unless positions
+      if positions == false
+        for property, variable of variables
+          if variable >= target
+            variables[property]++
+
+      for property, variable of problems.variables
+        if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
+          if (i = variables[property])? && (i > @index) && (i != target)
+            unless i in (positions ||= [])
+              index = 0
+              while positions[index] < i
+                index++
+              positions.splice index, 0, i
+          else
+            variables[property] = target
+
+    offset = 0
+    if positions
+      for index in [0 ... positions.length] by 1
+        i = positions[index]
+        condition = 
+          if domain.constraints && @domains[i].constraints
+            @domains[i].constraints.length > domain.constraints.length
+          else
+            target > i
+
+        if condition
+          from = i
+          to = target
+        else
+          from = target
+          to = i
+        
+        target = @merge(from, to)
+
+        for j in [index + 1 ... positions.length] by 1
+          if positions[j] >= from
+            positions[j]--
+
+    return target
 
   # Combine two groups in the queue, and their domains if necessary
   merge: (from, to, parent) ->
@@ -87,7 +220,7 @@ Update.prototype =
       result[method || 'push'].apply(result, exported)
 
       for prob in exported
-        @setVariables(result, prob, other)
+        @setVariables(result, prob)
 
       @reify(exported, other, domain)
 
@@ -100,295 +233,15 @@ Update.prototype =
 
     return to
 
-  # Group expressions
-  wrap: (problem, parent, Default) -> 
-    bubbled = undefined
-
-
-    for other, index in @domains by -1
-      exps = @problems[index]
-      i = 0
-      break if index == @index
-      while exp = exps[i++]
-        # If this domain contains argument of given expression
-        continue unless  (j = problem.indexOf(exp)) > -1
-
-        # Replace last argument of the strongest domain 
-        # with the given expression (bubbles up domain info)
-        k = l = j
-        while (next = problem[++k]) != undefined
-          if next && next.push
-            for problems in @problems
-              if (m = problems.indexOf(next)) > -1
-                break
-            if m > -1
-              break
-        continue if next
-
-        # Iterate other arguments to join variable graphs
-        while (previous = problem[--l]) != undefined
-          if previous && previous.push && exps.indexOf(previous) == -1
-            for domain, n in @domains by -1
-              continue if n == index
-              break if n == @index
-              probs = @problems[n]
-
-              if (j = probs.indexOf(previous)) > -1
-                if domain != other && domain.priority < 0 && other.priority < 0
-                  if !domain.MAYBE
-
-                    if index < n || other.constraints?.length > domain.constraints?.length
-                      @merge n, index, parent
-                    else
-                      unless (@merge index, n, parent)?
-                        exps.splice(--i, 1)
-
-                      other = domain
-                      i = j + 1
-                      exps = @problems[n]
-
-                    break
-                  else if !other.MAYBE
-                    @merge n, index
-
-                    continue
-                if domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)
-                  i = j + 1
-                  exps = @problems[n]
-                  other = domain
-                break
-            break
-
-        # Replace that last argument with the given function call
-        if !other.signatures[problem[0]]
-          opdomain = Default
-        if opdomain && (opdomain.displayName != other.displayName)
-          if (j = @domains.indexOf(opdomain, @index + 1)) == -1
-            j = @domains.push(opdomain) - 1
-            @problems[j] = [problem]
-          else
-            @problems[j].push problem
-          problem.domain = opdomain
-          #strong = exp.domain && !exp.domain.MAYBE
-          #for arg in exp
-          #  if arg.domain && !arg.domain.MAYBE
-          #    strong = true
-          #unless strong
-          exps.splice(--i, 1)
-          if exps.length == 0
-            @splice index, 1
-        else unless bubbled
-          if problem.indexOf(exps[i - 1]) > -1
-            bubbled = exps
-            if exps.indexOf(problem) == -1
-              exps[i - 1] = problem
-            else 
-              exps.splice(--i, 1)
-
-            problem.domain = other
-
-        # Update variables table (???)
-        if other
-          for domain, counter in @domains by -1
-            if domain && (domain != other || bubbled)
-              if (other.MAYBE && domain.MAYBE) || domain.displayName == other.displayName
-                problems = @problems[counter]
-                for arg in problem
-                  if (j = problems.indexOf(arg)) > -1
-                    @reify(arg, other, domain)
-                    problems.splice(j, 1)
-                    if problems.length == 0
-                      @splice counter, 1
-
-        if bubbled
-          for arg in problem
-            if arg.push
-              if arg[0] == 'get'
-                #if !arg.domain || arg.domain.displayName == other.displayName
-                @setVariable(problem, arg[1], arg)
-                @setVariable(exp, arg[1], arg)
-
-              else if arg.variables
-                for prop, value of arg.variables
-                  @setVariable(problem, prop, value)
-                  @setVariable(exp, prop, value)
-          @setVariables(bubbled, problem, other)
-          return @problems.indexOf(bubbled)
-        return
-
-  setVariable: (result, prop, arg, domain) ->
-    variables = (result.variables ||= {})
-    variables[prop] = arg
-
-  setVariables: (result, probs, other) ->
-    if probs.variables
-      variables = result.variables ||= {}
-      for property, operation of probs.variables
-        #operation.domain = other
-        variables[property] = operation
-    return
-
-  splice: (index) ->
-    #unless @domains[index].constraints?.length > 0
-    if (i = @engine.domains.indexOf(@domains[index])) > -1
-      @engine.domains.splice i, 1
-    @domains.splice(index, 1)
-    @problems.splice(index, 1)
-
-    if @variables
-      for name, variable of @variables
-        if variable > index
-          @variables[name] = variable - 1
-    
-    return
-
-  finish: ->
-    @time = @engine.console.time(@start)
-    @start = undefined
-
-  # change all maybe-domains to this domain
-  reify: (operation, domain, from) ->
-    if operation.domain == from
-      operation.domain = domain
-    for arg in operation
-      if arg?.push
-        @reify arg, domain, from
-    return operation
-
-  register: (variables) ->
-
-
-  connect: (position, inserted) ->
-    index = @index
-    domain = @domains[position]
-    return unless domain
-    problems = @problems[position]
-
-    variables = @variables ||= {}
-    connecting = undefined
-
-    if inserted
-      for property, variable of variables
-        if variable >= position
-          variables[property]++
-
-    for property, variable of problems.variables
-      if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
-        if (i = variables[property])? && (i > index) && (i != position)
-          unless i in (connecting ||= [])
-            j = 0
-            while connecting[j] < i
-              j++
-            connecting.splice j, 0, i
-        else
-          variables[property] = position
-
-
-    offset = 0
-    if connecting
-      for index in [0 ... connecting.length] by 1
-        i = connecting[index]
-        other = @domains[i]
-        condition = 
-          if other.constraints && domain.constraints
-            other.constraints.length > domain.constraints.length
-          else
-            position > i
-
-        if condition
-          from = i
-          to = position
-        else
-          from = position
-          to = i
-        
-        position = @merge(from, to)
-
-        for j in [index + 1 ... connecting.length]
-          if connecting[j] >= from
-            connecting[j]--
-    return
-
-  # Merge source update into target update
-  push: (problems, domain, reverse) ->
-    if domain == undefined
-      for domain, index in problems.domains
-        @push problems.problems[index], domain
-      return @
-    priority = @domains.length
-    position = @index + 1
-    unless domain?
-      debugger
-    while (other = @domains[position]) != undefined
-      if other || !domain
-        if other == domain || (domain && !domain?.solve && other.url == domain.url)
-          cmds = @problems[position]
-          for problem in problems
-            if reverse || (domain && !domain.solve && other.url == domain.url && problem[0] == 'remove')
-              cmds.unshift problem
-            else
-              cmds.push problem
-            @setVariables(cmds, problem, other)
-            @reify(problem, other, domain)
-
-          @connect(position)
-
-          return true
-
-        else if other && domain
-          if (other.priority < domain.priority)
-            priority = position
-            break
-          else if (other.priority == domain.priority && other.MAYBE && !domain.MAYBE) && 
-              (!other.frame || other.frame == domain.frame)
-            priority = position + 1
-        else# if !domain || !other
-          priority--
-      position++
-    for problem in problems
-      @setVariables(problems, problem, domain)
-
-    @insert priority, domain, problems
-
-    @reify(problems, domain)
-    @connect(priority, true)
-    return @
-
-  insert: (index, domain, problems) ->
-    @domains.splice(index, 0, domain)
-    @problems.splice(index, 0, problems)
-
-
-  # clean cache by prefix
-  cleanup: (name, continuation) ->
-    old = @[name]
-    if continuation
-      if old
-        length = continuation.length
-        for prop of old
-          if prop.substring(0, length) == continuation
-            delete old[prop]
-    else
-      @[name] = {}
-      @[name].previous = old
-
-
-  reset: (continuation) ->
-    @cleanup 'queries', continuation
-    @cleanup 'collections', continuation
-    @cleanup 'mutations'
-
   await: (url) ->
     (@busy ||= []).push(url)
 
   postMessage: (url, message) ->
     ((@posted ||= {})[url.url || url] ||= []).push(@engine.clone(message))
 
+  # Send queued messages to the workers
   terminate: ->
     if @posted
-      #if (i = @domains.indexOf(@engine.intrinsic)) > -1
-      #  if i == @domains.lastIndexOf(@engine.intrinsic)
-      #    @engine.intrinsic.batch()
       for url, message of @posted
         worker = @engine.workers[url]
         paths = (worker.paths ||= {})
@@ -483,9 +336,7 @@ Update.prototype =
             @splice index, 1
     return
 
-  getProblems: (callback, bind) ->
-    return GSS.prototype.clone @problems
-
+  # Find globally broadcasted commands and apply them to a domain
   perform: (domain) -> 
     globals = @domains.indexOf(null, @index + 1)
     if globals > -1
@@ -497,7 +348,55 @@ Update.prototype =
         for glob in globs
           if glob[0] == 'remove'
             domain.remove.apply(domain, glob.slice(1))
+    
+    return
+
+  # Register expression variables in a given variable lookup table
+  setVariables: (result, operation, share) ->
+    if variables = operation.variables
+      if !result.variables && share
+        result.variables = variables
+      else
+        for property, variable of variables
+          (result.variables ||= {})[property] = variable
+    else if operation[0] == 'get'
+      (result.variables ||= {})[operation[1]] = operation
+    return result.variables
+    
+  # Replace domain references in given expression tree
+  reify: (operation, domain, from) ->
+    if operation.domain == from
+      operation.domain = domain
+    for arg in operation
+      if arg?.push
+        @reify arg, domain, from
+    return operation
+
+
+  # clean cache by prefix
+  cleanup: (name, continuation) ->
+    old = @[name]
+    if continuation
+      if old
+        length = continuation.length
+        for prop of old
+          if prop.substring(0, length) == continuation
+            delete old[prop]
+    else
+      @[name] = {}
+      @[name].previous = old
+
+  reset: (continuation) ->
+    @cleanup 'queries', continuation
+    @cleanup 'collections', continuation
+    @cleanup 'mutations'
+
+  getProblems: (callback, bind) ->
+    return GSS.prototype.clone @problems
+    
+  finish: ->
+    @time = @engine.console.time(@start)
+    @start = undefined
+
   index: -1
-
-
 module.exports = Update

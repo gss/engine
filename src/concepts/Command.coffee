@@ -228,7 +228,7 @@ class Command
       return engine.Continuation.get(continuation, null, engine.Continuation.PAIR)
 
   fork: (engine, continuation, item) ->
-    return engine.Continuation.get(continuation + engine.identity.yield(item), null, engine.Continuation.ASCEND)
+    return engine.Continuation.get(continuation + engine.identity(item), null, engine.Continuation.ASCEND)
 
   # Return alternative operation to process
   jump: ->
@@ -339,6 +339,8 @@ class Command
   @orphanize: (operation) ->
     if operation.domain
       operation.domain = undefined
+    if operation.variables
+      operation.variables = undefined
     for arg in operation
       if arg?.push
         @orphanize arg

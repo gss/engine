@@ -164,26 +164,26 @@ class Pairs
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
-    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + @engine.identity.yield(scope)
+    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + @engine.identity(scope)
       
 
     cleaned = []
     for pair in removed
       continue if !pair[0] || !pair[1]
       contd = left
-      contd += @engine.identity.yield(pair[0])
+      contd += @engine.identity(pair[0])
       contd += @engine.Continuation.PAIR
       contd += root.right.command.path
-      contd += @engine.identity.yield(pair[1])
+      contd += @engine.identity(pair[1])
       cleaned.push(contd)
     
     solved = []
     for pair in added
       contd = left
-      contd += @engine.identity.yield(pair[0])
+      contd += @engine.identity(pair[0])
       contd += @engine.Continuation.PAIR
       contd += root.right.command.path
-      contd += @engine.identity.yield(pair[1])
+      contd += @engine.identity(pair[1])
 
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)

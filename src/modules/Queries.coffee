@@ -246,7 +246,7 @@ class Queries
   remove: (id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
       node = id
-      id = @engine.identity.yield(id)
+      id = @engine.identity(id)
     else
       if id.indexOf('"') > -1
         node = id
@@ -336,7 +336,6 @@ class Queries
       unless path.charAt(0) == @engine.Continuation.PAIR
         contd = @engine.Continuation(path)
         @engine.updating?.remove(contd)
-        
         @engine.yield(['remove', contd])
     return true
 
@@ -454,7 +453,7 @@ class Queries
       else if continuation.charAt(0) == engine.Continuation.PAIR
 
         # Subscribe node to the query
-        if id = engine.identity.yield(node)
+        if id = engine.identity(node)
           watchers = @watchers[id] ||= []
           if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
             operation.command.prepare(operation)
@@ -487,7 +486,7 @@ class Queries
       
     #unless operation.def.capture
       # Subscribe node to the query
-    if id = engine.identity.yield(node)
+    if id = engine.identity(node)
       watchers = @watchers[id] ||= []
       if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         operation.command.prepare(operation)
@@ -520,7 +519,7 @@ class Queries
 
   # Check if a node observes this qualifier or combinator
   match: (node, group, qualifier, changed, continuation) ->
-    return unless id = @engine.identity.yield(node)
+    return unless id = @engine.identity(node)
     return unless watchers = @watchers[id]
     if continuation
       path = @engine.Continuation.getCanonicalPath(continuation)

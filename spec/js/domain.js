@@ -319,14 +319,12 @@ describe('Domain', function() {
       });
       expect(engine.solve([['==', ['get', 'c'], ['*', 2, ['get', 'a']]]], 'my_tracker_path')).to.eql({
         b: 2,
-        c: 2,
-        a: 1
+        c: 2
       });
       GSS.console.log(1);
       return expect(engine.solve([['remove', 'my_tracker_path']])).to.eql({
         b: 0,
-        c: 0,
-        a: 1
+        c: 0
       });
     });
     return it('should merge multiple domains', function() {

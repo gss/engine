@@ -42,7 +42,7 @@ class Document extends Abstract
 
   events:
     resize: (e = '::window') ->
-      id = e.target && @identity.yield(e.target) || e
+      id = e.target && @identity(e.target) || e
 
       unless @resizer?
         if e.target && @updating
@@ -65,7 +65,7 @@ class Document extends Abstract
       , 20
       
     scroll: (e = '::window') ->
-      id = e.target && @identity.yield(e.target) || e
+      id = e.target && @identity(e.target) || e
       @solve id + ' scrolled', ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
@@ -94,14 +94,14 @@ class Document extends Abstract
       if @running == undefined
         @triggerEvent('DOMContentLoaded')
       @solve 'Document', 'onload', ->
-        @solve(['get', ['::window'], 'width'])
+        @intrinsic.solve([])
     
     load: ->
       if @running == undefined
         @triggerEvent('DOMContentLoaded')
       window.removeEventListener 'load', @
       @solve 'Document', 'onload', ->
-        @solve(['get', ['::window'], 'width'])
+        @intrinsic.solve([])
 
     # Observe and parse stylesheets
     compile: ->

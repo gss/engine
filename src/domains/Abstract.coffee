@@ -38,7 +38,7 @@ Top = Abstract::Default.extend
   execute: (args..., engine, operation, continuation, scope) ->
     meta = key: engine.Continuation.get(continuation)
     if scope != engine.scope
-      meta.scope = engine.identity.yield(scope)
+      meta.scope = engine.identity(scope)
 
     args.unshift operation[0]
     wrapper = @produce(meta, args, operation)

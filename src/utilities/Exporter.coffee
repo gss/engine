@@ -4,11 +4,11 @@ class Exporter
     # Let every element get an ID
     if (scope = @scope).nodeType == 9
       scope = @scope.body
-    @identity.yield(scope)
+    @identity(scope)
     for element in scope.getElementsByTagName('*')
       if element.tagName != 'SCRIPT' &&
           (element.tagName != 'STYLE' || element.getAttribute('type')?.indexOf('gss') > -1)
-        @identity.yield(element)
+        @identity(element)
     if window.Sizes
       @sizes = []
       for pairs in window.Sizes

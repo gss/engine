@@ -83,7 +83,7 @@ class Domain extends Trigger
         result = @apply(result)
 
     if commands
-      @engine.yield commands
+      @update commands
 
     if transacting
       commited = @commit()
@@ -344,7 +344,7 @@ class Domain extends Trigger
       for prop of @nullified
         (solution ||= {})[prop] = null
       @updating.apply solution 
-    
+
   # Return a lazy that may later be promoted to a domain 
   maybe: () ->
     unless @Maybe
@@ -365,7 +365,7 @@ class Domain extends Trigger
     else
       if typeof id != 'string'
         if id.nodeType
-          id = @identity.yield(id)
+          id = @identity(id)
         else 
           id = id.path
       if id == @engine.scope?._gss_id && property.substring(0, 10) != 'intrinsic-'
@@ -438,6 +438,28 @@ class Domain extends Trigger
         engine[name.toLowerCase()] = new engine[name]
     @
 
+  # Hook: Should interpreter iterate returned object?
+  # (yes, if it's a collection of objects or empty array)
+  isCollection: (object) ->
+    if object && object.length != undefined && !object.substring && !object.nodeType
+      return true if object.isCollection
+      switch typeof object[0]
+        when "object"
+          return object[0].nodeType
+        when "undefined"
+          return object.length == 0
+
+  clone: (object) -> 
+    if object && object.map
+      return object.map @clone, @
+    return object
+
+  indexOfTriplet: (array, a, b, c) ->
+    if array
+      for op, index in array by 3
+        if op == a && array[index + 1] == b && array[index + 2] == c
+          return index
+    return -1
   DONE: 'solve'
   
 module.exports = Domain

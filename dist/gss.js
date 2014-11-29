@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-11-28) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-11-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20103,7 +20103,7 @@ Engine = (function(_super) {
         case 'object':
           if (argument.nodeType) {
             if (this.Command) {
-              Engine[Engine.identity["yield"](argument)] = this;
+              Engine[Engine.identity(argument)] = this;
               this.scope = scope = argument;
             } else {
               scope = argument;
@@ -20307,7 +20307,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.resolve = function(domain, problems, index, update) {
-    var i, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, working, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4;
+    var problem, result, _i, _len;
     if (domain && !domain.solve && domain.postMessage) {
       update.postMessage(domain, problems);
       update.await(domain.url);
@@ -20319,87 +20319,95 @@ Engine = (function(_super) {
         problem = problems[index] = problem[0];
       }
     }
-    if (domain) {
-      this.console.start(problems, domain.displayName);
-      result = domain.solve(problems) || void 0;
-      if (result && result.postMessage) {
-        update.await(result.url);
-      } else {
-        if ((result != null ? result.length : void 0) === 1) {
-          result = result[0];
-        }
-      }
-      this.console.end();
-      domain.setup();
-      if (domain.priority < 0 && !domain.url) {
-        if (this.domains.indexOf(domain) === -1) {
-          this.domains.push(domain);
-        }
-      }
+    if (!domain) {
+      this.broadcast(problems, index, update);
+    }
+    this.console.start(problems, domain.displayName);
+    result = domain.solve(problems) || void 0;
+    if (result && result.postMessage) {
+      update.await(result.url);
     } else {
-      others = [];
-      removes = [];
-      if (problems[0] === 'remove') {
-        removes.push(problems);
-      } else {
-        for (_j = 0, _len1 = problems.length; _j < _len1; _j++) {
-          problem = problems[_j];
-          if (problem[0] === 'remove') {
-            removes.push(problem);
-          } else {
-            others.push(problem);
-          }
-        }
-      }
-      _ref = [this.assumed, this.solved].concat(this.domains);
-      for (i = _k = 0, _len2 = _ref.length; _k < _len2; i = ++_k) {
-        other = _ref[i];
-        locals = [];
-        other.changes = void 0;
-        for (_l = 0, _len3 = removes.length; _l < _len3; _l++) {
-          remove = removes[_l];
-          for (index = _m = 0, _len4 = remove.length; _m < _len4; index = ++_m) {
-            path = remove[index];
-            if (index === 0) {
-              continue;
-            }
-            if ((_ref1 = other.paths) != null ? _ref1[path] : void 0) {
-              locals.push(path);
-            } else if ((_ref2 = other.observers) != null ? _ref2[path] : void 0) {
-              other.remove(path);
-            }
-          }
-        }
-        if (other.changes) {
-          _ref3 = other.changes;
-          for (property in _ref3) {
-            value = _ref3[property];
-            (result || (result = {}))[property] = value;
-          }
-          other.changes = void 0;
-        }
-        if (locals.length) {
-          locals.unshift('remove');
-          update.push([locals], other, true);
-        }
-        if (others.length) {
-          update.push(others, other);
-        }
-      }
-      if (typeof problems[0] === 'string') {
-        problems = [problems];
-      }
-      _ref4 = this.workers;
-      for (url in _ref4) {
-        worker = _ref4[url];
-        working = problems.filter(function(command) {
-          var _ref5;
-          return command[0] !== 'remove' || ((_ref5 = worker.paths) != null ? _ref5[command[1]] : void 0);
-        });
-        update.push(working, worker);
+      if ((result != null ? result.length : void 0) === 1) {
+        result = result[0];
       }
     }
+    this.console.end();
+    domain.setup();
+    if (domain.priority < 0 && !domain.url) {
+      if (this.domains.indexOf(domain) === -1) {
+        this.domains.push(domain);
+      }
+    } else {
+
+    }
     return result;
+  };
+
+  Engine.prototype.broadcast = function(problems, index, update) {
+    var i, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, working, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _results;
+    others = [];
+    removes = [];
+    if (problems[0] === 'remove') {
+      removes.push(problems);
+    } else {
+      for (_i = 0, _len = problems.length; _i < _len; _i++) {
+        problem = problems[_i];
+        if (problem[0] === 'remove') {
+          removes.push(problem);
+        } else {
+          others.push(problem);
+        }
+      }
+    }
+    _ref = [this.assumed, this.solved].concat(this.domains);
+    for (i = _j = 0, _len1 = _ref.length; _j < _len1; i = ++_j) {
+      other = _ref[i];
+      locals = [];
+      other.changes = void 0;
+      for (_k = 0, _len2 = removes.length; _k < _len2; _k++) {
+        remove = removes[_k];
+        for (index = _l = 0, _len3 = remove.length; _l < _len3; index = ++_l) {
+          path = remove[index];
+          if (index === 0) {
+            continue;
+          }
+          if ((_ref1 = other.paths) != null ? _ref1[path] : void 0) {
+            locals.push(path);
+          } else if ((_ref2 = other.observers) != null ? _ref2[path] : void 0) {
+            other.remove(path);
+          }
+        }
+      }
+      if (other.changes) {
+        _ref3 = other.changes;
+        for (property in _ref3) {
+          value = _ref3[property];
+          (result || (result = {}))[property] = value;
+        }
+        other.changes = void 0;
+      }
+      if (locals.length) {
+        locals.unshift('remove');
+        update.push([locals], other, true);
+      }
+      if (others.length) {
+        update.push(others, other);
+      }
+    }
+    if (typeof problems[0] === 'string') {
+      problems = [problems];
+    }
+    _ref4 = this.workers;
+    _results = [];
+    for (url in _ref4) {
+      worker = _ref4[url];
+      working = problems.filter(function(command) {
+        var _ref5;
+        return command[0] !== 'remove' || ((_ref5 = worker.paths) != null ? _ref5[command[1]] : void 0);
+      });
+      _results.push(update.push(working, worker));
+    }
+    return _results;
   };
 
   Engine.prototype.precompile = function() {
@@ -20412,40 +20420,6 @@ Engine = (function(_super) {
     if (location.search.indexOf('export=') > -1) {
       return this.preexport();
     }
-  };
-
-  Engine.prototype.isCollection = function(object) {
-    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
-      if (object.isCollection) {
-        return true;
-      }
-      switch (typeof object[0]) {
-        case "object":
-          return object[0].nodeType;
-        case "undefined":
-          return object.length === 0;
-      }
-    }
-  };
-
-  Engine.prototype.clone = function(object) {
-    if (object && object.map) {
-      return object.map(this.clone, this);
-    }
-    return object;
-  };
-
-  Engine.prototype.indexOfTriplet = function(array, a, b, c) {
-    var index, op, _i, _len;
-    if (array) {
-      for (index = _i = 0, _len = array.length; _i < _len; index = _i += 3) {
-        op = array[index];
-        if (op === a && array[index + 1] === b && array[index + 2] === c) {
-          return index;
-        }
-      }
-    }
-    return -1;
   };
 
   Engine.prototype.compile = function(state) {
@@ -21332,7 +21306,7 @@ Query = Command.extend({
   getPath: function(engine, operation, continuation) {
     if (continuation) {
       if (continuation.nodeType) {
-        return engine.identity["yield"](continuation) + ' ' + this.path;
+        return engine.identity(continuation) + ' ' + this.path;
       } else {
         return continuation + (this.selector || this.key);
       }
@@ -21771,7 +21745,7 @@ Selector.define({
       if (node === engine.scope) {
         return '$"' + value + '"';
       } else {
-        return engine.identity["yield"](node) + '"' + value + '"';
+        return engine.identity(node) + '"' + value + '"';
       }
     },
     prefix: '"'
@@ -22783,7 +22757,7 @@ Command = (function() {
   };
 
   Command.prototype.fork = function(engine, continuation, item) {
-    return engine.Continuation.get(continuation + engine.identity["yield"](item), null, engine.Continuation.ASCEND);
+    return engine.Continuation.get(continuation + engine.identity(item), null, engine.Continuation.ASCEND);
   };
 
   Command.prototype.jump = function() {};
@@ -22910,6 +22884,9 @@ Command = (function() {
     var arg, _j, _len;
     if (operation.domain) {
       operation.domain = void 0;
+    }
+    if (operation.variables) {
+      operation.variables = void 0;
     }
     for (_j = 0, _len = operation.length; _j < _len; _j++) {
       arg = operation[_j];
@@ -23073,7 +23050,7 @@ Continuation = (function() {
       if (!path && !value) {
         return '';
       }
-      return path + (value && engine.identity["yield"](value) || '') + suffix;
+      return path + (value && engine.identity(value) || '') + suffix;
     };
     Kontinuation.engine = engine;
     Kontinuation.get = Kontinuation;
@@ -23144,7 +23121,7 @@ Continuation = (function() {
       return continuation;
     }
     if (scope && this.engine.scope !== scope) {
-      id = this.engine.identity["yield"](scope);
+      id = this.engine.identity(scope);
       prev = bits[bits.length - 2];
       if (prev && prev.substring(prev.length - id.length) !== id) {
         last = bits[bits.length - 1];
@@ -23171,7 +23148,7 @@ Continuation = (function() {
       bits.pop();
     }
     if (scope && this.engine.scope !== scope) {
-      id = this.engine.identity["yield"](scope);
+      id = this.engine.identity(scope);
       if (last.substring(last.length - id.length) === id) {
         bits.pop();
         last = bits[bits.length - 1];
@@ -23335,7 +23312,7 @@ Domain = (function(_super) {
       }
     }
     if (commands) {
-      this.engine["yield"](commands);
+      this.update(commands);
     }
     if (transacting) {
       commited = this.commit();
@@ -23702,7 +23679,7 @@ Domain = (function(_super) {
     } else {
       if (typeof id !== 'string') {
         if (id.nodeType) {
-          id = this.identity["yield"](id);
+          id = this.identity(id);
         } else {
           id = id.path;
         }
@@ -23797,6 +23774,40 @@ Domain = (function(_super) {
       }
     }
     return this;
+  };
+
+  Domain.prototype.isCollection = function(object) {
+    if (object && object.length !== void 0 && !object.substring && !object.nodeType) {
+      if (object.isCollection) {
+        return true;
+      }
+      switch (typeof object[0]) {
+        case "object":
+          return object[0].nodeType;
+        case "undefined":
+          return object.length === 0;
+      }
+    }
+  };
+
+  Domain.prototype.clone = function(object) {
+    if (object && object.map) {
+      return object.map(this.clone, this);
+    }
+    return object;
+  };
+
+  Domain.prototype.indexOfTriplet = function(array, a, b, c) {
+    var index, op, _i, _len;
+    if (array) {
+      for (index = _i = 0, _len = array.length; _i < _len; index = _i += 3) {
+        op = array[index];
+        if (op === a && array[index + 1] === b && array[index + 2] === c) {
+          return index;
+        }
+      }
+    }
+    return -1;
   };
 
   Domain.prototype.DONE = 'solve';
@@ -24611,14 +24622,11 @@ var Update, Updater,
 Updater = function(engine) {
   var Update, property, value, _ref;
   Update = function(problem, domain, parent, Default) {
-    var arg, index, object, start, update, vardomain, _i, _len;
+    var arg, index, object, update, vardomain, _i, _len;
     if (this instanceof Update) {
       this.problems = problem && (domain.push && problem || [problem]) || [];
       this.domains = domain && (domain.push && domain || [domain]) || [];
       return;
-    }
-    if (start = !parent) {
-      parent = this.updating;
     }
     update = new this.update;
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
@@ -24643,7 +24651,7 @@ Updater = function(engine) {
     if (!(problem[0] instanceof Array)) {
       index = update.wrap(problem, parent, Default);
     }
-    if (parent) {
+    if (parent || (parent = this.updating)) {
       return parent.push(update);
     } else {
       return update.each(this.resolve, this.engine);
@@ -24667,6 +24675,189 @@ Update = Updater();
 Update.compile = Updater;
 
 Update.prototype = {
+  push: function(problems, domain, reverse) {
+    var index, other, position, _i, _len, _ref;
+    if (domain === void 0) {
+      _ref = problems.domains;
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        domain = _ref[index];
+        this.push(problems.problems[index], domain);
+      }
+      return this;
+    }
+    if ((position = this.domains.indexOf(domain, this.index + 1)) > -1) {
+      return this.append(position, problems, reverse);
+    }
+    if (reverse || !domain) {
+      position = this.index + 1;
+    } else {
+      position = this.domains.length;
+      while ((other = this.domains[position - 1]) && (other.priority < domain.priority)) {
+        --position;
+      }
+    }
+    return this.insert(position, domain, problems);
+  },
+  append: function(position, problems, reverse) {
+    var cmds, domain, problem, _i, _len;
+    cmds = this.problems[position];
+    domain = this.domains[position];
+    if (reverse) {
+      cmds.unshift.apply(cmds, problems);
+    } else {
+      cmds.push.apply(cmds, problems);
+    }
+    for (_i = 0, _len = problems.length; _i < _len; _i++) {
+      problem = problems[_i];
+      if (domain) {
+        this.setVariables(cmds, problem);
+        this.reify(problem, domain);
+      }
+    }
+    if (domain) {
+      return this.connect(position);
+    }
+  },
+  insert: function(position, domain, problems) {
+    var problem, _i, _len;
+    for (_i = 0, _len = problems.length; _i < _len; _i++) {
+      problem = problems[_i];
+      problem.variables = this.setVariables(problems, problem);
+    }
+    this.domains.splice(position, 0, domain);
+    this.problems.splice(position, 0, problems);
+    this.reify(problems, domain);
+    return this.connect(position, false);
+  },
+  splice: function(index) {
+    var i, name, variable, _ref;
+    if ((i = this.engine.domains.indexOf(this.domains[index])) > -1) {
+      this.engine.domains.splice(i, 1);
+    }
+    this.domains.splice(index, 1);
+    this.problems.splice(index, 1);
+    if (this.variables) {
+      _ref = this.variables;
+      for (name in _ref) {
+        variable = _ref[name];
+        if (variable > index) {
+          this.variables[name] = variable - 1;
+        }
+      }
+    }
+  },
+  wrap: function(operation, parent, Default) {
+    var argument, domain, i, index, j, other, position, positions, problems, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref;
+    positions = void 0;
+    _ref = this.problems;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+      problems = _ref[index];
+      if (domain = this.domains[index]) {
+        for (_j = 0, _len1 = operation.length; _j < _len1; _j++) {
+          argument = operation[_j];
+          if (problems.indexOf(argument) > -1) {
+            if (!other || other.priority > domain.priority) {
+              position = index;
+              other = domain;
+            }
+            if (!positions || positions.indexOf(index) === -1) {
+              (positions || (positions = [])).push(index);
+            }
+          }
+        }
+      }
+    }
+    if (!positions) {
+      return;
+    }
+    for (j = _k = positions.length - 1; _k >= 0; j = _k += -1) {
+      index = positions[j];
+      if (this.domains[index].displayName !== other.displayName) {
+        positions.splice(index, 1);
+      } else {
+        problems = this.problems[index];
+        for (_l = 0, _len2 = operation.length; _l < _len2; _l++) {
+          argument = operation[_l];
+          if ((i = problems.indexOf(argument)) > -1) {
+            if (index === position && problems.indexOf(operation) === -1) {
+              problems[i] = operation;
+              positions.splice(j, 1);
+            } else {
+              problems.splice(i, 1);
+            }
+          }
+        }
+      }
+    }
+    if (other) {
+      for (_m = 0, _len3 = operation.length; _m < _len3; _m++) {
+        argument = operation[_m];
+        if (argument.push) {
+          operation.variables = argument.variables = this.setVariables(operation, argument, true);
+        }
+      }
+      this.setVariables(this.problems[position], operation);
+    }
+    if (positions.length) {
+      return this.connect(position, positions);
+    } else {
+      return this.connect(position);
+    }
+  },
+  connect: function(target, positions) {
+    var condition, domain, from, i, index, j, offset, problems, property, to, variable, variables, _i, _j, _ref, _ref1, _ref2, _ref3;
+    domain = this.domains[target];
+    problems = this.problems[target];
+    variables = this.variables || (this.variables = {});
+    if (!positions) {
+      if (positions === false) {
+        for (property in variables) {
+          variable = variables[property];
+          if (variable >= target) {
+            variables[property]++;
+          }
+        }
+      }
+      _ref = problems.variables;
+      for (property in _ref) {
+        variable = _ref[property];
+        if (variable.domain.priority < 0 && variable.domain.displayName === domain.displayName) {
+          if (((i = variables[property]) != null) && (i > this.index) && (i !== target)) {
+            if (__indexOf.call((positions || (positions = [])), i) < 0) {
+              index = 0;
+              while (positions[index] < i) {
+                index++;
+              }
+              positions.splice(index, 0, i);
+            }
+          } else {
+            variables[property] = target;
+          }
+        }
+      }
+    }
+    offset = 0;
+    if (positions) {
+      for (index = _i = 0, _ref1 = positions.length; _i < _ref1; index = _i += 1) {
+        i = positions[index];
+        condition = domain.constraints && this.domains[i].constraints ? this.domains[i].constraints.length > domain.constraints.length : target > i;
+        if (condition) {
+          from = i;
+          to = target;
+        } else {
+          from = target;
+          to = i;
+        }
+        target = this.merge(from, to);
+        for (j = _j = _ref2 = index + 1, _ref3 = positions.length; _j < _ref3; j = _j += 1) {
+          if (positions[j] >= from) {
+            positions[j]--;
+          }
+        }
+      }
+    }
+    return target;
+  },
   merge: function(from, to, parent) {
     var domain, exported, method, other, prob, problems, property, result, variable, _i, _j, _len, _len1, _ref;
     domain = this.domains[from];
@@ -24692,7 +24883,7 @@ Update.prototype = {
       result[method || 'push'].apply(result, exported);
       for (_j = 0, _len1 = exported.length; _j < _len1; _j++) {
         prob = exported[_j];
-        this.setVariables(result, prob, other);
+        this.setVariables(result, prob);
       }
       this.reify(exported, other, domain);
       _ref = result.variables;
@@ -24707,343 +24898,6 @@ Update.prototype = {
       this.engine.domains.push(other);
     }
     return to;
-  },
-  wrap: function(problem, parent, Default) {
-    var arg, bubbled, counter, domain, exp, exps, i, index, j, k, l, m, n, next, opdomain, other, previous, problems, probs, prop, value, _i, _j, _k, _l, _len, _len1, _len2, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-    bubbled = void 0;
-    _ref = this.domains;
-    for (index = _i = _ref.length - 1; _i >= 0; index = _i += -1) {
-      other = _ref[index];
-      exps = this.problems[index];
-      i = 0;
-      if (index === this.index) {
-        break;
-      }
-      while (exp = exps[i++]) {
-        if (!((j = problem.indexOf(exp)) > -1)) {
-          continue;
-        }
-        k = l = j;
-        while ((next = problem[++k]) !== void 0) {
-          if (next && next.push) {
-            _ref1 = this.problems;
-            for (_j = 0, _len = _ref1.length; _j < _len; _j++) {
-              problems = _ref1[_j];
-              if ((m = problems.indexOf(next)) > -1) {
-                break;
-              }
-            }
-            if (m > -1) {
-              break;
-            }
-          }
-        }
-        if (next) {
-          continue;
-        }
-        while ((previous = problem[--l]) !== void 0) {
-          if (previous && previous.push && exps.indexOf(previous) === -1) {
-            _ref2 = this.domains;
-            for (n = _k = _ref2.length - 1; _k >= 0; n = _k += -1) {
-              domain = _ref2[n];
-              if (n === index) {
-                continue;
-              }
-              if (n === this.index) {
-                break;
-              }
-              probs = this.problems[n];
-              if ((j = probs.indexOf(previous)) > -1) {
-                if (domain !== other && domain.priority < 0 && other.priority < 0) {
-                  if (!domain.MAYBE) {
-                    if (index < n || ((_ref3 = other.constraints) != null ? _ref3.length : void 0) > ((_ref4 = domain.constraints) != null ? _ref4.length : void 0)) {
-                      this.merge(n, index, parent);
-                    } else {
-                      if ((this.merge(index, n, parent)) == null) {
-                        exps.splice(--i, 1);
-                      }
-                      other = domain;
-                      i = j + 1;
-                      exps = this.problems[n];
-                    }
-                    break;
-                  } else if (!other.MAYBE) {
-                    this.merge(n, index);
-                    continue;
-                  }
-                }
-                if (domain.priority < 0 && (domain.priority > other.priority || other.priority > 0)) {
-                  i = j + 1;
-                  exps = this.problems[n];
-                  other = domain;
-                }
-                break;
-              }
-            }
-            break;
-          }
-        }
-        if (!other.signatures[problem[0]]) {
-          opdomain = Default;
-        }
-        if (opdomain && (opdomain.displayName !== other.displayName)) {
-          if ((j = this.domains.indexOf(opdomain, this.index + 1)) === -1) {
-            j = this.domains.push(opdomain) - 1;
-            this.problems[j] = [problem];
-          } else {
-            this.problems[j].push(problem);
-          }
-          problem.domain = opdomain;
-          exps.splice(--i, 1);
-          if (exps.length === 0) {
-            this.splice(index, 1);
-          }
-        } else if (!bubbled) {
-          if (problem.indexOf(exps[i - 1]) > -1) {
-            bubbled = exps;
-            if (exps.indexOf(problem) === -1) {
-              exps[i - 1] = problem;
-            } else {
-              exps.splice(--i, 1);
-            }
-            problem.domain = other;
-          }
-        }
-        if (other) {
-          _ref5 = this.domains;
-          for (counter = _l = _ref5.length - 1; _l >= 0; counter = _l += -1) {
-            domain = _ref5[counter];
-            if (domain && (domain !== other || bubbled)) {
-              if ((other.MAYBE && domain.MAYBE) || domain.displayName === other.displayName) {
-                problems = this.problems[counter];
-                for (_m = 0, _len1 = problem.length; _m < _len1; _m++) {
-                  arg = problem[_m];
-                  if ((j = problems.indexOf(arg)) > -1) {
-                    this.reify(arg, other, domain);
-                    problems.splice(j, 1);
-                    if (problems.length === 0) {
-                      this.splice(counter, 1);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-        if (bubbled) {
-          for (_n = 0, _len2 = problem.length; _n < _len2; _n++) {
-            arg = problem[_n];
-            if (arg.push) {
-              if (arg[0] === 'get') {
-                this.setVariable(problem, arg[1], arg);
-                this.setVariable(exp, arg[1], arg);
-              } else if (arg.variables) {
-                _ref6 = arg.variables;
-                for (prop in _ref6) {
-                  value = _ref6[prop];
-                  this.setVariable(problem, prop, value);
-                  this.setVariable(exp, prop, value);
-                }
-              }
-            }
-          }
-          this.setVariables(bubbled, problem, other);
-          return this.problems.indexOf(bubbled);
-        }
-        return;
-      }
-    }
-  },
-  setVariable: function(result, prop, arg, domain) {
-    var variables;
-    variables = (result.variables || (result.variables = {}));
-    return variables[prop] = arg;
-  },
-  setVariables: function(result, probs, other) {
-    var operation, property, variables, _ref;
-    if (probs.variables) {
-      variables = result.variables || (result.variables = {});
-      _ref = probs.variables;
-      for (property in _ref) {
-        operation = _ref[property];
-        variables[property] = operation;
-      }
-    }
-  },
-  splice: function(index) {
-    var i, name, variable, _ref;
-    if ((i = this.engine.domains.indexOf(this.domains[index])) > -1) {
-      this.engine.domains.splice(i, 1);
-    }
-    this.domains.splice(index, 1);
-    this.problems.splice(index, 1);
-    if (this.variables) {
-      _ref = this.variables;
-      for (name in _ref) {
-        variable = _ref[name];
-        if (variable > index) {
-          this.variables[name] = variable - 1;
-        }
-      }
-    }
-  },
-  finish: function() {
-    this.time = this.engine.console.time(this.start);
-    return this.start = void 0;
-  },
-  reify: function(operation, domain, from) {
-    var arg, _i, _len;
-    if (operation.domain === from) {
-      operation.domain = domain;
-    }
-    for (_i = 0, _len = operation.length; _i < _len; _i++) {
-      arg = operation[_i];
-      if (arg != null ? arg.push : void 0) {
-        this.reify(arg, domain, from);
-      }
-    }
-    return operation;
-  },
-  register: function(variables) {},
-  connect: function(position, inserted) {
-    var condition, connecting, domain, from, i, index, j, offset, other, problems, property, to, variable, variables, _i, _j, _ref, _ref1, _ref2, _ref3;
-    index = this.index;
-    domain = this.domains[position];
-    if (!domain) {
-      return;
-    }
-    problems = this.problems[position];
-    variables = this.variables || (this.variables = {});
-    connecting = void 0;
-    if (inserted) {
-      for (property in variables) {
-        variable = variables[property];
-        if (variable >= position) {
-          variables[property]++;
-        }
-      }
-    }
-    _ref = problems.variables;
-    for (property in _ref) {
-      variable = _ref[property];
-      if (variable.domain.priority < 0 && variable.domain.displayName === domain.displayName) {
-        if (((i = variables[property]) != null) && (i > index) && (i !== position)) {
-          if (__indexOf.call((connecting || (connecting = [])), i) < 0) {
-            j = 0;
-            while (connecting[j] < i) {
-              j++;
-            }
-            connecting.splice(j, 0, i);
-          }
-        } else {
-          variables[property] = position;
-        }
-      }
-    }
-    offset = 0;
-    if (connecting) {
-      for (index = _i = 0, _ref1 = connecting.length; _i < _ref1; index = _i += 1) {
-        i = connecting[index];
-        other = this.domains[i];
-        condition = other.constraints && domain.constraints ? other.constraints.length > domain.constraints.length : position > i;
-        if (condition) {
-          from = i;
-          to = position;
-        } else {
-          from = position;
-          to = i;
-        }
-        position = this.merge(from, to);
-        for (j = _j = _ref2 = index + 1, _ref3 = connecting.length; _ref2 <= _ref3 ? _j < _ref3 : _j > _ref3; j = _ref2 <= _ref3 ? ++_j : --_j) {
-          if (connecting[j] >= from) {
-            connecting[j]--;
-          }
-        }
-      }
-    }
-  },
-  push: function(problems, domain, reverse) {
-    var cmds, index, other, position, priority, problem, _i, _j, _k, _len, _len1, _len2, _ref;
-    if (domain === void 0) {
-      _ref = problems.domains;
-      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
-        domain = _ref[index];
-        this.push(problems.problems[index], domain);
-      }
-      return this;
-    }
-    priority = this.domains.length;
-    position = this.index + 1;
-    if (domain == null) {
-      debugger;
-    }
-    while ((other = this.domains[position]) !== void 0) {
-      if (other || !domain) {
-        if (other === domain || (domain && !(domain != null ? domain.solve : void 0) && other.url === domain.url)) {
-          cmds = this.problems[position];
-          for (_j = 0, _len1 = problems.length; _j < _len1; _j++) {
-            problem = problems[_j];
-            if (reverse || (domain && !domain.solve && other.url === domain.url && problem[0] === 'remove')) {
-              cmds.unshift(problem);
-            } else {
-              cmds.push(problem);
-            }
-            this.setVariables(cmds, problem, other);
-            this.reify(problem, other, domain);
-          }
-          this.connect(position);
-          return true;
-        } else if (other && domain) {
-          if (other.priority < domain.priority) {
-            priority = position;
-            break;
-          } else if ((other.priority === domain.priority && other.MAYBE && !domain.MAYBE) && (!other.frame || other.frame === domain.frame)) {
-            priority = position + 1;
-          }
-        } else {
-          priority--;
-        }
-      }
-      position++;
-    }
-    for (_k = 0, _len2 = problems.length; _k < _len2; _k++) {
-      problem = problems[_k];
-      this.setVariables(problems, problem, domain);
-    }
-    this.insert(priority, domain, problems);
-    this.reify(problems, domain);
-    this.connect(priority, true);
-    return this;
-  },
-  insert: function(index, domain, problems) {
-    this.domains.splice(index, 0, domain);
-    return this.problems.splice(index, 0, problems);
-  },
-  cleanup: function(name, continuation) {
-    var length, old, prop, _results;
-    old = this[name];
-    if (continuation) {
-      if (old) {
-        length = continuation.length;
-        _results = [];
-        for (prop in old) {
-          if (prop.substring(0, length) === continuation) {
-            _results.push(delete old[prop]);
-          } else {
-            _results.push(void 0);
-          }
-        }
-        return _results;
-      }
-    } else {
-      this[name] = {};
-      return this[name].previous = old;
-    }
-  },
-  reset: function(continuation) {
-    this.cleanup('queries', continuation);
-    this.cleanup('collections', continuation);
-    return this.cleanup('mutations');
   },
   await: function(url) {
     return (this.busy || (this.busy = [])).push(url);
@@ -25184,31 +25038,86 @@ Update.prototype = {
       }
     }
   },
-  getProblems: function(callback, bind) {
-    return GSS.prototype.clone(this.problems);
-  },
   perform: function(domain) {
-    var glob, globals, globs, _i, _len, _results;
+    var glob, globals, globs, _i, _len;
     globals = this.domains.indexOf(null, this.index + 1);
     if (globals > -1) {
       globs = this.problems[globals];
       if (typeof globs[0] === 'string') {
         if (globs[0] === 'remove') {
-          return domain.remove.apply(domain, globs.slice(1));
+          domain.remove.apply(domain, globs.slice(1));
         }
       } else {
-        _results = [];
         for (_i = 0, _len = globs.length; _i < _len; _i++) {
           glob = globs[_i];
           if (glob[0] === 'remove') {
-            _results.push(domain.remove.apply(domain, glob.slice(1)));
+            domain.remove.apply(domain, glob.slice(1));
+          }
+        }
+      }
+    }
+  },
+  setVariables: function(result, operation, share) {
+    var property, variable, variables;
+    if (variables = operation.variables) {
+      if (!result.variables && share) {
+        result.variables = variables;
+      } else {
+        for (property in variables) {
+          variable = variables[property];
+          (result.variables || (result.variables = {}))[property] = variable;
+        }
+      }
+    } else if (operation[0] === 'get') {
+      (result.variables || (result.variables = {}))[operation[1]] = operation;
+    }
+    return result.variables;
+  },
+  reify: function(operation, domain, from) {
+    var arg, _i, _len;
+    if (operation.domain === from) {
+      operation.domain = domain;
+    }
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      arg = operation[_i];
+      if (arg != null ? arg.push : void 0) {
+        this.reify(arg, domain, from);
+      }
+    }
+    return operation;
+  },
+  cleanup: function(name, continuation) {
+    var length, old, prop, _results;
+    old = this[name];
+    if (continuation) {
+      if (old) {
+        length = continuation.length;
+        _results = [];
+        for (prop in old) {
+          if (prop.substring(0, length) === continuation) {
+            _results.push(delete old[prop]);
           } else {
             _results.push(void 0);
           }
         }
         return _results;
       }
+    } else {
+      this[name] = {};
+      return this[name].previous = old;
     }
+  },
+  reset: function(continuation) {
+    this.cleanup('queries', continuation);
+    this.cleanup('collections', continuation);
+    return this.cleanup('mutations');
+  },
+  getProblems: function(callback, bind) {
+    return GSS.prototype.clone(this.problems);
+  },
+  finish: function() {
+    this.time = this.engine.console.time(this.start);
+    return this.start = void 0;
   },
   index: -1
 };
@@ -25353,7 +25262,7 @@ Top = Abstract.prototype.Default.extend({
       key: engine.Continuation.get(continuation)
     };
     if (scope !== engine.scope) {
-      meta.scope = engine.identity["yield"](scope);
+      meta.scope = engine.identity(scope);
     }
     args.unshift(operation[0]);
     wrapper = this.produce(meta, args, operation);
@@ -25567,7 +25476,7 @@ Intrinsic = (function(_super) {
     var computed, id, old;
     if ((old = element.currentStyle) == null) {
       computed = (this.computed || (this.computed = {}));
-      id = this.identity["yield"](element);
+      id = this.identity(element);
       old = computed[id];
       if (force || (old == null)) {
         return computed[id] = window.getComputedStyle(element);
@@ -25909,7 +25818,7 @@ Document = (function(_super) {
       if (e == null) {
         e = '::window';
       }
-      id = e.target && this.identity["yield"](e.target) || e;
+      id = e.target && this.identity(e.target) || e;
       if (this.resizer == null) {
         if (e.target && this.updating) {
           if (this.updating.resizing) {
@@ -25941,7 +25850,7 @@ Document = (function(_super) {
       if (e == null) {
         e = '::window';
       }
-      id = e.target && this.identity["yield"](e.target) || e;
+      id = e.target && this.identity(e.target) || e;
       this.solve(id + ' scrolled', function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
@@ -25980,7 +25889,7 @@ Document = (function(_super) {
         this.triggerEvent('DOMContentLoaded');
       }
       return this.solve('Document', 'onload', function() {
-        return this.solve(['get', ['::window'], 'width']);
+        return this.intrinsic.solve([]);
       });
     },
     load: function() {
@@ -25989,7 +25898,7 @@ Document = (function(_super) {
       }
       window.removeEventListener('load', this);
       return this.solve('Document', 'onload', function() {
-        return this.solve(['get', ['::window'], 'width']);
+        return this.intrinsic.solve([]);
       });
     },
     compile: function() {
@@ -26782,7 +26691,7 @@ Queries = (function() {
     }
     if (typeof id === 'object') {
       node = id;
-      id = this.engine.identity["yield"](id);
+      id = this.engine.identity(id);
     } else {
       if (id.indexOf('"') > -1) {
         node = id;
@@ -27017,7 +26926,7 @@ Queries = (function() {
         }
         this.clean(path, void 0, operation, scope);
       } else if (continuation.charAt(0) === engine.Continuation.PAIR) {
-        if (id = engine.identity["yield"](node)) {
+        if (id = engine.identity(node)) {
           watchers = (_base = this.watchers)[id] || (_base[id] = []);
           if (engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
             operation.command.prepare(operation);
@@ -27051,7 +26960,7 @@ Queries = (function() {
     } else {
       this.updateCollections(operation, path, scope, added, removed, void 0, continuation);
     }
-    if (id = engine.identity["yield"](node)) {
+    if (id = engine.identity(node)) {
       watchers = (_base1 = this.watchers)[id] || (_base1[id] = []);
       if (engine.indexOfTriplet(watchers, operation, continuation, scope) === -1) {
         operation.command.prepare(operation);
@@ -27090,7 +26999,7 @@ Queries = (function() {
 
   Queries.prototype.match = function(node, group, qualifier, changed, continuation) {
     var change, contd, groupped, id, index, operation, path, scope, watchers, _i, _j, _len, _len1;
-    if (!(id = this.engine.identity["yield"](node))) {
+    if (!(id = this.engine.identity(node))) {
       return;
     }
     if (!(watchers = this.watchers[id])) {
@@ -27779,7 +27688,7 @@ Pairs = (function() {
         }
       }
     }
-    this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999', left + ' ' + this.engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + this.engine.identity["yield"](scope));
+    this.engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999', left + ' ' + this.engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + this.engine.identity(scope));
     cleaned = [];
     for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
       pair = removed[_k];
@@ -27787,20 +27696,20 @@ Pairs = (function() {
         continue;
       }
       contd = left;
-      contd += this.engine.identity["yield"](pair[0]);
+      contd += this.engine.identity(pair[0]);
       contd += this.engine.Continuation.PAIR;
       contd += root.right.command.path;
-      contd += this.engine.identity["yield"](pair[1]);
+      contd += this.engine.identity(pair[1]);
       cleaned.push(contd);
     }
     solved = [];
     for (_l = 0, _len2 = added.length; _l < _len2; _l++) {
       pair = added[_l];
       contd = left;
-      contd += this.engine.identity["yield"](pair[0]);
+      contd += this.engine.identity(pair[0]);
       contd += this.engine.Continuation.PAIR;
       contd += root.right.command.path;
-      contd += this.engine.identity["yield"](pair[1]);
+      contd += this.engine.identity(pair[1]);
       if ((index = cleaned.indexOf(contd)) > -1) {
         cleaned.splice(index, 1);
       } else {
@@ -28495,34 +28404,41 @@ require.register("gss/lib/modules/Identity.js", function(exports, require, modul
 var Identity;
 
 Identity = (function() {
-  function Identity() {}
-
   Identity.uid = 0;
 
-  Identity.prototype["yield"] = function(object, generate) {
-    var id, uid;
-    if (typeof object === 'string') {
-      if (object.charAt(0) !== '$' && object.charAt(0) !== ':') {
-        return '$' + object;
-      }
-      return object;
-    }
-    if (!(id = object._gss_id)) {
-      if (object === document) {
-        id = "::document";
-      } else if (object === window) {
-        id = "::window";
-      }
-      if (generate !== false) {
-        if (uid = object._gss_uid) {
-          object._gss_id = uid;
+  function Identity() {
+    var Identify, property, value, _ref;
+    Identify = function(object, generate) {
+      var id, uid;
+      if (typeof object === 'string') {
+        if (object.charAt(0) !== '$' && object.charAt(0) !== ':') {
+          return '$' + object;
         }
-        object._gss_id = id || (id = "$" + (object.id || object._gss_id || ++Identity.uid));
-        this[id] = object;
+        return object;
       }
+      if (!(id = object._gss_id)) {
+        if (object === document) {
+          id = "::document";
+        } else if (object === window) {
+          id = "::window";
+        }
+        if (generate !== false) {
+          if (uid = object._gss_uid) {
+            object._gss_id = uid;
+          }
+          object._gss_id = id || (id = "$" + (object.id || object._gss_id || ++Identity.uid));
+          this[id] = object;
+        }
+      }
+      return id;
+    };
+    _ref = Identity.prototype;
+    for (property in _ref) {
+      value = _ref[property];
+      Identify[property] = value;
     }
-    return id;
-  };
+    return Identify;
+  }
 
   Identity.prototype.get = function(id) {
     return this[id];
@@ -28537,7 +28453,7 @@ Identity = (function() {
   };
 
   Identity.prototype.find = function(object) {
-    return this["yield"](object, false);
+    return this(object, false);
   };
 
   return Identity;
@@ -28555,25 +28471,25 @@ Axioms = (function() {
 
   Axioms.prototype.right = function(scope) {
     var id;
-    id = this.identity["yield"](scope);
+    id = this.identity(scope);
     return ['+', ['get', this.getPath(id, 'x')], ['get', this.getPath(id, 'width')]];
   };
 
   Axioms.prototype.bottom = function(scope, path) {
     var id;
-    id = this.identity["yield"](scope);
+    id = this.identity(scope);
     return ['+', ['get', this.getPath(id, 'y')], ['get', this.getPath(id, 'height')]];
   };
 
   Axioms.prototype.center = {
     x: function(scope, path) {
       var id;
-      id = this.identity["yield"](scope);
+      id = this.identity(scope);
       return ['+', ['get', this.getPath(id, 'x')], ['/', ['get', this.getPath(id, 'width')], 2]];
     },
     y: function(scope, path) {
       var id;
-      id = this.identity["yield"](scope);
+      id = this.identity(scope);
       return ['+', ['get', this.getPath(id, 'y')], ['/', ['get', this.getPath(id, 'height')], 2]];
     }
   };
@@ -29116,12 +29032,12 @@ Exporter = (function() {
     if ((scope = this.scope).nodeType === 9) {
       scope = this.scope.body;
     }
-    this.identity["yield"](scope);
+    this.identity(scope);
     _ref = scope.getElementsByTagName('*');
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       element = _ref[_i];
       if (element.tagName !== 'SCRIPT' && (element.tagName !== 'STYLE' || ((_ref1 = element.getAttribute('type')) != null ? _ref1.indexOf('gss') : void 0) > -1)) {
-        this.identity["yield"](element);
+        this.identity(element);
       }
     }
     if (window.Sizes) {
