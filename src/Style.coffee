@@ -1,6 +1,9 @@
 # Define a style from a tree definition
-# Creates matcher function that match arguments against types
-# and returns extendable shorthand class instance with defaults 
+# Creates matcher function that matches arguments against types and keywords
+
+# Style family shorthands produce family object instance with defaults.
+# It can be used to merge and serialize redefined values
+
 
 Style = (definition, name, styles,
          keywords = {}, types = [], keys = [], properties = [], required = {}

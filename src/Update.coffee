@@ -1,5 +1,5 @@
-# Schedule, group, sort expressions by domain, graph and worker
-# Then evaluate it asynchronously, in order. Re-evaluate side-effects.
+# Schedule, group, sort expressions by domain, dependencies and worker
+# Evaluates asynchronously, in order. Re-evaluate side-effects.
 
 Updater = (engine) ->
   Update = (problem, domain, parent, Default) ->

@@ -11,6 +11,8 @@
   
   "scripts": [
     "lib/Engine.js",
+    "lib/Domain.js",
+    "lib/Command.js",
 
     "lib/commands/Assignment.js", 
     "lib/commands/Block.js", 
@@ -25,16 +27,6 @@
     "lib/commands/Variable.js", 
     "lib/commands/Call.js", 
 
-    "lib/concepts/Command.js",
-    "lib/concepts/Continuation.js",
-    "lib/concepts/Domain.js",
-    "lib/concepts/Operation.js",
-    "lib/concepts/Property.js",
-    "lib/concepts/Style.js",
-    "lib/concepts/Trigger.js",
-    "lib/concepts/Type.js",
-    "lib/concepts/Update.js",
-
     "lib/domains/Numeric.js",
     "lib/domains/Abstract.js",
     "lib/domains/Boolean.js",
@@ -43,17 +35,22 @@
     "lib/domains/Linear.js", 
     "lib/domains/Finite.js", 
 
-    "lib/modules/Positions.js", 
-    "lib/modules/Queries.js", 
-    "lib/modules/Mutations.js", 
-    "lib/modules/Pairs.js", 
-    "lib/modules/Stylesheets.js", 
-    "lib/modules/Signatures.js", 
-    "lib/modules/Identity.js", 
+
+
+    "lib/structures/Events.js", 
+    "lib/structures/Identity.js", 
+    "lib/structures/Mutations.js", 
+    "lib/structures/Pairs.js", 
+    "lib/structures/Positions.js", 
+    "lib/structures/Queries.js", 
+    "lib/structures/Signatures.js",
+    "lib/structures/Stylesheets.js",  
+    "lib/structures/Signatures.js",
 
     "lib/properties/Axioms.js",
     "lib/properties/Dimensions.js",
     "lib/properties/Styles.js",
+    "lib/properties/Types.js",
 
     "lib/utilities/Console.js",
     "lib/utilities/Exporter.js",
