@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2014-11-29) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20042,7 +20041,7 @@ Domains that set constraints only include constraints that refer shared variable
 forming multiple unrelated dependency graphs.
 */
 
-var Domain, Engine,
+var Domain, Engine, Events,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -20059,16 +20058,12 @@ this.module || (this.module = {});
 
 Domain = require('./concepts/Domain');
 
+Events = require('./structures/Events');
+
 Engine = (function(_super) {
   __extends(Engine, _super);
 
   Engine.prototype.Command = require('./concepts/Command');
-
-  Engine.prototype.Property = require('./concepts/Property');
-
-  Engine.prototype.Update = require('./concepts/Update');
-
-  Engine.prototype.Continuation = require('./concepts/Continuation');
 
   Engine.prototype.Console = require('./utilities/Console');
 
@@ -20076,11 +20071,11 @@ Engine = (function(_super) {
 
   Engine.prototype.Exporter = require('./utilities/Exporter');
 
-  Engine.prototype.Properties = require('./properties/Axioms');
+  Engine.prototype.Update = require('./structures/Update');
 
-  Engine.prototype.Identity = require('./modules/Identity');
+  Engine.prototype.Identity = require('./structures/Identity');
 
-  Engine.prototype.Signatures = require('./modules/Signatures');
+  Engine.prototype.Signatures = require('./structures/Signatures');
 
   Engine.prototype.Domains = {
     Abstract: require('./domains/Abstract'),
@@ -20137,7 +20132,6 @@ Engine = (function(_super) {
     this.domain = this;
     this.inspector = new this.Inspector(this);
     this.precompile();
-    this.Continuation = this.Continuation["new"](this);
     this.assumed = new this.Numeric(assumed);
     this.assumed.displayName = 'Assumed';
     this.assumed["static"] = true;
@@ -20156,7 +20150,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.solve = function() {
-    var arg, args, index, name, old, onlyRemoving, problematic, providing, reason, restyled, solution, source, update, _base, _i, _len, _ref, _ref1, _ref2, _ref3;
+    var arg, args, index, name, old, onlyRemoving, problematic, providing, reason, restyled, solution, source, strategy, update, _base, _i, _len, _ref, _ref1, _ref2, _ref3;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
         source = arguments[0];
@@ -20204,7 +20198,12 @@ Engine = (function(_super) {
     if (typeof args[0] === 'function') {
       solution = args.shift().apply(this, args);
     } else if (args[0] != null) {
-      solution = Domain.prototype.solve.apply(this, args);
+      strategy = this[this.strategy];
+      if (strategy.solve) {
+        solution = strategy.solve.apply(strategy, arguments) || {};
+      } else {
+        solution = strategy.apply(this, arguments);
+      }
     }
     if (solution) {
       this.updating.apply(solution);
@@ -20320,7 +20319,7 @@ Engine = (function(_super) {
       }
     }
     if (!domain) {
-      this.broadcast(problems, index, update);
+      return this.broadcast(problems, index, update);
     }
     this.console.start(problems, domain.displayName);
     result = domain.solve(problems) || void 0;
@@ -20337,8 +20336,6 @@ Engine = (function(_super) {
       if (this.domains.indexOf(domain) === -1) {
         this.domains.push(domain);
       }
-    } else {
-
     }
     return result;
   };
@@ -20519,7 +20516,7 @@ Engine = (function(_super) {
 
   return Engine;
 
-})(Domain);
+})(Events);
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
@@ -24435,12 +24432,12 @@ module.exports = Trigger;
 
 });
 require.register("gss/lib/concepts/Type.js", function(exports, require, module){
-var Type;
+var Types;
 
-Type = (function() {
-  function Type() {}
+Types = (function() {
+  function Types() {}
 
-  Type.define = function(property, value) {
+  Types.define = function(property, value) {
     var prop, _results;
     if (value) {
       return this[property] = value;
@@ -24454,11 +24451,11 @@ Type = (function() {
     }
   };
 
-  return Type;
+  return Types;
 
 })();
 
-Type.define({
+Types.define({
   Float: function(obj) {
     var parsed;
     parsed = parseFloat(obj);
@@ -24612,7 +24609,7 @@ Type.define({
   }
 });
 
-module.exports = Type;
+module.exports = Types;
 
 });
 require.register("gss/lib/concepts/Update.js", function(exports, require, module){
@@ -25136,9 +25133,9 @@ var Block, Command, Domain, Numeric, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Domain = require('../concepts/Domain');
+Domain = require('../Domain');
 
-Command = require('../concepts/Command');
+Command = require('../Command');
 
 Variable = require('../commands/Variable');
 
@@ -25206,7 +25203,9 @@ var Abstract, Assignment, Clause, Command, Condition, Constraint, Domain, Iterat
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
-Domain = require('../concepts/Domain', Command = require('../concepts/Command'));
+Domain = require('../Domain');
+
+Command = require('../Command');
 
 Variable = require('../commands/Variable');
 
@@ -25429,11 +25428,15 @@ module.exports = Boolean;
 
 });
 require.register("gss/lib/domains/Intrinsic.js", function(exports, require, module){
-var Intrinsic, Numeric,
+var Dimensions, Intrinsic, Numeric, Styles,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Numeric = require('./Numeric');
+
+Dimensions = require('../properties/Dimensions');
+
+Styles = require('../properties/Styles');
 
 Intrinsic = (function(_super) {
   __extends(Intrinsic, _super);
@@ -25452,7 +25455,7 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.Transformation = require('../commands/Transformation');
 
-  Intrinsic.prototype.Properties = (function(Dimensions, Styles) {
+  Intrinsic.prototype.Properties = (function() {
     var Properties, property, value, _ref, _ref1;
     Properties = function() {};
     _ref = Styles.prototype;
@@ -25466,7 +25469,7 @@ Intrinsic = (function(_super) {
       Properties.prototype[property] = value;
     }
     return Properties;
-  })(require('../properties/Dimensions'), require('../properties/Styles'));
+  })();
 
   function Intrinsic() {
     this.types = new this.Type(this);
@@ -25772,15 +25775,15 @@ Document = (function(_super) {
 
   Document.prototype.Source = require('../commands/Source');
 
-  Document.prototype.Queries = require('../modules/Queries');
+  Document.prototype.Queries = require('../structures/Queries');
 
-  Document.prototype.Pairs = require('../modules/Pairs');
+  Document.prototype.Pairs = require('../structures/Pairs');
 
-  Document.prototype.Mutations = require('../modules/Mutations');
+  Document.prototype.Mutations = require('../structures/Mutations');
 
-  Document.prototype.Positions = require('../modules/Positions');
+  Document.prototype.Positions = require('../structures/Positions');
 
-  Document.prototype.Stylesheet = require('../modules/Stylesheets');
+  Document.prototype.Stylesheets = require('../structures/Stylesheets');
 
   Document.prototype.helps = true;
 
@@ -25790,7 +25793,7 @@ Document = (function(_super) {
     var engine;
     engine = this.engine;
     engine.positions || (engine.positions = new this.Positions(this));
-    engine.stylesheets || (engine.stylesheets = new this.Stylesheet(this));
+    engine.stylesheets || (engine.stylesheets = new this.Stylesheets(this));
     engine.queries || (engine.queries = new this.Queries(this));
     engine.pairs || (engine.pairs = new this.Pairs(this));
     engine.mutations || (engine.mutations = new this.Mutations(this));
@@ -25930,7 +25933,7 @@ var Block, Call, Constraint, Domain, Linear, Variable, _ref,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
 
-Domain = require('../concepts/Domain');
+Domain = require('../Domain');
 
 Variable = require('../commands/Variable');
 
@@ -26188,9 +26191,9 @@ var Command, Constraint, Domain, Finite, Variable,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Domain = require('../concepts/Domain');
+Domain = require('../Domain');
 
-Command = require('../concepts/Command');
+Command = require('../Command');
 
 Variable = require('../commands/Variable');
 

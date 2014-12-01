@@ -1,4 +1,4 @@
-Domain     = require('../concepts/Domain')
+Domain     = require('../Domain')
 Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 Block      = require('../commands/Block')

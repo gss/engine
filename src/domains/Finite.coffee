@@ -1,5 +1,5 @@
-Domain     = require('../concepts/Domain')
-Command    = require('../concepts/Command')
+Domain     = require('../Domain')
+Command    = require('../Command')
 Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
 

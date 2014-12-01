@@ -15,6 +15,9 @@ class Queries
   constructor: (@engine) ->
     @watchers = {}
     @mutations = []
+    unless @PAIR
+      for property in ['PAIR', 'ASCEND', 'DESCEND', 'DELIMETERS', 'continuate']
+        Queries::[property] = @engine.Command::[property]
 
   onBeforeSolve: ->
     # Update all DOM queries that matched mutations
@@ -44,17 +47,17 @@ class Queries
 
   addMatch: (node, continuation) ->
     return unless node.nodeType == 1
-    if (index = continuation.indexOf(@engine.Continuation.DESCEND)) > -1
+    if (index = continuation.indexOf(@DESCEND)) > -1
       continuation = continuation.substring(index + 1)
-    continuation = @engine.Continuation.getCanonicalSelector(continuation)
-    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @engine.Continuation.DESCEND))
+    continuation = @getCanonicalSelector(continuation)
+    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @DESCEND))
   
   removeMatch: (node, continuation) ->
     return unless node.nodeType == 1
     if matches = node.getAttribute('matches')
-      if (index = continuation.indexOf(@engine.Continuation.DESCEND)) > -1
+      if (index = continuation.indexOf(@DESCEND)) > -1
         continuation = continuation.substring(index + 1)
-      path = ' ' + @engine.Continuation.getCanonicalSelector(continuation)
+      path = ' ' + @getCanonicalSelector(continuation)
       if matches.indexOf(path) > -1
         node.setAttribute('matches', matches.replace(path,''))
 
@@ -111,7 +114,7 @@ class Queries
   # Remove observers from element
   unobserve: (id, continuation, quick, path, contd, scope, top) ->
     if continuation != true
-      refs = @engine.Continuation.getVariants(continuation)
+      refs = @getVariants(continuation)
     index = 0
     return unless (watchers = typeof id == 'object' && id || @watchers[id])
     while watcher = watchers[index]
@@ -191,7 +194,7 @@ class Queries
     #if !contd?
     #  refs = [undefined]
     #else
-    refs = @engine.Continuation.getVariants(contd)
+    refs = @getVariants(contd)
     # Dont remove it if element matches more than one selector
     if (duplicates = collection.duplicates)
       for dup, index in duplicates
@@ -279,7 +282,7 @@ class Queries
         # Remove all watchers that match continuation path
         ref = continuation + (collection?.length? && id || '')
 
-        if ref.charAt(0) == @engine.Continuation.PAIR
+        if ref.charAt(0) == @PAIR
           @unobserve(id, ref, undefined, undefined, ref, scope)
         else
           @unobserve(id, ref, undefined, undefined, ref)
@@ -333,8 +336,8 @@ class Queries
     @unobserve((scope || @engine.scope)._gss_id, path)
 
     if !result || !@engine.isCollection(result)
-      unless path.charAt(0) == @engine.Continuation.PAIR
-        contd = @engine.Continuation(path)
+      unless path.charAt(0) == @PAIR
+        contd = @continuate(path)
         @engine.updating?.remove(contd)
         @engine.yield(['remove', contd])
     return true
@@ -356,8 +359,8 @@ class Queries
 
   updateCollections: (operation, path, scope, added, removed, recursion, contd) ->
     
-    oppath = @engine.Continuation.getCanonicalPath(path)
-    if path == oppath || @engine.Continuation.PAIR + oppath == path
+    oppath = @getCanonicalPath(path)
+    if path == oppath || @PAIR + oppath == path
 
     else if recursion != oppath
       @updateCollection operation, oppath, scope, added, removed, oppath, path
@@ -432,14 +435,14 @@ class Queries
     if updating.collections?.hasOwnProperty(path)
       old = updating.collections[path]
     else if !old? && (result && result.length == 0) && continuation
-      old = @get(engine.Continuation.getCanonicalPath(path))
+      old = @get(@getCanonicalPath(path))
 
     isCollection = engine.isCollection(result)
 
     # Clean refs of nodes that dont match anymore
     if old
       if engine.isCollection(old)
-        if continuation?.charAt(0) == engine.Continuation.PAIR
+        if continuation?.charAt(0) == @PAIR
           old = @filterByScope(old, scope, operation)
         removed = undefined
         for child, index in old
@@ -450,7 +453,7 @@ class Queries
         if !result
           removed = old
         @clean(path, undefined, operation, scope)
-      else if continuation.charAt(0) == engine.Continuation.PAIR
+      else if continuation.charAt(0) == @PAIR
 
         # Subscribe node to the query
         if id = engine.identity(node)
@@ -522,12 +525,12 @@ class Queries
     return unless id = @engine.identity(node)
     return unless watchers = @watchers[id]
     if continuation
-      path = @engine.Continuation.getCanonicalPath(continuation)
+      path = @getCanonicalPath(continuation)
     
     for operation, index in watchers by 3
       if groupped = operation.command[group]
         contd = watchers[index + 1]
-        continue if path && path != @engine.Continuation.getCanonicalPath(contd)
+        continue if path && path != @getCanonicalPath(contd)
         scope = watchers[index + 2]
         # Check qualifier value
         if qualifier
@@ -558,44 +561,9 @@ class Queries
         @mutations.splice(index, 0, operation, continuation, scope)
     @
 
-  # temp workaround for inability to 
-  getParentScope: (continuation, operation) ->
-    @ScopeSplitterRegExp ||= new RegExp(@engine.Continuation.DESCEND + '|' + @engine.Continuation.ASCEND + '&', 'g')
-
-    bits = continuation.split(@ScopeSplitterRegExp)
-    
-    if !bits[bits.length - 1]
-      bits.pop()
-    bits.pop()
-
-    for bit, index in bits by -1
-      parent = operation.parent
-      canonical = @engine.Continuation.getCanonicalPath(bit)
-      while parent = parent.parent
-        if parent.name == 'rule' && parent[1].path == canonical
-          break
-      break if parent
-      bits.splice index, 1
-
-    continuation = bits.join(@engine.Continuation.DESCEND)
-    if !continuation || 
-        (bits.length == 1 && bits[0].indexOf('style[type*="text/gss"]') > -1)
-      return @engine.scope
-    if id = continuation.match(@engine.pairs.TrailingIDRegExp)
-      if id[1].indexOf('"') > -1
-        return id[1]
-      return @engine.identity[id[1]]
-    else
-      return @engine.queries[continuation]
-
-  getScopedCollection: (operation, continuation, scope) ->
-    path = @engine.Continuation(@engine.Continuation.getCanonicalPath(continuation))
-    collection = @get(path)
-    #if operation[1].marked
-    #  collection = @filterByScope collection, scope
-    #else if operation[1].def.mark
-    #collection = @filterByScope collection, @getParentScope(continuation, operation)
-    return collection
+  # Return collection shared for all codepaths
+  getCanonicalCollection: (path) ->
+    return @get(@continuate(@getCanonicalPath(continuation)))
     
 
   # Compare position of two nodes to sort collection in DOM order
@@ -624,4 +592,74 @@ class Queries
     if a.compareDocumentPosition
       return a.compareDocumentPosition(b) & 4
     return a.sourceIndex < b.sourceIndex
+
+
+
+
+  # Get path for the scope that triggered the script 
+  # (e.g. el matched by css rule)
+  getScopePath: (scope, continuation) ->
+    unless continuation 
+      return ''
+    bits = continuation.split(@DESCEND)
+    unless bits[bits.length - 1]
+      return continuation
+    if scope && @engine.scope != scope
+      id = @engine.identity(scope)
+      prev = bits[bits.length - 2]
+      # Ugh #1
+      if prev && prev.substring(prev.length - id.length) != id
+        last = bits[bits.length - 1]
+        if (index = last.indexOf(id + @ASCEND)) > -1
+          bits.splice(bits.length - 1, 0, last.substring(0, index + id.length))
+    
+    bits[bits.length - 1] = ""
+    path = bits.join(@DESCEND)
+    if continuation.charAt(0) == @PAIR
+      path = @PAIR + path
+    return path
+
+  # Return id of a parent scope element
+  getParentScope: (scope, continuation) ->
+    return scope._gss_id unless continuation
+    
+    bits = continuation.split(@DESCEND)
+
+    until last = bits[bits.length - 1]
+      bits.pop()
+
+    if scope && @engine.scope != scope
+      id = @engine.identity(scope)
+      # Ugh #1
+      if last.substring(last.length - id.length) == id
+        bits.pop()
+        last = bits[bits.length - 1]
+    
+    unless last?
+      return @engine.scope
+
+    if matched = last.match(@engine.pairs.TrailingIDRegExp)
+      if matched[1].indexOf('"') > -1
+        return matched[1]
+      return @engine.identity[matched[1]]
+      
+    return @engine.queries[bits.join(@DESCEND)]
+
+  # Remove all fork marks from a path. 
+  # Allows multiple selector paths have shared destination 
+  getCanonicalPath: (continuation, compact) ->
+    bits = @get(continuation).split(@DESCEND)
+    last = bits[bits.length - 1]
+    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '$1')
+    return last if compact
+    return bits.join(@DESCEND)
+
+  CanonicalizeRegExp: new RegExp("" +
+    "([^"   + Command::PAIR   + ",])" +
+    "\\$[^" + Command::ASCEND + "]+" +
+    "(?:"   + Command::ASCEND + "|$)", "g")
+
+  getVariants: (path) ->
+    [path, path + @ASCEND, path + @PAIR, path + @DESCEND]
+
 module.exports = Queries

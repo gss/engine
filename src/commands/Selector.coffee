@@ -374,7 +374,7 @@ Selector.define
   # Parent element (alias for !> *)
   '^':
     Element: (engine, operation, continuation, scope) ->
-      return engine.Continuation.getParentScope(scope, continuation)
+      return engine.queries.getParentScope(scope, continuation)
 
 
   # Current engine scope (defaults to document)
@@ -462,7 +462,7 @@ Selector.define
   ':next':
     relative: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getScopedCollection(operation, continuation, scope)
+      collection = engine.queries.getCanonicalCollection(continuation)
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
       return collection[index + 1]
@@ -470,7 +470,7 @@ Selector.define
   ':previous':
     relative: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getScopedCollection(operation, continuation, scope)
+      collection = engine.queries.getCanonicalCollection(continuation)
       index = collection?.indexOf(node)
       return if index == -1 || !index
       return collection[index - 1]
@@ -479,7 +479,7 @@ Selector.define
     relative: true
     singular: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getScopedCollection(operation, continuation, scope)
+      collection = engine.queries.getCanonicalCollection(continuation)
       index = collection?.indexOf(node)
       return unless index?
       return node if index == collection.length - 1
@@ -488,7 +488,7 @@ Selector.define
     relative: true
     singular: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getScopedCollection(operation, continuation, scope)
+      collection = engine.queries.getCanonicalCollection(continuation)
       index = collection?.indexOf(node)
       return if !index?
       return node if index == 0
@@ -513,7 +513,7 @@ Selector.define
     # Duplicates are stored separately, they dont trigger callbacks
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
-      contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.command.path
+      contd = @queries.getScopePath(scope, continuation) + operation.parent.command.path
       engine.queries.add(result, contd, operation.parent, scope, operation, continuation)
       engine.queries.ascending ||= []
       if engine.indexOfTriplet(engine.queries.ascending, operation.parent, contd, scope) == -1
@@ -523,7 +523,7 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = engine.Continuation.getScopePath(scope, continuation) + operation.parent.command.path
+      contd = @queries.getScopePath(scope, continuation) + operation.parent.command.path
       engine.queries.remove(result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     

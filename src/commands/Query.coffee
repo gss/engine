@@ -92,7 +92,7 @@ Query = Command.extend
 
     # Let it descend quickly
     if tail[1]?.command?.key? && !ascender? && 
-          (continuation.lastIndexOf(engine.Continuation.PAIR) == continuation.indexOf(engine.Continuation.PAIR))
+          (continuation.lastIndexOf(@PAIR) == continuation.indexOf(@PAIR))
       return tail[1].command.solve(engine, tail[1], continuation, scope)
 
 

@@ -3,15 +3,14 @@ Abstract = require('./Abstract')
 class Document extends Abstract
   priority: Infinity
   
-  Selector:   require('../commands/Selector')
-  Source:     require('../commands/Source')
-              
-  Queries:    require('../modules/Queries')
-  Pairs:      require('../modules/Pairs')
-
-  Mutations:  require('../modules/Mutations')
-  Positions:  require('../modules/Positions')
-  Stylesheet: require('../modules/Stylesheets')
+  Selector:    require('../commands/Selector')
+  Source:      require('../commands/Source')
+               
+  Queries:     require('../structures/Queries')
+  Pairs:       require('../structures/Pairs')
+  Mutations:   require('../structures/Mutations')
+  Positions:   require('../structures/Positions')
+  Stylesheets: require('../structures/Stylesheets')
 
   helps: true
   disconnected: true
@@ -20,7 +19,7 @@ class Document extends Abstract
     # Export modules into engine
     engine = @engine
     engine.positions   ||= new @Positions(@)
-    engine.stylesheets ||= new @Stylesheet(@)
+    engine.stylesheets ||= new @Stylesheets(@)
     engine.queries     ||= new @Queries(@)
     engine.pairs       ||= new @Pairs(@)
     engine.mutations   ||= new @Mutations(@)

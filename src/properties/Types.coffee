@@ -1,4 +1,4 @@
-class Type
+class Types
   
   @define: (property, value)-> 
     if value
@@ -7,7 +7,7 @@ class Type
       for prop, value of property
         @define prop, value
   
-Type.define
+Types.define
   # Decimal value (e.g. line-height: 1.0)
   Float: (obj) ->
     parsed = parseFloat(obj)
@@ -104,4 +104,4 @@ Type.define
     if typeof obj == 'object' && object.length != undefined
       return obj
 
-module.exports = Type
+module.exports = Types

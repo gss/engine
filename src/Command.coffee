@@ -103,13 +103,13 @@ class Command
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
       when 'object', 'string'
-        if continuation.indexOf(engine.Continuation.PAIR) > -1 || @reference
+        if continuation.indexOf(@PAIR) > -1 || @reference
           return result
         
       when 'boolean'
         if result
           result = undefined
-          continuation = engine.Continuation.getScopePath(scope, continuation)
+          continuation = @getScopePath(scope, continuation)
         else
           return
 
@@ -224,11 +224,11 @@ class Command
         return parent[0]
 
   connect: (engine, operation, continuation, scope, args, ascender) ->
-    if ascender? && continuation[continuation.length - 1] != engine.Continuation.DESCEND
-      return engine.Continuation.get(continuation, null, engine.Continuation.PAIR)
+    if ascender? && continuation[continuation.length - 1] != @DESCEND
+      return @continuate(continuation, @PAIR)
 
   fork: (engine, continuation, item) ->
-    return engine.Continuation.get(continuation + engine.identity(item), null, engine.Continuation.ASCEND)
+    return @continuate(continuation + engine.identity(item), @ASCEND)
 
   # Return alternative operation to process
   jump: ->
@@ -392,6 +392,35 @@ class Command
       args.length = command.permutation.length + command.padding
       return command.execute.apply(command, args.concat(engine, args, '', engine.scope))
 
+
+# ### Delimeters
+
+# **↑ Referencing**, e.g. to jump to results of dom query,
+# or to figure out which element in that collection 
+# called this function
+  ASCEND: String.fromCharCode(8593)
+
+# **→ Linking**, to pair up elements in arguments
+  PAIR: String.fromCharCode(8594)
+
+# **↓ Nesting**, as a way for expressions to own side effects,
+# e.g. to remove stylesheet, css rule or conditional branch
+  DESCEND: String.fromCharCode(8595)
+
+  DELIMETERS: [
+    Command::ASCEND
+    Command::PAIR
+    Command::DESCEND
+  ]
+  
+
+  # Update delimeter at the end of the path
+  continuate: (path, delimeter || '') ->
+    if @DELIMETERS.indexOf(path.charAt(path.length - 1)) > -1
+      return path.substring(0, path.length - 2) + delimeter
+    else
+      return path + delimeter
+
 class Command.List extends Command
   constructor: ->
   extras: 0
@@ -427,6 +456,7 @@ class Command.Default extends Command
 class Command.Object extends Command
   type: 'List'
   constructor: ->
+
 
 
 module.exports = Command

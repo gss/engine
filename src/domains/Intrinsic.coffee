@@ -7,7 +7,9 @@
 # Measurements happen synchronously,
 # re-measurements are deferred to be done in bulk
 
-Numeric = require('./Numeric')
+Numeric    = require('./Numeric')
+Dimensions = require('../properties/Dimensions')
+Styles     = require('../properties/Styles')
 
 class Intrinsic extends Numeric
   priority: 1
@@ -20,15 +22,13 @@ class Intrinsic extends Numeric
   Unit:           require('../commands/Unit')
   Transformation: require('../commands/Transformation')
 
-  Properties:     ((Dimensions, Styles) ->
-                    Properties = ->
-                    for property, value of Styles::
-                      Properties::[property] = value
-                    for property, value of Dimensions::
-                      Properties::[property] = value
-                    return Properties
-                  )(require('../properties/Dimensions'),
-                    require('../properties/Styles'))
+  Properties: do ->
+    Properties = ->
+    for property, value of Styles::
+      Properties::[property] = value
+    for property, value of Dimensions::
+      Properties::[property] = value
+    Properties
 
   constructor: ->
     @types = new @Type(@)
@@ -72,7 +72,7 @@ class Intrinsic extends Numeric
         element.style.position = ''
 
     if continuation
-      bits = continuation.split(@Continuation.DESCEND)
+      bits = continuation.split(@queries.DESCEND)
       first = bits.shift()
       if (j = first.lastIndexOf('$')) > -1
         id = first.substring(j)
@@ -83,7 +83,7 @@ class Intrinsic extends Numeric
               shared = false
               break
           if shared != false
-            if @stylesheets.solve stylesheet, operation, @Continuation(continuation), element, property, value
+            if @stylesheets.solve stylesheet, operation, @queries.continuate(continuation), element, property, value
               return
 
     path = @engine.getPath(element, 'intrinsic-' + property)

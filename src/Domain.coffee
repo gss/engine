@@ -1,5 +1,8 @@
-### Domain: Observed values
-Acts as input values for equations.
+### Domain: Observable object. 
+
+Has 3 use cases:
+
+1) Base  
 
 Interface:
 
@@ -18,9 +21,8 @@ State:
 
 ###
 
-Trigger = require('./Trigger')
 
-class Domain extends Trigger
+class Domain
   priority: 0
   strategy: undefined
 
@@ -66,11 +68,6 @@ class Domain extends Trigger
         result = @assumed.merge operation
       else
         result = @merge operation
-    else if strategy = @strategy
-      if (object = @[strategy]).solve
-        result = object.solve.apply(object, arguments) || {}
-      else
-        result = @[strategy].apply(@, arguments)
     else
       result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
@@ -89,22 +86,6 @@ class Domain extends Trigger
       commited = @commit()
 
     return result || commited
-
-
-  transact: ->
-    @setup()
-    unless @changes && @hasOwnProperty('changes')
-      if @disconnected
-        @mutations?.disconnect(true)
-      @changes = {}
-
-
-  commit: ->
-    changes = @changes
-    @changes = undefined
-    if @disconnected
-      @mutations?.connect(true)
-    return changes
 
   watch: (object, property, operation, continuation, scope) ->
     @setup()
@@ -250,14 +231,14 @@ class Domain extends Trigger
     return object
 
 
-
+  # Observe path so when it's cleaned, command's remove method is invoked
   add: (path, value) ->
     group = (@paths ||= {})[path] ||= []
     group.push(value)
     return
 
+  # Transform solution values to reflect reconfigured constraints
   prepare: (result = {}) ->
-
     nullified = @nullified
     replaced = @replaced
     if @declared
@@ -279,7 +260,7 @@ class Domain extends Trigger
 
     return result
 
-
+  # Merge solution and trigger callbacks
   apply: (solution) ->
     result = {}
     nullified = @nullified
@@ -302,11 +283,11 @@ class Domain extends Trigger
 
     return result
 
-
+  # Remove watchers and registered operations by path
   remove: ->
     for path in arguments
       if @observers
-        for contd in @Continuation.getVariants(path)
+        for contd in @queries.getVariants(path)
           if observer = @observers[contd]
             while observer[0]
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
@@ -317,6 +298,7 @@ class Domain extends Trigger
 
     return
 
+  # Return an array of operations that makes the constraint set
   export: (strings) ->
     if @constraints
       operations = []
@@ -356,6 +338,7 @@ class Domain extends Trigger
       
     return new @Maybe
 
+  # Produce string representation of id-property pair
   getPath: (id, property) ->
     unless property
       property = id
@@ -406,6 +389,23 @@ class Domain extends Trigger
   yield: (solution, value) ->
     @engine.engine.yield solution
 
+
+  transact: ->
+    @setup()
+    unless @changes && @hasOwnProperty('changes')
+      if @disconnected
+        @mutations?.disconnect(true)
+      @changes = {}
+
+
+  commit: ->
+    changes = @changes
+    @changes = undefined
+    if @disconnected
+      @mutations?.connect(true)
+    return changes
+
+
   # Make Domain class inherit given engine instance. Crazy huh
   # Overloads parts of the world (methods, variables, observers)
   @compile = (domains, engine) ->
@@ -419,8 +419,9 @@ class Domain extends Trigger
             @values = {} unless @hasOwnProperty 'values'
             @values[property] = value
         
-        @Property.compile @Properties::, @
-        Properties = @Properties
+        if @Properties
+          @Property.compile @Properties::, @
+          Properties = @Properties
         @properties  = new (Properties || Object)
 
         return domain::constructor.call(@, engine)
@@ -438,6 +439,32 @@ class Domain extends Trigger
         engine[name.toLowerCase()] = new engine[name]
     @
 
+  @Property: (property, reference, properties) ->
+    if typeof property == 'object'
+      if property.push
+        return properties[reference] = @Style(property, reference, properties)
+      else
+        for key, value of property
+          if (index = reference.indexOf('[')) > -1
+            path = reference.replace(']', '-' + key + ']')
+            left = reference.substring(0, index)
+            right = path.substring(index + 1, path.length - 1)
+            properties[left][right] ||= @Property(value, path, properties)
+          else if reference.match(/^[a-z]/i) 
+            path = reference + '-' + key
+          else
+            path = reference + '[' + key + ']'
+
+          properties[path] = @Property(value, path, properties)
+    return property
+
+  @Property.compile = (properties, engine) ->
+    properties.engine ||= engine
+    for own key, property of properties
+      continue if key == 'engine'
+      @call(engine, property, key, properties)
+    return properties
+
   # Hook: Should interpreter iterate returned object?
   # (yes, if it's a collection of objects or empty array)
   isCollection: (object) ->
@@ -449,11 +476,13 @@ class Domain extends Trigger
         when "undefined"
           return object.length == 0
 
+  # Slice arrays recursively to remove the meta data
   clone: (object) -> 
     if object && object.map
       return object.map @clone, @
     return object
 
+  # Return an index of 3 given items values in a flat array of triplets 
   indexOfTriplet: (array, a, b, c) ->
     if array
       for op, index in array by 3

@@ -31,10 +31,8 @@ Source.define
       if (nodeContinuation = node._continuation)?
         engine.queries.clean(nodeContinuation)
         continuation = nodeContinuation
-      else if !operation
-        continuation = engine.Continuation(node.tagName.toLowerCase(), node)
       else
-        continuation = node._continuation = engine.Continuation(continuation || '', null,  engine.Continuation.DESCEND)
+        continuation = node._continuation = @continuate(continuation, @DESCEND)
       if node.getAttribute('scoped')?
         scope = node.parentNode
 

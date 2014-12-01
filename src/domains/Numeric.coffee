@@ -5,8 +5,8 @@ enables anonymous constraints on immutable values
 
 ###
 
-Domain   = require('../concepts/Domain')
-Command  = require('../concepts/Command')
+Domain   = require('../Domain')
+Command  = require('../Command')
 Variable = require('../commands/Variable')
 Block    = require('../commands/Block')
 
@@ -21,7 +21,7 @@ Numeric::Variable = Variable.extend {},
     if meta = @getMeta(operation)
       continuation = meta.key
       scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
-    return engine.watch(null, path, operation, engine.Continuation(continuation || ""), scope)
+    return engine.watch(null, path, operation, @continuate(continuation || ''), scope)
 
 Numeric::Variable.Expression = Variable.Expression.extend()
 Numeric::Variable.Expression.define(Variable.Expression.algebra)

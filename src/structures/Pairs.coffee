@@ -5,7 +5,7 @@ class Pairs
 
 
   onLeft: (operation, parent, continuation, scope) ->
-    left = @engine.Continuation.getCanonicalPath(continuation)
+    left = @engine.queries.getCanonicalPath(continuation)
     if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
       parent.right = operation
       @lefts.push parent, left, scope
@@ -18,13 +18,13 @@ class Pairs
   # Choose a good match for element from the first collection
   # Currently bails out and schedules re-pairing 
   onRight: (operation, parent, continuation, scope, left, right) ->
-    right = @engine.Continuation.getCanonicalPath(continuation.substring(0, continuation.length - 1))
+    right = @engine.queries.getCanonicalPath(continuation.substring(0, continuation.length - 1))
     for op, index in @lefts by 3
       if op == parent && @lefts[index + 2] == scope
         left = @lefts[index + 1]
         @watch(operation, continuation, scope, left, right)
     return unless left
-    left = @engine.Continuation.getCanonicalPath(left)
+    left = @engine.queries.getCanonicalPath(left)
     pairs = @paths[left] ||= []
     if pairs.indexOf(right) == -1
       pushed = pairs.push(right, operation, scope)
@@ -38,11 +38,11 @@ class Pairs
     
   getSolution: (operation, continuation, scope, ascender, ascending, single) ->
     # Attempt pairing
-    last = continuation.lastIndexOf(@engine.Continuation.PAIR)
+    last = continuation.lastIndexOf(@engine.queries.PAIR)
     if last > -1 && !operation.command.reference
       # Found right side
       prev = -1
-      while (index = continuation.indexOf(@engine.Continuation.PAIR, prev + 1)) > -1
+      while (index = continuation.indexOf(@engine.queries.PAIR, prev + 1)) > -1
         if result = @getSolution(operation, continuation.substring(prev + 1, index), scope, ascender, ascending, true)
           return result
         prev = index 
@@ -55,8 +55,8 @@ class Pairs
     # Fetch saved result if operation path mathes continuation canonical path
     else
       return if continuation.length == 1
-      contd = @engine.Continuation.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
-      if contd.charAt(0) == @engine.Continuation.PAIR
+      contd = @engine.queries.getCanonicalPath(continuation, true)#.replace(/@[0-9]+/g, '')
+      if contd.charAt(0) == @engine.queries.PAIR
         contd = contd.substring(1)
       if contd == operation.command.path
         if id = continuation.match(@TrailingIDRegExp)
@@ -114,7 +114,7 @@ class Pairs
   # Update bindings of two pair collections
   solve: (left, right, operation, scope) ->
     root = @engine.Command.getRoot(operation)
-    right = @engine.Continuation.getScopePath(scope, left) + root.right.command.path
+    right = @engine.queries.getScopePath(scope, left) + root.right.command.path
     leftNew = @engine.queries.get(left)
     rightNew = @engine.queries.get(right)
 
@@ -164,7 +164,8 @@ class Pairs
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
-    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @engine.Continuation.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @engine.Continuation.PAIR + ' ' + root.right.command.path + ' in ' + @engine.identity(scope)
+    PAIR = @engine.queries.PAIR
+    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + @engine.identity(scope)
       
 
     cleaned = []
@@ -172,7 +173,7 @@ class Pairs
       continue if !pair[0] || !pair[1]
       contd = left
       contd += @engine.identity(pair[0])
-      contd += @engine.Continuation.PAIR
+      contd += PAIR
       contd += root.right.command.path
       contd += @engine.identity(pair[1])
       cleaned.push(contd)
@@ -181,7 +182,7 @@ class Pairs
     for pair in added
       contd = left
       contd += @engine.identity(pair[0])
-      contd += @engine.Continuation.PAIR
+      contd += PAIR
       contd += root.right.command.path
       contd += @engine.identity(pair[1])
 
@@ -189,7 +190,7 @@ class Pairs
         cleaned.splice(index, 1)
       else
         op = operation.parent
-        @engine.document.solve op, contd + @engine.Continuation.PAIR, scope, true
+        @engine.document.solve op, contd + PAIR, scope, true
       
         
     for contd in cleaned
@@ -230,7 +231,7 @@ class Pairs
         delete @engine.queries[right]
       for index in rights by -1
         right = pairs[index]
-        @engine.queries.unobserve(scope._gss_id, @engine.Continuation.PAIR, null, right.substring(1), undefined, scope, top)
+        @engine.queries.unobserve(scope._gss_id, @engine.queries.PAIR, null, right.substring(1), undefined, scope, top)
         pairs.splice(index, 3)
       if !pairs.length
         delete @paths[left]
@@ -244,7 +245,7 @@ class Pairs
 
 
   set: (path, result) ->
-    path = @engine.Continuation.getCanonicalPath(path)
+    path = @engine.queries.getCanonicalPath(path)
     for left, watchers of @paths
       if watchers.indexOf(path) > -1
         (@dirty ||= {})[left] = true

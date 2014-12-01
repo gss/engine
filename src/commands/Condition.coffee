@@ -21,7 +21,7 @@ class Condition extends Command
   push: ->
 
   serialize: (operation, engine) ->
-    return engine.Continuation.DESCEND + '@' + 
+    return @DESCEND + '@' + 
       #operation[0] + 
       #'(' + 
         @toExpression(operation[1]) 
@@ -60,9 +60,9 @@ class Condition extends Command
 
 
       index = ascending ^ @inverted && 2 || 3
-      engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + engine.Continuation.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
+      engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + @DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
       if branch = operation.parent[index]
-        result = engine.Command(branch).solve(engine, branch, engine.Continuation(path, null,  engine.Continuation.DESCEND), scope)
+        result = engine.Command(branch).solve(engine, branch, @continuate(path, @DESCEND), scope)
 
       if switching
         engine.pairs?.onBeforeSolve()
@@ -79,7 +79,7 @@ class Condition extends Command
         continuation = operation[0].key
         scope = engine.identity[operation[0].scope] || scope
       else
-        continuation = engine.Continuation(continuation, null, engine.Continuation.DESCEND)
+        continuation = @continuate(continuation, @DESCEND)
       if continuation?
         @update(engine.document || engine.abstract, operation.parent[1], continuation, scope, undefined, result)
       return true

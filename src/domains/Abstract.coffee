@@ -1,6 +1,6 @@
 # Find, produce and observe variables
-Domain     = require('../concepts/Domain'
-Command    = require('../concepts/Command'))
+Domain     = require('../Domain')
+Command    = require('../Command')
 
 Variable   = require('../commands/Variable')
 Constraint = require('../commands/Constraint')
@@ -36,7 +36,7 @@ Top = Abstract::Default.extend
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
-    meta = key: engine.Continuation.get(continuation)
+    meta = key: @continuate(continuation)
     if scope != engine.scope
       meta.scope = engine.identity(scope)
 

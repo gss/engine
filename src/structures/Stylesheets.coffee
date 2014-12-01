@@ -204,4 +204,14 @@ class Stylesheets
   getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'
 
+  getCanonicalSelector: (selector) ->
+    selector = selector.trim()
+    selector = selector.
+      replace(@CanonicalizeSelectorRegExp, ' ').
+      replace(/\s+/g, @DESCEND)#.
+      #replace(@engine.Operation.CleanupSelectorRegExp, '')
+    return selector
+  CanonicalizeSelectorRegExp: new RegExp("" +
+    "[$][a-z0-9]+[" + Continuation::DESCEND + "]\s*", "gi")
+
 module.exports = Stylesheets

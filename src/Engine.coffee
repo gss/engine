@@ -17,24 +17,20 @@ forming multiple unrelated dependency graphs. ###
   return this[bits[bits.length - 1]]
 @module ||= {}
 
-Domain = require ('./concepts/Domain')
+Domain  = require('./concepts/Domain')
+Events  = require('./structures/Events')
 
-class Engine extends Domain
+class Engine extends Events
 
   Command:      require('./concepts/Command')
-  Property:     require('./concepts/Property')
-  Update:       require('./concepts/Update')
     
-  Continuation: require('./concepts/Continuation')
-
   Console:      require('./utilities/Console')
   Inspector:    require('./utilities/Inspector')
   Exporter:     require('./utilities/Exporter')
   
-  Properties:   require('./properties/Axioms')
-  
-  Identity:     require('./modules/Identity')
-  Signatures:   require('./modules/Signatures')
+  Update:       require('./structures/Update')
+  Identity:     require('./structures/Identity')
+  Signatures:   require('./structures/Signatures')
 
   Domains: 
     Abstract:   require('./domains/Abstract')
@@ -72,11 +68,6 @@ class Engine extends Domain
     unless @Command
       return new Engine(arguments[0], arguments[1], arguments[2])
 
-    # Create instance own objects and context objects.
-    # Context objects are contain non-callable 
-    # definitions of commands and properties.
-    # Definitions are compiled into functions 
-    # right before first commands are executed
     super(@, url)
     
     @addListeners(@$events)
@@ -84,19 +75,16 @@ class Engine extends Domain
     @domains      = []
     @domain       = @
     @inspector    = new @Inspector(@)
-    
 
     @precompile()
  
-    @Continuation = @Continuation.new(@)
-
-    # Constant and input values
+    # Known suggested values
     @assumed = new @Numeric(assumed)
     @assumed.displayName = 'Assumed'
     @assumed.static = true
     @assumed.setup()
 
-    # Conditions and final values
+    # Final values, used in conditions
     @solved = new @Boolean
     @solved.displayName = 'Solved'
     @solved.setup()
@@ -162,7 +150,11 @@ class Engine extends Domain
     if typeof args[0] == 'function'
       solution = args.shift().apply(@, args) 
     else if args[0]?
-      solution = Domain::solve.apply(@, args)
+      strategy = @[@strategy]
+      if strategy.solve
+        solution = strategy.solve.apply(strategy, arguments) || {}
+      else
+        solution = strategy.apply(@, arguments)
 
     if solution
       @updating.apply(solution)
@@ -291,13 +283,10 @@ class Engine extends Domain
     if domain.priority < 0 && !domain.url
       if @domains.indexOf(domain) == -1
         @domains.push(domain)
-          
-
-    # Broadcast operations without specific domain (e.g. remove)
-    else
 
     return result
 
+  # Dispatch operations without specific domain (e.g. remove)
   broadcast: (problems, index, update) ->
     others = []
     removes = []
@@ -458,8 +447,6 @@ if !self.window && self.onmessage != undefined
       for property, value of solution
         result[property] = value
     postMessage(result)
-
-Engine.Continuation = Engine::Continuation
 
 # Identity and console modules are shared between engines
 Engine.identity = Engine::identity = new Engine::Identity

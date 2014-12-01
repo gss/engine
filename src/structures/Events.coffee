@@ -11,7 +11,7 @@ if window?
   CustomEvent.prototype = window.Event.prototype
   window.CustomEvent = CustomEvent
 
-class Trigger
+class Events
   constructor: ->
     @listeners ||= {}
     @eventHandler = @handleEvent.bind(@)
@@ -66,4 +66,4 @@ class Trigger
   then: (callback) ->
     @once @DONE, callback
 
-module.exports = Trigger
+module.exports = Events
