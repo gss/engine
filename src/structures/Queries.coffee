@@ -15,11 +15,17 @@ class Queries
   constructor: (@engine) ->
     @watchers = {}
     @mutations = []
-    unless @PAIR
-      for property in ['PAIR', 'ASCEND', 'DESCEND', 'DELIMETERS', 'continuate']
+    @engine.addEventListener 'solve', @after.bind(@)
+    unless @CanonicalizeRegExp
+      for property in ['PAIR', 'ASCEND', 'DESCEND', 'DELIMITERS', 'delimit']
         Queries::[property] = @engine.Command::[property]
 
-  onBeforeSolve: ->
+      Queries::CanonicalizeRegExp = new RegExp("" +
+        "([^"   + Queries::PAIR   + ",])" +
+        "\\$[^" + Queries::ASCEND + "]+" +
+        "(?:"   + Queries::ASCEND + "|$)", "g")
+
+  after: ->
     # Update all DOM queries that matched mutations
     index = 0
     while @mutations[index]
@@ -249,7 +255,7 @@ class Queries
   remove: (id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
       node = id
-      id = @engine.identity(id)
+      id = @engine.identify(id)
     else
       if id.indexOf('"') > -1
         node = id
@@ -332,14 +338,13 @@ class Queries
     if @mutations
       @unobserve(@mutations, path, true)
 
-
     @unobserve((scope || @engine.scope)._gss_id, path)
 
     if !result || !@engine.isCollection(result)
       unless path.charAt(0) == @PAIR
-        contd = @continuate(path)
+        contd = @delimit(path)
         @engine.updating?.remove(contd)
-        @engine.yield(['remove', contd])
+        @engine.remove(contd)
     return true
 
   # If a query selects element from some other node than current scope
@@ -456,7 +461,7 @@ class Queries
       else if continuation.charAt(0) == @PAIR
 
         # Subscribe node to the query
-        if id = engine.identity(node)
+        if id = engine.identify(node)
           watchers = @watchers[id] ||= []
           if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
             operation.command.prepare(operation)
@@ -489,7 +494,7 @@ class Queries
       
     #unless operation.def.capture
       # Subscribe node to the query
-    if id = engine.identity(node)
+    if id = engine.identify(node)
       watchers = @watchers[id] ||= []
       if (engine.indexOfTriplet(watchers, operation, continuation, scope) == -1)
         operation.command.prepare(operation)
@@ -522,7 +527,7 @@ class Queries
 
   # Check if a node observes this qualifier or combinator
   match: (node, group, qualifier, changed, continuation) ->
-    return unless id = @engine.identity(node)
+    return unless id = @engine.identify(node)
     return unless watchers = @watchers[id]
     if continuation
       path = @getCanonicalPath(continuation)
@@ -563,7 +568,7 @@ class Queries
 
   # Return collection shared for all codepaths
   getCanonicalCollection: (path) ->
-    return @get(@continuate(@getCanonicalPath(continuation)))
+    return @get(@getCanonicalPath(path))
     
 
   # Compare position of two nodes to sort collection in DOM order
@@ -605,7 +610,7 @@ class Queries
     unless bits[bits.length - 1]
       return continuation
     if scope && @engine.scope != scope
-      id = @engine.identity(scope)
+      id = @engine.identify(scope)
       prev = bits[bits.length - 2]
       # Ugh #1
       if prev && prev.substring(prev.length - id.length) != id
@@ -629,7 +634,7 @@ class Queries
       bits.pop()
 
     if scope && @engine.scope != scope
-      id = @engine.identity(scope)
+      id = @engine.identify(scope)
       # Ugh #1
       if last.substring(last.length - id.length) == id
         bits.pop()
@@ -646,18 +651,13 @@ class Queries
     return @engine.queries[bits.join(@DESCEND)]
 
   # Remove all fork marks from a path. 
-  # Allows multiple selector paths have shared destination 
+  # Allows multiple query paths have shared destination 
   getCanonicalPath: (continuation, compact) ->
-    bits = @get(continuation).split(@DESCEND)
+    bits = @delimit(continuation).split(@DESCEND)
     last = bits[bits.length - 1]
     last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '$1')
     return last if compact
     return bits.join(@DESCEND)
-
-  CanonicalizeRegExp: new RegExp("" +
-    "([^"   + Command::PAIR   + ",])" +
-    "\\$[^" + Command::ASCEND + "]+" +
-    "(?:"   + Command::ASCEND + "|$)", "g")
 
   getVariants: (path) ->
     [path, path + @ASCEND, path + @PAIR, path + @DESCEND]

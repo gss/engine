@@ -1,6 +1,11 @@
-# Define a style from a tree definition
-# Creates matcher function that match arguments against types
-# and returns extendable shorthand class instance with defaults 
+# Define a style (family) from JSON definition
+# Creates matcher function that validates and identifies 
+# values against defined property types and keywords
+
+# Style family shorthands produce family object instance 
+# that has default values set in the prototype.
+# It can be used to merge and serialize partial updates.
+
 
 Style = (definition, name, styles,
          keywords = {}, types = [], keys = [], properties = [], required = {}
@@ -103,6 +108,7 @@ class Shorthand
     callback.prototype = @
     return callback
 
+  # Serialize given styles respecting default and instance values.
   format: (styles, number) ->
     string = undefined
     if @style.keys
@@ -148,6 +154,7 @@ class Shorthand
 
     return string 
 
+  # Compare values of two properties
   equals: (first, second) ->
     a = @[first]
     b = @[second]
@@ -156,7 +163,7 @@ class Shorthand
     else
       return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]
 
-
+  # Serialize expression to string, cast integers to pixels when applicable
   toExpressionString: (key, operation, expression, styles = @styles) ->
     switch typeof operation
       when 'object'

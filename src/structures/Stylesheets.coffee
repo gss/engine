@@ -1,4 +1,4 @@
-# Find, parse, watch and transform stylesheets
+# Find, parse, watch andS transform stylesheets
 
 class Stylesheets
   constructor: (@engine) ->
@@ -11,7 +11,10 @@ class Stylesheets
   ]
 
   compile: ->
-    @CleanupSelectorRegExp = new RegExp(@engine.Continuation.DESCEND, 'g')
+    @CanonicalizeSelectorRegExp = new RegExp(
+      "[$][a-z0-9]+[" + @engine.queries.DESCEND + "]\s*", "gi"
+    )
+    @CleanupSelectorRegExp = new RegExp(@engine.queries.DESCEND, 'g')
     @engine.engine.solve 'Document', 'stylesheets', @initialize
     @inline = @engine.queries['style[type*="text/gss"]']
     @remote = @engine.queries['link[type*="text/gss"]']
@@ -156,7 +159,7 @@ class Stylesheets
           for result, index in results
             if result.substring(0, 11) != '[matches~="'
               result = @getCustomSelector(result)
-            results[index] = result.substring(0, 11) + parent.uid + @engine.Continuation.DESCEND + result.substring(11)
+            results[index] = result.substring(0, 11) + parent.uid + @engine.queries.DESCEND + result.substring(11)
       
       # Add rule selector to path
       else if parent[0] == 'rule'
@@ -178,7 +181,7 @@ class Stylesheets
           update = []
           for result in results
             if result.substring(0, 11) == '[matches~="'
-              update.push result.substring(0, 11) + selectors + @engine.Continuation.DESCEND + result.substring(11)
+              update.push result.substring(0, 11) + selectors + @engine.queries.DESCEND + result.substring(11)
             else
               for bit, index in bits
                 if groups[index] != bit
@@ -202,7 +205,7 @@ class Stylesheets
     return results
 
   getCustomSelector: (selector) ->
-    return '[matches~="' + selector.replace(/\s+/, @engine.Continuation.DESCEND) + '"]'
+    return '[matches~="' + selector.replace(/\s+/, @engine.queries.DESCEND) + '"]'
 
   getCanonicalSelector: (selector) ->
     selector = selector.trim()
@@ -211,7 +214,5 @@ class Stylesheets
       replace(/\s+/g, @DESCEND)#.
       #replace(@engine.Operation.CleanupSelectorRegExp, '')
     return selector
-  CanonicalizeSelectorRegExp: new RegExp("" +
-    "[$][a-z0-9]+[" + Continuation::DESCEND + "]\s*", "gi")
 
 module.exports = Stylesheets

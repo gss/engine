@@ -13,6 +13,7 @@
     "lib/Engine.js",
     "lib/Domain.js",
     "lib/Command.js",
+    "lib/Update.js",
 
     "lib/commands/Assignment.js", 
     "lib/commands/Block.js", 
@@ -21,7 +22,9 @@
     "lib/commands/Iterator.js", 
     "lib/commands/Query.js", 
     "lib/commands/Selector.js", 
+    "lib/commands/Style.js",
     "lib/commands/Source.js", 
+    "lib/commands/Type.js",
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
     "lib/commands/Variable.js", 
@@ -34,8 +37,6 @@
     "lib/domains/Document.js",
     "lib/domains/Linear.js", 
     "lib/domains/Finite.js", 
-
-
 
     "lib/structures/Events.js", 
     "lib/structures/Identity.js", 

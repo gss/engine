@@ -203,7 +203,7 @@ describe 'Domain', ->
           "$box0[intrinsic-width]": 20
           result: 0
           x: 21
-
+        debugger
         engine.solve
           x: 2
         , (solution) ->
@@ -544,7 +544,7 @@ describe 'Domain', ->
       ]).to.eql
         a: 8
         result: 9
-        #c: 9
-        #b: 3
+        c: 9
+        b: 3
 
 

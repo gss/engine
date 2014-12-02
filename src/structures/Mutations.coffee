@@ -2,6 +2,8 @@ require '../../vendor/weakmap.js'
 require '../../vendor/MutationObserver.js'
 require '../../vendor/MutationObserver.attributes.js'
 
+# Process observed mutations in order and 
+# resolve operations that might be affected by changes
 class Mutations
   options:
     subtree: true
@@ -43,9 +45,11 @@ class Mutations
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
-    return @engine.engine.compile(true) unless @engine.engine.running
+    unless @engine.engine.running
+      return @engine.engine.compile(true)
+    
     result = @engine.engine.solve 'mutations', ->
-      @engine.updating.reset()
+      @updating.reset()
 
       for mutation in mutations
         if @mutations.filter(mutation) == false
@@ -88,34 +92,35 @@ class Mutations
 
     prev = next = mutation
     firstPrev = firstNext = true
+    queries = @engine.queries
     while (prev = prev.previousSibling)
       if prev.nodeType == 1
         if firstPrev
-          @engine.queries.match(prev, '+', undefined, '*') 
-          @engine.queries.match(prev, '++', undefined, '*')
+          queries.match(prev, '+', undefined, '*') 
+          queries.match(prev, '++', undefined, '*')
           firstPrev = false
-        @engine.queries.match(prev, '~', undefined, changedTags)
-        @engine.queries.match(prev, '~~', undefined, changedTags)
+        queries.match(prev, '~', undefined, changedTags)
+        queries.match(prev, '~~', undefined, changedTags)
         next = prev
     while (next = next.nextSibling)
       if next.nodeType == 1
         if firstNext
-          @engine.queries.match(next, '!+', undefined, '*') 
-          @engine.queries.match(next, '++', undefined, '*')
+          queries.match(next, '!+', undefined, '*') 
+          queries.match(next, '++', undefined, '*')
           firstNext = false
-        @engine.queries.match(next, '!~', undefined, changedTags)
-        @engine.queries.match(next, '~~', undefined, changedTags)
+        queries.match(next, '!~', undefined, changedTags)
+        queries.match(next, '~~', undefined, changedTags)
 
 
     # Invalidate descendants observers
-    @engine.queries.match(target, '>', undefined, changedTags)
+    queries.match(target, '>', undefined, changedTags)
     allAdded = []
     allRemoved = []
     allMoved = []
     moved = []
 
     for child in added
-      @engine.queries.match(child, '!>', undefined, target)
+      queries.match(child, '!>', undefined, target)
       allAdded.push(child)
       for el in child.getElementsByTagName('*')
         allAdded.push(el)
@@ -153,16 +158,16 @@ class Mutations
     parent = target
     while parent#.nodeType == 1
       # Let parents know about inserted nodes
-      @engine.queries.match(parent, ' ', undefined, allChanged)
+      queries.match(parent, ' ', undefined, allChanged)
       for child in allChanged
-        @engine.queries.match(child, '!', undefined, parent)
+        queries.match(child, '!', undefined, parent)
 
       for prop, values of update
         for value in values
           if prop.charAt(1) == '$' # qualifiers
-            @engine.queries.match(parent, prop, value)
+            queries.match(parent, prop, value)
           else
-            @engine.queries.match(parent, prop, undefined, value)
+            queries.match(parent, prop, undefined, value)
 
       break if parent == @engine.scope
       break unless parent = parent.parentNode

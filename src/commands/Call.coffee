@@ -1,4 +1,4 @@
-Command = require('../concepts/Command')
+Command = require('../Command')
 
 class Call extends Command
   type: 'Call'

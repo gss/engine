@@ -12,6 +12,7 @@ class Document extends Abstract
   Positions:   require('../structures/Positions')
   Stylesheets: require('../structures/Stylesheets')
 
+
   helps: true
   disconnected: true
 
@@ -25,12 +26,11 @@ class Document extends Abstract
     engine.mutations   ||= new @Mutations(@)
     engine.applier     ||= engine.positions
     engine.scope       ||= document
-    engine.all           = engine.scope.getElementsByTagName('*')
 
     if @scope.nodeType == 9 && ['complete', 'loaded'].indexOf(@scope.readyState) == -1
-      @scope   .addEventListener('DOMContentLoaded', engine)
-      document .addEventListener('readystatechange', engine)
-      window   .addEventListener('load',             engine)
+      @scope  .addEventListener('DOMContentLoaded', engine)
+      document.addEventListener('readystatechange', engine)
+      window  .addEventListener('load',             engine)
     else if @running
       @events.compile.call(@)
       
@@ -41,7 +41,7 @@ class Document extends Abstract
 
   events:
     resize: (e = '::window') ->
-      id = e.target && @identity(e.target) || e
+      id = e.target && @identify(e.target) || e
 
       unless @resizer?
         if e.target && @updating
@@ -64,7 +64,7 @@ class Document extends Abstract
       , 20
       
     scroll: (e = '::window') ->
-      id = e.target && @identity(e.target) || e
+      id = e.target && @identify(e.target) || e
       @solve id + ' scrolled', ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")

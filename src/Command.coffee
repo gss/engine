@@ -16,6 +16,105 @@ class Command
     
     return command
 
+  # Evaluate operation arguments, execute command, propagate result
+  solve: (engine, operation, continuation, scope, ascender, ascending) -> 
+    domain = operation.domain || engine
+    
+    # Let engine modify continuation or return cached result
+    switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
+      when 'object', 'string'
+        if continuation.indexOf(@PAIR) > -1 || @reference
+          return result
+        
+      when 'boolean'
+        if result
+          result = undefined
+          continuation = @rewind(engine, operation, continuation, scope)
+        else
+          return
+
+    # Use a shortcut operation when possible (e.g. native dom query)
+    if @head# && @head != operation
+      return @jump(domain, operation, continuation, scope, ascender, ascending)
+
+    if result == undefined
+      # Recursively solve arguments, stop on undefined
+      args = @descend(domain, operation, continuation, scope, ascender, ascending)
+
+      return if args == false
+
+      @log(args, domain, operation, continuation)
+
+      # Execute command with hooks
+      result = @before(args, domain, operation, continuation, scope, ascender, ascending)
+      result ?= @execute.apply(@, args)
+      if result = @after(args, result, domain, operation, continuation, scope, ascender, ascending)
+        continuation = @continue(result, domain, operation, continuation, scope, ascender, ascending)
+
+    if result?
+      return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
+
+  # Evaluate operation arguments in order, break on undefined
+  descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    for index in [1 ... operation.length] by 1
+
+      # Use ascending value
+      
+      if ascender == index
+        argument = ascending
+      else
+        argument = operation[index]
+
+        if argument instanceof Array
+          # Find a class that will execute the command
+          command = argument.command || engine.Command(argument)
+          argument.parent ||= operation
+            
+          # Leave forking/pairing mark in a path when resolving next arguments
+          contd = @connect(engine, operation, continuation, scope, args, ascender)
+
+          # Evaluate argument
+          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, undefined, ascending)
+            
+          if argument == undefined
+            return false
+          
+      # Place argument at position enforced by signature
+      (args || args = Array(operation.length - 1 + @padding))[@permutation[index - 1]] = argument
+    
+    # Methods that accept more arguments than signature gets extra meta arguments
+    extras = @extras ? @execute.length - index + 1
+    if extras > 0
+      for i in [0 ... extras] by 1
+        (args ||= Array(operation.length - 1 + @padding)).push arguments[i]
+
+    return args
+
+  # Pass control to parent operation. 
+  ascend: (engine, operation, continuation, scope, result, ascender, ascending) ->
+    
+    if (parent = operation.parent)
+
+      # Return partial solution to dispatch to parent command's domain
+      if domain = operation.domain
+        if (wrapper = parent.domain) && wrapper != domain && wrapper != engine
+          @transfer(operation.domain, parent, continuation, scope, ascender, ascending, parent.command)
+          return
+        
+      # Offer parent command to capture a value
+      if top = parent.command
+        if yielded = top.yield?(result, engine, operation, continuation, scope, ascender)
+          return if yielded == true
+          return yielded
+
+      # Recurse to execute parent expression with ascending query result
+      if ascender?
+        return top.solve(parent.domain || engine, parent, continuation, scope, parent.indexOf(operation), result)
+      
+    return result
+
+
+
   @subtype: (engine, operation, types) ->
 
   
@@ -97,100 +196,6 @@ class Command
   log: (args, engine, operation, continuation, scope, name) ->
     engine.console.row(name || operation[0], args, continuation || "")
 
-  solve: (engine, operation, continuation, scope, ascender, ascending) -> 
-    domain = operation.domain || engine
-    
-    # Let engine modify continuation or return cached result
-    switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
-      when 'object', 'string'
-        if continuation.indexOf(@PAIR) > -1 || @reference
-          return result
-        
-      when 'boolean'
-        if result
-          result = undefined
-          continuation = @getScopePath(scope, continuation)
-        else
-          return
-
-    # Use a shortcut operation when possible (e.g. native dom query)
-    if @head# && @head != operation
-      return @jump(domain, operation, continuation, scope, ascender, ascending)
-
-    if result == undefined
-      # Recursively solve arguments, stop on undefined
-      args = @descend(domain, operation, continuation, scope, ascender, ascending)
-
-      return if args == false
-
-      @log(args, domain, operation, continuation)
-
-      # Execute command with hooks
-      result = @before(args, domain, operation, continuation, scope, ascender, ascending)
-      result ?= @execute.apply(@, args)
-      if result = @after(args, result, domain, operation, continuation, scope, ascender, ascending)
-        continuation = @continue(result, domain, operation, continuation, scope, ascender, ascending)
-
-    if result?
-      return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
-
-  # Evaluate operation arguments in order, break on undefined
-  descend: (engine, operation, continuation, scope, ascender, ascending) ->
-    for index in [1 ... operation.length] by 1
-
-      # Use ascending value
-      
-      if ascender == index
-        argument = ascending
-      else
-        argument = operation[index]
-
-        if argument instanceof Array
-          command = argument.command || engine.Command(argument)
-          argument.parent ||= operation
-            
-          # Leave forking/pairing mark in a path when resolving next arguments
-          contd = @connect(engine, operation, continuation, scope, args, ascender)
-
-          # Evaluate argument
-          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, undefined, ascending)
-            
-          if argument == undefined
-            return false
-          
-      # Place argument at position enforced by signature
-      (args || args = Array(operation.length - 1 + @padding))[@permutation[index - 1]] = argument
-    
-    # Methods that accept more arguments than signature gets extra meta arguments
-    extras = @extras ? @execute.length - index + 1
-    if extras > 0
-      for i in [0 ... extras] by 1
-        (args ||= Array(operation.length - 1 + @padding)).push arguments[i]
-
-    return args
-
-  # Pass control to parent operation. 
-  ascend: (engine, operation, continuation, scope, result, ascender, ascending) ->
-    
-    if (parent = operation.parent)
-
-      # Return partial solution to dispatch to parent command's domain
-      if domain = operation.domain
-        if (wrapper = parent.domain) && wrapper != domain && wrapper != engine
-          @transfer(operation.domain, parent, continuation, scope, ascender, ascending, parent.command)
-          return
-        
-      # Hook parent command to capture yielded value 
-      if top = parent.command
-        if yielded = top.yield?(result, engine, operation, continuation, scope, ascender)
-          return if yielded == true
-          return yielded
-
-      # Recurse to ascend query result
-      if ascender?
-        return top.solve(parent.domain || engine, parent, continuation, scope, parent.indexOf(operation), result)
-      
-    return result
 
   # Reinitialize foreign expression as local to parent domain
   patch: (engine, operation, continuation, scope, replacement) ->
@@ -199,10 +204,7 @@ class Command
     if op.domain != domain
       op.command.transfer(domain, op, continuation, scope, undefined, undefined, op.command, replacement)
 
-
-
-
-  # Write meta data for a foreign domain
+  # Write meta data for a foreign domain, optionally queues parent operation
   transfer: (engine, operation, continuation, scope, ascender, ascending, top, replacement) ->
     if (meta = @getMeta(operation))
       for path of operation.variables
@@ -216,19 +218,27 @@ class Command
         parent = parent.parent
       engine.updating.push([parent], parent.domain)
 
-
+  # Meta information is stored in a wrapper root object by convention
+  # Used to restore continuation/scope and to export values across domains
   getMeta: (operation) ->
     parent = operation
     while parent = parent.parent
       if parent[0].key?
         return parent[0]
 
+  # Return pairing continuation after one query has been resolved
   connect: (engine, operation, continuation, scope, args, ascender) ->
     if ascender? && continuation[continuation.length - 1] != @DESCEND
-      return @continuate(continuation, @PAIR)
+      return @delimit(continuation, @PAIR)
 
+  # Return parent scope continuation to execute and pair another query
+  rewind: (engine, operation, continuation, scope) ->
+    return engine.queries.getScopePath(scope, continuation)
+
+  # Return ascending continuation with ids when iterating collection
   fork: (engine, continuation, item) ->
-    return @continuate(continuation + engine.identity(item), @ASCEND)
+    return @delimit(continuation + engine.identify(item), @ASCEND)
+
 
   # Return alternative operation to process
   jump: ->
@@ -239,8 +249,8 @@ class Command
   # Retrieve cached result
   retrieve: ->
 
-  # Map to reorder arguments, no changes by default
-  permutation: [0 ... 150]
+  # Map to reorder arguments, 640 should be enough for everybody
+  permutation: [0 ... 640]
 
   # Add this nubmer of undefineds at the end of argument list
   padding: 0
@@ -249,6 +259,7 @@ class Command
   # Computed automatically for each command by checking `.length` of `@execute` callback
   extras: undefined
 
+  # Serialize operation with infix syntax (useful for constraints) 
   toExpression: (operation) ->
     switch typeof operation
       when 'object'
@@ -336,6 +347,7 @@ class Command
       return 'List'
     return 'Object'
   
+  # Unset domain and variable references from sub-tree
   @orphanize: (operation) ->
     if operation.domain
       operation.domain = undefined
@@ -346,6 +358,7 @@ class Command
         @orphanize arg
     operation
 
+  # Return topmost known command
   @getRoot: (operation) ->
     while !(operation.command instanceof Command.Default)
       operation = operation.parent
@@ -380,9 +393,8 @@ class Command
     @Types = Types
       
     @
-  
-  @Empty: {}
 
+  # Compile command as an external helper on engine prototype
   @Helper: (engine, name) ->
     signature = engine.signatures[name] 
     base = [name]
@@ -391,7 +403,7 @@ class Command
       command = Command.match(engine, base.concat(args)).prototype
       args.length = command.permutation.length + command.padding
       return command.execute.apply(command, args.concat(engine, args, '', engine.scope))
-
+  
 
 # ### Delimeters
 
@@ -407,7 +419,7 @@ class Command
 # e.g. to remove stylesheet, css rule or conditional branch
   DESCEND: String.fromCharCode(8595)
 
-  DELIMETERS: [
+  DELIMITERS: [
     Command::ASCEND
     Command::PAIR
     Command::DESCEND
@@ -415,9 +427,9 @@ class Command
   
 
   # Update delimeter at the end of the path
-  continuate: (path, delimeter || '') ->
-    if @DELIMETERS.indexOf(path.charAt(path.length - 1)) > -1
-      return path.substring(0, path.length - 2) + delimeter
+  delimit: (path, delimeter = '') ->
+    if @DELIMITERS.indexOf(path.charAt(path.length - 1)) > -1
+      return path.substring(0, path.length - 1) + delimeter
     else
       return path + delimeter
 
@@ -440,7 +452,7 @@ class Command.List extends Command
         command.solve(engine, argument, continuation, scope)
     return
 
-# An optional command for unmatched ast
+# An optional command for unmatched operation
 class Command.Default extends Command
   type: 'Default'
 

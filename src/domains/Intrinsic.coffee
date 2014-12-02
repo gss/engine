@@ -13,13 +13,12 @@ Styles     = require('../properties/Styles')
 
 class Intrinsic extends Numeric
   priority: 1
-  structured: true
+  subscribing: true
   immediate: true
   
-  Type:           require('../concepts/Type')
-  Style:          require('../concepts/Style')
-
   Unit:           require('../commands/Unit')
+  Style:          require('../commands/Style')
+  Type:           require('../commands/Type')
   Transformation: require('../commands/Transformation')
 
   Properties: do ->
@@ -32,11 +31,12 @@ class Intrinsic extends Numeric
 
   constructor: ->
     @types = new @Type(@)
+    super
 
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
       computed = (@computed ||= {})
-      id = @identity(element)
+      id = @identify(element)
       old = computed[id]
       if force || !old?
         return computed[id] = window.getComputedStyle(element)
@@ -83,10 +83,10 @@ class Intrinsic extends Numeric
               shared = false
               break
           if shared != false
-            if @stylesheets.solve stylesheet, operation, @queries.continuate(continuation), element, property, value
+            if @stylesheets.solve stylesheet, operation, @queries.delimit(continuation), element, property, value
               return
 
-    path = @engine.getPath(element, 'intrinsic-' + property)
+    path = @getPath(element, 'intrinsic-' + property)
     if @watchers?[path]
       return
     element.style[camel] = value
@@ -102,7 +102,7 @@ class Intrinsic extends Numeric
     return
 
   get: (object, property, continuation) ->
-    path = @engine.getPath(object, property)
+    path = @getPath(object, property)
 
     if (prop = @properties[path])?
       if typeof prop == 'function'
@@ -137,7 +137,7 @@ class Intrinsic extends Numeric
     @engine.updating.reflown = @scope
 
   verify: (object, property, continuation) ->
-    path = @engine.getPath(object, property)
+    path = @getPath(object, property)
     if @values.hasOwnProperty(path)
       @set(null, path, @get(null, path, continuation))
 
@@ -193,7 +193,7 @@ class Intrinsic extends Numeric
     if (node = @identity.solve(id)) && node.nodeType == 1
       if property.indexOf('intrinsic-') > -1
         property = property.substring(10)
-      if @engine.values[@engine.getPath(id, property)] != undefined
+      if @engine.values[@getPath(id, property)] != undefined
         node.style[property] = ''
 
   measure: (node, x, y, full) ->

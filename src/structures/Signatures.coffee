@@ -11,7 +11,7 @@ composition to be implemented structurally, instead of branching in runtime.
 Signatures are shared between commands. Dispatcher support css-style 
 typed optional argument groups, but has no support for keywords or repeating groups yet
 ###
-Command = require('../concepts/Command')
+Command = require('../Command')
 
 class Signatures
   

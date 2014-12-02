@@ -2,11 +2,12 @@ class Pairs
   constructor: (@engine) ->
     @lefts = []
     @paths = {}
+    @engine.addEventListener 'solve', @after.bind(@)
 
 
   onLeft: (operation, parent, continuation, scope) ->
     left = @engine.queries.getCanonicalPath(continuation)
-    if @engine.indexOfTriplet(@lefts, parent, left, scope) == -1
+    if @engine.Domain::indexOfTriplet(@lefts, parent, left, scope) == -1
       parent.right = operation
       @lefts.push parent, left, scope
       return true
@@ -70,8 +71,7 @@ class Pairs
 
   TrailingIDRegExp: /(\$[a-z0-9-_"]+)[↓↑→]?$/i
 
-
-  onBeforeSolve: () ->
+  after: () ->
     dirty = @dirty
     delete @dirty
     @repairing = true
@@ -165,26 +165,26 @@ class Pairs
           added.push([leftNew[index], rightNew[index]])
 
     PAIR = @engine.queries.PAIR
-    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + @engine.identity(scope)
+    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + @engine.identify(scope)
       
 
     cleaned = []
     for pair in removed
       continue if !pair[0] || !pair[1]
       contd = left
-      contd += @engine.identity(pair[0])
+      contd += @engine.identify(pair[0])
       contd += PAIR
       contd += root.right.command.path
-      contd += @engine.identity(pair[1])
+      contd += @engine.identify(pair[1])
       cleaned.push(contd)
     
     solved = []
     for pair in added
       contd = left
-      contd += @engine.identity(pair[0])
+      contd += @engine.identify(pair[0])
       contd += PAIR
       contd += root.right.command.path
-      contd += @engine.identity(pair[1])
+      contd += @engine.identify(pair[1])
 
       if (index = cleaned.indexOf(contd)) > -1
         cleaned.splice(index, 1)
@@ -253,12 +253,12 @@ class Pairs
 
   watch: (operation, continuation, scope, left, right) ->
     watchers = @paths[left] ||= []
-    if @engine.indexOfTriplet(watchers, right, operation, scope) == -1
+    if @engine.Domain::indexOfTriplet(watchers, right, operation, scope) == -1
       watchers.push(right, operation, scope)
 
   unwatch: (operation, continuation, scope, left, right) ->
     watchers = @paths[left] ||= []
-    unless (index = @engine.indexOfTriplet(watchers, right, operation, scope)) == -1
+    unless (index = @engine.Domain::indexOfTriplet(watchers, right, operation, scope)) == -1
       watchers.splice(index, 3)
 
 

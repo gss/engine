@@ -7,14 +7,25 @@ Constraint = require('../commands/Constraint')
 Assignment = require('../commands/Assignment')
 Condition  = require('../commands/Condition')
 Iterator   = require('../commands/Iterator')
+Call       = require('../commands/Call')
 
 class Abstract extends Domain
   url: undefined
+
+  Properties:  require('../properties/Axioms')
 
   constructor: ->
     if @running
       @compile()
     super
+
+Abstract::Remove = Call.Unsafe.extend {
+  extras: 1
+},
+  remove: (args..., engine)->
+    engine.engine.remove(args...)
+    return true
+
 
 # Catch-all class for unknown commands    
 Abstract::Default = Command.Default.extend
@@ -29,16 +40,16 @@ Top = Abstract::Default.extend
 
   condition: (engine, operation) ->
     if parent = operation.parent
-      if parent.command instanceof Abstract::Default
+      if parent.command instanceof Abstract::Default 
         return false
     return true
 
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
-    meta = key: @continuate(continuation)
+    meta = key: @delimit(continuation)
     if scope != engine.scope
-      meta.scope = engine.identity(scope)
+      meta.scope = engine.identify(scope)
 
     args.unshift operation[0]
     wrapper = @produce(meta, args, operation)
@@ -56,6 +67,7 @@ Top = Abstract::Default.extend
 
   produce: (meta, args)->
     return [meta, args] 
+
 
 # Unrecognized command in conditional clause
 Clause = Top.extend

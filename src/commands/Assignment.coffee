@@ -1,4 +1,4 @@
-Command = require('../concepts/Command')
+Command = require('../Command')
 
 class Assignment extends Command
   type: 'Assignment'

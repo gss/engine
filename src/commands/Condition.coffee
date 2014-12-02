@@ -1,4 +1,4 @@
-Command = require('../concepts/Command')
+Command = require('../Command')
 
 class Condition extends Command
   type: 'Condition'
@@ -50,7 +50,7 @@ class Condition extends Command
       engine.queries[path] = ascending
       if switching
         if !d && (d = engine.pairs.dirty)
-          engine.pairs.onBeforeSolve()
+          engine.pairs.after()
 
         if engine.updating
           collections = engine.updating.collections
@@ -62,11 +62,11 @@ class Condition extends Command
       index = ascending ^ @inverted && 2 || 3
       engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + @DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
       if branch = operation.parent[index]
-        result = engine.Command(branch).solve(engine, branch, @continuate(path, @DESCEND), scope)
+        result = engine.Command(branch).solve(engine, branch, @delimit(path, @DESCEND), scope)
 
       if switching
-        engine.pairs?.onBeforeSolve()
-        #engine.queries?.onBeforeSolve()
+        engine.pairs?.after()
+        #engine.queries?.after()
         engine.switching = undefined
       
       engine.console.groupEnd(path)
@@ -79,7 +79,7 @@ class Condition extends Command
         continuation = operation[0].key
         scope = engine.identity[operation[0].scope] || scope
       else
-        continuation = @continuate(continuation, @DESCEND)
+        continuation = @delimit(continuation, @DESCEND)
       if continuation?
         @update(engine.document || engine.abstract, operation.parent[1], continuation, scope, undefined, result)
       return true

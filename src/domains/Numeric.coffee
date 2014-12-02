@@ -21,7 +21,7 @@ Numeric::Variable = Variable.extend {},
     if meta = @getMeta(operation)
       continuation = meta.key
       scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
-    return engine.watch(null, path, operation, @continuate(continuation || ''), scope)
+    return engine.watch(null, path, operation, @delimit(continuation || ''), scope)
 
 Numeric::Variable.Expression = Variable.Expression.extend()
 Numeric::Variable.Expression.define(Variable.Expression.algebra)

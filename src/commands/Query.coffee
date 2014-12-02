@@ -1,4 +1,4 @@
-Command = require('../concepts/Command')
+Command = require('../Command')
 
 Query = Command.extend
   type: 'Query'
@@ -102,7 +102,7 @@ Query = Command.extend
   getPath: (engine, operation, continuation) ->
     if continuation
       if continuation.nodeType
-        return engine.identity(continuation) + ' ' + @path
+        return engine.identify(continuation) + ' ' + @path
       else
         return continuation + (@selector || @key)
     else

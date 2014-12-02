@@ -166,7 +166,7 @@ Linear::Block.Meta = Block.Meta.extend {
       ]
 
 Linear::Call = Call.extend {},
-  'stay': (value, engine, operation) ->
+  stay: (value, engine, operation) ->
     engine.suggested = true;
     engine.solver.addStay(value)
     return
@@ -175,7 +175,7 @@ Linear::Call.Unsafe = Call.Unsafe.extend {
   extras: 1
 },
 
-  'remove': (args ..., engine) ->
+  remove: (args ..., engine) ->
     engine.remove.apply(engine, args)
 
 

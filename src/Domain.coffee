@@ -27,23 +27,29 @@ class Domain
   strategy: undefined
 
   constructor: (engine, url, values, name) ->
-    if !engine || engine instanceof Domain
-      @engine       = engine if engine
-      @displayName  = name   if name
-      @url          = url    if url
-      @signatures   = new @Signatures(@)
-      @merge(values)         if values
-      super
+    @values       = {}
+    @engine       = engine if engine
+    @displayName  = name   if name
+    @url          = url    if url
+    @merge(values)         if values
 
-      if @url && @getWorkerURL
-        if @url && (@url = @getWorkerURL?(@url))
-          if engine != @
-            unless @useWorker(@url)
-              @url = undefined
+    if @events != @engine.events
+      @addListeners(@events)
 
-      return @
-    else
-      return @find.apply(@, arguments)
+    @signatures   = new @Signatures(@)
+
+    if @Properties
+      @Property.compile @Properties::, @
+      Properties = @Properties
+    @properties  = new (Properties || Object)
+
+    if @url && @getWorkerURL
+      if @url && (@url = @getWorkerURL?(@url))
+        if engine != @
+          unless @useWorker(@url)
+            @url = undefined
+
+    return @
 
   setup: () ->
     return if @engine == @
@@ -58,16 +64,13 @@ class Domain
       else
         @watchers    = {}
         @observers   = {}
-        @objects     = {} if @structured
+        @objects     = {} if @subscribing
 
   solve: (operation, continuation, scope, ascender, ascending) ->
     transacting = @transact()
 
     if typeof operation == 'object' && !operation.push
-      if @domain == @engine
-        result = @assumed.merge operation
-      else
-        result = @merge operation
+      result = @assumed.merge operation
     else
       result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
@@ -87,10 +90,11 @@ class Domain
 
     return result || commited
 
+  # Listen to value changes
   watch: (object, property, operation, continuation, scope) ->
     @setup()
     path = @getPath(object, property)
-    if @engine.indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
+    if @indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
       observers = @observers[continuation] ||= []
       observers.push(operation, path, scope)
 
@@ -99,7 +103,7 @@ class Domain
 
       
       # Register props by id for quick lookup
-      if @structured && watchers.length == 3
+      if @subscribing && watchers.length == 3
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
           obj = @objects[id] ||= {}
@@ -112,16 +116,16 @@ class Domain
   unwatch: (object, property, operation, continuation, scope) ->
     path = @getPath(object, property)
     observers = @observers[continuation]
-    index = @engine.indexOfTriplet observers, operation, path, scope
+    index = @indexOfTriplet observers, operation, path, scope
     observers.splice index, 3
     delete @observers[continuation] unless observers.length
 
     watchers = @watchers[path]
-    index = @engine.indexOfTriplet watchers, operation, continuation, scope
+    index = @indexOfTriplet watchers, operation, continuation, scope
     watchers.splice index, 3
     unless watchers.length
       delete @watchers[path]
-      if @structured
+      if @subscribing
         if (j = path.indexOf('[')) > -1
           id = path.substring(0, j)
           obj = @objects[id] ||= {}
@@ -193,13 +197,13 @@ class Domain
         # Propagate updated value
         if value?
           watcher.command.ascend(@, watcher, watchers[index + 1], watchers[index + 2], value, true)
-        # Remove propagated value and all around it
+        # Remove propagated value and re-match expressions around it
         else
           watcher.command.patch(@, watcher, watchers[index + 1], watchers[index + 2])
                   
     return if @immutable
 
-    # Substitute variables
+    # Suggest or remove suggestions for previously added constraints
     if @priority >= 0 && variable = @variables[path]
       for constraint in variable.constraints
         for operation in constraint.operations
@@ -209,17 +213,13 @@ class Domain
                 op.command.patch(op.domain, op, undefined, undefined, @)
                 op.command.solve(@, op)
 
-    # Notify workers
+    # Suggest value to workers
     if workers = @workers
       for url, worker of workers
         if values = worker.values
           if values.hasOwnProperty(path)
-            @update([['value', path, value ? null]], worker)
+            @updating.push([['value', path, value ? null]], worker)
 
-    #while (index = @updating.imports.indexOf(path)) > -1
-    #if exports = @updating?.exports?[path]
-    #  for domain in exports
-    #    @update(domain, [['value', value, path]])
     return
 
   # Export values in a plain object. Use for tests only
@@ -230,6 +230,9 @@ class Domain
         object[property] = value
     return object
 
+  # Generate signature lookup tables for commands provided by domain
+  compile: ->
+    @Command.compile @
 
   # Observe path so when it's cleaned, command's remove method is invoked
   add: (path, value) ->
@@ -238,7 +241,7 @@ class Domain
     return
 
   # Transform solution values to reflect reconfigured constraints
-  prepare: (result = {}) ->
+  transform: (result = {}) ->
     nullified = @nullified
     replaced = @replaced
     if @declared
@@ -270,7 +273,7 @@ class Domain
       if !nullified?[path] && !replaced?[path] && path.charAt(0) != '%'
         result[path] = value
 
-    result = @prepare(result)
+    result = @transform(result)
     @merge(result, true)
 
     if @constraints
@@ -287,7 +290,7 @@ class Domain
   remove: ->
     for path in arguments
       if @observers
-        for contd in @queries.getVariants(path)
+        for contd in @queries?.getVariants(path) || [path]
           if observer = @observers[contd]
             while observer[0]
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
@@ -348,10 +351,10 @@ class Domain
     else
       if typeof id != 'string'
         if id.nodeType
-          id = @identity(id)
+          id = @identify(id)
         else 
           id = id.path
-      if id == @engine.scope?._gss_id && property.substring(0, 10) != 'intrinsic-'
+      if id == @scope?._gss_id && property.substring(0, 10) != 'intrinsic-'
         return property
       if id.substring(0, 2) == '$"'
         id = id.substring(1)
@@ -359,37 +362,36 @@ class Domain
 
 
   # Return domain that should be used to evaluate given variable
-  getVariableDomain: (engine, operation, Default) ->
+  # For unknown variables, it creates a domain instance 
+  # that will hold all dependent constraints and variables.
+  getVariableDomain: (operation, Default) ->
     if operation.domain
       return operation.domain
     path = operation[1]
     if (i = path.indexOf('[')) > -1
       property = path.substring(i + 1, path.length - 1)
     
-    if engine.assumed.values.hasOwnProperty(path)
-      return engine.assumed
-    else if property && (intrinsic = engine.intrinsic?.properties)
+    if @assumed.values.hasOwnProperty(path)
+      return @assumed
+    else if property && (intrinsic = @intrinsic?.properties)
       if (intrinsic[path]? || (intrinsic[property] && !intrinsic[property].matcher))
-        return engine.intrinsic
+        return @intrinsic
     
     if Default
       return Default
       
     if property && (index = property.indexOf('-')) > -1
       prefix = property.substring(0, index)
-      if (domain = engine[prefix])
-        if domain instanceof engine.Domain
+      if (domain = @[prefix])
+        if domain instanceof @Domain
           return domain
 
-    if op = engine.variables[path]?.constraints?[0]?.operations[0]?.domain
+    if op = @variables[path]?.constraints?[0]?.operations[0]?.domain
       return op
 
-    return @engine.linear.maybe()      
+    return @domain.maybe()      
 
-  yield: (solution, value) ->
-    @engine.engine.yield solution
-
-
+  # Set a flag to record all changed values
   transact: ->
     @setup()
     unless @changes && @hasOwnProperty('changes')
@@ -397,7 +399,7 @@ class Domain
         @mutations?.disconnect(true)
       @changes = {}
 
-
+  # Unset transaction flag and return changes
   commit: ->
     changes = @changes
     @changes = undefined
@@ -406,40 +408,27 @@ class Domain
     return changes
 
 
-  # Make Domain class inherit given engine instance. Crazy huh
-  # Overloads parts of the world (methods, variables, observers)
+  # Make Domain class inherit given engine instance
+  # Allows domain to overload engine methods and modules
   @compile = (domains, engine) ->
     for own name, domain of domains
       continue if domain.condition?.call(engine) == false
-      EngineDomain = engine[name] = (object) ->
-        @values = {}
+      EngineDomain = engine[name] = (values) ->
+        return domain::constructor.call(@, undefined, undefined, values)
         
-        if object
-          for property, value of object
-            @values = {} unless @hasOwnProperty 'values'
-            @values[property] = value
-        
-        if @Properties
-          @Property.compile @Properties::, @
-          Properties = @Properties
-        @properties  = new (Properties || Object)
-
-        return domain::constructor.call(@, engine)
-        
-      
       EngineDomainWrapper = ->
       EngineDomainWrapper.prototype = engine
       EngineDomain.prototype    = new EngineDomainWrapper
+      EngineDomain::engine = engine
+      EngineDomain::displayName = name
       for property, value of domain::
         EngineDomain::[property] = value
-      EngineDomain::solve     ||= Domain::solve unless domain::solve
-      EngineDomain::displayName = name
-      EngineDomain.displayName  = name
-      unless engine.prototype
-        engine[name.toLowerCase()] = new engine[name]
+      engine[name.toLowerCase()] = new engine[name]()
     @
 
-  @Property: (property, reference, properties) ->
+  # Create flat dictionary of property handlers from nested objects
+  # or generates css-like property families from array definitions
+  Property: (property, reference, properties) ->
     if typeof property == 'object'
       if property.push
         return properties[reference] = @Style(property, reference, properties)
@@ -458,7 +447,8 @@ class Domain
           properties[path] = @Property(value, path, properties)
     return property
 
-  @Property.compile = (properties, engine) ->
+  # Compile own properties
+  Domain::Property.compile = (properties, engine) ->
     properties.engine ||= engine
     for own key, property of properties
       continue if key == 'engine'
@@ -476,12 +466,6 @@ class Domain
         when "undefined"
           return object.length == 0
 
-  # Slice arrays recursively to remove the meta data
-  clone: (object) -> 
-    if object && object.map
-      return object.map @clone, @
-    return object
-
   # Return an index of 3 given items values in a flat array of triplets 
   indexOfTriplet: (array, a, b, c) ->
     if array
@@ -489,7 +473,6 @@ class Domain
         if op == a && array[index + 1] == b && array[index + 2] == c
           return index
     return -1
-  DONE: 'solve'
   
 module.exports = Domain
 

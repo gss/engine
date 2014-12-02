@@ -5,7 +5,7 @@ Combinators fetch new elements, while qualifiers filter them.
 
 ###
 
-Command = require('../concepts/Command')
+Command = require('../Command')
 Query   = require('./Query')
 
 class Selector extends Query
@@ -395,7 +395,7 @@ Selector.define
       if node == engine.scope
         return '$"' + value + '"'
       else
-        return engine.identity(node) + '"' + value + '"'
+        return engine.identify(node) + '"' + value + '"'
 
     prefix: '"'
 
@@ -513,7 +513,7 @@ Selector.define
     # Duplicates are stored separately, they dont trigger callbacks
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
-      contd = @queries.getScopePath(scope, continuation) + operation.parent.command.path
+      contd = engine.queries.getScopePath(scope, continuation) + operation.parent.command.path
       engine.queries.add(result, contd, operation.parent, scope, operation, continuation)
       engine.queries.ascending ||= []
       if engine.indexOfTriplet(engine.queries.ascending, operation.parent, contd, scope) == -1
@@ -523,7 +523,7 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = @queries.getScopePath(scope, continuation) + operation.parent.command.path
+      contd = engine.queries.getScopePath(scope, continuation) + operation.parent.command.path
       engine.queries.remove(result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     

@@ -134,6 +134,7 @@ describe('Domain', function() {
           result: 0,
           x: 21
         });
+        debugger;
         return engine.solve({
           x: 2
         }, function(solution) {
@@ -349,7 +350,9 @@ describe('Domain', function() {
       });
       return expect(engine.solve([['<=', ['get', 'c'], ['get', 'result']]])).to.eql({
         a: 8,
-        result: 9
+        result: 9,
+        c: 9,
+        b: 3
       });
     });
   });

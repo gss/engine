@@ -1,8 +1,8 @@
 # Schedule, group, sort expressions by domain, dependencies and worker
-# Evaluates asynchronously, in order. Re-evaluate side-effects.
+# Evaluates commands and their side effects in ordered batches
 
 Updater = (engine) ->
-  Update = (problem, domain, parent, Default) ->
+  Update = (problem, domain, parent, Domain) ->
     # Handle constructor call (e.g. new engine.update)
     if @ instanceof Update
       @problems = problem && (domain.push && problem || [problem]) || []
@@ -14,22 +14,23 @@ Updater = (engine) ->
     # Process arguments
     for arg, index in problem
       continue unless arg?.push
-      if typeof arg[0] == 'string'
+      unless arg[0] instanceof Array
         arg.parent ||= problem
         # Variable
         if arg[0] == 'get'
-          vardomain = arg.domain ||= @getVariableDomain(@, arg, Default)
+          vardomain = arg.domain ||= @domain.getVariableDomain(arg, Domain)
           update.push [arg], vardomain
         # Function call
         else
-          @update(arg, null, update, Default)
+          @update(arg, domain, update, Domain)
         object = true
     unless object
-      update.push [problem], null
+      unless problem instanceof Array
+        update.push [problem], null
 
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
-      index = update.wrap(problem, parent, Default)
+      update.wrap(problem, parent, domain || Domain)
 
     # Unroll recursion, solve problems
     if parent ||= @updating
@@ -59,7 +60,7 @@ Update.prototype =
       return @append position, problems, reverse
 
     # Find an insertion point
-    if reverse || !domain
+    if !domain
       position = @index + 1
     else
       position = @domains.length
@@ -86,7 +87,7 @@ Update.prototype =
   # Add new domain/problems pair to the queue
   insert: (position, domain, problems) ->
     for problem in problems
-      problem.variables = @setVariables(problems, problem)
+      @setVariables(problems, problem)
 
     @domains.splice(position, 0, domain)
     @problems.splice(position, 0, problems)
@@ -109,7 +110,7 @@ Update.prototype =
     return
 
   # Replace queued arguments with their parent function call
-  wrap: (operation, parent, Default) ->
+  wrap: (operation, parent, Domain) ->
     positions = undefined
     for problems, index in @problems
       if domain = @domains[index]
@@ -121,7 +122,9 @@ Update.prototype =
             if !positions || positions.indexOf(index) == -1
               (positions ||= []).push(index)
 
-    return unless positions
+    if !positions
+      @push [operation], null
+      return
 
     for index, j in positions by -1
       if @domains[index].displayName != other.displayName
@@ -149,7 +152,9 @@ Update.prototype =
 
   # Attempt to find and merge new domains that share variables
   connect: (target, positions) ->
-    domain = @domains[target]
+    unless domain = @domains[target]
+      return 
+
     problems = @problems[target]
     variables = @variables ||= {}
 
@@ -197,18 +202,18 @@ Update.prototype =
 
   # Combine two groups in the queue, and their domains if necessary
   merge: (from, to, parent) ->
-    domain = @domains[from]
     other = @domains[to]
     problems = @problems[from]
     result = @problems[to]
 
-    unless domain.MAYBE
-      domain.transfer(parent, other)
-      exported = domain.export()
+    if domain = @domains[from]
+      unless domain.MAYBE
+        domain.transfer(parent, other)
+        exported = domain.export()
 
-    for prob in problems
-      if result.indexOf(prob) == -1
-        (exported ||= []).push(prob)
+      for prob in problems
+        if result.indexOf(prob) == -1
+          (exported ||= []).push(prob)
 
     @splice from, 1
 
@@ -228,14 +233,16 @@ Update.prototype =
         if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
           (@variables ||= {})[property] = to
 
-    if !other.url && @engine.domains.indexOf(other) == -1
+    if other && !other.url && @engine.domains.indexOf(other) == -1
       @engine.domains.push(other)
 
     return to
 
+  # Indicate that update is blocked on solutions from specific url
   await: (url) ->
     (@busy ||= []).push(url)
 
+  # Queue and group messages by url to send them in batch
   postMessage: (url, message) ->
     ((@posted ||= {})[url.url || url] ||= []).push(@engine.clone(message))
 

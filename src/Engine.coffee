@@ -17,18 +17,18 @@ forming multiple unrelated dependency graphs. ###
   return this[bits[bits.length - 1]]
 @module ||= {}
 
-Domain  = require('./concepts/Domain')
+Domain  = require('./Domain')
 Events  = require('./structures/Events')
 
 class Engine extends Events
 
-  Command:      require('./concepts/Command')
+  Command:      require('./Command')
+  Update:       require('./Update')
     
   Console:      require('./utilities/Console')
   Inspector:    require('./utilities/Inspector')
   Exporter:     require('./utilities/Exporter')
   
-  Update:       require('./structures/Update')
   Identity:     require('./structures/Identity')
   Signatures:   require('./structures/Signatures')
 
@@ -48,7 +48,7 @@ class Engine extends Events
         when 'object'
           if argument.nodeType
             if @Command
-              Engine[Engine.identity(argument)] = @
+              Engine[Engine.identify(argument)] = @
               @scope = scope = argument
             else
               scope = argument
@@ -68,21 +68,26 @@ class Engine extends Events
     unless @Command
       return new Engine(arguments[0], arguments[1], arguments[2])
 
-    super(@, url)
+    if url?
+      @url = url
     
+    super
     @addListeners(@$events)
 
+    @variables    = {}
     @domains      = []
-    @domain       = @
+    @engine       = @
     @inspector    = new @Inspector(@)
 
     @precompile()
  
     # Known suggested values
-    @assumed = new @Numeric(assumed)
+    @assumed = new @Numeric
     @assumed.displayName = 'Assumed'
     @assumed.static = true
     @assumed.setup()
+    for property, value of assumed
+      @assumed.values[property] = value
 
     # Final values, used in conditions
     @solved = new @Boolean
@@ -91,7 +96,9 @@ class Engine extends Events
 
     @values = @solved.values
 
-    @variables = {}
+    # Cassowary is a default solver for all unknown variables
+    @domain = @linear
+
 
     @strategy = 
       unless window?
@@ -104,6 +111,8 @@ class Engine extends Events
     return @
 
   # Evaluate bypassing abstract domain
+  # So queries will not be executed, 
+  # and variable names will be used as given 
   evaluate: (expressions) ->
     @update(expressions).solution
 
@@ -111,6 +120,28 @@ class Engine extends Events
   # engine.solve([]) - evaluate commands
   # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
+    args = @before.apply(@, arguments)
+
+    unless old = @updating
+      @engine.updating = new @update
+      @updating.start ?= @engine.console.time()
+
+    unless @transacting
+      @transacting = transacting = true
+
+    if typeof args[0] == 'function'
+      solution = args.shift().apply(@, args) 
+    else if args[0]?
+      strategy = @[@strategy]
+      if strategy.solve
+        solution = strategy.solve.apply(strategy, args) || {}
+      else
+        solution = strategy.apply(@, args)
+
+    return @after(solution, old, transacting)
+
+  # Figure out arguments and prepare to solve given operations
+  before: ->
     if typeof arguments[0] == 'string'
       if typeof arguments[1] == 'string'
         source = arguments[0]
@@ -140,30 +171,20 @@ class Engine extends Events
       if name = source || @displayName
         @console.start(reason || args[0], name)
 
-    unless old = @updating
-      @engine.updating = new @update
-      @engine.updating.start ?= @engine.console.time()
+    return args
 
-    if @providing == undefined
-      @providing = null
-      providing = true
-    if typeof args[0] == 'function'
-      solution = args.shift().apply(@, args) 
-    else if args[0]?
-      strategy = @[@strategy]
-      if strategy.solve
-        solution = strategy.solve.apply(strategy, arguments) || {}
-      else
-        solution = strategy.apply(@, arguments)
-
+  # Process and apply computed values
+  after: (solution, old, transacting) ->
     if solution
       @updating.apply(solution)
 
-    @queries?.onBeforeSolve()
-    @pairs?.onBeforeSolve()
+    @fireEvent('after', solution)
 
-    if providing
-      @providing = undefined
+    if started = @started
+      @started = undefined
+
+    if transacting
+      @transacting = undefined
 
     if name
       @console.end(reason)
@@ -178,11 +199,12 @@ class Engine extends Events
       if update.busy?.length
         return update
 
-    onlyRemoving = (update.problems.length == 1 && update.domains[0] == null)
-    restyled = onlyRemoving || (@restyled && !old && !update.problems.length)
-
-    if @engine == @ && providing && (!update.problems[update.index + 1] || restyled) 
-      return @onSolve(null, restyled)
+    removing = (update.problems.length == 1 && update.domains[0] == null)
+    restyling = (@restyled && started && !update.problems.length)
+    complete = !update.problems[update.index + 1]
+    effects = removing || restyling || complete
+    if @engine == @ && transacting && effects 
+      return @onSolve(null, effects)
 
   onSolve: (solution, restyled) ->
     # Apply styles
@@ -204,7 +226,7 @@ class Engine extends Events
 
     @solved.merge solution
 
-    @pairs?.onBeforeSolve()
+    @pairs?.after()
     update.reset()
 
     # Launch another pass here if solutions caused effects
@@ -246,17 +268,16 @@ class Engine extends Events
     if @scope
       @dispatchEvent(@scope, name, data, object)
 
-  # Accept solution from a solver and resolve it to verify
+  # Accept solution from solver, remeasure if necessary
   yield: (solution) ->
     if !solution.push
-      return @updating?.each(@resolve, @, solution) || @onSolve(solution)
+      return @updating?.each(@resolve, @engine, solution) || @onSolve(solution)
 
-    #if @providing != undefined
-    #  (@providing ||= []).push(Array.prototype.slice.call(arguments, 0))
-    #  return
-    
-    return @update.apply(@, arguments)
+    return @update.apply(@engine, arguments)
 
+  # Solve problems by given domain/worker
+  # When using worker, it writes messages into the queue
+  # and sends them together
   resolve: (domain, problems, index, update) ->
     if domain && !domain.solve && domain.postMessage
       update.postMessage domain, problems
@@ -285,6 +306,10 @@ class Engine extends Events
         @domains.push(domain)
 
     return result
+
+  # Schedule constraints and observers by path 
+  remove: ->
+    @update(['remove', arguments...])
 
   # Dispatch operations without specific domain (e.g. remove)
   broadcast: (problems, index, update) ->
@@ -327,6 +352,7 @@ class Engine extends Events
         command[0] != 'remove' || worker.paths?[command[1]]
 
       update.push working, worker
+    return
 
   # Compile initial domains and shared engine features 
   precompile: ->
@@ -342,9 +368,9 @@ class Engine extends Events
     if state
       for name of @Domains
         if domain = @[name.toLowerCase()]
-          @Command.compile domain
-      @Command.compile(@assumed)
-      @Command.compile(@solved)
+          domain.compile()
+      @assumed.compile()
+      @solved.compile()
         
     @console.compile(@)
     @running = state ? null
@@ -410,15 +436,14 @@ class Engine extends Events
       if @worker
         @worker.removeEventListener 'message', @eventHandler
         @worker.removeEventListener 'error', @eventHandler
-
-  
+    
+  DONE: 'solve'
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
   self.addEventListener 'message', (e) ->
     unless engine = Engine.messenger
       engine = Engine.messenger = Engine()
-      engine.compile(true)
     data = e.data
     values = undefined
     commands = []
@@ -448,11 +473,20 @@ if !self.window && self.onmessage != undefined
         result[property] = value
     postMessage(result)
 
+
 # Identity and console modules are shared between engines
 Engine.identity = Engine::identity = new Engine::Identity
+Engine.identify = Engine::identify = Engine.identity.set
 Engine.console  = Engine::console  = new Engine::Console
 
 Engine.Engine   = Engine
 Engine.Domain   = Engine::Domain   = Domain
+
+
+  # Slice arrays recursively to remove the meta data
+Engine.clone    = Engine::clone = (object) -> 
+  if object && object.map
+    return object.map @clone, @
+  return object
 
 module.exports = @GSS = Engine

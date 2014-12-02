@@ -1,5 +1,5 @@
 Parser = require('ccss-compiler')
-Command = require('../concepts/Command')
+Command = require('../Command')
 
 class Source extends Command
   type: 'Source'
@@ -32,7 +32,7 @@ Source.define
         engine.queries.clean(nodeContinuation)
         continuation = nodeContinuation
       else
-        continuation = node._continuation = @continuate(continuation, @DESCEND)
+        continuation = node._continuation = @delimit(continuation, @DESCEND)
       if node.getAttribute('scoped')?
         scope = node.parentNode
 
