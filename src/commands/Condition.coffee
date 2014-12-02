@@ -42,14 +42,13 @@ class Condition extends Command
 
 
       unless old == undefined
-        engine.solved.remove(path)
         engine.queries.clean(path , continuation, operation.parent, scope)
       unless engine.switching
         switching = engine.switching = true
 
       engine.queries[path] = ascending
       if switching
-        engine.fireEvent('switch', operation)
+        engine.triggerEvent('switch', operation)
 
         if engine.updating
           collections = engine.updating.collections
@@ -64,7 +63,7 @@ class Condition extends Command
         result = engine.Command(branch).solve(engine, branch, @delimit(path, @DESCEND), scope)
 
       if switching
-        engine.fireEvent('switch', operation, true)
+        engine.triggerEvent('switch', operation, true)
         #engine.queries?.after()
         engine.switching = undefined
       

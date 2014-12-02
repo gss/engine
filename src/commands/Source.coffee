@@ -29,7 +29,7 @@ Source.define
         type = nodeType
       source = text || node.textContent || node 
       if (nodeContinuation = node._continuation)?
-        engine.queries.clean(nodeContinuation)
+        engine.queries.clean(@delimit(nodeContinuation))
         continuation = nodeContinuation
       else
         continuation = node._continuation = @delimit(continuation, @DESCEND)

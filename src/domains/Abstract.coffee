@@ -25,8 +25,7 @@ Abstract::Remove = Call.Unsafe.extend {
 },
   remove: (args..., engine)->
     for path in args
-      engine.updating.remove(path)
-    engine.update(['remove', args...])
+      engine.triggerEvent('remove', path)
     return true
 
 

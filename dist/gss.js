@@ -20419,6 +20419,10 @@ Engine = (function(_super) {
     }
   };
 
+  Engine.prototype.onremove = function(path) {
+    return this.updating.remove(path);
+  };
+
   Engine.prototype.precompile = function() {
     var _ref;
     this.Domain.compile(this.Domains, this);
@@ -22207,6 +22211,7 @@ Update.prototype = {
   },
   remove: function(continuation, problem) {
     var i, index, problems, _i, _j, _ref;
+    this.push([['remove', continuation]], null);
     _ref = this.problems;
     for (index = _i = _ref.length - 1; _i >= 0; index = _i += -1) {
       problems = _ref[index];
@@ -22498,7 +22503,6 @@ Condition = (function(_super) {
     old = engine.queries[path];
     if (!!old !== !!ascending || (old === void 0 && old !== ascending)) {
       if (old !== void 0) {
-        engine.solved.remove(path);
         engine.queries.clean(path, continuation, operation.parent, scope);
       }
       if (!engine.switching) {
@@ -22506,7 +22510,7 @@ Condition = (function(_super) {
       }
       engine.queries[path] = ascending;
       if (switching) {
-        engine.fireEvent('switch', operation);
+        engine.triggerEvent('switch', operation);
         if (engine.updating) {
           collections = engine.updating.collections;
           engine.updating.collections = {};
@@ -22519,7 +22523,7 @@ Condition = (function(_super) {
         result = engine.Command(branch).solve(engine, branch, this.delimit(path, this.DESCEND), scope);
       }
       if (switching) {
-        engine.fireEvent('switch', operation, true);
+        engine.triggerEvent('switch', operation, true);
         engine.switching = void 0;
       }
       return engine.console.groupEnd(path);
@@ -24207,7 +24211,7 @@ Source.define({
       }
       source = text || node.textContent || node;
       if ((nodeContinuation = node._continuation) != null) {
-        engine.queries.clean(nodeContinuation);
+        engine.queries.clean(this.delimit(nodeContinuation));
         continuation = nodeContinuation;
       } else {
         continuation = node._continuation = this.delimit(continuation, this.DESCEND);
@@ -24897,9 +24901,8 @@ Abstract.prototype.Remove = Call.Unsafe.extend({
     args = 2 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 1) : (_i = 0, []), engine = arguments[_i++];
     for (_j = 0, _len = args.length; _j < _len; _j++) {
       path = args[_j];
-      engine.updating.remove(path);
+      engine.triggerEvent('remove', path);
     }
-    engine.update(['remove'].concat(__slice.call(args)));
     return true;
   }
 });
@@ -27335,7 +27338,6 @@ Queries = (function() {
     if ((result = this.get(path, void 0, true)) !== void 0) {
       this.each('remove', result, path, operation, scope, operation, false, contd);
     }
-    this.engine.solved.remove(path);
     this.engine.intrinsic.remove(path);
     if ((_ref = this.engine.stylesheets) != null) {
       _ref.remove(path);
@@ -27361,9 +27363,7 @@ Queries = (function() {
     }
     this.unobserve((scope || this.engine.scope)._gss_id, path);
     if (!result || !this.engine.isCollection(result)) {
-      if (path.charAt(0) !== this.PAIR) {
-        this.engine.engine.remove(this.delimit(path));
-      }
+      this.engine.triggerEvent('remove', path);
     }
     return true;
   };

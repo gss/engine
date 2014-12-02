@@ -318,7 +318,6 @@ class Queries
     #if scope && operation.command.cleaning
     #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
-    @engine.solved.remove(path)
     @engine.intrinsic.remove(path)
     @engine.stylesheets?.remove(path)
 
@@ -341,8 +340,7 @@ class Queries
     @unobserve((scope || @engine.scope)._gss_id, path)
 
     if !result || !@engine.isCollection(result)
-      unless path.charAt(0) == @PAIR
-        @engine.engine.remove(@delimit(path))
+      @engine.triggerEvent('remove', path)
     return true
 
   # If a query selects element from some other node than current scope

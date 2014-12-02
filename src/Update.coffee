@@ -334,6 +334,7 @@ Update.prototype =
 
   # Remove queued commands that match given key
   remove: (continuation, problem) ->
+    @push([['remove', continuation]], null)
     for problems, index in @problems by -1
       break if index == @index
       for problem, i in problems by -1

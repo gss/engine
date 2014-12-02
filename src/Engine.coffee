@@ -350,6 +350,9 @@ class Engine extends Events
       update.push working, worker
     return
 
+  onremove: (path) ->
+    @updating.remove(path)
+
   # Compile initial domains and shared engine features 
   precompile: ->
     @Domain.compile(@Domains,   @)
