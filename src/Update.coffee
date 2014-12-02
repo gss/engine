@@ -64,7 +64,9 @@ Update.prototype =
       position = @index + 1
     else
       position = @domains.length
-      while (other = @domains[position - 1]) && (other.priority < domain.priority)
+      while (other = @domains[position - 1]) && 
+          (other.priority < domain.priority || 
+            (reverse && @problems[position - 1][0][0] != 'remove')) 
         --position
     @insert(position, domain, problems)
 
@@ -104,8 +106,11 @@ Update.prototype =
 
     if @variables
       for name, variable of @variables
-        if variable > index
-          @variables[name] = variable - 1
+        if variable >= index
+          if variable == index
+            delete @variables[name]
+          else
+            @variables[name] = variable - 1
     
     return
 
@@ -127,17 +132,24 @@ Update.prototype =
       return
 
     for index, j in positions by -1
-      if @domains[index].displayName != other.displayName
-        positions.splice index, 1
+      if (domain = @domains[index]).displayName != other.displayName
+        positions.splice j, 1
       else
         problems = @problems[index]
         for argument in operation
           if (i = problems.indexOf(argument)) > -1
-            if index == position && problems.indexOf(operation) == -1
-              problems[i] = operation
-              positions.splice(j, 1)
+            @reify(argument, other, domain)
+            if index == position
+              if problems.indexOf(operation) == -1
+                problems[i] = operation
+                positions.splice(j, 1)
             else
               problems.splice(i, 1)
+              if problems.length == 0 && domain.MAYBE
+                @splice(index, 1)
+                if index < position
+                  position--
+                positions.splice(j, 1)
 
     if other
       for argument in operation
@@ -208,7 +220,7 @@ Update.prototype =
 
     if domain = @domains[from]
       unless domain.MAYBE
-        domain.transfer(parent, other)
+        domain.transfer(parent, @, other)
         exported = domain.export()
 
       for prob in problems
@@ -335,6 +347,7 @@ Update.prototype =
   # Remove queued commands that match given key
   remove: (continuation, problem) ->
     @push([['remove', continuation]], null)
+
     for problems, index in @problems by -1
       break if index == @index
       for problem, i in problems by -1
@@ -345,6 +358,7 @@ Update.prototype =
     return
 
   # Find globally broadcasted commands and apply them to a domain
+  # So it can be safely merged into another 
   perform: (domain) -> 
     globals = @domains.indexOf(null, @index + 1)
     if globals > -1

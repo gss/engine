@@ -13,12 +13,15 @@ class Abstract extends Domain
   url: undefined
   helps: true
 
-  Properties:  require('../properties/Axioms')
+  Properties:  require('../properties/Axioms')  
 
   constructor: ->
     if @running
       @compile()
     super
+
+  @condition: ->
+    !@scope
 
 Abstract::Remove = Call.Unsafe.extend {
   extras: 1

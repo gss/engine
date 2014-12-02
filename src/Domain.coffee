@@ -312,8 +312,11 @@ class Domain
       return operations
   
   # Prepare domain to be consumed by another  
-  transfer: (update) ->
+  transfer: (update, parent) ->
     # Apply removes from parent update
+    debugger
+    if parent
+      parent.perform(@)
     if update
       update.perform(@)
             

@@ -318,6 +318,7 @@ class Queries
     #if scope && operation.command.cleaning
     #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
+    @engine.solved.remove(path)
     @engine.intrinsic.remove(path)
     @engine.stylesheets?.remove(path)
 

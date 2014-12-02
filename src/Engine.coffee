@@ -1,21 +1,14 @@
 ### Base class: Engine
 
-Engine is a base class for scripting environments.
+Engine is a base class for scripting environment.
 It initializes and orchestrates all moving parts.
 
-It includes interpreter that operates in multiple environments called domains.
-Each domain has its own command set, that extends engine defaults.
-Domains that set constraints only include constraints that refer shared variables
-forming multiple unrelated dependency graphs. ###
+It operates with workers and domains. Workers are
+separate engines running in web worker thread. 
+Domains are either independent constraint graphs or
+pseudo-solvers like intrinsic measurements.
 
-
-# Little shim for require.js so we dont have to carry it around
-@require ||= (string) ->
-  if string == 'cassowary'
-    return c
-  bits = string.replace('', '').split('/')
-  return this[bits[bits.length - 1]]
-@module ||= {}
+###
 
 Events  = require('./structures/Events')
 
@@ -263,11 +256,6 @@ class Engine extends Events
     
     return @updated.solution
 
-  fireEvent: (name, data, object) ->
-    @triggerEvent(name, data, object)
-    if @scope
-      @dispatchEvent(@scope, name, data, object)
-
   # Accept solution from solver, remeasure if necessary
   yield: (solution) ->
     if !solution.push
@@ -276,8 +264,7 @@ class Engine extends Events
     return @update.apply(@engine, arguments)
 
   # Solve problems by given domain/worker
-  # When using worker, it writes messages into the queue
-  # and sends them together
+  # Writes messages to lazy buffer, when using worker
   resolve: (domain, problems, index, update) ->
     if domain && !domain.solve && domain.postMessage
       update.postMessage domain, problems
@@ -350,9 +337,6 @@ class Engine extends Events
       update.push working, worker
     return
 
-  onremove: (path) ->
-    @updating.remove(path)
-
   # Compile initial domains and shared engine features 
   precompile: ->
     @Domain.compile(@Domains,   @)
@@ -375,36 +359,29 @@ class Engine extends Events
     @running = state ? null
     @triggerEvent('compile', @)
 
-  # auto-worker url, only works with sync scripts!
-  getWorkerURL: do ->
-    if document?
-      scripts = document.getElementsByTagName('script')
-      src = scripts[scripts.length - 1].src
-      if location.search?.indexOf('log=0') > -1
-        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
-    return (url) ->
-      return typeof url == 'string' && url || src
+  # Trigger event on engine and its scope element
+  fireEvent: (name, data, object) ->
+    @triggerEvent(name, data, object)
+    if @scope
+      @dispatchEvent(@scope, name, data, object)
 
-  # Initialize new worker and subscribe engine to its events
-  useWorker: (url) ->
-    unless typeof url == 'string' && Worker? && self.onmessage != undefined
-      return
+  # Alias `engine.then(callback)` to `engine.once('solve', callback)`
+  DONE: 'solve'
 
-    @engine.worker ||= @engine.getWorker(url)
-    @worker.url = url
-    @worker.addEventListener 'message', @engine.eventHandler
-    @worker.addEventListener 'error', @engine.eventHandler
-    @solve = (commands) =>
-      @engine.updating ||= new @update
-      @engine.updating.postMessage(@worker, commands)
-      return @worker
-    return @worker
-
-  getWorker: (url) ->
-    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
-
-  # Worker communications
   $events:
+    # Dispatch remove command
+    remove: (path) ->
+      @updating.remove(path)
+
+    # Unsubscribe from worker and forget the engine
+    destroy: (e) ->
+      if @scope
+        Engine[@scope._gss_id] = undefined
+      if @worker
+        @worker.removeEventListener 'message', @eventHandler
+        @worker.removeEventListener 'error', @eventHandler
+
+    # Receive message from worker
     message: (e) ->
       values = e.target.values ||= {}
       for property, value of e.data
@@ -423,20 +400,39 @@ class Engine extends Events
           else
             return @updating.apply(e.data)
 
-      #@yield e.data
-
     # Handle error from worker
     error: (e) ->
       throw new Error "#{e.message} (#{e.filename}:#{e.lineno})"
-
-    destroy: (e) ->
-      if @scope
-        Engine[@scope._gss_id] = undefined
-      if @worker
-        @worker.removeEventListener 'message', @eventHandler
-        @worker.removeEventListener 'error', @eventHandler
     
-  DONE: 'solve'
+  # Figure out worker url automatically, only works with sync scripts!
+  getWorkerURL: do ->
+    if document?
+      scripts = document.getElementsByTagName('script')
+      src = scripts[scripts.length - 1].src
+      if location.search?.indexOf('log=0') > -1
+        src += ((src.indexOf('?') > -1) && '&' || '?') + 'log=0'
+    return (url) ->
+      return typeof url == 'string' && url || src
+
+  # Initialize new worker and subscribe engine to listen for message
+  useWorker: (url) ->
+    unless typeof url == 'string' && Worker? && self.onmessage != undefined
+      return
+
+    @engine.worker ||= @engine.getWorker(url)
+    @worker.url = url
+    @worker.addEventListener 'message', @engine.eventHandler
+    @worker.addEventListener 'error', @engine.eventHandler
+    @solve = (commands) =>
+      @engine.updating ||= new @update
+      @engine.updating.postMessage(@worker, commands)
+      return @worker
+    return @worker
+
+  # Use worker from a shared pool. To use multiple workers, provide #hashed urls
+  getWorker: (url) ->
+    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-02) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-03) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20033,29 +20033,18 @@ c._api = function() {
 require.register("gss/lib/Engine.js", function(exports, require, module){
 /* Base class: Engine
 
-Engine is a base class for scripting environments.
+Engine is a base class for scripting environment.
 It initializes and orchestrates all moving parts.
 
-It includes interpreter that operates in multiple environments called domains.
-Each domain has its own command set, that extends engine defaults.
-Domains that set constraints only include constraints that refer shared variables
-forming multiple unrelated dependency graphs.
+It operates with workers and domains. Workers are
+separate engines running in web worker thread. 
+Domains are either independent constraint graphs or
+pseudo-solvers like intrinsic measurements.
 */
 
 var Engine, Events,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-this.require || (this.require = function(string) {
-  var bits;
-  if (string === 'cassowary') {
-    return c;
-  }
-  bits = string.replace('', '').split('/');
-  return this[bits[bits.length - 1]];
-});
-
-this.module || (this.module = {});
 
 Events = require('./structures/Events');
 
@@ -20304,13 +20293,6 @@ Engine = (function(_super) {
     return this.updated.solution;
   };
 
-  Engine.prototype.fireEvent = function(name, data, object) {
-    this.triggerEvent(name, data, object);
-    if (this.scope) {
-      return this.dispatchEvent(this.scope, name, data, object);
-    }
-  };
-
   Engine.prototype["yield"] = function(solution) {
     var _ref;
     if (!solution.push) {
@@ -20419,10 +20401,6 @@ Engine = (function(_super) {
     }
   };
 
-  Engine.prototype.onremove = function(path) {
-    return this.updating.remove(path);
-  };
-
   Engine.prototype.precompile = function() {
     var _ref;
     this.Domain.compile(this.Domains, this);
@@ -20449,6 +20427,59 @@ Engine = (function(_super) {
     this.console.compile(this);
     this.running = state != null ? state : null;
     return this.triggerEvent('compile', this);
+  };
+
+  Engine.prototype.fireEvent = function(name, data, object) {
+    this.triggerEvent(name, data, object);
+    if (this.scope) {
+      return this.dispatchEvent(this.scope, name, data, object);
+    }
+  };
+
+  Engine.prototype.DONE = 'solve';
+
+  Engine.prototype.$events = {
+    remove: function(path) {
+      return this.updating.remove(path);
+    },
+    destroy: function(e) {
+      if (this.scope) {
+        Engine[this.scope._gss_id] = void 0;
+      }
+      if (this.worker) {
+        this.worker.removeEventListener('message', this.eventHandler);
+        return this.worker.removeEventListener('error', this.eventHandler);
+      }
+    },
+    message: function(e) {
+      var i, property, value, values, _base, _ref;
+      values = (_base = e.target).values || (_base.values = {});
+      _ref = e.data;
+      for (property in _ref) {
+        value = _ref[property];
+        if (value != null) {
+          values[property] = value;
+        } else {
+          delete values[property];
+        }
+      }
+      if (this.updating) {
+        if (this.updating.busy.length) {
+          this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
+          if ((i = this.updating.solutions.indexOf(e.target)) > -1) {
+            this.updating.solutions[i] = e.data;
+          }
+          if (!this.updating.busy.length) {
+            return this.updating.each(this.resolve, this, e.data) || this.onSolve(e.data);
+          } else {
+            return this.updating.apply(e.data);
+          }
+        }
+      }
+    },
+    error: function(e) {
+      throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
+    }
   };
 
   Engine.prototype.getWorkerURL = (function() {
@@ -20488,49 +20519,6 @@ Engine = (function(_super) {
     var _base, _base1, _base2;
     return (_base = ((_base1 = this.engine).workers || (_base1.workers = {})))[url] || (_base[url] = (_base2 = (Engine.workers || (Engine.workers = {})))[url] || (_base2[url] = new Worker(url)));
   };
-
-  Engine.prototype.$events = {
-    message: function(e) {
-      var i, property, value, values, _base, _ref;
-      values = (_base = e.target).values || (_base.values = {});
-      _ref = e.data;
-      for (property in _ref) {
-        value = _ref[property];
-        if (value != null) {
-          values[property] = value;
-        } else {
-          delete values[property];
-        }
-      }
-      if (this.updating) {
-        if (this.updating.busy.length) {
-          this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
-          if ((i = this.updating.solutions.indexOf(e.target)) > -1) {
-            this.updating.solutions[i] = e.data;
-          }
-          if (!this.updating.busy.length) {
-            return this.updating.each(this.resolve, this, e.data) || this.onSolve(e.data);
-          } else {
-            return this.updating.apply(e.data);
-          }
-        }
-      }
-    },
-    error: function(e) {
-      throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
-    },
-    destroy: function(e) {
-      if (this.scope) {
-        Engine[this.scope._gss_id] = void 0;
-      }
-      if (this.worker) {
-        this.worker.removeEventListener('message', this.eventHandler);
-        return this.worker.removeEventListener('error', this.eventHandler);
-      }
-    }
-  };
-
-  Engine.prototype.DONE = 'solve';
 
   return Engine;
 
@@ -21017,8 +21005,12 @@ Domain = (function() {
     }
   };
 
-  Domain.prototype.transfer = function(update) {
+  Domain.prototype.transfer = function(update, parent) {
+    debugger;
     var prop, solution;
+    if (parent) {
+      parent.perform(this);
+    }
     if (update) {
       update.perform(this);
     }
@@ -21878,7 +21870,7 @@ Update.prototype = {
       position = this.index + 1;
     } else {
       position = this.domains.length;
-      while ((other = this.domains[position - 1]) && (other.priority < domain.priority)) {
+      while ((other = this.domains[position - 1]) && (other.priority < domain.priority || (reverse && this.problems[position - 1][0][0] !== 'remove'))) {
         --position;
       }
     }
@@ -21926,8 +21918,12 @@ Update.prototype = {
       _ref = this.variables;
       for (name in _ref) {
         variable = _ref[name];
-        if (variable > index) {
-          this.variables[name] = variable - 1;
+        if (variable >= index) {
+          if (variable === index) {
+            delete this.variables[name];
+          } else {
+            this.variables[name] = variable - 1;
+          }
         }
       }
     }
@@ -21959,18 +21955,28 @@ Update.prototype = {
     }
     for (j = _k = positions.length - 1; _k >= 0; j = _k += -1) {
       index = positions[j];
-      if (this.domains[index].displayName !== other.displayName) {
-        positions.splice(index, 1);
+      if ((domain = this.domains[index]).displayName !== other.displayName) {
+        positions.splice(j, 1);
       } else {
         problems = this.problems[index];
         for (_l = 0, _len2 = operation.length; _l < _len2; _l++) {
           argument = operation[_l];
           if ((i = problems.indexOf(argument)) > -1) {
-            if (index === position && problems.indexOf(operation) === -1) {
-              problems[i] = operation;
-              positions.splice(j, 1);
+            this.reify(argument, other, domain);
+            if (index === position) {
+              if (problems.indexOf(operation) === -1) {
+                problems[i] = operation;
+                positions.splice(j, 1);
+              }
             } else {
               problems.splice(i, 1);
+              if (problems.length === 0 && domain.MAYBE) {
+                this.splice(index, 1);
+                if (index < position) {
+                  position--;
+                }
+                positions.splice(j, 1);
+              }
             }
           }
         }
@@ -22054,7 +22060,7 @@ Update.prototype = {
     result = this.problems[to];
     if (domain = this.domains[from]) {
       if (!domain.MAYBE) {
-        domain.transfer(parent, other);
+        domain.transfer(parent, this, other);
         exported = domain["export"]();
       }
       for (_i = 0, _len = problems.length; _i < _len; _i++) {
@@ -24889,6 +24895,10 @@ Abstract = (function(_super) {
     Abstract.__super__.constructor.apply(this, arguments);
   }
 
+  Abstract.condition = function() {
+    return !this.scope;
+  };
+
   return Abstract;
 
 })(Domain);
@@ -27338,6 +27348,7 @@ Queries = (function() {
     if ((result = this.get(path, void 0, true)) !== void 0) {
       this.each('remove', result, path, operation, scope, operation, false, contd);
     }
+    this.engine.solved.remove(path);
     this.engine.intrinsic.remove(path);
     if ((_ref = this.engine.stylesheets) != null) {
       _ref.remove(path);
