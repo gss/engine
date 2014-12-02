@@ -11,6 +11,7 @@ Call       = require('../commands/Call')
 
 class Abstract extends Domain
   url: undefined
+  helps: true
 
   Properties:  require('../properties/Axioms')
 
@@ -23,7 +24,9 @@ Abstract::Remove = Call.Unsafe.extend {
   extras: 1
 },
   remove: (args..., engine)->
-    engine.engine.remove(args...)
+    for path in args
+      engine.updating.remove(path)
+    engine.update(['remove', args...])
     return true
 
 

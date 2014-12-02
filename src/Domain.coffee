@@ -393,20 +393,15 @@ class Domain
 
   # Set a flag to record all changed values
   transact: ->
-    @setup()
     unless @changes && @hasOwnProperty('changes')
-      if @disconnected
-        @mutations?.disconnect(true)
-      @changes = {}
+      @setup()
+      return @changes = {}
 
   # Unset transaction flag and return changes
   commit: ->
-    changes = @changes
-    @changes = undefined
-    if @disconnected
-      @mutations?.connect(true)
-    return changes
-
+    if changes = @changes
+      @changes = undefined
+      return changes
 
   # Make Domain class inherit given engine instance
   # Allows domain to overload engine methods and modules
@@ -423,7 +418,7 @@ class Domain
       EngineDomain::displayName = name
       for property, value of domain::
         EngineDomain::[property] = value
-      engine[name.toLowerCase()] = new engine[name]()
+      engine[name.toLowerCase()] = new EngineDomain()
     @
 
   # Create flat dictionary of property handlers from nested objects

@@ -17,12 +17,12 @@ forming multiple unrelated dependency graphs. ###
   return this[bits[bits.length - 1]]
 @module ||= {}
 
-Domain  = require('./Domain')
 Events  = require('./structures/Events')
 
 class Engine extends Events
 
   Command:      require('./Command')
+  Domain:       require('./Domain')
   Update:       require('./Update')
     
   Console:      require('./utilities/Console')
@@ -120,14 +120,15 @@ class Engine extends Events
   # engine.solve([]) - evaluate commands
   # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
-    args = @before.apply(@, arguments)
+    args = @transact.apply(@, arguments)
+
+    unless @transacting
+      @transacting = transacting = true
 
     unless old = @updating
       @engine.updating = new @update
       @updating.start ?= @engine.console.time()
 
-    unless @transacting
-      @transacting = transacting = true
 
     if typeof args[0] == 'function'
       solution = args.shift().apply(@, args) 
@@ -138,10 +139,10 @@ class Engine extends Events
       else
         solution = strategy.apply(@, args)
 
-    return @after(solution, old, transacting)
+    return @commit(solution, old, transacting)
 
   # Figure out arguments and prepare to solve given operations
-  before: ->
+  transact: ->
     if typeof arguments[0] == 'string'
       if typeof arguments[1] == 'string'
         source = arguments[0]
@@ -174,11 +175,11 @@ class Engine extends Events
     return args
 
   # Process and apply computed values
-  after: (solution, old, transacting) ->
+  commit: (solution, old, transacting) ->
     if solution
       @updating.apply(solution)
 
-    @fireEvent('after', solution)
+    @fireEvent('commit', solution)
 
     if started = @started
       @started = undefined
@@ -186,8 +187,7 @@ class Engine extends Events
     if transacting
       @transacting = undefined
 
-    if name
-      @console.end(reason)
+      @console.end()
 
     update = @updating
     if update.domains.length
@@ -200,7 +200,7 @@ class Engine extends Events
         return update
 
     removing = (update.problems.length == 1 && update.domains[0] == null)
-    restyling = (@restyled && started && !update.problems.length)
+    restyling = (@restyled && !update.problems.length)
     complete = !update.problems[update.index + 1]
     effects = removing || restyling || complete
     if @engine == @ && transacting && effects 
@@ -226,7 +226,7 @@ class Engine extends Events
 
     @solved.merge solution
 
-    @pairs?.after()
+    #@commit()
     update.reset()
 
     # Launch another pass here if solutions caused effects
@@ -306,10 +306,6 @@ class Engine extends Events
         @domains.push(domain)
 
     return result
-
-  # Schedule constraints and observers by path 
-  remove: ->
-    @update(['remove', arguments...])
 
   # Dispatch operations without specific domain (e.g. remove)
   broadcast: (problems, index, update) ->
@@ -473,15 +469,12 @@ if !self.window && self.onmessage != undefined
         result[property] = value
     postMessage(result)
 
+Engine.Engine   = Engine
 
 # Identity and console modules are shared between engines
 Engine.identity = Engine::identity = new Engine::Identity
 Engine.identify = Engine::identify = Engine.identity.set
 Engine.console  = Engine::console  = new Engine::Console
-
-Engine.Engine   = Engine
-Engine.Domain   = Engine::Domain   = Domain
-
 
   # Slice arrays recursively to remove the meta data
 Engine.clone    = Engine::clone = (object) -> 

@@ -2,7 +2,8 @@ class Pairs
   constructor: (@engine) ->
     @lefts = []
     @paths = {}
-    @engine.addEventListener 'solve', @after.bind(@)
+    @engine.addEventListener 'commit', @commit.bind(@)
+    @engine.addEventListener 'switch',  @commit.bind(@)
 
 
   onLeft: (operation, parent, continuation, scope) ->
@@ -71,16 +72,15 @@ class Pairs
 
   TrailingIDRegExp: /(\$[a-z0-9-_"]+)[↓↑→]?$/i
 
-  after: () ->
-    dirty = @dirty
-    delete @dirty
+  commit: () ->
+    return unless dirty = @dirty
+    @dirty = undefined
     @repairing = true
-    if dirty
-      for property, value of dirty
-        if pairs = @paths[property]?.slice()
-          for pair, index in pairs by 3
-            @solve property, pair, pairs[index + 1], pairs[index + 2]
-    delete @repairing
+    for property, value of dirty
+      if pairs = @paths[property]?.slice()
+        for pair, index in pairs by 3
+          @solve property, pair, pairs[index + 1], pairs[index + 2]
+    @repairing = undefined
       
   match: (collection, node, scope) ->
     if (index = collection.indexOf(node)) > -1

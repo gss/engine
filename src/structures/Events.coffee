@@ -45,9 +45,15 @@ class Events
 
   triggerEvent: (type, a, b, c) ->
     if group = @listeners?[type]
-      for fn, index in group by -1
-        group.splice(index, 1) if fn.once
+      index = 0
+      j = group.length
+      while index < j
+        fn = group[index]
+        if fn.once
+          group.splice(index--, 1)
+          j--
         fn.call(@, a, b, c)
+        index++
     if @[method = 'on' + type]
       return @[method](a, b, c)
 

@@ -15,7 +15,7 @@ class Queries
   constructor: (@engine) ->
     @watchers = {}
     @mutations = []
-    @engine.addEventListener 'solve', @after.bind(@)
+    @engine.addEventListener 'commit', @commit.bind(@)
     unless @CanonicalizeRegExp
       for property in ['PAIR', 'ASCEND', 'DESCEND', 'DELIMITERS', 'delimit']
         Queries::[property] = @engine.Command::[property]
@@ -25,7 +25,7 @@ class Queries
         "\\$[^" + Queries::ASCEND + "]+" +
         "(?:"   + Queries::ASCEND + "|$)", "g")
 
-  after: ->
+  commit: (solution) ->
     # Update all DOM queries that matched mutations
     index = 0
     while @mutations[index]
@@ -342,9 +342,7 @@ class Queries
 
     if !result || !@engine.isCollection(result)
       unless path.charAt(0) == @PAIR
-        contd = @delimit(path)
-        @engine.updating?.remove(contd)
-        @engine.remove(contd)
+        @engine.engine.remove(@delimit(path))
     return true
 
   # If a query selects element from some other node than current scope

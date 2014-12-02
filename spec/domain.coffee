@@ -82,6 +82,7 @@ describe 'Domain', ->
         result: 555 * 2 + 10
         b: 10
 
+      debugger
       expect(engine.solve
         a: -555
       ).to.eql

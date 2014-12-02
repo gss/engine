@@ -20042,10 +20042,9 @@ Domains that set constraints only include constraints that refer shared variable
 forming multiple unrelated dependency graphs.
 */
 
-var Domain, Engine, Events,
+var Engine, Events,
   __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  __slice = [].slice;
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 this.require || (this.require = function(string) {
   var bits;
@@ -20058,14 +20057,14 @@ this.require || (this.require = function(string) {
 
 this.module || (this.module = {});
 
-Domain = require('./Domain');
-
 Events = require('./structures/Events');
 
 Engine = (function(_super) {
   __extends(Engine, _super);
 
   Engine.prototype.Command = require('./Command');
+
+  Engine.prototype.Domain = require('./Domain');
 
   Engine.prototype.Update = require('./Update');
 
@@ -20161,15 +20160,15 @@ Engine = (function(_super) {
 
   Engine.prototype.solve = function() {
     var args, old, solution, strategy, transacting, _base;
-    args = this.before.apply(this, arguments);
+    args = this.transact.apply(this, arguments);
+    if (!this.transacting) {
+      this.transacting = transacting = true;
+    }
     if (!(old = this.updating)) {
       this.engine.updating = new this.update;
       if ((_base = this.updating).start == null) {
         _base.start = this.engine.console.time();
       }
-    }
-    if (!this.transacting) {
-      this.transacting = transacting = true;
     }
     if (typeof args[0] === 'function') {
       solution = args.shift().apply(this, args);
@@ -20181,10 +20180,10 @@ Engine = (function(_super) {
         solution = strategy.apply(this, args);
       }
     }
-    return this.after(solution, old, transacting);
+    return this.commit(solution, old, transacting);
   };
 
-  Engine.prototype.before = function() {
+  Engine.prototype.transact = function() {
     var arg, args, index, name, problematic, reason, source, _i, _len;
     if (typeof arguments[0] === 'string') {
       if (typeof arguments[1] === 'string') {
@@ -20223,20 +20222,18 @@ Engine = (function(_super) {
     return args;
   };
 
-  Engine.prototype.after = function(solution, old, transacting) {
+  Engine.prototype.commit = function(solution, old, transacting) {
     var complete, effects, removing, restyling, started, update, _ref, _ref1;
     if (solution) {
       this.updating.apply(solution);
     }
-    this.fireEvent('after', solution);
+    this.fireEvent('commit', solution);
     if (started = this.started) {
       this.started = void 0;
     }
     if (transacting) {
       this.transacting = void 0;
-    }
-    if (name) {
-      this.console.end(reason);
+      this.console.end();
     }
     update = this.updating;
     if (update.domains.length) {
@@ -20253,7 +20250,7 @@ Engine = (function(_super) {
       }
     }
     removing = update.problems.length === 1 && update.domains[0] === null;
-    restyling = this.restyled && started && !update.problems.length;
+    restyling = this.restyled && !update.problems.length;
     complete = !update.problems[update.index + 1];
     effects = removing || restyling || complete;
     if (this.engine === this && transacting && effects) {
@@ -20262,7 +20259,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(solution, restyled) {
-    var effects, update, _ref, _ref1, _ref2, _ref3;
+    var effects, update, _ref, _ref1, _ref2;
     update = this.updating;
     if (solution || (solution = update.solution)) {
       this.fireEvent('apply', solution, update);
@@ -20281,12 +20278,9 @@ Engine = (function(_super) {
       this.intrinsic.changes = void 0;
     }
     this.solved.merge(solution);
-    if ((_ref1 = this.pairs) != null) {
-      _ref1.after();
-    }
     update.reset();
     effects = update.each(this.resolve, this);
-    if ((_ref2 = update.busy) != null ? _ref2.length : void 0) {
+    if ((_ref1 = update.busy) != null ? _ref1.length : void 0) {
       return effects;
     }
     if (effects && Object.keys(effects).length) {
@@ -20296,7 +20290,7 @@ Engine = (function(_super) {
       return;
     }
     this.updating.finish();
-    if (!update.problems.length && ((_ref3 = this.updated) != null ? _ref3.problems.length : void 0) && !this.engine.restyled) {
+    if (!update.problems.length && ((_ref2 = this.updated) != null ? _ref2.problems.length : void 0) && !this.engine.restyled) {
       this.restyled = this.updating = void 0;
       return;
     } else {
@@ -20358,10 +20352,6 @@ Engine = (function(_super) {
       }
     }
     return result;
-  };
-
-  Engine.prototype.remove = function() {
-    return this.update(['remove'].concat(__slice.call(arguments)));
   };
 
   Engine.prototype.broadcast = function(problems, index, update) {
@@ -20594,15 +20584,13 @@ if (!self.window && self.onmessage !== void 0) {
   });
 }
 
+Engine.Engine = Engine;
+
 Engine.identity = Engine.prototype.identity = new Engine.prototype.Identity;
 
 Engine.identify = Engine.prototype.identify = Engine.identity.set;
 
 Engine.console = Engine.prototype.console = new Engine.prototype.Console;
-
-Engine.Engine = Engine;
-
-Engine.Domain = Engine.prototype.Domain = Domain;
 
 Engine.clone = Engine.prototype.clone = function(object) {
   if (object && object.map) {
@@ -21115,28 +21103,18 @@ Domain = (function() {
   };
 
   Domain.prototype.transact = function() {
-    var _ref;
-    this.setup();
     if (!(this.changes && this.hasOwnProperty('changes'))) {
-      if (this.disconnected) {
-        if ((_ref = this.mutations) != null) {
-          _ref.disconnect(true);
-        }
-      }
+      this.setup();
       return this.changes = {};
     }
   };
 
   Domain.prototype.commit = function() {
-    var changes, _ref;
-    changes = this.changes;
-    this.changes = void 0;
-    if (this.disconnected) {
-      if ((_ref = this.mutations) != null) {
-        _ref.connect(true);
-      }
+    var changes;
+    if (changes = this.changes) {
+      this.changes = void 0;
+      return changes;
     }
-    return changes;
   };
 
   Domain.compile = function(domains, engine) {
@@ -21160,7 +21138,7 @@ Domain = (function() {
         value = _ref1[property];
         EngineDomain.prototype[property] = value;
       }
-      engine[name.toLowerCase()] = new engine[name]();
+      engine[name.toLowerCase()] = new EngineDomain();
     }
     return this;
   };
@@ -21657,7 +21635,7 @@ Command = (function() {
   };
 
   Command.compile = function(engine, command) {
-    var Types, aliases, name, property, proto, value, _j, _len;
+    var Types, aliases, name, property, proto, value, _base, _j, _len;
     if (!command) {
       for (property in engine) {
         value = engine[property];
@@ -21686,7 +21664,7 @@ Command = (function() {
           if (!property.match(/^[A-Z]/)) {
             engine.Signatures.set(engine.signatures, property, value, Types);
             if (engine.helps) {
-              engine.engine[property] = this.Helper(engine, property);
+              (_base = engine.engine)[property] || (_base[property] = this.Helper(engine, property));
               if (aliases = value.prototype.helpers) {
                 for (_j = 0, _len = aliases.length; _j < _len; _j++) {
                   name = aliases[_j];
@@ -21703,15 +21681,31 @@ Command = (function() {
   };
 
   Command.Helper = function(engine, name) {
-    var base, signature;
+    var base, signature, _base;
     signature = engine.signatures[name];
     base = [name];
-    return engine[name] || (engine[name] = function() {
-      var args, command;
+    return (_base = engine.engine)[name] || (_base[name] = function() {
+      var args, command, extras, length, _ref;
       args = Array.prototype.slice.call(arguments);
       command = Command.match(engine, base.concat(args)).prototype;
-      args.length = command.permutation.length + command.padding;
-      return command.execute.apply(command, args.concat(engine, args, '', engine.scope));
+      length = (command.hasOwnProperty('permutation') && command.permutation.length || 0) + command.padding;
+      if (length > args.length) {
+        args.length = length;
+      }
+      debugger;
+      if (extras = (_ref = command.extras) != null ? _ref : command.execute.length) {
+        args.push(engine);
+        if (extras > 1) {
+          args.push(args);
+          if (extras > 2) {
+            args.push('');
+            if (extras > 3) {
+              args.push(engine.scope);
+            }
+          }
+        }
+      }
+      return command.execute.apply(command, args);
     });
   };
 
@@ -22495,7 +22489,7 @@ Condition = (function(_super) {
   };
 
   Condition.prototype.update = function(engine, operation, continuation, scope, ascender, ascending) {
-    var branch, collections, d, index, old, path, result, switching, watchers, _base, _name, _ref;
+    var branch, collections, index, old, path, result, switching, watchers, _base, _name;
     watchers = (_base = engine.queries.watchers)[_name = scope._gss_id] || (_base[_name] = []);
     if (!watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) === -1) {
       watchers.push(operation.parent, continuation, scope);
@@ -22512,9 +22506,7 @@ Condition = (function(_super) {
       }
       engine.queries[path] = ascending;
       if (switching) {
-        if (!d && (d = engine.pairs.dirty)) {
-          engine.pairs.after();
-        }
+        engine.fireEvent('switch', operation);
         if (engine.updating) {
           collections = engine.updating.collections;
           engine.updating.collections = {};
@@ -22527,9 +22519,7 @@ Condition = (function(_super) {
         result = engine.Command(branch).solve(engine, branch, this.delimit(path, this.DESCEND), scope);
       }
       if (switching) {
-        if ((_ref = engine.pairs) != null) {
-          _ref.after();
-        }
+        engine.fireEvent('switch', operation, true);
         engine.switching = void 0;
       }
       return engine.console.groupEnd(path);
@@ -24884,6 +24874,8 @@ Abstract = (function(_super) {
 
   Abstract.prototype.url = void 0;
 
+  Abstract.prototype.helps = true;
+
   Abstract.prototype.Properties = require('../properties/Axioms');
 
   function Abstract() {
@@ -24901,9 +24893,13 @@ Abstract.prototype.Remove = Call.Unsafe.extend({
   extras: 1
 }, {
   remove: function() {
-    var args, engine, _i, _ref;
+    var args, engine, path, _i, _j, _len;
     args = 2 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 1) : (_i = 0, []), engine = arguments[_i++];
-    (_ref = engine.engine).remove.apply(_ref, args);
+    for (_j = 0, _len = args.length; _j < _len; _j++) {
+      path = args[_j];
+      engine.updating.remove(path);
+    }
+    engine.update(['remove'].concat(__slice.call(args)));
     return true;
   }
 });
@@ -25461,8 +25457,6 @@ Document = (function(_super) {
 
   Document.prototype.Stylesheets = require('../structures/Stylesheets');
 
-  Document.prototype.helps = true;
-
   Document.prototype.disconnected = true;
 
   function Document() {
@@ -25591,6 +25585,26 @@ Document = (function(_super) {
 
   Document.condition = function() {
     return this.scope != null;
+  };
+
+  Document.prototype.transact = function() {
+    var result, _ref;
+    if (result = Document.__super__.transact.apply(this, arguments)) {
+      if ((_ref = this.mutations) != null) {
+        _ref.disconnect(true);
+      }
+      return result;
+    }
+  };
+
+  Document.prototype.commit = function() {
+    var result, _ref;
+    if (result = Document.__super__.commit.apply(this, arguments)) {
+      if ((_ref = this.mutations) != null) {
+        _ref.connect(true);
+      }
+      return result;
+    }
   };
 
   Document.prototype.url = null;
@@ -26020,14 +26034,18 @@ Events = (function() {
   };
 
   Events.prototype.triggerEvent = function(type, a, b, c) {
-    var fn, group, index, method, _i, _ref;
+    var fn, group, index, j, method, _ref;
     if (group = (_ref = this.listeners) != null ? _ref[type] : void 0) {
-      for (index = _i = group.length - 1; _i >= 0; index = _i += -1) {
+      index = 0;
+      j = group.length;
+      while (index < j) {
         fn = group[index];
         if (fn.once) {
-          group.splice(index, 1);
+          group.splice(index--, 1);
+          j--;
         }
         fn.call(this, a, b, c);
+        index++;
       }
     }
     if (this[method = 'on' + type]) {
@@ -26473,7 +26491,8 @@ Pairs = (function() {
     this.engine = engine;
     this.lefts = [];
     this.paths = {};
-    this.engine.addEventListener('solve', this.after.bind(this));
+    this.engine.addEventListener('commit', this.commit.bind(this));
+    this.engine.addEventListener('switch', this.commit.bind(this));
   }
 
   Pairs.prototype.onLeft = function(operation, parent, continuation, scope) {
@@ -26563,23 +26582,23 @@ Pairs = (function() {
 
   Pairs.prototype.TrailingIDRegExp = /(\$[a-z0-9-_"]+)[↓↑→]?$/i;
 
-  Pairs.prototype.after = function() {
+  Pairs.prototype.commit = function() {
     var dirty, index, pair, pairs, property, value, _i, _len, _ref;
-    dirty = this.dirty;
-    delete this.dirty;
+    if (!(dirty = this.dirty)) {
+      return;
+    }
+    this.dirty = void 0;
     this.repairing = true;
-    if (dirty) {
-      for (property in dirty) {
-        value = dirty[property];
-        if (pairs = (_ref = this.paths[property]) != null ? _ref.slice() : void 0) {
-          for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
-            pair = pairs[index];
-            this.solve(property, pair, pairs[index + 1], pairs[index + 2]);
-          }
+    for (property in dirty) {
+      value = dirty[property];
+      if (pairs = (_ref = this.paths[property]) != null ? _ref.slice() : void 0) {
+        for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
+          pair = pairs[index];
+          this.solve(property, pair, pairs[index + 1], pairs[index + 2]);
         }
       }
     }
-    return delete this.repairing;
+    return this.repairing = void 0;
   };
 
   Pairs.prototype.match = function(collection, node, scope) {
@@ -26954,7 +26973,7 @@ Queries = (function() {
     this.engine = engine;
     this.watchers = {};
     this.mutations = [];
-    this.engine.addEventListener('solve', this.after.bind(this));
+    this.engine.addEventListener('commit', this.commit.bind(this));
     if (!this.CanonicalizeRegExp) {
       _ref = ['PAIR', 'ASCEND', 'DESCEND', 'DELIMITERS', 'delimit'];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -26965,7 +26984,7 @@ Queries = (function() {
     }
   }
 
-  Queries.prototype.after = function() {
+  Queries.prototype.commit = function(solution) {
     var collection, contd, i, index, item, old, op, watcher, _i, _ref, _ref1;
     index = 0;
     while (this.mutations[index]) {
@@ -27305,7 +27324,7 @@ Queries = (function() {
   };
 
   Queries.prototype.clean = function(path, continuation, operation, scope, bind, contd) {
-    var command, i, result, s, shared, _i, _len, _ref, _ref1, _ref2;
+    var command, i, result, s, shared, _i, _len, _ref, _ref1;
     if (command = path.command) {
       path = (continuation || '') + (operation.uid || '') + (command.selector || command.key || '');
     }
@@ -27343,11 +27362,7 @@ Queries = (function() {
     this.unobserve((scope || this.engine.scope)._gss_id, path);
     if (!result || !this.engine.isCollection(result)) {
       if (path.charAt(0) !== this.PAIR) {
-        contd = this.delimit(path);
-        if ((_ref2 = this.engine.updating) != null) {
-          _ref2.remove(contd);
-        }
-        this.engine.remove(contd);
+        this.engine.engine.remove(this.delimit(path));
       }
     }
     return true;

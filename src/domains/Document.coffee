@@ -12,8 +12,6 @@ class Document extends Abstract
   Positions:   require('../structures/Positions')
   Stylesheets: require('../structures/Stylesheets')
 
-
-  helps: true
   disconnected: true
 
   constructor: () ->
@@ -113,5 +111,15 @@ class Document extends Abstract
 
   @condition: ->
     @scope?  
+
+  transact: ->
+    if result = super
+      @mutations?.disconnect(true)
+      return result
+
+  commit: ->
+    if result = super
+      @mutations?.connect(true)
+      return result 
   url: null
 module.exports = Document

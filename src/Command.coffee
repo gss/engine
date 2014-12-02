@@ -386,7 +386,7 @@ class Command
           unless property.match /^[A-Z]/
             engine.Signatures.set(engine.signatures, property, value, Types)
             if engine.helps
-              engine.engine[property] = @Helper(engine, property)
+              engine.engine[property] ||= @Helper(engine, property)
               if aliases = value.prototype.helpers
                 for name in aliases
                   engine.engine[name] = engine.engine[property]
@@ -398,11 +398,25 @@ class Command
   @Helper: (engine, name) ->
     signature = engine.signatures[name] 
     base = [name]
-    engine[name] ||= ->
+    engine.engine[name] ||= ->
       args = Array.prototype.slice.call(arguments)
       command = Command.match(engine, base.concat(args)).prototype
-      args.length = command.permutation.length + command.padding
-      return command.execute.apply(command, args.concat(engine, args, '', engine.scope))
+      length = (command.hasOwnProperty('permutation') && command.permutation.length || 0) + command.padding
+      
+      if length > args.length
+        args.length = length
+
+      debugger
+      if extras = command.extras ? command.execute.length 
+        args.push(engine)
+        if extras > 1
+          args.push(args)
+          if extras > 2         
+            args.push('')
+            if extras > 3
+              args.push(engine.scope)
+
+      return command.execute.apply(command, args)
   
 
 # ### Delimeters

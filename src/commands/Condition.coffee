@@ -49,8 +49,7 @@ class Condition extends Command
 
       engine.queries[path] = ascending
       if switching
-        if !d && (d = engine.pairs.dirty)
-          engine.pairs.after()
+        engine.fireEvent('switch', operation)
 
         if engine.updating
           collections = engine.updating.collections
@@ -65,7 +64,7 @@ class Condition extends Command
         result = engine.Command(branch).solve(engine, branch, @delimit(path, @DESCEND), scope)
 
       if switching
-        engine.pairs?.after()
+        engine.fireEvent('switch', operation, true)
         #engine.queries?.after()
         engine.switching = undefined
       
