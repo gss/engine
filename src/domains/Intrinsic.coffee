@@ -12,7 +12,7 @@ Dimensions = require('../properties/Dimensions')
 Styles     = require('../properties/Styles')
 
 class Intrinsic extends Numeric
-  priority: 1
+  priority: 100
   subscribing: true
   immediate: true
   

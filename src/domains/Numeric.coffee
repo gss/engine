@@ -11,7 +11,7 @@ Variable = require('../commands/Variable')
 Block    = require('../commands/Block')
 
 class Numeric extends Domain
-  priority: 10
+  priority: 200
 
   # Numeric domains usually dont use worker
   url: null

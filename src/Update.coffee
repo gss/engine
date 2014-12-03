@@ -119,18 +119,23 @@ Update.prototype =
     positions = undefined
     for problems, index in @problems
       if domain = @domains[index]
-        for argument in operation
-          if problems.indexOf(argument) > -1
-            if !other || other.priority > domain.priority
-              position = index
-              other = domain
+        if typeof operation[0] != 'string' || domain.signatures[operation[0]]
+          for argument in operation
+            if problems.indexOf(argument) > -1
+              if !other || (domain.Solver && !other.Solver)
+                position = index
+                other = domain
             if !positions || positions.indexOf(index) == -1
               (positions ||= []).push(index)
+
+    if Domain && other.displayName != Domain.displayName
+      return @push [operation], Domain
 
     if !positions
       @push [operation], null
       return
 
+    # Replace chosen argument with operation, remove arguments
     for index, j in positions by -1
       if (domain = @domains[index]).displayName != other.displayName
         positions.splice j, 1
@@ -139,10 +144,9 @@ Update.prototype =
         for argument in operation
           if (i = problems.indexOf(argument)) > -1
             @reify(argument, other, domain)
-            if index == position
-              if problems.indexOf(operation) == -1
-                problems[i] = operation
-                positions.splice(j, 1)
+            if index == position && problems.indexOf(operation) == -1
+              problems[i] = operation
+              positions.splice(j, 1)
             else
               problems.splice(i, 1)
               if problems.length == 0 && domain.MAYBE
@@ -177,7 +181,7 @@ Update.prototype =
             variables[property]++
 
       for property, variable of problems.variables
-        if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
+        if variable.domain.Solver && variable.domain.displayName == domain.displayName
           if (i = variables[property])? && (i > @index) && (i != target)
             unless i in (positions ||= [])
               index = 0
@@ -242,7 +246,7 @@ Update.prototype =
       @reify(exported, other, domain)
 
       for property, variable of result.variables
-        if variable.domain.priority < 0 && variable.domain.displayName == domain.displayName
+        if variable.domain.Solver && variable.domain.displayName == domain.displayName
           (@variables ||= {})[property] = to
 
     if other && !other.url && @engine.domains.indexOf(other) == -1

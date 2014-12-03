@@ -6,7 +6,7 @@ Call       = require('../commands/Call')
 
 
 class Linear extends Domain
-  priority: -100
+  priority: 0
 
   Solver:  require('cassowary')
 

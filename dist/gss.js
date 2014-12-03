@@ -20136,6 +20136,7 @@ Engine = (function(_super) {
     }
     this.solved = new this.Boolean;
     this.solved.displayName = 'Solved';
+    this.solved.priority = -200;
     this.solved.setup();
     this.values = this.solved.values;
     this.domain = this.linear;
@@ -20328,7 +20329,7 @@ Engine = (function(_super) {
     }
     this.console.end();
     domain.setup();
-    if (domain.priority < 0 && !domain.url) {
+    if (domain.Solver && !domain.url) {
       if (this.domains.indexOf(domain) === -1) {
         this.domains.push(domain);
       }
@@ -21935,12 +21936,14 @@ Update.prototype = {
     for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
       problems = _ref[index];
       if (domain = this.domains[index]) {
-        for (_j = 0, _len1 = operation.length; _j < _len1; _j++) {
-          argument = operation[_j];
-          if (problems.indexOf(argument) > -1) {
-            if (!other || other.priority > domain.priority) {
-              position = index;
-              other = domain;
+        if (typeof operation[0] !== 'string' || domain.signatures[operation[0]]) {
+          for (_j = 0, _len1 = operation.length; _j < _len1; _j++) {
+            argument = operation[_j];
+            if (problems.indexOf(argument) > -1) {
+              if (!other || (domain.Solver && !other.Solver)) {
+                position = index;
+                other = domain;
+              }
             }
             if (!positions || positions.indexOf(index) === -1) {
               (positions || (positions = [])).push(index);
@@ -21948,6 +21951,9 @@ Update.prototype = {
           }
         }
       }
+    }
+    if (Domain && other.displayName !== Domain.displayName) {
+      return this.push([operation], Domain);
     }
     if (!positions) {
       this.push([operation], null);
@@ -21963,11 +21969,9 @@ Update.prototype = {
           argument = operation[_l];
           if ((i = problems.indexOf(argument)) > -1) {
             this.reify(argument, other, domain);
-            if (index === position) {
-              if (problems.indexOf(operation) === -1) {
-                problems[i] = operation;
-                positions.splice(j, 1);
-              }
+            if (index === position && problems.indexOf(operation) === -1) {
+              problems[i] = operation;
+              positions.splice(j, 1);
             } else {
               problems.splice(i, 1);
               if (problems.length === 0 && domain.MAYBE) {
@@ -22016,7 +22020,7 @@ Update.prototype = {
       _ref = problems.variables;
       for (property in _ref) {
         variable = _ref[property];
-        if (variable.domain.priority < 0 && variable.domain.displayName === domain.displayName) {
+        if (variable.domain.Solver && variable.domain.displayName === domain.displayName) {
           if (((i = variables[property]) != null) && (i > this.index) && (i !== target)) {
             if (__indexOf.call((positions || (positions = [])), i) < 0) {
               index = 0;
@@ -22085,7 +22089,7 @@ Update.prototype = {
       _ref = result.variables;
       for (property in _ref) {
         variable = _ref[property];
-        if (variable.domain.priority < 0 && variable.domain.displayName === domain.displayName) {
+        if (variable.domain.Solver && variable.domain.displayName === domain.displayName) {
           (this.variables || (this.variables = {}))[property] = to;
         }
       }
@@ -24809,7 +24813,7 @@ Numeric = (function(_super) {
     return _ref;
   }
 
-  Numeric.prototype.priority = 10;
+  Numeric.prototype.priority = 200;
 
   Numeric.prototype.url = null;
 
@@ -25125,7 +25129,7 @@ Styles = require('../properties/Styles');
 Intrinsic = (function(_super) {
   __extends(Intrinsic, _super);
 
-  Intrinsic.prototype.priority = 1;
+  Intrinsic.prototype.priority = 100;
 
   Intrinsic.prototype.subscribing = true;
 
@@ -25653,7 +25657,7 @@ Linear = (function(_super) {
     return _ref;
   }
 
-  Linear.prototype.priority = -100;
+  Linear.prototype.priority = 0;
 
   Linear.prototype.Solver = require('cassowary');
 

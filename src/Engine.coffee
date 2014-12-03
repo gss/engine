@@ -85,6 +85,7 @@ class Engine extends Events
     # Final values, used in conditions
     @solved = new @Boolean
     @solved.displayName = 'Solved'
+    @solved.priority = -200
     @solved.setup()
 
     @values = @solved.values
@@ -288,7 +289,7 @@ class Engine extends Events
         result = result[0]
     @console.end()
     domain.setup()
-    if domain.priority < 0 && !domain.url
+    if domain.Solver && !domain.url
       if @domains.indexOf(domain) == -1
         @domains.push(domain)
 
