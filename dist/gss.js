@@ -21007,7 +21007,6 @@ Domain = (function() {
   };
 
   Domain.prototype.transfer = function(update, parent) {
-    debugger;
     var prop, solution;
     if (parent) {
       parent.perform(this);
@@ -21925,7 +21924,7 @@ Update.prototype = {
         variable = _ref[name];
         if (variable >= index) {
           if (variable === index) {
-            delete this.variables[name];
+            this.variables[name] = void 0;
           } else {
             this.variables[name] = variable - 1;
           }
@@ -21954,9 +21953,6 @@ Update.prototype = {
           }
         }
       }
-    }
-    if (operation[0] === '>=') {
-      debugger;
     }
     if (Domain && (!other || other.displayName !== Domain.displayName)) {
       other = Domain;

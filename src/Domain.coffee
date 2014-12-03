@@ -314,7 +314,6 @@ class Domain
   # Prepare domain to be consumed by another  
   transfer: (update, parent) ->
     # Apply removes from parent update
-    debugger
     if parent
       parent.perform(@)
     if update

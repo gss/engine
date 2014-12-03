@@ -109,7 +109,7 @@ Update.prototype =
       for name, variable of @variables
         if variable >= index
           if variable == index
-            delete @variables[name]
+            @variables[name] = undefined
           else
             @variables[name] = variable - 1
     
@@ -128,9 +128,8 @@ Update.prototype =
               other = domain
           if !positions || positions.indexOf(index) == -1
             (positions ||= []).push(index)
-    if operation[0] == '>='
-      debugger
 
+    # Use suggested domain if no argument domain can handle operation
     if Domain && (!other || other.displayName != Domain.displayName)
       other = Domain
       position = @push [operation], Domain
@@ -139,7 +138,7 @@ Update.prototype =
       @push [operation], null
       return
 
-    # Replace chosen argument with operation, remove arguments
+    # Replace chosen argument with operation, clean arguments
     for index, j in positions by -1
       if (domain = @domains[index]).displayName != other.displayName
         positions.splice j, 1
