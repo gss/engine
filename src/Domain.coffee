@@ -204,7 +204,7 @@ class Domain
     return if @immutable
 
     # Suggest or remove suggestions for previously added constraints
-    if @priority >= 0 && variable = @variables[path]
+    if !@Solver && variable = @variables[path]
       for constraint in variable.constraints
         for operation in constraint.operations
           if op = operation.variables[path]

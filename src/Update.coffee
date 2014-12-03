@@ -64,12 +64,13 @@ Update.prototype =
       position = @index + 1
     else
       position = @domains.length
-      while (other = @domains[position - 1]) && 
-          (other.priority < domain.priority || 
-            (reverse && @problems[position - 1][0][0] != 'remove')) 
+      while position - 1 > @index && (other = @domains[position - 1])
+        unless (other.priority < domain.priority || 
+            (reverse && @problems[position - 1][0][0] != 'remove'))
+          break
         --position
     @insert(position, domain, problems)
-
+    return position
 
   # Add given problems to a problem list at given position
   append: (position, problems, reverse) ->
@@ -119,17 +120,20 @@ Update.prototype =
     positions = undefined
     for problems, index in @problems
       if domain = @domains[index]
-        if typeof operation[0] != 'string' || domain.signatures[operation[0]]
-          for argument in operation
-            if problems.indexOf(argument) > -1
-              if !other || (domain.Solver && !other.Solver)
-                position = index
-                other = domain
-            if !positions || positions.indexOf(index) == -1
-              (positions ||= []).push(index)
+        signed = typeof operation[0] != 'string' || domain.signatures[operation[0]]
+        for argument in operation
+          if signed && problems.indexOf(argument) > -1
+            if !other || (domain.Solver && !other.Solver)
+              position = index
+              other = domain
+          if !positions || positions.indexOf(index) == -1
+            (positions ||= []).push(index)
+    if operation[0] == '>='
+      debugger
 
-    if Domain && other.displayName != Domain.displayName
-      return @push [operation], Domain
+    if Domain && (!other || other.displayName != Domain.displayName)
+      other = Domain
+      position = @push [operation], Domain
 
     if !positions
       @push [operation], null
