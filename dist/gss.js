@@ -21023,13 +21023,12 @@ Domain = (function() {
     }
   };
 
-  Domain.prototype["export"] = function(strings) {
-    var constraint, operation, operations, ops, _i, _j, _len, _len1, _ref;
-    if (this.constraints) {
+  Domain.prototype["export"] = function(constraints) {
+    var constraint, operation, operations, ops, _i, _j, _len, _len1;
+    if (constraints || (constraints = this.constraints)) {
       operations = [];
-      _ref = this.constraints;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        constraint = _ref[_i];
+      for (_i = 0, _len = constraints.length; _i < _len; _i++) {
+        constraint = constraints[_i];
         if (ops = constraint.operations) {
           for (_j = 0, _len1 = ops.length; _j < _len1; _j++) {
             operation = ops[_j];
@@ -21990,6 +21989,7 @@ Update.prototype = {
             if (index === position && problems.indexOf(operation) === -1) {
               problems[i] = operation;
               positions.splice(j, 1);
+              operation.domain = domain;
             } else {
               problems.splice(i, 1);
               if (problems.length === 0 && domain.MAYBE) {
@@ -22013,7 +22013,11 @@ Update.prototype = {
       }
       this.setVariables(this.problems[position], operation);
     }
-    return this.connect(position, positions.length && positions);
+    if (positions.length) {
+      return this.connect(position, positions);
+    } else {
+      return this.connect(position);
+    }
   },
   match: function(target, domain, positions) {
     var Solver, i, index, problems, property, variable, variables, _ref;
@@ -22060,7 +22064,7 @@ Update.prototype = {
         }
         target = this.merge(from, to);
         for (j = _j = _ref1 = index + 1, _ref2 = positions.length; _j < _ref2; j = _j += 1) {
-          if (positions[j] > from) {
+          if (positions[j] >= from) {
             positions[j]--;
           }
         }
@@ -22183,8 +22187,17 @@ Update.prototype = {
     previous = this.domains[this.index];
     while ((domain = this.domains[++this.index]) !== void 0) {
       previous = domain;
+      if (this.variables) {
+        _ref = this.variables;
+        for (property in _ref) {
+          variable = _ref[property];
+          if (variable === this.index) {
+            delete this.variables[property];
+          }
+        }
+      }
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
-      if (((_ref = this.busy) != null ? _ref.length : void 0) && this.busy.indexOf((_ref1 = this.domains[this.index + 1]) != null ? _ref1.url : void 0) === -1) {
+      if (((_ref1 = this.busy) != null ? _ref1.length : void 0) && this.busy.indexOf((_ref2 = this.domains[this.index + 1]) != null ? _ref2.url : void 0) === -1) {
         this.terminate();
         return result;
       }
@@ -22194,15 +22207,6 @@ Update.prototype = {
         } else {
           this.apply(result);
           solution = this.apply(result, solution || {});
-        }
-      }
-      if (this.variables) {
-        _ref2 = this.variables;
-        for (property in _ref2) {
-          variable = _ref2[property];
-          if (variable <= this.index) {
-            delete this.variables[property];
-          }
         }
       }
     }

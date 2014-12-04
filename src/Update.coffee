@@ -161,6 +161,7 @@ Update.prototype =
             if index == position && problems.indexOf(operation) == -1
               problems[i] = operation
               positions.splice(j, 1)
+              operation.domain = domain
             else
               problems.splice(i, 1)
               if problems.length == 0 && domain.MAYBE
@@ -175,7 +176,10 @@ Update.prototype =
           operation.variables = argument.variables = @setVariables(operation, argument, true)
       @setVariables(@problems[position], operation)
 
-    return @connect(position, positions.length && positions)
+    if positions.length
+      return @connect(position, positions)
+    else
+      return @connect(position)
 
   # Find operations that use same variables with the same kind of solver
   match: (target, domain, positions) ->
@@ -221,7 +225,7 @@ Update.prototype =
         target = @merge(from, to)
 
         for j in [index + 1 ... positions.length] by 1
-          if positions[j] > from
+          if positions[j] >= from
             positions[j]--
 
     return target
@@ -235,6 +239,7 @@ Update.prototype =
     if domain = @domains[from]
       if !domain.MAYBE && !domain.consumed 
         domain.transfer(parent, @, other)
+        #domain.Constraint::split(domain)
         exported = domain.export()
         domain.consumed = true
 
@@ -321,6 +326,12 @@ Update.prototype =
     while (domain = @domains[++@index]) != undefined
       previous = domain
 
+
+      if @variables
+        for property, variable of @variables
+          if variable == @index
+            delete @variables[property]
+            
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
@@ -336,11 +347,6 @@ Update.prototype =
           @apply(result)
           solution = @apply(result, solution || {})
 
-
-      if @variables
-        for property, variable of @variables
-          if variable <= @index
-            delete @variables[property]
     @terminate()
     @index--
 

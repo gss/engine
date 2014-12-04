@@ -301,10 +301,10 @@ class Domain
     return
 
   # Return an array of operations that makes the constraint set
-  export: (strings) ->
-    if @constraints
+  export: (constraints) ->
+    if constraints ||= @constraints
       operations = []
-      for constraint in @constraints
+      for constraint in constraints
         if ops = constraint.operations
           for operation in ops
             operations.push(operation.parent)
