@@ -32,8 +32,10 @@ Updater = (engine) ->
     unless problem[0] instanceof Array
       if update
         update.wrap(problem, parent, domain || Domain)
-      else
+      else if problem[0] == 'remove'
         update = new @update([problem], [domain || Domain || null])
+      else
+        return parent
     
     # Unroll recursion, deal with the update
     if parent == false
@@ -100,6 +102,10 @@ Update.prototype =
     @domains.splice(position, 0, domain)
     @problems.splice(position, 0, problems)
 
+    for problem in problems
+      if typeof problem == 'string'
+        debugger
+
 
     if variables = @variables
       for property, variable of variables
@@ -157,7 +163,8 @@ Update.prototype =
         problems = @problems[index]
         for argument in operation
           if (i = problems.indexOf(argument)) > -1
-            @reify(argument, other, domain)
+            if argument.push
+              @reify(argument, other, domain)
             if index == position && problems.indexOf(operation) == -1
               problems[i] = operation
               positions.splice(j, 1)
@@ -261,9 +268,10 @@ Update.prototype =
 
       @reify(exported, other, domain)
 
-      for property, variable of result.variables
-        if variable.domain.Solver && variable.domain.displayName == domain.displayName
-          (@variables ||= {})[property] = to
+      if Solver = domain.Solver
+        for property, variable of result.variables
+          if variable.domain.Solver == Solver
+            (@variables ||= {})[property] = to
 
     if other && !other.url && @engine.domains.indexOf(other) == -1
       @engine.domains.push(other)
@@ -329,9 +337,9 @@ Update.prototype =
 
       if @variables
         for property, variable of @variables
-          if variable == @index
+          if variable <= @index
             delete @variables[property]
-            
+
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
@@ -417,7 +425,7 @@ Update.prototype =
     if operation.domain == from
       operation.domain = domain
     for arg in operation
-      if arg?.push
+      if arg && arg.push
         @reify arg, domain, from
     return operation
 

@@ -13,11 +13,18 @@ describe('Domain', function() {
     }
   });
   describe('single solving domain', function() {
-    return it('should find solutions', function() {
+    it('should find solutions', function() {
       engine = new GSS.Engine();
       return expect(engine.solve([['==', ['get', 'result'], ['+', ['get', 'a'], 1]]])).to.eql({
         result: 0,
         a: -1
+      });
+    });
+    return it('should find solutions when using nested simple expressions', function() {
+      engine = new GSS.Engine();
+      return expect(engine.solve([['==', ['get', 'result'], ['+', ['get', 'a'], ['+', ['*', 1, 2], 3]]]])).to.eql({
+        result: 0,
+        a: -5
       });
     });
   });
@@ -351,9 +358,7 @@ describe('Domain', function() {
       });
       return expect(engine.solve([['<=', ['get', 'c'], ['get', 'result']]])).to.eql({
         a: 8,
-        result: 9,
-        c: 9,
-        b: 3
+        result: 9
       });
     });
   });

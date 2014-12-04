@@ -45,7 +45,7 @@ describe('Standalone page tests', function() {
               expect(Math.floor(e.data['$dan_tocchini[x]'])).to.eql(768);
               expect(Math.floor(e.data['$dan_tocchini[width]'])).to.eql(768);
               expect(Math.floor(e.data['$yaroslaff_fedin[y]'])).to.eql(0);
-              expect(Math.floor(e.data['$yaroslaff_fedin[x]'])).to.eql(6143);
+              expect(Math.floor(e.data['$yaroslaff_fedin[x]'])).to.eql(6144);
               expect(Math.floor(e.data['$yaroslaff_fedin[width]'])).to.eql(768);
               expect(Math.floor(e.data['$lost_cosmonaut[y]'])).to.eql(0);
               expect(Math.floor(e.data['$lost_cosmonaut[x]'])).to.eql(9984);

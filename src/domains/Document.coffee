@@ -31,8 +31,8 @@ class Document extends Abstract
       @events.compile.call(@)
       
     @scope.addEventListener 'scroll', engine, true
-    if @scope != document
-      document.addEventListener 'scroll', engine, true
+    #if @scope != document
+    #  document.addEventListener 'scroll', engine, true
     window?.addEventListener 'resize', engine
 
     super
@@ -111,8 +111,8 @@ class Document extends Abstract
       
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @
-      if @scope != document
-        document.removeEventListener 'scroll', @
+      #if @scope != document
+      #  document.removeEventListener 'scroll', @
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
 

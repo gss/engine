@@ -21829,8 +21829,10 @@ Updater = function(engine) {
     if (!(problem[0] instanceof Array)) {
       if (update) {
         update.wrap(problem, parent, domain || Domain);
-      } else {
+      } else if (problem[0] === 'remove') {
         update = new this.update([problem], [domain || Domain || null]);
+      } else {
+        return parent;
       }
     }
     if (parent === false) {
@@ -21907,13 +21909,19 @@ Update.prototype = {
     }
   },
   insert: function(position, domain, problems) {
-    var problem, property, variable, variables, _i, _len;
+    var problem, property, variable, variables, _i, _j, _len, _len1;
     for (_i = 0, _len = problems.length; _i < _len; _i++) {
       problem = problems[_i];
       this.setVariables(problems, problem);
     }
     this.domains.splice(position, 0, domain);
     this.problems.splice(position, 0, problems);
+    for (_j = 0, _len1 = problems.length; _j < _len1; _j++) {
+      problem = problems[_j];
+      if (typeof problem === 'string') {
+        debugger;
+      }
+    }
     if (variables = this.variables) {
       for (property in variables) {
         variable = variables[property];
@@ -21985,7 +21993,9 @@ Update.prototype = {
         for (_l = 0, _len2 = operation.length; _l < _len2; _l++) {
           argument = operation[_l];
           if ((i = problems.indexOf(argument)) > -1) {
-            this.reify(argument, other, domain);
+            if (argument.push) {
+              this.reify(argument, other, domain);
+            }
             if (index === position && problems.indexOf(operation) === -1) {
               problems[i] = operation;
               positions.splice(j, 1);
@@ -22073,7 +22083,7 @@ Update.prototype = {
     return target;
   },
   merge: function(from, to, parent) {
-    var domain, exported, method, other, prob, problems, property, result, variable, _i, _j, _len, _len1, _ref;
+    var Solver, domain, exported, method, other, prob, problems, property, result, variable, _i, _j, _len, _len1, _ref;
     other = this.domains[to];
     problems = this.problems[from];
     result = this.problems[to];
@@ -22102,11 +22112,13 @@ Update.prototype = {
         this.setVariables(result, prob);
       }
       this.reify(exported, other, domain);
-      _ref = result.variables;
-      for (property in _ref) {
-        variable = _ref[property];
-        if (variable.domain.Solver && variable.domain.displayName === domain.displayName) {
-          (this.variables || (this.variables = {}))[property] = to;
+      if (Solver = domain.Solver) {
+        _ref = result.variables;
+        for (property in _ref) {
+          variable = _ref[property];
+          if (variable.domain.Solver === Solver) {
+            (this.variables || (this.variables = {}))[property] = to;
+          }
         }
       }
     }
@@ -22191,7 +22203,7 @@ Update.prototype = {
         _ref = this.variables;
         for (property in _ref) {
           variable = _ref[property];
-          if (variable === this.index) {
+          if (variable <= this.index) {
             delete this.variables[property];
           }
         }
@@ -22306,7 +22318,7 @@ Update.prototype = {
     }
     for (_i = 0, _len = operation.length; _i < _len; _i++) {
       arg = operation[_i];
-      if (arg != null ? arg.push : void 0) {
+      if (arg && arg.push) {
         this.reify(arg, domain, from);
       }
     }
@@ -25823,9 +25835,6 @@ Document = (function(_super) {
       this.events.compile.call(this);
     }
     this.scope.addEventListener('scroll', engine, true);
-    if (this.scope !== document) {
-      document.addEventListener('scroll', engine, true);
-    }
     if (typeof window !== "undefined" && window !== null) {
       window.addEventListener('resize', engine);
     }
@@ -25927,9 +25936,6 @@ Document = (function(_super) {
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
-      if (this.scope !== document) {
-        document.removeEventListener('scroll', this);
-      }
       this.scope.removeEventListener('scroll', this);
       return window.removeEventListener('resize', this);
     }
