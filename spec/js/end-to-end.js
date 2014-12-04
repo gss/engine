@@ -1198,7 +1198,7 @@ describe('End - to - End', function() {
         counter = 0;
         listen = function(e) {
           counter++;
-          if (counter === 3) {
+          if (counter === 1) {
             expect(engine.values).to.eql({
               "external-file": 1000,
               "external-file-2": 2000,

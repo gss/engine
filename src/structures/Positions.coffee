@@ -1,8 +1,8 @@
 ### Output: DOM element styles
   
 Applies style changes in bulk, separates reflows & positions.
-Revalidates intrinsic measurements, optionally schedules 
-another solver pass
+It recursively offsets global coordinates to respect offset parent, 
+then sets new positions
 
 ###
 class Positions

@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-03) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-04) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20316,7 +20316,7 @@ Engine = (function(_super) {
       }
     }
     if (!domain) {
-      return this.broadcast(problems, index, update);
+      return this.broadcast(problems, update);
     }
     this.console.start(problems, domain.displayName);
     result = domain.solve(problems) || void 0;
@@ -20337,8 +20337,11 @@ Engine = (function(_super) {
     return result;
   };
 
-  Engine.prototype.broadcast = function(problems, index, update) {
-    var i, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, working, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4;
+  Engine.prototype.broadcast = function(problems, update) {
+    var i, index, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, working, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4;
+    if (update == null) {
+      update = this.updating;
+    }
     others = [];
     removes = [];
     if (problems[0] === 'remove') {
@@ -20504,9 +20507,6 @@ Engine = (function(_super) {
       return;
     }
     (_base = this.engine).worker || (_base.worker = this.engine.getWorker(url));
-    this.worker.url = url;
-    this.worker.addEventListener('message', this.engine.eventHandler);
-    this.worker.addEventListener('error', this.engine.eventHandler);
     this.solve = function(commands) {
       var _base1;
       (_base1 = _this.engine).updating || (_base1.updating = new _this.update);
@@ -20517,8 +20517,49 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.getWorker = function(url) {
-    var _base, _base1, _base2;
-    return (_base = ((_base1 = this.engine).workers || (_base1.workers = {})))[url] || (_base[url] = (_base2 = (Engine.workers || (Engine.workers = {})))[url] || (_base2[url] = new Worker(url)));
+    var worker, _base, _base1, _base2;
+    worker = (_base = ((_base1 = this.engine).workers || (_base1.workers = {})))[url] || (_base[url] = (_base2 = (Engine.workers || (Engine.workers = {})))[url] || (_base2[url] = new Worker(url)));
+    worker.url || (worker.url = url);
+    worker.addEventListener('message', this.engine.eventHandler);
+    worker.addEventListener('error', this.engine.eventHandler);
+    return worker;
+  };
+
+  Engine.prototype.getVariableDomain = function(operation, Default) {
+    var domain, i, index, intrinsic, op, path, prefix, property, _ref, _ref1, _ref2, _ref3, _ref4;
+    if (operation.domain) {
+      return operation.domain;
+    }
+    path = operation[1];
+    if ((i = path.indexOf('[')) > -1) {
+      property = path.substring(i + 1, path.length - 1);
+    }
+    if (this.assumed.values.hasOwnProperty(path)) {
+      return this.assumed;
+    } else if (property && (intrinsic = (_ref = this.intrinsic) != null ? _ref.properties : void 0)) {
+      if ((intrinsic[path] != null) || (intrinsic[property] && !intrinsic[property].matcher)) {
+        return this.intrinsic;
+      }
+    }
+    if (Default) {
+      return Default;
+    }
+    if (property && (index = property.indexOf('-')) > -1) {
+      prefix = property.substring(0, index);
+      if ((domain = this[prefix])) {
+        if (domain instanceof this.Domain) {
+          return domain;
+        }
+      }
+    }
+    if (op = (_ref1 = this.variables[path]) != null ? (_ref2 = _ref1.constraints) != null ? (_ref3 = _ref2[0]) != null ? (_ref4 = _ref3.operations[0]) != null ? _ref4.domain : void 0 : void 0 : void 0 : void 0) {
+      return op;
+    }
+    if (this.domain.url) {
+      return this.domain;
+    } else {
+      return this.domain.maybe();
+    }
   };
 
   return Engine;
@@ -20553,7 +20594,7 @@ if (!self.window && self.onmessage !== void 0) {
         }
       }
       if (removes.length) {
-        this.solve(removes);
+        this.broadcast(removes);
       }
       if (values) {
         this.assumed.merge(values);
@@ -21063,39 +21104,6 @@ Domain = (function() {
       }
       return id + '[' + property + ']';
     }
-  };
-
-  Domain.prototype.getVariableDomain = function(operation, Default) {
-    var domain, i, index, intrinsic, op, path, prefix, property, _ref, _ref1, _ref2, _ref3, _ref4;
-    if (operation.domain) {
-      return operation.domain;
-    }
-    path = operation[1];
-    if ((i = path.indexOf('[')) > -1) {
-      property = path.substring(i + 1, path.length - 1);
-    }
-    if (this.assumed.values.hasOwnProperty(path)) {
-      return this.assumed;
-    } else if (property && (intrinsic = (_ref = this.intrinsic) != null ? _ref.properties : void 0)) {
-      if ((intrinsic[path] != null) || (intrinsic[property] && !intrinsic[property].matcher)) {
-        return this.intrinsic;
-      }
-    }
-    if (Default) {
-      return Default;
-    }
-    if (property && (index = property.indexOf('-')) > -1) {
-      prefix = property.substring(0, index);
-      if ((domain = this[prefix])) {
-        if (domain instanceof this.Domain) {
-          return domain;
-        }
-      }
-    }
-    if (op = (_ref1 = this.variables[path]) != null ? (_ref2 = _ref1.constraints) != null ? (_ref3 = _ref2[0]) != null ? (_ref4 = _ref3.operations[0]) != null ? _ref4.domain : void 0 : void 0 : void 0 : void 0) {
-      return op;
-    }
-    return this.domain.maybe();
   };
 
   Domain.prototype.transact = function() {
@@ -21804,7 +21812,7 @@ Updater = function(engine) {
       this.domains = domain && (domain.push && domain || [domain]) || [];
       return;
     }
-    update = new this.update;
+    update = void 0;
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
       arg = problem[index];
       if (!(arg != null ? arg.push : void 0)) {
@@ -21814,9 +21822,9 @@ Updater = function(engine) {
         arg.parent || (arg.parent = problem);
         if (arg[0] === 'get') {
           vardomain = arg.domain || (arg.domain = this.domain.getVariableDomain(arg, Domain));
-          update.push([arg], vardomain);
+          (update || (update = new this.update)).push([arg], vardomain);
         } else {
-          this.update(arg, domain, update, Domain);
+          update = this.update(arg, domain, update || false, Domain);
         }
         object = true;
       }
@@ -21827,9 +21835,15 @@ Updater = function(engine) {
       }
     }
     if (!(problem[0] instanceof Array)) {
-      update.wrap(problem, parent, domain || Domain);
+      if (update) {
+        update.wrap(problem, parent, domain || Domain);
+      } else {
+        update = new this.update([problem], [domain || Domain || null]);
+      }
     }
-    if (parent || (parent = this.updating)) {
+    if (parent === false) {
+      return update;
+    } else if (parent || (parent = this.updating)) {
       return parent.push(update);
     } else {
       return update.each(this.resolve, this.engine);
@@ -22066,9 +22080,10 @@ Update.prototype = {
     problems = this.problems[from];
     result = this.problems[to];
     if (domain = this.domains[from]) {
-      if (!domain.MAYBE) {
+      if (!domain.MAYBE && !domain.consumed) {
         domain.transfer(parent, this, other);
         exported = domain["export"]();
+        domain.consumed = true;
       }
       for (_i = 0, _len = problems.length; _i < _len; _i++) {
         prob = problems[_i];
@@ -24168,8 +24183,8 @@ Matcher = function(name, keywords, types, keys, required, pad, depth, initial, c
 module.exports = Style;
 
 });
-require.register("gss/lib/commands/Source.js", function(exports, require, module){
-var Command, Parser, Source, _ref,
+require.register("gss/lib/commands/Stylesheet.js", function(exports, require, module){
+var Command, Parser, Stylesheet, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -24177,17 +24192,17 @@ Parser = require('ccss-compiler');
 
 Command = require('../Command');
 
-Source = (function(_super) {
-  __extends(Source, _super);
+Stylesheet = (function(_super) {
+  __extends(Stylesheet, _super);
 
-  function Source() {
-    _ref = Source.__super__.constructor.apply(this, arguments);
+  function Stylesheet() {
+    _ref = Stylesheet.__super__.constructor.apply(this, arguments);
     return _ref;
   }
 
-  Source.prototype.type = 'Source';
+  Stylesheet.prototype.type = 'Stylesheet';
 
-  Source.prototype.signature = [
+  Stylesheet.prototype.signature = [
     {
       'source': ['Selector', 'String', 'Node']
     }, [
@@ -24198,7 +24213,31 @@ Source = (function(_super) {
     ]
   ];
 
-  Source.prototype.types = {
+  Stylesheet.define({
+    "eval": function(node, type, text, engine, operation, continuation, scope) {
+      engine.Stylesheet.add(engine.engine, operation, continuation, node, type, node.textContent);
+    },
+    "load": function(node, type, method, engine, operation, continuation, scope) {
+      var src, xhr,
+        _this = this;
+      src = node.href || node.src || node;
+      type || (type = node.type || 'text/gss');
+      xhr = new XMLHttpRequest();
+      engine.Stylesheet.block(engine);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          engine.Stylesheet.add(engine, operation, continuation, node, type, xhr.responseText);
+          if (engine.Stylesheet.unblock(engine)) {
+            return engine.Stylesheet.complete(engine);
+          }
+        }
+      };
+      xhr.open('GET', method && method.toUpperCase() || src);
+      return xhr.send();
+    }
+  });
+
+  Stylesheet.mimes = {
     "text/gss-ast": function(source) {
       return JSON.parse(source);
     },
@@ -24208,56 +24247,341 @@ Source = (function(_super) {
     }
   };
 
-  return Source;
+  Stylesheet.add = function(engine, operation, continuation, stylesheet, type, source) {
+    var el, index, old, stylesheets, _i, _len;
+    type = stylesheet.getAttribute('type') || 'text/gss';
+    if (stylesheet.operations) {
+      engine.queries.clean(this.prototype.delimit(stylesheet.continuation));
+      if ((old = engine.stylesheets[stylesheet.continuation]) !== stylesheet) {
+        engine.stylesheets.splice(engine.stylesheets.indexOf(old), 1);
+      }
+    } else {
+      stylesheet.continuation = this.prototype.delimit(continuation, this.prototype.DESCEND);
+    }
+    stylesheet.command = this;
+    stylesheet.operations = engine.clone(this.mimes[type](source));
+    stylesheets = engine.stylesheets || (engine.stylesheets = []);
+    engine.console.row('parse', stylesheet.operations, stylesheet.continuation);
+    if (stylesheets.indexOf(stylesheet) === -1) {
+      for (index = _i = 0, _len = stylesheets.length; _i < _len; index = ++_i) {
+        el = stylesheets[index];
+        if (!engine.queries.comparePosition(el, stylesheet, operation, operation)) {
+          break;
+        }
+      }
+      stylesheets.splice(index, 0, stylesheet);
+    }
+    engine.stylesheets[stylesheet.continuation] = stylesheet;
+    stylesheet.dirty = true;
+  };
+
+  Stylesheet.operations = [['eval', ['[*=]', ['tag', 'style'], 'type', 'text/gss']], ['load', ['[*=]', ['tag', 'link'], 'type', 'text/gss']]];
+
+  Stylesheet.perform = function(engine) {
+    var stylesheet, _i, _len, _ref1;
+    if (engine.stylesheets) {
+      _ref1 = engine.stylesheets;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        stylesheet = _ref1[_i];
+        this.evaluate(engine, stylesheet);
+      }
+    }
+    return this;
+  };
+
+  Stylesheet.evaluate = function(engine, stylesheet) {
+    var scope;
+    if (!stylesheet.dirty) {
+      return;
+    }
+    stylesheet.dirty = void 0;
+    if (stylesheet.getAttribute('scoped') != null) {
+      scope = stylesheet.parentNode;
+    }
+    return engine.solve(stylesheet.operations, stylesheet.continuation, scope);
+  };
+
+  Stylesheet.complete = function(engine) {
+    this.perform(engine);
+    debugger;
+    if (engine.blocking === 0) {
+      engine.blocking = void 0;
+      return engine.engine.commit(void 0, void 0, true);
+    }
+  };
+
+  Stylesheet.compile = function(engine) {
+    this.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + engine.queries.DESCEND + "]\s*", "gi");
+    this.CleanupSelectorRegExp = new RegExp(engine.queries.DESCEND, 'g');
+    engine.engine.solve('Document', 'stylesheets', this.operations);
+    if (!engine.blocking && engine.stylesheets) {
+      return this.complete(engine);
+    }
+  };
+
+  Stylesheet.update = function(engine, operation, property, value, stylesheet, rule) {
+    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref1;
+    watchers = this.getWatchers(engine, stylesheet);
+    dump = this.getStylesheet(engine, stylesheet);
+    sheet = dump.sheet;
+    needle = this.getOperation(operation, watchers, rule);
+    previous = [];
+    for (index = _i = 0, _len = watchers.length; _i < _len; index = ++_i) {
+      item = watchers[index];
+      if (index >= needle) {
+        break;
+      }
+      if (ops = watchers[index]) {
+        other = this.getRule(watchers[ops[0]][0]);
+        if (previous.indexOf(other) === -1) {
+          previous.push(other);
+        }
+      }
+    }
+    if (!sheet) {
+      if (dump.parentNode) {
+        dump.parentNode.removeChild(dump);
+      }
+      return;
+    }
+    rules = sheet.rules || sheet.cssRules;
+    if (needle !== operation.index || value === '') {
+      generated = rules[previous.length];
+      generated.style[property] = value;
+      next = void 0;
+      if (needle === operation.index) {
+        needle++;
+      }
+      for (index = _j = needle, _ref1 = watchers.length; needle <= _ref1 ? _j < _ref1 : _j > _ref1; index = needle <= _ref1 ? ++_j : --_j) {
+        if (ops = watchers[index]) {
+          next = this.getRule(watchers[ops[0]][0]);
+          if (next !== rule) {
+            sheet.deleteRule(previous.length);
+          }
+          break;
+        }
+      }
+      if (!next) {
+        sheet.deleteRule(previous.length);
+      }
+    } else {
+      body = property + ':' + value;
+      selectors = this.getSelector(operation);
+      index = sheet.insertRule(selectors + "{" + body + "}", previous.length);
+    }
+    return true;
+  };
+
+  Stylesheet.getRule = function(operation) {
+    var rule;
+    rule = operation;
+    while (rule = rule.parent) {
+      if (rule[0] === 'rule') {
+        return rule;
+      }
+    }
+  };
+
+  Stylesheet.getStylesheet = function(engine, stylesheet) {
+    var sheet, _base;
+    if (!(sheet = ((_base = engine.stylesheets).dumps || (_base.dumps = {}))[stylesheet._gss_id])) {
+      sheet = engine.stylesheets.dumps[stylesheet._gss_id] = document.createElement('STYLE');
+      stylesheet.parentNode.insertBefore(sheet, stylesheet.nextSibling);
+    }
+    return sheet;
+  };
+
+  Stylesheet.getWatchers = function(engine, stylesheet) {
+    var _base, _base1, _name;
+    return (_base = ((_base1 = engine.stylesheets).watchers || (_base1.watchers = {})))[_name = stylesheet._gss_id] || (_base[_name] = []);
+  };
+
+  Stylesheet.getOperation = function(operation, watchers, rule) {
+    var needle, other, _i, _len, _ref1, _ref2;
+    needle = operation.index;
+    _ref1 = rule.properties;
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      other = _ref1[_i];
+      if ((_ref2 = watchers[other]) != null ? _ref2.length : void 0) {
+        needle = other;
+        break;
+      }
+    }
+    return needle;
+  };
+
+  Stylesheet.set = function(engine, operation, continuation, stylesheet, element, property, value) {
+    debugger;
+    var rule;
+    if (rule = this.getRule(operation)) {
+      if (this.watch(engine, operation, continuation, stylesheet)) {
+        if (this.update(engine, operation, property, value, stylesheet, rule)) {
+          engine.engine.restyled = true;
+        }
+      }
+      return true;
+    }
+  };
+
+  Stylesheet.block = function(engine) {
+    return engine.blocking = (engine.blocking || 0) + 1;
+  };
+
+  Stylesheet.unblock = function(engine) {
+    return --engine.blocking === 0;
+  };
+
+  Stylesheet.remove = function(engine, continuation) {
+    var operation, operations, stylesheet, watchers, _i, _j, _len, _ref1;
+    if (engine.stylesheets) {
+      _ref1 = engine.stylesheets;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        stylesheet = _ref1[_i];
+        if (watchers = this.getWatchers(engine, stylesheet)) {
+          if (operations = watchers[continuation]) {
+            for (_j = operations.length - 1; _j >= 0; _j += -1) {
+              operation = operations[_j];
+              this.unwatch(engine, operation, continuation, stylesheet, watchers);
+            }
+          }
+        }
+      }
+    }
+  };
+
+  Stylesheet.watch = function(engine, operation, continuation, stylesheet) {
+    var meta, watchers, _name;
+    watchers = this.getWatchers(engine, stylesheet);
+    meta = (watchers[_name = operation.index] || (watchers[_name] = []));
+    if (meta.indexOf(continuation) > -1) {
+      return;
+    }
+    (watchers[continuation] || (watchers[continuation] = [])).push(operation);
+    return meta.push(continuation) === 1;
+  };
+
+  Stylesheet.unwatch = function(engine, operation, continuation, stylesheet, watchers) {
+    var index, meta, observers;
+    if (watchers == null) {
+      watchers = this.getWatchers(engine, stylesheet);
+    }
+    index = operation.index;
+    meta = watchers[index];
+    meta.splice(meta.indexOf(continuation), 1);
+    observers = watchers[continuation];
+    observers.splice(observers.indexOf(operation), 1);
+    if (!observers.length) {
+      delete watchers[continuation];
+    }
+    if (!meta.length) {
+      delete watchers[index];
+      return this.update(engine, operation, operation[1], '', stylesheet, this.getRule(operation));
+    }
+  };
+
+  Stylesheet["export"] = function() {
+    var id, rule, sheet, style, text, _i, _len, _ref1, _ref2;
+    sheet = [];
+    _ref1 = engine.stylesheets.dumps;
+    for (id in _ref1) {
+      style = _ref1[id];
+      _ref2 = style.sheet.rules || style.sheet.cssRules;
+      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+        rule = _ref2[_i];
+        text = rule.cssText.replace(/\[matches~="(.*?)"\]/g, function(m, selector) {
+          return selector.replace(/@\d+/g, '').replace(/↓/g, ' ');
+        });
+        sheet.push(text);
+      }
+    }
+    return sheet.join('');
+  };
+
+  Stylesheet.getSelector = function(operation) {
+    return this.getSelectors(operation).join(', ');
+  };
+
+  Stylesheet.getSelectors = function(operation) {
+    var bit, bits, cmd, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1,
+      _this = this;
+    parent = operation;
+    results = wrapped = custom = void 0;
+    while (parent) {
+      if (parent[0] === 'if') {
+        if (results) {
+          for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
+            result = results[index];
+            if (result.substring(0, 11) !== '[matches~="') {
+              result = this.getCustomSelector(result);
+            }
+            results[index] = result.substring(0, 11) + parent.uid + this.prototype.DESCEND + result.substring(11);
+          }
+        }
+      } else if (parent[0] === 'rule') {
+        cmd = parent[1].command;
+        selectors = cmd.path;
+        if (parent[1][0] === ',') {
+          paths = parent[1].slice(1).map(function(item) {
+            return item.command.selector || item.command.path;
+          });
+          groups = ((_ref1 = cmd.selector) != null ? _ref1.split(',') : void 0) || [];
+        } else {
+          paths = [selectors];
+          groups = [cmd.selector || (cmd.key === cmd.path && cmd.key)];
+        }
+        if (results != null ? results.length : void 0) {
+          bits = selectors.split(',');
+          update = [];
+          for (_j = 0, _len1 = results.length; _j < _len1; _j++) {
+            result = results[_j];
+            if (result.substring(0, 11) === '[matches~="') {
+              update.push(result.substring(0, 11) + selectors + this.prototype.DESCEND + result.substring(11));
+            } else {
+              for (index = _k = 0, _len2 = bits.length; _k < _len2; index = ++_k) {
+                bit = bits[index];
+                if (groups[index] !== bit) {
+                  update.push(this.getCustomSelector(selectors) + ' ' + result);
+                } else {
+                  update.push(bit + ' ' + result);
+                }
+              }
+            }
+          }
+          results = update;
+        } else {
+          results = selectors.split(',').map(function(path, index) {
+            if (path !== groups[index]) {
+              return _this.getCustomSelector(selectors);
+            } else {
+              return path;
+            }
+          });
+        }
+      }
+      parent = parent.parent;
+    }
+    for (index = _l = 0, _len3 = results.length; _l < _len3; index = ++_l) {
+      result = results[index];
+      results[index] = results[index].replace(this.CleanupSelectorRegExp, '');
+    }
+    return results;
+  };
+
+  Stylesheet.getCustomSelector = function(selector) {
+    return '[matches~="' + selector.replace(/\s+/, this.prototype.DESCEND) + '"]';
+  };
+
+  Stylesheet.getCanonicalSelector = function(selector) {
+    selector = selector.trim();
+    selector = selector.replace(this.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.prototype.DESCEND);
+    return selector;
+  };
+
+  return Stylesheet;
 
 })(Command);
 
-Source.define({
-  "eval": function(node, type, text, engine, operation, continuation, scope) {
-    var nodeContinuation, nodeType, rules, source;
-    if (type == null) {
-      type = 'text/gss';
-    }
-    if (node.nodeType) {
-      if (nodeType = node.getAttribute('type')) {
-        type = nodeType;
-      }
-      source = text || node.textContent || node;
-      if ((nodeContinuation = node._continuation) != null) {
-        engine.queries.clean(this.delimit(nodeContinuation));
-        continuation = nodeContinuation;
-      } else {
-        continuation = node._continuation = this.delimit(continuation, this.DESCEND);
-      }
-      if (node.getAttribute('scoped') != null) {
-        scope = node.parentNode;
-      }
-    }
-    rules = engine.clone(this.types[type](source));
-    engine.console.row('rules', rules);
-    engine.engine.solve(rules, continuation, scope);
-  },
-  "load": function(node, type, method, engine, operation, continuation, scope) {
-    var src, xhr,
-      _this = this;
-    src = node.href || node.src || node;
-    type || (type = node.type || 'text/gss');
-    xhr = new XMLHttpRequest();
-    engine.requesting = (engine.requesting || 0) + 1;
-    xhr.onreadystatechange = function() {
-      var op;
-      if (xhr.readyState === 4 && xhr.status === 200) {
-        --engine.requesting;
-        op = ['eval', node, type, xhr.responseText];
-        return engine.Command(op).solve(engine, op, continuation, scope);
-      }
-    };
-    xhr.open('GET', method && method.toUpperCase() || src);
-    return xhr.send();
-  }
-});
-
-module.exports = Source;
+module.exports = Stylesheet;
 
 });
 require.register("gss/lib/commands/Type.js", function(exports, require, module){
@@ -25181,7 +25505,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.restyle = function(element, property, value, continuation, operation) {
-    var bits, camel, first, id, j, parent, path, position, prop, shared, stylesheet, _ref, _ref1, _ref2;
+    var bits, camel, command, first, id, j, parent, path, position, prop, shared, stylesheet, _ref, _ref1, _ref2;
     if (value == null) {
       value = '';
     }
@@ -25227,7 +25551,7 @@ Intrinsic = (function(_super) {
       first = bits.shift();
       if ((j = first.lastIndexOf('$')) > -1) {
         id = first.substring(j);
-        if (((_ref1 = (stylesheet = this.identity[id])) != null ? _ref1.tagName : void 0) === 'STYLE') {
+        if (command = (_ref1 = (stylesheet = this.identity[id])) != null ? _ref1.command : void 0) {
           parent = operation;
           while (parent = parent.parent) {
             if (parent[0] === 'if' && parent[1].marked) {
@@ -25236,7 +25560,7 @@ Intrinsic = (function(_super) {
             }
           }
           if (shared !== false) {
-            if (this.stylesheets.solve(stylesheet, operation, this.queries.delimit(continuation), element, property, value)) {
+            if (command.set(this, operation, this.queries.delimit(continuation), stylesheet, element, property, value)) {
               return;
             }
           }
@@ -25465,7 +25789,7 @@ Document = (function(_super) {
 
   Document.prototype.Selector = require('../commands/Selector');
 
-  Document.prototype.Source = require('../commands/Source');
+  Document.prototype.Stylesheet = require('../commands/Stylesheet');
 
   Document.prototype.Queries = require('../structures/Queries');
 
@@ -25475,15 +25799,12 @@ Document = (function(_super) {
 
   Document.prototype.Positions = require('../structures/Positions');
 
-  Document.prototype.Stylesheets = require('../structures/Stylesheets');
-
   Document.prototype.disconnected = true;
 
   function Document() {
     var engine;
     engine = this.engine;
     engine.positions || (engine.positions = new this.Positions(this));
-    engine.stylesheets || (engine.stylesheets = new this.Stylesheets(this));
     engine.queries || (engine.queries = new this.Queries(this));
     engine.pairs || (engine.pairs = new this.Pairs(this));
     engine.mutations || (engine.mutations = new this.Mutations(this));
@@ -25594,7 +25915,10 @@ Document = (function(_super) {
       });
     },
     compile: function() {
-      return this.stylesheets.compile();
+      return this.document.Stylesheet.compile(this);
+    },
+    commit: function() {
+      return this.document.Stylesheet.perform(this);
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
@@ -26858,8 +27182,8 @@ require.register("gss/lib/structures/Positions.js", function(exports, require, m
 /* Output: DOM element styles
   
 Applies style changes in bulk, separates reflows & positions.
-Revalidates intrinsic measurements, optionally schedules 
-another solver pass
+It recursively offsets global coordinates to respect offset parent, 
+then sets new positions
 */
 
 var Positions;
@@ -27357,8 +27681,8 @@ Queries = (function() {
     }
     this.engine.solved.remove(path);
     this.engine.intrinsic.remove(path);
-    if ((_ref = this.engine.stylesheets) != null) {
-      _ref.remove(path);
+    if ((_ref = this.engine.Stylesheet) != null) {
+      _ref.remove(this.engine, path);
     }
     shared = false;
     if (this.engine.isCollection(result)) {
@@ -28069,286 +28393,6 @@ Signatures = (function() {
 })();
 
 module.exports = Signatures;
-
-});
-require.register("gss/lib/structures/Stylesheets.js", function(exports, require, module){
-var Stylesheets;
-
-Stylesheets = (function() {
-  function Stylesheets(engine) {
-    this.engine = engine;
-    this.watchers = {};
-    this.sheets = {};
-  }
-
-  Stylesheets.prototype.initialize = [['eval', ['[*=]', ['tag', 'style'], 'type', 'text/gss']], ['load', ['[*=]', ['tag', 'link'], 'type', 'text/gss']]];
-
-  Stylesheets.prototype.compile = function() {
-    this.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + this.engine.queries.DESCEND + "]\s*", "gi");
-    this.CleanupSelectorRegExp = new RegExp(this.engine.queries.DESCEND, 'g');
-    this.engine.engine.solve('Document', 'stylesheets', this.initialize);
-    this.inline = this.engine.queries['style[type*="text/gss"]'];
-    this.remote = this.engine.queries['link[type*="text/gss"]'];
-    return this.collections = [this.inline, this.remote];
-  };
-
-  Stylesheets.prototype.getRule = function(operation) {
-    var rule;
-    rule = operation;
-    while (rule = rule.parent) {
-      if (rule[0] === 'rule') {
-        return rule;
-      }
-    }
-  };
-
-  Stylesheets.prototype.getStylesheet = function(stylesheet) {
-    var sheet;
-    if (!(sheet = this.sheets[stylesheet._gss_id])) {
-      sheet = this.sheets[stylesheet._gss_id] = document.createElement('STYLE');
-      stylesheet.parentNode.insertBefore(sheet, stylesheet.nextSibling);
-    }
-    return sheet;
-  };
-
-  Stylesheets.prototype.getWatchers = function(stylesheet) {
-    var _base, _name;
-    return (_base = this.watchers)[_name = stylesheet._gss_id] || (_base[_name] = []);
-  };
-
-  Stylesheets.prototype.getOperation = function(operation, watchers, rule) {
-    var needle, other, _i, _len, _ref, _ref1;
-    needle = operation.index;
-    _ref = rule.properties;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      other = _ref[_i];
-      if ((_ref1 = watchers[other]) != null ? _ref1.length : void 0) {
-        needle = other;
-        break;
-      }
-    }
-    return needle;
-  };
-
-  Stylesheets.prototype.solve = function(stylesheet, operation, continuation, element, property, value) {
-    var rule;
-    if (rule = this.getRule(operation)) {
-      if (this.watch(operation, continuation, stylesheet)) {
-        if (this.update(operation, property, value, stylesheet, rule)) {
-          this.engine.engine.restyled = true;
-        }
-      }
-      return true;
-    }
-  };
-
-  Stylesheets.prototype.update = function(operation, property, value, stylesheet, rule) {
-    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref;
-    watchers = this.getWatchers(stylesheet);
-    dump = this.getStylesheet(stylesheet);
-    sheet = dump.sheet;
-    needle = this.getOperation(operation, watchers, rule);
-    previous = [];
-    for (index = _i = 0, _len = watchers.length; _i < _len; index = ++_i) {
-      item = watchers[index];
-      if (index >= needle) {
-        break;
-      }
-      if (ops = watchers[index]) {
-        other = this.getRule(watchers[ops[0]][0]);
-        if (previous.indexOf(other) === -1) {
-          previous.push(other);
-        }
-      }
-    }
-    if (!sheet) {
-      if (dump.parentNode) {
-        dump.parentNode.removeChild(dump);
-      }
-      return;
-    }
-    rules = sheet.rules || sheet.cssRules;
-    if (needle !== operation.index || value === '') {
-      generated = rules[previous.length];
-      generated.style[property] = value;
-      next = void 0;
-      if (needle === operation.index) {
-        needle++;
-      }
-      for (index = _j = needle, _ref = watchers.length; needle <= _ref ? _j < _ref : _j > _ref; index = needle <= _ref ? ++_j : --_j) {
-        if (ops = watchers[index]) {
-          next = this.getRule(watchers[ops[0]][0]);
-          if (next !== rule) {
-            sheet.deleteRule(previous.length);
-          }
-          break;
-        }
-      }
-      if (!next) {
-        sheet.deleteRule(previous.length);
-      }
-    } else {
-      body = property + ':' + value;
-      selectors = this.getSelector(operation);
-      index = sheet.insertRule(selectors + "{" + body + "}", previous.length);
-    }
-    return true;
-  };
-
-  Stylesheets.prototype.watch = function(operation, continuation, stylesheet) {
-    var meta, watchers, _name;
-    watchers = this.getWatchers(stylesheet);
-    meta = (watchers[_name = operation.index] || (watchers[_name] = []));
-    if (meta.indexOf(continuation) > -1) {
-      return;
-    }
-    (watchers[continuation] || (watchers[continuation] = [])).push(operation);
-    return meta.push(continuation) === 1;
-  };
-
-  Stylesheets.prototype.unwatch = function(operation, continuation, stylesheet, watchers) {
-    var index, meta, observers;
-    if (watchers == null) {
-      watchers = this.getWatchers(stylesheet);
-    }
-    index = operation.index;
-    meta = watchers[index];
-    meta.splice(meta.indexOf(continuation), 1);
-    observers = watchers[continuation];
-    observers.splice(observers.indexOf(operation), 1);
-    if (!observers.length) {
-      delete watchers[continuation];
-    }
-    if (!meta.length) {
-      delete watchers[index];
-      return this.update(operation, operation[1], '', stylesheet, this.getRule(operation));
-    }
-  };
-
-  Stylesheets.prototype["export"] = function() {
-    var id, rule, sheet, style, text, _i, _len, _ref, _ref1;
-    sheet = [];
-    _ref = this.sheets;
-    for (id in _ref) {
-      style = _ref[id];
-      _ref1 = style.sheet.rules || style.sheet.cssRules;
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        rule = _ref1[_i];
-        text = rule.cssText.replace(/\[matches~="(.*?)"\]/g, function(m, selector) {
-          return selector.replace(/@\d+/g, '').replace(/↓/g, ' ');
-        });
-        sheet.push(text);
-      }
-    }
-    return sheet.join('');
-  };
-
-  Stylesheets.prototype.remove = function(continuation, stylesheets) {
-    var collection, operation, operations, stylesheet, watchers, _i, _j, _k, _len, _len1, _ref;
-    if (this.collections) {
-      _ref = this.collections;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        collection = _ref[_i];
-        for (_j = 0, _len1 = collection.length; _j < _len1; _j++) {
-          stylesheet = collection[_j];
-          if (watchers = this.getWatchers(stylesheet)) {
-            if (operations = watchers[continuation]) {
-              for (_k = operations.length - 1; _k >= 0; _k += -1) {
-                operation = operations[_k];
-                this.unwatch(operation, continuation, stylesheet, watchers);
-              }
-            }
-          }
-        }
-      }
-    }
-  };
-
-  Stylesheets.prototype.getSelector = function(operation) {
-    return this.getSelectors(operation).join(', ');
-  };
-
-  Stylesheets.prototype.getSelectors = function(operation) {
-    var bit, bits, cmd, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref,
-      _this = this;
-    parent = operation;
-    results = wrapped = custom = void 0;
-    while (parent) {
-      if (parent[0] === 'if') {
-        if (results) {
-          for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
-            result = results[index];
-            if (result.substring(0, 11) !== '[matches~="') {
-              result = this.getCustomSelector(result);
-            }
-            results[index] = result.substring(0, 11) + parent.uid + this.engine.queries.DESCEND + result.substring(11);
-          }
-        }
-      } else if (parent[0] === 'rule') {
-        cmd = parent[1].command;
-        selectors = cmd.path;
-        if (parent[1][0] === ',') {
-          paths = parent[1].slice(1).map(function(item) {
-            return item.command.selector || item.command.path;
-          });
-          groups = ((_ref = cmd.selector) != null ? _ref.split(',') : void 0) || [];
-        } else {
-          paths = [selectors];
-          groups = [cmd.selector || (cmd.key === cmd.path && cmd.key)];
-        }
-        if (results != null ? results.length : void 0) {
-          bits = selectors.split(',');
-          update = [];
-          for (_j = 0, _len1 = results.length; _j < _len1; _j++) {
-            result = results[_j];
-            if (result.substring(0, 11) === '[matches~="') {
-              update.push(result.substring(0, 11) + selectors + this.engine.queries.DESCEND + result.substring(11));
-            } else {
-              for (index = _k = 0, _len2 = bits.length; _k < _len2; index = ++_k) {
-                bit = bits[index];
-                if (groups[index] !== bit) {
-                  update.push(this.getCustomSelector(selectors) + ' ' + result);
-                } else {
-                  update.push(bit + ' ' + result);
-                }
-              }
-            }
-          }
-          results = update;
-        } else {
-          results = selectors.split(',').map(function(path, index) {
-            if (path !== groups[index]) {
-              return _this.getCustomSelector(selectors);
-            } else {
-              return path;
-            }
-          });
-        }
-      }
-      parent = parent.parent;
-    }
-    for (index = _l = 0, _len3 = results.length; _l < _len3; index = ++_l) {
-      result = results[index];
-      results[index] = results[index].replace(this.CleanupSelectorRegExp, '');
-    }
-    return results;
-  };
-
-  Stylesheets.prototype.getCustomSelector = function(selector) {
-    return '[matches~="' + selector.replace(/\s+/, this.engine.queries.DESCEND) + '"]';
-  };
-
-  Stylesheets.prototype.getCanonicalSelector = function(selector) {
-    selector = selector.trim();
-    selector = selector.replace(this.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.DESCEND);
-    return selector;
-  };
-
-  return Stylesheets;
-
-})();
-
-module.exports = Stylesheets;
 
 });
 require.register("gss/lib/structures/Signatures.js", function(exports, require, module){
@@ -35227,7 +35271,7 @@ module.exports = {
     "lib/commands/Query.js", 
     "lib/commands/Selector.js", 
     "lib/commands/Style.js",
-    "lib/commands/Source.js", 
+    "lib/commands/Stylesheet.js", 
     "lib/commands/Type.js",
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
@@ -35249,7 +35293,6 @@ module.exports = {
     "lib/structures/Positions.js", 
     "lib/structures/Queries.js", 
     "lib/structures/Signatures.js",
-    "lib/structures/Stylesheets.js",  
     "lib/structures/Signatures.js",
 
     "lib/properties/Axioms.js",

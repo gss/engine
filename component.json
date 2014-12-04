@@ -23,7 +23,7 @@
     "lib/commands/Query.js", 
     "lib/commands/Selector.js", 
     "lib/commands/Style.js",
-    "lib/commands/Source.js", 
+    "lib/commands/Stylesheet.js", 
     "lib/commands/Type.js",
     "lib/commands/Transformation.js",
     "lib/commands/Unit.js",
@@ -45,7 +45,6 @@
     "lib/structures/Positions.js", 
     "lib/structures/Queries.js", 
     "lib/structures/Signatures.js",
-    "lib/structures/Stylesheets.js",  
     "lib/structures/Signatures.js",
 
     "lib/properties/Axioms.js",

@@ -4,13 +4,12 @@ class Document extends Abstract
   priority: Infinity
   
   Selector:    require('../commands/Selector')
-  Source:      require('../commands/Source')
+  Stylesheet:  require('../commands/Stylesheet')
                
   Queries:     require('../structures/Queries')
   Pairs:       require('../structures/Pairs')
   Mutations:   require('../structures/Mutations')
   Positions:   require('../structures/Positions')
-  Stylesheets: require('../structures/Stylesheets')
 
   disconnected: true
 
@@ -18,7 +17,6 @@ class Document extends Abstract
     # Export modules into engine
     engine = @engine
     engine.positions   ||= new @Positions(@)
-    engine.stylesheets ||= new @Stylesheets(@)
     engine.queries     ||= new @Queries(@)
     engine.pairs       ||= new @Pairs(@)
     engine.mutations   ||= new @Mutations(@)
@@ -101,8 +99,12 @@ class Document extends Abstract
         @intrinsic.solve([])
 
     # Observe and parse stylesheets
+
     compile: ->
-      @stylesheets.compile()
+      @document.Stylesheet.compile(@)
+      
+    commit: ->
+      @document.Stylesheet.perform(@)
       
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @

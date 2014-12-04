@@ -361,37 +361,7 @@ class Domain
       if id.substring(0, 2) == '$"'
         id = id.substring(1)
       return id + '[' + property + ']'
-
-
-  # Return domain that should be used to evaluate given variable
-  # For unknown variables, it creates a domain instance 
-  # that will hold all dependent constraints and variables.
-  getVariableDomain: (operation, Default) ->
-    if operation.domain
-      return operation.domain
-    path = operation[1]
-    if (i = path.indexOf('[')) > -1
-      property = path.substring(i + 1, path.length - 1)
-    
-    if @assumed.values.hasOwnProperty(path)
-      return @assumed
-    else if property && (intrinsic = @intrinsic?.properties)
-      if (intrinsic[path]? || (intrinsic[property] && !intrinsic[property].matcher))
-        return @intrinsic
-    
-    if Default
-      return Default
-      
-    if property && (index = property.indexOf('-')) > -1
-      prefix = property.substring(0, index)
-      if (domain = @[prefix])
-        if domain instanceof @Domain
-          return domain
-
-    if op = @variables[path]?.constraints?[0]?.operations[0]?.domain
-      return op
-
-    return @domain.maybe()      
+   
 
   # Set a flag to record all changed values
   transact: ->

@@ -9,7 +9,7 @@ Updater = (engine) ->
       @domains  = domain  && (domain.push && domain  || [domain] ) || []
       return
     
-    update = new @update
+    update = undefined
 
     # Process arguments
     for arg, index in problem
@@ -19,10 +19,10 @@ Updater = (engine) ->
         # Variable
         if arg[0] == 'get'
           vardomain = arg.domain ||= @domain.getVariableDomain(arg, Domain)
-          update.push [arg], vardomain
+          (update ||= new @update).push [arg], vardomain
         # Function call
         else
-          @update(arg, domain, update, Domain)
+          update = @update(arg, domain, update || false, Domain)
         object = true
     unless object
       unless problem instanceof Array
@@ -30,10 +30,15 @@ Updater = (engine) ->
 
     # Replace arguments updates with parent function update
     unless problem[0] instanceof Array
-      update.wrap(problem, parent, domain || Domain)
-
-    # Unroll recursion, solve problems
-    if parent ||= @updating
+      if update
+        update.wrap(problem, parent, domain || Domain)
+      else
+        update = new @update([problem], [domain || Domain || null])
+    
+    # Unroll recursion, deal with the update
+    if parent == false
+      return update
+    else if parent ||= @updating
       return parent.push(update)
     else
       return update.each @resolve, @engine
@@ -226,9 +231,10 @@ Update.prototype =
     result = @problems[to]
 
     if domain = @domains[from]
-      unless domain.MAYBE
+      if !domain.MAYBE && !domain.consumed 
         domain.transfer(parent, @, other)
         exported = domain.export()
+        domain.consumed = true
 
       for prob in problems
         if result.indexOf(prob) == -1

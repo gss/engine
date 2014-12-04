@@ -1516,7 +1516,7 @@ describe 'End - to - End', ->
         counter = 0
         listen = (e) ->
           counter++
-          if counter == 3
+          if counter == 1
             expect(engine.values).to.eql 
               "external-file": 1000
               "external-file-2": 2000

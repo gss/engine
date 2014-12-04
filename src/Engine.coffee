@@ -278,7 +278,7 @@ class Engine extends Events
         problem = problems[index] = problem[0]
     
     unless domain
-      return @broadcast problems, index, update
+      return @broadcast problems, update
 
     @console.start(problems, domain.displayName)
     result = domain.solve(problems) || undefined
@@ -296,7 +296,7 @@ class Engine extends Events
     return result
 
   # Dispatch operations without specific domain (e.g. remove)
-  broadcast: (problems, index, update) ->
+  broadcast: (problems, update = @updating) ->
     others = []
     removes = []
     if problems[0] == 'remove'
@@ -421,9 +421,6 @@ class Engine extends Events
       return
 
     @engine.worker ||= @engine.getWorker(url)
-    @worker.url = url
-    @worker.addEventListener 'message', @engine.eventHandler
-    @worker.addEventListener 'error', @engine.eventHandler
     @solve = (commands) =>
       @engine.updating ||= new @update
       @engine.updating.postMessage(@worker, commands)
@@ -432,8 +429,46 @@ class Engine extends Events
 
   # Use worker from a shared pool. To use multiple workers, provide #hashed urls
   getWorker: (url) ->
-    return (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+    worker = (@engine.workers ||= {})[url] ||= (Engine.workers ||= {})[url] ||= new Worker(url)
+    worker.url ||= url
+    worker.addEventListener 'message', @engine.eventHandler
+    worker.addEventListener 'error', @engine.eventHandler
+    return worker
 
+
+  # Return domain that should be used to evaluate given variable
+  # For unknown variables, it creates a domain instance 
+  # that will hold all dependent constraints and variables.
+  getVariableDomain: (operation, Default) ->
+    if operation.domain
+      return operation.domain
+    path = operation[1]
+    if (i = path.indexOf('[')) > -1
+      property = path.substring(i + 1, path.length - 1)
+    
+    if @assumed.values.hasOwnProperty(path)
+      return @assumed
+    else if property && (intrinsic = @intrinsic?.properties)
+      if (intrinsic[path]? || (intrinsic[property] && !intrinsic[property].matcher))
+        return @intrinsic
+    
+    if Default
+      return Default
+      
+    if property && (index = property.indexOf('-')) > -1
+      prefix = property.substring(0, index)
+      if (domain = @[prefix])
+        if domain instanceof @Domain
+          return domain
+
+    if op = @variables[path]?.constraints?[0]?.operations[0]?.domain
+      return op
+
+    
+    if @domain.url
+      return @domain
+    else
+      return @domain.maybe()   
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
@@ -455,7 +490,7 @@ if !self.window && self.onmessage != undefined
                 command[1].parent = command
               commands.push(command)
       if removes.length
-        @solve(removes)
+        @broadcast(removes)
       if values
         @assumed.merge(values)
       if commands.length

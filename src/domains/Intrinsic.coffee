@@ -76,14 +76,14 @@ class Intrinsic extends Numeric
       first = bits.shift()
       if (j = first.lastIndexOf('$')) > -1
         id = first.substring(j)
-        if (stylesheet = @identity[id])?.tagName == 'STYLE'
+        if command = (stylesheet = @identity[id])?.command
           parent = operation
           while parent = parent.parent
             if parent[0] == 'if' && parent[1].marked
               shared = false
               break
           if shared != false
-            if @stylesheets.solve stylesheet, operation, @queries.delimit(continuation), element, property, value
+            if command.set @, operation, @queries.delimit(continuation), stylesheet, element, property, value
               return
 
     path = @getPath(element, 'intrinsic-' + property)

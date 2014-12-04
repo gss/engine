@@ -320,7 +320,7 @@ class Queries
     
     @engine.solved.remove(path)
     @engine.intrinsic.remove(path)
-    @engine.stylesheets?.remove(path)
+    @engine.Stylesheet?.remove(@engine, path)
 
     shared = false
     if @engine.isCollection(result)
