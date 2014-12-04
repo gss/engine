@@ -68,8 +68,6 @@ class Domain
 
   solve: (operation, continuation, scope, ascender, ascending) ->
     transacting = @transact()
-    if operation?.variables?['$message[height]']
-      debugger
     if typeof operation == 'object'
       if !operation.push
         result = @assumed.merge operation

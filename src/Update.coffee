@@ -100,8 +100,14 @@ Update.prototype =
     @domains.splice(position, 0, domain)
     @problems.splice(position, 0, problems)
 
+
+    if variables = @variables
+      for property, variable of variables
+        if variable >= position
+          variables[property]++
+
     @reify(problems, domain)
-    @connect(position, false)
+    @connect(position)
 
   # Remove domain/problem pair at given index
   splice: (index) ->
@@ -169,30 +175,23 @@ Update.prototype =
           operation.variables = argument.variables = @setVariables(operation, argument, true)
       @setVariables(@problems[position], operation)
 
-    if positions.length
-      return @connect(position, positions)
-    else
-      return @connect(position)
+    return @connect(position, positions.length && positions)
 
-
+  # Find operations that use same variables with the same kind of solver
   match: (target, domain, positions) ->
     problems = @problems[target]
     variables = @variables ||= {}
-    if positions == false
-      for property, variable of variables
-        if variable >= target
-          variables[property]++
-
-    for property, variable of problems.variables
-      if domain.Solver && variable.domain.displayName == domain.displayName
-        if (i = variables[property])? && (@index < i) && (i != target)
-          unless i in (positions ||= [])
-            index = 0
-            while positions[index] < i
-              index++
-            positions.splice index, 0, i
-        else
-          variables[property] = target
+    if Solver = domain.Solver
+      for property, variable of problems.variables
+        if variable.domain.Solver == Solver
+          if (i = variables[property])? && (i != target)
+            unless i in (positions ||= [])
+              index = 0
+              while positions[index] < i
+                index++
+              positions.splice index, 0, i
+          else
+            variables[property] = target
 
     return positions
 
@@ -202,13 +201,15 @@ Update.prototype =
       return 
 
     if positions ||= @match(target, domain, positions)
+      b = domain.constraints
       for index in [0 ... positions.length] by 1
         i = positions[index]
-        condition = 
-          if domain.constraints && @domains[i].constraints
-            @domains[i].constraints.length > domain.constraints.length
+        a = @domains[i].constraints  
+        condition =
+          if a || b
+            (a && a.length) < (b && b.length)
           else
-            target > i
+            target < i
 
         if condition
           from = i
@@ -220,7 +221,7 @@ Update.prototype =
         target = @merge(from, to)
 
         for j in [index + 1 ... positions.length] by 1
-          if positions[j] >= from
+          if positions[j] > from
             positions[j]--
 
     return target
@@ -240,8 +241,6 @@ Update.prototype =
       for prob in problems
         if result.indexOf(prob) == -1
           (exported ||= []).push(prob)
-        else if prob.variables['$message[intrinsic-height]']
-          debugger
 
     @splice from, 1
 
@@ -336,6 +335,12 @@ Update.prototype =
         else
           @apply(result)
           solution = @apply(result, solution || {})
+
+
+      if @variables
+        for property, variable of @variables
+          if variable <= @index
+            delete @variables[property]
     @terminate()
     @index--
 

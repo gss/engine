@@ -74,8 +74,7 @@ class Document extends Abstract
 
     # Wait for web fonts
     readystatechange: ->
-      if @running
-        document.removeEventListener 'readystatechange', @
+      if @running && document.readyState == 'complete'
         @solve 'Document', 'readystatechange', ->
           @intrinsic.solve()
     

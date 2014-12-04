@@ -20717,11 +20717,8 @@ Domain = (function() {
   };
 
   Domain.prototype.solve = function(operation, continuation, scope, ascender, ascending) {
-    var commands, commited, result, transacting, _ref, _ref1;
+    var commands, commited, result, transacting, _ref;
     transacting = this.transact();
-    if (operation != null ? (_ref = operation.variables) != null ? _ref['$message[height]'] : void 0 : void 0) {
-      debugger;
-    }
     if (typeof operation === 'object') {
       if (!operation.push) {
         result = this.assumed.merge(operation);
@@ -20734,7 +20731,7 @@ Domain = (function() {
       this.Constraint.prototype.reset(this);
     }
     if (typeof result !== 'object') {
-      if (result = (_ref1 = this.perform) != null ? _ref1.apply(this, arguments) : void 0) {
+      if (result = (_ref = this.perform) != null ? _ref.apply(this, arguments) : void 0) {
         result = this.apply(result);
       }
     }
@@ -21911,15 +21908,23 @@ Update.prototype = {
     }
   },
   insert: function(position, domain, problems) {
-    var problem, _i, _len;
+    var problem, property, variable, variables, _i, _len;
     for (_i = 0, _len = problems.length; _i < _len; _i++) {
       problem = problems[_i];
       this.setVariables(problems, problem);
     }
     this.domains.splice(position, 0, domain);
     this.problems.splice(position, 0, problems);
+    if (variables = this.variables) {
+      for (property in variables) {
+        variable = variables[property];
+        if (variable >= position) {
+          variables[property]++;
+        }
+      }
+    }
     this.reify(problems, domain);
-    return this.connect(position, false);
+    return this.connect(position);
   },
   splice: function(index) {
     var i, name, variable, _ref;
@@ -22008,52 +22013,44 @@ Update.prototype = {
       }
       this.setVariables(this.problems[position], operation);
     }
-    if (positions.length) {
-      return this.connect(position, positions);
-    } else {
-      return this.connect(position);
-    }
+    return this.connect(position, positions.length && positions);
   },
   match: function(target, domain, positions) {
-    var i, index, problems, property, variable, variables, _ref;
+    var Solver, i, index, problems, property, variable, variables, _ref;
     problems = this.problems[target];
     variables = this.variables || (this.variables = {});
-    if (positions === false) {
-      for (property in variables) {
-        variable = variables[property];
-        if (variable >= target) {
-          variables[property]++;
-        }
-      }
-    }
-    _ref = problems.variables;
-    for (property in _ref) {
-      variable = _ref[property];
-      if (domain.Solver && variable.domain.displayName === domain.displayName) {
-        if (((i = variables[property]) != null) && (this.index < i) && (i !== target)) {
-          if (__indexOf.call((positions || (positions = [])), i) < 0) {
-            index = 0;
-            while (positions[index] < i) {
-              index++;
+    if (Solver = domain.Solver) {
+      _ref = problems.variables;
+      for (property in _ref) {
+        variable = _ref[property];
+        if (variable.domain.Solver === Solver) {
+          if (((i = variables[property]) != null) && (i !== target)) {
+            if (__indexOf.call((positions || (positions = [])), i) < 0) {
+              index = 0;
+              while (positions[index] < i) {
+                index++;
+              }
+              positions.splice(index, 0, i);
             }
-            positions.splice(index, 0, i);
+          } else {
+            variables[property] = target;
           }
-        } else {
-          variables[property] = target;
         }
       }
     }
     return positions;
   },
   connect: function(target, positions) {
-    var condition, domain, from, i, index, j, to, _i, _j, _ref, _ref1, _ref2;
+    var a, b, condition, domain, from, i, index, j, to, _i, _j, _ref, _ref1, _ref2;
     if (!(domain = this.domains[target])) {
       return;
     }
     if (positions || (positions = this.match(target, domain, positions))) {
+      b = domain.constraints;
       for (index = _i = 0, _ref = positions.length; _i < _ref; index = _i += 1) {
         i = positions[index];
-        condition = domain.constraints && this.domains[i].constraints ? this.domains[i].constraints.length > domain.constraints.length : target > i;
+        a = this.domains[i].constraints;
+        condition = a || b ? (a && a.length) < (b && b.length) : target < i;
         if (condition) {
           from = i;
           to = target;
@@ -22063,7 +22060,7 @@ Update.prototype = {
         }
         target = this.merge(from, to);
         for (j = _j = _ref1 = index + 1, _ref2 = positions.length; _j < _ref2; j = _j += 1) {
-          if (positions[j] >= from) {
+          if (positions[j] > from) {
             positions[j]--;
           }
         }
@@ -22086,8 +22083,6 @@ Update.prototype = {
         prob = problems[_i];
         if (result.indexOf(prob) === -1) {
           (exported || (exported = [])).push(prob);
-        } else if (prob.variables['$message[intrinsic-height]']) {
-          debugger;
         }
       }
     }
@@ -22178,7 +22173,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, previous, result, _ref, _ref1;
+    var domain, previous, property, result, variable, _ref, _ref1, _ref2;
     if (solution) {
       this.apply(solution);
     }
@@ -22199,6 +22194,15 @@ Update.prototype = {
         } else {
           this.apply(result);
           solution = this.apply(result, solution || {});
+        }
+      }
+      if (this.variables) {
+        _ref2 = this.variables;
+        for (property in _ref2) {
+          variable = _ref2[property];
+          if (variable <= this.index) {
+            delete this.variables[property];
+          }
         }
       }
     }
@@ -25557,7 +25561,6 @@ Intrinsic = (function(_super) {
             }
           }
           if (shared !== false) {
-            debugger;
             if (command.set(this, operation, this.queries.delimit(continuation), stylesheet, element, property, value)) {
               return;
             }
@@ -25573,7 +25576,6 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.perform = function() {
-    debugger;
     if (arguments.length < 4) {
       this.each(this.scope, this.measure);
       this.console.row('Intrinsic', this.changes);
@@ -25876,8 +25878,7 @@ Document = (function(_super) {
       return this.compile();
     },
     readystatechange: function() {
-      if (this.running) {
-        document.removeEventListener('readystatechange', this);
+      if (this.running && document.readyState === 'complete') {
         return this.solve('Document', 'readystatechange', function() {
           return this.intrinsic.solve();
         });
