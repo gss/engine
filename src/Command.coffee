@@ -406,7 +406,6 @@ class Command
       if length > args.length
         args.length = length
 
-      debugger
       if extras = command.extras ? command.execute.length 
         args.push(engine)
         if extras > 1

@@ -83,6 +83,7 @@ class Intrinsic extends Numeric
               shared = false
               break
           if shared != false
+            debugger
             if command.set @, operation, @queries.delimit(continuation), stylesheet, element, property, value
               return
 
@@ -95,9 +96,10 @@ class Intrinsic extends Numeric
 
 
   perform: ->
+    debugger
     if arguments.length < 4
-      @console.row('measure', arguments[0], arguments[1])
       @each @scope, @measure
+      @console.row('Intrinsic', @changes)
       return @changes
     return
 

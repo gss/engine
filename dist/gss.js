@@ -20150,10 +20150,10 @@ Engine = (function(_super) {
 
   Engine.prototype.solve = function() {
     var args, old, solution, strategy, transacting, _base;
-    args = this.transact.apply(this, arguments);
     if (!this.transacting) {
       this.transacting = transacting = true;
     }
+    args = this.transact.apply(this, arguments);
     if (!(old = this.updating)) {
       this.engine.updating = new this.update;
       if ((_base = this.updating).start == null) {
@@ -20204,10 +20204,8 @@ Engine = (function(_super) {
         }
       }
     }
-    if (typeof args[0] === 'object') {
-      if (name = source || this.displayName) {
-        this.console.start(reason || args[0], name);
-      }
+    if (name = source || this.displayName) {
+      this.console.start(reason || args[0], name);
     }
     return args;
   };
@@ -20217,7 +20215,7 @@ Engine = (function(_super) {
     if (solution) {
       this.updating.apply(solution);
     }
-    this.fireEvent('commit', solution);
+    this.triggerEvent('commit', solution);
     if (started = this.started) {
       this.started = void 0;
     }
@@ -20249,7 +20247,7 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.onSolve = function(solution, restyled) {
-    var effects, update, _ref, _ref1, _ref2;
+    var effects, update, _ref, _ref1, _ref2, _ref3;
     update = this.updating;
     if (solution || (solution = update.solution)) {
       this.fireEvent('apply', solution, update);
@@ -20262,15 +20260,13 @@ Engine = (function(_super) {
       }
       return;
     }
-    if (this.intrinsic) {
-      this.intrinsic.changes = {};
-      update.apply(this.intrinsic.perform());
-      this.intrinsic.changes = void 0;
+    if ((_ref1 = this.intrinsic) != null ? _ref1.objects : void 0) {
+      update.apply(this.intrinsic.solve());
     }
     this.solved.merge(solution);
     update.reset();
     effects = update.each(this.resolve, this);
-    if ((_ref1 = update.busy) != null ? _ref1.length : void 0) {
+    if ((_ref2 = update.busy) != null ? _ref2.length : void 0) {
       return effects;
     }
     if (effects && Object.keys(effects).length) {
@@ -20280,7 +20276,7 @@ Engine = (function(_super) {
       return;
     }
     this.updating.finish();
-    if (!update.problems.length && ((_ref2 = this.updated) != null ? _ref2.problems.length : void 0) && !this.engine.restyled) {
+    if (!update.problems.length && ((_ref3 = this.updated) != null ? _ref3.problems.length : void 0) && !this.engine.restyled) {
       this.restyled = this.updating = void 0;
       return;
     } else {
@@ -20406,12 +20402,8 @@ Engine = (function(_super) {
   };
 
   Engine.prototype.precompile = function() {
-    var _ref;
     this.Domain.compile(this.Domains, this);
     this.update = Engine.prototype.Update.compile(this);
-    if ((_ref = this.mutations) != null) {
-      _ref.connect(true);
-    }
     if (location.search.indexOf('export=') > -1) {
       return this.preexport();
     }
@@ -20725,19 +20717,24 @@ Domain = (function() {
   };
 
   Domain.prototype.solve = function(operation, continuation, scope, ascender, ascending) {
-    var commands, commited, result, transacting, _ref;
+    var commands, commited, result, transacting, _ref, _ref1;
     transacting = this.transact();
-    if (typeof operation === 'object' && !operation.push) {
-      result = this.assumed.merge(operation);
-    } else {
-      result = this.Command(operation).solve(this, operation, continuation || '', scope || this.scope, ascender, ascending);
+    if (operation != null ? (_ref = operation.variables) != null ? _ref['$message[height]'] : void 0 : void 0) {
+      debugger;
+    }
+    if (typeof operation === 'object') {
+      if (!operation.push) {
+        result = this.assumed.merge(operation);
+      } else {
+        result = this.Command(operation).solve(this, operation, continuation || '', scope || this.scope, ascender, ascending);
+      }
     }
     if (this.constrained || this.unconstrained) {
       commands = this.Constraint.prototype.split(this);
       this.Constraint.prototype.reset(this);
     }
     if (typeof result !== 'object') {
-      if (result = (_ref = this.perform) != null ? _ref.apply(this, arguments) : void 0) {
+      if (result = (_ref1 = this.perform) != null ? _ref1.apply(this, arguments) : void 0) {
         result = this.apply(result);
       }
     }
@@ -21696,7 +21693,6 @@ Command = (function() {
       if (length > args.length) {
         args.length = length;
       }
-      debugger;
       if (extras = (_ref = command.extras) != null ? _ref : command.execute.length) {
         args.push(engine);
         if (extras > 1) {
@@ -22018,43 +22014,44 @@ Update.prototype = {
       return this.connect(position);
     }
   },
+  match: function(target, domain, positions) {
+    var i, index, problems, property, variable, variables, _ref;
+    problems = this.problems[target];
+    variables = this.variables || (this.variables = {});
+    if (positions === false) {
+      for (property in variables) {
+        variable = variables[property];
+        if (variable >= target) {
+          variables[property]++;
+        }
+      }
+    }
+    _ref = problems.variables;
+    for (property in _ref) {
+      variable = _ref[property];
+      if (domain.Solver && variable.domain.displayName === domain.displayName) {
+        if (((i = variables[property]) != null) && (this.index < i) && (i !== target)) {
+          if (__indexOf.call((positions || (positions = [])), i) < 0) {
+            index = 0;
+            while (positions[index] < i) {
+              index++;
+            }
+            positions.splice(index, 0, i);
+          }
+        } else {
+          variables[property] = target;
+        }
+      }
+    }
+    return positions;
+  },
   connect: function(target, positions) {
-    var condition, domain, from, i, index, j, offset, problems, property, to, variable, variables, _i, _j, _ref, _ref1, _ref2, _ref3;
+    var condition, domain, from, i, index, j, to, _i, _j, _ref, _ref1, _ref2;
     if (!(domain = this.domains[target])) {
       return;
     }
-    problems = this.problems[target];
-    variables = this.variables || (this.variables = {});
-    if (!positions) {
-      if (positions === false) {
-        for (property in variables) {
-          variable = variables[property];
-          if (variable >= target) {
-            variables[property]++;
-          }
-        }
-      }
-      _ref = problems.variables;
-      for (property in _ref) {
-        variable = _ref[property];
-        if (variable.domain.Solver && variable.domain.displayName === domain.displayName) {
-          if (((i = variables[property]) != null) && (i > this.index) && (i !== target)) {
-            if (__indexOf.call((positions || (positions = [])), i) < 0) {
-              index = 0;
-              while (positions[index] < i) {
-                index++;
-              }
-              positions.splice(index, 0, i);
-            }
-          } else {
-            variables[property] = target;
-          }
-        }
-      }
-    }
-    offset = 0;
-    if (positions) {
-      for (index = _i = 0, _ref1 = positions.length; _i < _ref1; index = _i += 1) {
+    if (positions || (positions = this.match(target, domain, positions))) {
+      for (index = _i = 0, _ref = positions.length; _i < _ref; index = _i += 1) {
         i = positions[index];
         condition = domain.constraints && this.domains[i].constraints ? this.domains[i].constraints.length > domain.constraints.length : target > i;
         if (condition) {
@@ -22065,7 +22062,7 @@ Update.prototype = {
           to = i;
         }
         target = this.merge(from, to);
-        for (j = _j = _ref2 = index + 1, _ref3 = positions.length; _j < _ref3; j = _j += 1) {
+        for (j = _j = _ref1 = index + 1, _ref2 = positions.length; _j < _ref2; j = _j += 1) {
           if (positions[j] >= from) {
             positions[j]--;
           }
@@ -22089,6 +22086,8 @@ Update.prototype = {
         prob = problems[_i];
         if (result.indexOf(prob) === -1) {
           (exported || (exported = [])).push(prob);
+        } else if (prob.variables['$message[intrinsic-height]']) {
+          debugger;
         }
       }
     }
@@ -24248,7 +24247,7 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.add = function(engine, operation, continuation, stylesheet, type, source) {
-    var el, index, old, stylesheets, _i, _len;
+    var el, index, old, stylesheets, _base, _i, _len;
     type = stylesheet.getAttribute('type') || 'text/gss';
     if (stylesheet.operations) {
       engine.queries.clean(this.prototype.delimit(stylesheet.continuation));
@@ -24260,7 +24259,7 @@ Stylesheet = (function(_super) {
     }
     stylesheet.command = this;
     stylesheet.operations = engine.clone(this.mimes[type](source));
-    stylesheets = engine.stylesheets || (engine.stylesheets = []);
+    stylesheets = (_base = engine.engine).stylesheets || (_base.stylesheets = []);
     engine.console.row('parse', stylesheet.operations, stylesheet.continuation);
     if (stylesheets.indexOf(stylesheet) === -1) {
       for (index = _i = 0, _len = stylesheets.length; _i < _len; index = ++_i) {
@@ -24303,7 +24302,6 @@ Stylesheet = (function(_super) {
 
   Stylesheet.complete = function(engine) {
     this.perform(engine);
-    debugger;
     if (engine.blocking === 0) {
       engine.blocking = void 0;
       return engine.engine.commit(void 0, void 0, true);
@@ -24411,7 +24409,6 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.set = function(engine, operation, continuation, stylesheet, element, property, value) {
-    debugger;
     var rule;
     if (rule = this.getRule(operation)) {
       if (this.watch(engine, operation, continuation, stylesheet)) {
@@ -25560,6 +25557,7 @@ Intrinsic = (function(_super) {
             }
           }
           if (shared !== false) {
+            debugger;
             if (command.set(this, operation, this.queries.delimit(continuation), stylesheet, element, property, value)) {
               return;
             }
@@ -25575,9 +25573,10 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.perform = function() {
+    debugger;
     if (arguments.length < 4) {
-      this.console.row('measure', arguments[0], arguments[1]);
       this.each(this.scope, this.measure);
+      this.console.row('Intrinsic', this.changes);
       return this.changes;
     }
   };
@@ -25810,14 +25809,17 @@ Document = (function(_super) {
     engine.mutations || (engine.mutations = new this.Mutations(this));
     engine.applier || (engine.applier = engine.positions);
     engine.scope || (engine.scope = document);
-    if (this.scope.nodeType === 9 && ['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
-      this.scope.addEventListener('DOMContentLoaded', engine);
+    if (document.nodeType === 9 && ['complete', 'loaded'].indexOf(document.readyState) === -1) {
+      document.addEventListener('DOMContentLoaded', engine);
       document.addEventListener('readystatechange', engine);
       window.addEventListener('load', engine);
     } else if (this.running) {
       this.events.compile.call(this);
     }
     this.scope.addEventListener('scroll', engine, true);
+    if (this.scope !== document) {
+      document.addEventListener('scroll', engine, true);
+    }
     if (typeof window !== "undefined" && window !== null) {
       window.addEventListener('resize', engine);
     }
@@ -25856,18 +25858,43 @@ Document = (function(_super) {
           this.intrinsic.verify(id, "width");
           return this.intrinsic.verify(id, "height");
         });
-      }, 20);
+      }, 10);
     },
     scroll: function(e) {
-      var html, id, klass, _i, _len, _ref, _ref1, _ref2;
+      var id;
       if (e == null) {
         e = '::window';
       }
       id = e.target && this.identify(e.target) || e;
-      this.solve(id + ' scrolled', function() {
+      return this.solve(id + ' scrolled', function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
       });
+    },
+    DOMContentLoaded: function() {
+      document.removeEventListener('DOMContentLoaded', this);
+      return this.compile();
+    },
+    readystatechange: function() {
+      if (this.running) {
+        document.removeEventListener('readystatechange', this);
+        return this.solve('Document', 'readystatechange', function() {
+          return this.intrinsic.solve();
+        });
+      }
+    },
+    load: function() {
+      window.removeEventListener('load', this);
+      document.removeEventListener('DOMContentLoaded', this);
+      return this.solve('Document', 'load', function() {
+        return this.intrinsic.solve();
+      });
+    },
+    compile: function() {
+      return this.document.Stylesheet.compile(this.document);
+    },
+    solve: function() {
+      var html, id, klass, _i, _len, _ref, _ref1, _ref2;
       if (this.scope.nodeType === 9) {
         html = this.scope.body.parentNode;
         klass = html.className;
@@ -25890,38 +25917,14 @@ Document = (function(_super) {
         return this.document.removed = void 0;
       }
     },
-    DOMContentLoaded: function() {
-      this.scope.removeEventListener('DOMContentLoaded', this);
-      if (this.running === void 0) {
-        return this.engine.compile();
-      }
-    },
-    readystatechange: function() {
-      document.removeEventListener('readystatechange', this);
-      if (this.running === void 0) {
-        this.triggerEvent('DOMContentLoaded');
-      }
-      return this.solve('Document', 'onload', function() {
-        return this.intrinsic.solve([]);
-      });
-    },
-    load: function() {
-      if (this.running === void 0) {
-        this.triggerEvent('DOMContentLoaded');
-      }
-      window.removeEventListener('load', this);
-      return this.solve('Document', 'onload', function() {
-        return this.intrinsic.solve([]);
-      });
-    },
-    compile: function() {
-      return this.document.Stylesheet.compile(this);
-    },
     commit: function() {
-      return this.document.Stylesheet.perform(this);
+      return this.document.Stylesheet.perform(this.document);
     },
     destroy: function() {
       this.scope.removeEventListener('DOMContentLoaded', this);
+      if (this.scope !== document) {
+        document.removeEventListener('scroll', this);
+      }
       this.scope.removeEventListener('scroll', this);
       return window.removeEventListener('resize', this);
     }
@@ -26555,10 +26558,10 @@ Mutations = (function() {
 
   Mutations.prototype.solve = function(mutations) {
     var result;
-    if (!this.engine.engine.running) {
-      return this.engine.engine.compile(true);
+    if (!this.engine.running) {
+      return this.engine.engine.solve(function() {});
     }
-    result = this.engine.engine.solve('mutations', function() {
+    result = this.engine.engine.solve('Document', 'mutations', function() {
       var mutation, _i, _len;
       this.updating.reset();
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {

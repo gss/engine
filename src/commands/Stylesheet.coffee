@@ -55,7 +55,7 @@ class Stylesheet extends Command
     stylesheet.command = @
     stylesheet.operations = engine.clone @mimes[type](source)
 
-    stylesheets = engine.stylesheets ||= []
+    stylesheets = engine.engine.stylesheets ||= []
     engine.console.row('parse', stylesheet.operations, stylesheet.continuation)
 
     if stylesheets.indexOf(stylesheet) == -1
@@ -89,7 +89,6 @@ class Stylesheet extends Command
 
   @complete: (engine) ->
     @perform(engine)
-    debugger
     if engine.blocking == 0
       engine.blocking = undefined
       engine.engine.commit(undefined, undefined, true)
@@ -173,7 +172,6 @@ class Stylesheet extends Command
 
   # dump style into native stylesheet rule
   @set: (engine, operation, continuation, stylesheet, element, property, value) ->
-    debugger
     if rule = @getRule(operation)
       if @watch engine, operation, continuation, stylesheet
         if @update engine, operation, property, value, stylesheet, rule

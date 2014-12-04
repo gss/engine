@@ -114,10 +114,11 @@ class Engine extends Events
   # engine.solve([]) - evaluate commands
   # engine.solve(function(){}) - buffer and solve changes of state within callback
   solve: () ->
-    args = @transact.apply(@, arguments)
 
     unless @transacting
       @transacting = transacting = true
+      
+    args = @transact.apply(@, arguments)
 
     unless old = @updating
       @engine.updating = new @update
@@ -162,9 +163,9 @@ class Engine extends Events
         else
           problematic = arg
 
-    if typeof args[0] == 'object'
-      if name = source || @displayName
-        @console.start(reason || args[0], name)
+    #if typeof args[0] == 'object'
+    if name = source || @displayName
+      @console.start(reason || args[0], name)
 
     return args
 
@@ -173,7 +174,7 @@ class Engine extends Events
     if solution
       @updating.apply(solution)
 
-    @fireEvent('commit', solution)
+    @triggerEvent('commit', solution)
 
     if started = @started
       @started = undefined
@@ -213,10 +214,8 @@ class Engine extends Events
         @updating = undefined
       return
 
-    if @intrinsic
-      @intrinsic.changes = {}
-      update.apply @intrinsic.perform()
-      @intrinsic.changes = undefined
+    if @intrinsic?.objects
+      update.apply @intrinsic.solve()
 
     @solved.merge solution
 
@@ -342,7 +341,6 @@ class Engine extends Events
   precompile: ->
     @Domain.compile(@Domains,   @)
     @update = Engine::Update.compile(@)
-    @mutations?.connect(true)
 
     if location.search.indexOf('export=') > -1
       @preexport()

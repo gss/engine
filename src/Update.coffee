@@ -174,33 +174,34 @@ Update.prototype =
     else
       return @connect(position)
 
+
+  match: (target, domain, positions) ->
+    problems = @problems[target]
+    variables = @variables ||= {}
+    if positions == false
+      for property, variable of variables
+        if variable >= target
+          variables[property]++
+
+    for property, variable of problems.variables
+      if domain.Solver && variable.domain.displayName == domain.displayName
+        if (i = variables[property])? && (@index < i) && (i != target)
+          unless i in (positions ||= [])
+            index = 0
+            while positions[index] < i
+              index++
+            positions.splice index, 0, i
+        else
+          variables[property] = target
+
+    return positions
+
   # Attempt to find and merge new domains that share variables
   connect: (target, positions) ->
     unless domain = @domains[target]
       return 
 
-    problems = @problems[target]
-    variables = @variables ||= {}
-
-    unless positions
-      if positions == false
-        for property, variable of variables
-          if variable >= target
-            variables[property]++
-
-      for property, variable of problems.variables
-        if variable.domain.Solver && variable.domain.displayName == domain.displayName
-          if (i = variables[property])? && (i > @index) && (i != target)
-            unless i in (positions ||= [])
-              index = 0
-              while positions[index] < i
-                index++
-              positions.splice index, 0, i
-          else
-            variables[property] = target
-
-    offset = 0
-    if positions
+    if positions ||= @match(target, domain, positions)
       for index in [0 ... positions.length] by 1
         i = positions[index]
         condition = 
@@ -239,6 +240,8 @@ Update.prototype =
       for prob in problems
         if result.indexOf(prob) == -1
           (exported ||= []).push(prob)
+        else if prob.variables['$message[intrinsic-height]']
+          debugger
 
     @splice from, 1
 

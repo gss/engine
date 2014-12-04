@@ -68,11 +68,13 @@ class Domain
 
   solve: (operation, continuation, scope, ascender, ascending) ->
     transacting = @transact()
-
-    if typeof operation == 'object' && !operation.push
-      result = @assumed.merge operation
-    else
-      result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
+    if operation?.variables?['$message[height]']
+      debugger
+    if typeof operation == 'object'
+      if !operation.push
+        result = @assumed.merge operation
+      else
+        result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
 
     if @constrained || @unconstrained
       commands = @Constraint::split(@)
@@ -81,7 +83,6 @@ class Domain
     unless typeof result == 'object'
       if result = @perform?.apply(@, arguments)
         result = @apply(result)
-
     if commands
       @update commands
 

@@ -45,10 +45,10 @@ class Mutations
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
-    unless @engine.engine.running
-      return @engine.engine.compile(true)
+    unless @engine.running
+      return @engine.engine.solve ->
     
-    result = @engine.engine.solve 'mutations', ->
+    result = @engine.engine.solve 'Document', 'mutations', ->
       @updating.reset()
 
       for mutation in mutations
