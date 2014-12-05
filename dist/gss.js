@@ -20333,13 +20333,22 @@ Engine = (function(_super) {
     return result;
   };
 
-  Engine.prototype.broadcast = function(problems, update) {
-    var i, index, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, working, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4;
+  Engine.prototype.broadcast = function(problems, update, insert) {
+    var broadcasted, i, index, locals, other, others, path, problem, property, remove, removes, result, url, value, worker, working, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4;
     if (update == null) {
       update = this.updating;
     }
     others = [];
     removes = [];
+    if (insert) {
+      if (update.domains[update.index + 1] !== null) {
+        update.domains.splice(update.index, 0, null);
+        update.problems.splice(update.index, 0, problems);
+      } else {
+        broadcasted = update.problems[update.index + 1];
+        broadcasted.push.apply(broadcasted, problems);
+      }
+    }
     if (problems[0] === 'remove') {
       removes.push(problems);
     } else {
@@ -20397,7 +20406,7 @@ Engine = (function(_super) {
         var _ref5;
         return command[0] !== 'remove' || ((_ref5 = worker.paths) != null ? _ref5[command[1]] : void 0);
       });
-      update.push(working, worker);
+      update.push(working, worker, true);
     }
   };
 
@@ -20460,9 +20469,10 @@ Engine = (function(_super) {
       if (this.updating) {
         if (this.updating.busy.length) {
           this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
-          return this.commit(e.data, this.updating, true);
+          this.commit(e.data, this.updating, true);
         }
       }
+      debugger;
     },
     error: function(e) {
       throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
@@ -20551,7 +20561,6 @@ Engine = (function(_super) {
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
-    debugger;
     var commands, data, engine, property, removes, result, solution, value, values;
     if (!(engine = Engine.messenger)) {
       engine = Engine.messenger = Engine();
@@ -20578,7 +20587,7 @@ if (!self.window && self.onmessage !== void 0) {
         }
       }
       if (removes.length) {
-        this.broadcast(removes);
+        this.broadcast(removes, this.updating, true);
       }
       if (values) {
         this.assumed.merge(values);

@@ -295,9 +295,17 @@ class Engine extends Events
     return result
 
   # Dispatch operations without specific domain (e.g. remove)
-  broadcast: (problems, update = @updating) ->
+  broadcast: (problems, update = @updating, insert) ->
     others = []
     removes = []
+    if insert
+      if update.domains[update.index + 1] != null
+        update.domains.splice(update.index, 0, null)
+        update.problems.splice(update.index, 0, problems)
+      else
+        broadcasted = update.problems[update.index + 1]
+        broadcasted.push.apply(broadcasted, problems)
+
     if problems[0] == 'remove'
       removes.push problems
     else
@@ -334,7 +342,7 @@ class Engine extends Events
       working = problems.filter (command) ->
         command[0] != 'remove' || worker.paths?[command[1]]
 
-      update.push working, worker
+      update.push working, worker, true
     return
 
   # Compile initial domains and shared engine features 
@@ -381,6 +389,7 @@ class Engine extends Events
 
     # Receive message from worker
     message: (e) ->
+
       values = e.target.values ||= {}
       for property, value of e.data
         if value?
@@ -392,6 +401,7 @@ class Engine extends Events
         if @updating.busy.length
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
           @commit e.data, @updating, true
+      debugger
 
     # Handle error from worker
     error: (e) ->
@@ -481,8 +491,9 @@ if !self.window && self.onmessage != undefined
               if command[0]?.key?
                 command[1].parent = command
               commands.push(command)
+
       if removes.length
-        @broadcast(removes)
+        @broadcast(removes, @updating, true)
       if values
         @assumed.merge(values)
       if commands.length

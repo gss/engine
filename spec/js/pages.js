@@ -48,7 +48,7 @@ describe('Standalone page tests', function() {
               expect(Math.floor(e.data['$yaroslaff_fedin[x]'])).to.eql(6144);
               expect(Math.floor(e.data['$yaroslaff_fedin[width]'])).to.eql(768);
               expect(Math.floor(e.data['$lost_cosmonaut[y]'])).to.eql(0);
-              expect(Math.floor(e.data['$lost_cosmonaut[x]'])).to.eql(9984);
+              expect(Math.floor(e.data['$lost_cosmonaut[x]'])).to.eql(9983);
               expect(Math.floor(e.data['$lost_cosmonaut[width]'])).to.eql(768);
               return iframe.width = 1024;
             } else if (i % 4 === 3) {
