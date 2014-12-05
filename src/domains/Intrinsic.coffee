@@ -79,7 +79,7 @@ class Intrinsic extends Numeric
         if command = (stylesheet = @identity[id])?.command
           parent = operation
           while parent = parent.parent
-            if parent[0] == 'if' && parent[1].marked
+            if parent[0] == 'if'# && parent[1].marked
               shared = false
               break
           if shared != false

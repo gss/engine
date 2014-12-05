@@ -51,22 +51,6 @@ class Queries
       @ascending = undefined
     @
 
-  addMatch: (node, continuation) ->
-    return unless node.nodeType == 1
-    if (index = continuation.indexOf(@DESCEND)) > -1
-      continuation = continuation.substring(index + 1)
-    continuation = @getCanonicalSelector(continuation)
-    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @DESCEND))
-  
-  removeMatch: (node, continuation) ->
-    return unless node.nodeType == 1
-    if matches = node.getAttribute('matches')
-      if (index = continuation.indexOf(@DESCEND)) > -1
-        continuation = continuation.substring(index + 1)
-      path = ' ' + @getCanonicalSelector(continuation)
-      if matches.indexOf(path) > -1
-        node.setAttribute('matches', matches.replace(path,''))
-
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (node, continuation, operation, scope, key, contd) ->
@@ -92,8 +76,8 @@ class Queries
       scopes.splice(index, 0, scope)
       @chain collection[index - 1], node, continuation
       @chain node, collection[index + 1], continuation
-      if operation.parent.name == 'rule'
-        @addMatch(node, continuation)
+      if operation.parent[0] == 'rule'
+        @engine.Stylesheet.match(node, continuation)
 
       return true
     else unless scopes[index] == scope && paths[index] == contd
@@ -245,8 +229,8 @@ class Queries
           scopes.splice(index, 1)
         @chain collection[index - 1], node, continuation
         @chain node, collection[index], continuation
-        if operation.parent.name == 'rule'
-          @removeMatch(node, continuation)
+        if operation.parent[0] == 'rule'
+          @engine.Stylesheet.unmatch(node, continuation)
         return true
 
 

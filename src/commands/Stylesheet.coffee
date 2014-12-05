@@ -19,7 +19,6 @@ class Stylesheet extends Command
       return
 
 
-
     # Load & evaluate stylesheet
     "load": (node, type, method, engine, operation, continuation, scope) ->
         src = node.href || node.src || node
@@ -303,5 +302,19 @@ class Stylesheet extends Command
       #replace(@engine.Operation.CleanupSelectorRegExp, '')
     return selector
 
-    
+  @match: (node, continuation) ->
+    return unless node.nodeType == 1
+    if (index = continuation.indexOf(@prototype.DESCEND)) > -1
+      continuation = continuation.substring(index + 1)
+    continuation = @getCanonicalSelector(continuation)
+    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @prototype.DESCEND))
+  
+  @unmatch: (node, continuation) ->
+    return unless node.nodeType == 1
+    if matches = node.getAttribute('matches')
+      if (index = continuation.indexOf(@prototype.DESCEND)) > -1
+        continuation = continuation.substring(index + 1)
+      path = ' ' + @getCanonicalSelector(continuation)
+      if matches.indexOf(path) > -1
+        node.setAttribute('matches', matches.replace(path,''))
 module.exports = Stylesheet

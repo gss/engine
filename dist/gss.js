@@ -24589,6 +24589,34 @@ Stylesheet = (function(_super) {
     return selector;
   };
 
+  Stylesheet.match = function(node, continuation) {
+    var index;
+    if (node.nodeType !== 1) {
+      return;
+    }
+    if ((index = continuation.indexOf(this.prototype.DESCEND)) > -1) {
+      continuation = continuation.substring(index + 1);
+    }
+    continuation = this.getCanonicalSelector(continuation);
+    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.prototype.DESCEND));
+  };
+
+  Stylesheet.unmatch = function(node, continuation) {
+    var index, matches, path;
+    if (node.nodeType !== 1) {
+      return;
+    }
+    if (matches = node.getAttribute('matches')) {
+      if ((index = continuation.indexOf(this.prototype.DESCEND)) > -1) {
+        continuation = continuation.substring(index + 1);
+      }
+      path = ' ' + this.getCanonicalSelector(continuation);
+      if (matches.indexOf(path) > -1) {
+        return node.setAttribute('matches', matches.replace(path, ''));
+      }
+    }
+  };
+
   return Stylesheet;
 
 })(Command);
@@ -25566,7 +25594,7 @@ Intrinsic = (function(_super) {
         if (command = (_ref1 = (stylesheet = this.identity[id])) != null ? _ref1.command : void 0) {
           parent = operation;
           while (parent = parent.parent) {
-            if (parent[0] === 'if' && parent[1].marked) {
+            if (parent[0] === 'if') {
               shared = false;
               break;
             }
@@ -27378,34 +27406,6 @@ Queries = (function() {
     return this;
   };
 
-  Queries.prototype.addMatch = function(node, continuation) {
-    var index;
-    if (node.nodeType !== 1) {
-      return;
-    }
-    if ((index = continuation.indexOf(this.DESCEND)) > -1) {
-      continuation = continuation.substring(index + 1);
-    }
-    continuation = this.getCanonicalSelector(continuation);
-    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.DESCEND));
-  };
-
-  Queries.prototype.removeMatch = function(node, continuation) {
-    var index, matches, path;
-    if (node.nodeType !== 1) {
-      return;
-    }
-    if (matches = node.getAttribute('matches')) {
-      if ((index = continuation.indexOf(this.DESCEND)) > -1) {
-        continuation = continuation.substring(index + 1);
-      }
-      path = ' ' + this.getCanonicalSelector(continuation);
-      if (matches.indexOf(path) > -1) {
-        return node.setAttribute('matches', matches.replace(path, ''));
-      }
-    }
-  };
-
   Queries.prototype.add = function(node, continuation, operation, scope, key, contd) {
     var collection, dup, duplicates, el, index, keys, paths, scopes, _i, _j, _len, _len1;
     collection = this[continuation] || (this[continuation] = []);
@@ -27430,8 +27430,8 @@ Queries = (function() {
       scopes.splice(index, 0, scope);
       this.chain(collection[index - 1], node, continuation);
       this.chain(node, collection[index + 1], continuation);
-      if (operation.parent.name === 'rule') {
-        this.addMatch(node, continuation);
+      if (operation.parent[0] === 'rule') {
+        this.engine.Stylesheet.match(node, continuation);
       }
       return true;
     } else if (!(scopes[index] === scope && paths[index] === contd)) {
@@ -27617,8 +27617,8 @@ Queries = (function() {
         }
         this.chain(collection[index - 1], node, continuation);
         this.chain(node, collection[index], continuation);
-        if (operation.parent.name === 'rule') {
-          this.removeMatch(node, continuation);
+        if (operation.parent[0] === 'rule') {
+          this.engine.Stylesheet.unmatch(node, continuation);
         }
         return true;
       }
