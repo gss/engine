@@ -391,12 +391,7 @@ class Engine extends Events
       if @updating
         if @updating.busy.length
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
-          if (i = @updating.solutions.indexOf(e.target)) > -1
-            @updating.solutions[i] = e.data
-          unless @updating.busy.length
-            return @updating.each(@resolve, @, e.data) || @onSolve(e.data)
-          else
-            return @updating.apply(e.data)
+          @commit e.data, @updating, true
 
     # Handle error from worker
     error: (e) ->

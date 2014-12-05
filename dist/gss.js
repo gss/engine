@@ -20446,7 +20446,7 @@ Engine = (function(_super) {
       }
     },
     message: function(e) {
-      var i, property, value, values, _base, _ref;
+      var property, value, values, _base, _ref;
       values = (_base = e.target).values || (_base.values = {});
       _ref = e.data;
       for (property in _ref) {
@@ -20460,14 +20460,7 @@ Engine = (function(_super) {
       if (this.updating) {
         if (this.updating.busy.length) {
           this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
-          if ((i = this.updating.solutions.indexOf(e.target)) > -1) {
-            this.updating.solutions[i] = e.data;
-          }
-          if (!this.updating.busy.length) {
-            return this.updating.each(this.resolve, this, e.data) || this.onSolve(e.data);
-          } else {
-            return this.updating.apply(e.data);
-          }
+          return this.commit(e.data, this.updating, true);
         }
       }
     },
@@ -20558,6 +20551,7 @@ Engine = (function(_super) {
 
 if (!self.window && self.onmessage !== void 0) {
   self.addEventListener('message', function(e) {
+    debugger;
     var commands, data, engine, property, removes, result, solution, value, values;
     if (!(engine = Engine.messenger)) {
       engine = Engine.messenger = Engine();
