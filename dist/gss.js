@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-04) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-05) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20187,7 +20187,7 @@ Engine = (function(_super) {
     }
     args = Array.prototype.slice.call(arguments, index || 0);
     if (!this.running) {
-      this.compile(true);
+      this.compile();
     }
     problematic = void 0;
     for (index = _i = 0, _len = args.length; _i < _len; index = ++_i) {
@@ -20409,19 +20409,17 @@ Engine = (function(_super) {
     }
   };
 
-  Engine.prototype.compile = function(state) {
+  Engine.prototype.compile = function() {
     var domain, name;
-    if (state) {
-      for (name in this.Domains) {
-        if (domain = this[name.toLowerCase()]) {
-          domain.compile();
-        }
+    for (name in this.Domains) {
+      if (domain = this[name.toLowerCase()]) {
+        domain.compile();
       }
-      this.assumed.compile();
-      this.solved.compile();
     }
+    this.assumed.compile();
+    this.solved.compile();
     this.console.compile(this);
-    this.running = state != null ? state : null;
+    this.running = true;
     return this.triggerEvent('compile', this);
   };
 
@@ -21798,7 +21796,7 @@ var Update, Updater,
 Updater = function(engine) {
   var Update, property, value, _ref;
   Update = function(problem, domain, parent, Domain) {
-    var arg, index, object, update, vardomain, _i, _len;
+    var arg, index, object, result, update, vardomain, _i, _len;
     if (this instanceof Update) {
       this.problems = problem && (domain.push && problem || [problem]) || [];
       this.domains = domain && (domain.push && domain || [domain]) || [];
@@ -21816,7 +21814,9 @@ Updater = function(engine) {
           vardomain = arg.domain || (arg.domain = this.domain.getVariableDomain(arg, Domain));
           (update || (update = new this.update)).push([arg], vardomain);
         } else {
-          update = this.update(arg, domain, update || false, Domain);
+          if (result = this.update(arg, domain, update || false, Domain)) {
+            update || (update = result);
+          }
         }
         object = true;
       }
@@ -21829,10 +21829,10 @@ Updater = function(engine) {
     if (!(problem[0] instanceof Array)) {
       if (update) {
         update.wrap(problem, parent, domain || Domain);
-      } else if (problem[0] === 'remove') {
-        update = new this.update([problem], [domain || Domain || null]);
+      } else if (problem[0] !== 'remove') {
+        return;
       } else {
-        return parent;
+        update = new this.update([problem], [domain || Domain || null]);
       }
     }
     if (parent === false) {
@@ -21909,19 +21909,13 @@ Update.prototype = {
     }
   },
   insert: function(position, domain, problems) {
-    var problem, property, variable, variables, _i, _j, _len, _len1;
+    var problem, property, variable, variables, _i, _len;
     for (_i = 0, _len = problems.length; _i < _len; _i++) {
       problem = problems[_i];
       this.setVariables(problems, problem);
     }
     this.domains.splice(position, 0, domain);
     this.problems.splice(position, 0, problems);
-    for (_j = 0, _len1 = problems.length; _j < _len1; _j++) {
-      problem = problems[_j];
-      if (typeof problem === 'string') {
-        debugger;
-      }
-    }
     if (variables = this.variables) {
       for (property in variables) {
         variable = variables[property];
@@ -22015,6 +22009,7 @@ Update.prototype = {
       }
     }
     if (other) {
+      operation.domain = other;
       for (_m = 0, _len3 = operation.length; _m < _len3; _m++) {
         argument = operation[_m];
         if (argument.push) {
@@ -25827,12 +25822,14 @@ Document = (function(_super) {
     engine.mutations || (engine.mutations = new this.Mutations(this));
     engine.applier || (engine.applier = engine.positions);
     engine.scope || (engine.scope = document);
-    if (document.nodeType === 9 && ['complete', 'loaded'].indexOf(document.readyState) === -1) {
-      document.addEventListener('DOMContentLoaded', engine);
-      document.addEventListener('readystatechange', engine);
-      window.addEventListener('load', engine);
-    } else if (this.running) {
-      this.events.compile.call(this);
+    if (this.scope.nodeType === 9) {
+      if (['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
+        document.addEventListener('DOMContentLoaded', engine);
+        document.addEventListener('readystatechange', engine);
+        window.addEventListener('load', engine);
+      } else {
+        this.compile();
+      }
     }
     this.scope.addEventListener('scroll', engine, true);
     if (typeof window !== "undefined" && window !== null) {
@@ -25857,12 +25854,12 @@ Document = (function(_super) {
           this.updating.resizing = 'computing';
         }
         this.once('solve', function() {
-          return setTimeout(function() {
+          return requestAnimationFrame(function() {
             var _ref;
             if (((_ref = this.updated) != null ? _ref.resizing : void 0) === 'scheduled') {
               return this.triggerEvent('resize');
             }
-          }, 10);
+          });
         });
       } else {
         clearTimeout(this.resizer);
@@ -25905,7 +25902,8 @@ Document = (function(_super) {
       });
     },
     compile: function() {
-      return this.document.Stylesheet.compile(this.document);
+      this.document.Stylesheet.compile(this.document);
+      return this.document.mutations.connect();
     },
     solve: function() {
       var html, id, klass, _i, _len, _ref, _ref1, _ref2;
@@ -26570,11 +26568,16 @@ Mutations = (function() {
   Mutations.prototype.solve = function(mutations) {
     var result;
     if (!this.engine.running) {
+      if (this.engine.scope.nodeType === 9) {
+        return;
+      }
       return this.engine.engine.solve(function() {});
     }
     result = this.engine.engine.solve('Document', 'mutations', function() {
       var mutation, _i, _len;
-      this.updating.reset();
+      if (this.updating.index > -1) {
+        this.updating.reset();
+      }
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         if (this.mutations.filter(mutation) === false) {

@@ -46,10 +46,14 @@ class Mutations
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   solve: (mutations) ->
     unless @engine.running
-      return @engine.engine.solve ->
+      if @engine.scope.nodeType == 9
+        return
+
+      return @engine.engine.solve(->)
     
     result = @engine.engine.solve 'Document', 'mutations', ->
-      @updating.reset()
+      if @updating.index > -1
+        @updating.reset()
 
       for mutation in mutations
         if @mutations.filter(mutation) == false

@@ -24,7 +24,7 @@ describe 'Signatures', ->
     before ->
       engine = new GSS
       engine.abstract.PrimitiveCommand = PrimitiveCommand
-      engine.compile(true)
+      engine.compile()
     
     describe 'with primitive', ->
       it 'should match property function definition', ->
@@ -67,7 +67,7 @@ describe 'Signatures', ->
       engine = new GSS
       engine.abstract.UnorderedCommand = UnorderedCommand
       
-      engine.compile(true)
+      engine.compile()
     
     describe 'and no required arguments', ->
       it 'should match property function definition', ->
@@ -107,7 +107,7 @@ describe 'Signatures', ->
       }, {
         'fancy': () ->
       } 
-      engine.compile(true)
+      engine.compile()
 
 
     it 'should respect type order', ->
@@ -141,7 +141,7 @@ describe 'Signatures', ->
     before ->
       engine = new GSS
       engine.abstract.OptionalGroupCommand = OptionalGroupCommand
-      engine.compile(true)
+      engine.compile()
       
     describe 'and no required arguments', ->
       it 'should match property function definition', ->
@@ -209,7 +209,7 @@ describe 'Signatures', ->
       engine = new GSS
       engine.abstract.WrapperCommand = WrapperCommand
       engine.abstract.DynamicCommand = DynamicCommand
-      engine.compile(true)
+      engine.compile()
 
     it 'should dispatch command', ->
       engine.abstract.Command(cmd = ['wrapper', ['dynamic'], 0])
@@ -237,7 +237,7 @@ describe 'Signatures', ->
     before ->
       engine = new GSS
       engine.abstract.ObjectCommand = ObjectCommand
-      engine.compile(true)
+      engine.compile()
 
     it 'should dispatch command', ->
       z = {title: 'God Object'}

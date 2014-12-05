@@ -109,7 +109,7 @@ describe('GSS engine', function() {
           $('#fixtures').appendChild(container);
           container.innerHTML = "<button id=\"button1\">One</button>\n<button id=\"button2\">Second</button>\n<button id=\"button3\">Three</button>\n<button id=\"button4\">4</button>";
           engine = new GSS(container, useWorker || void 0);
-          return engine.compile(true);
+          return engine.compile();
         });
         after(function(done) {
           remove(container);

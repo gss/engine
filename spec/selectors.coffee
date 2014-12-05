@@ -4,7 +4,7 @@ describe 'Selectors', ->
   before ->
     container = document.createElement('div')
     engine = new GSS(container)
-    engine.compile(true)
+    engine.compile()
     
   describe 'dispatched by argument types', ->
     it 'should create command instance for each operation', ->

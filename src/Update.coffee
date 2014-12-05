@@ -22,7 +22,9 @@ Updater = (engine) ->
           (update ||= new @update).push [arg], vardomain
         # Function call
         else
-          update = @update(arg, domain, update || false, Domain)
+          if result = @update(arg, domain, update || false, Domain)
+            update ||= result
+
         object = true
     unless object
       unless problem instanceof Array
@@ -32,10 +34,10 @@ Updater = (engine) ->
     unless problem[0] instanceof Array
       if update
         update.wrap(problem, parent, domain || Domain)
-      else if problem[0] == 'remove'
-        update = new @update([problem], [domain || Domain || null])
+      else if problem[0] != 'remove'
+        return
       else
-        return parent
+        update = new @update([problem], [domain || Domain || null])
     
     # Unroll recursion, deal with the update
     if parent == false
@@ -101,11 +103,6 @@ Update.prototype =
 
     @domains.splice(position, 0, domain)
     @problems.splice(position, 0, problems)
-
-    for problem in problems
-      if typeof problem == 'string'
-        debugger
-
 
     if variables = @variables
       for property, variable of variables
@@ -178,6 +175,7 @@ Update.prototype =
                 positions.splice(j, 1)
 
     if other
+      operation.domain = other
       for argument in operation
         if argument.push
           operation.variables = argument.variables = @setVariables(operation, argument, true)

@@ -21,11 +21,7 @@ class Condition extends Command
   push: ->
 
   serialize: (operation, engine) ->
-    return @DESCEND + '@' + 
-      #operation[0] + 
-      #'(' + 
-        @toExpression(operation[1]) 
-      #  + ')'
+    return @DESCEND + '@' + @toExpression(operation[1])
 
   update: (engine, operation, continuation, scope, ascender, ascending) ->
 

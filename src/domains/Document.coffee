@@ -23,12 +23,14 @@ class Document extends Abstract
     engine.applier     ||= engine.positions
     engine.scope       ||= document
 
-    if document.nodeType == 9 && ['complete', 'loaded'].indexOf(document.readyState) == -1
-      document.addEventListener('DOMContentLoaded', engine)
-      document.addEventListener('readystatechange', engine)
-      window  .addEventListener('load',             engine)
-    else if @running
-      @events.compile.call(@)
+    if @scope.nodeType == 9
+      if ['complete', 'loaded'].indexOf(@scope.readyState) == -1
+        document.addEventListener('DOMContentLoaded', engine)
+        document.addEventListener('readystatechange', engine)
+        window  .addEventListener('load',             engine)
+      else
+        @compile()
+    
       
     @scope.addEventListener 'scroll', engine, true
     #if @scope != document
@@ -47,10 +49,9 @@ class Document extends Abstract
             return @updating.resizing = 'scheduled'
           @updating.resizing = 'computing'
         @once 'solve', ->
-          setTimeout ->
+          requestAnimationFrame ->
             if @updated?.resizing == 'scheduled'
               @triggerEvent('resize')
-          , 10
       else
         clearTimeout(@resizer);
 
@@ -89,6 +90,7 @@ class Document extends Abstract
 
     compile: ->
       @document.Stylesheet.compile(@document)
+      @document.mutations.connect()
 
     solve: ->
       if @scope.nodeType == 9

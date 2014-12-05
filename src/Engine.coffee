@@ -117,7 +117,7 @@ class Engine extends Events
 
     unless @transacting
       @transacting = transacting = true
-      
+
     args = @transact.apply(@, arguments)
 
     unless old = @updating
@@ -150,7 +150,7 @@ class Engine extends Events
     args = Array.prototype.slice.call(arguments, index || 0)
 
     unless @running
-      @compile(true)
+      @compile()
 
     problematic = undefined
     for arg, index in args
@@ -346,16 +346,15 @@ class Engine extends Events
       @preexport()
 
   # Compile all static definitions in the engine
-  compile: (state) ->
-    if state
-      for name of @Domains
-        if domain = @[name.toLowerCase()]
-          domain.compile()
-      @assumed.compile()
-      @solved.compile()
-        
+  compile: () ->
+    for name of @Domains
+      if domain = @[name.toLowerCase()]
+        domain.compile()
+    @assumed.compile()
+    @solved.compile()
+      
     @console.compile(@)
-    @running = state ? null
+    @running = true
     @triggerEvent('compile', @)
 
   # Trigger event on engine and its scope element

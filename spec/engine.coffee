@@ -103,7 +103,7 @@ describe 'GSS engine', ->
             <button id="button4">4</button>
           """
           engine = new GSS(container, useWorker || undefined)
-          engine.compile(true)
+          engine.compile()
         after (done) ->
           remove(container)
           # have to manually destroy, otherwise there is some clash!
