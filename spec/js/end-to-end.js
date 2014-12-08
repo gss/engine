@@ -177,7 +177,12 @@ describe('End - to - End', function() {
         container.innerHTML = "<div class=\"outer\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-1\"></div>\n  </div>\n</div>\n<div class=\"outie\">\n  <div class=\"innie-outie\">\n    <div id=\"css-inner-dump-2\"></div>\n  </div>\n</div>\n<style type=\"text/gss\" scoped>\n  .outer, .outie {\n    @if [A] > 0 {\n      .innie-outie {\n        #css-inner-dump-2 {\n          height: 200px;\n        }\n      }\n    }\n    \n    #css-inner-dump-1 {\n      z-index: 5;\n\n      @if [B] > 0 {\n        height: 200px;\n      }\n    }\n  }\n</style>";
         return engine.once('solve', function() {
           expect(getSource(engine.tag('style')[1])).to.equal(".outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}");
-          return done();
+          return engine.solve({
+            A: 1
+          }, function() {
+            expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".outer,.outie@A>0 .innie-outie#css-inner-dump-2\"]{height:200px;}\n.outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}");
+            return done();
+          });
         });
       });
     });

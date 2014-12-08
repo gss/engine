@@ -415,7 +415,7 @@ class Domain
 
   # Compile own properties
   Domain::Property.compile = (properties, engine) ->
-    properties.engine ||= engine
+    #properties.engine ||= engine
     for own key, property of properties
       continue if key == 'engine'
       @call(engine, property, key, properties)

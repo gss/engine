@@ -19,6 +19,22 @@ describe 'Standalone page tests', ->
   @timeout 100000
     
   describe 'Grid website', ->
+    describe 'Head cta section', ->
+
+      it 'should reorient', (done) ->
+        i = 0
+
+        window.addEventListener('message', (e) ->
+          if (e.origin == location.origin)
+            
+            expect()
+        )
+
+        iframe.width = 1024
+        iframe.height = 768
+        iframe.src = './pages/grid_head_cta.html?log=0.5'
+
+
     describe 'Team section', ->
 
       it 'should reorient', (done) ->

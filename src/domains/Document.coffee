@@ -30,7 +30,7 @@ class Document extends Abstract
         window  .addEventListener('load',             engine)
       else
         @compile()
-    
+
       
     @scope.addEventListener 'scroll', engine, true
     #if @scope != document
@@ -53,14 +53,13 @@ class Document extends Abstract
             if @updated?.resizing == 'scheduled'
               @triggerEvent('resize')
       else
-        clearTimeout(@resizer);
+        cancelAnimationFrame(@resizer);
 
-      @resizer = setTimeout =>
+      @resizer = requestAnimationFrame =>
         @resizer = undefined
         @solve id + ' resized', ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
-      , 10
       
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
@@ -84,7 +83,6 @@ class Document extends Abstract
       window.removeEventListener 'load', @
       document.removeEventListener 'DOMContentLoaded', @
       @solve 'Document', 'load', ->
-        @intrinsic.solve()
 
     # Observe and parse stylesheets
 

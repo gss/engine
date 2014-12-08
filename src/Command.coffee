@@ -201,7 +201,7 @@ class Command
   patch: (engine, operation, continuation, scope, replacement) ->
     op = @sanitize(engine, operation, undefined, replacement).parent
     domain = replacement || engine
-    if op.domain != domain
+    if op.domain != domain && op.command
       op.command.transfer(domain, op, continuation, scope, undefined, undefined, op.command, replacement)
 
   # Write meta data for a foreign domain, optionally queues parent operation

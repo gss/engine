@@ -308,13 +308,14 @@ describe 'End - to - End', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
             """
-          #engine.solve
-          #  A: 1
-          #, ->
-          #  expect(getSource(engine.tag('style')[1])).to.equal """
-          #    .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
-          #    """
-          done()
+          engine.solve
+            A: 1
+          , ->
+            expect(getSource(engine.tag('style')[1])).to.equal """
+              [matches~=".outer,.outie@A>0 .innie-outie#css-inner-dump-2"]{height:200px;}
+              .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
+              """
+            done()
 
 
   

@@ -19,6 +19,20 @@ describe('Standalone page tests', function() {
   });
   this.timeout(100000);
   return describe('Grid website', function() {
+    describe('Head cta section', function() {
+      return it('should reorient', function(done) {
+        var i;
+        i = 0;
+        window.addEventListener('message', function(e) {
+          if (e.origin === location.origin) {
+            return expect();
+          }
+        });
+        iframe.width = 1024;
+        iframe.height = 768;
+        return iframe.src = './pages/grid_head_cta.html?log=0.5';
+      });
+    });
     return describe('Team section', function() {
       return it('should reorient', function(done) {
         var i;

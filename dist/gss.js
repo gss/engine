@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-06) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -21168,7 +21168,6 @@ Domain = (function() {
 
   Domain.prototype.Property.compile = function(properties, engine) {
     var key, property;
-    properties.engine || (properties.engine = engine);
     for (key in properties) {
       if (!__hasProp.call(properties, key)) continue;
       property = properties[key];
@@ -21439,7 +21438,7 @@ Command = (function() {
     var domain, op;
     op = this.sanitize(engine, operation, void 0, replacement).parent;
     domain = replacement || engine;
-    if (op.domain !== domain) {
+    if (op.domain !== domain && op.command) {
       return op.command.transfer(domain, op, continuation, scope, void 0, void 0, op.command, replacement);
     }
   };
@@ -22535,16 +22534,16 @@ Condition = (function(_super) {
   Condition.prototype.push = function() {};
 
   Condition.prototype.serialize = function(operation, engine) {
-    return this.DESCEND + '@' + this.toExpression(operation[1]);
+    return '@' + this.toExpression(operation[1]);
   };
 
   Condition.prototype.update = function(engine, operation, continuation, scope, ascender, ascending) {
     var branch, collections, index, old, path, result, switching, watchers, _base, _name;
     watchers = (_base = engine.queries.watchers)[_name = scope._gss_id] || (_base[_name] = []);
     if (!watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) === -1) {
-      watchers.push(operation.parent, continuation, scope);
+      watchers.push(operation.parent, continuation + this.DESCEND, scope);
     }
-    path = continuation + this.key;
+    path = continuation + this.DESCEND + this.key;
     old = engine.queries[path];
     if (!!old !== !!ascending || (old === void 0 && old !== ascending)) {
       if (old !== void 0) {
@@ -22555,7 +22554,7 @@ Condition = (function(_super) {
       }
       engine.queries[path] = ascending;
       if (switching) {
-        engine.triggerEvent('switch', operation);
+        engine.triggerEvent('switch', operation, path);
         if (engine.updating) {
           collections = engine.updating.collections;
           engine.updating.collections = {};
@@ -24328,7 +24327,6 @@ Stylesheet = (function(_super) {
 
   Stylesheet.compile = function(engine) {
     this.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + engine.queries.DESCEND + "]\s*", "gi");
-    this.CleanupSelectorRegExp = new RegExp(engine.queries.DESCEND, 'g');
     engine.engine.solve('Document', 'stylesheets', this.operations);
     if (!engine.blocking && engine.stylesheets) {
       return this.complete(engine);
@@ -24517,19 +24515,19 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.getSelectors = function(operation) {
-    var bit, bits, cmd, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1,
+    var bit, bits, cmd, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2,
       _this = this;
     parent = operation;
     results = wrapped = custom = void 0;
     while (parent) {
-      if (parent[0] === 'if') {
+      if (((_ref1 = parent.command) != null ? _ref1.type : void 0) === 'Condition') {
         if (results) {
           for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
             result = results[index];
             if (result.substring(0, 11) !== '[matches~="') {
               result = this.getCustomSelector(result);
             }
-            results[index] = result.substring(0, 11) + parent.uid + this.prototype.DESCEND + result.substring(11);
+            results[index] = result.substring(0, 11) + parent.command.key + this.prototype.DESCEND + result.substring(11);
           }
         }
       } else if (parent[0] === 'rule') {
@@ -24539,7 +24537,7 @@ Stylesheet = (function(_super) {
           paths = parent[1].slice(1).map(function(item) {
             return item.command.selector || item.command.path;
           });
-          groups = ((_ref1 = cmd.selector) != null ? _ref1.split(',') : void 0) || [];
+          groups = ((_ref2 = cmd.selector) != null ? _ref2.split(',') : void 0) || [];
         } else {
           paths = [selectors];
           groups = [cmd.selector || (cmd.key === cmd.path && cmd.key)];
@@ -24575,15 +24573,11 @@ Stylesheet = (function(_super) {
       }
       parent = parent.parent;
     }
-    for (index = _l = 0, _len3 = results.length; _l < _len3; index = ++_l) {
-      result = results[index];
-      results[index] = results[index].replace(this.CleanupSelectorRegExp, '');
-    }
     return results;
   };
 
   Stylesheet.getCustomSelector = function(selector) {
-    return '[matches~="' + selector.replace(/\s+/, this.prototype.DESCEND) + '"]';
+    return '[matches~="' + selector.replace(/\s+/g, this.prototype.DESCEND) + '"]';
   };
 
   Stylesheet.getCanonicalSelector = function(selector) {
@@ -25597,6 +25591,9 @@ Intrinsic = (function(_super) {
         if (command = (_ref1 = (stylesheet = this.identity[id])) != null ? _ref1.command : void 0) {
           parent = operation;
           while (parent = parent.parent) {
+            if (parent[0] === 'rule') {
+              break;
+            }
             if (parent[0] === 'if') {
               shared = false;
               break;
@@ -25893,15 +25890,15 @@ Document = (function(_super) {
           });
         });
       } else {
-        clearTimeout(this.resizer);
+        cancelAnimationFrame(this.resizer);
       }
-      return this.resizer = setTimeout(function() {
+      return this.resizer = requestAnimationFrame(function() {
         _this.resizer = void 0;
         return _this.solve(id + ' resized', function() {
           this.intrinsic.verify(id, "width");
           return this.intrinsic.verify(id, "height");
         });
-      }, 10);
+      });
     },
     scroll: function(e) {
       var id;
@@ -25928,9 +25925,7 @@ Document = (function(_super) {
     load: function() {
       window.removeEventListener('load', this);
       document.removeEventListener('DOMContentLoaded', this);
-      return this.solve('Document', 'load', function() {
-        return this.intrinsic.solve();
-      });
+      return this.solve('Document', 'load', function() {});
     },
     compile: function() {
       this.document.Stylesheet.compile(this.document);

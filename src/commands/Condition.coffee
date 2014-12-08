@@ -21,30 +21,28 @@ class Condition extends Command
   push: ->
 
   serialize: (operation, engine) ->
-    return @DESCEND + '@' + @toExpression(operation[1])
+    return '@' + @toExpression(operation[1])
 
   update: (engine, operation, continuation, scope, ascender, ascending) ->
 
     watchers = engine.queries.watchers[scope._gss_id] ||= []
     if !watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) == -1
-      watchers.push operation.parent, continuation, scope
+      watchers.push operation.parent, continuation + @DESCEND, scope
 
     
-    path = continuation + @key
+    path = continuation + @DESCEND + @key
 
     old = engine.queries[path]
     if !!old != !!ascending || (old == undefined && old != ascending)
       
-
-
       unless old == undefined
-        engine.queries.clean(path , continuation, operation.parent, scope)
+        engine.queries.clean(path, continuation, operation.parent, scope)
       unless engine.switching
         switching = engine.switching = true
 
       engine.queries[path] = ascending
       if switching
-        engine.triggerEvent('switch', operation)
+        engine.triggerEvent('switch', operation, path)
 
         if engine.updating
           collections = engine.updating.collections
@@ -60,7 +58,6 @@ class Condition extends Command
 
       if switching
         engine.triggerEvent('switch', operation, true)
-        #engine.queries?.after()
         engine.switching = undefined
       
       engine.console.groupEnd(path)

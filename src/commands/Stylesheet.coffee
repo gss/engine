@@ -96,7 +96,6 @@ class Stylesheet extends Command
     @CanonicalizeSelectorRegExp = new RegExp(
       "[$][a-z0-9]+[" + engine.queries.DESCEND + "]\s*", "gi"
     )
-    @CleanupSelectorRegExp = new RegExp(engine.queries.DESCEND, 'g') 
     
     engine.engine.solve 'Document', 'stylesheets', @operations
 
@@ -241,12 +240,12 @@ class Stylesheet extends Command
     while parent
 
       # Append condition id to path
-      if parent[0] == 'if'
+      if parent.command?.type == 'Condition'
         if results
           for result, index in results
             if result.substring(0, 11) != '[matches~="'
               result = @getCustomSelector(result)
-            results[index] = result.substring(0, 11) + parent.uid + @prototype.DESCEND + result.substring(11)
+            results[index] = result.substring(0, 11) + parent.command.key + @prototype.DESCEND + result.substring(11)
       
       # Add rule selector to path
       else if parent[0] == 'rule'
@@ -287,12 +286,12 @@ class Stylesheet extends Command
               path
       parent = parent.parent
 
-    for result, index in results
-      results[index] = results[index].replace(@CleanupSelectorRegExp, '')
+    #for result, index in results
+    #  results[index] = results[index].replace(@CleanupSelectorRegExp, '')
     return results
 
   @getCustomSelector: (selector) ->
-    return '[matches~="' + selector.replace(/\s+/, @prototype.DESCEND) + '"]'
+    return '[matches~="' + selector.replace(/\s+/g, @prototype.DESCEND) + '"]'
 
   @getCanonicalSelector: (selector) ->
     selector = selector.trim()
