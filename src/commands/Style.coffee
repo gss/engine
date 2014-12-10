@@ -168,8 +168,7 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
-        engine = @styles.engine
-        if name == '%' || engine.Unit[name] || engine.Type.Times[name]
+        if name == '%' || @styles.Unit[name] || @styles.Type.Times[name]
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('

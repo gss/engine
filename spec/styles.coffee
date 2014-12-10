@@ -5,7 +5,7 @@ assert = chai.assert
 
 describe 'Styles', ->
   doc = engine = null
-  beforeEach ->
+  before ->
     engine ||= new GSS(document.createElement('div'))
     engine.compile()
     doc = {}
@@ -14,10 +14,10 @@ describe 'Styles', ->
         doc[property] = ->
           value.apply(engine.intrinsic, arguments)
         doc[property].initial = value.initial
+        
   describe 'simple properties', ->
 
     it 'numeric property', ->
-      debugger
       expect(doc['z-index'](10)).to.eql(10)
       expect(doc['z-index'](10.5)).to.eql(undefined)
       expect(doc['z-index']('ff')).to.eql(undefined)

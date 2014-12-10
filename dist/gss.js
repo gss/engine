@@ -20288,6 +20288,7 @@ Domain = (function() {
     this.signatures = new this.Signatures(this);
     if (this.Properties) {
       this.Property.compile(this.Properties.prototype, this);
+      this.Properties.prototype.engine = this.Properties.prototype;
       Properties = this.Properties;
     }
     this.properties = new (Properties || Object);
@@ -23666,15 +23667,14 @@ Shorthand = (function() {
   };
 
   Shorthand.prototype.toExpressionString = function(key, operation, expression, styles) {
-    var engine, index, name, string, type, types, _i, _j, _len, _ref;
+    var index, name, string, type, types, _i, _j, _len, _ref;
     if (styles == null) {
       styles = this.styles;
     }
     switch (typeof operation) {
       case 'object':
         name = operation[0];
-        engine = this.styles.engine;
-        if (name === '%' || engine.Unit[name] || engine.Type.Times[name]) {
+        if (name === '%' || this.styles.Unit[name] || this.styles.Type.Times[name]) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
           string = name + '(';
@@ -25151,6 +25151,8 @@ Intrinsic = (function(_super) {
       value = _ref1[property];
       Properties.prototype[property] = value;
     }
+    Properties.prototype.Unit = Intrinsic.prototype.Unit;
+    Properties.prototype.Type = Intrinsic.prototype.Type;
     return Properties;
   })();
 

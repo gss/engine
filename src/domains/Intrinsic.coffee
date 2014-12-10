@@ -27,6 +27,8 @@ class Intrinsic extends Numeric
       Properties::[property] = value
     for property, value of Dimensions::
       Properties::[property] = value
+    Properties::Unit = Intrinsic::Unit
+    Properties::Type = Intrinsic::Type
     Properties
 
   constructor: ->

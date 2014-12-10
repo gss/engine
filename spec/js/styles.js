@@ -7,7 +7,7 @@ assert = chai.assert;
 describe('Styles', function() {
   var doc, engine;
   doc = engine = null;
-  beforeEach(function() {
+  before(function() {
     var property, value, _ref, _results;
     engine || (engine = new GSS(document.createElement('div')));
     engine.compile();
@@ -27,7 +27,6 @@ describe('Styles', function() {
   });
   describe('simple properties', function() {
     it('numeric property', function() {
-      debugger;
       expect(doc['z-index'](10)).to.eql(10);
       expect(doc['z-index'](10.5)).to.eql(void 0);
       return expect(doc['z-index']('ff')).to.eql(void 0);

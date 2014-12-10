@@ -40,6 +40,7 @@ class Domain
 
     if @Properties
       @Property.compile @Properties::, @
+      @Properties::engine = @Properties::
       Properties = @Properties
     @properties  = new (Properties || Object)
     @properties.engine = @
@@ -417,7 +418,6 @@ class Domain
 
   # Compile own properties
   Domain::Property.compile = (properties, engine) ->
-    #properties.engine ||= engine
     for own key, property of properties
       continue if key == 'engine'
       @call(engine, property, key, properties)
