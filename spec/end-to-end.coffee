@@ -334,7 +334,7 @@ describe 'End - to - End', ->
             "z": 510
           done()                               
         container.innerHTML =  """
-            <style type="text/gss">              
+            <style type="text/gss" scoped>              
               [c] == 10 !require;
               0 <= [x] <= 500;
               500 == [y] == 500;
@@ -347,7 +347,7 @@ describe 'End - to - End', ->
       it 'should be ok', (done) ->                                 
         container.innerHTML =  """
             <div id="billy"></div>
-            <style type="text/gss">              
+            <style type="text/gss" scoped>              
               [grid] == 36;
               0 <= #billy[x] == [grid];
             </style>
@@ -378,7 +378,7 @@ describe 'End - to - End', ->
     describe 'order of operations', ->  
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
-            <style type="text/gss">              
+            <style type="text/gss" scoped>              
               [w] == 100 !require;
               [igap] == 3 !require;
               [ogap] == 10 !require;
@@ -798,7 +798,7 @@ describe 'End - to - End', ->
     describe 'equal simple selector on the both sides', ->
       it 'should bind elements with itself', (done) ->                            
         container.innerHTML =  """
-            <style type="text/gss">                            
+            <style type="text/gss" scoped>                            
               [x] == 100;
               .a {
                 ::[x] == 10;
@@ -824,7 +824,7 @@ describe 'End - to - End', ->
     describe 'complex plural selectors on the left', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
-            <style type="text/gss">                            
+            <style type="text/gss" scoped>                            
               [x] == 100;
               (.a !+ .a)[x] == .b[x] == [x];          
             </style>
@@ -1066,7 +1066,7 @@ describe 'End - to - End', ->
     describe 'complex plural selectors on the right', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
-            <style type="text/gss">                            
+            <style type="text/gss" scoped>                            
               [x] == 100;
               .a[x] == (.b !+ .b)[x] == [x];          
             </style>
@@ -1120,7 +1120,7 @@ describe 'End - to - End', ->
     describe 'complex plural selectors on both sides', -> 
       it 'should compute values', (done) ->                                 
         container.innerHTML =  """
-            <style type="text/gss">                            
+            <style type="text/gss" scoped>                            
               [x] == 100;
               (.a !+ .a)[x] == (.b !+ .b)[x] == [x];          
             </style>
@@ -1188,7 +1188,7 @@ describe 'End - to - End', ->
             <div id="b1" class="b"></div>
             <div id="b2" class="b"></div>
             <div id="b3" class="b"></div>
-            <style type="text/gss">                            
+            <style type="text/gss" scoped>                            
               [x] == 100;
               .a[x] == .b[x] == [x];              
             </style>
@@ -1238,7 +1238,7 @@ describe 'End - to - End', ->
             <div id="b2" class="b"></div>
             <div id="b3" class="b"></div>
             <div id="b4" class="b"></div>
-            <style type="text/gss">                            
+            <style type="text/gss" scoped>                            
               [x] == 100;
               .a[x] == .b[x] == [x];              
             </style>
@@ -1468,7 +1468,7 @@ describe 'End - to - End', ->
           expect(engine.values["center-y"]).to.eql cy
           done()                             
         container.innerHTML =  """
-            <style type="text/gss">              
+            <style type="text/gss" scoped>              
               [center-x] == ::window[center-x];
               [center-y] == ::window[center-y];
             </style>
@@ -1484,7 +1484,7 @@ describe 'End - to - End', ->
           expect(engine.values["left"]).to.eql 0
           done()                             
         container.innerHTML =  """
-            <style type="text/gss">
+            <style type="text/gss" scoped>
               [top] == ::window[top];
               [right] == ::window[right];
               [bottom] == ::window[bottom];
@@ -1508,7 +1508,7 @@ describe 'End - to - End', ->
         engine.once 'solve', listen
     
         container.innerHTML =  """
-            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss" scoped></link>
           """
 
     describe "multiple files", ->
@@ -1528,9 +1528,9 @@ describe 'End - to - End', ->
         engine.addEventListener 'solve', listen
     
         container.innerHTML =  """
-            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss"></link>
-            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-2.gss"></link>
-            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-3.gss"></link>
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss" scoped></link>
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-2.gss" scoped></link>
+            <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-3.gss" scoped></link>
           """
 
   
@@ -1542,17 +1542,42 @@ describe 'End - to - End', ->
     describe 'basic', ->
       engine = null
     
-      it 'vars', (done) ->
+      it 'in scoped stylesheet', (done) ->
         engine = GSS(container)
         container.innerHTML =  """
           <div id="ship"></div>
-          <style type="text/gss" scoped>
+          <style type="text/gss" id="gss">
             #ship {
-              $"mast"[top] == 0;
-              $"mast"[bottom] == 100;
-              $"mast"[left] == 10;
-              $"mast"[right] == 20;
-              "mast"[z] == 1;
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
+            }
+            #ship[height] == "mast"[height];
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '$gss"mast"[height]': 100
+            '$gss"mast"[x]': 10
+            '$gss"mast"[width]': 10
+            '$gss"mast"[y]': 0
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+          done()
+
+      it 'in regular stylesheet', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style scoped type="text/gss" id="gss">
+            #ship {
+              "mast"[top] == 0;
+              "mast"[bottom] == 100;
+              "mast"[left] == 10;
+              "mast"[right] == 20;
+              &"mast"[z] == 1;
             }
             #ship[height] == "mast"[height];
           </style>
@@ -1565,6 +1590,46 @@ describe 'End - to - End', ->
             '"mast"[y]': 0
             '$ship[height]': 100
             '$ship"mast"[z]': 1
+          done()
+
+      it 'in mixed stylesheets', (done) ->
+        engine = GSS(container)
+        container.innerHTML =  """
+          <div id="ship"></div>
+          <style type="text/gss" id="gss1">
+            [b] == 10; // &
+
+            ^"mast" {
+              & {
+                x: == [b]; // ^^
+              }
+              d: == 100; // &
+              bottom: == [d]; // &
+            } 
+          </style>
+          <style scoped type="text/gss" id="gss2">
+            [e] == 1; // $
+            #ship {
+              [c] == 20; // &
+              "mast"[top] == 0; // $
+              "mast"[right] == [c]; // $, &
+              &"mast"[z] == [e]; // &
+            }
+            #ship[height] == "mast"[height]; // $
+          </style>
+          """
+        engine.once 'solve', (e) ->
+          expect((engine.values)).to.eql 
+            '"mast"[height]': 100
+            '"mast"[x]': 10
+            '"mast"[width]': 10
+            '"mast"[y]': 0
+            '"mast"[d]': 100
+            '$ship[height]': 100
+            '$ship"mast"[z]': 1
+            '$ship[c]': 20
+            '$gss1[b]': 10
+            'e': 1
           done()
 
     it 'in VFL', (done) ->
@@ -1580,7 +1645,7 @@ describe 'End - to - End', ->
           $[size] == $[intrinsic-size];
           $[left] == 0;
         
-          @h |("col-1...8")-[col-gap]-...| in($) !require {
+          @h |($"col-1...8")-[col-gap]-...| in($) !require {
             width: == $[col-width] !require;
           }
           
@@ -1616,7 +1681,7 @@ describe 'End - to - End', ->
         <div id="a2" class="a"></div>
         <div id="b1" class="b"></div>
         <div id="b2" class="b"></div>
-        <style type="text/gss">
+        <style type="text/gss" scoped>
           "c", .a, "z", .b {
             &:next[x] == 10;
           }
@@ -1902,7 +1967,6 @@ describe 'End - to - End', ->
     describe '|| over two variables', ->
       it 'should compute values', (done) ->
         
-        debugger
         engine.assumed.merge A: 200, B: 200
 
         engine.once 'solve', ->     
@@ -1972,7 +2036,7 @@ describe 'End - to - End', ->
           engine.assumed.merge A: 500
     
         container.innerHTML =  """
-            <style type="text/gss">
+            <style type="text/gss" scoped>
             [a] == [A];
             [b] == [B];
         
@@ -2019,7 +2083,7 @@ describe 'End - to - End', ->
           engine.assumed.merge input: 500
     
         container.innerHTML =  """
-            <style type="text/gss">
+            <style type="text/gss" scoped>
             [t] == 500;
             [z] == [input];
         
@@ -2045,7 +2109,7 @@ describe 'End - to - End', ->
         engine.once 'solve', listen
     
         container.innerHTML =  """
-            <style type="text/gss">
+            <style type="text/gss" scoped>
             [t] == 500;
         
             @if [t] >= 960 {          
@@ -2068,7 +2132,7 @@ describe 'End - to - End', ->
           done()     
         container.innerHTML =  """
             <div id="b"></div>
-            <style type="text/gss">
+            <style type="text/gss" scoped>
             [t] == 500;
         
             @if [t] >= 960 {
@@ -2366,13 +2430,28 @@ describe 'End - to - End', ->
   
       it 'should be ok', (done) ->
         listen = (e) ->     
-          expect(engine.values).to.be.ok
+          expect(engine.values).to.eql {
+            '$section1[height]': 20
+            '$section1[intrinsic-height]': 20
+            '$section1[width]': window.innerWidth - 200
+            '$section1[x]': 100
+            '$section1[y]': 0
+            '$section2[height]': 10
+            '$section2[intrinsic-height]': 10
+            '$section2[width]': window.innerWidth - 200
+            '$section2[x]': 100
+            '$section2[y]': 0
+            '::window[width]': window.innerWidth
+            '::window[x]': 0
+            '::window[y]': 0
+            'Wwin': 1000
+          }
           done()          
       
         container.innerHTML =  """
-            <div class="section"></div>
-            <div class="section"></div>
-            <style type="text/gss">
+            <div class="section" id="section1" style="height: 20px"></div>
+            <div class="section" id="section2" style="height: 10px"></div>
+            <style type="text/gss" scoped>
             [Wwin] == 1000;
 
             @if [Wwin] > 960 {
@@ -2416,7 +2495,7 @@ describe 'End - to - End', ->
         container.innerHTML =  """
             <div id="s1"></div>
             <div id="s2"></div>
-            <style type="text/gss">
+            <style type="text/gss" scoped>
             [Wwin] == 100;          
           
             @if [Wwin] > 960 {
@@ -2882,6 +2961,7 @@ describe 'End - to - End', ->
                 engine.then ->
                   expect(engine.values).to.eql {}
                   done()
+
     describe "new VFL input", ->
       it 'should work', (done) ->
         container.innerHTML = """
@@ -2891,7 +2971,7 @@ describe 'End - to - End', ->
         <div id="box3"></div>
         <div id="container"></div>
 
-        <style type="text/gss">
+        <style type="text/gss" scoped>
           #container[width] == 300;
           #container[left] == 0;
           [gap] >= 0;
@@ -2936,23 +3016,23 @@ describe 'End - to - End', ->
         <style type="text/gss">
           #container[width] == 300;
           #container[left] == 0;
-          [gap] >= 0;
+          $gap >= 0;
 
           .box, #box2, #box3 {
-            &[width] == (&:next)[width];
-            &[top] == ::window[top];
+            width: == :next[width];
+            top: == ::window[top];
           }
           
-          #container[left] + [gap] == (.box:first)[left];
+          #container[left] + $gap == (.box:first)[left];
            
           .box {
-            &[right] + 10 == (&:next)[left];
+            &[right] + 10 == :next[left];
           }
 
-          (.box:last)[right] + [gap] == (#box2)[left];
+          (.box:last)[right] + $gap == (#box2)[left];
            
           #box2[right] == #box3[left];
-          #box3[right] + [gap] == #container[right];
+          #box3[right] + $gap == #container[right];
            
         </style>
         """
@@ -3025,7 +3105,7 @@ describe 'End - to - End', ->
             <div id="s1"></div>
             <div id="s2"></div>
             <div id="container"></div>
-            <style type="text/gss">                        
+            <style type="text/gss" scoped>                        
             
               #container {
                 x: == 10;

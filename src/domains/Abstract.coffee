@@ -106,7 +106,11 @@ Abstract::Variable = Variable.extend {
   ],
 }, 
   'get': (property, engine, operation, continuation, scope) ->
-    return ['get', property]
+    if engine.queries
+      if scope == engine.scope
+        scope = undefined
+      object = engine.queries.getScope(scope, continuation)
+    return ['get', engine.getPath(object, property)]
     
 # Scoped variable
 Abstract::Variable.Getter = Abstract::Variable.extend {
@@ -116,6 +120,8 @@ Abstract::Variable.Getter = Abstract::Variable.extend {
   ]
 },
   'get': (object, property, engine, operation, continuation, scope) ->
+    if engine.queries
+      object = engine.queries.getScope(object, continuation)
     if prop = engine.properties[property]
       unless prop.matcher
         return prop.call(engine, object, continuation)

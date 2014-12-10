@@ -42,6 +42,7 @@ class Domain
       @Property.compile @Properties::, @
       Properties = @Properties
     @properties  = new (Properties || Object)
+    @properties.engine = @
 
     if @url && @getWorkerURL
       if @url && (@url = @getWorkerURL?(@url))
@@ -360,7 +361,8 @@ class Domain
       if id.substring(0, 2) == '$"'
         id = id.substring(1)
       return id + '[' + property + ']'
-   
+
+
 
   # Set a flag to record all changed values
   transact: ->

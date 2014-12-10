@@ -63,7 +63,7 @@
     "vendor/MutationObserver.classList.js"
   ],
   "dependencies": {
-    "gss/ccss-compiler": "0f2240b2f923ab8be4b780516bc0b0d67eee507e",
+    "gss/ccss-compiler": "new",
     "slightlyoff/cassowary.js": "*"
   },
   "paths": ["/Users/invizko/Sites/the-gss"],

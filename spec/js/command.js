@@ -630,7 +630,7 @@ describe('GSS commands', function() {
         var el;
         el = null;
         window.$engine = engine;
-        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['#', 'thing1'], 'width'], 100], ['rule', ['.', 'thing'], ['==', ['get', ['&'], 'width'], ['+', ['get', [':previous', ['&']], 'width'], ['*', ['get', 'hgap'], 2]]]]]);
+        engine.solve([['==', ['get', 'hgap'], 20], ['==', ['get', ['#', 'thing1'], 'width'], 100], ['rule', ['.', 'thing'], ['==', ['get', ['&'], 'width'], ['+', ['get', [':previous'], 'width'], ['*', ['get', ['^'], 'hgap'], 2]]]]]);
         engine.once('solve', function() {
           chai.expect(engine.values["$thing1[width]"]).to.eql(100);
           chai.expect(engine.values["$thing2[width]"]).to.eql(140);

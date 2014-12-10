@@ -1414,17 +1414,17 @@ describe 'Nested Rules', ->
 
             ['if',
               ['>=',                 
-                ['get', 'target-width']
+                ['get', ['^'], 'target-width']
                 960]
-              ['==', ["get",["&"],"width"], ["get","big"]]
+              ['==', ["get", ["&"], "width"], ["get",['^'], "big"]]
               [
                 ['if',
                   ['>=',                     
-                    ['get', 'target-width']
+                    ['get', ['^'], 'target-width']
                     500]
-                  ['==', ["get",["&"], 'width'],["get","med"]]
+                  ['==', ["get", ["&"], 'width'],["get", ['^'], "med"]]
 
-                  ['==', ["get",["&"], 'width'], ["get","small"]]
+                  ['==', ["get", ["&"], 'width'], ["get", ['^'], "small"]]
                 ]
               ]
             ]

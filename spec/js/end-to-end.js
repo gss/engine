@@ -199,12 +199,12 @@ describe('End - to - End', function() {
           });
           return done();
         });
-        return container.innerHTML = "<style type=\"text/gss\">              \n  [c] == 10 !require;\n  0 <= [x] <= 500;\n  500 == [y] == 500;\n  \n  0 <= [z] == [c] + [y] !strong100;\n</style>";
+        return container.innerHTML = "<style type=\"text/gss\" scoped>              \n  [c] == 10 !require;\n  0 <= [x] <= 500;\n  500 == [y] == 500;\n  \n  0 <= [z] == [c] + [y] !strong100;\n</style>";
       });
     });
     describe('expression chain w/ queryBound connector', function() {
       return it('should be ok', function(done) {
-        container.innerHTML = "<div id=\"billy\"></div>\n<style type=\"text/gss\">              \n  [grid] == 36;\n  0 <= #billy[x] == [grid];\n</style>";
+        container.innerHTML = "<div id=\"billy\"></div>\n<style type=\"text/gss\" scoped>              \n  [grid] == 36;\n  0 <= #billy[x] == [grid];\n</style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             "grid": 36,
@@ -228,7 +228,7 @@ describe('End - to - End', function() {
     });
     describe('order of operations', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">              \n  [w] == 100 !require;\n  [igap] == 3 !require;\n  [ogap] == 10 !require;\n  \n  [md] * 4 == [w] - [ogap] * 2 !require;\n  \n  [span3] == [md] * 3 + [igap] * 2;\n  \n  [blah] == [w] - 10 - 10 - 10;\n  \n  [blah2] == [w] - [ogap] - [ogap] - [ogap];\n  \n  [md2] == ([w] - [ogap] - [ogap] - [igap] * 3) / 4 !require;\n\n</style>";
+        container.innerHTML = "<style type=\"text/gss\" scoped>              \n  [w] == 100 !require;\n  [igap] == 3 !require;\n  [ogap] == 10 !require;\n  \n  [md] * 4 == [w] - [ogap] * 2 !require;\n  \n  [span3] == [md] * 3 + [igap] * 2;\n  \n  [blah] == [w] - 10 - 10 - 10;\n  \n  [blah2] == [w] - [ogap] - [ogap] - [ogap];\n  \n  [md2] == ([w] - [ogap] - [ogap] - [igap] * 3) / 4 !require;\n\n</style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             "w": 100,
@@ -540,7 +540,7 @@ describe('End - to - End', function() {
     });
     describe('equal simple selector on the both sides', function() {
       return it('should bind elements with itself', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">                            \n  [x] == 100;\n  .a {\n    ::[x] == 10;\n  } \n  .a[y] == .a[x];\n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>";
+        container.innerHTML = "<style type=\"text/gss\" scoped>                            \n  [x] == 100;\n  .a {\n    ::[x] == 10;\n  } \n  .a[y] == .a[x];\n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>";
         return engine.once('solve', function(e) {
           var b3;
           expect(engine.values).to.eql({
@@ -559,7 +559,7 @@ describe('End - to - End', function() {
     });
     describe('complex plural selectors on the left', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">                            \n  [x] == 100;\n  (.a !+ .a)[x] == .b[x] == [x];          \n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>";
+        container.innerHTML = "<style type=\"text/gss\" scoped>                            \n  [x] == 100;\n  (.a !+ .a)[x] == .b[x] == [x];          \n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>";
         return engine.once('solve', function(e) {
           var b3;
           expect(engine.values).to.eql({
@@ -815,7 +815,7 @@ describe('End - to - End', function() {
     });
     describe('complex plural selectors on the right', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">                            \n  [x] == 100;\n  .a[x] == (.b !+ .b)[x] == [x];          \n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>";
+        container.innerHTML = "<style type=\"text/gss\" scoped>                            \n  [x] == 100;\n  .a[x] == (.b !+ .b)[x] == [x];          \n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>";
         engine;
         return engine.once('solve', function(e) {
           var b3;
@@ -865,7 +865,7 @@ describe('End - to - End', function() {
     });
     describe('complex plural selectors on both sides', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">                            \n  [x] == 100;\n  (.a !+ .a)[x] == (.b !+ .b)[x] == [x];          \n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>";
+        container.innerHTML = "<style type=\"text/gss\" scoped>                            \n  [x] == 100;\n  (.a !+ .a)[x] == (.b !+ .b)[x] == [x];          \n</style>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>";
         engine;
         return engine.once('solve', function(e) {
           var b3;
@@ -926,7 +926,7 @@ describe('End - to - End', function() {
     });
     describe('balanced plural selectors', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>\n<style type=\"text/gss\">                            \n  [x] == 100;\n  .a[x] == .b[x] == [x];              \n</style>";
+        container.innerHTML = "<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>\n<style type=\"text/gss\" scoped>                            \n  [x] == 100;\n  .a[x] == .b[x] == [x];              \n</style>";
         return engine.once('solve', function(e) {
           var a3;
           expect(engine.values).to.eql({
@@ -969,7 +969,7 @@ describe('End - to - End', function() {
     });
     describe('WARN: unbalanced plural selectors', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>\n<div id=\"b4\" class=\"b\"></div>\n<style type=\"text/gss\">                            \n  [x] == 100;\n  .a[x] == .b[x] == [x];              \n</style>";
+        container.innerHTML = "<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"a3\" class=\"a\"></div>            \n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<div id=\"b3\" class=\"b\"></div>\n<div id=\"b4\" class=\"b\"></div>\n<style type=\"text/gss\" scoped>                            \n  [x] == 100;\n  .a[x] == .b[x] == [x];              \n</style>";
         engine;
         return engine.once('solve', function(e) {
           var a3, a4;
@@ -1164,7 +1164,7 @@ describe('End - to - End', function() {
           expect(engine.values["center-y"]).to.eql(cy);
           return done();
         });
-        return container.innerHTML = "<style type=\"text/gss\">              \n  [center-x] == ::window[center-x];\n  [center-y] == ::window[center-y];\n</style>";
+        return container.innerHTML = "<style type=\"text/gss\" scoped>              \n  [center-x] == ::window[center-x];\n  [center-y] == ::window[center-y];\n</style>";
       });
     });
     return describe('position values', function() {
@@ -1179,7 +1179,7 @@ describe('End - to - End', function() {
           expect(engine.values["left"]).to.eql(0);
           return done();
         });
-        return container.innerHTML = "<style type=\"text/gss\">\n  [top] == ::window[top];\n  [right] == ::window[right];\n  [bottom] == ::window[bottom];\n  [left] == ::window[left];\n</style>";
+        return container.innerHTML = "<style type=\"text/gss\" scoped>\n  [top] == ::window[top];\n  [right] == ::window[right];\n  [bottom] == ::window[bottom];\n  [left] == ::window[left];\n</style>";
       });
     });
   });
@@ -1194,7 +1194,7 @@ describe('End - to - End', function() {
           return done();
         };
         engine.once('solve', listen);
-        return container.innerHTML = "<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file.gss\"></link>";
+        return container.innerHTML = "<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file.gss\" scoped></link>";
       });
     });
     return describe("multiple files", function() {
@@ -1214,16 +1214,31 @@ describe('End - to - End', function() {
           }
         };
         engine.addEventListener('solve', listen);
-        return container.innerHTML = "<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file.gss\"></link>\n<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file-2.gss\"></link>\n<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file-3.gss\"></link>";
+        return container.innerHTML = "<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file.gss\" scoped></link>\n<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file-2.gss\" scoped></link>\n<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file-3.gss\" scoped></link>";
       });
     });
   });
   describe('Virtual Elements', function() {
     describe('basic', function() {
       engine = null;
-      return it('vars', function(done) {
+      it('in scoped stylesheet', function(done) {
         engine = GSS(container);
-        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" scoped>\n  #ship {\n    $\"mast\"[top] == 0;\n    $\"mast\"[bottom] == 100;\n    $\"mast\"[left] == 10;\n    $\"mast\"[right] == 20;\n    \"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
+        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" id=\"gss\">\n  #ship {\n    \"mast\"[top] == 0;\n    \"mast\"[bottom] == 100;\n    \"mast\"[left] == 10;\n    \"mast\"[right] == 20;\n    &\"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
+        return engine.once('solve', function(e) {
+          expect(engine.values).to.eql({
+            '$gss"mast"[height]': 100,
+            '$gss"mast"[x]': 10,
+            '$gss"mast"[width]': 10,
+            '$gss"mast"[y]': 0,
+            '$ship[height]': 100,
+            '$ship"mast"[z]': 1
+          });
+          return done();
+        });
+      });
+      it('in regular stylesheet', function(done) {
+        engine = GSS(container);
+        container.innerHTML = "<div id=\"ship\"></div>\n<style scoped type=\"text/gss\" id=\"gss\">\n  #ship {\n    \"mast\"[top] == 0;\n    \"mast\"[bottom] == 100;\n    \"mast\"[left] == 10;\n    \"mast\"[right] == 20;\n    &\"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             '"mast"[height]': 100,
@@ -1236,12 +1251,31 @@ describe('End - to - End', function() {
           return done();
         });
       });
+      return it('in mixed stylesheets', function(done) {
+        engine = GSS(container);
+        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" id=\"gss1\">\n  [b] == 10; // &\n\n  ^\"mast\" {\n    & {\n      x: == [b]; // ^^\n    }\n    d: == 100; // &\n    bottom: == [d]; // &\n  } \n</style>\n<style scoped type=\"text/gss\" id=\"gss2\">\n  [e] == 1; // $\n  #ship {\n    [c] == 20; // &\n    \"mast\"[top] == 0; // $\n    \"mast\"[right] == [c]; // $, &\n    &\"mast\"[z] == [e]; // &\n  }\n  #ship[height] == \"mast\"[height]; // $\n</style>";
+        return engine.once('solve', function(e) {
+          expect(engine.values).to.eql({
+            '"mast"[height]': 100,
+            '"mast"[x]': 10,
+            '"mast"[width]': 10,
+            '"mast"[y]': 0,
+            '"mast"[d]': 100,
+            '$ship[height]': 100,
+            '$ship"mast"[z]': 1,
+            '$ship[c]': 20,
+            '$gss1[b]': 10,
+            'e': 1
+          });
+          return done();
+        });
+      });
     });
     it('in VFL', function(done) {
       engine = window.$engine = GSS(container);
       container.style.width = '400px';
       container.style.height = '100px';
-      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      $[col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |(\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
+      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      $[col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |($\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
       return engine.then(function(solution) {
         expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 2);
         engine.id('box').click();
@@ -1255,7 +1289,7 @@ describe('End - to - End', function() {
       engine = window.$engine = GSS(container);
       container.style.width = '400px';
       container.style.height = '100px';
-      container.innerHTML = "<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<style type=\"text/gss\">\n  \"c\", .a, \"z\", .b {\n    &:next[x] == 10;\n  }\n</style>";
+      container.innerHTML = "<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>\n<style type=\"text/gss\" scoped>\n  \"c\", .a, \"z\", .b {\n    &:next[x] == 10;\n  }\n</style>";
       return engine.then(function(solution) {
         var item, lefts;
         expect(solution).to.eql({
@@ -1497,7 +1531,6 @@ describe('End - to - End', function() {
     });
     describe('|| over two variables', function() {
       return it('should compute values', function(done) {
-        debugger;
         engine.assumed.merge({
           A: 200,
           B: 200
@@ -1586,7 +1619,7 @@ describe('End - to - End', function() {
             A: 500
           });
         });
-        return container.innerHTML = "    <style type=\"text/gss\">\n    [a] == [A];\n    [b] == [B];\n\n    @if [a] >= 400 || [b] >= 400 {          \n      [x] == 96;\n    }\n\n    @else {  \n      [x] == 1;  \n    }\n    </style>";
+        return container.innerHTML = "    <style type=\"text/gss\" scoped>\n    [a] == [A];\n    [b] == [B];\n\n    @if [a] >= 400 || [b] >= 400 {          \n      [x] == 96;\n    }\n\n    @else {  \n      [x] == 1;  \n    }\n    </style>";
       });
     });
     describe('&& over two variables', function() {
@@ -1625,7 +1658,7 @@ describe('End - to - End', function() {
             input: 500
           });
         });
-        return container.innerHTML = "    <style type=\"text/gss\">\n    [t] == 500;\n    [z] == [input];\n\n    @if [t] >= 400 && [z] < 450 {          \n      [x] == 96;\n    }\n\n    @else {  \n      [x] == 1;  \n    }\n    </style>";
+        return container.innerHTML = "    <style type=\"text/gss\" scoped>\n    [t] == 500;\n    [z] == [input];\n\n    @if [t] >= 400 && [z] < 450 {          \n      [x] == 96;\n    }\n\n    @else {  \n      [x] == 1;  \n    }\n    </style>";
       });
     });
     describe('flat @if @else w/o queries', function() {
@@ -1639,7 +1672,7 @@ describe('End - to - End', function() {
           return done();
         };
         engine.once('solve', listen);
-        return container.innerHTML = "    <style type=\"text/gss\">\n    [t] == 500;\n\n    @if [t] >= 960 {          \n      [x] == 96;\n    }\n\n    @else {  \n      [x] == 1;  \n    }\n    </style>";
+        return container.innerHTML = "    <style type=\"text/gss\" scoped>\n    [t] == 500;\n\n    @if [t] >= 960 {          \n      [x] == 96;\n    }\n\n    @else {  \n      [x] == 1;  \n    }\n    </style>";
       });
     });
     describe('top level @if @else w/ queries', function() {
@@ -1652,7 +1685,7 @@ describe('End - to - End', function() {
           });
           return done();
         };
-        container.innerHTML = "          <div id=\"b\"></div>\n          <style type=\"text/gss\">\n          [t] == 500;\n      \n          @if [t] >= 960 {\n        \n            #b {\n              width: == 100;\n            }\n\n          }\n\n          @else {\n\n            #b {\n              width: == 1;\n            }\n\n          }\n          </style>";
+        container.innerHTML = "          <div id=\"b\"></div>\n          <style type=\"text/gss\" scoped>\n          [t] == 500;\n      \n          @if [t] >= 960 {\n        \n            #b {\n              width: == 100;\n            }\n\n          }\n\n          @else {\n\n            #b {\n              width: == 1;\n            }\n\n          }\n          </style>";
         return engine.once('solve', listen);
       });
     });
@@ -1768,10 +1801,25 @@ describe('End - to - End', function() {
       return it('should be ok', function(done) {
         var listen;
         listen = function(e) {
-          expect(engine.values).to.be.ok;
+          expect(engine.values).to.eql({
+            '$section1[height]': 20,
+            '$section1[intrinsic-height]': 20,
+            '$section1[width]': window.innerWidth - 200,
+            '$section1[x]': 100,
+            '$section1[y]': 0,
+            '$section2[height]': 10,
+            '$section2[intrinsic-height]': 10,
+            '$section2[width]': window.innerWidth - 200,
+            '$section2[x]': 100,
+            '$section2[y]': 0,
+            '::window[width]': window.innerWidth,
+            '::window[x]': 0,
+            '::window[y]': 0,
+            'Wwin': 1000
+          });
           return done();
         };
-        container.innerHTML = "          <div class=\"section\"></div>\n          <div class=\"section\"></div>\n          <style type=\"text/gss\">\n          [Wwin] == 1000;\n\n          @if [Wwin] > 960 {\n\n            .section {\n              height: == ::[intrinsic-height];\n              right: == ::window[right] - 100;\n              left: == ::window[left] + 100;\n              top:>= ::window[top];\n            }\n\n          }\n\n          @else {\n\n            .section {\n              height: == ::[intrinsic-height];\n              right: == ::window[right] - 10;\n              left: == ::window[left] + 10;\n              top:>= ::window[top];\n            }\n\n          }\n          </style>";
+        container.innerHTML = "          <div class=\"section\" id=\"section1\" style=\"height: 20px\"></div>\n          <div class=\"section\" id=\"section2\" style=\"height: 10px\"></div>\n          <style type=\"text/gss\" scoped>\n          [Wwin] == 1000;\n\n          @if [Wwin] > 960 {\n\n            .section {\n              height: == ::[intrinsic-height];\n              right: == ::window[right] - 100;\n              left: == ::window[left] + 100;\n              top:>= ::window[top];\n            }\n\n          }\n\n          @else {\n\n            .section {\n              height: == ::[intrinsic-height];\n              right: == ::window[right] - 10;\n              left: == ::window[left] + 10;\n              top:>= ::window[top];\n            }\n\n          }\n          </style>";
         return engine.once('solve', listen);
       });
     });
@@ -1788,7 +1836,7 @@ describe('End - to - End', function() {
           });
           return done();
         };
-        container.innerHTML = "          <div id=\"s1\"></div>\n          <div id=\"s2\"></div>\n          <style type=\"text/gss\">\n          [Wwin] == 100;          \n        \n          @if [Wwin] > 960 {\n                      \n            #s1[x] == 100;\n            @horizontal (#s1(==10))-(#s2(==10)) gap(100);\n\n          }\n\n          @else {\n\n            #s1[x] == 50;\n            @horizontal (#s1(==1))-(#s2(==1)) gap(5);\n\n          }\n          </style>";
+        container.innerHTML = "          <div id=\"s1\"></div>\n          <div id=\"s2\"></div>\n          <style type=\"text/gss\" scoped>\n          [Wwin] == 100;          \n        \n          @if [Wwin] > 960 {\n                      \n            #s1[x] == 100;\n            @horizontal (#s1(==10))-(#s2(==10)) gap(100);\n\n          }\n\n          @else {\n\n            #s1[x] == 50;\n            @horizontal (#s1(==1))-(#s2(==1)) gap(5);\n\n          }\n          </style>";
         return engine.once('solve', listen);
       });
     });
@@ -2052,7 +2100,7 @@ describe('End - to - End', function() {
     });
     describe("new VFL input", function() {
       return it('should work', function(done) {
-        container.innerHTML = "       <div id=\"boxA\" class=\"box\"></div>\n       <div id=\"boxB\" class=\"box\"></div>\n       <div id=\"box2\" class=\"box\"></div>\n       <div id=\"box3\"></div>\n       <div id=\"container\"></div>\n\n       <style type=\"text/gss\">\n         #container[width] == 300;\n         #container[left] == 0;\n         [gap] >= 0;\n\n         @h |- (.box)-10-... - (#box2) (#box3)-| gap([gap]) in(#container) {\n\n           width: == &:next[width]; // replacement for chain-width()\n          \n           top: == ::window[top]; // replacement for chain-top(::window[top])\n         }\n       </style>";
+        container.innerHTML = "       <div id=\"boxA\" class=\"box\"></div>\n       <div id=\"boxB\" class=\"box\"></div>\n       <div id=\"box2\" class=\"box\"></div>\n       <div id=\"box3\"></div>\n       <div id=\"container\"></div>\n\n       <style type=\"text/gss\" scoped>\n         #container[width] == 300;\n         #container[left] == 0;\n         [gap] >= 0;\n\n         @h |- (.box)-10-... - (#box2) (#box3)-| gap([gap]) in(#container) {\n\n           width: == &:next[width]; // replacement for chain-width()\n          \n           top: == ::window[top]; // replacement for chain-top(::window[top])\n         }\n       </style>";
         return engine.once('solve', function(solution) {
           expect(solution).to.eql({
             "::window[y]": 0,
@@ -2078,7 +2126,7 @@ describe('End - to - End', function() {
     });
     describe("new VFL output", function() {
       return it('should work', function(done) {
-        container.innerHTML = "<div id=\"boxA\" class=\"box\"></div>\n<div id=\"boxB\" class=\"box\"></div>\n<div id=\"box2\" class=\"box\"></div>\n<div id=\"box3\"></div>\n<div id=\"container\"></div>\n\n<style type=\"text/gss\">\n  #container[width] == 300;\n  #container[left] == 0;\n  [gap] >= 0;\n\n  .box, #box2, #box3 {\n    &[width] == (&:next)[width];\n    &[top] == ::window[top];\n  }\n  \n  #container[left] + [gap] == (.box:first)[left];\n   \n  .box {\n    &[right] + 10 == (&:next)[left];\n  }\n\n  (.box:last)[right] + [gap] == (#box2)[left];\n   \n  #box2[right] == #box3[left];\n  #box3[right] + [gap] == #container[right];\n   \n</style>";
+        container.innerHTML = "<div id=\"boxA\" class=\"box\"></div>\n<div id=\"boxB\" class=\"box\"></div>\n<div id=\"box2\" class=\"box\"></div>\n<div id=\"box3\"></div>\n<div id=\"container\"></div>\n\n<style type=\"text/gss\">\n  #container[width] == 300;\n  #container[left] == 0;\n  $gap >= 0;\n\n  .box, #box2, #box3 {\n    width: == :next[width];\n    top: == ::window[top];\n  }\n  \n  #container[left] + $gap == (.box:first)[left];\n   \n  .box {\n    &[right] + 10 == :next[left];\n  }\n\n  (.box:last)[right] + $gap == (#box2)[left];\n   \n  #box2[right] == #box3[left];\n  #box3[right] + $gap == #container[right];\n   \n</style>";
         GSS.console.profile(1);
         return engine.once('solve', function(solution) {
           GSS.console.profileEnd(1);
@@ -2134,7 +2182,7 @@ describe('End - to - End', function() {
           });
           return done();
         });
-        return container.innerHTML = "          <div id=\"s1\"></div>\n          <div id=\"s2\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\">                        \n          \n            #container {\n              x: == 10;\n              width: == 100;\n            }\n            \n            [right-edge] == 200;\n            \n            @h <#container[center-x]>-(#s1)-<[right-edge]> (#s2) < 1000 + 1 > gap(10);     \n\n          </style>";
+        return container.innerHTML = "          <div id=\"s1\"></div>\n          <div id=\"s2\"></div>\n          <div id=\"container\"></div>\n          <style type=\"text/gss\" scoped>                        \n          \n            #container {\n              x: == 10;\n              width: == 100;\n            }\n            \n            [right-edge] == 200;\n            \n            @h <#container[center-x]>-(#s1)-<[right-edge]> (#s2) < 1000 + 1 > gap(10);     \n\n          </style>";
       });
     });
     return describe('VFLs w/ missing elements', function() {

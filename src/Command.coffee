@@ -71,7 +71,8 @@ class Command
           argument.parent ||= operation
             
           # Leave forking/pairing mark in a path when resolving next arguments
-          contd = @connect(engine, operation, continuation, scope, args, ascender)
+          if continuation && ascending && ascender != index
+            contd = @connect(engine, operation, continuation, scope, args, ascender)
 
           # Evaluate argument
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, undefined, ascending)
@@ -432,16 +433,12 @@ class Command
 # e.g. to remove stylesheet, css rule or conditional branch
   DESCEND: String.fromCharCode(8595)
 
-  DELIMITERS: [
-    Command::ASCEND
-    Command::PAIR
-    Command::DESCEND
-  ]
+  DELIMITERS: [8593, 8594, 8595]
   
 
   # Update delimeter at the end of the path
   delimit: (path, delimeter = '') ->
-    if @DELIMITERS.indexOf(path.charAt(path.length - 1)) > -1
+    if @DELIMITERS.indexOf(path.charCodeAt(path.length - 1)) > -1
       return path.substring(0, path.length - 1) + delimeter
     else
       return path + delimeter

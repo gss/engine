@@ -580,10 +580,10 @@ describe 'GSS commands', ->
                 'width'],
               ['+',
                 ['get'
-                  [':previous', ['&']],
+                  [':previous'],
                   'width']
                 ['*'
-                  ['get', 'hgap'],
+                  ['get', ['^'], 'hgap'],
                   2
                 ]
               ]

@@ -191,7 +191,9 @@ Selector.Attribute = Selector.Search.extend
   
 # Reference to related element
 Selector.Element = Selector.extend
-  signature: []
+  signature: [[
+    parameter: ['Number', 'String']
+  ]]
 
 # Optimized element reference outside of selector context
 Selector.Reference = Selector.Element.extend
@@ -210,8 +212,9 @@ Selector.Reference = Selector.Element.extend
     return result
 
   # Bypasses cache and pairing
-  retrieve: ->
-    return @execute arguments ...
+  retrieve: (args...)->
+    args.unshift args[1][1]
+    return @execute args ...
 
   reference: true
   
@@ -365,7 +368,7 @@ Selector.define
     serialize: ->
       return ''
 
-    Element: (engine, operation, continuation, scope) ->
+    Element: (parameter, engine, operation, continuation, scope) ->
       return scope
 
     retrieve: ->
@@ -373,13 +376,13 @@ Selector.define
 
   # Parent element (alias for !> *)
   '^':
-    Element: (engine, operation, continuation, scope) ->
+    Element: (parameter, engine, operation, continuation, scope) ->
       return engine.queries.getParentScope(scope, continuation)
 
 
   # Current engine scope (defaults to document)
   '$':
-    Element: (engine, operation, continuation, scope) ->
+    Element: (parameter, engine, operation, continuation, scope) ->
       return engine.scope
 
 
@@ -390,12 +393,10 @@ Selector.define
       
     stringy: true
   
-  '$virtual':
-    Virtual: (node = scope, value, engine, operation, continuation, scope) ->
-      if node == engine.scope
-        return '$"' + value + '"'
-      else
-        return engine.identify(node) + '"' + value + '"'
+  'virtual':
+    Virtual: (node, value, engine, operation, continuation, scope) ->
+      prefix = engine.queries.getScope(node, continuation) || '$'
+      return prefix + '"' + value + '"'
 
     prefix: '"'
 
@@ -545,11 +546,11 @@ if document?
   dummy = Selector.dummy = document.createElement('_')
 
   unless dummy.hasOwnProperty("classList")
-    Selector['class']::Qualifier = (node, value) ->
+    Selector['.']::Qualifier = (node, value) ->
       return node if node.className.split(/\s+/).indexOf(value) > -1
       
   unless dummy.hasOwnProperty("parentElement") 
-    Selector['!>']::Combinator = Selector['^']::Element = (node) ->
+    Selector['!>']::Combinator = (node = scope, engine, operation, continuation, scope) ->
       if parent = node.parentNode
         return parent if parent.nodeType == 1
   unless dummy.hasOwnProperty("nextElementSibling")

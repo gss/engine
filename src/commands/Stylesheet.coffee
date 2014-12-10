@@ -82,7 +82,8 @@ class Stylesheet extends Command
     return unless stylesheet.dirty
     stylesheet.dirty = undefined
     if stylesheet.getAttribute('scoped')?
-      scope = stylesheet.parentNode
+      stylesheet.scoped ?= 'scoped'
+      scope = engine.getScopeElement(stylesheet.parentNode)
 
     engine.solve(stylesheet.operations, stylesheet.continuation, scope)
 

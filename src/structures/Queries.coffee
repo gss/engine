@@ -272,10 +272,10 @@ class Queries
         # Remove all watchers that match continuation path
         ref = continuation + (collection?.length? && id || '')
 
-        if ref.charAt(0) == @PAIR
-          @unobserve(id, ref, undefined, undefined, ref, scope)
-        else
-          @unobserve(id, ref, undefined, undefined, ref)
+        #if ref.charAt(0) == @PAIR
+        #  @unobserve(id, ref, undefined, undefined, ref, scope)
+        #else
+        @unobserve(id, ref, undefined, undefined, ref)
 
         if recursion != continuation
           if removed != false #true#(removed || !parent?.command.release)
@@ -346,9 +346,7 @@ class Queries
   updateCollections: (operation, path, scope, added, removed, recursion, contd) ->
     
     oppath = @getCanonicalPath(path)
-    if path == oppath || @PAIR + oppath == path
-
-    else if recursion != oppath
+    if path != oppath && recursion != oppath
       @updateCollection operation, oppath, scope, added, removed, oppath, path
 
     @updateCollection operation, path, scope, added, removed, recursion, contd || ''
@@ -570,7 +568,7 @@ class Queries
       index = i
       while next = parent[++index]
         break if next == right
-        if next[0] == '$virtual'
+        if next[0] == 'virtual'
           return i < j
 
       unless a.nodeType && b.nodeType 
@@ -601,35 +599,64 @@ class Queries
     
     bits[bits.length - 1] = ""
     path = bits.join(@DESCEND)
-    if continuation.charAt(0) == @PAIR
-      path = @PAIR + path
+    #if continuation.charAt(0) == @PAIR
+    #  path = @PAIR + path
     return path
 
+
+  # Scope variables and locals to the stylesheet
+  getScope: (node, continuation) ->
+    if !node
+      if (index = continuation.lastIndexOf('$')) > -1
+        code = continuation.charCodeAt((length = continuation.length) - 1)
+        if continuation.charCodeAt((length = continuation.length) - 1) == 8595 #descend
+          length--
+
+        id = continuation.substring(index, length)
+        if el = @engine.identity[id] || @engine.queries[continuation.substring(0, length)]
+          if el.scoped
+            if (parent = @engine.getScopeElement(el.parentNode)) == @engine.scope
+              return
+            return node._gss_id
+          return el._gss_id
+    else if node != @engine.scope
+      return node._gss_id || node
+
   # Return id of a parent scope element
-  getParentScope: (scope, continuation) ->
+  getParentScope: (scope, continuation, level = 1) ->
     return scope._gss_id unless continuation
-    
-    bits = continuation.split(@DESCEND)
+    # Iterate parent scopes, skip conditions
+    last = continuation.length - 1
 
-    until last = bits[bits.length - 1]
-      bits.pop()
+    if continuation.charCodeAt(last) == 8594 # @PAIR
+      debugger
+      last = continuation.lastIndexOf(@DESCEND, last) - 1
 
-    if scope && @engine.scope != scope
-      id = @engine.identify(scope)
-      # Ugh #1
-      if last.substring(last.length - id.length) == id
-        bits.pop()
-        last = bits[bits.length - 1]
-    
-    unless last?
-      return @engine.scope
+    while true
+      index = continuation.lastIndexOf(@DESCEND, last)
+      if (bit = continuation.substring(index + 1, last + 1)) && 
+          bit.charCodeAt(0) != 64 && # @ ...
+          --level == -1
+        break
+      if index == -1
+        return @engine.scope
+      last = index - 1
 
-    if matched = last.match(@engine.pairs.TrailingIDRegExp)
-      if matched[1].indexOf('"') > -1
-        return matched[1]
-      return @engine.identity[matched[1]]
-      
-    return @engine.queries[bits.join(@DESCEND)]
+    if (j = bit.lastIndexOf('$')) > -1
+      # Virtual
+      id = bit.substring(j)
+      if id.indexOf('"') > -1
+        return id
+
+      # Element in collection
+      if result = @engine.identity[id]
+        return @engine.getScopeElement(result)
+
+    # Singular element
+    if result = @[continuation.substring(0, index)]
+      return @engine.getScopeElement(result)
+
+    return @engine.scope
 
   # Remove all fork marks from a path. 
   # Allows multiple query paths have shared destination 

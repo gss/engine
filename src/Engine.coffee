@@ -41,8 +41,8 @@ class Engine extends Events
         when 'object'
           if argument.nodeType
             if @Command
+              @scope = scope = @getScopeElement(argument)
               Engine[Engine.identify(argument)] = @
-              @scope = scope = argument
             else
               scope = argument
               while scope
@@ -470,7 +470,18 @@ class Engine extends Events
     if @domain.url
       return @domain
     else
-      return @domain.maybe()   
+      return @domain.maybe()
+
+  # Normalize scope element
+  getScopeElement: (node) ->
+    switch node.tagName
+      when 'HTML', 'BODY', 'HEAD'
+        return document
+      when 'STYLE'
+        if node.scoped
+          return @getScopeElement(node.parentNode)
+    return node
+
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
