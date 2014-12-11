@@ -24171,10 +24171,7 @@ Stylesheet = (function(_super) {
         if (results) {
           for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
             result = results[index];
-            if (result.substring(0, 11) !== '[matches~="') {
-              result = this.getCustomSelector(result);
-            }
-            results[index] = result.substring(0, 11) + parent.command.key + this.prototype.DESCEND + result.substring(11);
+            results[index] = ' ' + this.getCustomSelector(parent.command.key, result);
           }
         }
       } else if (parent.command.type === 'Iterator') {
@@ -24185,7 +24182,7 @@ Stylesheet = (function(_super) {
           for (index = _j = 0, _len1 = results.length; _j < _len1; index = ++_j) {
             result = results[index];
             if (result.substring(0, 12) === ' [matches~="') {
-              update.push(' [matches~="' + query.command.path + this.prototype.DESCEND + result.substring(12));
+              update.push(' ' + this.getCustomSelector(query.command.path, result));
             } else {
               debugger;
               _ref1 = this.getRuleSelectors(parent[1]);
@@ -24236,8 +24233,21 @@ Stylesheet = (function(_super) {
     }
   };
 
-  Stylesheet.getCustomSelector = function(selector) {
-    return '[matches~="' + selector.replace(/\s+/g, this.prototype.DESCEND) + '"]';
+  Stylesheet.getCustomSelector = function(selector, suffix, prefix) {
+    selector = selector.replace(/\s+/g, this.prototype.DESCEND);
+    if (suffix) {
+      if (suffix.charAt(0) === ' ') {
+        suffix = suffix.substring(1);
+      }
+      if (suffix.substring(0, 11) === '[matches~="') {
+        suffix = this.prototype.DESCEND + suffix.substring(11);
+      } else {
+        suffix = this.prototype.DESCEND + suffix.replace(/\s+/g, this.prototype.DESCEND)(+'"]');
+      }
+    } else {
+      suffix = '"]';
+    }
+    return '[matches~="' + selector + suffix;
   };
 
   Stylesheet.getCanonicalSelector = function(selector) {

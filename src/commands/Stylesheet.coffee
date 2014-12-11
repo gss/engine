@@ -244,9 +244,7 @@ class Stylesheet extends Command
       if parent.command.type == 'Condition' && !parent.global
         if results
           for result, index in results
-            if result.substring(0, 11) != '[matches~="'
-              result = @getCustomSelector(result)
-            results[index] = result.substring(0, 11) + parent.command.key + @prototype.DESCEND + result.substring(11)
+            results[index] = ' ' + @getCustomSelector(parent.command.key, result)
       
       # Add rule selector to path
       else if parent.command.type == 'Iterator'
@@ -259,7 +257,7 @@ class Stylesheet extends Command
 
           for result, index in results
             if result.substring(0, 12) == ' [matches~="'
-              update.push ' [matches~="' + query.command.path + @prototype.DESCEND + result.substring(12)
+              update.push ' ' + @getCustomSelector(query.command.path, result)
             else
               debugger
               for selector in @getRuleSelectors(parent[1])
@@ -298,8 +296,18 @@ class Stylesheet extends Command
     else
       return ' ' + @getCustomSelector((parent || command).path)
 
-  @getCustomSelector: (selector) ->
-    return '[matches~="' + selector.replace(/\s+/g, @prototype.DESCEND) + '"]'
+  @getCustomSelector: (selector, suffix, prefix) ->
+    selector = selector.replace(/\s+/g, @prototype.DESCEND)
+    if suffix
+      if suffix.charAt(0) == ' '
+        suffix = suffix.substring(1)
+      if suffix.substring(0, 11) == '[matches~="'
+        suffix = @prototype.DESCEND + suffix.substring(11)
+      else
+        suffix = @prototype.DESCEND + suffix.replace(/\s+/g, @prototype.DESCEND) + '"]'
+    else
+      suffix = '"]'
+    return '[matches~="' + selector + suffix
 
   @getCanonicalSelector: (selector) ->
     selector = selector.trim()
