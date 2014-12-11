@@ -22170,7 +22170,6 @@ Condition = (function(_super) {
           engine.updating.previous = collections;
         }
       }
-      debugger;
       index = ascending ^ this.inverted && 2 || 3;
       engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (index === 2 && 'if' || 'else') + this.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
       if (branch = operation.parent[index]) {
@@ -22205,10 +22204,14 @@ Condition = (function(_super) {
 
 Condition.Global = Condition.extend({
   condition: function(engine, operation, command) {
-    debugger;
     var argument, _i, _len;
-    if (operation[0] === 'get' && operation[0].length === 2) {
-      return false;
+    if (command) {
+      operation = operation[1];
+    }
+    if (operation[0] === 'get') {
+      if (operation.length === 2 || operation[1][0] === '&') {
+        return false;
+      }
     }
     for (_i = 0, _len = operation.length; _i < _len; _i++) {
       argument = operation[_i];
@@ -22220,6 +22223,8 @@ Condition.Global = Condition.extend({
   },
   global: true
 });
+
+Condition.prototype.advices = [Condition.Global];
 
 Condition.define('if', {});
 
@@ -24202,7 +24207,7 @@ Stylesheet = (function(_super) {
     return results;
   };
 
-  Stylesheet.getRuleSelectors = function(operation, nested) {
+  Stylesheet.getRuleSelectors = function(operation) {
     var index, _i, _ref1, _results;
     if (operation[0] === ',') {
       _results = [];
@@ -24242,7 +24247,7 @@ Stylesheet = (function(_super) {
       if (suffix.substring(0, 11) === '[matches~="') {
         suffix = this.prototype.DESCEND + suffix.substring(11);
       } else {
-        suffix = this.prototype.DESCEND + suffix.replace(/\s+/g, this.prototype.DESCEND)(+'"]');
+        suffix = this.prototype.DESCEND + suffix.replace(/\s+/g, this.prototype.DESCEND) + '"]';
       }
     } else {
       suffix = '"]';
@@ -25282,7 +25287,7 @@ Intrinsic = (function(_super) {
             if (parent[0] === 'rule') {
               break;
             }
-            if (parent[0] === 'if') {
+            if (parent[0] === 'if' && !parent.command.global) {
               shared = false;
               break;
             }

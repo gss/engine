@@ -272,13 +272,10 @@ class Stylesheet extends Command
 
     return results
 
-  @getRuleSelectors: (operation, nested) ->
+  @getRuleSelectors: (operation) ->
     if operation[0] == ','
-      #if operation.command.selector || nested
       for index in [1 ... operation.length] by 1
         @getRuleSelector(operation[index], operation.command)
-      #else
-      #  return [@getCustomSelector(operation.command.path)]
     else
       return [@getRuleSelector(operation)]
 

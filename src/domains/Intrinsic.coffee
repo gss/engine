@@ -83,7 +83,7 @@ class Intrinsic extends Numeric
           while parent = parent.parent
             if parent[0] == 'rule'
               break
-            if parent[0] == 'if'
+            if parent[0] == 'if' && !parent.command.global
               shared = false
               break
           if shared != false

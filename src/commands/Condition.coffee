@@ -49,8 +49,6 @@ class Condition extends Command
           engine.updating.collections = {}
           engine.updating.previous = collections
 
-      debugger
-
       index = ascending ^ @inverted && 2 || 3
       engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + @DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
       if branch = operation.parent[index]
@@ -78,15 +76,21 @@ class Condition extends Command
 Condition.Global = Condition.extend
 
   condition: (engine, operation, command) ->
-    debugger
-    if operation[0] == 'get' && operation[0].length == 2
-      return false
+    if command
+      operation = operation[1]
+    if operation[0] == 'get'
+      if operation.length == 2 || operation[1][0] == '&'
+        return false
     for argument in operation
       if argument && argument.push && @condition(engine, argument) == false
         return false
     return true
 
+
+
   global: true
+
+Condition::advices = [Condition.Global]
 
 Condition.define 'if', {}
 Condition.define 'unless', {
