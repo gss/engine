@@ -251,6 +251,8 @@ Update.prototype =
       for prob in problems
         if result.indexOf(prob) == -1
           (exported ||= []).push(prob)
+        else
+          @reify(prob, other, domain)
 
     @splice from, 1
 

@@ -61,7 +61,6 @@ class Domain
 
       if @Solver
         @paths       = {}
-        @MAYBE     = undefined
       else
         @watchers    = {}
         @observers   = {}
@@ -355,7 +354,6 @@ class Domain
       Base.prototype = @
       @Maybe = ->
       @Maybe.prototype = new Base
-      @Maybe.prototype.MAYBE = @
       
     return new @Maybe
 

@@ -19986,9 +19986,6 @@ Engine = (function(_super) {
     if (typeof problems[0] === 'string') {
       problems = [problems];
     }
-    if (insert) {
-      update.index++;
-    }
     _ref4 = this.workers;
     for (url in _ref4) {
       worker = _ref4[url];
@@ -20190,7 +20187,7 @@ if (!self.window && self.onmessage !== void 0) {
         }
       }
       if (removes.length) {
-        this.broadcast(removes, void 0, true);
+        this.solve(removes);
       }
       if (values) {
         this.assumed.merge(values);
@@ -20308,8 +20305,7 @@ Domain = (function() {
         this.values = {};
       }
       if (this.Solver) {
-        this.paths = {};
-        return this.MAYBE = void 0;
+        return this.paths = {};
       } else {
         this.watchers = {};
         this.observers = {};
@@ -20679,7 +20675,6 @@ Domain = (function() {
       Base.prototype = this;
       this.Maybe = function() {};
       this.Maybe.prototype = new Base;
-      this.Maybe.prototype.MAYBE = this;
     }
     return new this.Maybe;
   };
@@ -21709,6 +21704,8 @@ Update.prototype = {
         prob = problems[_i];
         if (result.indexOf(prob) === -1) {
           (exported || (exported = [])).push(prob);
+        } else {
+          this.reify(prob, other, domain);
         }
       }
     }

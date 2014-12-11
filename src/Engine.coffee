@@ -334,8 +334,6 @@ class Engine extends Events
         update.push(others, other)
     if typeof problems[0] == 'string'
       problems = [problems]
-    if insert
-      update.index++
     for url, worker of @workers
       working = problems.filter (command) ->
         command[0] != 'remove' || worker.paths?[command[1]]
@@ -501,7 +499,7 @@ if !self.window && self.onmessage != undefined
               commands.push(command)
 
       if removes.length
-        @broadcast(removes, undefined, true)
+        @solve(removes)
       if values
         @assumed.merge(values)
       if commands.length
