@@ -1622,7 +1622,7 @@ describe 'End - to - End', ->
         <div id="box" class="box foo" onclick="this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')"></div>
     
         <style type="text/gss">
-          $[col-gap] == 16;
+          [col-gap] == 16;
           $[size] == $[intrinsic-size];
           $[left] == 0;
         
@@ -1643,11 +1643,14 @@ describe 'End - to - End', ->
         
       """
       engine.then (solution) ->
+        expect(Math.floor solution["col-width"]).to.eql (400 - 16 * 7) / 8
+        expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
         expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 2
 
         engine.id('box').click()
 
         engine.then (solution) ->
+          expect(Math.floor solution["$box[width]"]).to.eql (400 - 16 * 7) / 8
           expect(Math.floor solution["$box[x]"]).to.eql (((400 - 16 * 7) / 8) + 16) * 5
           done()
 

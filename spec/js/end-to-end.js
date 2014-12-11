@@ -1259,11 +1259,14 @@ describe('End - to - End', function() {
       engine = window.$engine = GSS(container);
       container.style.width = '400px';
       container.style.height = '100px';
-      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      $[col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |($\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
+      container.innerHTML = "\n    <div id=\"box\" class=\"box foo\" onclick=\"this.setAttribute('class', this.className.indexOf('bar') > -1 ? 'box foo' : 'box bar')\"></div>\n\n    <style type=\"text/gss\">\n      [col-gap] == 16;\n      $[size] == $[intrinsic-size];\n      $[left] == 0;\n    \n      @h |($\"col-1...8\")-[col-gap]-...| in($) !require {\n        width: == $[col-width] !require;\n      }\n      \n      .box {          \n        @v |(&)| in(::window);\n        &.bar {\n          @h |(&)| in($\"col-6\");\n        }\n        &.foo {\n          @h |(&)| in($\"col-3\");\n        }\n      }\n    </style>\n    ";
       return engine.then(function(solution) {
+        expect(Math.floor(solution["col-width"])).to.eql((400 - 16 * 7) / 8);
+        expect(Math.floor(solution["$box[width]"])).to.eql((400 - 16 * 7) / 8);
         expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 2);
         engine.id('box').click();
         return engine.then(function(solution) {
+          expect(Math.floor(solution["$box[width]"])).to.eql((400 - 16 * 7) / 8);
           expect(Math.floor(solution["$box[x]"])).to.eql((((400 - 16 * 7) / 8) + 16) * 5);
           return done();
         });

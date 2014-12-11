@@ -379,6 +379,12 @@ Selector.define
     retrieve: ->
       return @execute arguments ...
 
+    # A little hack to avoid adding & multiple times
+    continue: (result, engine, operation, continuation = '') ->
+      if (key = @key) == '&' && continuation.charAt(continuation.length - 1) == '&'
+        return continuation
+      return continuation + @key
+
   # Parent element (alias for !> *)
   '^':
     Element: (parameter, engine, operation, continuation, scope) ->
