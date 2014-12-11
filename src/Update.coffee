@@ -168,7 +168,7 @@ Update.prototype =
               operation.domain = domain
             else
               problems.splice(i, 1)
-              if problems.length == 0 && domain.MAYBE
+              if problems.length == 0 && !domain.paths
                 @splice(index, 1)
                 if index < position
                   position--
@@ -242,7 +242,7 @@ Update.prototype =
     result = @problems[to]
 
     if domain = @domains[from]
-      if !domain.MAYBE && !domain.consumed 
+      if domain.paths && !domain.consumed 
         domain.transfer(parent, @, other)
         #domain.Constraint::split(domain)
         exported = domain.export()
@@ -271,8 +271,7 @@ Update.prototype =
           if variable.domain.Solver == Solver
             (@variables ||= {})[property] = to
 
-    if other && !other.url && @engine.domains.indexOf(other) == -1
-      @engine.domains.push(other)
+    other.register()
 
     return to
 
@@ -332,19 +331,20 @@ Update.prototype =
     while (domain = @domains[++@index]) != undefined
       previous = domain
 
-
+      # Update variable lookup table 
       if @variables
         for property, variable of @variables
           if variable <= @index
             delete @variables[property]
 
+      # Use domain to solve groupped problems
       result = (@solutions ||= [])[@index] = 
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
       # Send queued commands to worker
-      if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
-        @terminate()
-        return result
+      #if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
+      #  @terminate()
+      #  return result
 
       if result && result.onerror == undefined
         if result.push
@@ -352,6 +352,9 @@ Update.prototype =
         else
           @apply(result)
           solution = @apply(result, solution || {})
+
+      if domain?.constraints?.length == 0 && @engine.domains.indexOf(domain) > -1
+        debugger
 
     @terminate()
     @index--

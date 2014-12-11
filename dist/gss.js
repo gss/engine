@@ -19917,12 +19917,6 @@ Engine = (function(_super) {
       }
     }
     this.console.end();
-    domain.setup();
-    if (domain.Solver && !domain.url) {
-      if (this.domains.indexOf(domain) === -1) {
-        this.domains.push(domain);
-      }
-    }
     return result;
   };
 
@@ -19991,6 +19985,9 @@ Engine = (function(_super) {
     }
     if (typeof problems[0] === 'string') {
       problems = [problems];
+    }
+    if (insert) {
+      update.index++;
     }
     _ref4 = this.workers;
     for (url in _ref4) {
@@ -20062,10 +20059,9 @@ Engine = (function(_super) {
       if (this.updating) {
         if (this.updating.busy.length) {
           this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
-          this.commit(e.data, this.updating, true);
+          return this.commit(e.data, this.updating, true);
         }
       }
-      debugger;
     },
     error: function(e) {
       throw new Error("" + e.message + " (" + e.filename + ":" + e.lineno + ")");
@@ -20194,7 +20190,7 @@ if (!self.window && self.onmessage !== void 0) {
         }
       }
       if (removes.length) {
-        this.broadcast(removes, this.updating, true);
+        this.broadcast(removes, void 0, true);
       }
       if (values) {
         this.assumed.merge(values);
@@ -20311,7 +20307,7 @@ Domain = (function() {
       if (!this.hasOwnProperty('values')) {
         this.values = {};
       }
-      if (this.MAYBE) {
+      if (this.Solver) {
         this.paths = {};
         return this.MAYBE = void 0;
       } else {
@@ -20328,10 +20324,10 @@ Domain = (function() {
     var commands, commited, result, transacting, _ref;
     transacting = this.transact();
     if (typeof operation === 'object') {
-      if (!operation.push) {
-        result = this.assumed.merge(operation);
-      } else {
+      if (operation instanceof Array) {
         result = this.Command(operation).solve(this, operation, continuation || '', scope || this.scope, ascender, ascending);
+      } else {
+        result = this.assumed.merge(operation);
       }
     }
     if (this.constrained || this.unconstrained) {
@@ -20581,7 +20577,7 @@ Domain = (function() {
   };
 
   Domain.prototype.apply = function(solution) {
-    var index, nullified, path, replaced, result, value, _ref;
+    var nullified, path, replaced, result, value;
     result = {};
     nullified = this.nullified;
     replaced = this.replaced;
@@ -20593,18 +20589,24 @@ Domain = (function() {
     }
     result = this.transform(result);
     this.merge(result, true);
-    if (this.constraints) {
-      if (((_ref = this.constraints) != null ? _ref.length : void 0) === 0) {
-        if ((index = this.engine.domains.indexOf(this)) > -1) {
-          this.engine.domains.splice(index, 1);
-        }
-      } else {
-        if (this.engine.domains.indexOf(this) === -1) {
-          this.engine.domains.push(this);
-        }
+    return result;
+  };
+
+  Domain.prototype.register = function(constraints) {
+    var domains, index;
+    if (constraints == null) {
+      constraints = this.constraints;
+    }
+    domains = this.engine.domains;
+    if (constraints != null ? constraints.length : void 0) {
+      if (domains.indexOf(this) === -1) {
+        return domains.push(this);
+      }
+    } else {
+      if ((index = domains.indexOf(this)) > -1) {
+        return domains.splice(index, 1);
       }
     }
-    return result;
   };
 
   Domain.prototype.remove = function() {
@@ -20659,6 +20661,7 @@ Domain = (function() {
     this.updating.perform(this);
     if (this.unconstrained) {
       this.Constraint.prototype.reset(this);
+      this.register(this.constraints);
     }
     if (this.nullified) {
       solution = {};
@@ -20708,15 +20711,18 @@ Domain = (function() {
   };
 
   Domain.prototype.transact = function() {
-    if (!(this.changes && this.hasOwnProperty('changes'))) {
+    if (!this.changes) {
       this.setup();
       return this.changes = {};
     }
   };
 
   Domain.prototype.commit = function() {
-    var changes;
+    var changes, constraints;
     if (changes = this.changes) {
+      if (constraints = this.constraints) {
+        this.register(constraints);
+      }
       this.changes = void 0;
       return changes;
     }
@@ -21607,7 +21613,7 @@ Update.prototype = {
               operation.domain = domain;
             } else {
               problems.splice(i, 1);
-              if (problems.length === 0 && domain.MAYBE) {
+              if (problems.length === 0 && !domain.paths) {
                 this.splice(index, 1);
                 if (index < position) {
                   position--;
@@ -21694,7 +21700,7 @@ Update.prototype = {
     problems = this.problems[from];
     result = this.problems[to];
     if (domain = this.domains[from]) {
-      if (!domain.MAYBE && !domain.consumed) {
+      if (domain.paths && !domain.consumed) {
         domain.transfer(parent, this, other);
         exported = domain["export"]();
         domain.consumed = true;
@@ -21728,9 +21734,7 @@ Update.prototype = {
         }
       }
     }
-    if (other && !other.url && this.engine.domains.indexOf(other) === -1) {
-      this.engine.domains.push(other);
-    }
+    other.register();
     return to;
   },
   await: function(url) {
@@ -21795,7 +21799,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, previous, property, result, variable, _ref, _ref1, _ref2;
+    var domain, previous, property, result, variable, _ref, _ref1;
     if (solution) {
       this.apply(solution);
     }
@@ -21815,10 +21819,6 @@ Update.prototype = {
         }
       }
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
-      if (((_ref1 = this.busy) != null ? _ref1.length : void 0) && this.busy.indexOf((_ref2 = this.domains[this.index + 1]) != null ? _ref2.url : void 0) === -1) {
-        this.terminate();
-        return result;
-      }
       if (result && result.onerror === void 0) {
         if (result.push) {
           this.engine.update(result);
@@ -21826,6 +21826,9 @@ Update.prototype = {
           this.apply(result);
           solution = this.apply(result, solution || {});
         }
+      }
+      if ((typeof domain !== "undefined" && domain !== null ? (_ref1 = domain.constraints) != null ? _ref1.length : void 0 : void 0) === 0 && this.engine.domains.indexOf(domain) > -1) {
+        debugger;
       }
     }
     this.terminate();

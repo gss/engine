@@ -51,6 +51,7 @@ class Domain
 
     return @
 
+  # Sub-constructor for graph wrappers
   setup: () ->
     return if @engine == @
       
@@ -58,7 +59,7 @@ class Domain
       unless @hasOwnProperty('values')
         @values      = {}
 
-      if @MAYBE
+      if @Solver
         @paths       = {}
         @MAYBE     = undefined
       else
@@ -66,26 +67,39 @@ class Domain
         @observers   = {}
         @objects     = {} if @subscribing
 
+
+  # Main method to execute any kind of operations in the domain
   solve: (operation, continuation, scope, ascender, ascending) ->
     transacting = @transact()
     if typeof operation == 'object'
-      if !operation.push
-        result = @assumed.merge operation
-      else
+      # Dispatch and solve operation
+      if operation instanceof Array
         result = @Command(operation).solve(@, operation, continuation || '', scope || @scope, ascender, ascending)
-
+      
+      # Suggested solution is dispatched through assumed domain
+      else
+        result = @assumed.merge operation
+   
     if @constrained || @unconstrained
+      # Find constraints that are independent from the graph
       commands = @Constraint::split(@)
+
+      # Apply and remove constraints
       @Constraint::reset(@)
 
+    # Perform optional step to produce solution out of commands
     unless typeof result == 'object'
       if result = @perform?.apply(@, arguments)
         result = @apply(result)
+
+    # Add separated commands back to queue
     if commands
       @update commands
 
+    # Finish process
     if transacting
       commited = @commit()
+
 
     return result || commited
 
@@ -275,15 +289,17 @@ class Domain
     result = @transform(result)
     @merge(result, true)
 
-    if @constraints
-      if @constraints?.length == 0
-        if (index = @engine.domains.indexOf(@)) > -1
-          @engine.domains.splice(index, 1)
-      else 
-        if @engine.domains.indexOf(@) == -1
-          @engine.domains.push(@)
-
     return result
+
+  register: (constraints = @constraints) ->
+    domains = @engine.domains
+    if constraints?.length
+      if domains.indexOf(@) == -1
+        domains.push(@)
+    else
+      if (index = domains.indexOf(@)) > -1
+        domains.splice(index, 1)
+
 
   # Remove watchers and registered operations by path
   remove: ->
@@ -324,6 +340,7 @@ class Domain
     # Reconfigure solver to release removed constraints
     if @unconstrained
       @Constraint::reset(@)
+      @register(@constraints)
 
     if @nullified
       solution = {}
@@ -365,13 +382,16 @@ class Domain
 
   # Set a flag to record all changed values
   transact: ->
-    unless @changes && @hasOwnProperty('changes')
+    unless @changes
       @setup()
       return @changes = {}
 
   # Unset transaction flag and return changes
   commit: ->
     if changes = @changes
+      if constraints = @constraints
+        @register(constraints)
+        
       @changes = undefined
       return changes
 

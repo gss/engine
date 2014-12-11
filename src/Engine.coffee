@@ -287,10 +287,6 @@ class Engine extends Events
       if result?.length == 1
         result = result[0]
     @console.end()
-    domain.setup()
-    if domain.Solver && !domain.url
-      if @domains.indexOf(domain) == -1
-        @domains.push(domain)
 
     return result
 
@@ -338,6 +334,8 @@ class Engine extends Events
         update.push(others, other)
     if typeof problems[0] == 'string'
       problems = [problems]
+    if insert
+      update.index++
     for url, worker of @workers
       working = problems.filter (command) ->
         command[0] != 'remove' || worker.paths?[command[1]]
@@ -401,7 +399,6 @@ class Engine extends Events
         if @updating.busy.length
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
           @commit e.data, @updating, true
-      debugger
 
     # Handle error from worker
     error: (e) ->
@@ -504,7 +501,7 @@ if !self.window && self.onmessage != undefined
               commands.push(command)
 
       if removes.length
-        @broadcast(removes, @updating, true)
+        @broadcast(removes, undefined, true)
       if values
         @assumed.merge(values)
       if commands.length
