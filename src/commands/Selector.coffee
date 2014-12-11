@@ -197,9 +197,10 @@ Selector.Element = Selector.extend
 
 # Optimized element reference outside of selector context
 Selector.Reference = Selector.Element.extend
+  excludes: ['Selector', 'Iterator']
 
   condition: (engine, operation) ->
-    return !(operation.parent.command instanceof Selector)
+    return @excludes.indexOf(operation.parent.command.type) == -1
 
   # Optimize methods that provide Element signature 
   kind: 'Element'
@@ -377,7 +378,7 @@ Selector.define
   # Parent element (alias for !> *)
   '^':
     Element: (parameter, engine, operation, continuation, scope) ->
-      return engine.queries.getParentScope(scope, continuation)
+      return engine.queries.getParentScope(scope, continuation, parameter)
 
 
   # Current engine scope (defaults to document)
@@ -394,7 +395,11 @@ Selector.define
     stringy: true
   
   'virtual':
+    localizers: ['Selector', 'Iterator']
+
     Virtual: (node, value, engine, operation, continuation, scope) ->
+      if !node && @localizers.indexOf(operation.parent.command.type) > -1
+        node = scope
       prefix = engine.queries.getScope(node, continuation) || '$'
       return prefix + '"' + value + '"'
 

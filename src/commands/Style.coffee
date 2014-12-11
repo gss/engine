@@ -137,7 +137,7 @@ class Shorthand
               for index in [keys.indexOf(key) - 1 ... 0] by -1
                 if (k = keys[index]) != previous
                   break if @hasOwnProperty(k)
-                  if types[index] == @styles.engine.Type.Length
+                  if types[index] == @styles.Type.Length
                     expression = @toExpressionString(k, @[k])
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '')
                     previous = k

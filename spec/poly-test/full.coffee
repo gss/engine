@@ -8,7 +8,7 @@ DEMOS =
 
     </section>
 
-    <style type="text/gss">
+    <style type="text/gss" scoped>
       [md] == 72 !require;
       [md-sub] == 8;
       $[width] == $[intrinsic-width];
@@ -17,12 +17,12 @@ DEMOS =
       .demo {
         @if $[width] < 500 {
           .title {
-            margin-top: == [md-sub];
+            &margin-top == [md-sub];
           }
         } @else {
           .title {
-            margin-top: == [md];
-            padding-top: == ([md-sub] * 6) - 8;
+            &margin-top == [md];
+            &padding-top == ([md-sub] * 6) - 8;
           }
         }
 
@@ -140,7 +140,7 @@ DEMOS =
         top: 5px;
       }
     </style>
-    <style type="text/gss">
+    <style type="text/gss" scoped>
       // plural selectors can be used as singular, a la jQ
       [left-margin] == (main)[right];
 
@@ -192,11 +192,11 @@ DEMOS =
       // Chains
       ul li {
         // justify by using variable
-        ::[width] == [li-width];
+        ::[width] == $[li-width];
 
-        (&:previous)[right] == &[left];
-        (&:last)[right] == $[intrinsic-width] - 16;
-        (&:first)[left] == 0;
+        :previous[right] == &[left];
+        :last[right] == $[intrinsic-width] - 16;
+        :first[left] == 0;
       }
     </style>
 
@@ -296,7 +296,7 @@ DEMOS =
         box-shadow: 0 5px 8px hsla(0,0%,0%,.3);  
       }
     </style>
-<style type="text/gss">
+<style type="text/gss" scoped>
 /* vars */
 [gap] == 20 !required;
 [flex-gap] >= [gap] * 2 !required;
@@ -311,35 +311,35 @@ $[height] == $[intrinsic-height] !require;
 
 /* elements */
 #profile-card {      
-  width: == $[width] - 480 !required;            
-  height: == $[height] - 350 !required;
-  center-x: == $[center-x];
-  center-y: == $[center-y];        
-  border-radius: == [outer-radius];
+  &width == $[width] - 480;            
+  &width == $[height] - 350;
+  &[center-x] == $[center-x];
+  &[center-y] == $[center-y];        
+  &border-radius == [outer-radius];
 }
 
 #avatar {
-  height: == 160 !required;
-  width: == ::[height];
-  border-radius: == ::[height] / 2;        
+  &height == 160 !required;
+  &width == ::[height];
+  &border-radius == ::[height] / 2;        
 }
 
 #name {
-  height: == ::[intrinsic-height] !required;
-  width: == ::[intrinsic-width] !required;
+  &height == ::[intrinsic-height] !required;
+  &width == ::[intrinsic-width] !required;
 }
 
 #cover {
-  border-radius: == [radius];
+  &border-radius == [radius];
 }
 
 button {
-  width: == ::[intrinsic-width] !required;
-  height: == ::[intrinsic-height] !required;        
-  padding: == [gap];
-  padding-top: == [gap] / 2;
-  padding-bottom: == [gap] / 2;
-  border-radius: == [radius];
+  &width == ::[intrinsic-width] !required;
+  &height == ::[intrinsic-height] !required;        
+  &padding == [gap];
+  &padding-top == [gap] / 2;
+  &padding-bottom == [gap] / 2;
+  &border-radius == [radius];
 }
 
 
@@ -357,7 +357,7 @@ button {
      |
     in(#cover)
     gap([gap]) outer-gap([flex-gap]) {
-      center-x: == ($ #cover)[center-x];
+      &[center-x] == ($ #cover)[center-x];
   }
 
   @h |-10-(#cover)-10-|
@@ -379,7 +379,7 @@ button {
     in(#profile-card)
     gap([gap])
     !strong {
-      &[top] == &:next[top];
+      :next[top] == &top;
     }
 }
 
@@ -403,7 +403,7 @@ button {
     in(#cover)
     gap([gap])
     outer-gap([flex-gap]) !strong {
-      center-x: == ($ #profile-card)[center-x];
+      &[center-x] == ($ #profile-card)[center-x];
   }
 
   @h |-10-(#cover)-10-| in(#profile-card) !strong;
@@ -761,9 +761,9 @@ describe 'Full page tests', ->
             GSS.console.log(JSON.stringify solution)
 
 
-            roughAssert(solution['$follow[y]'], 540)
-            roughAssert(solution['$follow[x]'], 329.5)
-            roughAssert(solution['flex-gap'], 95)
+            roughAssert(solution['$follow[y]'], 659)
+            roughAssert(solution['$follow[x]'], 272)
+            roughAssert(solution['flex-gap'], 40)
         
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
@@ -776,9 +776,8 @@ describe 'Full page tests', ->
  
               engine.then (solution) ->
                 GSS.console.log(solution)
-                roughAssert(solution['flex-gap'], 95)
-                roughAssert(solution['$follow[y]'], 540)
-                roughAssert(solution['$follow[x]'], 329.5)
+                roughAssert(solution['$follow[y]'], 659)
+                roughAssert(solution['$follow[x]'], 272)
  
                 container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
                 

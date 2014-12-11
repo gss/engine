@@ -121,11 +121,16 @@ Abstract::Variable.Getter = Abstract::Variable.extend {
 },
   'get': (object, property, engine, operation, continuation, scope) ->
     if engine.queries
-      object = engine.queries.getScope(object, continuation)
+      prefix = engine.queries.getScope(object, continuation)
+
     if prop = engine.properties[property]
       unless prop.matcher
+        if (object ||= scope).nodeType == 9
+          object = object.body
         return prop.call(engine, object, continuation)
-    return ['get', engine.getPath(object, property)]
+    if property.indexOf('intrinsic') > -1
+      prefix ||= engine.scope
+    return ['get', engine.getPath(prefix, property)]
   
 # Proxy math that passes basic expressions along
 Abstract::Variable.Expression = Variable.Expression.extend {},

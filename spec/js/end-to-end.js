@@ -401,7 +401,7 @@ describe('End - to - End', function() {
       });
     });
     describe('css binding', function() {
-      describe('simple', function() {
+      return describe('simple', function() {
         describe('numerical properties', function() {
           it('should compute value when there is no regular value set', function(done) {
             engine.once('solve', function(e) {
@@ -492,23 +492,6 @@ describe('End - to - End', function() {
             };
             engine.addEventListener('solve', listener);
             return container.innerHTML = "<style>\n  #a1 {\n    border: 2px solid #000;\n  }\n</style>\n<style type=\"text/gss\"> \n  [multiplier] == 2;\n  #b1[border-left-width] == [multiplier] * (1 + #a1[intrinsic-border-top-width]);\n</style>\n<div class=\"a\" id=\"a1\"></div>\n<div class=\"b\" id=\"b1\"></div>";
-          });
-        });
-      });
-      return xdescribe('of dimensions', function() {
-        return describe('with units other than pixels', function() {
-          return it('should use intrinsic value when there is no regular value set', function(done) {
-            container.innerHTML = "<style type=\"text/gss\"> \n  #b1[width] == #a1[width];   \n  #a2[width] == #b2[width];  \n</style>\n<div class=\"a\" id=\"a1\" style=\"width: 15px; height: 10px\"></div>\n<div class=\"a\" id=\"a2\" style=\"width: 20px; height: 25px\"></div>\n\n<div class=\"b\" id=\"b1\"></div>\n<div class=\"b\" id=\"b2\"></div>";
-            engine;
-            return engine.once('solve', function(e) {
-              expect(stringify(engine.values)).to.eql(stringify({
-                "$a1[width]": 15,
-                "$b1[width]": 15,
-                "$a2[width]": 20,
-                "$b2[width]": 20
-              }));
-              return done();
-            });
           });
         });
       });
@@ -1253,7 +1236,7 @@ describe('End - to - End', function() {
       });
       return it('in mixed stylesheets', function(done) {
         engine = GSS(container);
-        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" id=\"gss1\">\n  [b] == 10; // &\n\n  ^\"mast\" {\n    & {\n      x: == [b]; // ^^\n    }\n    d: == 100; // &\n    bottom: == [d]; // &\n  } \n</style>\n<style scoped type=\"text/gss\" id=\"gss2\">\n  [e] == 1; // $\n  #ship {\n    [c] == 20; // &\n    \"mast\"[top] == 0; // $\n    \"mast\"[right] == [c]; // $, &\n    &\"mast\"[z] == [e]; // &\n  }\n  #ship[height] == \"mast\"[height]; // $\n</style>";
+        container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" id=\"gss1\">\n  [b] == 10; // &\n\n  ^ {\n    \"mast\" {\n      x: == [b]; // ^^\n    }\n  }\n  ^\"mast\" {\n    d: == 100; // &\n    bottom: == [d]; // &\n  } \n</style>\n<style scoped type=\"text/gss\" id=\"gss2\">\n  [e] == 1; // $\n  #ship {\n    [c] == 20; // &\n    \"mast\"[top] == 0; // $\n    \"mast\"[right] == [c]; // $, &\n    &\"mast\"[z] == [e]; // &\n  }\n  #ship[height] == \"mast\"[height]; // $\n</style>";
         return engine.once('solve', function(e) {
           expect(engine.values).to.eql({
             '"mast"[height]': 100,

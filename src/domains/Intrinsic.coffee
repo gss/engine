@@ -105,6 +105,10 @@ class Intrinsic extends Numeric
       return @changes
     return
 
+  everything: {
+    'intrinsic-width', 'intrinsic-height', 'intrinsic-x', 'intrinsic-y'
+  }
+
   get: (object, property, continuation) ->
     path = @getPath(object, property)
 

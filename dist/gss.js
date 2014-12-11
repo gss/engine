@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-10) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-11) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -20288,11 +20288,9 @@ Domain = (function() {
     this.signatures = new this.Signatures(this);
     if (this.Properties) {
       this.Property.compile(this.Properties.prototype, this);
-      this.Properties.prototype.engine = this.Properties.prototype;
       Properties = this.Properties;
     }
     this.properties = new (Properties || Object);
-    this.properties.engine = this;
     if (this.url && this.getWorkerURL) {
       if (this.url && (this.url = typeof this.getWorkerURL === "function" ? this.getWorkerURL(this.url) : void 0)) {
         if (engine !== this) {
@@ -22172,6 +22170,7 @@ Condition = (function(_super) {
           engine.updating.previous = collections;
         }
       }
+      debugger;
       index = ascending ^ this.inverted && 2 || 3;
       engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (index === 2 && 'if' || 'else') + this.DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation);
       if (branch = operation.parent[index]) {
@@ -22933,8 +22932,9 @@ Selector.Element = Selector.extend({
 });
 
 Selector.Reference = Selector.Element.extend({
+  excludes: ['Selector', 'Iterator'],
   condition: function(engine, operation) {
-    return !(operation.parent.command instanceof Selector);
+    return this.excludes.indexOf(operation.parent.command.type) === -1;
   },
   kind: 'Element',
   prefix: '',
@@ -23112,7 +23112,7 @@ Selector.define({
   },
   '^': {
     Element: function(parameter, engine, operation, continuation, scope) {
-      return engine.queries.getParentScope(scope, continuation);
+      return engine.queries.getParentScope(scope, continuation, parameter);
     }
   },
   '$': {
@@ -23127,8 +23127,12 @@ Selector.define({
     stringy: true
   },
   'virtual': {
+    localizers: ['Selector', 'Iterator'],
     Virtual: function(node, value, engine, operation, continuation, scope) {
       var prefix;
+      if (!node && this.localizers.indexOf(operation.parent.command.type) > -1) {
+        node = scope;
+      }
       prefix = engine.queries.getScope(node, continuation) || '$';
       return prefix + '"' + value + '"';
     },
@@ -23630,7 +23634,7 @@ Shorthand = (function() {
                   if (this.hasOwnProperty(k)) {
                     break;
                   }
-                  if (types[index] === this.styles.engine.Type.Length) {
+                  if (types[index] === this.styles.Type.Length) {
                     expression = this.toExpressionString(k, this[k]);
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
                     previous = k;
@@ -25003,16 +25007,22 @@ Abstract.prototype.Variable.Getter = Abstract.prototype.Variable.extend({
   ]
 }, {
   'get': function(object, property, engine, operation, continuation, scope) {
-    var prop;
+    var prefix, prop;
     if (engine.queries) {
-      object = engine.queries.getScope(object, continuation);
+      prefix = engine.queries.getScope(object, continuation);
     }
     if (prop = engine.properties[property]) {
       if (!prop.matcher) {
+        if ((object || (object = scope)).nodeType === 9) {
+          object = object.body;
+        }
         return prop.call(engine, object, continuation);
       }
     }
-    return ['get', engine.getPath(object, property)];
+    if (property.indexOf('intrinsic') > -1) {
+      prefix || (prefix = engine.scope);
+    }
+    return ['get', engine.getPath(prefix, property)];
   }
 });
 
@@ -25253,6 +25263,13 @@ Intrinsic = (function(_super) {
       this.console.row('Intrinsic', this.changes);
       return this.changes;
     }
+  };
+
+  Intrinsic.prototype.everything = {
+    'intrinsic-width': 'intrinsic-width',
+    'intrinsic-height': 'intrinsic-height',
+    'intrinsic-x': 'intrinsic-x',
+    'intrinsic-y': 'intrinsic-y'
   };
 
   Intrinsic.prototype.get = function(object, property, continuation) {
@@ -28399,6 +28416,7 @@ Axioms = (function() {
       return ['+', ['get', this.getPath(id, 'x')], ['/', ['get', this.getPath(id, 'width')], 2]];
     },
     y: function(scope, path) {
+      debugger;
       var id;
       id = this.identify(scope);
       return ['+', ['get', this.getPath(id, 'y')], ['/', ['get', this.getPath(id, 'height')], 2]];

@@ -40,10 +40,8 @@ class Domain
 
     if @Properties
       @Property.compile @Properties::, @
-      @Properties::engine = @Properties::
       Properties = @Properties
     @properties  = new (Properties || Object)
-    @properties.engine = @
 
     if @url && @getWorkerURL
       if @url && (@url = @getWorkerURL?(@url))

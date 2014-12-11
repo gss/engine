@@ -49,7 +49,7 @@ class Condition extends Command
           engine.updating.collections = {}
           engine.updating.previous = collections
 
-
+      debugger
 
       index = ascending ^ @inverted && 2 || 3
       engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + @DESCEND, operation.parent[index], 'font-weight: normal; color: #999', continuation
