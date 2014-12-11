@@ -20837,15 +20837,15 @@ Command = (function() {
       if (!(command = match.instance)) {
         command = new match(operation, this);
       }
-      if (!parent) {
-        command = Command.descend(command, this, operation);
-      }
       if (command.key != null) {
         command.push(operation);
       } else {
         (command.definition || match).instance = command;
       }
       operation.command = command;
+      if (!parent) {
+        command = Command.descend(command, this, operation);
+      }
     }
     return command;
   }
@@ -22203,6 +22203,24 @@ Condition = (function(_super) {
 
 })(Command);
 
+Condition.Global = Condition.extend({
+  condition: function(engine, operation, command) {
+    debugger;
+    var argument, _i, _len;
+    if (operation[0] === 'get' && operation[0].length === 2) {
+      return false;
+    }
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      argument = operation[_i];
+      if (argument && argument.push && this.condition(engine, argument) === false) {
+        return false;
+      }
+    }
+    return true;
+  },
+  global: true
+});
+
 Condition.define('if', {});
 
 Condition.define('unless', {
@@ -23098,11 +23116,16 @@ Selector.define({
     after: function(args, result) {
       return result;
     },
+    serialize: function(operation) {
+      var _ref;
+      if ((_ref = Selector[operation.parent[0]]) != null ? _ref.prototype.Qualifier : void 0) {
+        return '&';
+      } else {
+        return '';
+      }
+    },
     log: function() {},
     hidden: true,
-    serialize: function() {
-      return '';
-    },
     Element: function(parameter, engine, operation, continuation, scope) {
       return scope;
     },
@@ -24140,12 +24163,11 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.getSelectors = function(operation) {
-    var bit, bits, cmd, custom, groups, index, parent, paths, result, results, selectors, update, wrapped, _i, _j, _k, _len, _len1, _len2, _ref1, _ref2,
-      _this = this;
+    var custom, index, parent, query, result, results, selector, selectors, update, wrapped, _i, _j, _k, _len, _len1, _len2, _ref1;
     parent = operation;
     results = wrapped = custom = void 0;
     while (parent) {
-      if (((_ref1 = parent.command) != null ? _ref1.type : void 0) === 'Condition') {
+      if (parent.command.type === 'Condition' && !parent.global) {
         if (results) {
           for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
             result = results[index];
@@ -24155,50 +24177,63 @@ Stylesheet = (function(_super) {
             results[index] = result.substring(0, 11) + parent.command.key + this.prototype.DESCEND + result.substring(11);
           }
         }
-      } else if (parent[0] === 'rule') {
-        cmd = parent[1].command;
-        selectors = cmd.path;
-        if (parent[1][0] === ',') {
-          paths = parent[1].slice(1).map(function(item) {
-            return item.command.selector || item.command.path;
-          });
-          groups = ((_ref2 = cmd.selector) != null ? _ref2.split(',') : void 0) || [];
-        } else {
-          paths = [selectors];
-          groups = [cmd.selector || (cmd.key === cmd.path && cmd.key)];
-        }
+      } else if (parent.command.type === 'Iterator') {
+        query = parent[1];
+        selectors = [];
         if (results != null ? results.length : void 0) {
-          bits = selectors.split(',');
           update = [];
-          for (_j = 0, _len1 = results.length; _j < _len1; _j++) {
-            result = results[_j];
-            if (result.substring(0, 11) === '[matches~="') {
-              update.push(result.substring(0, 11) + selectors + this.prototype.DESCEND + result.substring(11));
+          for (index = _j = 0, _len1 = results.length; _j < _len1; index = ++_j) {
+            result = results[index];
+            if (result.substring(0, 12) === ' [matches~="') {
+              update.push(' [matches~="' + query.command.path + this.prototype.DESCEND + result.substring(12));
             } else {
-              for (index = _k = 0, _len2 = bits.length; _k < _len2; index = ++_k) {
-                bit = bits[index];
-                if (groups[index] !== bit) {
-                  update.push(this.getCustomSelector(selectors) + ' ' + result);
-                } else {
-                  update.push(bit + ' ' + result);
-                }
+              debugger;
+              _ref1 = this.getRuleSelectors(parent[1]);
+              for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
+                selector = _ref1[_k];
+                update.push(selector + result);
               }
             }
           }
           results = update;
         } else {
-          results = selectors.split(',').map(function(path, index) {
-            if (path !== groups[index]) {
-              return _this.getCustomSelector(selectors);
-            } else {
-              return path;
-            }
-          });
+          results = this.getRuleSelectors(parent[1], true);
         }
       }
       parent = parent.parent;
     }
     return results;
+  };
+
+  Stylesheet.getRuleSelectors = function(operation, nested) {
+    var index, _i, _ref1, _results;
+    if (operation[0] === ',') {
+      _results = [];
+      for (index = _i = 1, _ref1 = operation.length; _i < _ref1; index = _i += 1) {
+        _results.push(this.getRuleSelector(operation[index], operation.command));
+      }
+      return _results;
+    } else {
+      return [this.getRuleSelector(operation)];
+    }
+  };
+
+  Stylesheet.getRuleSelector = function(operation, parent) {
+    var command, key, path;
+    command = operation.command;
+    path = command.path;
+    if (path.charAt(0) === '&') {
+      if ((key = path.substring(1)) === command.key) {
+        return key;
+      } else {
+        return this.getCustomSelector((parent || command).path);
+      }
+    }
+    if (command.key === path) {
+      return ' ' + path;
+    } else {
+      return ' ' + this.getCustomSelector((parent || command).path);
+    }
   };
 
   Stylesheet.getCustomSelector = function(selector) {

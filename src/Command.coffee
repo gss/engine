@@ -6,13 +6,13 @@ class Command
       match = Command.match(@, operation, parent, index)
       unless command = match.instance
         command = new match(operation, @)
-      unless parent
-        command = Command.descend(command, @, operation)
       if command.key?
         command.push(operation)
       else
         (command.definition || match).instance = command
       operation.command = command
+      unless parent
+        command = Command.descend(command, @, operation)
     
     return command
 

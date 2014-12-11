@@ -218,7 +218,7 @@ Selector.Reference = Selector.Element.extend
     return @execute args ...
 
   reference: true
-  
+
 Selector.define
   # Live collections
 
@@ -361,13 +361,17 @@ Selector.define
     after: (args, result) ->
       return result
 
+    serialize: (operation) ->
+      # A little cheat code to serialize `&.filter` properly
+      if Selector[operation.parent[0]]?::Qualifier
+        return '&'
+      else
+        return ''
+
     log: ->
 
     # Dont leave trace in a continuation path
     hidden: true
-
-    serialize: ->
-      return ''
 
     Element: (parameter, engine, operation, continuation, scope) ->
       return scope

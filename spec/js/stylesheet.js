@@ -26,7 +26,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -49,7 +49,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -70,7 +70,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -90,7 +90,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -113,7 +113,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -136,7 +136,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -144,9 +144,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -159,15 +159,15 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['[matches~=".outer' + GSS.Continuation.DESCEND + '#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '#box2!+.box');
+            })()).to.eql(['[matches~=".outer' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box"] { width: 1px; }']);
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql;
             return done();
           });
@@ -180,7 +180,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -188,7 +188,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(["#box1.box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box1 #box1.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box1 #box1' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -203,7 +203,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -211,9 +211,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box, .outer .zox { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -226,17 +226,17 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.outer .box, .outer.zox, [matches~=".outer' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
+            })()).to.eql(['.outer .box, .outer.zox, [matches~=".outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -251,7 +251,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -259,9 +259,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box, .zouter .box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -274,15 +274,15 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['[matches~=".outer,.zouter' + GSS.Continuation.DESCEND + '#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '#box2!+.box');
+            })()).to.eql(['[matches~=".outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box"] { width: 1px; }']);
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -297,7 +297,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -305,7 +305,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(["#box1.box, .outer.box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box1,.outer #box1,.outer.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box1,.outer #box1,.outer' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -320,7 +320,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -328,9 +328,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box, .zouter .box, .outer .zox, .zouter .zox { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -343,17 +343,17 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
+            })()).to.eql(['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -368,7 +368,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -376,9 +376,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.Continuation.DESCEND + '.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.Continuation.DESCEND + '.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -391,15 +391,15 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['[matches~=".outer,div!+div' + GSS.Continuation.DESCEND + '#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.Continuation.DESCEND + '#box2!+.box');
+            })()).to.eql(['[matches~=".outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box"] { width: 1px; }']);
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -414,7 +414,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -422,9 +422,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['#box2.box, [matches~="#box2,div!+div"].box { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box2,div!+div #box2,div!+div.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box2,div!+div #box2,div!+div' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' #box2,div!+div #box2,div!+div.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' #box2,div!+div #box2,div!+div' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -437,7 +437,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -445,9 +445,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer .zox, [matches~=".outer,div!+div"] .zox { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.Continuation.DESCEND + '.box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.Continuation.DESCEND + '.box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -460,17 +460,17 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.sheets.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
                 _results.push(rule.cssText);
               }
               return _results;
-            })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
+            })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
+            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.Continuation.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });

@@ -17,6 +17,8 @@ class Assignment.Unsafe extends Assignment
     value:    ['Any']
   ]
 
+  # Register assignment within parent rule 
+  # by its auto-incremented property local to operation list
   advices: [
     (engine, operation, command) ->
       parent = operation

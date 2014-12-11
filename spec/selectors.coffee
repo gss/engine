@@ -16,6 +16,8 @@ describe 'Selectors', ->
     it 'should have absolute and relative path set for each command', ->
       expect(engine.document.Command(['tag', 'div']).path).to.eql('div')
       expect(engine.document.Command(['tag', 'h1']).key).to.eql('h1')
+      expect(engine.document.Command(['tag', ['&'], 'h1']).path).to.eql('&h1')
+      
       expect(engine.document.Command(['.', ['tag', 'p'], 'active']).path).to.eql('p.active')
       expect(engine.document.Command(['.', ['tag', 'p'], 'active']).key).to.eql('.active')
       

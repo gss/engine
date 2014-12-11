@@ -241,7 +241,7 @@ class Stylesheet extends Command
     while parent
 
       # Append condition id to path
-      if parent.command?.type == 'Condition'
+      if parent.command.type == 'Condition' && !parent.global
         if results
           for result, index in results
             if result.substring(0, 11) != '[matches~="'
@@ -249,47 +249,54 @@ class Stylesheet extends Command
             results[index] = result.substring(0, 11) + parent.command.key + @prototype.DESCEND + result.substring(11)
       
       # Add rule selector to path
-      else if parent[0] == 'rule'
-        cmd = parent[1].command
-        selectors = cmd.path
+      else if parent.command.type == 'Iterator'
+        query = parent[1]
 
-        if parent[1][0] == ','
-          paths = parent[1].slice(1).map (item) -> 
-            return item.command.selector || item.command.path
-          groups = cmd.selector?.split(',') || []
-        else
-          paths = [selectors]
-          groups = [cmd.selector || (cmd.key == cmd.path && cmd.key)]
-
+        selectors = []
         # Prepend selectors with selectors of a parent rule
         if results?.length
-          bits = selectors.split(',')
-
           update = []
-          for result in results
-            if result.substring(0, 11) == '[matches~="'
-              update.push result.substring(0, 11) + selectors + @prototype.DESCEND + result.substring(11)
-            else
-              for bit, index in bits
-                if groups[index] != bit
-                  update.push @getCustomSelector(selectors) + ' ' + result
-                else 
-                  update.push bit + ' ' + result
 
+          for result, index in results
+            if result.substring(0, 12) == ' [matches~="'
+              update.push ' [matches~="' + query.command.path + @prototype.DESCEND + result.substring(12)
+            else
+              debugger
+              for selector in @getRuleSelectors(parent[1])
+                update.push selector + result
           results = update
-        # Return all selectors
+        # Wrap custom selectors
         else 
+          results = @getRuleSelectors(parent[1], true)
 
-          results = selectors.split(',').map (path, index) =>
-            if path != groups[index]
-              @getCustomSelector(selectors)
-            else
-              path
+
       parent = parent.parent
 
-    #for result, index in results
-    #  results[index] = results[index].replace(@CleanupSelectorRegExp, '')
     return results
+
+  @getRuleSelectors: (operation, nested) ->
+    if operation[0] == ','
+      #if operation.command.selector || nested
+      for index in [1 ... operation.length] by 1
+        @getRuleSelector(operation[index], operation.command)
+      #else
+      #  return [@getCustomSelector(operation.command.path)]
+    else
+      return [@getRuleSelector(operation)]
+
+  @getRuleSelector: (operation, parent) ->
+    command = operation.command
+    path = command.path
+    if path.charAt(0) == '&'
+      if (key = path.substring(1)) == command.key
+        return key
+      else
+        return @getCustomSelector((parent || command).path)
+
+    if command.key == path
+      return ' ' + path
+    else
+      return ' ' + @getCustomSelector((parent || command).path)
 
   @getCustomSelector: (selector) ->
     return '[matches~="' + selector.replace(/\s+/g, @prototype.DESCEND) + '"]'
@@ -299,7 +306,6 @@ class Stylesheet extends Command
     selector = selector.
       replace(@CanonicalizeSelectorRegExp, ' ').
       replace(/\s+/g, @prototype.DESCEND)#.
-      #replace(@engine.Operation.CleanupSelectorRegExp, '')
     return selector
 
   @match: (node, continuation) ->

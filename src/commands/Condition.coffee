@@ -74,7 +74,20 @@ class Condition extends Command
       if continuation?
         @update(engine.document || engine.abstract, operation.parent[1], continuation, scope, undefined, result)
       return true
-      
+
+Condition.Global = Condition.extend
+
+  condition: (engine, operation, command) ->
+    debugger
+    if operation[0] == 'get' && operation[0].length == 2
+      return false
+    for argument in operation
+      if argument && argument.push && @condition(engine, argument) == false
+        return false
+    return true
+
+  global: true
+
 Condition.define 'if', {}
 Condition.define 'unless', {
   inverted: true

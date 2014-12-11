@@ -1758,6 +1758,10 @@ describe('End - to - End', function() {
           expect(window.getComputedStyle(engine.id("box2"), null).getPropertyValue("margin-top")).to.equal("0px");
           expect(window.getComputedStyle(engine.id("box1"), null).getPropertyValue("padding-top")).to.equal("1px");
           expect(window.getComputedStyle(engine.id("box2"), null).getPropertyValue("padding-top")).to.equal("1px");
+          expect(engine.id("box1").style.paddingTop).to.eql('');
+          expect(engine.id("box2").style.paddingTop).to.eql('');
+          expect(engine.id("box1").style.marginTop).to.eql('');
+          expect(engine.id("box2").style.marginTop).to.eql('');
           expect(engine.id("box1").style.zIndex).to.eql('1');
           expect(engine.id("box2").style.zIndex).to.eql('2');
           return done();
