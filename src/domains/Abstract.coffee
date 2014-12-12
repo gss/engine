@@ -1,29 +1,31 @@
 # Find, produce and observe variables
-Domain     = require('../Domain')
-Command    = require('../Command')
-
-Variable   = require('../commands/Variable')
-Constraint = require('../commands/Constraint')
-Assignment = require('../commands/Assignment')
-Condition  = require('../commands/Condition')
-Iterator   = require('../commands/Iterator')
-Call       = require('../commands/Call')
+Domain      = require('../Domain')
+Command     = require('../Command')
+   
+Variable    = require('../Variable')
+Constraint  = require('../Constraint')
 
 class Abstract extends Domain
   url: undefined
   helps: true
 
-  Properties:  require('../properties/Axioms')  
+  Iterator:   require('../Iterator')
+  Condition:  require('../Condition')
+  Query:      require('../Query')
 
-  constructor: ->
-    if @running
-      @compile()
-    super
+  Properties: require('../properties/Axioms')  
 
-  @condition: ->
-    !@scope
+  events:
+    commit: ->
+      @Query::commit(@)
+      @Query::repair(@)
 
-Abstract::Remove = Call.Unsafe.extend {
+    switch: ->
+      @Query::repair(@)
+
+Abstract::Remove = Command.extend {
+  signature: false
+
   extras: 1
 },
   remove: (args..., engine)->
@@ -90,12 +92,6 @@ Clause = Top.extend
 # Register subclasses to be dispatched by condition
 Abstract::Default::advices = [Clause, Top]
 
-# Asynchronous block
-Abstract::Iterator = Iterator
-
-# Conditional blocks
-Abstract::Condition = Condition
-
 # Array of commands, stops command propagation
 Abstract::List = Command.List
 
@@ -109,7 +105,7 @@ Abstract::Variable = Variable.extend {
     if engine.queries
       if scope == engine.scope
         scope = undefined
-      object = engine.queries.getScope(scope, continuation)
+      object = engine.Query::getScope(engine, scope, continuation)
     return ['get', engine.getPath(object, property)]
     
 # Scoped variable
@@ -121,7 +117,7 @@ Abstract::Variable.Getter = Abstract::Variable.extend {
 },
   'get': (object, property, engine, operation, continuation, scope) ->
     if engine.queries
-      prefix = engine.queries.getScope(object, continuation)
+      prefix = engine.Query::getScope(engine, object, continuation)
 
     if prop = engine.properties[property]
       unless prop.matcher
@@ -148,12 +144,43 @@ Abstract::Variable.Expression = Variable.Expression.extend {},
   
   
 # Constant definition
-Abstract::Assignment = Assignment.extend {},
+Abstract::Assignment = Command.extend {
+  type: 'Assignment'
+  
+  signature: [
+    [object:   ['Query', 'Selector']]
+    property: ['String']
+    value:    ['Variable']
+  ]
+},
   '=': (object, name, value, engine) ->
     engine.assumed.set(object, name, value)
 
 # Style assignment
-Abstract::Assignment.Unsafe = Assignment.Unsafe.extend {},
+Abstract::Assignment.Style = Abstract::Assignment.extend {
+  signature: [
+    [object:   ['Query', 'Selector']]
+    property: ['String']
+    value:    ['Any']
+  ]
+
+  # Register assignment within parent rule 
+  # by its auto-incremented property local to operation list
+  advices: [
+    (engine, operation, command) ->
+      parent = operation
+      rule = undefined
+      while parent.parent
+        if !rule && parent[0] == 'rule'
+          rule = parent
+        parent = parent.parent
+
+      operation.index = parent.rules = (parent.rules || 0) + 1
+      if rule
+        (rule.properties ||= []).push(operation.index)
+      return
+  ]
+},
   'set': (object, property, value, engine, operation, continuation, scope) ->
 
     if engine.intrinsic

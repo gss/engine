@@ -1,5 +1,5 @@
 Parser = require('ccss-compiler')
-Command = require('../Command')
+Command = require('./Command')
 
 class Stylesheet extends Command
   type: 'Stylesheet'
@@ -46,7 +46,7 @@ class Stylesheet extends Command
 
 
     if stylesheet.operations
-      engine.queries.clean(@prototype.delimit(stylesheet.continuation))
+      engine.Query::clean(engine, @prototype.delimit(stylesheet.continuation))
       if (old = engine.stylesheets[stylesheet.continuation]) != stylesheet
         engine.stylesheets.splice(engine.stylesheets.indexOf(old), 1)
     else
@@ -59,7 +59,7 @@ class Stylesheet extends Command
 
     if stylesheets.indexOf(stylesheet) == -1
       for el, index in stylesheets
-        break unless engine.queries.comparePosition(el, stylesheet, operation, operation)
+        break unless engine.Query::comparePosition(el, stylesheet, operation, operation)
       stylesheets.splice index, 0, stylesheet
     engine.stylesheets[stylesheet.continuation] = stylesheet
     stylesheet.dirty = true
@@ -95,7 +95,7 @@ class Stylesheet extends Command
 
   @compile: (engine) ->
     @CanonicalizeSelectorRegExp = new RegExp(
-      "[$][a-z0-9]+[" + engine.queries.DESCEND + "]\s*", "gi"
+      "[$][a-z0-9]+[" + @prototype.DESCEND + "]\s*", "gi"
     )
     
     engine.engine.solve 'Document', 'stylesheets', @operations

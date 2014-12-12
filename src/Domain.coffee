@@ -32,11 +32,11 @@ class Domain
     @displayName  = name   if name
     @url          = url    if url
     @merge(values)         if values
+    @signatures = {}
 
     if @events != @engine.events
       @addListeners(@events)
 
-    @signatures   = new @Signatures(@)
 
     if @Properties
       @Property.compile @Properties::, @

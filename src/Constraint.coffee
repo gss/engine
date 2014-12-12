@@ -1,4 +1,4 @@
-Command = require('../Command')
+Command = require('./Command')
 
 Constraint = Command.extend
   type: 'Constraint'

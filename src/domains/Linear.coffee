@@ -1,9 +1,7 @@
 Domain     = require('../Domain')
-Variable   = require('../commands/Variable')
-Constraint = require('../commands/Constraint')
-Block      = require('../commands/Block')
-Call       = require('../commands/Call')
-
+Command    = require('../Command')
+Variable   = require('../Variable')
+Constraint = require('../Constraint')
 
 class Linear extends Domain
   priority: 0
@@ -146,12 +144,7 @@ Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
     return c.divide(left, right)
 
 # Handle constraints wrapped into meta constructs provided by Abstract
-Linear::Block = Block.extend()
-Linear::Block.Meta = Block.Meta.extend {
-  signature: [
-    body: ['Any']
-  ]
-}, 
+Linear::Meta = Command.Meta.extend {}, 
   'object': 
     execute: (constraint, engine, operation) ->
       if constraint?.hashCode?
@@ -165,14 +158,20 @@ Linear::Block.Meta = Block.Meta.extend {
         operation
       ]
 
-Linear::Call = Call.extend {},
+Linear::Stay = Command.extend {
+  signature: [
+    value: ['Variable']
+  ]
+},
   stay: (value, engine, operation) ->
     engine.suggested = true;
     engine.solver.addStay(value)
     return
 
-Linear::Call.Unsafe = Call.Unsafe.extend {
+Linear::Remove = Command.extend {
   extras: 1
+
+  signature: false
 },
 
   remove: (args ..., engine) ->

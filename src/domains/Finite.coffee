@@ -1,7 +1,7 @@
 Domain     = require('../Domain')
 Command    = require('../Command')
-Variable   = require('../commands/Variable')
-Constraint = require('../commands/Constraint')
+Variable   = require('../Variable')
+Constraint = require('../Constraint')
 
 class Finite extends Domain
   priority: -10

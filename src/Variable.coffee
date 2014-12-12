@@ -1,4 +1,4 @@
-Command = require('../Command')
+Command = require('./Command')
 
 class Variable extends Command
   type: 'Variable'

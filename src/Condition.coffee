@@ -1,4 +1,4 @@
-Command = require('../Command')
+Command = require('./Command')
 
 class Condition extends Command
   type: 'Condition'
@@ -17,6 +17,14 @@ class Condition extends Command
 
   constructor: (operation, engine) ->
     @key ||= @serialize(operation, engine)
+    if @linked
+      if parent = operation.parent
+        previous = parent[parent.indexOf(operation) - 1]
+        if command = previous.command
+          if command.type == 'Condition'
+            command.next = operation
+            @previous = command
+
 
   push: ->
 
@@ -25,22 +33,23 @@ class Condition extends Command
 
   update: (engine, operation, continuation, scope, ascender, ascending) ->
 
-    watchers = engine.queries.watchers[scope._gss_id] ||= []
-    if !watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) == -1
-      watchers.push operation.parent, continuation + @DESCEND, scope
+    if watchers = engine.queries?.watchers
+      watchers = watchers[scope._gss_id] ||= []
+      if !watchers.length || engine.indexOfTriplet(watchers, operation.parent, continuation, scope) == -1
+        watchers.push operation.parent, continuation + @DESCEND, scope
 
     
     path = continuation + @DESCEND + @key
 
-    old = engine.queries[path]
+    old = @value
     if !!old != !!ascending || (old == undefined && old != ascending)
       
       unless old == undefined
-        engine.queries.clean(path, continuation, operation.parent, scope)
+        engine.Query::clean(engine, path, continuation, operation.parent, scope)
       unless engine.switching
         switching = engine.switching = true
 
-      engine.queries[path] = ascending
+      @value = ascending
       if switching
         engine.triggerEvent('switch', operation, path)
 
@@ -73,6 +82,7 @@ class Condition extends Command
         @update(engine.document || engine.abstract, operation.parent[1], continuation, scope, undefined, result)
       return true
 
+# Detect condition that only observes variables outside of current scope
 Condition.Global = Condition.extend
 
   condition: (engine, operation, command) ->
@@ -95,6 +105,21 @@ Condition::advices = [Condition.Global]
 Condition.define 'if', {}
 Condition.define 'unless', {
   inverted: true
+}
+Condition.define 'else', {
+  signature: [
+    then: ['Any']
+  ]
+
+  linked: true
+
+  solve: ->
+    return true
+}
+Condition.define 'elseif', {
+  linked: true
+}
+Condition.define 'elsif', {
 }
  
 module.exports = Condition

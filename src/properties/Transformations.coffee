@@ -1,4 +1,4 @@
-Command = require('../Command')
+Command = require ('../Command')
 
 class Transformation extends Command
   type: 'Transformation'
@@ -68,5 +68,3 @@ class Transformation extends Command
     y:
   ]###
   
-
-module.exports = Transformation

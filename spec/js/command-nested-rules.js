@@ -1,4 +1,4 @@
-var $, $$, Engine, assert, expect, fixtures, remove, stringify;
+var Engine, assert, expect, fixtures, remove, stringify;
 
 Engine = GSS;
 
@@ -9,14 +9,6 @@ expect = chai.expect;
 stringify = function(o) {
   return o;
   return JSON.stringify(o, 1, 1);
-};
-
-$ = function() {
-  return document.querySelector.apply(document, arguments);
-};
-
-$$ = function() {
-  return document.querySelectorAll.apply(document, arguments);
 };
 
 remove = function(el) {

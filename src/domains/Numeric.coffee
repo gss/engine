@@ -7,8 +7,7 @@ enables anonymous constraints on immutable values
 
 Domain   = require('../Domain')
 Command  = require('../Command')
-Variable = require('../commands/Variable')
-Block    = require('../commands/Block')
+Variable = require('../Variable')
 
 class Numeric extends Domain
   priority: 200
@@ -26,12 +25,7 @@ Numeric::Variable = Variable.extend {},
 Numeric::Variable.Expression = Variable.Expression.extend()
 Numeric::Variable.Expression.define(Variable.Expression.algebra)
     
-Numeric::Block = Block.extend()
-Numeric::Block.Meta = Block.Meta.extend {
-  signature: [
-    body: ['Any']
-  ]
-}, 
+Numeric::Meta = Command.Meta.extend {}, 
   'object': 
 
     execute: (result) ->

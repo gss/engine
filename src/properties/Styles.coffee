@@ -162,5 +162,7 @@ class Styles
         Styles::[prop] = ['Length', 'none']
 
         (Styles::['border-radius'] ||= [{'pad'}])[0][prop] = ['Length', 'none']
+Command = require('../Command')
+
 
 module.exports = Styles

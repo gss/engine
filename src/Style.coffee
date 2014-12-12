@@ -263,4 +263,6 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
   matcher.callback    = callback if callback?
   return matcher
 
+
 module.exports = Style
+

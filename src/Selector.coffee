@@ -5,8 +5,11 @@ Combinators fetch new elements, while qualifiers filter them.
 
 ###
 
-Command = require('../Command')
 Query   = require('./Query')
+
+require '../vendor/weakmap.js'
+require '../vendor/MutationObserver.js'
+require '../vendor/MutationObserver.attributes.js'
 
 class Selector extends Query
   type: 'Selector'
@@ -74,17 +77,7 @@ class Selector extends Query
 
   # Does the selector return only one element?
   singular: undefined
-  
-  relative: undefined
 
-  # Check if query was already updated
-  before: (args, engine, operation, continuation, scope, ascender, ascending) ->
-    return engine.queries.fetch(args, operation, continuation, scope)
-
-  # Subscribe elements to query 
-  after: (args, result, engine, operation, continuation, scope) ->
-    return engine.queries.update(args, result, operation, continuation, scope)
-  
   # Methods to build mutation lookup keys:
   # Format is `@[prefix + index][suffix]`
   # Example: Composite selector `h1>div` will generate 
@@ -97,6 +90,255 @@ class Selector extends Query
   
   getIndexSuffix: (operation) ->
     return operation[2] || operation[1]
+
+
+  # Compare position of two nodes to sort collection in DOM order
+  # Virtual elements make up stable positions within collection,
+  # so dom elements can be permuted only within range between virtual elements
+  @comparePosition: (a, b, op1, op2) ->
+    if op1 != op2
+      parent = op1.parent
+      i = parent.indexOf(op1)
+      j = parent.indexOf(op2)
+      if i > j
+        left = op2
+        right = op1
+      else
+        left = op1
+        right = op2
+
+      index = i
+      while next = parent[++index]
+        break if next == right
+        if next[0] == 'virtual'
+          return i < j
+
+      unless a.nodeType && b.nodeType 
+        return i < j
+    if a.compareDocumentPosition
+      return a.compareDocumentPosition(b) & 4
+    return a.sourceIndex < b.sourceIndex
+
+
+  @options:
+    subtree: true
+    childList: true
+    attributes: true
+    characterData: true
+    attributeOldValue: true
+
+
+  @observe: (engine) ->
+    if @Observer
+      @listener = new @Observer @onMutations.bind(engine)
+      @connect(engine)
+
+  @Observer: 
+    window? && (window.MutationObserver || window.WebKitMutationObserver || window.JsMutationObserver)
+
+  @connect: (engine, temporary) ->
+    return if temporary && window.JsMutationObserver == @Observer
+    engine.observer?.observe engine.scope, @options 
+
+  @disconnect: (engine, temporary) ->
+    return if temporary && window.JsMutationObserver == @Observer
+    engine.observer?.disconnect()
+
+  @filterMutation: (mutation)->
+    parent = mutation.target
+    while parent
+      if parent.nodeType == 1 && @filterNode(parent) == false
+        return false
+      parent = parent.parentNode
+    return true
+
+  @filterNodeMutation: (target) ->
+    if target._gss
+      return false
+    return true
+
+
+  # Listen to changes in DOM to broadcast them all around, update queries in batch
+  @onMutations: (mutations) ->
+    unless @running
+      return if @scope.nodeType == 9
+      return engine.solve(->)
+    
+    result = @solve 'Document', 'mutations', ->
+      if @updating.index > -1
+        @updating.reset()
+
+      for mutation in mutations
+        if @Selector.filterMutation(mutation) == false
+          continue
+        switch mutation.type
+          when "attributes"
+            @Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue)
+          when "childList"
+            @Selector.mutateChildList(@, mutation.target, mutation)
+          when "characterData"
+            @Selector.mutateCharacterData(@, mutation.target, mutation)
+
+        @intrinsic.validate(mutation.target)
+      return
+
+    if !@scope.parentNode && @scope.nodeType == 1
+      @destroy()
+    return result
+
+  @mutateChildList: (engine, target, mutation) ->
+    # Invalidate sibling observers
+    added = []
+    removed = []
+    for child in mutation.addedNodes
+      if child.nodeType == 1 && @filterNodeMutation(child) != false
+        added.push(child)
+    for child in mutation.removedNodes
+      if child.nodeType == 1 && @filterNodeMutation(child) != false
+        if (index = added.indexOf(child)) > -1
+          added.splice index, 1
+        else
+          removed.push(child)
+    @mutateCharacterData(target, target)
+    changed = added.concat(removed)
+    changedTags = []
+    for node in changed
+      tag = node.tagName
+      if changedTags.indexOf(tag) == -1
+        changedTags.push(tag)
+
+    prev = next = mutation
+    firstPrev = firstNext = true
+    queries = engine.queries
+    while (prev = prev.previousSibling)
+      if prev.nodeType == 1
+        if firstPrev
+          @match(prev, '+', undefined, '*') 
+          @match(prev, '++', undefined, '*')
+          firstPrev = false
+        @match(prev, '~', undefined, changedTags)
+        @match(prev, '~~', undefined, changedTags)
+        next = prev
+    while (next = next.nextSibling)
+      if next.nodeType == 1
+        if firstNext
+          @match(next, '!+', undefined, '*') 
+          @match(next, '++', undefined, '*')
+          firstNext = false
+        @match(next, '!~', undefined, changedTags)
+        @match(next, '~~', undefined, changedTags)
+
+
+    # Invalidate descendants observers
+    @match(target, '>', undefined, changedTags)
+    allAdded = []
+    allRemoved = []
+    allMoved = []
+    moved = []
+
+    for child in added
+      @match(child, '!>', undefined, target)
+      allAdded.push(child)
+      for el in child.getElementsByTagName('*')
+        allAdded.push(el)
+    for child in removed
+      allRemoved.push(child)
+      for el in child.getElementsByTagName('*')
+        allRemoved.push(el)
+    allChanged = allAdded.concat(allRemoved, allMoved)
+
+    # Generate map of qualifiers to invalidate (to re-query native selectors)
+    update = {}
+    for node in allChanged
+      for attribute in node.attributes
+        switch attribute.name
+          when 'class'
+            for kls in node.classList || node.className.split(/\s+/)
+              @index update, ' .', kls
+          when 'id'
+            @index update, ' #', attribute.value
+
+        @index update, ' attribute', attribute.name
+      prev = next = node  
+      while prev = prev.previousSibling
+        if prev.nodeType == 1
+          @index update, ' +', prev.tagName
+          break
+      while next = next.nextSibling
+        if next.nodeType == 1
+          break
+
+      @index update, ' :', 'first-child' unless prev
+      @index update, ' :', 'last-child' unless next
+      @index update, ' +', child.tagName
+
+    parent = target
+    while parent#.nodeType == 1
+      # Let parents know about inserted nodes
+      @match(parent, ' ', undefined, allChanged)
+      for child in allChanged
+        @match(child, '!', undefined, parent)
+
+      for prop, values of update
+        for value in values
+          if prop.charAt(1) == '$' # qualifiers
+            @match(parent, prop, value)
+          else
+            @match(parent, prop, undefined, value)
+
+      break if parent == engine.scope
+      break unless parent = parent.parentNode
+
+    # Clean removed elements by id
+    for removed in allRemoved
+      if allAdded.indexOf(removed) == -1
+        if id = engine.identity.find(removed)
+          (engine.removed ||= []).push(id)
+
+    if engine.removed
+      for added in allAdded
+        if (j = engine.removed.indexOf(engine.identity.find(added))) > -1
+          engine.removed.splice(j, 1)
+    @
+
+  @mutateCharacterData: (engine, target, parent = target.parentNode) ->
+    if id = engine.identity.find(parent)
+      if parent.tagName == 'STYLE' 
+        if parent.getAttribute('type')?.indexOf('text/gss') > -1
+          engine.eval(parent)
+
+  @mutateAttribute: (engine, target, name, changed) ->
+    if name == 'style'
+      engine.engine.restyled = true
+    # Notify parents about class and attribute changes
+    if name == 'class' && typeof changed == 'string'
+      klasses = target.classList || target.className.split(/\s+/)
+      old = changed.split(' ')
+      changed = []
+      for kls in old
+        changed.push kls unless kls && ((klasses.indexOf && klasses.indexOf(kls) > -1) ? klasses.contains(kls))
+      for kls in klasses
+        changed.push kls unless kls && old.indexOf(kls) > -1
+
+    parent = target
+    while parent
+      $attribute = target == parent && 'attribute' || ' attribute'
+      @match(parent, $attribute, name, target)
+      if changed?.length && name == 'class'
+        $class = target == parent && '.' || ' .'
+        for kls in changed
+          @match(parent, $class, kls, target)
+      break if parent == engine.scope
+      break unless parent = parent.parentNode
+    @
+
+
+  index: (update, type, value) ->
+    if group = update[type]
+      return unless group.indexOf(value) == -1
+    else
+      update[type] = []
+    update[type].push(value)
 
 Selector::checkers.selector = (command, other, parent, operation) ->
   if !other.head
@@ -388,7 +630,7 @@ Selector.define
   # Parent element (alias for !> *)
   '^':
     Element: (parameter, engine, operation, continuation, scope) ->
-      return engine.queries.getParentScope(scope, continuation, parameter)
+      return @getParentScope(engine, scope, continuation, parameter)
 
 
   # Current engine scope (defaults to document)
@@ -410,7 +652,7 @@ Selector.define
     Virtual: (node, value, engine, operation, continuation, scope) ->
       if !node && @localizers.indexOf(operation.parent.command.type) > -1
         node = scope
-      prefix = engine.queries.getScope(node, continuation) || '$'
+      prefix = @getScope(node, continuation) || '$'
       return prefix + '"' + value + '"'
 
     prefix: '"'
@@ -478,7 +720,7 @@ Selector.define
   ':next':
     relative: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getCanonicalCollection(continuation)
+      collection = @getCanonicalCollection(engine, continuation)
       index = collection?.indexOf(node)
       return if !index? || index == -1 || index == collection.length - 1
       return collection[index + 1]
@@ -486,7 +728,7 @@ Selector.define
   ':previous':
     relative: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getCanonicalCollection(continuation)
+      collection = @getCanonicalCollection(engine, continuation)
       index = collection?.indexOf(node)
       return if index == -1 || !index
       return collection[index - 1]
@@ -495,7 +737,7 @@ Selector.define
     relative: true
     singular: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getCanonicalCollection(continuation)
+      collection = @getCanonicalCollection(engine, continuation)
       index = collection?.indexOf(node)
       return unless index?
       return node if index == collection.length - 1
@@ -504,7 +746,7 @@ Selector.define
     relative: true
     singular: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
-      collection = engine.queries.getCanonicalCollection(continuation)
+      collection = @getCanonicalCollection(engine, continuation)
       index = collection?.indexOf(node)
       return if !index?
       return node if index == 0
@@ -529,18 +771,18 @@ Selector.define
     # Duplicates are stored separately, they dont trigger callbacks
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
-      contd = engine.queries.getScopePath(scope, continuation) + operation.parent.command.path
-      engine.queries.add(result, contd, operation.parent, scope, operation, continuation)
-      engine.queries.ascending ||= []
-      if engine.indexOfTriplet(engine.queries.ascending, operation.parent, contd, scope) == -1
-        engine.queries.ascending.push(operation.parent, contd, scope)
+      contd = @getScopePath(engine, scope, continuation) + operation.parent.command.path
+      @add(engine, result, contd, operation.parent, scope, operation, continuation)
+      engine.ascending ||= []
+      if engine.indexOfTriplet(engine.ascending, operation.parent, contd, scope) == -1
+        engine.ascending.push(operation.parent, contd, scope)
       return true
 
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = engine.queries.getScopePath(scope, continuation) + operation.parent.command.path
-      engine.queries.remove(result, contd, operation.parent, scope, operation, undefined, continuation)
+      contd = @getScopePath(engine, scope, continuation) + operation.parent.command.path
+      @remove(engine, result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     
     # Evaluate arguments without stopping on undefined

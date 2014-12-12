@@ -6,13 +6,7 @@ expect = chai.expect
 stringify = (o) ->
   return o
   return JSON.stringify o, 1, 1
-
-$  = () ->
-  return document.querySelector arguments...
   
-$$ = () -> 
-  return document.querySelectorAll arguments...
-
 remove = (el) ->
   el?.parentNode?.removeChild(el)
 

@@ -3,25 +3,21 @@ Abstract = require('./Abstract')
 class Document extends Abstract
   priority: Infinity
   
-  Selector:    require('../commands/Selector')
-  Stylesheet:  require('../commands/Stylesheet')
+  Selector:    require('../Selector')
+  Stylesheet:  require('../Stylesheet')
                
-  Queries:     require('../structures/Queries')
-  Pairs:       require('../structures/Pairs')
-  Mutations:   require('../structures/Mutations')
-  Positions:   require('../structures/Positions')
-
   disconnected: true
 
   constructor: () ->
     # Export modules into engine
     engine = @engine
-    engine.positions   ||= new @Positions(@)
-    engine.queries     ||= new @Queries(@)
-    engine.pairs       ||= new @Pairs(@)
-    engine.mutations   ||= new @Mutations(@)
-    engine.applier     ||= engine.positions
-    engine.scope       ||= document
+    #engine.pairs       ||= new @Pairs(@)
+    
+    @Selector.observe(engine)
+
+    engine.scope      = document
+
+    super
 
     if @scope.nodeType == 9
       if ['complete', 'loaded'].indexOf(@scope.readyState) == -1
@@ -37,7 +33,6 @@ class Document extends Abstract
     #  document.addEventListener 'scroll', engine, true
     window?.addEventListener 'resize', engine
 
-    super
 
   events:
     resize: (e = '::window') ->
@@ -88,7 +83,6 @@ class Document extends Abstract
 
     compile: ->
       @document.Stylesheet.compile(@document)
-      @document.mutations.connect()
 
     solve: ->
       if @scope.nodeType == 9
@@ -129,4 +123,5 @@ class Document extends Abstract
       @mutations?.connect(true)
       return result 
   url: null
+
 module.exports = Document

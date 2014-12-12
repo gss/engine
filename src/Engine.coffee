@@ -10,24 +10,20 @@ pseudo-solvers like intrinsic measurements.
 
 ###
 
-Events  = require('./structures/Events')
-
-class Engine extends Events
+class Engine
 
   Command:      require('./Command')
   Domain:       require('./Domain')
   Update:       require('./Update')
+  Query:        require('./Query')
     
   Console:      require('./utilities/Console')
   Inspector:    require('./utilities/Inspector')
   Exporter:     require('./utilities/Exporter')
-  
-  Identity:     require('./structures/Identity')
-  Signatures:   require('./structures/Signatures')
 
   Domains: 
-    Abstract:   require('./domains/Abstract')
     Document:   require('./domains/Document')
+    Abstract:   require('./domains/Abstract')
     Intrinsic:  require('./domains/Intrinsic')
     Numeric:    require('./domains/Numeric')
     Linear:     require('./domains/Linear')
@@ -63,9 +59,17 @@ class Engine extends Events
 
     if url?
       @url = url
+
+    @listeners = {}
+    @observers = {}
+    @queries   = {}
     
-    super
+    @lefts = {}
+    @pairs = {}
+    
     @addListeners(@$events)
+    @addListeners(@events)
+
 
     @variables    = {}
     @domains      = []
@@ -208,7 +212,7 @@ class Engine extends Events
       #if Object.keys(solution).length
 
       @fireEvent('apply', solution, update)
-      @applier?.solve(solution)
+      @fireEvent('write', solution, update)
     else if !update.reflown && !restyled
       if !update.problems.length
         @updating = undefined
@@ -477,6 +481,98 @@ class Engine extends Events
           return @getScopeElement(node.parentNode)
     return node
 
+  destroy: ->
+    @triggerEvent('destroy')
+    if @scope
+      @dispatchEvent(@scope, 'destroy')
+    @removeListeners(@events) if @events
+
+
+  # Event trigger
+
+  addListeners: (listeners) ->
+    for name, callback of listeners
+      @addEventListener name, callback
+
+  removeListeners: (listeners) ->
+    for name, callback of listeners
+      @removeEventListener name, callback
+
+  once: (type, fn) ->
+    fn.once = true
+    @addEventListener(type, fn)
+
+  addEventListener: (type, fn) ->
+    (@listeners[type] ||= []).push(fn)
+
+  removeEventListener: (type, fn) ->
+    if group = @listeners[type]
+      if (index = group.indexOf(fn)) > -1
+        group.splice(index, 1)
+
+  triggerEvent: (type, a, b, c) ->
+    if group = @listeners?[type]
+      index = 0
+      j = group.length
+      while index < j
+        fn = group[index]
+        if fn.once
+          group.splice(index--, 1)
+          j--
+        fn.call(@, a, b, c)
+        index++
+    if @[method = 'on' + type]
+      return @[method](a, b, c)
+
+  dispatchEvent: (element, type, data, bubbles, cancelable) ->
+    return unless @scope
+    detail = {engine: @}
+    for prop, value of data
+      detail[prop] = value
+
+    element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
+
+  # Catch-all event listener 
+  handleEvent: (e) ->
+    @triggerEvent(e.type, e)
+
+  then: (callback) ->
+    @once @DONE, callback
+
+class Engine::Identity
+  @uid: 0
+
+  set: (object, generate) =>
+    if typeof object == 'string'
+      if object.charAt(0) != '$' && object.charAt(0) != ':'
+        return '$' + object
+      return object
+    unless id = object._gss_id
+      if object == document
+        id = "::document"
+      else if object == window
+        id = "::window"
+
+      unless generate == false
+        if uid = object._gss_uid
+          object._gss_id = uid
+        object._gss_id = id ||= 
+          "$" + (object.id || object._gss_id || ++Identity.uid)
+        @[id] = object
+    return id
+  
+  get: (id) ->
+    return @[id]
+
+  solve: (id) ->
+    return @[id]
+
+  unset: (object) ->
+    delete @[object._gss_id]
+
+  # Get id if given object has one
+  find: (object) ->
+    return @set(object, false)
 
 # Listen for message in worker to initialize engine on demand
 if !self.window && self.onmessage != undefined
