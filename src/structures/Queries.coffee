@@ -629,7 +629,6 @@ class Queries
     last = continuation.length - 1
 
     if continuation.charCodeAt(last) == 8594 # @PAIR
-      debugger
       last = continuation.lastIndexOf(@DESCEND, last) - 1
 
     while true
@@ -653,7 +652,7 @@ class Queries
         return @engine.getScopeElement(result)
 
     # Singular element
-    if result = @[continuation.substring(0, index)]
+    if result = @[continuation.substring(0, last + 1)]
       return @engine.getScopeElement(result)
 
     return @engine.scope

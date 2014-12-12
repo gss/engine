@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-11) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-12) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -27791,7 +27791,6 @@ Queries = (function() {
     }
     last = continuation.length - 1;
     if (continuation.charCodeAt(last) === 8594) {
-      debugger;
       last = continuation.lastIndexOf(this.DESCEND, last) - 1;
     }
     while (true) {
@@ -27813,7 +27812,7 @@ Queries = (function() {
         return this.engine.getScopeElement(result);
       }
     }
-    if (result = this[continuation.substring(0, index)]) {
+    if (result = this[continuation.substring(0, last + 1)]) {
       return this.engine.getScopeElement(result);
     }
     return this.engine.scope;
