@@ -62,38 +62,38 @@ Types.define
   # Keywords for background-position and alike
   Positions: {"top", "bottom", "left", "right"}
   Position: (obj) ->
-    if @Type.Positions[obj]
+    if @Types.Positions[obj]
       return obj
 
   # Length with % unit
   Times: {'s', 'ms', 'm'}
   Time: (obj) ->
-    if @Type.Times[obj[0]]
+    if @Types.Times[obj[0]]
       return obj
 
   Colors: {'transparent', 'hsl', 'rgb', 'hsla', 'rgba', 'hsb'}
   Pseudocolors: {'transparent', 'currentColor'}
   Color: (obj) ->
     if typeof obj == 'string'
-      if @Type.Pseudocolors[obj]
+      if @Types.Pseudocolors[obj]
         return obj
     else
-      if @Type.Colors[obj[0]]
+      if @Types.Colors[obj[0]]
         return obj
 
   Sizes: {'medium', 'xx-small', 'x-small', 'small', 'large', 'x-large', 'xx-large', 'smaller', 'larger' }
   Size: (obj) ->
-    if @Type.Sizes[obj]
+    if @Types.Sizes[obj]
       return obj
 
   Gradients: {'linear-gradient', 'radial-gradient', 'repeating-linear-gradient', 'repeating-radial-gradient'}
   Gradient: (obj) ->
-    if @Type.Gradients[obj[0]]
+    if @Types.Gradients[obj[0]]
       return obj
 
   URLs: {'url', 'src'}
   URL: (obj) ->
-    if @Type.URLs[obj[0]]
+    if @Types.URLs[obj[0]]
       return obj
 
   Property: (obj) ->

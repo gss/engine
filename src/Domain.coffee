@@ -304,7 +304,7 @@ class Domain
   remove: ->
     for path in arguments
       if @observers
-        for contd in @queries?.getVariants(path) || [path]
+        for contd in @Query::getVariants(path) || [path]
           if observer = @observers[contd]
             while observer[0]
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
@@ -434,29 +434,9 @@ class Domain
 
   # Compile own properties
   Domain::Property.compile = (properties, engine) ->
-    for own key, property of properties
-      continue if key == 'engine'
+    for key, property of properties
       @call(engine, property, key, properties)
     return properties
-
-  # Hook: Should interpreter iterate returned object?
-  # (yes, if it's a collection of objects or empty array)
-  isCollection: (object) ->
-    if object && object.length != undefined && !object.substring && !object.nodeType
-      return true if object.isCollection
-      switch typeof object[0]
-        when "object"
-          return object[0].nodeType
-        when "undefined"
-          return object.length == 0
-
-  # Return an index of 3 given items values in a flat array of triplets 
-  indexOfTriplet: (array, a, b, c) ->
-    if array
-      for op, index in array by 3
-        if op == a && array[index + 1] == b && array[index + 2] == c
-          return index
-    return -1
   
 module.exports = Domain
 

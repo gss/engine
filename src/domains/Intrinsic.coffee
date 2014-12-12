@@ -31,14 +31,14 @@ class Intrinsic extends Numeric
     for property, value of Intrinsic::Dimensions::
       Properties::[property] = value
     Properties::Units = Intrinsic::Units
-    Properties::Types = Intrinsic::Types
+    Properties::Types = new Intrinsic::Types
     Properties
 
   events:
     write: (solution) ->
-      @engine.Selector?.disconnect(true)
+      @Selector?.disconnect(@, true)
       @intrinsic.assign(solution)
-      @engine.Selector?.connect(true)
+      @Selector?.connect(@, true)
 
 
   getComputedStyle: (element, force) ->

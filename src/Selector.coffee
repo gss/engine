@@ -29,6 +29,7 @@ class Selector extends Query
       for argument in operation
         if argument.command?.head == (parent || @).head
           argument.command.prepare(argument, parent || @)
+    return
 
   # Do an actual DOM lookup by composed native selector
   perform: (engine, operation, continuation, scope, ascender, ascending) ->
@@ -92,34 +93,6 @@ class Selector extends Query
     return operation[2] || operation[1]
 
 
-  # Compare position of two nodes to sort collection in DOM order
-  # Virtual elements make up stable positions within collection,
-  # so dom elements can be permuted only within range between virtual elements
-  @comparePosition: (a, b, op1, op2) ->
-    if op1 != op2
-      parent = op1.parent
-      i = parent.indexOf(op1)
-      j = parent.indexOf(op2)
-      if i > j
-        left = op2
-        right = op1
-      else
-        left = op1
-        right = op2
-
-      index = i
-      while next = parent[++index]
-        break if next == right
-        if next[0] == 'virtual'
-          return i < j
-
-      unless a.nodeType && b.nodeType 
-        return i < j
-    if a.compareDocumentPosition
-      return a.compareDocumentPosition(b) & 4
-    return a.sourceIndex < b.sourceIndex
-
-
   @options:
     subtree: true
     childList: true
@@ -129,6 +102,7 @@ class Selector extends Query
 
 
   @observe: (engine) ->
+    debugger
     if @Observer
       @listener = new @Observer @onMutations.bind(engine)
       @connect(engine)
@@ -138,16 +112,16 @@ class Selector extends Query
 
   @connect: (engine, temporary) ->
     return if temporary && window.JsMutationObserver == @Observer
-    engine.observer?.observe engine.scope, @options 
+    engine.Selector.listener.observe engine.scope, @options 
 
   @disconnect: (engine, temporary) ->
     return if temporary && window.JsMutationObserver == @Observer
-    engine.observer?.disconnect()
+    engine.Selector.listener.disconnect()
 
   @filterMutation: (mutation)->
     parent = mutation.target
     while parent
-      if parent.nodeType == 1 && @filterNode(parent) == false
+      if parent.nodeType == 1 && @filterNodeMutation(parent) == false
         return false
       parent = parent.parentNode
     return true
@@ -160,6 +134,7 @@ class Selector extends Query
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   @onMutations: (mutations) ->
+    debugger
     unless @running
       return if @scope.nodeType == 9
       return engine.solve(->)
@@ -189,7 +164,9 @@ class Selector extends Query
   @mutateChildList: (engine, target, mutation) ->
     # Invalidate sibling observers
     added = []
+
     removed = []
+    debugger
     for child in mutation.addedNodes
       if child.nodeType == 1 && @filterNodeMutation(child) != false
         added.push(child)
@@ -199,7 +176,7 @@ class Selector extends Query
           added.splice index, 1
         else
           removed.push(child)
-    @mutateCharacterData(target, target)
+    @mutateCharacterData(engine, target, target)
     changed = added.concat(removed)
     changedTags = []
     for node in changed
@@ -213,31 +190,31 @@ class Selector extends Query
     while (prev = prev.previousSibling)
       if prev.nodeType == 1
         if firstPrev
-          @match(prev, '+', undefined, '*') 
-          @match(prev, '++', undefined, '*')
+          @prototype.match(engine, prev, '+', undefined, '*') 
+          @prototype.match(engine, prev, '++', undefined, '*')
           firstPrev = false
-        @match(prev, '~', undefined, changedTags)
-        @match(prev, '~~', undefined, changedTags)
+        @prototype.match(engine, prev, '~', undefined, changedTags)
+        @prototype.match(engine, prev, '~~', undefined, changedTags)
         next = prev
     while (next = next.nextSibling)
       if next.nodeType == 1
         if firstNext
-          @match(next, '!+', undefined, '*') 
-          @match(next, '++', undefined, '*')
+          @prototype.match(engine, next, '!+', undefined, '*') 
+          @prototype.match(engine, next, '++', undefined, '*')
           firstNext = false
-        @match(next, '!~', undefined, changedTags)
-        @match(next, '~~', undefined, changedTags)
+        @prototype.match(engine, next, '!~', undefined, changedTags)
+        @prototype.match(engine, next, '~~', undefined, changedTags)
 
 
     # Invalidate descendants observers
-    @match(target, '>', undefined, changedTags)
+    @prototype.match(engine, target, '>', undefined, changedTags)
     allAdded = []
     allRemoved = []
     allMoved = []
     moved = []
 
     for child in added
-      @match(child, '!>', undefined, target)
+      @prototype.match(engine, child, '!>', undefined, target)
       allAdded.push(child)
       for el in child.getElementsByTagName('*')
         allAdded.push(el)
@@ -275,16 +252,16 @@ class Selector extends Query
     parent = target
     while parent#.nodeType == 1
       # Let parents know about inserted nodes
-      @match(parent, ' ', undefined, allChanged)
+      @prototype.match(engine, parent, ' ', undefined, allChanged)
       for child in allChanged
-        @match(child, '!', undefined, parent)
+        @prototype.match(engine, child, '!', undefined, parent)
 
       for prop, values of update
         for value in values
           if prop.charAt(1) == '$' # qualifiers
-            @match(parent, prop, value)
+            @prototype.match(engine, parent, prop, value)
           else
-            @match(parent, prop, undefined, value)
+            @prototype.match(engine, parent, prop, undefined, value)
 
       break if parent == engine.scope
       break unless parent = parent.parentNode
@@ -323,17 +300,17 @@ class Selector extends Query
     parent = target
     while parent
       $attribute = target == parent && 'attribute' || ' attribute'
-      @match(parent, $attribute, name, target)
+      @prototype.match(engine, parent, $attribute, name, target)
       if changed?.length && name == 'class'
         $class = target == parent && '.' || ' .'
         for kls in changed
-          @match(parent, $class, kls, target)
+          @prototype.match(engine, parent, $class, kls, target)
       break if parent == engine.scope
       break unless parent = parent.parentNode
     @
 
 
-  index: (update, type, value) ->
+  @index: (update, type, value) ->
     if group = update[type]
       return unless group.indexOf(value) == -1
     else

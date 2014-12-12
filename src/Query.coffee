@@ -10,7 +10,7 @@ class Query extends Command
   # For each node in collection, fork continuation with element id
   ascend: (engine, operation, continuation, scope, result, ascender) ->
     if parent = operation.parent
-      if engine.isCollection(result)
+      if @isCollection(result)
         for node in result
           contd = @fork(engine, continuation, node)
           unless parent.command.yield?(node, engine, operation, contd, scope, ascender)
@@ -125,13 +125,13 @@ class Query extends Command
     if updating.collections?.hasOwnProperty(path)
       old = updating.collections[path]
     else if !old? && (result && result.length == 0) && continuation
-      old = @get(@getCanonicalPath(path))
+      old = @getCanonicalCollection(path)
 
-    isCollection = engine.isCollection(result)
+    isCollection = @isCollection(result)
 
     # Clean refs of nodes that dont match anymore
     if old
-      if engine.isCollection(old)
+      if @isCollection(old)
         removed = undefined
         for child, index in old
           if !old.scopes || old.scopes?[index] == scope
@@ -156,7 +156,7 @@ class Query extends Command
 
     # Register newly found nodes
     if isCollection
-      @[path] ||= []
+      engine.queries[path] ||= []
       added = undefined
       for child in result
         if !old || Array.prototype.indexOf.call(old, child) == -1  
@@ -171,14 +171,14 @@ class Query extends Command
       removed = old
 
     if result?.continuations
-      @updateCollections(operation, path, scope, undefined, undefined, undefined, continuation)
+      @reduce(engine, operation, path, scope, undefined, undefined, undefined, continuation)
     else
-      @updateCollections(operation, path, scope, added, removed, undefined, continuation)
+      @reduce(engine, operation, path, scope, added, removed, undefined, continuation)
       
     #unless operation.def.capture
       # Subscribe node to the query
     if id = engine.identify(node)
-      observers = engine.observers[id] ||= []
+      observers = engine.engine.observers[id] ||= []
       if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
         operation.command.prepare(operation)
         observers.push(operation, continuation, scope)
@@ -192,44 +192,45 @@ class Query extends Command
     return if result == old
 
     unless result?.push
-      @set path, result
+      @set engine, path, result
 
     return added
 
 
 
 
-  commit: (solution) ->
+  commit: (engine, solution) ->
     # Update all DOM queries that matched mutations
-    if @mutations
+    if mutations = engine.updating.mutations
       index = 0
-      while @mutations[index]
-        watcher = @mutations.splice(0, 3)
-        @engine.document.solve watcher[0], watcher[1], watcher[2]
-      
+      while mutations[index]
+        watcher = mutations.splice(0, 3)
+        engine.document.solve watcher[0], watcher[1], watcher[2]
+      engine.updating.mutations = undefined
     # Execute all deferred selectors (e.g. comma)
-    if @ascending
+    if ascending = engine.updating.ascending
       index = 0
-      while @ascending[index]
-        contd = @ascending[index + 1]
-        collection = @[contd]
-        if old = @engine.updating?.collections?[contd]
+      while ascending[index]
+        contd = ascending[index + 1]
+        collection = @get(engine, contd)
+        if old = engine.updating.collections[contd]
           collection = collection.slice()
           collection.isCollection = true
           for item, i in collection by -1
             if old.indexOf(item) > -1
               collection.splice(i, 1)
         if collection?.length
-          op = @ascending[index]
-          @engine.document.Command(op).ascend(@engine.document, op, contd, @ascending[index + 2], collection)
+          op = ascending[index]
+          engine.document.Command(op).ascend(engine.document, op, contd, ascending[index + 2], collection)
         index += 3
-      @ascending = undefined
-    @
+      engine.updating.ascending = undefined
+    
+    return
 
   # Manually add element to collection, handle dups
   # Also stores path which can be used to remove elements
   add: (engine, node, continuation, operation, scope, key, contd) ->
-    collection = @[continuation] ||= []
+    collection = engine.queries[continuation] ||= []
 
     if !collection.push
       return
@@ -249,10 +250,10 @@ class Query extends Command
       keys.splice(index, 0, key)
       paths.splice(index, 0, contd)
       scopes.splice(index, 0, scope)
-      @chain collection[index - 1], node, continuation
-      @chain node, collection[index + 1], continuation
+      @chain engine, collection[index - 1], node, continuation
+      @chain engine, node, collection[index + 1], continuation
       if operation.parent[0] == 'rule'
-        @engine.Stylesheet.match(node, continuation)
+        engine.Stylesheet.match(node, continuation)
 
       return true
     else unless scopes[index] == scope && paths[index] == contd
@@ -271,10 +272,8 @@ class Query extends Command
     return collection
 
   # Return collection by path & scope
-  get: (operation, continuation, old) ->
-    if typeof operation == 'string'
-      result = @[operation]
-      return result
+  get: (engine, continuation) ->
+    return engine.queries[continuation] 
 
   # Remove observers from element
   unobserve: (engine, id, continuation, quick, path, contd, scope, top) ->
@@ -383,46 +382,47 @@ class Query extends Command
           keys.splice(index, 1)
           paths.splice(index, 1)
           scopes.splice(index, 1)
-        @chain collection[index - 1], node, continuation
-        @chain node, collection[index], continuation
+        @chain engine, collection[index - 1], node, continuation
+        @chain engine, node, collection[index], continuation
         if operation.parent[0] == 'rule'
-          @engine.Stylesheet.unmatch(node, continuation)
+          engine.Stylesheet.unmatch(node, continuation)
         return true
 
 
 
   # Remove observers and cached node lists
-  remove: (id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
+  remove: (engine, id, continuation, operation, scope, needle = operation, recursion, contd = continuation) ->
     if typeof id == 'object'
       node = id
-      id = @engine.identify(id)
+      id = engine.identify(id)
     else
       if id.indexOf('"') > -1
         node = id
       else
-        node = @engine.identity[id]
+        node = engine.identity[id]
 
     if continuation
 
-      collection = @get(continuation)
+      if engine.pairs[continuation]
+        (engine.updating.pairs ||= {})[continuation] = true
+      
+      collection = @get(engine, continuation)
 
-      if collection && @engine.isCollection(collection)
+      if collection && @isCollection(collection)
         @snapshot engine, continuation, collection
       
-        removed = @removeFromCollection(node, continuation, operation, scope, needle, contd)
+        removed = @removeFromCollection(engine, node, continuation, operation, scope, needle, contd)
         
       else
         removed = undefined
 
       if removed != false
-        @engine.pairs.remove(id, continuation)
-
         if parent = operation?.parent
-          if @engine.isCollection(collection)
+          if @isCollection(collection)
             string = continuation + id
           else
             string = continuation
-          parent.command.release?(node, @engine, operation, string, scope)
+          parent.command.release?(node, engine, operation, string, scope)
           
       
         # Remove all observers that match continuation path
@@ -431,39 +431,39 @@ class Query extends Command
         #if ref.charAt(0) == @PAIR
         #  @unobserve(id, ref, undefined, undefined, ref, scope)
         #else
-        @unobserve(id, ref, undefined, undefined, ref)
+        @unobserve(engine, id, ref, undefined, undefined, ref)
 
         if recursion != continuation
           if removed != false #true#(removed || !parent?.command.release)
-            @updateCollections operation, continuation, scope, recursion, node, continuation, contd
+            @reduce engine, operation, continuation, scope, recursion, node, continuation, contd
           if removed
-            @clean(continuation + id)
+            @clean(engine, continuation + id)
 
     else if node
       # Detach queries attached to an element when removing element by id
-      @unobserve(id, true)
+      @unobserve(engine, id, true)
 
     return removed
 
 
-  clean: (path, continuation, operation, scope, bind, contd) ->
+  clean: (engine, path, continuation, operation, scope, bind, contd) ->
     if command = path.command
       path = (continuation || '') + (operation.uid || '') + (command.selector || command.key || '')
     continuation = path if bind
-    result = @get(path)
+    result = @get(engine, path)
     
-    if (result = @get(path, undefined, true)) != undefined
-      @each 'remove', result, path, operation, scope, operation, false, contd
+    if (result = @get(engine, path)) != undefined
+      @each 'remove', engine, result, path, operation, scope, operation, false, contd
 
     #if scope && operation.command.cleaning
     #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
-    @engine.solved.remove(path)
-    @engine.intrinsic.remove(path)
-    @engine.Stylesheet?.remove(@engine, path)
+    engine.solved.remove(path)
+    engine.intrinsic.remove(path)
+    engine.Stylesheet?.remove(engine, path)
 
     shared = false
-    if @engine.isCollection(result)
+    if @isCollection(result)
       if result.scopes
         for s, i in result.scopes
           # fixme
@@ -472,50 +472,45 @@ class Query extends Command
             break
 
     if !shared
-      @set path, undefined
+      @set engine, path, undefined
 
     # Remove queries in queue and global observers that match the path 
-    if @mutations
-      @unobserve(@mutations, path, true)
+    if engine.updating.mutations
+      @unobserve(engine, engine.updating.mutations, path, true)
 
-    @unobserve((scope || @engine.scope)._gss_id, path)
+    @unobserve(engine, (scope || engine.scope)._gss_id, path)
 
-    if !result || !@engine.isCollection(result)
-      @engine.triggerEvent('remove', path)
+    if !result || !@isCollection(result)
+      engine.fireEvent('remove', path)
     return true
 
-  # If a query selects element from some other node than current scope
-  # Maybe somebody else calculated it already
-  fetch: (args, operation, continuation, scope) ->
-    node = if args[0]?.nodeType == 1 then args[0] else scope
-    query = operation.command.getPath(@engine, operation, node)
-    return @engine.updating?.queries?[query]
-
-  chain: (left, right, continuation) ->
+  chain: (engine, left, right, continuation) ->
     if left
-      @match(left, ':last', '*', undefined, continuation)
-      @match(left, ':next', '*', undefined, continuation)
+      @match(engine, left, ':last', '*', undefined, continuation)
+      @match(engine, left, ':next', '*', undefined, continuation)
     if right
-      @match(right, ':previous', '*', undefined, continuation)
-      @match(right, ':first', '*', undefined, continuation)
+      @match(engine, right, ':previous', '*', undefined, continuation)
+      @match(engine, right, ':first', '*', undefined, continuation)
 
-  updateCollections: (operation, path, scope, added, removed, recursion, contd) ->
+  # Register node by its canonical and regular path
+  reduce: (engine, operation, path, scope, added, removed, recursion, contd) ->
     
     oppath = @getCanonicalPath(path)
     if path != oppath && recursion != oppath
-      @updateCollection operation, oppath, scope, added, removed, oppath, path
+      @collect engine, operation, oppath, scope, added, removed, oppath, path
 
-    @updateCollection operation, path, scope, added, removed, recursion, contd || ''
+    @collect engine, operation, path, scope, added, removed, recursion, contd || ''
     
   # Combine nodes from multiple selector paths
-  updateCollection: (operation, path, scope, added, removed, recursion, contd) ->
+  collect: (engine, operation, path, scope, added, removed, recursion, contd) ->
     if removed
-      @each 'remove', removed, path, operation, scope, operation, recursion, contd
+      @each 'remove', engine, removed, path, operation, scope, operation, recursion, contd
 
     if added
-      @each 'add', added, path, operation, scope, operation, contd
+      @each 'add', engine, added, path, operation, scope, operation, contd
 
-    if (collection = @[path])?.continuations
+    # Check if collection was resorted
+    if (collection = @get(engine, path))?.continuations
       sorted = collection.slice().sort (a, b) =>
         i = collection.indexOf(a)
         j = collection.indexOf(b)
@@ -527,8 +522,7 @@ class Query extends Command
         if node != collection[index]
           if !updated
             updated = collection.slice()
-            if @[path]
-              @[path] = updated
+            @set(engine, path, updated)
             updated.continuations = collection.continuations.slice()
             updated.paths = collection.paths.slice()
             updated.scopes = collection.scopes.slice()
@@ -541,47 +535,50 @@ class Query extends Command
           updated.paths[index] = collection.paths[i]
           updated.scopes[index] = collection.scopes[i]
 
-          @chain sorted[index - 1], node, path
-          @chain node, sorted[index + 1], path
+          @chain engine, sorted[index - 1], node, path
+          @chain engine, node, sorted[index + 1], path
 
   # Perform method over each node in nodelist, or against given node
-  each: (method, result = undefined, continuation, operation, scope, needle, recursion, contd) ->
-    if @engine.isCollection(result)
+  each: (method, engine, result = undefined, continuation, operation, scope, needle, recursion, contd) ->
+    if @isCollection(result)
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] child, continuation, operation, scope, needle, recursion, contd
+        if @[method] engine, child, continuation, operation, scope, needle, recursion, contd
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] result, continuation, operation, scope, needle, recursion, contd
+      return @[method] engine, result, continuation, operation, scope, needle, recursion, contd
 
 
-  set: (path, result) ->
-    old = @[path]
+  set: (engine, path, result) ->
+    old = engine.queries[path]
+
     if !result?
       @snapshot engine, path, old
+
     if result
-      @[path] = result
+      engine.queries[path] = result
     else
-      delete @[path]
+      delete engine.queries[path]
 
     path = @getCanonicalPath(path)
-    for left, observers of @paths
+
+    for left, observers of engine.pairs
       if observers.indexOf(path) > -1
-        (@dirty ||= {})[left] = true
+        (engine.updating.pairs ||= {})[left] = true
 
     return
 
 
-  onLeft: (operation, parent, continuation, scope) ->
+  onLeft: (engine, operation, parent, continuation, scope) ->
     left = @getCanonicalPath(continuation)
-    if @engine.Domain::indexOfTriplet(@lefts, parent, left, scope) == -1
+    if engine.Domain::indexOfTriplet(engine.lefts, parent, left, scope) == -1
       parent.right = operation
-      @lefts.push parent, left, scope
+      engine.lefts.push parent, left, scope
       return true
     else
-      (@dirty ||= {})[left] = true
+      (engine.pairing ||= {})[left] = true
       return false
 
   # Check if operation is pairly bound with another selector
@@ -589,22 +586,18 @@ class Query extends Command
   # Currently bails out and schedules re-pairing 
   onRight: (engine, operation, parent, continuation, scope, left, right) ->
     right = @getCanonicalPath(continuation.substring(0, continuation.length - 1))
-    for op, index in @lefts by 3
-      if op == parent && @lefts[index + 2] == scope
-        left = @lefts[index + 1]
+    for op, index in engine.lefts by 3
+      if op == parent && engine.lefts[index + 2] == scope
+        left = engine.lefts[index + 1]
         @watch(engine, operation, continuation, scope, left, right)
     return unless left
     left = @getCanonicalPath(left)
-    pairs = @paths[left] ||= []
+    pairs = engine.pairs[left] ||= []
     if pairs.indexOf(right) == -1
       pushed = pairs.push(right, operation, scope)
-    if @repairing == undefined
-      (@dirty ||= {})[left] = true
+    if engine.updating.pairs != false
+      (engine.updating.pairs ||= {})[left] = true
     return false
-
-  remove: (id, continuation) ->
-    return unless @paths[continuation]
-    (@dirty ||= {})[continuation] = true
     
   retrieve: (engine, operation, continuation, scope, ascender, ascending, single) ->
     # Attempt pairing
@@ -640,15 +633,14 @@ class Query extends Command
 
   TrailingIDRegExp: /(\$[a-z0-9-_"]+)[↓↑→]?$/i
 
-  repair: () ->
-    return unless dirty = @dirty
-    @dirty = undefined
-    @repairing = true
+  repair: (engine) ->
+    return unless dirty = engine.updating.pairs
+    engine.updating.pairs = false
     for property, value of dirty
-      if pairs = @paths[property]?.slice()
+      if pairs = engine.pairs[property]?.slice()
         for pair, index in pairs by 3
-          @solve property, pair, pairs[index + 1], pairs[index + 2]
-    @repairing = undefined
+          @pair engine, property, pair, pairs[index + 1], pairs[index + 2]
+    engine.updating.pairs = undefined
       
   match: (collection, node, scope) ->
     if (index = collection.indexOf(node)) > -1
@@ -680,7 +672,7 @@ class Query extends Command
 
 
   # Update bindings of two pair collections
-  pair: (left, right, operation, scope) ->
+  pair: (engine, left, right, operation, scope) ->
     root = @getRoot(operation)
     right = @getScopePath(engine, scope, left) + root.right.command.path
     leftNew = @get(engine, left)
@@ -691,7 +683,7 @@ class Query extends Command
     else
       leftOld = leftNew
   
-    if @engine.updating.collections.hasOwnProperty(right)
+    if engine.updating.collections.hasOwnProperty(right)
       rightOld = engine.updating.collections[right]
     else
       rightOld = rightNew
@@ -732,7 +724,7 @@ class Query extends Command
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
-    @engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + @engine.identify(scope)
+    engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + engine.identify(scope)
       
 
     cleaned = []
@@ -775,7 +767,7 @@ class Query extends Command
     engine.console.groupEnd()
 
   unpair: (engine, left, scope, operation) ->  
-    if pairs = @paths?[left]
+    if pairs = engine.pairs?[left]
       rights = []
 
       top = @getRoot(operation)
@@ -787,7 +779,7 @@ class Query extends Command
 
       # clean right part if nobody else is subscribed
       top = @getRoot(operation)
-      for prefix, others of @paths
+      for prefix, others of engine.pairs
         for other, i in others by 3
           for index, j in cleaning by -1
             if other == pairs[index] && (others != pairs || scope != others[i + 2])
@@ -795,30 +787,30 @@ class Query extends Command
 
 
       for index in cleaning
-        delete @engine.queries[right]
+        delete engine.queries[right]
       for index in rights by -1
         right = pairs[index]
         @unlisten(engine, scope._gss_id, @PAIR, null, right.substring(1), undefined, scope, top)
         pairs.splice(index, 3)
       if !pairs.length
-        delete @paths[left]
+        delete engine.pairs[left]
     index = 0
-    while contd = @lefts[index + 1]
-      if contd == left && @lefts[index + 2] == scope
-        @lefts.splice(index, 3)
+    while contd = engine.lefts[index + 1]
+      if contd == left && engine.lefts[index + 2] == scope
+        engine.lefts.splice(index, 3)
       else
         index += 3
     @
 
 
-  listen: (operation, continuation, scope, left, right) ->
-    observers = @paths[left] ||= []
-    if @engine.Domain::indexOfTriplet(observers, right, operation, scope) == -1
+  listen: (engine, operation, continuation, scope, left, right) ->
+    observers = engine.pairs[left] ||= []
+    if engine.Domain::indexOfTriplet(observers, right, operation, scope) == -1
       observers.push(right, operation, scope)
 
-  unlisten: (operation, continuation, scope, left, right) ->
-    observers = @paths[left] ||= []
-    unless (index = @engine.Domain::indexOfTriplet(observers, right, operation, scope)) == -1
+  unlisten: (engine, operation, continuation, scope, left, right) ->
+    observers = engine.pairs[left] ||= []
+    unless (index = engine.Domain::indexOfTriplet(observers, right, operation, scope)) == -1
       observers.splice(index, 3)
 
 
@@ -895,7 +887,7 @@ class Query extends Command
         return engine.getScopeElement(result)
 
     # Singular element
-    if result = @[continuation.substring(0, index)]
+    if result = @get(engine, continuation.substring(0, index))
       return engine.getScopeElement(result)
 
     return engine.scope
@@ -927,4 +919,86 @@ class Query extends Command
       return (@selector || @key)
 
 
+  # Compare position of two nodes to sort collection in DOM order
+  # Virtual elements make up stable positions within collection,
+  # so dom elements can be permuted only within range between virtual elements
+  comparePosition: (a, b, op1, op2) ->
+    if op1 != op2
+      parent = op1.parent
+      i = parent.indexOf(op1)
+      j = parent.indexOf(op2)
+      if i > j
+        left = op2
+        right = op1
+      else
+        left = op1
+        right = op2
+
+      index = i
+      while next = parent[++index]
+        break if next == right
+        if next[0] == 'virtual'
+          return i < j
+
+      unless a.nodeType && b.nodeType 
+        return i < j
+    if a.compareDocumentPosition
+      return a.compareDocumentPosition(b) & 4
+    return a.sourceIndex < b.sourceIndex
+
+  # Check if a node observes this qualifier or combinator
+  match: (engine, node, group, qualifier, changed, continuation) ->
+    return unless id = engine.identify(node)
+    return unless watchers = engine.observers[id]
+    if continuation
+      path = @getCanonicalPath(continuation)
+    
+    for operation, index in watchers by 3
+      if groupped = operation.command[group]
+        contd = watchers[index + 1]
+        continue if path && path != @getCanonicalPath(contd)
+        scope = watchers[index + 2]
+        # Check qualifier value
+        if qualifier
+          @qualify(engine, operation, contd, scope, groupped, qualifier)
+        # Check combinator and tag name of a given element
+        else if changed.nodeType
+          @qualify(engine, operation, contd, scope, groupped, changed.tagName, '*')
+        # Check combinator and given tag name
+        else if typeof changed == 'string'
+          @qualify(engine, operation, contd, scope, groupped, changed, '*')
+        # Ditto in bulk: Qualify combinator with nodelist or array of tag names
+        else for change in changed
+          if typeof change == 'string'
+            @qualify(engine, operation, contd, scope, groupped, change, '*')
+          else
+            @qualify(engine, operation, contd, scope, groupped, change.tagName, '*')
+    @
+
+  # Check if query observes qualifier by combinator 
+  qualify: (engine, operation, continuation, scope, groupped, qualifier, fallback) ->
+    if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
+      mutations = engine.updating.mutations ||= []
+      if engine.indexOfTriplet(mutations, operation, continuation, scope) > -1
+        return
+      length = (continuation || '').length
+      # Make shorter continuation keys run before longer ones
+      for mutations, index in mutations by 3
+        if (mutations[index + 1] || '').length > length
+          break
+      mutations.splice(index, 0, operation, continuation, scope)
+    @
+
+
+
+  # Hook: Should interpreter iterate returned object?
+  # (yes, if it's a collection of objects or empty array)
+  isCollection: (object) ->
+    if object && object.length != undefined && !object.substring && !object.nodeType
+      return true if object.isCollection
+      switch typeof object[0]
+        when "object"
+          return object[0].nodeType
+        when "undefined"
+          return object.length == 0
 module.exports = Query

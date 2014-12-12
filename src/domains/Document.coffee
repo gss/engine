@@ -12,8 +12,6 @@ class Document extends Abstract
     # Export modules into engine
     engine = @engine
     #engine.pairs       ||= new @Pairs(@)
-    
-    @Selector.observe(engine)
 
     engine.scope      = document
 
@@ -27,6 +25,8 @@ class Document extends Abstract
       else
         @compile()
 
+    engine.Selector = @Selector
+    @Selector.observe(engine)
       
     @scope.addEventListener 'scroll', engine, true
     #if @scope != document
@@ -89,9 +89,9 @@ class Document extends Abstract
         html = @scope.body.parentNode
         klass = html.className
         if klass.indexOf('gss-ready') == -1
-          @mutations?.disconnect(true)
+          @Selector?.disconnect(@, true)
           html.className = (klass && klass + ' ' || '') + 'gss-ready' 
-          @mutations?.connect(true)
+          @Selector?.connect(@, true)
 
     
       # Unreference removed elements

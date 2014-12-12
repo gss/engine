@@ -63,7 +63,7 @@ class Engine
     @listeners = {}
     @observers = {}
     @queries   = {}
-    
+
     @lefts = {}
     @pairs = {}
     
@@ -481,6 +481,14 @@ class Engine
           return @getScopeElement(node.parentNode)
     return node
 
+  # Return an index of 3 given items values in a flat array of triplets 
+  indexOfTriplet: (array, a, b, c) ->
+    if array
+      for op, index in array by 3
+        if op == a && array[index + 1] == b && array[index + 2] == c
+          return index
+    return -1
+    
   destroy: ->
     @triggerEvent('destroy')
     if @scope

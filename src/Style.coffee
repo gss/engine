@@ -48,7 +48,7 @@ Style = (definition, name, styles,
           max = Math.max(substyle.depth, max)
         when "string"
           # Predefined value type
-          Types = @Type
+          Types = @Types
           if type = Types[property]
             types.push(type)
             if initial == undefined
@@ -168,7 +168,7 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
-        if name == '%' || @styles.Unit[name] || @styles.Type.Times[name]
+        if name == '%' || @styles.Unit[name] || @styles.Types.Times[name]
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('
