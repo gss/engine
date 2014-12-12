@@ -443,8 +443,7 @@ Update.prototype =
           if prop.substring(0, length) == continuation
             delete old[prop]
     else
-      @[name] = {}
-      @[name].previous = old
+      @[name] = undefined
 
   reset: (continuation) ->
     @cleanup 'queries', continuation

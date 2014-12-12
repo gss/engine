@@ -110,18 +110,11 @@ class Document extends Abstract
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
 
+      @Selector?.disconnect(@, true)
+
   @condition: ->
-    @scope?  
-
-  transact: ->
-    if result = super
-      @mutations?.disconnect(true)
-      return result
-
-  commit: ->
-    if result = super
-      @mutations?.connect(true)
-      return result 
+    @scope?
+    
   url: null
 
 module.exports = Document

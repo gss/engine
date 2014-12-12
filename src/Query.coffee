@@ -280,6 +280,7 @@ class Query extends Command
     if continuation != true
       refs = @getVariants(continuation)
     index = 0
+    debugger
     return unless (observers = typeof id == 'object' && id || engine.observers[id])
     while watcher = observers[index]
       query = observers[index + 1]
@@ -450,7 +451,6 @@ class Query extends Command
     if command = path.command
       path = (continuation || '') + (operation.uid || '') + (command.selector || command.key || '')
     continuation = path if bind
-    result = @get(engine, path)
     
     if (result = @get(engine, path)) != undefined
       @each 'remove', engine, result, path, operation, scope, operation, false, contd

@@ -14919,7 +14919,7 @@ mutate = function(buffer) {
 };
 
 _mutate = function(node) {
-  var child, hoistLevel, level, parent, unscoped, upper_unscoped, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _results;
+  var child, hoistLevel, hoister, level, parent, unscoped, upper_unscoped, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _results;
   _ref = node._childScopes;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     child = _ref[_i];
@@ -14944,10 +14944,16 @@ _mutate = function(node) {
         }
         parent = parent._parentScope;
       }
-      if (hoistLevel === 1) {
-        _results.push(unscoped.splice(1, 0, ['^']));
-      } else if (hoistLevel > 1) {
-        _results.push(unscoped.splice(1, 0, ['^', hoistLevel]));
+      if (hoistLevel > 0) {
+        if (unscoped[1][0] !== '^') {
+          hoister = ['^'];
+          if (hoistLevel > 1) {
+            hoister.push(hoistLevel);
+          }
+          _results.push(unscoped.splice(1, 0, hoister));
+        } else {
+          _results.push(void 0);
+        }
       } else {
         _results.push(void 0);
       }
@@ -20467,7 +20473,7 @@ Domain = (function() {
         return this.paths = {};
       } else {
         this.watchers = {};
-        this.observers = {};
+        this.watched = {};
         if (this.subscribing) {
           return this.objects = {};
         }
@@ -20508,7 +20514,7 @@ Domain = (function() {
     this.setup();
     path = this.getPath(object, property);
     if (this.indexOfTriplet(this.watchers[path], operation, continuation, scope) === -1) {
-      observers = (_base = this.observers)[continuation] || (_base[continuation] = []);
+      observers = (_base = this.watched)[continuation] || (_base[continuation] = []);
       observers.push(operation, path, scope);
       watchers = (_base1 = this.watchers)[path] || (_base1[path] = []);
       watchers.push(operation, continuation, scope);
@@ -20530,11 +20536,11 @@ Domain = (function() {
   Domain.prototype.unwatch = function(object, property, operation, continuation, scope) {
     var id, index, j, obj, observers, old, path, prop, watchers, _base;
     path = this.getPath(object, property);
-    observers = this.observers[continuation];
+    observers = this.watched[continuation];
     index = this.indexOfTriplet(observers, operation, path, scope);
     observers.splice(index, 3);
     if (!observers.length) {
-      delete this.observers[continuation];
+      delete this.watched[continuation];
     }
     watchers = this.watchers[path];
     index = this.indexOfTriplet(watchers, operation, continuation, scope);
@@ -20768,11 +20774,11 @@ Domain = (function() {
     var contd, i, observer, operation, operations, path, _i, _j, _k, _len, _len1, _ref, _ref1;
     for (_i = 0, _len = arguments.length; _i < _len; _i++) {
       path = arguments[_i];
-      if (this.observers) {
+      if (this.watched) {
         _ref = this.Query.prototype.getVariants(path) || [path];
         for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
           contd = _ref[_j];
-          if (observer = this.observers[contd]) {
+          if (observer = this.watched[contd]) {
             while (observer[0]) {
               this.unwatch(observer[1], void 0, observer[0], contd, observer[2]);
             }
@@ -22390,8 +22396,7 @@ Update.prototype = {
         return _results;
       }
     } else {
-      this[name] = {};
-      return this[name].previous = old;
+      return this[name] = void 0;
     }
   },
   reset: function(continuation) {
@@ -22736,6 +22741,7 @@ Query = (function(_super) {
       refs = this.getVariants(continuation);
     }
     index = 0;
+    debugger;
     if (!(observers = typeof id === 'object' && id || engine.observers[id])) {
       return;
     }
@@ -22926,7 +22932,6 @@ Query = (function(_super) {
     if (bind) {
       continuation = path;
     }
-    result = this.get(engine, path);
     if ((result = this.get(engine, path)) !== void 0) {
       this.each('remove', engine, result, path, operation, scope, operation, false, contd);
     }
@@ -27057,34 +27062,16 @@ Document = (function(_super) {
       return this.document.Stylesheet.perform(this.document);
     },
     destroy: function() {
+      var _ref;
       this.scope.removeEventListener('DOMContentLoaded', this);
       this.scope.removeEventListener('scroll', this);
-      return window.removeEventListener('resize', this);
+      window.removeEventListener('resize', this);
+      return (_ref = this.Selector) != null ? _ref.disconnect(this, true) : void 0;
     }
   };
 
   Document.condition = function() {
     return this.scope != null;
-  };
-
-  Document.prototype.transact = function() {
-    var result, _ref;
-    if (result = Document.__super__.transact.apply(this, arguments)) {
-      if ((_ref = this.mutations) != null) {
-        _ref.disconnect(true);
-      }
-      return result;
-    }
-  };
-
-  Document.prototype.commit = function() {
-    var result, _ref;
-    if (result = Document.__super__.commit.apply(this, arguments)) {
-      if ((_ref = this.mutations) != null) {
-        _ref.connect(true);
-      }
-      return result;
-    }
   };
 
   Document.prototype.url = null;

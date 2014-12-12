@@ -57,14 +57,14 @@ class Domain
       
     unless (@hasOwnProperty('watchers') || @hasOwnProperty('paths'))
       unless @hasOwnProperty('values')
-        @values      = {}
+        @values   = {}
 
       if @Solver
-        @paths       = {}
+        @paths    = {}
       else
-        @watchers    = {}
-        @observers   = {}
-        @objects     = {} if @subscribing
+        @watchers = {}
+        @watched  = {}
+        @objects  = {} if @subscribing
 
 
   # Main method to execute any kind of operations in the domain
@@ -107,7 +107,7 @@ class Domain
     @setup()
     path = @getPath(object, property)
     if @indexOfTriplet(@watchers[path], operation, continuation, scope) == -1
-      observers = @observers[continuation] ||= []
+      observers = @watched[continuation] ||= []
       observers.push(operation, path, scope)
 
       watchers = @watchers[path] ||= []
@@ -127,10 +127,10 @@ class Domain
 
   unwatch: (object, property, operation, continuation, scope) ->
     path = @getPath(object, property)
-    observers = @observers[continuation]
+    observers = @watched[continuation]
     index = @indexOfTriplet observers, operation, path, scope
     observers.splice index, 3
-    delete @observers[continuation] unless observers.length
+    delete @watched[continuation] unless observers.length
 
     watchers = @watchers[path]
     index = @indexOfTriplet watchers, operation, continuation, scope
@@ -303,9 +303,9 @@ class Domain
   # Remove watchers and registered operations by path
   remove: ->
     for path in arguments
-      if @observers
+      if @watched
         for contd in @Query::getVariants(path) || [path]
-          if observer = @observers[contd]
+          if observer = @watched[contd]
             while observer[0]
               @unwatch(observer[1], undefined, observer[0], contd, observer[2])
       
