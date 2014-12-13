@@ -141,16 +141,9 @@ class Query extends Command
         if !result
           removed = old
         @clean(engine, path, undefined, operation, scope)
-      else if continuation.charAt(0) == @PAIR
-
-        # Subscribe node to the query
-        if id = engine.identify(node)
-          observers = engine.observers[id] ||= []
-          if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
-            operation.command.prepare(operation)
-            observers.push(operation, continuation, scope)
-        
-        return old
+      #else if continuation.charAt(0) == @PAIR
+      #  @subscribe(engine, operation, continuation, scope, node)
+      #  return old
       else
         return
 
@@ -175,13 +168,7 @@ class Query extends Command
     else
       @reduce(engine, operation, path, scope, added, removed, undefined, continuation)
       
-    #unless operation.def.capture
-      # Subscribe node to the query
-    if id = engine.identify(node)
-      observers = engine.engine.observers[id] ||= []
-      if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
-        operation.command.prepare(operation)
-        observers.push(operation, continuation, scope)
+    @subscribe(engine, operation, continuation, scope, node)
     
     if query
       @snapshot engine, query, old
@@ -196,6 +183,13 @@ class Query extends Command
 
     return added
 
+  # Subscribe node to the query
+  subscribe: (engine, operation, continuation, scope, node) ->
+    id = node && engine.identify(node) || '::global'
+    observers = engine.engine.observers[id] ||= []
+    if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
+      operation.command.prepare(operation)
+      observers.push(operation, continuation, scope)
 
 
 
@@ -205,7 +199,7 @@ class Query extends Command
       index = 0
       while mutations[index]
         watcher = mutations.splice(0, 3)
-        engine.document.solve watcher[0], watcher[1], watcher[2]
+        (engine.document || engine.abstract).solve watcher[0], watcher[1], watcher[2]
       engine.updating.mutations = undefined
     # Execute all deferred selectors (e.g. comma)
     if ascending = engine.updating.ascending
@@ -221,7 +215,7 @@ class Query extends Command
               collection.splice(i, 1)
         if collection?.length
           op = ascending[index]
-          engine.document.Command(op).ascend(engine.document, op, contd, ascending[index + 2], collection)
+          (engine.document || engine.abstract).Command(op).ascend(engine.document, op, contd, ascending[index + 2], collection)
         index += 3
       engine.updating.ascending = undefined
     
@@ -461,7 +455,7 @@ class Query extends Command
     #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     engine.solved.remove(path)
-    engine.intrinsic.remove(path)
+    engine.intrinsic?.remove(path)
     engine.Stylesheet?.remove(engine, path)
 
     shared = false
@@ -480,7 +474,11 @@ class Query extends Command
     if engine.updating.mutations
       @unobserve(engine, engine.updating.mutations, path, true)
 
-    @unobserve(engine, (scope || engine.scope)._gss_id, path)
+    if scope ||= engine.scope
+      id = scope._gss_id
+    else
+      id = '::global'
+    @unobserve(engine, id, path)
 
     if !result || !@isCollection(result)
       engine.fireEvent('remove', path)
@@ -556,10 +554,10 @@ class Query extends Command
   set: (engine, path, result) ->
     old = engine.queries[path]
 
-    if !result?
-      @snapshot engine, path, old
+    #if !result?
+    @snapshot engine, path, old
 
-    if result
+    if result?
       engine.queries[path] = result
     else
       delete engine.queries[path]
@@ -578,10 +576,13 @@ class Query extends Command
     if engine.indexOfTriplet(engine.lefts, parent, left, scope) == -1
       parent.right = operation
       engine.lefts.push parent, left, scope
-      return true
+      return @rewind
     else
       (engine.pairing ||= {})[left] = true
-      return false
+      return @nothing
+
+  nothing: ->
+    return
 
   # Check if operation is pairly bound with another selector
   # Choose a good match for element from the first collection
@@ -599,7 +600,7 @@ class Query extends Command
       pushed = pairs.push(right, operation, scope)
     if engine.updating.pairs != false
       (engine.updating.pairs ||= {})[left] = true
-    return false
+    return @nothing
     
   retrieve: (engine, operation, continuation, scope, ascender, ascending, single) ->
     # Attempt pairing
@@ -630,8 +631,6 @@ class Query extends Command
           return engine.identity[id[1]]
         else
           return engine.queries[continuation]
-      
-    return
 
   TrailingIDRegExp: /(\$[a-z0-9-_"]+)[↓↑→]?$/i
 
@@ -752,7 +751,7 @@ class Query extends Command
         cleaned.splice(index, 1)
       else
         op = operation.parent
-        engine.document.solve op, contd + @PAIR, scope, true
+        (engine.document || engine.abstract).solve op, contd + @PAIR, scope, true
       
         
     for contd in cleaned
@@ -980,21 +979,38 @@ class Query extends Command
             @qualify(engine, operation, contd, scope, groupped, change, '*')
           else
             @qualify(engine, operation, contd, scope, groupped, change.tagName, '*')
-    @
+    return
 
   # Check if query observes qualifier by combinator 
   qualify: (engine, operation, continuation, scope, groupped, qualifier, fallback) ->
     if (indexed = groupped[qualifier]) || (fallback && groupped[fallback])
-      mutations = engine.updating.mutations ||= []
-      if engine.indexOfTriplet(mutations, operation, continuation, scope) > -1
+      @schedule(engine, operation, continuation, scope)
+    return
+
+  notify: (engine, continuation, scope) ->
+    return unless id = (scope && engine.identify(scope) || '::global')
+    return unless watchers = engine.observers[id]
+
+    for watcher, index in watchers by 3
+      if watchers[index + 1] + watcher.command.key == continuation
+        @schedule(engine, watcher, continuation, scope || engine.scope)
+    return
+
+  # Add query into the queue 
+  schedule: (engine, operation, continuation, scope) ->
+    mutations = engine.updating.mutations ||= []
+    if engine.indexOfTriplet(mutations, operation, continuation, scope) > -1
+      return
+    length = (continuation || '').length
+    last = null
+    for watcher, index in mutations by 3
+      contd = mutations[index + 1] || ''
+      if watcher == operation && continuation == cont && scope == mutations[index + 2]
         return
-      length = (continuation || '').length
       # Make shorter continuation keys run before longer ones
-      for watcher, index in mutations by 3
-        if (mutations[index + 1] || '').length > length
-          break
-      mutations.splice(index, 0, operation, continuation, scope)
-    @
+      if !last? && contd.length > length
+        last = index
+    mutations.splice(last || 0, 0, operation, continuation, scope)
 
 
 

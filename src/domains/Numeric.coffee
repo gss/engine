@@ -22,7 +22,12 @@ Numeric::Variable = Variable.extend {},
       scope ||= meta.scope && engine.identity[meta.scope] || engine.scope
     return engine.watch(null, path, operation, @delimit(continuation || ''), scope)
 
-Numeric::Variable.Expression = Variable.Expression.extend()
+Numeric::Variable.Expression = Variable.Expression.extend(
+  before: (args, engine)->
+    for arg in args
+      if !arg? || arg != arg
+        return NaN
+)
 Numeric::Variable.Expression.define(Variable.Expression.algebra)
     
 Numeric::Meta = Command.Meta.extend {}, 

@@ -24,19 +24,17 @@ class Command
     
     # Let engine modify continuation or return cached result
     switch typeof (result = @retrieve(domain, operation, continuation, scope, ascender, ascending))
-      when 'object', 'string'
+      when 'undefined'
+        break
+      when 'function'
+        unless continuation = result.call(@, engine, operation, continuation, scope)
+          return
+      else
         if continuation.indexOf(@PAIR) > -1 || @reference
           return result
-        
-      when 'boolean'
-        if result
-          result = undefined
-          continuation = @rewind(engine, operation, continuation, scope)
-        else
-          return
 
     # Use a shortcut operation when possible (e.g. native dom query)
-    if @head# && @head != operation
+    if @head
       return @jump(domain, operation, continuation, scope, ascender, ascending)
 
     if result == undefined
@@ -202,7 +200,9 @@ class Command
 
   # Reinitialize foreign expression as local to parent domain
   patch: (engine, operation, continuation, scope, replacement) ->
-    op = @sanitize(engine, operation, undefined, replacement).parent
+    op = @sanitize(engine, operation, undefined, replacement)
+    unless op.parent.command.boundaries
+      op = op.parent
     domain = replacement || engine
     if op.domain != domain && op.command
       op.command.transfer(domain, op, continuation, scope, undefined, undefined, op.command, replacement)
@@ -217,9 +217,13 @@ class Command
           delete meta.values[path]
     if top
       parent = operation
-      while parent.parent?.domain == parent.domain && !(parent.parent.command instanceof Command.List)
+      while parent.parent?.domain == parent.domain && !parent.parent.command.boundaries
+        operation = parent
         parent = parent.parent
-      engine.updating.push([parent], parent.domain)
+      unless domain = parent.domain
+        if domain = parent.command.domains?[parent.indexOf(operation)]
+          domain = engine[domain]
+      engine.updating.push([parent], domain)
 
   # Meta information is stored in a wrapper root object by convention
   # Used to restore continuation/scope and to export values across domains
@@ -295,7 +299,7 @@ class Command
       replacement.Command(operation)
 
     unless ascend == false
-      if (parent = operation.parent) && parent.domain == engine
+      if (parent = operation.parent) && parent.domain == engine && !parent.command.boundaries
         return @sanitize(engine, parent, operation, replacement)
 
     return operation
@@ -685,6 +689,7 @@ class Command.List extends Command
   
   constructor: ->
   extras: 0
+  boundaries: true
 
   execute: ->
 

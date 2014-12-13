@@ -73,7 +73,6 @@ class Stylesheet extends Command
   ]
 
   @perform: (engine) ->
-    debugger
     if engine.stylesheets
       for stylesheet in engine.stylesheets
         @evaluate(engine, stylesheet)

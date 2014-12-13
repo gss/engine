@@ -44,7 +44,7 @@ Abstract::Default = Command.Default.extend
 
 # Topmost unknown command returns processed operation back to engine
 Top = Abstract::Default.extend
-
+  
   condition: (engine, operation) ->
     if parent = operation.parent
       if parent.command instanceof Abstract::Default 
@@ -63,34 +63,23 @@ Top = Abstract::Default.extend
     args.parent = wrapper
 
 
-    if @inheriting
+    if domain = @domain?(engine, operation)
       wrapper.parent = operation.parent
-
-    if domain = @domain?(engine)
       wrapper.domain ||= domain
 
     engine.update wrapper, undefined, undefined, domain
     return
 
   produce: (meta, args)->
-    return [meta, args] 
+    return [meta, args]
 
-
-# Unrecognized command in conditional clause
-Clause = Top.extend
-
-  condition: (engine, operation) ->
+  domain: (engine, operation) -> 
     if parent = operation.parent
-      if parent[1] == operation
-        return parent.command instanceof Abstract::Condition
-
-  domain: (engine) ->
-    return engine.solved
-
-  inheriting: true
+      if domain = parent.command.domains?[parent.indexOf(operation)]
+        return engine[domain]
 
 # Register subclasses to be dispatched by condition
-Abstract::Default::advices = [Clause, Top]
+Abstract::Default::advices = [Top]
 
 # Array of commands, stops command propagation
 Abstract::List = Command.List

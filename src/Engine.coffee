@@ -178,26 +178,32 @@ class Engine
     if solution
       @updating.apply(solution)
 
-    @fireEvent('precommit', solution)
-    @fireEvent('commit', solution)
+    mutations = true
+    while mutations
 
-    if started = @started
-      @started = undefined
+      @fireEvent('precommit', solution)
+      @fireEvent('commit', solution)
 
-    if transacting
-      @transacting = undefined
 
-      @console.end()
+      if started = @started
+        @started = undefined
 
-    update = @updating
-    if update.domains.length
-      if old
-        if old != update
-          old.push(update)
-      if !old || !update.busy?.length
-        update.each @resolve, @
-      if update.busy?.length
-        return update
+      if transacting
+        @transacting = undefined
+
+        @console.end()
+
+      update = @updating
+      if update.domains.length
+        if old
+          if old != update
+            old.push(update)
+        if !old || !update.busy?.length
+          update.each @resolve, @
+        if update.busy?.length
+          return update
+
+      mutations = @updating.mutations
 
     removing = (update.problems.length == 1 && update.domains[0] == null)
     restyling = (@restyled && !update.problems.length)

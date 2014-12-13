@@ -1111,9 +1111,9 @@ describe('Nested Rules', function() {
             }));
             expect(Object.keys(engine.values).length).to.eql(4);
             expect(Object.keys(engine.solved.watchers).length).to.eql(0);
-            expect(Object.keys(engine.solved.observers).length).to.eql(0);
-            expect((k = Object.keys(engine.queries.watchers)).length).to.eql(1);
-            expect(Object.keys(engine.queries.watchers[k[0]]).length).to.eql(9);
+            expect(Object.keys(engine.solved.watched).length).to.eql(0);
+            expect((k = Object.keys(engine.observers)).length).to.eql(1);
+            expect(Object.keys(engine.observers[k[0]]).length).to.eql(9);
             container.removeEventListener('solve', listener);
             return done();
           }
