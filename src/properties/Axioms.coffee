@@ -16,7 +16,6 @@ class Axioms
       return ['+', ['get', @getPath(id, 'x')], ['/', ['get', @getPath(id, 'width')], 2]]
 
     y: (scope, path) ->
-      debugger
       id = @identify(scope)
       return ['+', ['get', @getPath(id, 'y')], ['/', ['get', @getPath(id, 'height')], 2]]
       

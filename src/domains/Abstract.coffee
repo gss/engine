@@ -16,7 +16,7 @@ class Abstract extends Domain
   Properties: require('../properties/Axioms')  
 
   events:
-    commit: ->
+    precommit: ->
       @Query::commit(@)
       @Query::repair(@)
 

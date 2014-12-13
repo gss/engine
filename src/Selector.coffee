@@ -102,7 +102,6 @@ class Selector extends Query
 
 
   @observe: (engine) ->
-    debugger
     if @Observer
       @listener = new @Observer @onMutations.bind(engine)
       @connect(engine)
@@ -134,10 +133,9 @@ class Selector extends Query
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   @onMutations: (mutations) ->
-    debugger
     unless @running
       return if @scope.nodeType == 9
-      return engine.solve(->)
+      return @solve(->)
     
     result = @solve 'Document', 'mutations', ->
       if @updating.index > -1
@@ -166,7 +164,6 @@ class Selector extends Query
     added = []
 
     removed = []
-    debugger
     for child in mutation.addedNodes
       if child.nodeType == 1 && @filterNodeMutation(child) != false
         added.push(child)
@@ -446,6 +443,7 @@ Selector.define
     tags: ['selector']
     
     Selecter: (value, engine, operation, continuation, scope) ->
+      debugger
       return scope.getElementsByClassName(value)
       
     Qualifier: (node, value) ->
@@ -715,6 +713,7 @@ Selector.define
     singular: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
       collection = @getCanonicalCollection(engine, continuation)
+      debugger
       index = collection?.indexOf(node)
       return unless index?
       return node if index == collection.length - 1
@@ -750,9 +749,9 @@ Selector.define
     yield: (result, engine, operation, continuation, scope, ascender) ->
       contd = @getScopePath(engine, scope, continuation) + operation.parent.command.path
       @add(engine, result, contd, operation.parent, scope, operation, continuation)
-      engine.ascending ||= []
-      if engine.indexOfTriplet(engine.ascending, operation.parent, contd, scope) == -1
-        engine.ascending.push(operation.parent, contd, scope)
+      engine.updating.ascending ||= []
+      if engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) == -1
+        engine.updating.ascending.push(operation.parent, contd, scope)
       return true
 
     # Remove a single element that was found by sub-selector

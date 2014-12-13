@@ -365,7 +365,7 @@ describe 'GSS engine', ->
       done()
       
     it "force display on un-queried views", ->
-      engine.positions.solve {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
+      engine.solve {"$d1[width]":1,"$d2[width]":2,"$d3[width]":3}
       w = Math.round($('#d1').getBoundingClientRect().width)
       assert w is 1, "d1 width: #{w}"
       w = Math.round($('#d2').getBoundingClientRect().width)

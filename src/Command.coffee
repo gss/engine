@@ -236,7 +236,7 @@ class Command
 
   # Return parent scope continuation to execute and pair another query
   rewind: (engine, operation, continuation, scope) ->
-    return engine.Query.getScopePath(engine, scope, continuation)
+    return @getScopePath(engine, scope, continuation)
 
   # Return ascending continuation with ids when iterating collection
   fork: (engine, continuation, item) ->

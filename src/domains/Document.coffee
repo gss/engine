@@ -9,29 +9,23 @@ class Document extends Abstract
   disconnected: true
 
   constructor: () ->
-    # Export modules into engine
-    engine = @engine
-    #engine.pairs       ||= new @Pairs(@)
-
-    engine.scope      = document
-
     super
 
     if @scope.nodeType == 9
       if ['complete', 'loaded'].indexOf(@scope.readyState) == -1
-        document.addEventListener('DOMContentLoaded', engine)
-        document.addEventListener('readystatechange', engine)
-        window  .addEventListener('load',             engine)
+        document.addEventListener('DOMContentLoaded', @engine)
+        document.addEventListener('readystatechange', @engine)
+        window  .addEventListener('load',             @engine)
       else
         @compile()
 
-    engine.Selector = @Selector
-    @Selector.observe(engine)
+    @engine.Selector = @Selector
+    @Selector.observe(@engine)
       
-    @scope.addEventListener 'scroll', engine, true
+    @scope.addEventListener 'scroll', @engine, true
     #if @scope != document
     #  document.addEventListener 'scroll', engine, true
-    window?.addEventListener 'resize', engine
+    window?.addEventListener 'resize', @engine
 
 
   events:

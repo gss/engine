@@ -52,7 +52,7 @@ class Stylesheet extends Command
     else
       stylesheet.continuation = @prototype.delimit(continuation, @prototype.DESCEND)
     stylesheet.command = @
-    stylesheet.operations = engine.clone @mimes[type](source)
+    stylesheet.operations = @mimes[type](source)
 
     stylesheets = engine.engine.stylesheets ||= []
     engine.console.row('parse', stylesheet.operations, stylesheet.continuation)
@@ -73,6 +73,7 @@ class Stylesheet extends Command
   ]
 
   @perform: (engine) ->
+    debugger
     if engine.stylesheets
       for stylesheet in engine.stylesheets
         @evaluate(engine, stylesheet)
@@ -259,7 +260,6 @@ class Stylesheet extends Command
             if result.substring(0, 12) == ' [matches~="'
               update.push ' ' + @getCustomSelector(query.command.path, result)
             else
-              debugger
               for selector in @getRuleSelectors(parent[1])
                 update.push selector + result
           results = update

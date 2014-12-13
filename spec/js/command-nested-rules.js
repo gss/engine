@@ -19,23 +19,23 @@ remove = function(el) {
 fixtures = document.getElementById('fixtures');
 
 describe('Nested Rules', function() {
+  var container, engine;
+  container = null;
+  engine = null;
+  beforeEach(function() {
+    var old;
+    if (old = (container != null ? container._gss_id : void 0) && GSS(container)) {
+      old.destroy();
+    }
+    container = document.createElement('div');
+    container.id = 'container0';
+    $('#fixtures').appendChild(container);
+    return window.$engine = engine = new GSS(container);
+  });
+  afterEach(function() {
+    return remove(container);
+  });
   describe('Basic', function() {
-    var container, engine;
-    container = null;
-    engine = null;
-    beforeEach(function() {
-      var old;
-      if (old = (container != null ? container._gss_id : void 0) && GSS(container)) {
-        old.destroy();
-      }
-      container = document.createElement('div');
-      container.id = 'container0';
-      $('#fixtures').appendChild(container);
-      return window.$engine = engine = new GSS(container);
-    });
-    afterEach(function() {
-      return remove(container);
-    });
     describe('flat', function() {
       return it('Runs commands from sourceNode', function(done) {
         var rules;
@@ -461,7 +461,6 @@ describe('Nested Rules', function() {
         rules = [['rule', ['.', [' ', ['.', 'vessel']], 'box'], ["<=", ["get", ["&"], "width"], ["get", ["$"], "width"]]]];
         container.id = 'container0';
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div id=\"vessel1\" class=\"vessel\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
-        engine = new GSS(container);
         engine.once('solve', function() {
           expect(stringify(engine.updated.getProblems())).to.eql(stringify([
             [
@@ -831,7 +830,6 @@ describe('Nested Rules', function() {
         var box1, rules, vessel0;
         rules = ['rule', ['.', 'vessel'], ['rule', ['.', 'box'], ['<=', ["get", ["&"], "x"], 100]]];
         container.innerHTML = "<div id=\"box0\" class=\"box\"></div>\n<div class=\"vessel\" id=\"vessel0\">\n  <div id=\"box1\" class=\"box\"></div>\n  <div id=\"box2\" class=\"box\"></div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
-        engine = new GSS(container);
         box1 = container.getElementsByClassName('box')[1];
         vessel0 = container.getElementsByClassName('vessel')[0];
         engine.once('solve', function() {
@@ -1012,16 +1010,6 @@ describe('Nested Rules', function() {
     });
   });
   return describe('@if @else', function() {
-    var container, engine;
-    container = null;
-    engine = null;
-    beforeEach(function() {
-      container = document.createElement('div');
-      return $('#fixtures').appendChild(container);
-    });
-    afterEach(function() {
-      return remove(container);
-    });
     return describe('basic', function() {
       return it('step 1', function(done) {
         var counter, listener, rules;
@@ -1131,7 +1119,6 @@ describe('Nested Rules', function() {
           }
         };
         container.addEventListener('solve', listener);
-        window.$engine = engine = new GSS(container);
         engine.solve(rules);
         return container.innerHTML = "<div id=\"container\" >\n  <div class=\"vessel\">\n    <div id=\"box1\" class=\"box\"></div>\n    <div id=\"box2\" class=\"box\"></div>\n  </div>\n</div>\n<div id=\"box3\" class=\"box\"></div>\n<div id=\"box4\" class=\"box\"></div>";
       });

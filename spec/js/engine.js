@@ -339,7 +339,7 @@ describe('GSS engine', function() {
     });
     return it("force display on un-queried views", function() {
       var w;
-      engine.positions.solve({
+      engine.solve({
         "$d1[width]": 1,
         "$d2[width]": 2,
         "$d3[width]": 3

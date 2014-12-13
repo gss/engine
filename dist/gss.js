@@ -19716,7 +19716,7 @@ Engine = (function() {
     this.listeners = {};
     this.observers = {};
     this.queries = {};
-    this.lefts = {};
+    this.lefts = [];
     this.pairs = {};
     this.addListeners(this.$events);
     this.addListeners(this.events);
@@ -19814,7 +19814,8 @@ Engine = (function() {
     if (solution) {
       this.updating.apply(solution);
     }
-    this.triggerEvent('commit', solution);
+    this.fireEvent('precommit', solution);
+    this.fireEvent('commit', solution);
     if (started = this.started) {
       this.started = void 0;
     }
@@ -21226,7 +21227,7 @@ Command = (function() {
   };
 
   Command.prototype.rewind = function(engine, operation, continuation, scope) {
-    return engine.Query.getScopePath(engine, scope, continuation);
+    return this.getScopePath(engine, scope, continuation);
   };
 
   Command.prototype.fork = function(engine, continuation, item) {
@@ -22574,7 +22575,7 @@ Query = (function(_super) {
     if ((_ref2 = updating.collections) != null ? _ref2.hasOwnProperty(path) : void 0) {
       old = updating.collections[path];
     } else if ((old == null) && (result && result.length === 0) && continuation) {
-      old = this.getCanonicalCollection(path);
+      old = this.getCanonicalCollection(engine, path);
     }
     isCollection = this.isCollection(result);
     if (old) {
@@ -22592,7 +22593,7 @@ Query = (function(_super) {
         if (!result) {
           removed = old;
         }
-        this.clean(path, void 0, operation, scope);
+        this.clean(engine, path, void 0, operation, scope);
       } else if (continuation.charAt(0) === this.PAIR) {
         if (id = engine.identify(node)) {
           observers = (_base = engine.observers)[id] || (_base[id] = []);
@@ -22685,7 +22686,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.add = function(engine, node, continuation, operation, scope, key, contd) {
-    var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _i, _j, _len, _len1;
+    var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1;
     collection = (_base = engine.queries)[continuation] || (_base[continuation] = []);
     if (!collection.push) {
       return;
@@ -22694,6 +22695,9 @@ Query = (function(_super) {
     keys = collection.continuations || (collection.continuations = []);
     paths = collection.paths || (collection.paths = []);
     scopes = collection.scopes || (collection.scopes = []);
+    if (engine.pairs[continuation]) {
+      ((_base1 = engine.updating).pairs || (_base1.pairs = {}))[continuation] = true;
+    }
     this.snapshot(engine, continuation, collection);
     if ((index = collection.indexOf(node)) === -1) {
       for (index = _i = 0, _len = collection.length; _i < _len; index = ++_i) {
@@ -22741,7 +22745,6 @@ Query = (function(_super) {
       refs = this.getVariants(continuation);
     }
     index = 0;
-    debugger;
     if (!(observers = typeof id === 'object' && id || engine.observers[id])) {
       return;
     }
@@ -23076,7 +23079,7 @@ Query = (function(_super) {
   Query.prototype.onLeft = function(engine, operation, parent, continuation, scope) {
     var left;
     left = this.getCanonicalPath(continuation);
-    if (engine.Domain.prototype.indexOfTriplet(engine.lefts, parent, left, scope) === -1) {
+    if (engine.indexOfTriplet(engine.lefts, parent, left, scope) === -1) {
       parent.right = operation;
       engine.lefts.push(parent, left, scope);
       return true;
@@ -23094,7 +23097,7 @@ Query = (function(_super) {
       op = _ref[index];
       if (op === parent && engine.lefts[index + 2] === scope) {
         left = engine.lefts[index + 1];
-        this.watch(engine, operation, continuation, scope, left, right);
+        this.listen(engine, operation, continuation, scope, left, right);
       }
     }
     if (!left) {
@@ -23113,7 +23116,7 @@ Query = (function(_super) {
 
   Query.prototype.retrieve = function(engine, operation, continuation, scope, ascender, ascending, single) {
     var contd, id, index, last, parent, prev, result;
-    last = continuation.lastIndexOf(engine.PAIR);
+    last = continuation.lastIndexOf(this.PAIR);
     if (last > -1 && !operation.command.reference) {
       prev = -1;
       while ((index = continuation.indexOf(this.PAIR, prev + 1)) > -1) {
@@ -23171,22 +23174,18 @@ Query = (function(_super) {
     return engine.updating.pairs = void 0;
   };
 
-  Query.prototype.match = function(collection, node, scope) {
-    var dups, index;
-    if ((index = collection.indexOf(node)) > -1) {
-      if (collection.scopes[index] === scope) {
-        return true;
-      }
-      index = -1;
-      if (dups = collection.duplicates) {
-        while ((index = dups.indexOf(node, index + 1)) > -1) {
-          if (collection.scopes[index + collection.length] === scope) {
-            return true;
-          }
-        }
-      }
-    }
-  };
+  /*
+  match: (collection, node, scope) ->
+    if (index = collection.indexOf(node)) > -1
+      if collection.scopes[index] == scope
+        return true
+      index = -1
+      if dups = collection.duplicates
+        while (index = dups.indexOf(node, index + 1)) > -1
+          if collection.scopes[index + collection.length] == scope
+            return true
+  */
+
 
   Query.prototype.count = function(value) {
     if (value != null ? value.push : void 0) {
@@ -23270,7 +23269,7 @@ Query = (function(_super) {
         }
       }
     }
-    engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999', left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + engine.identify(scope));
+    engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', this.PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999', left + ' ' + this.PAIR + ' ' + root.right.command.path + ' in ' + engine.identify(scope));
     cleaned = [];
     for (_k = 0, _len1 = removed.length; _k < _len1; _k++) {
       pair = removed[_k];
@@ -23371,7 +23370,7 @@ Query = (function(_super) {
   Query.prototype.listen = function(engine, operation, continuation, scope, left, right) {
     var observers, _base;
     observers = (_base = engine.pairs)[left] || (_base[left] = []);
-    if (engine.Domain.prototype.indexOfTriplet(observers, right, operation, scope) === -1) {
+    if (engine.indexOfTriplet(observers, right, operation, scope) === -1) {
       return observers.push(right, operation, scope);
     }
   };
@@ -23379,7 +23378,7 @@ Query = (function(_super) {
   Query.prototype.unlisten = function(engine, operation, continuation, scope, left, right) {
     var index, observers, _base;
     observers = (_base = engine.pairs)[left] || (_base[left] = []);
-    if ((index = engine.Domain.prototype.indexOfTriplet(observers, right, operation, scope)) !== -1) {
+    if ((index = engine.indexOfTriplet(observers, right, operation, scope)) !== -1) {
       return observers.splice(index, 3);
     }
   };
@@ -23470,10 +23469,11 @@ Query = (function(_super) {
   };
 
   Query.prototype.getCanonicalPath = function(continuation, compact) {
-    var bits, last;
+    var bits, last, regexp;
     bits = this.delimit(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
-    last = bits[bits.length - 1] = last.replace(this.CanonicalizeRegExp, '$1');
+    regexp = Query.CanonicalizeRegExp || (Query.CanonicalizeRegExp = new RegExp("" + "([^" + this.PAIR + ",])" + "\\$[^" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
+    last = bits[bits.length - 1] = last.replace(regexp, '$1');
     if (compact) {
       return last;
     }
@@ -23573,7 +23573,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.qualify = function(engine, operation, continuation, scope, groupped, qualifier, fallback) {
-    var index, indexed, length, mutations, _base, _i, _len;
+    var index, indexed, length, mutations, watcher, _base, _i, _len;
     if ((indexed = groupped[qualifier]) || (fallback && groupped[fallback])) {
       mutations = (_base = engine.updating).mutations || (_base.mutations = []);
       if (engine.indexOfTriplet(mutations, operation, continuation, scope) > -1) {
@@ -23581,7 +23581,7 @@ Query = (function(_super) {
       }
       length = (continuation || '').length;
       for (index = _i = 0, _len = mutations.length; _i < _len; index = _i += 3) {
-        mutations = mutations[index];
+        watcher = mutations[index];
         if ((mutations[index + 1] || '').length > length) {
           break;
         }
@@ -24226,7 +24226,6 @@ Selector = (function(_super) {
   };
 
   Selector.observe = function(engine) {
-    debugger;
     if (this.Observer) {
       this.listener = new this.Observer(this.onMutations.bind(engine));
       return this.connect(engine);
@@ -24269,13 +24268,12 @@ Selector = (function(_super) {
   };
 
   Selector.onMutations = function(mutations) {
-    debugger;
     var result;
     if (!this.running) {
       if (this.scope.nodeType === 9) {
         return;
       }
-      return engine.solve(function() {});
+      return this.solve(function() {});
     }
     result = this.solve('Document', 'mutations', function() {
       var mutation, _i, _len;
@@ -24310,7 +24308,6 @@ Selector = (function(_super) {
     var added, allAdded, allChanged, allMoved, allRemoved, attribute, changed, changedTags, child, el, firstNext, firstPrev, id, index, j, kls, moved, next, node, parent, prev, prop, queries, removed, tag, update, value, values, _i, _j, _k, _l, _len, _len1, _len10, _len11, _len12, _len13, _len2, _len3, _len4, _len5, _len6, _len7, _len8, _len9, _m, _n, _o, _p, _q, _r, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _s, _t, _u, _v;
     added = [];
     removed = [];
-    debugger;
     _ref = mutation.addedNodes;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       child = _ref[_i];
@@ -24686,6 +24683,7 @@ Selector.define({
     helpers: ['class', 'getElementsByClassName'],
     tags: ['selector'],
     Selecter: function(value, engine, operation, continuation, scope) {
+      debugger;
       return scope.getElementsByClassName(value);
     },
     Qualifier: function(node, value) {
@@ -25000,6 +24998,7 @@ Selector.define({
         node = scope;
       }
       collection = this.getCanonicalCollection(engine, continuation);
+      debugger;
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index == null) {
         return;
@@ -25036,12 +25035,12 @@ Selector.define({
       return '';
     },
     "yield": function(result, engine, operation, continuation, scope, ascender) {
-      var contd;
+      var contd, _base;
       contd = this.getScopePath(engine, scope, continuation) + operation.parent.command.path;
       this.add(engine, result, contd, operation.parent, scope, operation, continuation);
-      engine.ascending || (engine.ascending = []);
-      if (engine.indexOfTriplet(engine.ascending, operation.parent, contd, scope) === -1) {
-        engine.ascending.push(operation.parent, contd, scope);
+      (_base = engine.updating).ascending || (_base.ascending = []);
+      if (engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) === -1) {
+        engine.updating.ascending.push(operation.parent, contd, scope);
       }
       return true;
     },
@@ -25643,7 +25642,7 @@ Stylesheet = (function(_super) {
       stylesheet.continuation = this.prototype.delimit(continuation, this.prototype.DESCEND);
     }
     stylesheet.command = this;
-    stylesheet.operations = engine.clone(this.mimes[type](source));
+    stylesheet.operations = this.mimes[type](source);
     stylesheets = (_base = engine.engine).stylesheets || (_base.stylesheets = []);
     engine.console.row('parse', stylesheet.operations, stylesheet.continuation);
     if (stylesheets.indexOf(stylesheet) === -1) {
@@ -25662,6 +25661,7 @@ Stylesheet = (function(_super) {
   Stylesheet.operations = [['eval', ['[*=]', ['tag', 'style'], 'type', 'text/gss']], ['load', ['[*=]', ['tag', 'link'], 'type', 'text/gss']]];
 
   Stylesheet.perform = function(engine) {
+    debugger;
     var stylesheet, _i, _len, _ref1;
     if (engine.stylesheets) {
       _ref1 = engine.stylesheets;
@@ -25907,7 +25907,6 @@ Stylesheet = (function(_super) {
             if (result.substring(0, 12) === ' [matches~="') {
               update.push(' ' + this.getCustomSelector(query.command.path, result));
             } else {
-              debugger;
               _ref1 = this.getRuleSelectors(parent[1]);
               for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
                 selector = _ref1[_k];
@@ -26207,7 +26206,7 @@ Abstract = (function(_super) {
   Abstract.prototype.Properties = require('../properties/Axioms');
 
   Abstract.prototype.events = {
-    commit: function() {
+    precommit: function() {
       this.Query.prototype.commit(this);
       return this.Query.prototype.repair(this);
     },
@@ -26949,24 +26948,21 @@ Document = (function(_super) {
   Document.prototype.disconnected = true;
 
   function Document() {
-    var engine;
-    engine = this.engine;
-    engine.scope = document;
     Document.__super__.constructor.apply(this, arguments);
     if (this.scope.nodeType === 9) {
       if (['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
-        document.addEventListener('DOMContentLoaded', engine);
-        document.addEventListener('readystatechange', engine);
-        window.addEventListener('load', engine);
+        document.addEventListener('DOMContentLoaded', this.engine);
+        document.addEventListener('readystatechange', this.engine);
+        window.addEventListener('load', this.engine);
       } else {
         this.compile();
       }
     }
-    engine.Selector = this.Selector;
-    this.Selector.observe(engine);
-    this.scope.addEventListener('scroll', engine, true);
+    this.engine.Selector = this.Selector;
+    this.Selector.observe(this.engine);
+    this.scope.addEventListener('scroll', this.engine, true);
     if (typeof window !== "undefined" && window !== null) {
-      window.addEventListener('resize', engine);
+      window.addEventListener('resize', this.engine);
     }
   }
 
@@ -27442,7 +27438,6 @@ Axioms = (function() {
       return ['+', ['get', this.getPath(id, 'x')], ['/', ['get', this.getPath(id, 'width')], 2]];
     },
     y: function(scope, path) {
-      debugger;
       var id;
       id = this.identify(scope);
       return ['+', ['get', this.getPath(id, 'y')], ['/', ['get', this.getPath(id, 'height')], 2]];

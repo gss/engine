@@ -64,7 +64,7 @@ class Engine
     @observers = {}
     @queries   = {}
 
-    @lefts = {}
+    @lefts = []
     @pairs = {}
     
     @addListeners(@$events)
@@ -178,7 +178,8 @@ class Engine
     if solution
       @updating.apply(solution)
 
-    @triggerEvent('commit', solution)
+    @fireEvent('precommit', solution)
+    @fireEvent('commit', solution)
 
     if started = @started
       @started = undefined

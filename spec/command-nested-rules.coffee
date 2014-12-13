@@ -13,22 +13,22 @@ remove = (el) ->
 fixtures = document.getElementById 'fixtures'
 
 describe 'Nested Rules', ->
+  container = null
+  engine = null
+
+  beforeEach ->
+    if old = container?._gss_id && GSS(container)
+      old.destroy()
+    container = document.createElement 'div'
+    container.id = 'container0'
+    $('#fixtures').appendChild container
+    window.$engine = engine = new GSS(container)
+
+  afterEach ->
+    remove(container)
+
  
   describe 'Basic', ->
-    container = null
-    engine = null
-  
-    beforeEach ->
-      if old = container?._gss_id && GSS(container)
-        old.destroy()
-      container = document.createElement 'div'
-      container.id = 'container0'
-      $('#fixtures').appendChild container
-      window.$engine = engine = new GSS(container)
-  
-    afterEach ->
-      remove(container)
-
     describe 'flat', ->
     
       it 'Runs commands from sourceNode', (done) ->
@@ -628,7 +628,6 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
-        engine = new GSS(container)
                               
         engine.once 'solve', ->  
 
@@ -1196,7 +1195,6 @@ describe 'Nested Rules', ->
           <div id="box3" class="box"></div>
           <div id="box4" class="box"></div>
           """
-        engine = new GSS(container)
         
         box1 = container.getElementsByClassName('box')[1] 
         vessel0 = container.getElementsByClassName('vessel')[0] 
@@ -1380,17 +1378,7 @@ describe 'Nested Rules', ->
         engine.solve rules
 
   describe '@if @else', ->
-    
-    container = null
-    engine = null
-  
-    beforeEach ->
-      container = document.createElement 'div'
-      $('#fixtures').appendChild container
-  
-    afterEach ->
-      remove(container)
-  
+      
     describe 'basic', ->
     
       it 'step 1', (done) ->
@@ -1512,7 +1500,6 @@ describe 'Nested Rules', ->
             done()
         container.addEventListener 'solve', listener
         
-        window.$engine = engine = new GSS(container)
         engine.solve rules
         container.innerHTML =  """
           <div id="container" >

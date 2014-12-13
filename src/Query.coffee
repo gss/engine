@@ -125,7 +125,7 @@ class Query extends Command
     if updating.collections?.hasOwnProperty(path)
       old = updating.collections[path]
     else if !old? && (result && result.length == 0) && continuation
-      old = @getCanonicalCollection(path)
+      old = @getCanonicalCollection(engine, path)
 
     isCollection = @isCollection(result)
 
@@ -140,7 +140,7 @@ class Query extends Command
       else if result != old
         if !result
           removed = old
-        @clean(path, undefined, operation, scope)
+        @clean(engine, path, undefined, operation, scope)
       else if continuation.charAt(0) == @PAIR
 
         # Subscribe node to the query
@@ -240,6 +240,8 @@ class Query extends Command
     paths = collection.paths ||= []
     scopes = collection.scopes ||= []
 
+    if engine.pairs[continuation]
+      (engine.updating.pairs ||= {})[continuation] = true
 
     @snapshot engine, continuation, collection
 
@@ -280,7 +282,7 @@ class Query extends Command
     if continuation != true
       refs = @getVariants(continuation)
     index = 0
-    debugger
+
     return unless (observers = typeof id == 'object' && id || engine.observers[id])
     while watcher = observers[index]
       query = observers[index + 1]
@@ -573,7 +575,7 @@ class Query extends Command
 
   onLeft: (engine, operation, parent, continuation, scope) ->
     left = @getCanonicalPath(continuation)
-    if engine.Domain::indexOfTriplet(engine.lefts, parent, left, scope) == -1
+    if engine.indexOfTriplet(engine.lefts, parent, left, scope) == -1
       parent.right = operation
       engine.lefts.push parent, left, scope
       return true
@@ -589,7 +591,7 @@ class Query extends Command
     for op, index in engine.lefts by 3
       if op == parent && engine.lefts[index + 2] == scope
         left = engine.lefts[index + 1]
-        @watch(engine, operation, continuation, scope, left, right)
+        @listen(engine, operation, continuation, scope, left, right)
     return unless left
     left = @getCanonicalPath(left)
     pairs = engine.pairs[left] ||= []
@@ -601,7 +603,7 @@ class Query extends Command
     
   retrieve: (engine, operation, continuation, scope, ascender, ascending, single) ->
     # Attempt pairing
-    last = continuation.lastIndexOf(engine.PAIR)
+    last = continuation.lastIndexOf(@PAIR)
     if last > -1 && !operation.command.reference
       # Found right side
       prev = -1
@@ -641,7 +643,7 @@ class Query extends Command
         for pair, index in pairs by 3
           @pair engine, property, pair, pairs[index + 1], pairs[index + 2]
     engine.updating.pairs = undefined
-      
+  ###
   match: (collection, node, scope) ->
     if (index = collection.indexOf(node)) > -1
       if collection.scopes[index] == scope
@@ -651,6 +653,7 @@ class Query extends Command
         while (index = dups.indexOf(node, index + 1)) > -1
           if collection.scopes[index + collection.length] == scope
             return true
+  ###
 
   count: (value) ->
     if value?.push 
@@ -724,7 +727,7 @@ class Query extends Command
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
-    engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + PAIR + ' ' + root.right.command.path + ' in ' + engine.identify(scope)
+    engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @PAIR + ' ' + root.right.command.path + ' in ' + engine.identify(scope)
       
 
     cleaned = []
@@ -805,12 +808,12 @@ class Query extends Command
 
   listen: (engine, operation, continuation, scope, left, right) ->
     observers = engine.pairs[left] ||= []
-    if engine.Domain::indexOfTriplet(observers, right, operation, scope) == -1
+    if engine.indexOfTriplet(observers, right, operation, scope) == -1
       observers.push(right, operation, scope)
 
   unlisten: (engine, operation, continuation, scope, left, right) ->
     observers = engine.pairs[left] ||= []
-    unless (index = engine.Domain::indexOfTriplet(observers, right, operation, scope)) == -1
+    unless (index = engine.indexOfTriplet(observers, right, operation, scope)) == -1
       observers.splice(index, 3)
 
 
@@ -897,7 +900,11 @@ class Query extends Command
   getCanonicalPath: (continuation, compact) ->
     bits = @delimit(continuation).split(@DESCEND)
     last = bits[bits.length - 1]
-    last = bits[bits.length - 1] = last.replace(@CanonicalizeRegExp, '$1')
+    regexp = Query.CanonicalizeRegExp ||= new RegExp("" +
+        "([^"   + @PAIR   + ",])" +
+        "\\$[^" + @ASCEND + "]+" +
+        "(?:"   + @ASCEND + "|$)", "g")
+    last = bits[bits.length - 1] = last.replace(regexp, '$1')
     return last if compact
     return bits.join(@DESCEND)
 
@@ -983,7 +990,7 @@ class Query extends Command
         return
       length = (continuation || '').length
       # Make shorter continuation keys run before longer ones
-      for mutations, index in mutations by 3
+      for watcher, index in mutations by 3
         if (mutations[index + 1] || '').length > length
           break
       mutations.splice(index, 0, operation, continuation, scope)
