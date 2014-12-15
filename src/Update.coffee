@@ -457,5 +457,9 @@ Update.prototype =
     @time = @engine.console.time(@start)
     @start = undefined
 
+  isDone: ->
+    return !@mutations && !@ascending && @domains.length == @index + 1
+
+
   index: -1
 module.exports = Update

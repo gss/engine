@@ -112,7 +112,7 @@ class Engine
   # So queries will not be executed, 
   # and variable names will be used as given 
   evaluate: (expressions) ->
-    @update(expressions).solution
+    @update(expressions)
 
   # engine.solve({}) - solve with given constants
   # engine.solve([]) - evaluate commands
@@ -130,15 +130,17 @@ class Engine
 
 
     if typeof args[0] == 'function'
-      solution = args.shift().apply(@, args) 
+      args.shift().apply(@, args) 
     else if args[0]?
       strategy = @[@strategy]
       if strategy.solve
-        solution = strategy.solve.apply(strategy, args) || {}
+        strategy.solve.apply(strategy, args) || {}
       else
-        solution = strategy.apply(@, args)
+        strategy.apply(@, args)
 
-    return @commit(solution, old, transacting)
+    if transacting
+
+      return @commit(@updating)
 
   # Figure out arguments and prepare to solve given operations
   transact: ->
@@ -173,99 +175,46 @@ class Engine
 
     return args
 
-  # Process and apply computed values
-  commit: (solution, old, transacting) ->
-    if solution
-      @updating.apply(solution)
+  # Run solution in multiple ticks
+  commit: (update) ->
 
-    mutations = true
-    while mutations
+    until update.isDone()
+      # Process deferred operations, mutations and conditions
+      @triggerEvent('precommit', update)
+      @triggerEvent('commit', update)
 
-      @fireEvent('precommit', solution)
-      @fireEvent('commit', solution)
-
-
-      if started = @started
-        @started = undefined
-
-      if transacting
-        @transacting = undefined
-
-        @console.end()
-
-      update = @updating
+      # Process queue
       if update.domains.length
-        if old
-          if old != update
-            old.push(update)
-        if !old || !update.busy?.length
+        if !update.busy?.length
           update.each @resolve, @
         if update.busy?.length
           return update
 
-      mutations = @updating.mutations
+      # Apply styles
+      if update.solution
+        @triggerEvent('apply', update.solution, update)
+        @triggerEvent('write', update.solution, update)
 
-    removing = (update.problems.length == 1 && update.domains[0] == null)
-    restyling = (@restyled && !update.problems.length)
-    complete = !update.problems[update.index + 1]
-    effects = removing || restyling || complete
-    if @engine == @ && transacting && effects 
-      return @onSolve(null, effects)
+        @solved.merge update.solution
 
-  onSolve: (solution, restyled) ->
-    # Apply styles
-    update = @updating
-    if solution ||= update.solution
-      #if Object.keys(solution).length
+      # Remeasure intrinsics at the last tick
+      if update.isDone()
+        if @intrinsic?.objects
+          measured = @intrinsic.solve()
+          update.apply measured
+          @solved.merge measured
 
-      @fireEvent('apply', solution, update)
-      @fireEvent('write', solution, update)
-    else if !update.reflown && !restyled
-      if !update.problems.length
-        @updating = undefined
-      return
 
-    if @intrinsic?.objects
-      update.apply @intrinsic.solve()
+    update.finish()
 
-    @solved.merge solution
+    @updated = update
+    @updating = undefined
 
-    #@commit()
-    update.reset()
+    @console.info('Solution\t   ', @updated, update.solution, @solved.values)
+    @fireEvent 'solve', update.solution, @updated
+    @fireEvent 'solved', update.solution, @updated
 
-    # Launch another pass here if solutions caused effects
-    effects = update.each(@resolve, @)
-    if update.busy?.length
-      return effects
-
-    if effects && Object.keys(effects).length
-      return @onSolve(effects)
-
-    # Solved event is fired even for commands that cause side effects
-    if (!solution || (!solution.push && !Object.keys(solution).length) || update.problems[update.index + 1]) &&
-        (update.problems.length != 1 || update.domains[0] != null) &&
-        !@engine.restyled
-      return 
-
-    @updating.finish()
-    
-    if !update.problems.length && @updated?.problems.length && !@engine.restyled
-      @restyled = @updating = undefined
-      return
-    else
-      @restyled = @updating = undefined
-      @updated = update
-
-    @console.info('Solution\t   ', @updated, solution, @solved.values)
-
-    # Trigger events on engine and scope node
-    @fireEvent 'solve', @updated.solution, @updated
-    @fireEvent 'solved', @updated.solution, @updated
-    
-    @inspector.update(@)
-        
-    
-    return @updated.solution
+    return update.solution
 
   # Accept solution from solver, remeasure if necessary
   yield: (solution) ->

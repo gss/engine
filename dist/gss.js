@@ -19744,11 +19744,11 @@ Engine = (function() {
   }
 
   Engine.prototype.evaluate = function(expressions) {
-    return this.update(expressions).solution;
+    return this.update(expressions);
   };
 
   Engine.prototype.solve = function() {
-    var args, old, solution, strategy, transacting, _base;
+    var args, old, strategy, transacting, _base;
     if (!this.transacting) {
       this.transacting = transacting = true;
     }
@@ -19760,16 +19760,18 @@ Engine = (function() {
       }
     }
     if (typeof args[0] === 'function') {
-      solution = args.shift().apply(this, args);
+      args.shift().apply(this, args);
     } else if (args[0] != null) {
       strategy = this[this.strategy];
       if (strategy.solve) {
-        solution = strategy.solve.apply(strategy, args) || {};
+        strategy.solve.apply(strategy, args) || {};
       } else {
-        solution = strategy.apply(this, args);
+        strategy.apply(this, args);
       }
     }
-    return this.commit(solution, old, transacting);
+    if (transacting) {
+      return this.commit(this.updating);
+    }
   };
 
   Engine.prototype.transact = function() {
@@ -19809,87 +19811,39 @@ Engine = (function() {
     return args;
   };
 
-  Engine.prototype.commit = function(solution, old, transacting) {
-    var complete, effects, mutations, removing, restyling, started, update, _ref, _ref1;
-    if (solution) {
-      this.updating.apply(solution);
-    }
-    mutations = true;
-    while (mutations) {
-      this.fireEvent('precommit', solution);
-      this.fireEvent('commit', solution);
-      if (started = this.started) {
-        this.started = void 0;
-      }
-      if (transacting) {
-        this.transacting = void 0;
-        this.console.end();
-      }
-      update = this.updating;
+  Engine.prototype.commit = function(update) {
+    var measured, _ref, _ref1, _ref2;
+    while (!update.isDone()) {
+      this.triggerEvent('precommit', update);
+      this.triggerEvent('commit', update);
       if (update.domains.length) {
-        if (old) {
-          if (old !== update) {
-            old.push(update);
-          }
-        }
-        if (!old || !((_ref = update.busy) != null ? _ref.length : void 0)) {
+        if (!((_ref = update.busy) != null ? _ref.length : void 0)) {
           update.each(this.resolve, this);
         }
         if ((_ref1 = update.busy) != null ? _ref1.length : void 0) {
           return update;
         }
       }
-      mutations = this.updating.mutations;
-    }
-    removing = update.problems.length === 1 && update.domains[0] === null;
-    restyling = this.restyled && !update.problems.length;
-    complete = !update.problems[update.index + 1];
-    effects = removing || restyling || complete;
-    if (this.engine === this && transacting && effects) {
-      return this.onSolve(null, effects);
-    }
-  };
-
-  Engine.prototype.onSolve = function(solution, restyled) {
-    var effects, update, _ref, _ref1, _ref2;
-    update = this.updating;
-    if (solution || (solution = update.solution)) {
-      this.fireEvent('apply', solution, update);
-      this.fireEvent('write', solution, update);
-    } else if (!update.reflown && !restyled) {
-      if (!update.problems.length) {
-        this.updating = void 0;
+      if (update.solution) {
+        this.triggerEvent('apply', update.solution, update);
+        this.triggerEvent('write', update.solution, update);
+        this.solved.merge(update.solution);
       }
-      return;
+      if (update.isDone()) {
+        if ((_ref2 = this.intrinsic) != null ? _ref2.objects : void 0) {
+          measured = this.intrinsic.solve();
+          update.apply(measured);
+          this.solved.merge(measured);
+        }
+      }
     }
-    if ((_ref = this.intrinsic) != null ? _ref.objects : void 0) {
-      update.apply(this.intrinsic.solve());
-    }
-    this.solved.merge(solution);
-    update.reset();
-    effects = update.each(this.resolve, this);
-    if ((_ref1 = update.busy) != null ? _ref1.length : void 0) {
-      return effects;
-    }
-    if (effects && Object.keys(effects).length) {
-      return this.onSolve(effects);
-    }
-    if ((!solution || (!solution.push && !Object.keys(solution).length) || update.problems[update.index + 1]) && (update.problems.length !== 1 || update.domains[0] !== null) && !this.engine.restyled) {
-      return;
-    }
-    this.updating.finish();
-    if (!update.problems.length && ((_ref2 = this.updated) != null ? _ref2.problems.length : void 0) && !this.engine.restyled) {
-      this.restyled = this.updating = void 0;
-      return;
-    } else {
-      this.restyled = this.updating = void 0;
-      this.updated = update;
-    }
-    this.console.info('Solution\t   ', this.updated, solution, this.solved.values);
-    this.fireEvent('solve', this.updated.solution, this.updated);
-    this.fireEvent('solved', this.updated.solution, this.updated);
-    this.inspector.update(this);
-    return this.updated.solution;
+    update.finish();
+    this.updated = update;
+    this.updating = void 0;
+    this.console.info('Solution\t   ', this.updated, update.solution, this.solved.values);
+    this.fireEvent('solve', update.solution, this.updated);
+    this.fireEvent('solved', update.solution, this.updated);
+    return update.solution;
   };
 
   Engine.prototype["yield"] = function(solution) {
@@ -22424,6 +22378,9 @@ Update.prototype = {
   finish: function() {
     this.time = this.engine.console.time(this.start);
     return this.start = void 0;
+  },
+  isDone: function() {
+    return !this.mutations && !this.ascending && this.domains.length === this.index + 1;
   },
   index: -1
 };
