@@ -133,6 +133,7 @@ class Selector extends Query
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   @onMutations: (mutations) ->
+    debugger
     unless @running
       return if @scope.nodeType == 9
       return @solve(->)
@@ -627,7 +628,7 @@ Selector.define
     Virtual: (node, value, engine, operation, continuation, scope) ->
       if !node && @localizers.indexOf(operation.parent.command.type) > -1
         node = scope
-      prefix = @getScope(node, continuation) || '$'
+      prefix = @getScope(engine, node, continuation) || '$'
       return prefix + '"' + value + '"'
 
     prefix: '"'

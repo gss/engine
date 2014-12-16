@@ -24,11 +24,11 @@ class Stylesheet extends Command
         src = node.href || node.src || node
         type ||= node.type || 'text/gss'
         xhr = new XMLHttpRequest()
-        engine.Stylesheet.block(engine)
+        engine.updating.block(engine)
         xhr.onreadystatechange = =>
           if xhr.readyState == 4 && xhr.status == 200
             engine.Stylesheet.add(engine, operation, continuation, node, type, xhr.responseText)
-            if engine.Stylesheet.unblock(engine)
+            if engine.updating.unblock(engine)
               engine.Stylesheet.complete(engine)
         xhr.open('GET', method && method.toUpperCase() || src)
         xhr.send()
@@ -52,7 +52,7 @@ class Stylesheet extends Command
     else
       stylesheet.continuation = @prototype.delimit(continuation, @prototype.DESCEND)
     stylesheet.command = @
-    stylesheet.operations = @mimes[type](source)
+    stylesheet.operations = engine.clone @mimes[type](source)
 
     stylesheets = engine.engine.stylesheets ||= []
     engine.console.row('parse', stylesheet.operations, stylesheet.continuation)
@@ -62,7 +62,7 @@ class Stylesheet extends Command
         break unless engine.Query::comparePosition(el, stylesheet, operation, operation)
       stylesheets.splice index, 0, stylesheet
     engine.stylesheets[stylesheet.continuation] = stylesheet
-    stylesheet.dirty = true
+    (engine.updating.stylesheets ||= []).push(stylesheet)
 
     return
 
@@ -79,8 +79,16 @@ class Stylesheet extends Command
     @
 
   @evaluate: (engine, stylesheet) ->
-    return unless stylesheet.dirty
-    stylesheet.dirty = undefined
+    unless stylesheets = engine.updating.stylesheets
+      return
+
+    if (index = stylesheets.indexOf(stylesheet)) == -1
+      return
+
+    stylesheets.splice(index, 1)
+    if stylesheets.length == 0
+      engine.updating.stylesheets = undefined
+
     if stylesheet.getAttribute('scoped')?
       stylesheet.scoped ?= 'scoped'
       scope = engine.getScopeElement(stylesheet.parentNode)
@@ -89,9 +97,7 @@ class Stylesheet extends Command
 
   @complete: (engine) ->
     @perform(engine)
-    if engine.blocking == 0
-      engine.blocking = undefined
-      engine.engine.commit(undefined, undefined, true)
+    engine.engine.commit()
 
   @compile: (engine) ->
     @CanonicalizeSelectorRegExp = new RegExp(
@@ -100,8 +106,6 @@ class Stylesheet extends Command
     
     engine.engine.solve 'Document', 'stylesheets', @operations
 
-    if !engine.blocking && engine.stylesheets
-      @complete(engine)
 
   @update: (engine, operation, property, value, stylesheet, rule) ->
     watchers = @getWatchers(engine, stylesheet)
@@ -177,12 +181,6 @@ class Stylesheet extends Command
           engine.engine.restyled = true
 
       return true
-
-  @block: (engine) ->
-    engine.blocking = (engine.blocking || 0) + 1
-
-  @unblock: (engine) ->
-    return --engine.blocking == 0
 
   @remove: (engine, continuation) ->
     if engine.stylesheets

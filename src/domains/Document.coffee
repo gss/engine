@@ -77,6 +77,7 @@ class Document extends Abstract
 
     compile: ->
       @document.Stylesheet.compile(@document)
+      @Selector?.connect(@, true)
 
     solve: ->
       if @scope.nodeType == 9
@@ -96,6 +97,7 @@ class Document extends Abstract
       
     commit: ->
       @document.Stylesheet.perform(@document)
+
       
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @

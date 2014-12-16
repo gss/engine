@@ -139,8 +139,8 @@ class Engine
         strategy.apply(@, args)
 
     if transacting
-
-      return @commit(@updating)
+      @transacting = undefined
+      return @commit()
 
   # Figure out arguments and prepare to solve given operations
   transact: ->
@@ -176,12 +176,16 @@ class Engine
     return args
 
   # Run solution in multiple ticks
-  commit: (update) ->
-
+  commit: (update = @updating) ->
+    return if update.blocking
+    
     until update.isDone()
+
       # Process deferred operations, mutations and conditions
       @triggerEvent('precommit', update)
       @triggerEvent('commit', update)
+
+      return if update.blocking
 
       # Process queue
       if update.domains.length
@@ -198,12 +202,11 @@ class Engine
         @solved.merge update.solution
 
       # Remeasure intrinsics at the last tick
-      if update.isDone()
+      if  update.isDone()
         if @intrinsic?.objects
           measured = @intrinsic.solve()
           update.apply measured
           @solved.merge measured
-
 
     update.finish()
 

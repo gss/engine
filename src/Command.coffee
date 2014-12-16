@@ -29,6 +29,7 @@ class Command
       when 'function'
         unless continuation = result.call(@, engine, operation, continuation, scope)
           return
+        result = undefined
       else
         if continuation.indexOf(@PAIR) > -1 || @reference
           return result

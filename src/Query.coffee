@@ -197,6 +197,7 @@ class Query extends Command
     # Update all DOM queries that matched mutations
     if mutations = engine.updating.mutations
       index = 0
+      console.error(mutations.slice())
       while mutations[index]
         watcher = mutations.splice(0, 3)
         (engine.document || engine.abstract).solve watcher[0], watcher[1], watcher[2]
@@ -999,18 +1000,19 @@ class Query extends Command
   # Add query into the queue 
   schedule: (engine, operation, continuation, scope) ->
     mutations = engine.updating.mutations ||= []
-    if engine.indexOfTriplet(mutations, operation, continuation, scope) > -1
-      return
+
+    if mutations.length
+      debugger
     length = (continuation || '').length
     last = null
     for watcher, index in mutations by 3
       contd = mutations[index + 1] || ''
-      if watcher == operation && continuation == cont && scope == mutations[index + 2]
+      if watcher == operation && continuation == contd && scope == mutations[index + 2]
         return
       # Make shorter continuation keys run before longer ones
-      if !last? && contd.length > length
-        last = index
-    mutations.splice(last || 0, 0, operation, continuation, scope)
+      if contd.length < length
+        last = index + 3
+    mutations.splice(last ? 0, 0, operation, continuation, scope)
 
 
 

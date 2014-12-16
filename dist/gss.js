@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-13) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-16) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19770,7 +19770,8 @@ Engine = (function() {
       }
     }
     if (transacting) {
-      return this.commit(this.updating);
+      this.transacting = void 0;
+      return this.commit();
     }
   };
 
@@ -19813,9 +19814,18 @@ Engine = (function() {
 
   Engine.prototype.commit = function(update) {
     var measured, _ref, _ref1, _ref2;
+    if (update == null) {
+      update = this.updating;
+    }
+    if (update.blocking) {
+      return;
+    }
     while (!update.isDone()) {
       this.triggerEvent('precommit', update);
       this.triggerEvent('commit', update);
+      if (update.blocking) {
+        return;
+      }
       if (update.domains.length) {
         if (!((_ref = update.busy) != null ? _ref.length : void 0)) {
           update.each(this.resolve, this);
@@ -20955,6 +20965,7 @@ Command = (function() {
         if (!(continuation = result.call(this, engine, operation, continuation, scope))) {
           return;
         }
+        result = void 0;
         break;
       default:
         if (continuation.indexOf(this.PAIR) > -1 || this.reference) {
@@ -22380,8 +22391,15 @@ Update.prototype = {
     return this.start = void 0;
   },
   isDone: function() {
-    return !this.mutations && !this.ascending && this.domains.length === this.index + 1;
+    return !this.mutations && !this.ascending && !this.pairs && !this.stylesheets && this.domains.length === this.index + 1;
   },
+  block: function() {
+    return this.blocking++;
+  },
+  unblock: function() {
+    return --this.blocking === 0;
+  },
+  blocking: 0,
   index: -1
 };
 
@@ -22619,6 +22637,7 @@ Query = (function(_super) {
     var ascending, collection, contd, i, index, item, mutations, old, op, watcher, _i;
     if (mutations = engine.updating.mutations) {
       index = 0;
+      console.error(mutations.slice());
       while (mutations[index]) {
         watcher = mutations.splice(0, 3);
         (engine.document || engine.abstract).solve(watcher[0], watcher[1], watcher[2]);
@@ -23569,22 +23588,22 @@ Query = (function(_super) {
   Query.prototype.schedule = function(engine, operation, continuation, scope) {
     var contd, index, last, length, mutations, watcher, _base, _i, _len;
     mutations = (_base = engine.updating).mutations || (_base.mutations = []);
-    if (engine.indexOfTriplet(mutations, operation, continuation, scope) > -1) {
-      return;
+    if (mutations.length) {
+      debugger;
     }
     length = (continuation || '').length;
     last = null;
     for (index = _i = 0, _len = mutations.length; _i < _len; index = _i += 3) {
       watcher = mutations[index];
       contd = mutations[index + 1] || '';
-      if (watcher === operation && continuation === cont && scope === mutations[index + 2]) {
+      if (watcher === operation && continuation === contd && scope === mutations[index + 2]) {
         return;
       }
-      if ((last == null) && contd.length > length) {
-        last = index;
+      if (contd.length < length) {
+        last = index + 3;
       }
     }
-    return mutations.splice(last || 0, 0, operation, continuation, scope);
+    return mutations.splice(last != null ? last : 0, 0, operation, continuation, scope);
   };
 
   Query.prototype.isCollection = function(object) {
@@ -24280,6 +24299,7 @@ Selector = (function(_super) {
   };
 
   Selector.onMutations = function(mutations) {
+    debugger;
     var result;
     if (!this.running) {
       if (this.scope.nodeType === 9) {
@@ -24889,7 +24909,7 @@ Selector.define({
       if (!node && this.localizers.indexOf(operation.parent.command.type) > -1) {
         node = scope;
       }
-      prefix = this.getScope(node, continuation) || '$';
+      prefix = this.getScope(engine, node, continuation) || '$';
       return prefix + '"' + value + '"';
     },
     prefix: '"'
@@ -25618,11 +25638,11 @@ Stylesheet = (function(_super) {
       src = node.href || node.src || node;
       type || (type = node.type || 'text/gss');
       xhr = new XMLHttpRequest();
-      engine.Stylesheet.block(engine);
+      engine.updating.block(engine);
       xhr.onreadystatechange = function() {
         if (xhr.readyState === 4 && xhr.status === 200) {
           engine.Stylesheet.add(engine, operation, continuation, node, type, xhr.responseText);
-          if (engine.Stylesheet.unblock(engine)) {
+          if (engine.updating.unblock(engine)) {
             return engine.Stylesheet.complete(engine);
           }
         }
@@ -25643,7 +25663,7 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.add = function(engine, operation, continuation, stylesheet, type, source) {
-    var el, index, old, stylesheets, _base, _i, _len;
+    var el, index, old, stylesheets, _base, _base1, _i, _len;
     type = stylesheet.getAttribute('type') || 'text/gss';
     if (stylesheet.operations) {
       engine.Query.prototype.clean(engine, this.prototype.delimit(stylesheet.continuation));
@@ -25654,7 +25674,7 @@ Stylesheet = (function(_super) {
       stylesheet.continuation = this.prototype.delimit(continuation, this.prototype.DESCEND);
     }
     stylesheet.command = this;
-    stylesheet.operations = this.mimes[type](source);
+    stylesheet.operations = engine.clone(this.mimes[type](source));
     stylesheets = (_base = engine.engine).stylesheets || (_base.stylesheets = []);
     engine.console.row('parse', stylesheet.operations, stylesheet.continuation);
     if (stylesheets.indexOf(stylesheet) === -1) {
@@ -25667,7 +25687,7 @@ Stylesheet = (function(_super) {
       stylesheets.splice(index, 0, stylesheet);
     }
     engine.stylesheets[stylesheet.continuation] = stylesheet;
-    stylesheet.dirty = true;
+    ((_base1 = engine.updating).stylesheets || (_base1.stylesheets = [])).push(stylesheet);
   };
 
   Stylesheet.operations = [['eval', ['[*=]', ['tag', 'style'], 'type', 'text/gss']], ['load', ['[*=]', ['tag', 'link'], 'type', 'text/gss']]];
@@ -25685,11 +25705,17 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.evaluate = function(engine, stylesheet) {
-    var scope;
-    if (!stylesheet.dirty) {
+    var index, scope, stylesheets;
+    if (!(stylesheets = engine.updating.stylesheets)) {
       return;
     }
-    stylesheet.dirty = void 0;
+    if ((index = stylesheets.indexOf(stylesheet)) === -1) {
+      return;
+    }
+    stylesheets.splice(index, 1);
+    if (stylesheets.length === 0) {
+      engine.updating.stylesheets = void 0;
+    }
     if (stylesheet.getAttribute('scoped') != null) {
       if (stylesheet.scoped == null) {
         stylesheet.scoped = 'scoped';
@@ -25701,18 +25727,12 @@ Stylesheet = (function(_super) {
 
   Stylesheet.complete = function(engine) {
     this.perform(engine);
-    if (engine.blocking === 0) {
-      engine.blocking = void 0;
-      return engine.engine.commit(void 0, void 0, true);
-    }
+    return engine.engine.commit();
   };
 
   Stylesheet.compile = function(engine) {
     this.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + this.prototype.DESCEND + "]\s*", "gi");
-    engine.engine.solve('Document', 'stylesheets', this.operations);
-    if (!engine.blocking && engine.stylesheets) {
-      return this.complete(engine);
-    }
+    return engine.engine.solve('Document', 'stylesheets', this.operations);
   };
 
   Stylesheet.update = function(engine, operation, property, value, stylesheet, rule) {
@@ -25816,14 +25836,6 @@ Stylesheet = (function(_super) {
       }
       return true;
     }
-  };
-
-  Stylesheet.block = function(engine) {
-    return engine.blocking = (engine.blocking || 0) + 1;
-  };
-
-  Stylesheet.unblock = function(engine) {
-    return --engine.blocking === 0;
   };
 
   Stylesheet.remove = function(engine, continuation) {
@@ -27040,7 +27052,9 @@ Document = (function(_super) {
       return this.solve('Document', 'load', function() {});
     },
     compile: function() {
-      return this.document.Stylesheet.compile(this.document);
+      var _ref;
+      this.document.Stylesheet.compile(this.document);
+      return (_ref = this.Selector) != null ? _ref.connect(this, true) : void 0;
     },
     solve: function() {
       var html, id, klass, _i, _len, _ref, _ref1, _ref2;

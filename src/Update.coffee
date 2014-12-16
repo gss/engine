@@ -458,8 +458,16 @@ Update.prototype =
     @start = undefined
 
   isDone: ->
-    return !@mutations && !@ascending && @domains.length == @index + 1
+    return !@mutations && !@ascending && !@pairs && !@stylesheets && @domains.length == @index + 1
 
+
+  block: ->
+    @blocking++
+
+  unblock: ->
+    return --@blocking == 0
+
+  blocking: 0
 
   index: -1
 module.exports = Update
