@@ -178,7 +178,7 @@ class Stylesheet extends Command
     if rule = @getRule(operation)
       if @watch engine, operation, continuation, stylesheet
         if @update engine, operation, property, value, stylesheet, rule
-          engine.engine.restyled = true
+          engine.updating.restyled = true
 
       return true
 

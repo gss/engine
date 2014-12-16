@@ -19,6 +19,7 @@ class Abstract extends Domain
     precommit: ->
       @Query::commit(@)
       @Query::repair(@)
+      @Query::branch(@)
 
     switch: ->
       @Query::repair(@)

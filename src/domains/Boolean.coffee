@@ -16,6 +16,7 @@ Boolean::Constraint = Constraint.extend {
     return a && b
 
   "||": (a, b) ->
+    debugger
     return a || b
     
   "!=": (a, b) ->

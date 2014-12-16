@@ -289,7 +289,7 @@ describe 'End - to - End', ->
               @if $A > 0 {
                 .innie-outie {
                   #css-inner-dump-2 {
-                    height: 200px;
+                    width: 100px;
                   }
                 }
               }
@@ -308,15 +308,21 @@ describe 'End - to - End', ->
           expect(getSource(engine.tag('style')[1])).to.equal """
             .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
             """
-          debugger
           engine.solve
             A: 1
           , ->
             expect(getSource(engine.tag('style')[1])).to.equal """
-              [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{height:200px;}
+              [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
               .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;}
               """
-            done()
+            engine.solve
+              B: 1
+            , ->
+              expect(getSource(engine.tag('style')[1])).to.equal """
+                [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5; height: 200px}
+                """
+              done()
 
 
   
@@ -1903,7 +1909,8 @@ describe 'End - to - End', ->
   describe "@if @else", ->
     describe '|| and :: in condition', ->
       it 'should compute values', (done) ->
-                     
+        
+        debugger
         engine.assumed.merge '$button1[t]': 500, '$button2[t]': 400
 
         engine.once 'solve', ->     

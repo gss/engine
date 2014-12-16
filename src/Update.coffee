@@ -440,8 +440,9 @@ Update.prototype =
       if old
         length = continuation.length
         for prop of old
-          if prop.substring(0, length) == continuation
-            delete old[prop]
+          if prop.length > length
+            if prop.substring(0, length) == continuation
+              delete old[prop]
     else
       @[name] = undefined
 
@@ -458,7 +459,10 @@ Update.prototype =
     @start = undefined
 
   isDone: ->
-    return !@mutations && !@ascending && !@pairs && !@stylesheets && @domains.length == @index + 1
+    return (@domains.length == @index + 1) && @isDocumentDone()
+
+  isDocumentDone: ->
+    return !@mutations && !@ascending && !@pairs && !@stylesheets && !@restyled && !@branches
 
 
   block: ->

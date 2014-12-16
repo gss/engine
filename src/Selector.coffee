@@ -284,7 +284,7 @@ class Selector extends Query
 
   @mutateAttribute: (engine, target, name, changed) ->
     if name == 'style'
-      engine.engine.restyled = true
+      engine.updating.restyled = true
     # Notify parents about class and attribute changes
     if name == 'class' && typeof changed == 'string'
       klasses = target.classList || target.className.split(/\s+/)
@@ -605,7 +605,7 @@ Selector.define
 
   # Parent element (alias for !> *)
   '^':
-    Element: (parameter, engine, operation, continuation, scope) ->
+    Element: (parameter = 1, engine, operation, continuation, scope) ->
       return @getParentScope(engine, scope, continuation, parameter)
 
 
@@ -748,7 +748,7 @@ Selector.define
     # Duplicates are stored separately, they dont trigger callbacks
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
-      contd = @getScopePath(engine, scope, continuation) + operation.parent.command.path
+      contd = @getScopePath(engine, continuation) + operation.parent.command.path
       @add(engine, result, contd, operation.parent, scope, operation, continuation)
       engine.updating.ascending ||= []
       if engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) == -1
@@ -758,7 +758,7 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = @getScopePath(engine, scope, continuation) + operation.parent.command.path
+      contd = @getScopePath(engine, continuation) + operation.parent.command.path
       @remove(engine, result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     

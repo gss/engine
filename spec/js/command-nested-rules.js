@@ -1094,15 +1094,22 @@ describe('Nested Rules', function() {
             });
             return engine.id('box2').setAttribute('class', 'box');
           } else if (counter === 8) {
-            expect(stringify(engine.values)).to.eql(stringify({
+            return expect(stringify(engine.values)).to.eql(stringify({
               "big": 500,
               "med": 50,
               "small": 5,
-              "target-width": 1000,
-              "$box2[width]": 500
+              "target-width": 1000
+            }));
+          } else if (counter === 9) {
+            expect(stringify(engine.values)).to.eql(stringify({
+              "$box2[width]": 500,
+              "big": 500,
+              "med": 50,
+              "small": 5,
+              "target-width": 1000
             }));
             return container.innerHTML = '';
-          } else if (counter === 9) {
+          } else if (counter === 10) {
             expect(stringify(engine.values)).to.eql(stringify({
               "big": 500,
               "med": 50,

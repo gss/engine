@@ -185,7 +185,7 @@ class Query extends Command
 
   # Subscribe node to the query
   subscribe: (engine, operation, continuation, scope, node) ->
-    id = node && engine.identify(node) || '::global'
+    id = engine.identify(node)
     observers = engine.engine.observers[id] ||= []
     if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
       operation.command.prepare(operation)
@@ -194,6 +194,7 @@ class Query extends Command
 
 
   commit: (engine, solution) ->
+    debugger
     # Update all DOM queries that matched mutations
     if mutations = engine.updating.mutations
       index = 0
@@ -202,6 +203,7 @@ class Query extends Command
         watcher = mutations.splice(0, 3)
         (engine.document || engine.abstract).solve watcher[0], watcher[1], watcher[2]
       engine.updating.mutations = undefined
+
     # Execute all deferred selectors (e.g. comma)
     if ascending = engine.updating.ascending
       index = 0
@@ -453,7 +455,8 @@ class Query extends Command
       @each 'remove', engine, result, path, operation, scope, operation, false, contd
 
     #if scope && operation.command.cleaning
-    #  @remove @engine.identity.find(scope), path, operation, scope, operation, undefined, contd
+    #  debugger
+    #  @remove engine, engine.identity.find(scope), path, operation, scope, operation, undefined, contd
     
     engine.solved.remove(path)
     engine.intrinsic?.remove(path)
@@ -475,11 +478,7 @@ class Query extends Command
     if engine.updating.mutations
       @unobserve(engine, engine.updating.mutations, path, true)
 
-    if scope ||= engine.scope
-      id = scope._gss_id
-    else
-      id = '::global'
-    @unobserve(engine, id, path)
+    @unobserve(engine, engine.identify(scope || engine.scope), path)
 
     if !result || !@isCollection(result)
       engine.fireEvent('remove', path)
@@ -677,7 +676,7 @@ class Query extends Command
   # Update bindings of two pair collections
   pair: (engine, left, right, operation, scope) ->
     root = @getRoot(operation)
-    right = @getScopePath(engine, scope, left) + root.right.command.path
+    right = @getScopePath(engine, left) + root.right.command.path
     leftNew = @get(engine, left)
     rightNew = @get(engine, right)
 
@@ -817,81 +816,56 @@ class Query extends Command
       observers.splice(index, 3)
 
 
-
-  # Get path for the scope that triggered the script 
-  # (e.g. el matched by css rule)
-  getScopePath: (engine, scope, continuation) ->
-    unless continuation 
-      return ''
-    bits = continuation.split(@DESCEND)
-    unless bits[bits.length - 1]
-      return continuation
-    if scope && engine.scope != scope
-      id = engine.identify(scope)
-      prev = bits[bits.length - 2]
-      # Ugh #1
-      if prev && prev.substring(prev.length - id.length) != id
-        last = bits[bits.length - 1]
-        if (index = last.indexOf(id + @ASCEND)) > -1
-          bits.splice(bits.length - 1, 0, last.substring(0, index + id.length))
-    
-    bits[bits.length - 1] = ""
-    path = bits.join(@DESCEND)
-    #if continuation.charAt(0) == @PAIR
-    #  path = @PAIR + path
-    return path
-
-
   # Scope variables and locals to the stylesheet
   getScope: (engine, node, continuation) ->
     if !node
       if (index = continuation.lastIndexOf('$')) > -1
-        code = continuation.charCodeAt((length = continuation.length) - 1)
-        if continuation.charCodeAt((length = continuation.length) - 1) == 8595 #descend
-          length--
-
-        id = continuation.substring(index, length)
-        if el = engine.identity[id] || engine.queries[continuation.substring(0, length)]
-          if el.scoped
-            if (parent = engine.getScopeElement(el.parentNode)) == engine.scope
+        if scope = @getParentScope(engine, node, continuation, 0, true)
+          if scope.scoped
+            if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
               return
-            return node._gss_id
-          return el._gss_id
+          return scope._gss_id
     else if node != engine.scope
       return node._gss_id || node
 
-  # Return id of a parent scope element
-  getParentScope: (engine, scope, continuation, level = 1) ->
-    return scope._gss_id unless continuation
-    # Iterate parent scopes, skip conditions
+  # Iterate parent scopes, skip conditions
+  getScopePath: (engine, continuation, level = 0) ->
     last = continuation.length - 1
 
     if continuation.charCodeAt(last) == 8594 # @PAIR
       last = continuation.lastIndexOf(@DESCEND, last) - 1
 
     while true
-      index = continuation.lastIndexOf(@DESCEND, last)
-      if (bit = continuation.substring(index + 1, last + 1)) && 
-          bit.charCodeAt(0) != 64 && # @ ...
-          --level == -1
-        break
-      if index == -1
-        return engine.scope
+      if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
+        return ''
+
       last = index - 1
+      unless continuation.charCodeAt(index + 1) == 64
+        if --level == -1
+          break
 
-    if (j = bit.lastIndexOf('$')) > -1
-      # Virtual
-      id = bit.substring(j)
-      if id.indexOf('"') > -1
-        return id
 
-      # Element in collection
-      if result = engine.identity[id]
+    return continuation.substring(0, last + 1)
+
+  # Return id of a parent scope element
+  getParentScope: (engine, scope, continuation, level = 1, quick) ->
+    return scope._gss_id unless continuation
+    
+    if path = @getScopePath(engine, continuation, level)
+    
+      if (j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(@DESCEND)
+        # Virtual
+        id = path.substring(j)
+        if id.indexOf('"') > -1
+          return id
+
+        # Element in collection
+        if result = engine.identity[id]
+          return engine.getScopeElement(result)
+
+      # Singular element
+      if result = @get(engine, path)
         return engine.getScopeElement(result)
-
-    # Singular element
-    if result = @get(engine, continuation.substring(0, index))
-      return engine.getScopeElement(result)
 
     return engine.scope
 
@@ -989,20 +963,16 @@ class Query extends Command
     return
 
   notify: (engine, continuation, scope) ->
-    return unless id = (scope && engine.identify(scope) || '::global')
-    return unless watchers = engine.observers[id]
-
-    for watcher, index in watchers by 3
-      if watchers[index + 1] + watcher.command.key == continuation
-        @schedule(engine, watcher, continuation, scope || engine.scope)
+    if watchers = engine.observers[engine.identify(scope)]
+      for watcher, index in watchers by 3
+        if watchers[index + 1] + watcher.command.key == continuation
+          @schedule(engine, watcher, continuation, scope)
     return
 
   # Add query into the queue 
   schedule: (engine, operation, continuation, scope) ->
     mutations = engine.updating.mutations ||= []
 
-    if mutations.length
-      debugger
     length = (continuation || '').length
     last = null
     for watcher, index in mutations by 3
@@ -1014,7 +984,14 @@ class Query extends Command
         last = index + 3
     mutations.splice(last ? 0, 0, operation, continuation, scope)
 
-
+  branch: (engine)->
+    if conditions = engine.updating.branches
+      engine.updating.branches = undefined
+      for condition, index in conditions by 3
+        condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
+      engine.fireEvent('switch')
+      for condition, index in conditions by 3
+        condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])
 
   # Hook: Should interpreter iterate returned object?
   # (yes, if it's a collection of objects or empty array)

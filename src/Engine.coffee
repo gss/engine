@@ -130,17 +130,17 @@ class Engine
 
 
     if typeof args[0] == 'function'
-      args.shift().apply(@, args) 
+      result = args.shift().apply(@, args) 
     else if args[0]?
       strategy = @[@strategy]
       if strategy.solve
-        strategy.solve.apply(strategy, args) || {}
+        result = strategy.solve.apply(strategy, args) || {}
       else
-        strategy.apply(@, args)
+        result = strategy.apply(@, args)
 
     if transacting
       @transacting = undefined
-      return @commit()
+      return @commit(result)
 
   # Figure out arguments and prepare to solve given operations
   transact: ->
@@ -176,14 +176,20 @@ class Engine
     return args
 
   # Run solution in multiple ticks
-  commit: (update = @updating) ->
+  commit: (solution, update = @updating) ->
     return if update.blocking
-    
+
+    if solution
+      if update.solution != solution
+        update.apply(solution)
+      @solved.merge(solution)
+        
     until update.isDone()
 
       # Process deferred operations, mutations and conditions
-      @triggerEvent('precommit', update)
-      @triggerEvent('commit', update)
+      until update.isDocumentDone()
+        @triggerEvent('precommit', update)
+        @triggerEvent('commit', update)
 
       return if update.blocking
 
@@ -202,7 +208,7 @@ class Engine
         @solved.merge update.solution
 
       # Remeasure intrinsics at the last tick
-      if  update.isDone()
+      if update.isDone()
         if @intrinsic?.objects
           measured = @intrinsic.solve()
           update.apply measured
@@ -213,6 +219,7 @@ class Engine
     @updated = update
     @updating = undefined
 
+    @console.groupEnd()
     @console.info('Solution\t   ', @updated, update.solution, @solved.values)
     @fireEvent 'solve', update.solution, @updated
     @fireEvent 'solved', update.solution, @updated
@@ -338,6 +345,10 @@ class Engine
     remove: (path) ->
       @updating.remove(path)
 
+    switch: (path, operation) ->
+      @updating.cleanup 'collections', path
+      @updating.remove(path)
+
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->
       if @scope
@@ -359,7 +370,7 @@ class Engine
       if @updating
         if @updating.busy.length
           @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
-          @commit e.data, @updating, true
+          @commit e.data
 
     # Handle error from worker
     error: (e) ->
@@ -510,10 +521,14 @@ class Engine::Identity
   @uid: 0
 
   set: (object, generate) =>
+    unless object
+      return ''
+
     if typeof object == 'string'
       if object.charAt(0) != '$' && object.charAt(0) != ':'
         return '$' + object
       return object
+
     unless id = object._gss_id
       if object == document
         id = "::document"
