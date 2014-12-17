@@ -829,20 +829,23 @@ class Query extends Command
       return node._gss_id || node
 
   # Iterate parent scopes, skip conditions
-  getScopePath: (engine, continuation, level = 0) ->
+  getScopePath: (engine, continuation, level = 0, virtualize) ->
     last = continuation.length - 1
 
     if continuation.charCodeAt(last) == 8594 # @PAIR
       last = continuation.lastIndexOf(@DESCEND, last) - 1
 
-    while true
+    while level > -1
       if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
         return ''
 
-      last = index - 1
-      unless continuation.charCodeAt(index + 1) == 64
-        if --level == -1
+      if continuation.charCodeAt(index + 1) == 64
+        if virtualize
           break
+        else
+          ++level
+      last = index - 1
+      --level
 
 
     return continuation.substring(0, last + 1)

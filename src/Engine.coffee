@@ -83,8 +83,6 @@ class Engine
     @assumed.displayName = 'Assumed'
     @assumed.static = true
     @assumed.setup()
-    for property, value of assumed
-      @assumed.values[property] = value
 
     # Final values, used in conditions
     @solved = new @Boolean
@@ -93,6 +91,9 @@ class Engine
     @solved.setup()
 
     @values = @solved.values
+
+    for property, value of assumed
+      @assumed.values[property] = @values[property] = value
 
     # Cassowary is a default solver for all unknown variables
     @domain = @linear

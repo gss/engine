@@ -19729,15 +19729,15 @@ Engine = (function() {
     this.assumed.displayName = 'Assumed';
     this.assumed["static"] = true;
     this.assumed.setup();
-    for (property in assumed) {
-      value = assumed[property];
-      this.assumed.values[property] = value;
-    }
     this.solved = new this.Boolean;
     this.solved.displayName = 'Solved';
     this.solved.priority = -200;
     this.solved.setup();
     this.values = this.solved.values;
+    for (property in assumed) {
+      value = assumed[property];
+      this.assumed.values[property] = this.values[property] = value;
+    }
     this.domain = this.linear;
     this.strategy = typeof window === "undefined" || window === null ? 'evaluate' : this.scope ? 'document' : 'abstract';
     return this;
@@ -23408,7 +23408,7 @@ Query = (function(_super) {
     }
   };
 
-  Query.prototype.getScopePath = function(engine, continuation, level) {
+  Query.prototype.getScopePath = function(engine, continuation, level, virtualize) {
     var index, last;
     if (level == null) {
       level = 0;
@@ -23417,16 +23417,19 @@ Query = (function(_super) {
     if (continuation.charCodeAt(last) === 8594) {
       last = continuation.lastIndexOf(this.DESCEND, last) - 1;
     }
-    while (true) {
+    while (level > -1) {
       if ((index = continuation.lastIndexOf(this.DESCEND, last)) === -1) {
         return '';
       }
-      last = index - 1;
-      if (continuation.charCodeAt(index + 1) !== 64) {
-        if (--level === -1) {
+      if (continuation.charCodeAt(index + 1) === 64) {
+        if (virtualize) {
           break;
+        } else {
+          ++level;
         }
       }
+      last = index - 1;
+      --level;
     }
     return continuation.substring(0, last + 1);
   };
@@ -23717,12 +23720,13 @@ Condition = (function(_super) {
   };
 
   Condition.prototype.rebranch = function(engine, operation, continuation, scope) {
-    var branch, domain, increment, index, old, result, _ref, _ref1;
+    var branch, domain, increment, index, inverted, old, result, _ref, _ref1;
     old = (_ref = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) != null ? _ref : 0;
-    increment = old <= 0 ? 1 : -1;
+    console.log('rebranch', old);
+    increment = old < 0 || 1 / old === -Infinity ? 1 : -1;
     engine.queries[continuation] = (engine.queries[continuation] || 0) + increment;
-    debugger;
-    index = this.conditional + 1 + ((old > 0 ^ this.inverted) || 0);
+    inverted = operation[0] === 'unless';
+    index = this.conditional + 1 + ((increment === -1) ^ inverted);
     if (branch = operation[index]) {
       engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (index === 2 && 'if' || 'else') + this.DESCEND, operation[index], 'font-weight: normal; color: #999', continuation);
       domain = engine.document || engine.abstract;
@@ -23732,11 +23736,11 @@ Condition = (function(_super) {
   };
 
   Condition.prototype.unbranch = function(engine, operation, continuation, scope) {
-    var increment, old, _ref;
-    if (old = (_ref = engine.updating.collections) != null ? _ref[continuation] : void 0) {
-      increment = old < 0 ? 1 : -1;
+    var increment, old, _ref, _ref1;
+    console.log('unbranch', old = (_ref = engine.updating.collections) != null ? _ref[continuation] : void 0);
+    if (old = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) {
+      increment = old < 0 || 1 / old === -Infinity ? 1 : -1;
       if ((engine.queries[continuation] += increment) === 0) {
-        debugger;
         this.clean(engine, continuation, continuation, operation, scope);
         return true;
       }
@@ -23744,7 +23748,7 @@ Condition = (function(_super) {
   };
 
   Condition.prototype["yield"] = function(result, engine, operation, continuation, scope) {
-    var path, scoped;
+    var index, path, scoped, value, _base;
     if (operation.parent.indexOf(operation) === -1) {
       if (operation[0].key != null) {
         continuation = operation[0].key;
@@ -23752,8 +23756,14 @@ Condition = (function(_super) {
           scope = engine.identity[scoped];
         }
       }
-      path = this.delimit(this.getScopePath(engine, continuation, 1), this.DESCEND) + this.key;
-      this.set(engine, path, engine.queries[path]);
+      if ((index = continuation.lastIndexOf(this.DESCEND)) > -1) {
+        continuation = this.getScopePath(engine, continuation, index === continuation.length - 1, true);
+      }
+      path = this.delimit(continuation, this.DESCEND) + this.key;
+      if (!(value = engine.queries[path]) && result) {
+        value = -0;
+      }
+      ((_base = engine.updating).collections || (_base.collections = {}))[path] = value;
       this.notify(engine, path, scope, result);
       return true;
     }
