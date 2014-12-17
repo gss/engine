@@ -194,7 +194,6 @@ class Query extends Command
 
 
   commit: (engine, solution) ->
-    debugger
     # Update all DOM queries that matched mutations
     if mutations = engine.updating.mutations
       index = 0
@@ -828,14 +827,10 @@ class Query extends Command
     last = continuation.length - 1
 
     if continuation.charCodeAt(last) == 8594 # @PAIR
-      last = continuation.lastIndexOf(@DESCEND, last) - 1
-    req = level
+      last = continuation.lastIndexOf(@DESCEND, last)
     while level > -1
       if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
-        if req
-          return ''
-        else
-          break
+        return ''
 
       if continuation.charCodeAt(index + 1) == 64
         if virtualize
@@ -857,7 +852,6 @@ class Query extends Command
     return scope._gss_id unless continuation
     
     if path = @getScopePath(engine, continuation, level)
-      debugger
       if result = @getByPath(engine, path)
         if result.scoped
           result = engine.getScopeElement(result)

@@ -22674,7 +22674,6 @@ Query = (function(_super) {
   };
 
   Query.prototype.commit = function(engine, solution) {
-    debugger;
     var ascending, collection, contd, i, index, item, mutations, old, op, watcher, _i;
     if (mutations = engine.updating.mutations) {
       index = 0;
@@ -23423,22 +23422,17 @@ Query = (function(_super) {
   };
 
   Query.prototype.getScopePath = function(engine, continuation, level, virtualize) {
-    var index, last, req;
+    var index, last;
     if (level == null) {
       level = 0;
     }
     last = continuation.length - 1;
     if (continuation.charCodeAt(last) === 8594) {
-      last = continuation.lastIndexOf(this.DESCEND, last) - 1;
+      last = continuation.lastIndexOf(this.DESCEND, last);
     }
-    req = level;
     while (level > -1) {
       if ((index = continuation.lastIndexOf(this.DESCEND, last)) === -1) {
-        if (req) {
-          return '';
-        } else {
-          break;
-        }
+        return '';
       }
       if (continuation.charCodeAt(index + 1) === 64) {
         if (virtualize) {
@@ -23473,7 +23467,6 @@ Query = (function(_super) {
       return scope._gss_id;
     }
     if (path = this.getScopePath(engine, continuation, level)) {
-      debugger;
       if (result = this.getByPath(engine, path)) {
         if (result.scoped) {
           result = engine.getScopeElement(result);
