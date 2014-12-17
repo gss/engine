@@ -121,7 +121,7 @@ class Query extends Command
 
     node = if args[0]?.nodeType == 1 then args[0] else scope
 
-    unless @relative
+    unless @relative# || @type == 'Condition'
       query = operation.command.getPath(engine, operation, node, scope)
       aliases = updating.aliases ||= {}
       if !(alias = aliases[query]) || alias.length > path.length || !updating.queries?.hasOwnProperty(alias)
@@ -148,9 +148,6 @@ class Query extends Command
         if !result
           removed = old
         @clean(engine, path, undefined, operation, scope)
-      #else if continuation.charAt(0) == @PAIR
-      #  @subscribe(engine, operation, continuation, scope, node)
-      #  return old
       else
         return
 
@@ -673,6 +670,8 @@ class Query extends Command
   pair: (engine, left, right, operation, scope) ->
     root = @getRoot(operation)
     right = @getPrefixPath(engine, left, 0) + root.right.command.path
+    if left.indexOf('cover') > -1 && right.indexOf('avatar') > -1
+      debugger
     leftNew = @get(engine, left)
     rightNew = @get(engine, right)
 
@@ -883,7 +882,7 @@ class Query extends Command
     last = bits[bits.length - 1]
     regexp = Query.CanonicalizeRegExp ||= new RegExp("" +
         "([^"   + @PAIR   + ",@])" +
-        "\\$[^" + @ASCEND + "]+" +
+        "\\$[^\[" + @ASCEND + "]+" +
         "(?:"   + @ASCEND + "|$)", "g")
     last = bits[bits.length - 1] = last.replace(regexp, '$1')
     return last if compact
@@ -999,19 +998,24 @@ class Query extends Command
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
       
       engine.fireEvent('branch')
+      queries = engine.updating.queries ||= {}
+      collections = engine.updating.collections ||= {}
+      engine.updating.collections = queries
+      engine.updating.queries = collections
+
       @repair(engine)
       engine.updating.branching = undefined
-      if removed.length
-        debugger
-        queries = engine.updating.queries
-        collections = engine.updating.collections
-        for path in removed
-          if conditions.indexOf(path) > -1
-            continue
-          if collections
-            delete collections[path]
-          if queries
-            delete queries[path]
+
+      engine.updating.collections = collections
+      engine.updating.queries = queries
+
+      for path in removed
+        if conditions.indexOf(path) > -1
+          continue
+        if collections
+          delete collections[path]
+        if queries
+          delete queries[path]
 
       for condition, index in conditions by 3
         condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])

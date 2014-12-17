@@ -54,6 +54,7 @@ Top = Abstract::Default.extend
     wrapper = @produce(meta, args, operation)
     args.parent = wrapper
 
+    wrapper.index = operation.index ||= Top.index = (Top.index || 0) + 1
 
     if domain = @domain?(engine, operation)
       wrapper.parent = operation.parent

@@ -19854,9 +19854,6 @@ Engine = (function() {
         update.solved = update.restyled = void 0;
         this.triggerEvent('validate', update.solution, update);
       }
-      if (update.isDone()) {
-        this.triggerEvent('validate', update.solution, update);
-      }
     }
     if (!update.hadSideEffects()) {
       this.updating = void 0;
@@ -19970,6 +19967,7 @@ Engine = (function() {
       }
       if (locals.length) {
         locals.unshift('remove');
+        locals.index = -1;
         update.push([locals], other, true);
       }
       if (others.length) {
@@ -21963,11 +21961,7 @@ Update.prototype = {
     var cmds, domain, problem, _i, _len;
     cmds = this.problems[position];
     domain = this.domains[position];
-    if (reverse) {
-      cmds.unshift.apply(cmds, problems);
-    } else {
-      cmds.push.apply(cmds, problems);
-    }
+    this.mix(cmds, problems);
     for (_i = 0, _len = problems.length; _i < _len; _i++) {
       problem = problems[_i];
       if (domain) {
@@ -22149,7 +22143,7 @@ Update.prototype = {
     return target;
   },
   merge: function(from, to, parent) {
-    var Solver, domain, exported, method, other, prob, problems, property, result, variable, _i, _j, _len, _len1, _ref;
+    var Solver, domain, exported, other, prob, problems, property, result, variable, _i, _j, _len, _len1, _ref;
     other = this.domains[to];
     problems = this.problems[from];
     result = this.problems[to];
@@ -22170,11 +22164,10 @@ Update.prototype = {
     }
     this.splice(from, 1);
     if (from < to) {
-      method = 'unshift';
       to--;
     }
     if (exported) {
-      result[method || 'push'].apply(result, exported);
+      this.mix(result, exported);
       for (_j = 0, _len1 = exported.length; _j < _len1; _j++) {
         prob = exported[_j];
         this.setVariables(result, prob);
@@ -22192,6 +22185,21 @@ Update.prototype = {
     }
     other.register();
     return to;
+  },
+  mix: function(result, exported) {
+    var index, prob, problem, _i, _j, _len, _len1, _results;
+    _results = [];
+    for (_i = 0, _len = exported.length; _i < _len; _i++) {
+      prob = exported[_i];
+      for (index = _j = 0, _len1 = result.length; _j < _len1; index = ++_j) {
+        problem = result[index];
+        if (problem.index > prob.index) {
+          break;
+        }
+      }
+      _results.push(result.splice(index, 0, prob));
+    }
+    return _results;
   },
   await: function(url) {
     return (this.busy || (this.busy = [])).push(url);
@@ -23243,6 +23251,9 @@ Query = (function(_super) {
     var I, J, added, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     root = this.getRoot(operation);
     right = this.getPrefixPath(engine, left, 0) + root.right.command.path;
+    if (left.indexOf('cover') > -1 && right.indexOf('avatar') > -1) {
+      debugger;
+    }
     leftNew = this.get(engine, left);
     rightNew = this.get(engine, right);
     if (engine.updating.collections.hasOwnProperty(left)) {
@@ -23507,7 +23518,7 @@ Query = (function(_super) {
     var bits, last, regexp;
     bits = this.delimit(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
-    regexp = Query.CanonicalizeRegExp || (Query.CanonicalizeRegExp = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
+    regexp = Query.CanonicalizeRegExp || (Query.CanonicalizeRegExp = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^\[" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
     last = bits[bits.length - 1] = last.replace(regexp, '$1');
     if (compact) {
       return last;
@@ -23644,7 +23655,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.branch = function(engine) {
-    var collections, condition, conditions, index, path, queries, removed, _i, _j, _k, _len, _len1, _len2, _results;
+    var collections, condition, conditions, index, path, queries, removed, _base, _base1, _i, _j, _k, _len, _len1, _len2, _results;
     if (conditions = engine.updating.branches) {
       engine.updating.branches = void 0;
       removed = engine.updating.branching = [];
@@ -23653,23 +23664,24 @@ Query = (function(_super) {
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2]);
       }
       engine.fireEvent('branch');
+      queries = (_base = engine.updating).queries || (_base.queries = {});
+      collections = (_base1 = engine.updating).collections || (_base1.collections = {});
+      engine.updating.collections = queries;
+      engine.updating.queries = collections;
       this.repair(engine);
       engine.updating.branching = void 0;
-      if (removed.length) {
-        debugger;
-        queries = engine.updating.queries;
-        collections = engine.updating.collections;
-        for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
-          path = removed[_j];
-          if (conditions.indexOf(path) > -1) {
-            continue;
-          }
-          if (collections) {
-            delete collections[path];
-          }
-          if (queries) {
-            delete queries[path];
-          }
+      engine.updating.collections = collections;
+      engine.updating.queries = queries;
+      for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
+        path = removed[_j];
+        if (conditions.indexOf(path) > -1) {
+          continue;
+        }
+        if (collections) {
+          delete collections[path];
+        }
+        if (queries) {
+          delete queries[path];
         }
       }
       _results = [];
@@ -26417,6 +26429,7 @@ Top = Abstract.prototype.Default.extend({
     args.unshift(operation[0]);
     wrapper = this.produce(meta, args, operation);
     args.parent = wrapper;
+    wrapper.index = operation.index || (operation.index = Top.index = (Top.index || 0) + 1);
     if (domain = typeof this.domain === "function" ? this.domain(engine, operation) : void 0) {
       wrapper.parent = operation.parent;
       wrapper.domain || (wrapper.domain = domain);
@@ -26682,8 +26695,9 @@ Intrinsic = (function(_super) {
       return (_ref2 = this.Selector) != null ? _ref2.connect(this, true) : void 0;
     },
     validate: function(solution, update) {
+      debugger;
       var measured, _ref1;
-      if ((_ref1 = this.intrinsic) != null ? _ref1.objects : void 0) {
+      if (((_ref1 = this.intrinsic) != null ? _ref1.objects : void 0) && update.domains.indexOf(this.intrinsic, update.index + 1) === -1) {
         measured = this.intrinsic.solve();
         update.apply(measured);
         return this.solved.merge(measured);
@@ -27033,6 +27047,9 @@ Intrinsic = (function(_super) {
       if (!(element = document.getElementById(id.substring(1)))) {
         return;
       }
+    }
+    if (property === 'width' && !value) {
+      debugger;
     }
     if (positioning && (property === 'x' || property === 'y')) {
       return (positioning[id] || (positioning[id] = {}))[property] = value;

@@ -215,10 +215,6 @@ class Engine
         update.solved = update.restyled = undefined
         @triggerEvent('validate', update.solution, update)
 
-      # Remeasure intrinsics on the last tick
-      if update.isDone()
-        @triggerEvent('validate', update.solution, update)
-
     # Discard pure update 
     unless update.hadSideEffects()
       @updating = undefined
@@ -313,6 +309,7 @@ class Engine
       if locals.length
         #other.remove.apply(other, locals)
         locals.unshift 'remove'
+        locals.index = -1
         update.push([locals], other, true)
       if others.length
         update.push(others, other)

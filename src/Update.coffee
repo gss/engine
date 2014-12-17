@@ -85,10 +85,8 @@ Update.prototype =
   append: (position, problems, reverse) ->
     cmds = @problems[position]
     domain = @domains[position]
-    if reverse
-      cmds.unshift.apply cmds, problems
-    else
-      cmds.push.apply cmds, problems
+    @mix cmds, problems
+    
     for problem in problems
       if domain
         @setVariables(cmds, problem)
@@ -257,11 +255,10 @@ Update.prototype =
     @splice from, 1
 
     if from < to
-      method = 'unshift'
       to--
 
     if exported
-      result[method || 'push'].apply(result, exported)
+      @mix(result, exported)
 
       for prob in exported
         @setVariables(result, prob)
@@ -276,6 +273,13 @@ Update.prototype =
     other.register()
 
     return to
+
+  mix: (result, exported) ->
+    for prob in exported
+      for problem, index in result
+        if problem.index > prob.index
+          break
+      result.splice(index, 0, prob)
 
   # Indicate that update is blocked on solutions from specific url
   await: (url) ->

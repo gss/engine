@@ -41,7 +41,8 @@ class Intrinsic extends Numeric
       @Selector?.connect(@, true)
 
     validate: (solution, update) ->
-      if @intrinsic?.objects
+      debugger
+      if @intrinsic?.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
         measured = @intrinsic.solve()
         update.apply measured
         @solved.merge measured
@@ -288,7 +289,7 @@ class Intrinsic extends Numeric
         positions[@getPath(id, prop)] = value
 
     @engine.fireEvent('positions', positions)
-    
+
     for prop, value of positions
       @write null, prop, value
 
@@ -308,6 +309,9 @@ class Intrinsic extends Numeric
       return if id.indexOf('"') > -1
       return unless element = document.getElementById(id.substring(1))
     
+    if property == 'width' && !value
+      debugger
+
     if positioning && (property == 'x' || property == 'y')
       (positioning[id] ||= {})[property] = value
     else
