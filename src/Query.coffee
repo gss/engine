@@ -625,14 +625,7 @@ class Query extends Command
       if contd.charAt(0) == @PAIR
         contd = contd.substring(1)
       if contd == operation.command.path
-        if id = continuation.match(@TrailingIDRegExp)
-          if id[1].indexOf('"') > -1
-            return id[1]
-          return engine.identity[id[1]]
-        else
-          return engine.queries[continuation]
-
-  TrailingIDRegExp: /(\$[a-z0-9-_"]+)[↓↑→]?$/i
+        return @getByPath(engine, continuation)
 
   repair: (engine) ->
     return unless dirty = engine.updating.pairs
@@ -855,22 +848,21 @@ class Query extends Command
     return scope._gss_id unless continuation
     
     if path = @getScopePath(engine, continuation, level)
-    
-      if (j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(@DESCEND)
-        # Virtual
-        id = path.substring(j)
-        if id.indexOf('"') > -1
-          return id
-
-        # Element in collection
-        if result = engine.identity[id]
-          return engine.getScopeElement(result)
-
-      # Singular element
-      if result = @get(engine, path)
-        return engine.getScopeElement(result)
+      if result = @getByPath(engine, path)
+        if result.scoped
+          result = engine.getScopeElement(result)
+      return result
 
     return engine.scope
+
+  getByPath: (engine, path)->
+    if (j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(@DESCEND)
+      # Virtual
+      id = path.substring(j)
+      if id.indexOf('"') > -1
+        return id
+
+    return engine.identity[id] || @get(engine, path)
 
   # Remove all fork marks from a path. 
   # Allows multiple query paths have shared destination 

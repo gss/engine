@@ -23122,7 +23122,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.retrieve = function(engine, operation, continuation, scope, ascender, ascending, single) {
-    var contd, id, index, last, parent, prev, result;
+    var contd, index, last, parent, prev, result;
     last = continuation.lastIndexOf(this.PAIR);
     if (last > -1 && !operation.command.reference) {
       prev = -1;
@@ -23149,19 +23149,10 @@ Query = (function(_super) {
         contd = contd.substring(1);
       }
       if (contd === operation.command.path) {
-        if (id = continuation.match(this.TrailingIDRegExp)) {
-          if (id[1].indexOf('"') > -1) {
-            return id[1];
-          }
-          return engine.identity[id[1]];
-        } else {
-          return engine.queries[continuation];
-        }
+        return this.getByPath(engine, continuation);
       }
     }
   };
-
-  Query.prototype.TrailingIDRegExp = /(\$[a-z0-9-_"]+)[↓↑→]?$/i;
 
   Query.prototype.repair = function(engine) {
     var dirty, index, pair, pairs, property, value, _i, _len, _ref;
@@ -23435,7 +23426,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.getParentScope = function(engine, scope, continuation, level, quick) {
-    var id, j, path, result;
+    var path, result;
     if (level == null) {
       level = 1;
     }
@@ -23443,20 +23434,25 @@ Query = (function(_super) {
       return scope._gss_id;
     }
     if (path = this.getScopePath(engine, continuation, level)) {
-      if ((j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(this.DESCEND)) {
-        id = path.substring(j);
-        if (id.indexOf('"') > -1) {
-          return id;
-        }
-        if (result = engine.identity[id]) {
-          return engine.getScopeElement(result);
+      if (result = this.getByPath(engine, path)) {
+        if (result.scoped) {
+          result = engine.getScopeElement(result);
         }
       }
-      if (result = this.get(engine, path)) {
-        return engine.getScopeElement(result);
-      }
+      return result;
     }
     return engine.scope;
+  };
+
+  Query.prototype.getByPath = function(engine, path) {
+    var id, j;
+    if ((j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(this.DESCEND)) {
+      id = path.substring(j);
+      if (id.indexOf('"') > -1) {
+        return id;
+      }
+    }
+    return engine.identity[id] || this.get(engine, path);
   };
 
   Query.prototype.getCanonicalPath = function(continuation, compact) {
@@ -23710,20 +23706,34 @@ Condition = (function(_super) {
     return '@' + this.toExpression(operation[1]);
   };
 
+  Condition.prototype.getOldValue = function(engine, continuation) {
+    var old, _ref, _ref1;
+    old = (_ref = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) != null ? _ref : 0;
+    return old > 0 || (old === 0 && 1 / old !== -Infinity);
+  };
+
   Condition.prototype.ascend = function(engine, operation, continuation, scope, result) {
-    var conditions, _base;
+    var condition, conditions, contd, index, length, _base, _i, _len;
     if (conditions = ((_base = engine.updating).branches || (_base.branches = []))) {
       if (engine.indexOfTriplet(conditions, operation, continuation, scope) === -1) {
-        return conditions.push(operation, continuation, scope);
+        length = continuation.length;
+        for (index = _i = 0, _len = conditions.length; _i < _len; index = _i += 3) {
+          condition = conditions[index];
+          contd = conditions[index + 1];
+          if (contd.length > length) {
+            break;
+          } else if (continuation.substring(0, contd.length) === contd) {
+            return;
+          }
+        }
+        return conditions.splice(index || 0, 0, operation, continuation, scope);
       }
     }
   };
 
   Condition.prototype.rebranch = function(engine, operation, continuation, scope) {
-    var branch, domain, increment, index, inverted, old, result, _ref, _ref1;
-    old = (_ref = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) != null ? _ref : 0;
-    console.log('rebranch', old);
-    increment = old < 0 || 1 / old === -Infinity ? 1 : -1;
+    var branch, domain, increment, index, inverted, result;
+    increment = this.getOldValue(engine, continuation) ? -1 : 1;
     engine.queries[continuation] = (engine.queries[continuation] || 0) + increment;
     inverted = operation[0] === 'unless';
     index = this.conditional + 1 + ((increment === -1) ^ inverted);
@@ -23739,7 +23749,7 @@ Condition = (function(_super) {
     var increment, old, _ref, _ref1;
     console.log('unbranch', old = (_ref = engine.updating.collections) != null ? _ref[continuation] : void 0);
     if (old = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) {
-      increment = old < 0 || 1 / old === -Infinity ? 1 : -1;
+      increment = this.getOldValue(engine, continuation) ? -1 : 1;
       if ((engine.queries[continuation] += increment) === 0) {
         this.clean(engine, continuation, continuation, operation, scope);
         return true;
@@ -23748,7 +23758,7 @@ Condition = (function(_super) {
   };
 
   Condition.prototype["yield"] = function(result, engine, operation, continuation, scope) {
-    var index, path, scoped, value, _base;
+    var index, old, path, scoped, value, _base, _ref;
     if (operation.parent.indexOf(operation) === -1) {
       if (operation[0].key != null) {
         continuation = operation[0].key;
@@ -23764,6 +23774,12 @@ Condition = (function(_super) {
         value = -0;
       }
       ((_base = engine.updating).collections || (_base.collections = {}))[path] = value;
+      if (old = (_ref = engine.updating.collections) != null ? _ref[path] : void 0) {
+        debugger;
+        if (this.getOldValue(engine, path) === !!result) {
+          return;
+        }
+      }
       this.notify(engine, path, scope, result);
       return true;
     }

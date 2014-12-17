@@ -50,15 +50,26 @@ class Condition extends Query
   serialize: (operation, engine) ->
     return '@' + @toExpression(operation[1])
 
+  getOldValue: (engine, continuation) ->
+    old = engine.updating.collections?[continuation] ? 0
+    return old > 0 || (old == 0 && 1 / old != -Infinity)
+
   ascend: (engine, operation, continuation, scope, result) ->
     if conditions = (engine.updating.branches ||= [])
       if engine.indexOfTriplet(conditions, operation, continuation, scope) == -1
-        conditions.push(operation, continuation, scope)
+        length = continuation.length
+        for condition, index in conditions by 3
+          contd = conditions[index + 1]
+          if contd.length > length
+            break
+          # Top branch is switching
+          else if continuation.substring(0, contd.length) == contd
+            return
+
+        conditions.splice(index || 0, 0, operation, continuation, scope)
 
   rebranch: (engine, operation, continuation, scope) ->
-    old = engine.updating.collections?[continuation] ? 0
-    console.log('rebranch', old)
-    increment = if old < 0 || 1 / old == -Infinity then 1 else -1
+    increment = if @getOldValue(engine, continuation) then -1 else 1
     engine.queries[continuation] = (engine.queries[continuation] || 0) + increment
 
     inverted = operation[0] == 'unless'
@@ -73,7 +84,7 @@ class Condition extends Query
   unbranch: (engine, operation, continuation, scope) ->
     console.log('unbranch', old = engine.updating.collections?[continuation])
     if old = engine.updating.collections?[continuation]
-      increment = if old < 0 || 1 / old == -Infinity then 1 else -1
+      increment = if @getOldValue(engine, continuation) then -1 else 1
       if (engine.queries[continuation] += increment) == 0
         @clean(engine, continuation, continuation, operation, scope)
         return true
@@ -95,6 +106,12 @@ class Condition extends Query
       if !(value = engine.queries[path]) && result
         value = -0
       (engine.updating.collections ||= {})[path] = value
+      
+      if old = engine.updating.collections?[path]
+        debugger
+        if @getOldValue(engine, path) == !!result
+          return
+
       @notify(engine, path, scope, result)
 
 
