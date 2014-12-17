@@ -22411,7 +22411,7 @@ Update.prototype = {
     return (this.domains.length === this.index + 1) && this.isDocumentDone();
   },
   isDocumentDone: function() {
-    return !this.mutations && !this.ascending && !this.pairs && !this.stylesheets && !this.restyled && !this.branches;
+    return !this.mutations && !this.ascending && !this.pairs && !this.stylesheets && !this.branches;
   },
   block: function() {
     return this.blocking++;
@@ -23410,7 +23410,11 @@ Query = (function(_super) {
     }
     while (level > -1) {
       if ((index = continuation.lastIndexOf(this.DESCEND, last)) === -1) {
-        return '';
+        if (level) {
+          return '';
+        } else {
+          break;
+        }
       }
       if (continuation.charCodeAt(index + 1) === 64) {
         if (virtualize) {
@@ -23445,9 +23449,13 @@ Query = (function(_super) {
   };
 
   Query.prototype.getByPath = function(engine, path) {
-    var id, j;
+    var id, j, last;
     if ((j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(this.DESCEND)) {
       id = path.substring(j);
+      last = id.length - 1;
+      if (this.DELIMITERS.indexOf(id.charCodeAt(last)) > -1) {
+        id = id.substring(0, last);
+      }
       if (id.indexOf('"') > -1) {
         return id;
       }
@@ -23720,7 +23728,7 @@ Condition = (function(_super) {
         for (index = _i = 0, _len = conditions.length; _i < _len; index = _i += 3) {
           condition = conditions[index];
           contd = conditions[index + 1];
-          if (contd.length > length) {
+          if (contd.length >= length) {
             break;
           } else if (continuation.substring(0, contd.length) === contd) {
             return;

@@ -462,7 +462,7 @@ Update.prototype =
     return (@domains.length == @index + 1) && @isDocumentDone()
 
   isDocumentDone: ->
-    return !@mutations && !@ascending && !@pairs && !@stylesheets && !@restyled && !@branches
+    return !@mutations && !@ascending && !@pairs && !@stylesheets && !@branches
 
 
   block: ->

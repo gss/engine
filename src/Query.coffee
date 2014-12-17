@@ -830,7 +830,10 @@ class Query extends Command
 
     while level > -1
       if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
-        return ''
+        if level
+          return ''
+        else
+          break
 
       if continuation.charCodeAt(index + 1) == 64
         if virtualize
@@ -859,6 +862,10 @@ class Query extends Command
     if (j = path.lastIndexOf('$')) > -1 && j > path.lastIndexOf(@DESCEND)
       # Virtual
       id = path.substring(j)
+      last = id.length - 1
+      if @DELIMITERS.indexOf(id.charCodeAt(last)) > -1
+        id = id.substring(0, last)
+
       if id.indexOf('"') > -1
         return id
 

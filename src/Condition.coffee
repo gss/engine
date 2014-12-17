@@ -60,7 +60,7 @@ class Condition extends Query
         length = continuation.length
         for condition, index in conditions by 3
           contd = conditions[index + 1]
-          if contd.length > length
+          if contd.length >= length
             break
           # Top branch is switching
           else if continuation.substring(0, contd.length) == contd
@@ -106,7 +106,7 @@ class Condition extends Query
       if !(value = engine.queries[path]) && result
         value = -0
       (engine.updating.collections ||= {})[path] = value
-      
+
       if old = engine.updating.collections?[path]
         debugger
         if @getOldValue(engine, path) == !!result
