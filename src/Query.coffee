@@ -104,7 +104,10 @@ class Query extends Command
   before: (args, engine, operation, continuation, scope, ascender, ascending) ->
     node = if args[0]?.nodeType == 1 then args[0] else scope
     query = operation.command.getPath(engine, operation, node)
-    return engine.updating?.queries?[query]
+    if alias = engine.updating.aliases?[query]
+      if engine.updating.queries?.hasOwnProperty(alias)
+        return engine.updating.queries[alias]
+      return engine.updating.queries?[continuation]
 
   # Subscribe elements to query 
   after: (args, result, engine, operation, continuation, scope) ->
@@ -118,10 +121,14 @@ class Query extends Command
 
     node = if args[0]?.nodeType == 1 then args[0] else scope
 
-    if !command.relative && !command.marked && 
-            (query = operation.command.getPath(engine, operation, node, scope)) && 
-            updating.queries?.hasOwnProperty(query)
-      result = updating.queries[query]
+    unless @relative
+      query = operation.command.getPath(engine, operation, node, scope)
+      aliases = updating.aliases ||= {}
+      if !(alias = aliases[query]) || alias.length > path.length || !updating.queries?.hasOwnProperty(alias)
+        aliases[query] = path
+
+    (updating.queries ||= {})[path] = result
+
     if updating.collections?.hasOwnProperty(path)
       old = updating.collections[path]
     else if !old? && (result && result.length == 0) && continuation
@@ -169,11 +176,6 @@ class Query extends Command
       @reduce(engine, operation, path, scope, added, removed, undefined, continuation)
       
     @subscribe(engine, operation, continuation, scope, node)
-    
-    if query
-      @snapshot engine, query, old
-      (engine.updating.queries ||= {})[query] = result
-
     @snapshot engine, path, old
 
     return if result == old
@@ -560,6 +562,8 @@ class Query extends Command
       engine.queries[path] = result
     else
       delete engine.queries[path]
+      if engine.updating.branching
+        engine.updating.branching.push(path)
 
     path = @getCanonicalPath(path)
 
@@ -990,11 +994,24 @@ class Query extends Command
   branch: (engine)->
     if conditions = engine.updating.branches
       engine.updating.branches = undefined
+      removed = engine.updating.branching = []
       for condition, index in conditions by 3
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
       
       engine.fireEvent('branch')
       @repair(engine)
+      engine.updating.branching = undefined
+      if removed.length
+        debugger
+        queries = engine.updating.queries
+        collections = engine.updating.collections
+        for path in removed
+          if conditions.indexOf(path) > -1
+            continue
+          if collections
+            delete collections[path]
+          if queries
+            delete queries[path]
 
       for condition, index in conditions by 3
         condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])

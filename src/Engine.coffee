@@ -210,13 +210,13 @@ class Engine
         @triggerEvent('write', update.solution, update)
 
         @solved.merge update.solution
+        
+      if update.solved || update.isDone()
+        update.solved = update.restyled = undefined
+        @triggerEvent('validate', update.solution, update)
 
       # Remeasure intrinsics on the last tick
       if update.isDone()
-
-        if update.restyled
-          update.restyled = undefined
-
         @triggerEvent('validate', update.solution, update)
 
     # Discard pure update 

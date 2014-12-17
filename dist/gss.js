@@ -19850,10 +19850,11 @@ Engine = (function() {
         this.triggerEvent('write', update.solution, update);
         this.solved.merge(update.solution);
       }
+      if (update.solved || update.isDone()) {
+        update.solved = update.restyled = void 0;
+        this.triggerEvent('validate', update.solution, update);
+      }
       if (update.isDone()) {
-        if (update.restyled) {
-          update.restyled = void 0;
-        }
         this.triggerEvent('validate', update.solution, update);
       }
     }
@@ -22317,6 +22318,7 @@ Update.prototype = {
         }
         solution[property] = value;
       }
+      this.solved = true;
     }
     return solution;
   },
@@ -22584,22 +22586,32 @@ Query = (function(_super) {
   Query.prototype.checkers = {};
 
   Query.prototype.before = function(args, engine, operation, continuation, scope, ascender, ascending) {
-    var node, query, _ref, _ref1, _ref2;
+    var alias, node, query, _ref, _ref1, _ref2, _ref3;
     node = ((_ref = args[0]) != null ? _ref.nodeType : void 0) === 1 ? args[0] : scope;
     query = operation.command.getPath(engine, operation, node);
-    return (_ref1 = engine.updating) != null ? (_ref2 = _ref1.queries) != null ? _ref2[query] : void 0 : void 0;
+    if (alias = (_ref1 = engine.updating.aliases) != null ? _ref1[query] : void 0) {
+      if ((_ref2 = engine.updating.queries) != null ? _ref2.hasOwnProperty(alias) : void 0) {
+        return engine.updating.queries[alias];
+      }
+      return (_ref3 = engine.updating.queries) != null ? _ref3[continuation] : void 0;
+    }
   };
 
   Query.prototype.after = function(args, result, engine, operation, continuation, scope) {
-    var added, child, command, index, isCollection, node, old, path, query, removed, updating, _base, _base1, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
+    var added, alias, aliases, child, command, index, isCollection, node, old, path, query, removed, updating, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
     updating = engine.updating;
     path = operation.command.getPath(engine, operation, continuation);
     old = this.get(engine, path);
     command = operation.command;
     node = ((_ref = args[0]) != null ? _ref.nodeType : void 0) === 1 ? args[0] : scope;
-    if (!command.relative && !command.marked && (query = operation.command.getPath(engine, operation, node, scope)) && ((_ref1 = updating.queries) != null ? _ref1.hasOwnProperty(query) : void 0)) {
-      result = updating.queries[query];
+    if (!this.relative) {
+      query = operation.command.getPath(engine, operation, node, scope);
+      aliases = updating.aliases || (updating.aliases = {});
+      if (!(alias = aliases[query]) || alias.length > path.length || !((_ref1 = updating.queries) != null ? _ref1.hasOwnProperty(alias) : void 0)) {
+        aliases[query] = path;
+      }
     }
+    (updating.queries || (updating.queries = {}))[path] = result;
     if ((_ref2 = updating.collections) != null ? _ref2.hasOwnProperty(path) : void 0) {
       old = updating.collections[path];
     } else if ((old == null) && (result && result.length === 0) && continuation) {
@@ -22649,10 +22661,6 @@ Query = (function(_super) {
       this.reduce(engine, operation, path, scope, added, removed, void 0, continuation);
     }
     this.subscribe(engine, operation, continuation, scope, node);
-    if (query) {
-      this.snapshot(engine, query, old);
-      ((_base1 = engine.updating).queries || (_base1.queries = {}))[query] = result;
-    }
     this.snapshot(engine, path, old);
     if (result === old) {
       return;
@@ -23089,6 +23097,9 @@ Query = (function(_super) {
       engine.queries[path] = result;
     } else {
       delete engine.queries[path];
+      if (engine.updating.branching) {
+        engine.updating.branching.push(path);
+      }
     }
     path = this.getCanonicalPath(path);
     _ref = engine.pairs;
@@ -23633,17 +23644,36 @@ Query = (function(_super) {
   };
 
   Query.prototype.branch = function(engine) {
-    var condition, conditions, index, _i, _j, _len, _len1, _results;
+    var collections, condition, conditions, index, path, queries, removed, _i, _j, _k, _len, _len1, _len2, _results;
     if (conditions = engine.updating.branches) {
       engine.updating.branches = void 0;
+      removed = engine.updating.branching = [];
       for (index = _i = 0, _len = conditions.length; _i < _len; index = _i += 3) {
         condition = conditions[index];
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2]);
       }
       engine.fireEvent('branch');
       this.repair(engine);
+      engine.updating.branching = void 0;
+      if (removed.length) {
+        debugger;
+        queries = engine.updating.queries;
+        collections = engine.updating.collections;
+        for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
+          path = removed[_j];
+          if (conditions.indexOf(path) > -1) {
+            continue;
+          }
+          if (collections) {
+            delete collections[path];
+          }
+          if (queries) {
+            delete queries[path];
+          }
+        }
+      }
       _results = [];
-      for (index = _j = 0, _len1 = conditions.length; _j < _len1; index = _j += 3) {
+      for (index = _k = 0, _len2 = conditions.length; _k < _len2; index = _k += 3) {
         condition = conditions[index];
         _results.push(condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2]));
       }
@@ -23805,6 +23835,7 @@ Condition = (function(_super) {
         }
       }
       if (this.bound) {
+        debugger;
         continuation = this.getPrefixPath(engine, continuation, 0);
       }
       path = this.delimit(continuation, this.DESCEND) + this.key;
@@ -23813,7 +23844,6 @@ Condition = (function(_super) {
       }
       ((_base = engine.updating).collections || (_base.collections = {}))[path] = value;
       if (old = (_ref = engine.updating.collections) != null ? _ref[path] : void 0) {
-        debugger;
         if (this.getOldValue(engine, path) === !!result) {
           return;
         }
@@ -26288,8 +26318,11 @@ Numeric.prototype.Meta = Command.Meta.extend({}, {
     execute: function(result) {
       return result;
     },
-    descend: function(engine, operation) {
-      var meta, scope;
+    descend: function(engine, operation, continuation, scope, ascender, ascending) {
+      var meta;
+      if (ascender != null) {
+        return [ascending];
+      }
       meta = operation[0];
       scope = meta.scope && engine.identity[meta.scope] || engine.scope;
       return [operation[1].command.solve(engine, operation[1], meta.key, scope, void 0, operation[0])];
@@ -27082,6 +27115,7 @@ Document = (function(_super) {
       }
     }
     this.engine.Selector = this.Selector;
+    this.engine.Stylesheet = this.Stylesheet;
     this.Selector.observe(this.engine);
     this.scope.addEventListener('scroll', this.engine, true);
     if (typeof window !== "undefined" && window !== null) {

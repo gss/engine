@@ -36,7 +36,9 @@ Numeric::Meta = Command.Meta.extend {},
     execute: (result) ->
       return result
 
-    descend: (engine, operation) -> 
+    descend: (engine, operation, continuation, scope, ascender, ascending) -> 
+      if ascender?
+        return [ascending]
       meta = operation[0]
       scope = meta.scope && engine.identity[meta.scope] || engine.scope
       [operation[1].command.solve(engine, operation[1], meta.key, scope, undefined, operation[0])]

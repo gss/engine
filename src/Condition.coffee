@@ -99,6 +99,7 @@ class Condition extends Query
           scope = engine.identity[scoped]
 
       if @bound
+        debugger
         continuation = @getPrefixPath(engine, continuation, 0)
 
       path = @delimit(continuation, @DESCEND) + @key
@@ -108,7 +109,6 @@ class Condition extends Query
       (engine.updating.collections ||= {})[path] = value
 
       if old = engine.updating.collections?[path]
-        debugger
         if @getOldValue(engine, path) == !!result
           return
 

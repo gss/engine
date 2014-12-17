@@ -380,6 +380,7 @@ Update.prototype =
           if redefined[redefined.length - 1] != value && value?
             redefined.push(value)
         solution[property] = value
+      @solved = true
     return solution
 
   # Remove queued commands that match given key
