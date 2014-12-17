@@ -130,8 +130,8 @@ describe 'GSS commands', ->
 
               expect(engine.updated.getProblems()).to.eql [
                 [
-                  ['remove', '.box$box1'],
                   ['remove', '#box1'], 
+                  ['remove', '.box$box1'],
                   ['remove', '.box$box1→#box1$box1'], 
                   ['remove', '.box$35346→#box1$box1'], 
                   ['remove', '.box$34222→#box1$box1']

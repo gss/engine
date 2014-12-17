@@ -40,6 +40,12 @@ class Intrinsic extends Numeric
       @intrinsic.assign(solution)
       @Selector?.connect(@, true)
 
+    validate: (solution, update) ->
+      if @intrinsic?.objects
+        measured = @intrinsic.solve()
+        update.apply measured
+        @solved.merge measured
+
 
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
@@ -276,9 +282,15 @@ class Intrinsic extends Numeric
     @each(node, @placehold, null, null, null, positioning, !!data)
 
     # Set new positions in bulk (Reflow)
+    positions = {}
     for id, styles of positioning
       for prop, value of styles
-        @write id, prop, value
+        positions[@getPath(id, prop)] = value
+
+    @engine.fireEvent('positions', positions)
+    
+    for prop, value of positions
+      @write null, prop, value
 
     return data
 

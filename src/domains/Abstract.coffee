@@ -11,18 +11,9 @@ class Abstract extends Domain
 
   Iterator:   require('../Iterator')
   Condition:  require('../Condition')
-  Query:      require('../Query')
 
   Properties: require('../properties/Axioms')  
 
-  events:
-    precommit: ->
-      @Query::commit(@)
-      @Query::repair(@)
-      @Query::branch(@)
-
-    switch: ->
-      @Query::repair(@)
 
 Abstract::Remove = Command.extend {
   signature: false

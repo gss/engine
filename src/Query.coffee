@@ -669,7 +669,7 @@ class Query extends Command
   # Update bindings of two pair collections
   pair: (engine, left, right, operation, scope) ->
     root = @getRoot(operation)
-    right = @getScopePath(engine, left) + root.right.command.path
+    right = @getPrefixPath(engine, left) + root.right.command.path
     leftNew = @get(engine, left)
     rightNew = @get(engine, right)
 
@@ -827,10 +827,10 @@ class Query extends Command
 
     if continuation.charCodeAt(last) == 8594 # @PAIR
       last = continuation.lastIndexOf(@DESCEND, last) - 1
-
+    req = level
     while level > -1
       if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
-        if level
+        if req
           return ''
         else
           break
@@ -843,8 +843,12 @@ class Query extends Command
       last = index - 1
       --level
 
-
     return continuation.substring(0, last + 1)
+
+  getPrefixPath: (engine, continuation) ->
+    if path = @getScopePath(engine, continuation, 1)
+      return path + @DESCEND
+    return ''
 
   # Return id of a parent scope element
   getParentScope: (engine, scope, continuation, level = 1, quick) ->
@@ -991,7 +995,10 @@ class Query extends Command
       engine.updating.branches = undefined
       for condition, index in conditions by 3
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
-      engine.fireEvent('switch')
+      
+      engine.fireEvent('branch')
+      @repair(engine)
+
       for condition, index in conditions by 3
         condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])
 

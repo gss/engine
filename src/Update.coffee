@@ -464,6 +464,8 @@ Update.prototype =
   isDocumentDone: ->
     return !@mutations && !@ascending && !@pairs && !@stylesheets && !@branches
 
+  hadSideEffects: ->
+    return @domains.length > 0 || @hasOwnProperty('restyled')
 
   block: ->
     @blocking++

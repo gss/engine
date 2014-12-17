@@ -183,7 +183,7 @@ describe('GSS commands', function() {
             box1 = engine.id("box1");
             box1.parentNode.removeChild(box1);
             return engine.then(function(solution) {
-              expect(engine.updated.getProblems()).to.eql([[['remove', '.box$box1'], ['remove', '#box1'], ['remove', '.box$box1→#box1$box1'], ['remove', '.box$35346→#box1$box1'], ['remove', '.box$34222→#box1$box1']], [['remove', '.box$box1→#box1$box1', '.box$35346→#box1$box1', '.box$34222→#box1$box1']]]);
+              expect(engine.updated.getProblems()).to.eql([[['remove', '#box1'], ['remove', '.box$box1'], ['remove', '.box$box1→#box1$box1'], ['remove', '.box$35346→#box1$box1'], ['remove', '.box$34222→#box1$box1']], [['remove', '.box$box1→#box1$box1', '.box$35346→#box1$box1', '.box$34222→#box1$box1']]]);
               scope.appendChild(box1);
               return engine.then(function(solution) {
                 expect(engine.updated.getProblems()).to.eql([

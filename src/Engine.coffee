@@ -185,11 +185,14 @@ class Engine
         update.apply(solution)
       @solved.merge(solution)
         
-    until update.isDone()
+    until update.isDone() && !update.restyled
 
       # Process deferred operations, mutations and conditions
       until update.isDocumentDone()
         @triggerEvent('precommit', update)
+        @Query::commit(@)
+        @Query::repair(@)
+        @Query::branch(@)
         @triggerEvent('commit', update)
 
       return if update.blocking
@@ -210,10 +213,14 @@ class Engine
 
       # Remeasure intrinsics at the last tick
       if update.isDone()
-        if @intrinsic?.objects
-          measured = @intrinsic.solve()
-          update.apply measured
-          @solved.merge measured
+        @triggerEvent('validate', update.solution, update)
+
+        if update.restyled
+          update.restyled = undefined
+
+    unless update.hadSideEffects()
+      @updating = undefined
+      return update
 
     update.finish()
 
@@ -226,6 +233,10 @@ class Engine
     @fireEvent 'solved', update.solution, @updated
 
     return update.solution
+
+  validate: (update) ->
+
+    return true
 
   # Accept solution from solver, remeasure if necessary
   yield: (solution) ->

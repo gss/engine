@@ -27,7 +27,7 @@ class Command
       when 'undefined'
         break
       when 'function'
-        unless continuation = result.call(@, engine, operation, continuation, scope)
+        unless (continuation = result.call(@, engine, operation, continuation, scope))?
           return
         result = undefined
       else
@@ -241,7 +241,9 @@ class Command
 
   # Return parent scope continuation to execute and pair another query
   rewind: (engine, operation, continuation, scope) ->
-    return @getScopePath(engine, continuation)
+    if path = @getScopePath(engine, continuation)
+      return path + @DESCEND
+    return ''
 
   # Return ascending continuation with ids when iterating collection
   fork: (engine, continuation, item) ->

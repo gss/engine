@@ -133,14 +133,16 @@ class Selector extends Query
 
   # Listen to changes in DOM to broadcast them all around, update queries in batch
   @onMutations: (mutations) ->
-    debugger
     unless @running
       return if @scope.nodeType == 9
       return @solve(->)
+
     
     result = @solve 'Document', 'mutations', ->
       if @updating.index > -1
         @updating.reset()
+
+      @updating.restyled = true
 
       for mutation in mutations
         if @Selector.filterMutation(mutation) == false
@@ -283,8 +285,7 @@ class Selector extends Query
           engine.eval(parent)
 
   @mutateAttribute: (engine, target, name, changed) ->
-    if name == 'style'
-      engine.updating.restyled = true
+
     # Notify parents about class and attribute changes
     if name == 'class' && typeof changed == 'string'
       klasses = target.classList || target.className.split(/\s+/)
@@ -748,7 +749,8 @@ Selector.define
     # Duplicates are stored separately, they dont trigger callbacks
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
-      contd = @getScopePath(engine, continuation) + operation.parent.command.path
+
+      contd = @getPrefixPath(engine, continuation) + operation.parent.command.path
       @add(engine, result, contd, operation.parent, scope, operation, continuation)
       engine.updating.ascending ||= []
       if engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) == -1
@@ -758,7 +760,7 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = @getScopePath(engine, continuation) + operation.parent.command.path
+      contd = @getPrefixPath(engine, continuation) + operation.parent.command.path
       @remove(engine, result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     
@@ -775,6 +777,9 @@ Selector.define
           # Evaluate argument
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope)
       return Array.prototype.slice.call(arguments, 0, 4)
+
+
+
 if document?
   # Add shims for IE<=8 that dont support some DOM properties
   dummy = Selector.dummy = document.createElement('_')

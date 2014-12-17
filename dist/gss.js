@@ -19813,7 +19813,7 @@ Engine = (function() {
   };
 
   Engine.prototype.commit = function(solution, update) {
-    var measured, _ref, _ref1, _ref2;
+    var _ref, _ref1;
     if (update == null) {
       update = this.updating;
     }
@@ -19826,9 +19826,12 @@ Engine = (function() {
       }
       this.solved.merge(solution);
     }
-    while (!update.isDone()) {
+    while (!(update.isDone() && !update.restyled)) {
       while (!update.isDocumentDone()) {
         this.triggerEvent('precommit', update);
+        this.Query.prototype.commit(this);
+        this.Query.prototype.repair(this);
+        this.Query.prototype.branch(this);
         this.triggerEvent('commit', update);
       }
       if (update.blocking) {
@@ -19848,12 +19851,15 @@ Engine = (function() {
         this.solved.merge(update.solution);
       }
       if (update.isDone()) {
-        if ((_ref2 = this.intrinsic) != null ? _ref2.objects : void 0) {
-          measured = this.intrinsic.solve();
-          update.apply(measured);
-          this.solved.merge(measured);
+        this.triggerEvent('validate', update.solution, update);
+        if (update.restyled) {
+          update.restyled = void 0;
         }
       }
+    }
+    if (!update.hadSideEffects()) {
+      this.updating = void 0;
+      return update;
     }
     update.finish();
     this.updated = update;
@@ -19863,6 +19869,10 @@ Engine = (function() {
     this.fireEvent('solve', update.solution, this.updated);
     this.fireEvent('solved', update.solution, this.updated);
     return update.solution;
+  };
+
+  Engine.prototype.validate = function(update) {
+    return true;
   };
 
   Engine.prototype["yield"] = function(solution) {
@@ -20975,7 +20985,7 @@ Command = (function() {
       case 'undefined':
         break;
       case 'function':
-        if (!(continuation = result.call(this, engine, operation, continuation, scope))) {
+        if ((continuation = result.call(this, engine, operation, continuation, scope)) == null) {
           return;
         }
         result = void 0;
@@ -21216,7 +21226,11 @@ Command = (function() {
   };
 
   Command.prototype.rewind = function(engine, operation, continuation, scope) {
-    return this.getScopePath(engine, continuation);
+    var path;
+    if (path = this.getScopePath(engine, continuation)) {
+      return path + this.DESCEND;
+    }
+    return '';
   };
 
   Command.prototype.fork = function(engine, continuation, item) {
@@ -22413,6 +22427,9 @@ Update.prototype = {
   isDocumentDone: function() {
     return !this.mutations && !this.ascending && !this.pairs && !this.stylesheets && !this.branches;
   },
+  hadSideEffects: function() {
+    return this.domains.length > 0 || this.hasOwnProperty('restyled');
+  },
   block: function() {
     return this.blocking++;
   },
@@ -23212,7 +23229,7 @@ Query = (function(_super) {
   Query.prototype.pair = function(engine, left, right, operation, scope) {
     var I, J, added, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     root = this.getRoot(operation);
-    right = this.getScopePath(engine, left) + root.right.command.path;
+    right = this.getPrefixPath(engine, left) + root.right.command.path;
     leftNew = this.get(engine, left);
     rightNew = this.get(engine, right);
     if (engine.updating.collections.hasOwnProperty(left)) {
@@ -23400,7 +23417,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.getScopePath = function(engine, continuation, level, virtualize) {
-    var index, last;
+    var index, last, req;
     if (level == null) {
       level = 0;
     }
@@ -23408,9 +23425,10 @@ Query = (function(_super) {
     if (continuation.charCodeAt(last) === 8594) {
       last = continuation.lastIndexOf(this.DESCEND, last) - 1;
     }
+    req = level;
     while (level > -1) {
       if ((index = continuation.lastIndexOf(this.DESCEND, last)) === -1) {
-        if (level) {
+        if (req) {
           return '';
         } else {
           break;
@@ -23427,6 +23445,14 @@ Query = (function(_super) {
       --level;
     }
     return continuation.substring(0, last + 1);
+  };
+
+  Query.prototype.getPrefixPath = function(engine, continuation) {
+    var path;
+    if (path = this.getScopePath(engine, continuation, 1)) {
+      return path + this.DESCEND;
+    }
+    return '';
   };
 
   Query.prototype.getParentScope = function(engine, scope, continuation, level, quick) {
@@ -23611,7 +23637,8 @@ Query = (function(_super) {
         condition = conditions[index];
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2]);
       }
-      engine.fireEvent('switch');
+      engine.fireEvent('branch');
+      this.repair(engine);
       _results = [];
       for (index = _j = 0, _len1 = conditions.length; _j < _len1; index = _j += 3) {
         condition = conditions[index];
@@ -24347,7 +24374,6 @@ Selector = (function(_super) {
   };
 
   Selector.onMutations = function(mutations) {
-    debugger;
     var result;
     if (!this.running) {
       if (this.scope.nodeType === 9) {
@@ -24360,6 +24386,7 @@ Selector = (function(_super) {
       if (this.updating.index > -1) {
         this.updating.reset();
       }
+      this.updating.restyled = true;
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         if (this.Selector.filterMutation(mutation) === false) {
@@ -24566,9 +24593,6 @@ Selector = (function(_super) {
 
   Selector.mutateAttribute = function(engine, target, name, changed) {
     var $attribute, $class, klasses, kls, old, parent, _i, _j, _k, _len, _len1, _len2, _ref;
-    if (name === 'style') {
-      engine.updating.restyled = true;
-    }
     if (name === 'class' && typeof changed === 'string') {
       klasses = target.classList || target.className.split(/\s+/);
       old = changed.split(' ');
@@ -25119,7 +25143,7 @@ Selector.define({
     },
     "yield": function(result, engine, operation, continuation, scope, ascender) {
       var contd, _base;
-      contd = this.getScopePath(engine, continuation) + operation.parent.command.path;
+      contd = this.getPrefixPath(engine, continuation) + operation.parent.command.path;
       this.add(engine, result, contd, operation.parent, scope, operation, continuation);
       (_base = engine.updating).ascending || (_base.ascending = []);
       if (engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) === -1) {
@@ -25129,7 +25153,7 @@ Selector.define({
     },
     release: function(result, engine, operation, continuation, scope) {
       var contd;
-      contd = this.getScopePath(engine, continuation) + operation.parent.command.path;
+      contd = this.getPrefixPath(engine, continuation) + operation.parent.command.path;
       this.remove(engine, result, contd, operation.parent, scope, operation, void 0, continuation);
       return true;
     },
@@ -26285,20 +26309,7 @@ Abstract = (function(_super) {
 
   Abstract.prototype.Condition = require('../Condition');
 
-  Abstract.prototype.Query = require('../Query');
-
   Abstract.prototype.Properties = require('../properties/Axioms');
-
-  Abstract.prototype.events = {
-    precommit: function() {
-      this.Query.prototype.commit(this);
-      this.Query.prototype.repair(this);
-      return this.Query.prototype.branch(this);
-    },
-    "switch": function() {
-      return this.Query.prototype.repair(this);
-    }
-  };
 
   return Abstract;
 
@@ -26615,6 +26626,14 @@ Intrinsic = (function(_super) {
       }
       this.intrinsic.assign(solution);
       return (_ref2 = this.Selector) != null ? _ref2.connect(this, true) : void 0;
+    },
+    validate: function(solution, update) {
+      var measured, _ref1;
+      if ((_ref1 = this.intrinsic) != null ? _ref1.objects : void 0) {
+        measured = this.intrinsic.solve();
+        update.apply(measured);
+        return this.solved.merge(measured);
+      }
     }
   };
 
@@ -26911,7 +26930,7 @@ Intrinsic = (function(_super) {
 
 
   Intrinsic.prototype.assign = function(data, node) {
-    var id, path, positioning, prop, styles, value;
+    var id, path, positioning, positions, prop, styles, value;
     node || (node = this.reflown || this.engine.scope);
     positioning = {};
     if (data) {
@@ -26923,12 +26942,18 @@ Intrinsic = (function(_super) {
       }
     }
     this.each(node, this.placehold, null, null, null, positioning, !!data);
+    positions = {};
     for (id in positioning) {
       styles = positioning[id];
       for (prop in styles) {
         value = styles[prop];
-        this.write(id, prop, value);
+        positions[this.getPath(id, prop)] = value;
       }
+    }
+    this.engine.fireEvent('positions', positions);
+    for (prop in positions) {
+      value = positions[prop];
+      this.write(null, prop, value);
     }
     return data;
   };
