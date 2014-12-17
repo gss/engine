@@ -346,8 +346,8 @@ class Engine
       @updating.remove(path)
 
     switch: (path, operation) ->
-      @updating.cleanup 'collections', path
-      @updating.remove(path)
+      #@updating.cleanup 'collections', path
+      #@updating.remove(path)
 
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->
