@@ -21027,7 +21027,7 @@ Command = (function() {
         if (argument instanceof Array) {
           command = argument.command || engine.Command(argument);
           argument.parent || (argument.parent = operation);
-          if (continuation && ascending && ascender !== index) {
+          if (continuation && ascender && ascender !== index) {
             contd = this.connect(engine, operation, continuation, scope, args, ascender);
           }
           argument = command.solve(operation.domain || engine, argument, contd || continuation, scope, void 0, ascending);
@@ -23805,7 +23805,7 @@ Condition = (function(_super) {
         }
       }
       if (this.bound) {
-        continuation = this.getPrefixPath(engine, continuation);
+        continuation = this.getPrefixPath(engine, continuation, 0);
       }
       path = this.delimit(continuation, this.DESCEND) + this.key;
       if (!(value = engine.queries[path]) && result) {

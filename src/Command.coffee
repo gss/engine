@@ -72,7 +72,7 @@ class Command
           argument.parent ||= operation
             
           # Leave forking/pairing mark in a path when resolving next arguments
-          if continuation && ascending && ascender != index
+          if continuation && ascender && ascender != index
             contd = @connect(engine, operation, continuation, scope, args, ascender)
 
           # Evaluate argument
