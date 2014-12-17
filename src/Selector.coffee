@@ -445,7 +445,6 @@ Selector.define
     tags: ['selector']
     
     Selecter: (value, engine, operation, continuation, scope) ->
-      debugger
       return scope.getElementsByClassName(value)
       
     Qualifier: (node, value) ->
@@ -715,7 +714,6 @@ Selector.define
     singular: true
     Combinator: (node = scope, engine, operation, continuation, scope) ->
       collection = @getCanonicalCollection(engine, continuation)
-      debugger
       index = collection?.indexOf(node)
       return unless index?
       return node if index == collection.length - 1
@@ -750,7 +748,7 @@ Selector.define
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
 
-      contd = @getPrefixPath(engine, continuation) + operation.parent.command.path
+      contd = @getPrefixPath(engine, continuation, 0) + operation.parent.command.path
       @add(engine, result, contd, operation.parent, scope, operation, continuation)
       engine.updating.ascending ||= []
       if engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) == -1
@@ -760,7 +758,7 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = @getPrefixPath(engine, continuation) + operation.parent.command.path
+      contd = @getPrefixPath(engine, continuation, 0) + operation.parent.command.path
       @remove(engine, result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     

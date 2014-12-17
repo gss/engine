@@ -98,8 +98,8 @@ class Condition extends Query
         if scoped = operation[0].scope
           scope = engine.identity[scoped]
 
-      if (index = continuation.lastIndexOf(@DESCEND)) > -1
-        continuation = @getScopePath(engine, continuation, index == continuation.length - 1, true)
+      if @bound
+        continuation = @getPrefixPath(engine, continuation)
 
       path = @delimit(continuation, @DESCEND) + @key
 
@@ -133,11 +133,27 @@ Condition.Global = Condition.extend
         return false
     return true
 
-
-
   global: true
 
-Condition::advices = [Condition.Global]
+# Detect condition that observes selectors
+Condition.Selector = Condition.extend
+  
+  condition: (engine, operation, command) ->
+    if command
+      operation = operation[1]
+    if operation.command.type == 'Selector' && 
+        (operation.length > 1 || 
+          (operation.parent.command.type == 'Selector' &&
+          operation.parent.command.type == 'Iterator'))
+      return true
+    for argument in operation
+      if argument && argument.push && @condition(engine, argument)
+        return true
+    return false
+
+  bound: true
+
+Condition::advices = [Condition.Selector, Condition.Global]
 
 Condition.define 'if', {}
 Condition.define 'unless', {

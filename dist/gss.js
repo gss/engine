@@ -19851,10 +19851,10 @@ Engine = (function() {
         this.solved.merge(update.solution);
       }
       if (update.isDone()) {
-        this.triggerEvent('validate', update.solution, update);
         if (update.restyled) {
           update.restyled = void 0;
         }
+        this.triggerEvent('validate', update.solution, update);
       }
     }
     if (!update.hadSideEffects()) {
@@ -21308,6 +21308,9 @@ Command = (function() {
   Command.prototype.delimit = function(path, delimeter) {
     if (delimeter == null) {
       delimeter = '';
+    }
+    if (!path) {
+      return path;
     }
     if (this.DELIMITERS.indexOf(path.charCodeAt(path.length - 1)) > -1) {
       return path.substring(0, path.length - 1) + delimeter;
@@ -23229,7 +23232,7 @@ Query = (function(_super) {
   Query.prototype.pair = function(engine, left, right, operation, scope) {
     var I, J, added, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     root = this.getRoot(operation);
-    right = this.getPrefixPath(engine, left) + root.right.command.path;
+    right = this.getPrefixPath(engine, left, 0) + root.right.command.path;
     leftNew = this.get(engine, left);
     rightNew = this.get(engine, right);
     if (engine.updating.collections.hasOwnProperty(left)) {
@@ -23399,17 +23402,20 @@ Query = (function(_super) {
   };
 
   Query.prototype.getScope = function(engine, node, continuation) {
-    var index, parent, scope;
+    var index, parent, path, scope;
     if (!node) {
       if ((index = continuation.lastIndexOf('$')) > -1) {
-        if (scope = this.getParentScope(engine, node, continuation, 0, true)) {
-          if (scope.scoped) {
-            if ((parent = engine.getScopeElement(scope.parentNode)) === engine.scope) {
-              return;
+        if (path = this.getScopePath(engine, continuation, 0)) {
+          if (scope = this.getByPath(engine, path)) {
+            if (scope.scoped) {
+              if ((parent = engine.getScopeElement(scope.parentNode)) === engine.scope) {
+                return;
+              }
             }
+            return scope._gss_id;
           }
-          return scope._gss_id;
         }
+        return engine.scope.gss_id;
       }
     } else if (node !== engine.scope) {
       return node._gss_id || node;
@@ -23447,15 +23453,18 @@ Query = (function(_super) {
     return continuation.substring(0, last + 1);
   };
 
-  Query.prototype.getPrefixPath = function(engine, continuation) {
+  Query.prototype.getPrefixPath = function(engine, continuation, level) {
     var path;
-    if (path = this.getScopePath(engine, continuation, 1)) {
+    if (level == null) {
+      level = 1;
+    }
+    if (path = this.getScopePath(engine, continuation, level)) {
       return path + this.DESCEND;
     }
     return '';
   };
 
-  Query.prototype.getParentScope = function(engine, scope, continuation, level, quick) {
+  Query.prototype.getParentScope = function(engine, scope, continuation, level) {
     var path, result;
     if (level == null) {
       level = 1;
@@ -23464,6 +23473,7 @@ Query = (function(_super) {
       return scope._gss_id;
     }
     if (path = this.getScopePath(engine, continuation, level)) {
+      debugger;
       if (result = this.getByPath(engine, path)) {
         if (result.scoped) {
           result = engine.getScopeElement(result);
@@ -23493,7 +23503,7 @@ Query = (function(_super) {
     var bits, last, regexp;
     bits = this.delimit(continuation).split(this.DESCEND);
     last = bits[bits.length - 1];
-    regexp = Query.CanonicalizeRegExp || (Query.CanonicalizeRegExp = new RegExp("" + "([^" + this.PAIR + ",])" + "\\$[^" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
+    regexp = Query.CanonicalizeRegExp || (Query.CanonicalizeRegExp = new RegExp("" + "([^" + this.PAIR + ",@])" + "\\$[^" + this.ASCEND + "]+" + "(?:" + this.ASCEND + "|$)", "g"));
     last = bits[bits.length - 1] = last.replace(regexp, '$1');
     if (compact) {
       return last;
@@ -23793,7 +23803,7 @@ Condition = (function(_super) {
   };
 
   Condition.prototype["yield"] = function(result, engine, operation, continuation, scope) {
-    var index, old, path, scoped, value, _base, _ref;
+    var old, path, scoped, value, _base, _ref;
     if (operation.parent.indexOf(operation) === -1) {
       if (operation[0].key != null) {
         continuation = operation[0].key;
@@ -23801,8 +23811,8 @@ Condition = (function(_super) {
           scope = engine.identity[scoped];
         }
       }
-      if ((index = continuation.lastIndexOf(this.DESCEND)) > -1) {
-        continuation = this.getScopePath(engine, continuation, index === continuation.length - 1, true);
+      if (this.bound) {
+        continuation = this.getPrefixPath(engine, continuation);
       }
       path = this.delimit(continuation, this.DESCEND) + this.key;
       if (!(value = engine.queries[path]) && result) {
@@ -23848,7 +23858,27 @@ Condition.Global = Condition.extend({
   global: true
 });
 
-Condition.prototype.advices = [Condition.Global];
+Condition.Selector = Condition.extend({
+  condition: function(engine, operation, command) {
+    var argument, _i, _len;
+    if (command) {
+      operation = operation[1];
+    }
+    if (operation.command.type === 'Selector' && (operation.length > 1 || (operation.parent.command.type === 'Selector' && operation.parent.command.type === 'Iterator'))) {
+      return true;
+    }
+    for (_i = 0, _len = operation.length; _i < _len; _i++) {
+      argument = operation[_i];
+      if (argument && argument.push && this.condition(engine, argument)) {
+        return true;
+      }
+    }
+    return false;
+  },
+  bound: true
+});
+
+Condition.prototype.advices = [Condition.Selector, Condition.Global];
 
 Condition.define('if', {});
 
@@ -24787,7 +24817,6 @@ Selector.define({
     helpers: ['class', 'getElementsByClassName'],
     tags: ['selector'],
     Selecter: function(value, engine, operation, continuation, scope) {
-      debugger;
       return scope.getElementsByClassName(value);
     },
     Qualifier: function(node, value) {
@@ -25105,7 +25134,6 @@ Selector.define({
         node = scope;
       }
       collection = this.getCanonicalCollection(engine, continuation);
-      debugger;
       index = collection != null ? collection.indexOf(node) : void 0;
       if (index == null) {
         return;
@@ -25143,7 +25171,7 @@ Selector.define({
     },
     "yield": function(result, engine, operation, continuation, scope, ascender) {
       var contd, _base;
-      contd = this.getPrefixPath(engine, continuation) + operation.parent.command.path;
+      contd = this.getPrefixPath(engine, continuation, 0) + operation.parent.command.path;
       this.add(engine, result, contd, operation.parent, scope, operation, continuation);
       (_base = engine.updating).ascending || (_base.ascending = []);
       if (engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) === -1) {
@@ -25153,7 +25181,7 @@ Selector.define({
     },
     release: function(result, engine, operation, continuation, scope) {
       var contd;
-      contd = this.getPrefixPath(engine, continuation) + operation.parent.command.path;
+      contd = this.getPrefixPath(engine, continuation, 0) + operation.parent.command.path;
       this.remove(engine, result, contd, operation.parent, scope, operation, void 0, continuation);
       return true;
     },

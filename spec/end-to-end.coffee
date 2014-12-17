@@ -320,7 +320,7 @@ describe 'End - to - End', ->
             , ->
               expect(getSource(engine.tag('style')[1])).to.equal """
                 [matches~=".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2"]{width:100px;}
-                .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5; height: 200px}
+                .outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}
                 """
               done()
 
@@ -415,7 +415,7 @@ describe 'End - to - End', ->
           done()
 
     describe 'scoped order dependent selectors', ->
-      it 'should deliver', ->
+      it 'should deliver', (done) ->
         container = document.createElement('div')
         container.style.left = 0
         container.style.top = 0
@@ -460,7 +460,7 @@ describe 'End - to - End', ->
           </style>
         """
         engine.then ->
-          1
+          done()
 
     describe 'simpliest order dependent selectors', ->
       it 'should work in global scope', (done) ->                        
@@ -1527,7 +1527,7 @@ describe 'End - to - End', ->
     describe 'basic', ->
       engine = null
     
-      it 'in scoped stylesheet', (done) ->
+      it 'in regular stylesheet', (done) ->
         engine = GSS(container)
         container.innerHTML =  """
           <div id="ship"></div>
@@ -1552,7 +1552,7 @@ describe 'End - to - End', ->
             '$ship"mast"[z]': 1
           done()
 
-      it 'in regular stylesheet', (done) ->
+      it 'in scoped stylesheet', (done) ->
         engine = GSS(container)
         container.innerHTML =  """
           <div id="ship"></div>

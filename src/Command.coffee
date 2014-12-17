@@ -326,6 +326,8 @@ class Command
 
   # Update delimeter at the end of the path
   delimit: (path, delimeter = '') ->
+    unless path
+      return path
     if @DELIMITERS.indexOf(path.charCodeAt(path.length - 1)) > -1
       return path.substring(0, path.length - 1) + delimeter
     else

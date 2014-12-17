@@ -669,7 +669,7 @@ class Query extends Command
   # Update bindings of two pair collections
   pair: (engine, left, right, operation, scope) ->
     root = @getRoot(operation)
-    right = @getPrefixPath(engine, left) + root.right.command.path
+    right = @getPrefixPath(engine, left, 0) + root.right.command.path
     leftNew = @get(engine, left)
     rightNew = @get(engine, right)
 
@@ -813,11 +813,13 @@ class Query extends Command
   getScope: (engine, node, continuation) ->
     if !node
       if (index = continuation.lastIndexOf('$')) > -1
-        if scope = @getParentScope(engine, node, continuation, 0, true)
-          if scope.scoped
-            if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
-              return
-          return scope._gss_id
+        if path = @getScopePath(engine, continuation, 0)
+          if scope = @getByPath(engine, path)
+            if scope.scoped
+              if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
+                return
+            return scope._gss_id
+        return engine.scope.gss_id
     else if node != engine.scope
       return node._gss_id || node
 
@@ -845,16 +847,17 @@ class Query extends Command
 
     return continuation.substring(0, last + 1)
 
-  getPrefixPath: (engine, continuation) ->
-    if path = @getScopePath(engine, continuation, 1)
+  getPrefixPath: (engine, continuation, level = 1) ->
+    if path = @getScopePath(engine, continuation, level)
       return path + @DESCEND
     return ''
 
   # Return id of a parent scope element
-  getParentScope: (engine, scope, continuation, level = 1, quick) ->
+  getParentScope: (engine, scope, continuation, level = 1) ->
     return scope._gss_id unless continuation
     
     if path = @getScopePath(engine, continuation, level)
+      debugger
       if result = @getByPath(engine, path)
         if result.scoped
           result = engine.getScopeElement(result)
@@ -881,7 +884,7 @@ class Query extends Command
     bits = @delimit(continuation).split(@DESCEND)
     last = bits[bits.length - 1]
     regexp = Query.CanonicalizeRegExp ||= new RegExp("" +
-        "([^"   + @PAIR   + ",])" +
+        "([^"   + @PAIR   + ",@])" +
         "\\$[^" + @ASCEND + "]+" +
         "(?:"   + @ASCEND + "|$)", "g")
     last = bits[bits.length - 1] = last.replace(regexp, '$1')

@@ -184,7 +184,7 @@ describe('End - to - End', function() {
             return engine.solve({
               B: 1
             }, function() {
-              expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2\"]{width:100px;}\n.outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5; height: 200px}");
+              expect(getSource(engine.tag('style')[1])).to.equal("[matches~=\".outer,.outie↓@$[A]>0↓.innie-outie↓#css-inner-dump-2\"]{width:100px;}\n.outer #css-inner-dump-1, .outie #css-inner-dump-1{z-index:5;height:200px;}");
               return done();
             });
           });
@@ -250,7 +250,7 @@ describe('End - to - End', function() {
       });
     });
     describe('scoped order dependent selectors', function() {
-      return it('should deliver', function() {
+      return it('should deliver', function(done) {
         container = document.createElement('div');
         container.style.left = 0;
         container.style.top = 0;
@@ -259,7 +259,7 @@ describe('End - to - End', function() {
         document.body.appendChild(container);
         container.innerHTML = "<article id=\"article1\">\n  <section id=\"section11\">\n    <p id=\"p111\"></p>\n    <p id=\"p112\"></p>\n  </section>\n  <section id=\"section12\">\n    <p id=\"p121\"></p>\n    <p id=\"p122\"></p>\n  </section>\n</article>\n<article id=\"article2\">\n  <section id=\"section21\">\n    <p id=\"p211\"></p>\n    <p id=\"p212\"></p>\n  </section>\n  <section id=\"section22\">\n    <p id=\"p221\"></p>\n    <p id=\"p222\"></p>\n  </section>\n</article>\n\n<style type=\"text/gss\">\n  p {\n    height: == 50;\n    width: == 50;\n  }\n\n  article {\n    @h |(& section)-...| in(::);\n\n    section {\n      @h |(& p)...| in(::);\n    }\n  }\n</style>";
         return engine.then(function() {
-          return 1;
+          return done();
         });
       });
     });
@@ -1209,7 +1209,7 @@ describe('End - to - End', function() {
   describe('Virtual Elements', function() {
     describe('basic', function() {
       engine = null;
-      it('in scoped stylesheet', function(done) {
+      it('in regular stylesheet', function(done) {
         engine = GSS(container);
         container.innerHTML = "<div id=\"ship\"></div>\n<style type=\"text/gss\" id=\"gss\">\n  #ship {\n    \"mast\"[top] == 0;\n    \"mast\"[bottom] == 100;\n    \"mast\"[left] == 10;\n    \"mast\"[right] == 20;\n    &\"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
         return engine.once('solve', function(e) {
@@ -1224,7 +1224,7 @@ describe('End - to - End', function() {
           return done();
         });
       });
-      it('in regular stylesheet', function(done) {
+      it('in scoped stylesheet', function(done) {
         engine = GSS(container);
         container.innerHTML = "<div id=\"ship\"></div>\n<style scoped type=\"text/gss\" id=\"gss\">\n  #ship {\n    \"mast\"[top] == 0;\n    \"mast\"[bottom] == 100;\n    \"mast\"[left] == 10;\n    \"mast\"[right] == 20;\n    &\"mast\"[z] == 1;\n  }\n  #ship[height] == \"mast\"[height];\n</style>";
         return engine.once('solve', function(e) {
