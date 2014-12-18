@@ -74,7 +74,9 @@ class Linear extends Domain
   strength: (strength, byDefault = 'medium') ->
     return strength && c.Strength[strength] || c.Strength[byDefault]
 
-  weight: (weight) ->
+  weight: (weight, operation) ->
+    if index = operation?.parent[0].index
+      return 1 - index / 1000
     return weight
 
 # Capture values coming from other domains
@@ -107,20 +109,20 @@ Linear::Constraint = Constraint.extend {
     engine.solver.removeConstraint(constraint)
 
 },
-  '==': (left, right, strength, weight, engine) ->
-    return new c.Equation(left, right, engine.strength(strength), engine.weight(weight))
+  '==': (left, right, strength, weight, engine, operation) ->
+    return new c.Equation(left, right, engine.strength(strength), engine.weight(weight, operation))
 
-  '<=': (left, right, strength, weight, engine) ->
-    return new c.Inequality(left, c.LEQ, right, engine.strength(strength), engine.weight(weight))
+  '<=': (left, right, strength, weight, engine, operation) ->
+    return new c.Inequality(left, c.LEQ, right, engine.strength(strength), engine.weight(weight, operation))
 
-  '>=': (left, right, strength, weight, engine) ->
-    return new c.Inequality(left, c.GEQ, right, engine.strength(strength), engine.weight(weight))
+  '>=': (left, right, strength, weight, engine, operation) ->
+    return new c.Inequality(left, c.GEQ, right, engine.strength(strength), engine.weight(weight, operation))
 
-  '<': (left, right, strength, weight, engine) ->
-    return new c.Inequality(left, c.LEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
+  '<': (left, right, strength, weight, engine, operation) ->
+    return new c.Inequality(left, c.LEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight, operation))
 
-  '>': (left, right, strength, weight, engine) ->
-    return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight))
+  '>': (left, right, strength, weight, engine, operation) ->
+    return new c.Inequality(left, c.GEQ, engine['+'](right, 1), engine.strength(strength), engine.weight(weight, operation))
 
 
 Linear::Variable = Variable.extend Linear.Mixin,

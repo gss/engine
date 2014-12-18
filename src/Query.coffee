@@ -834,10 +834,9 @@ class Query extends Command
   # Iterate parent scopes, skip conditions
   getScopePath: (engine, continuation, level = 0, virtualize) ->
     last = continuation.length - 1
-
     if continuation.charCodeAt(last) == 8594 # @PAIR
       last = continuation.lastIndexOf(@DESCEND, last)
-    while level > -1
+    while true
       if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
         return ''
 
@@ -846,6 +845,8 @@ class Query extends Command
           break
         else
           ++level
+      if level == -1
+        break
       last = index - 1
       --level
 
@@ -859,7 +860,6 @@ class Query extends Command
   # Return id of a parent scope element
   getParentScope: (engine, scope, continuation, level = 1) ->
     return scope._gss_id unless continuation
-    
     if path = @getScopePath(engine, continuation, level)
       if result = @getByPath(engine, path)
         if result.scoped

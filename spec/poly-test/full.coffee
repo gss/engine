@@ -193,7 +193,6 @@ DEMOS =
       ul li {
         // justify by using variable
         ::[width] == $[li-width];
-
         :previous[right] == &[left];
         :last[right] == $[intrinsic-width] - 16;
         :first[left] == 0;
@@ -667,7 +666,7 @@ describe 'Full page tests', ->
             expect(solution['li-width']).to.eql((640 - 16) / 3)
             expect(solution['$aside[x]']).to.eql(640 / 2 + 100)
             expect(solution['$header[width]']).to.eql(Math.round(640 / 2)) 
-
+            debugger
             li = engine.scope.querySelector('ul li:last-child')
             clone = li.cloneNode()
             clone.id = 'li4'

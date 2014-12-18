@@ -41,12 +41,17 @@ Top = Abstract::Default.extend
     if parent = operation.parent
       if parent.command instanceof Abstract::Default 
         return false
+        
+    operation.index ||= engine.abstract.index = (engine.abstract.index || 0) + 1
     return true
 
   extras: 4
 
   execute: (args..., engine, operation, continuation, scope) ->
-    meta = key: @delimit(continuation)
+    meta = 
+      key: @delimit(continuation)
+      index: operation.index
+
     if scope != engine.scope
       meta.scope = engine.identify(scope)
 
@@ -54,7 +59,6 @@ Top = Abstract::Default.extend
     wrapper = @produce(meta, args, operation)
     args.parent = wrapper
 
-    wrapper.index = operation.index ||= Top.index = (Top.index || 0) + 1
 
     if domain = @domain?(engine, operation)
       wrapper.parent = operation.parent

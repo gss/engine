@@ -94,6 +94,7 @@ Constraint = Command.extend
 
     engine.unconstrained = undefined
 
+
   # Register constraint in the domain
   set: (engine, constraint) ->
     if (engine.constraints ||= []).indexOf(constraint) == -1

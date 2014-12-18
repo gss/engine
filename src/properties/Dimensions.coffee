@@ -43,10 +43,10 @@ class Dimensions
   intrinsic:
 
     height: (element) ->
-      return element.offsetHeight
+      return# element.offsetHeight
 
     width: (element) ->
-      return element.offsetWidth
+      return# element.offsetWidth
 
     y: (element) ->
       return

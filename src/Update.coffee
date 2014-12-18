@@ -380,7 +380,7 @@ Update.prototype =
           redefined = (@redefined ||= {})[property] ||= []
           if redefined[redefined.length - 1] != value && value?
             redefined.push(value)
-        
+
         if solution[property] != value
           @solved ?= true
           solution[property] = value

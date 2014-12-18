@@ -604,6 +604,9 @@ if !self.window && self.onmessage != undefined
         result[property] = value
       for property, value of solution
         result[property] = value
+    if !engine.domains.length
+      engine.variables = {}
+      engine.linear.operations = undefined
     postMessage(result)
 
 Engine.Engine   = Engine

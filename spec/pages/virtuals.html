@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" id="html">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="../../dist/gss.js" type="text/javascript" charset="utf-8"></script>
+
+  </head>
+  <body id="body">
+
+      <div class="wrap" id="wrap1">
+        <div class="thing" id="thing1" style="background-color:red;">
+          <div class="other" id="other2" style="background-color:blue;"></div>
+        </div>
+      </div>
+
+      <div class="wrap" id="wrap2">
+        <div class="thing" id="thing2" style="background-color:red;">
+          <div class="other" id="other1" style="background-color:blue;"></div>
+        </div>
+      </div>
+
+    <style type="text/gss">
+
+      @h |-(.wrap)-... in(::window) gap(100);
+
+      .wrap {
+        my-size == 100;
+
+        &"target" {
+          width: == &height == my-size;
+          center-y: == ::window[center-y];
+          center-x: ==        ^[center-x];
+        }
+        .thing {
+          width: == &height == my-size;
+          center: == "target"[center];
+          .other {
+            width: == &height == my-size / 2;
+            center: == "target"[center];
+          }
+        }
+      }
+
+    </style>
+
+    <script>
+    document.addEventListener('solve', function(solution) {
+      delete solution.detail.engine
+      window.parent.postMessage(solution.detail, location.origin)
+    })
+    window.engine = GSS(document);
+    </script>
+
+  </body>
+</html>

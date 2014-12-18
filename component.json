@@ -50,7 +50,8 @@
     "vendor/MutationObserver.classList.js"
   ],
   "dependencies": {
-    "gss/ccss-compiler": "new",
+    "gss/ccss-compiler": "550e442f2c64992f3a8c7babdaf90b5c643c4465",
+    "gss/vfl-compiler": "*",
     "slightlyoff/cassowary.js": "*"
   },
   "paths": ["/Users/invizko/Sites/the-gss"],

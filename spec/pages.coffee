@@ -19,7 +19,28 @@ describe 'Standalone page tests', ->
   @timeout 100000
     
   describe 'Grid website', ->
-    describe 'Head cta section', ->
+    describe 'Virtuals demo', ->
+
+      it 'should reorient', (done) ->
+        i = 0
+        listener = (e) ->
+          if (e.origin == location.origin)
+            
+            expect()
+
+
+          window.removeEventListener('message', listener)
+          done()
+
+        window.addEventListener('message', listener)
+
+        iframe.width = 1024
+        iframe.height = 768
+        iframe.src = './pages/virtuals.html?log=0.5'
+
+
+
+    xdescribe 'Head cta section', ->
 
       it 'should reorient', (done) ->
         i = 0

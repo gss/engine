@@ -19,7 +19,24 @@ describe('Standalone page tests', function() {
   });
   this.timeout(100000);
   return describe('Grid website', function() {
-    describe('Head cta section', function() {
+    describe('Virtuals demo', function() {
+      return it('should reorient', function(done) {
+        var i, listener;
+        i = 0;
+        listener = function(e) {
+          if (e.origin === location.origin) {
+            expect();
+          }
+          window.removeEventListener('message', listener);
+          return done();
+        };
+        window.addEventListener('message', listener);
+        iframe.width = 1024;
+        iframe.height = 768;
+        return iframe.src = './pages/virtuals.html?log=0.5';
+      });
+    });
+    xdescribe('Head cta section', function() {
       return it('should reorient', function(done) {
         var i;
         i = 0;
