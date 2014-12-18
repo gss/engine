@@ -96,7 +96,6 @@ describe 'Domain', ->
         result: 555 * 2 + 10
         b: 10
 
-      debugger
       expect(engine.solve
         a: -555
       ).to.eql
@@ -218,7 +217,8 @@ describe 'Domain', ->
           "$box0[intrinsic-width]": 20
           result: 0
           x: 21
-        debugger
+        
+        
         engine.solve
           x: 2
         , (solution) ->

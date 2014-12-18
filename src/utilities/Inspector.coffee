@@ -310,7 +310,6 @@ class Inspector
           if props
             for prop in props
               prop = prop.replace(/([\[\]$])/g, '\\$1')
-              debugger
               string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1')
 
 

@@ -20037,7 +20037,6 @@ Engine = (function() {
       }
     },
     message: function(e) {
-      debugger;
       var property, value, values, _base, _ref;
       values = (_base = e.target).values || (_base.values = {});
       _ref = e.data;
@@ -20560,7 +20559,6 @@ Domain = (function() {
               this.updating.apply(this.changes);
             }
           }
-          debugger;
           if (this.immediate) {
             this.solved.set(path, null);
             this.set(path, null);
@@ -23202,7 +23200,7 @@ Query = (function(_super) {
     }
   };
 
-  Query.prototype.repair = function(engine) {
+  Query.prototype.repair = function(engine, reversed) {
     var dirty, index, pair, pairs, property, value, _i, _len, _ref;
     if (!(dirty = engine.updating.pairs)) {
       return;
@@ -23213,7 +23211,7 @@ Query = (function(_super) {
       if (pairs = (_ref = engine.pairs[property]) != null ? _ref.slice() : void 0) {
         for (index = _i = 0, _len = pairs.length; _i < _len; index = _i += 3) {
           pair = pairs[index];
-          this.pair(engine, property, pair, pairs[index + 1], pairs[index + 2]);
+          this.pair(engine, property, pair, pairs[index + 1], pairs[index + 2], reversed);
         }
       }
     }
@@ -23257,24 +23255,34 @@ Query = (function(_super) {
     }
   };
 
-  Query.prototype.pair = function(engine, left, right, operation, scope) {
+  Query.prototype.restore = function(engine, path) {
+    if (engine.updating.collections.hasOwnProperty(path)) {
+      return engine.updating.collections[path];
+    } else {
+      return this.get(engine, path);
+    }
+  };
+
+  Query.prototype.fetch = function(engine, path, reversed) {
+    if (reversed) {
+      return this.restore(engine, path);
+    } else {
+      return this.get(engine, path);
+    }
+  };
+
+  Query.prototype.pair = function(engine, left, right, operation, scope, reversed) {
     var I, J, added, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     root = this.getRoot(operation);
     right = this.getPrefixPath(engine, left, 0) + root.right.command.path;
-    if (left.indexOf('cover') > -1 && right.indexOf('avatar') > -1) {
-      debugger;
-    }
-    leftNew = this.get(engine, left);
-    rightNew = this.get(engine, right);
-    if (engine.updating.collections.hasOwnProperty(left)) {
-      leftOld = engine.updating.collections[left];
+    if (reversed) {
+      leftOld = engine.updating.queries.hasOwnProperty(left) ? engine.updating.queries[left] : this.restore(engine, left);
+      rightOld = engine.updating.queries.hasOwnProperty(right) ? engine.updating.queries[right] : this.restore(engine, right);
     } else {
-      leftOld = leftNew;
-    }
-    if (engine.updating.collections.hasOwnProperty(right)) {
-      rightOld = engine.updating.collections[right];
-    } else {
-      rightOld = rightNew;
+      leftNew = this.get(engine, left);
+      rightNew = this.get(engine, right);
+      leftOld = this.restore(engine, left);
+      rightOld = this.restore(engine, right);
     }
     if (operation.command.singular) {
       if (leftNew != null ? leftNew.push : void 0) {
@@ -23366,7 +23374,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.unpair = function(engine, left, scope, operation) {
-    var cleaning, contd, i, index, j, op, other, others, pairs, prefix, right, rights, top, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref, _ref1;
+    var cleaning, contd, i, index, j, op, other, others, pairs, prefix, right, rights, top, _i, _j, _k, _l, _len, _len1, _ref, _ref1;
     if (pairs = (_ref = engine.pairs) != null ? _ref[left] : void 0) {
       rights = [];
       top = this.getRoot(operation);
@@ -23391,12 +23399,8 @@ Query = (function(_super) {
           }
         }
       }
-      for (_l = 0, _len2 = cleaning.length; _l < _len2; _l++) {
-        index = cleaning[_l];
-        delete engine.queries[right];
-      }
-      for (_m = rights.length - 1; _m >= 0; _m += -1) {
-        index = rights[_m];
+      for (_l = rights.length - 1; _l >= 0; _l += -1) {
+        index = rights[_l];
         right = pairs[index];
         this.unlisten(engine, scope._gss_id, this.PAIR, null, right.substring(1), void 0, scope, top);
         pairs.splice(index, 3);
@@ -23678,12 +23682,8 @@ Query = (function(_super) {
       engine.fireEvent('branch');
       queries = (_base = engine.updating).queries || (_base.queries = {});
       collections = (_base1 = engine.updating).collections || (_base1.collections = {});
-      engine.updating.collections = queries;
-      engine.updating.queries = collections;
-      this.repair(engine);
+      this.repair(engine, true);
       engine.updating.branching = void 0;
-      engine.updating.collections = collections;
-      engine.updating.queries = queries;
       for (_j = 0, _len1 = removed.length; _j < _len1; _j++) {
         path = removed[_j];
         if (conditions.indexOf(path) > -1) {
@@ -23695,6 +23695,7 @@ Query = (function(_super) {
         if (queries) {
           delete queries[path];
         }
+        delete engine.queries[path];
       }
       _results = [];
       for (index = _k = 0, _len2 = conditions.length; _k < _len2; index = _k += 3) {
@@ -23859,7 +23860,6 @@ Condition = (function(_super) {
         }
       }
       if (this.bound) {
-        debugger;
         continuation = this.getPrefixPath(engine, continuation, 0);
       }
       path = this.delimit(continuation, this.DESCEND) + this.key;
@@ -24460,9 +24460,6 @@ Selector = (function(_super) {
     }
     result = this.solve('Document', 'mutations', function() {
       var mutation, _i, _len;
-      if (this.updating.index > -1) {
-        this.updating.reset();
-      }
       this.updating.restyled = true;
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
@@ -26621,7 +26618,6 @@ Boolean.prototype.Constraint = Constraint.extend({
     return a && b;
   },
   "||": function(a, b) {
-    debugger;
     return a || b;
   },
   "!=": function(a, b) {
@@ -26707,7 +26703,6 @@ Intrinsic = (function(_super) {
       return (_ref2 = this.Selector) != null ? _ref2.connect(this, true) : void 0;
     },
     validate: function(solution, update) {
-      debugger;
       var measured, _ref1;
       if (((_ref1 = this.intrinsic) != null ? _ref1.objects : void 0) && update.domains.indexOf(this.intrinsic, update.index + 1) === -1) {
         measured = this.intrinsic.solve();
@@ -27060,9 +27055,6 @@ Intrinsic = (function(_super) {
         return;
       }
     }
-    if (property === 'width' && !value) {
-      debugger;
-    }
     if (positioning && (property === 'x' || property === 'y')) {
       return (positioning[id] || (positioning[id] = {}))[property] = value;
     } else {
@@ -27324,7 +27316,7 @@ Linear = (function(_super) {
 
   Linear.prototype.unedit = function(variable) {
     var cei, constraint, _ref1;
-    if (constraint = (_ref1 = this.editing) != null ? _ref1['%' + variable.name] : void 0) {
+    if (constraint = (_ref1 = this.editing) != null ? _ref1['%' + (variable.name || variable)] : void 0) {
       cei = this.solver._editVarMap.get(constraint.variable);
       this.solver.removeColumn(cei.editMinus);
       return this.solver._editVarMap["delete"](constraint.variable);
@@ -28912,7 +28904,6 @@ Inspector = (function() {
             for (_k = 0, _len2 = props.length; _k < _len2; _k++) {
               prop = props[_k];
               prop = prop.replace(/([\[\]$])/g, '\\$1');
-              debugger;
               string = string.replace(new RegExp('\\>(' + prop + '[\\[\\"])', 'g'), ' mark>$1');
             }
           }

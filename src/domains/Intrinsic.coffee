@@ -41,7 +41,6 @@ class Intrinsic extends Numeric
       @Selector?.connect(@, true)
 
     validate: (solution, update) ->
-      debugger
       if @intrinsic?.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
         measured = @intrinsic.solve()
         update.apply measured
@@ -309,9 +308,6 @@ class Intrinsic extends Numeric
       return if id.indexOf('"') > -1
       return unless element = document.getElementById(id.substring(1))
     
-    if property == 'width' && !value
-      debugger
-
     if positioning && (property == 'x' || property == 'y')
       (positioning[id] ||= {})[property] = value
     else

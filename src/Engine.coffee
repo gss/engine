@@ -372,7 +372,6 @@ class Engine
 
     # Receive message from worker
     message: (e) ->
-      debugger
       values = e.target.values ||= {}
       for property, value of e.data
         if value?

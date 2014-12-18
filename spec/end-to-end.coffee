@@ -1910,7 +1910,6 @@ describe 'End - to - End', ->
     describe '|| and :: in condition', ->
       it 'should compute values', (done) ->
         
-        debugger
         engine.assumed.merge '$button1[t]': 500, '$button2[t]': 400
 
         engine.once 'solve', ->     
@@ -2628,7 +2627,6 @@ describe 'End - to - End', ->
 
             p12 = engine.id('p12')
             p12.parentNode.removeChild(p12)
-            debugger
 
             engine.then (solution) ->  
               expect(solution).to.eql  

@@ -476,15 +476,11 @@ button {
     $[top] == 0;
     $[height] == $[intrinsic-height];
     $[width] == $[intrinsic-width];
-      article {
-        width: <= 800 !strong;
-      }
-
     @if $[intrinsic-width] < $[intrinsic-height] {
-      [article-gap] == 16; // centers article
+      [article-gap] >= 16; // centers article
       @h |-(article)-| gap([article-gap]) in($) {
         height: == &[intrinsic-height];
-        width: == 800;        
+        width: <= 800;        
       }
       @v |
         -72-
@@ -502,7 +498,7 @@ button {
     
     // horizontal article
     @else {
-      [article-gap] == 20; // centers article
+      [article-gap] >= 16; // centers article
       @v |-(article)-| gap([article-gap]) in($) {
         width: == &[intrinsic-width];
         height: <= 600;   

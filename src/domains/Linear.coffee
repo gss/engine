@@ -33,8 +33,8 @@ class Linear extends Domain
       return @solver._changed
 
   unedit: (variable) ->
-    if constraint = @editing?['%' + variable.name]
-
+    if constraint = @editing?['%' + (variable.name || variable)]
+      #@solver.removeConstraint(constraint)
       cei = @solver._editVarMap.get(constraint.variable);
       @solver.removeColumn(cei.editMinus);
       @solver._editVarMap.delete(constraint.variable);

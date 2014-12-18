@@ -451,10 +451,6 @@ class Query extends Command
     if (result = @get(engine, path)) != undefined
       @each 'remove', engine, result, path, operation, scope, operation, false, contd
 
-    #if scope && operation.command.cleaning
-    #  debugger
-    #  @remove engine, engine.identity.find(scope), path, operation, scope, operation, undefined, contd
-    
     engine.solved.remove(path)
     engine.intrinsic?.remove(path)
     engine.Stylesheet?.remove(engine, path)
@@ -626,13 +622,13 @@ class Query extends Command
       if contd == operation.command.path
         return @getByPath(engine, continuation)
 
-  repair: (engine) ->
+  repair: (engine, reversed) ->
     return unless dirty = engine.updating.pairs
     engine.updating.pairs = false
     for property, value of dirty
       if pairs = engine.pairs[property]?.slice()
         for pair, index in pairs by 3
-          @pair engine, property, pair, pairs[index + 1], pairs[index + 2]
+          @pair engine, property, pair, pairs[index + 1], pairs[index + 2], reversed
     engine.updating.pairs = undefined
   ###
   match: (collection, node, scope) ->
@@ -664,25 +660,35 @@ class Query extends Command
     else
       return value || []
 
+  restore: (engine, path) ->
+    if engine.updating.collections.hasOwnProperty(path)
+      return engine.updating.collections[path]
+    else
+      return @get(engine, path)
+
+  fetch: (engine, path, reversed) ->
+    if reversed
+      return @restore(engine, path)
+    else
+      return @get(engine, path)
 
   # Update bindings of two pair collections
-  pair: (engine, left, right, operation, scope) ->
+  pair: (engine, left, right, operation, scope, reversed) ->
     root = @getRoot(operation)
     right = @getPrefixPath(engine, left, 0) + root.right.command.path
-    if left.indexOf('cover') > -1 && right.indexOf('avatar') > -1
-      debugger
-    leftNew = @get(engine, left)
-    rightNew = @get(engine, right)
 
-    if engine.updating.collections.hasOwnProperty(left)
-      leftOld = engine.updating.collections[left]
+
+    if reversed
+
+      leftOld = if engine.updating.queries.hasOwnProperty(left) then engine.updating.queries[left] else @restore(engine, left)
+      rightOld = if engine.updating.queries.hasOwnProperty(right) then engine.updating.queries[right] else @restore(engine, right)
+
     else
-      leftOld = leftNew
-  
-    if engine.updating.collections.hasOwnProperty(right)
-      rightOld = engine.updating.collections[right]
-    else
-      rightOld = rightNew
+      leftNew = @get(engine, left)
+      rightNew = @get(engine, right)
+
+      leftOld = @restore(engine, left)
+      rightOld = @restore(engine, right)
 
     if operation.command.singular
       if leftNew?.push
@@ -782,8 +788,8 @@ class Query extends Command
               cleaning.splice(j, 1)
 
 
-      for index in cleaning
-        delete engine.queries[right]
+      #for index in cleaning
+      #  delete engine.queries[right]
       for index in rights by -1
         right = pairs[index]
         @unlisten(engine, scope._gss_id, @PAIR, null, right.substring(1), undefined, scope, top)
@@ -1000,14 +1006,9 @@ class Query extends Command
       engine.fireEvent('branch')
       queries = engine.updating.queries ||= {}
       collections = engine.updating.collections ||= {}
-      engine.updating.collections = queries
-      engine.updating.queries = collections
 
-      @repair(engine)
+      @repair(engine, true)
       engine.updating.branching = undefined
-
-      engine.updating.collections = collections
-      engine.updating.queries = queries
 
       for path in removed
         if conditions.indexOf(path) > -1
@@ -1016,6 +1017,7 @@ class Query extends Command
           delete collections[path]
         if queries
           delete queries[path]
+        delete engine.queries[path]
 
       for condition, index in conditions by 3
         condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])

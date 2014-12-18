@@ -149,7 +149,6 @@ class Domain
             @changes[path] = null
             unless @updating.domains.indexOf(@) > @updating.index
               @updating.apply(@changes)
-          debugger
           if @immediate
             @solved.set path, null
             @set path, null

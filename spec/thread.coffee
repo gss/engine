@@ -130,7 +130,7 @@ describe 'Cassowary Thread', ->
     ]
     chai.expect(thread.values).to.eql
       "x": 100
-    debugger
+
     thread.solve ['remove', 'x-tracker']
     chai.expect(thread.values).to.eql
       "x": 10

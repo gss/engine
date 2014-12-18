@@ -1481,7 +1481,6 @@ describe('End - to - End', function() {
   describe("@if @else", function() {
     describe('|| and :: in condition', function() {
       return it('should compute values', function(done) {
-        debugger;
         engine.assumed.merge({
           '$button1[t]': 500,
           '$button2[t]': 400
@@ -1910,7 +1909,6 @@ describe('End - to - End', function() {
             });
             p12 = engine.id('p12');
             p12.parentNode.removeChild(p12);
-            debugger;
             return engine.then(function(solution) {
               var h1;
               expect(solution).to.eql({

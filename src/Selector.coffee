@@ -139,8 +139,8 @@ class Selector extends Query
 
     
     result = @solve 'Document', 'mutations', ->
-      if @updating.index > -1
-        @updating.reset()
+      #if @updating.index > -1
+      #  @updating.reset()
 
       @updating.restyled = true
 
@@ -628,6 +628,7 @@ Selector.define
     Virtual: (node, value, engine, operation, continuation, scope) ->
       if !node && @localizers.indexOf(operation.parent.command.type) > -1
         node = scope
+
       prefix = @getScope(engine, node, continuation) || '$'
       return prefix + '"' + value + '"'
 

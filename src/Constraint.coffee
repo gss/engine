@@ -52,6 +52,8 @@ Constraint = Command.extend
               break
           unless matched
             op.command.undeclare(engine, object, quick)
+      #if constraint = engine.editing?['%' + path]
+      #  engine.unedit(path)
     return
 
   # Add constraint by tracker if it wasnt added before

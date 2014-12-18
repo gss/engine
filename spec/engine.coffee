@@ -751,7 +751,6 @@ describe 'GSS engine', ->
       expect(containerEngine.scope).to.equal container    
 
     it 'scoped value is bridged downward', (done) ->
-      #debugger
       cListener = (e) ->           
         container.removeEventListener 'solved', cListener
       
