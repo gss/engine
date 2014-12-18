@@ -592,7 +592,7 @@ if !self.window && self.onmessage != undefined
         @solve(removes)
         if @updating.domains[0] == null
           @broadcast(@updating.problems[0])
-          @index++
+          @updating.index++
       if values
         @assumed.merge(values)
       if commands.length

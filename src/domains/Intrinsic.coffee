@@ -144,7 +144,7 @@ class Intrinsic extends Numeric
             return prop
           else if !prop.matcher && property.indexOf('intrinsic') == -1
             return prop.call(@, object, continuation)
-    return Numeric::get.call(@, null, path, continuation)
+    return Numeric::get.call(@, null, path, continuation) || 0
 
 
   # Triggered on possibly resized element by mutation observer
@@ -221,8 +221,6 @@ class Intrinsic extends Numeric
     if id = node._gss_id
       if properties = @objects[id]
         for prop of properties
-          continue if full && (prop == 'width' || prop == 'height')
-        
           switch prop
             when "x", "intrinsic-x"
               @set id, prop, x + node.offsetLeft

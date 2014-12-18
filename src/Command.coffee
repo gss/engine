@@ -34,11 +34,12 @@ class Command
         if continuation.indexOf(@PAIR) > -1 || @reference
           return result
 
-    # Use a shortcut operation when possible (e.g. native dom query)
-    if @head
-      return @jump(domain, operation, continuation, scope, ascender, ascending)
 
     if result == undefined
+      # Use a shortcut operation when possible (e.g. native dom query)
+      if @head
+        return @jump(domain, operation, continuation, scope, ascender, ascending)
+        
       # Recursively solve arguments, stop on undefined
       args = @descend(domain, operation, continuation, scope, ascender, ascending)
 
