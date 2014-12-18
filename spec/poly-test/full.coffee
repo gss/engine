@@ -311,7 +311,7 @@ $[height] == $[intrinsic-height] !require;
 /* elements */
 #profile-card {      
   &width == $[width] - 480;            
-  &width == $[height] - 350;
+  &width == $[height] - 480;
   &[center-x] == $[center-x];
   &[center-y] == $[center-y];        
   &border-radius == [outer-radius];
@@ -475,9 +475,10 @@ button {
     $[top] == 0;
     $[height] == $[intrinsic-height];
     $[width] == $[intrinsic-width];
+    $[article-gap] >= 16;
+
     @if $[intrinsic-width] < $[intrinsic-height] {
-      [article-gap] >= 16; // centers article
-      @h |-(article)-| gap([article-gap]) in($) {
+      @h |-(article)-| gap($[article-gap]) in($) {
         height: == &[intrinsic-height];
         width: <= 800;        
       }
@@ -497,8 +498,7 @@ button {
     
     // horizontal article
     @else {
-      [article-gap] >= 16; // centers article
-      @v |-(article)-| gap([article-gap]) in($) {
+      @v |-(article)-| gap($[article-gap]) in($) {
         width: == &[intrinsic-width];
         height: <= 600;   
       }
@@ -754,34 +754,41 @@ describe 'Full page tests', ->
             GSS.console.log(JSON.stringify solution)
 
 
-            roughAssert(solution['$follow[y]'], 659)
-            roughAssert(solution['$follow[x]'], 272)
+            roughAssert(solution['$follow[y]'], 540)
+            roughAssert(solution['$follow[x]'], 330)
             roughAssert(solution['flex-gap'], 40)
         
-            container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
+            container.setAttribute('style', 'height: 768px; width: 1280px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
               GSS.console.log(solution)
-              roughAssert(solution['$follow[x]'], 435)
-              roughAssert(solution['$follow[y]'], 537)
+              roughAssert(solution['$follow[x]'], 586)
+              roughAssert(solution['$follow[y]'], 531)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
  
               engine.then (solution) ->
                 GSS.console.log(solution)
                 roughAssert(solution['$follow[y]'], 659)
-                roughAssert(solution['$follow[x]'], 272)
+                roughAssert(solution['$follow[x]'], 240)
  
-                container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
+                container.setAttribute('style', 'height: 1280px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
                 
                 engine.then (solution) ->
                   roughAssert(solution['$follow[x]'], 435)
                   roughAssert(solution['$follow[y]'], 537)
- 
-                  container.innerHTML = ""
+       
                   engine.then (solution) ->
-                    done()
-                    
+                    GSS.console.log(solution)
+                    roughAssert(solution['$follow[x]'], 435)
+                    roughAssert(solution['$follow[y]'], 537)
+                    container.setAttribute('style', 'height: 1024px; width: 500px; position: absolute; overflow: auto; left: 0; top: 0')
+       
+         
+                    container.innerHTML = ""
+                    engine.then (solution) ->
+                      done()
+                      
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->
             describe type, ->

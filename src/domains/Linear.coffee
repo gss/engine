@@ -76,7 +76,7 @@ class Linear extends Domain
 
   weight: (weight, operation) ->
     if index = operation?.parent[0].index
-      return 1 - index / 1000
+      return index / 1000
     return weight
 
 # Capture values coming from other domains

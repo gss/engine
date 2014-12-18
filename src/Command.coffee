@@ -39,7 +39,7 @@ class Command
       # Use a shortcut operation when possible (e.g. native dom query)
       if @head
         return @jump(domain, operation, continuation, scope, ascender, ascending)
-        
+
       # Recursively solve arguments, stop on undefined
       args = @descend(domain, operation, continuation, scope, ascender, ascending)
 
@@ -242,7 +242,9 @@ class Command
 
   # Return parent scope continuation to execute and pair another query
   rewind: (engine, operation, continuation, scope) ->
-    if path = @getScopePath(engine, continuation)
+    if continuation.indexOf(@DESCEND + '#profile-card') > -1
+      debugger
+    if path = @getScopePath(engine, continuation, 0, true)
       return path + @DESCEND
     return ''
 

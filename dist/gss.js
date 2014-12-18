@@ -21386,7 +21386,10 @@ Command = (function() {
 
   Command.prototype.rewind = function(engine, operation, continuation, scope) {
     var path;
-    if (path = this.getScopePath(engine, continuation)) {
+    if (continuation.indexOf(this.DESCEND + '#profile-card') > -1) {
+      debugger;
+    }
+    if (path = this.getScopePath(engine, continuation, 0, true)) {
       return path + this.DESCEND;
     }
     return '';
@@ -23622,10 +23625,12 @@ Query = (function(_super) {
     }
     while (true) {
       if ((index = continuation.lastIndexOf(this.DESCEND, last)) === -1) {
-        return '';
+        if (level > -1) {
+          return '';
+        }
       }
       if (continuation.charCodeAt(index + 1) === 64) {
-        if (virtualize) {
+        if (virtualize && level === -1) {
           break;
         } else {
           ++level;
@@ -23645,7 +23650,7 @@ Query = (function(_super) {
     if (level == null) {
       level = 1;
     }
-    if (path = this.getScopePath(engine, continuation, level)) {
+    if (path = this.getScopePath(engine, continuation, level, true)) {
       return path + this.DESCEND;
     }
     return '';
@@ -24007,7 +24012,7 @@ Condition = (function(_super) {
 
   Condition.prototype["yield"] = function(result, engine, operation, continuation, scope) {
     var old, path, scoped, value, _base, _ref;
-    if (operation.parent.indexOf(operation) === -1) {
+    if (!(operation.parent.indexOf(operation) > 1)) {
       if (operation[0].key != null) {
         continuation = operation[0].key;
         if (scoped = operation[0].scope) {
@@ -24024,9 +24029,10 @@ Condition = (function(_super) {
       ((_base = engine.updating).collections || (_base.collections = {}))[path] = value;
       if (old = (_ref = engine.updating.collections) != null ? _ref[path] : void 0) {
         if (this.getOldValue(engine, path) === !!result) {
-          return;
+          return true;
         }
       }
+      debugger;
       this.notify(engine, path, scope, result);
       return true;
     }
@@ -27523,7 +27529,7 @@ Linear = (function(_super) {
   Linear.prototype.weight = function(weight, operation) {
     var index;
     if (index = operation != null ? operation.parent[0].index : void 0) {
-      return 1 - index / 1000;
+      return index / 1000;
     }
     return weight;
   };

@@ -838,10 +838,11 @@ class Query extends Command
       last = continuation.lastIndexOf(@DESCEND, last)
     while true
       if (index = continuation.lastIndexOf(@DESCEND, last)) == -1
-        return ''
+        if level > -1
+          return ''
 
       if continuation.charCodeAt(index + 1) == 64
-        if virtualize
+        if virtualize && level == -1
           break
         else
           ++level
@@ -853,7 +854,7 @@ class Query extends Command
     return continuation.substring(0, last + 1)
 
   getPrefixPath: (engine, continuation, level = 1) ->
-    if path = @getScopePath(engine, continuation, level)
+    if path = @getScopePath(engine, continuation, level, true)
       return path + @DESCEND
     return ''
 
