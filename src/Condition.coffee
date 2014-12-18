@@ -111,7 +111,6 @@ class Condition extends Query
         if @getOldValue(engine, path) == !!result
           return true
 
-      debugger
       @notify(engine, path, scope, result)
 
 

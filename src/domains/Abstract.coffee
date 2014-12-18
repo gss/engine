@@ -41,7 +41,7 @@ Top = Abstract::Default.extend
     if parent = operation.parent
       if parent.command instanceof Abstract::Default 
         return false
-        
+
     operation.index ||= engine.abstract.index = (engine.abstract.index || 0) + 1
     return true
 
@@ -50,7 +50,7 @@ Top = Abstract::Default.extend
   execute: (args..., engine, operation, continuation, scope) ->
     meta = 
       key: @delimit(continuation)
-      index: operation.index
+      #index: operation.index
 
     if scope != engine.scope
       meta.scope = engine.identify(scope)

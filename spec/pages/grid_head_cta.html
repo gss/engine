@@ -114,15 +114,14 @@ boot()
 
 
 <style type="text/gss">
-
 section.head-cta {
   height: >= ::window[height];
 
   @h |(& .overlay)| in(&);
   @v |(& .overlay)| in(&);
 
-  @h  |-(&"area")-| in(&) gap([md]) !require;
-  @v  |-(&"area")-| in(&) gap([md]) !require;
+  @h  |-(&"area")-| in(&) gap($md) !require;
+  @v  |-(&"area")-| in(&) gap($md) !require;
 
   @h |(& .bg)| in(&);
   @v |(& .bg)| in(&);
@@ -137,12 +136,12 @@ section.head-cta {
 
   .cta, .play {
     height: == &[intrinsic-height];
-    line-height: == &[font-size] + [base];
+    line-height: == &[font-size] + $base;
   }
 
   .cta {
     .number {
-      margin-left: == [base];
+      margin-left: == $base;
     }
 
     .odometer {
@@ -196,34 +195,34 @@ section.head-cta {
 
     .cta, .play {
       font-size: == 14;
-      padding: == [base];
+      padding: == $base;
     }
   }
   @else {
 
     @v  |
         (&"logo")
-        ~[md]~
+        ~$md~
         (& .subtitle)
         -18-
         (& .title)
         <&"area"[center-y]>
-        -[md-gap]-
+        -$[md-gap]-
         (& .cta)
-        -[md-gap]-
+        -$[md-gap]-
         (& .play)
       in(&"area") !require;
 
-    @v (& .play)~[md]~| in(&"area");
+    @v (& .play)~$md~| in(&"area");
 
     .cta, .play {
       font-size: == 20;
-      padding: == [base] * 3;
+      padding: == $base * 3;
       size: == &[intrinsic-size];
     }
 
     &"logo" {
-      &[height] == [md] == &[width];
+      &[height] == $md == &[width];
     }
     &"logo"[center-x] == &"area"[center-x];
 
@@ -235,12 +234,12 @@ section.head-cta {
     @h  |(& .title)| in(&"area") {
 
           @if &[width] <= 600 {
-            line-height: == [md] / 2;
-            font-size: == [md] / 2;
+            line-height: == $md / 2;
+            font-size: == $md / 2;
           }
           @else {
-            line-height: == [md];
-            font-size: == [md];
+            line-height: == $md;
+            font-size: == $md;
           }
         }
 
@@ -260,249 +259,6 @@ section.head-cta {
 
 }
 
-.post-cols-footer {
-  height: == 72 !require;
-
-  (& a)[line-height] == &[height];
-
-}
-
-.post-columns {
-
-  .media {
-    width: == &[height];
-  }
-
-  @if ::window[width] < 504 {
-    @h |(&)| in(::window);
-    height: == ::window[height];
-
-    .title.main {
-      font-size: == 16 !require;
-      height: == &[intrinsic-height];
-    }
-
-    @v |-(& .title.main)-(& .media) in(&) gap(&[main-title-media-v-gap]);
-    @v (& .content)| in(&);
-
-    @h |-(& .title.main)-| in(&) gap([base] * 5);
-    @h |(& .content)| in(&);
-
-    (& .content)[width] == (& article)[width] == &[width];
-
-    @h |(& article)... in(& .content) {
-      top: == &:next[top];
-      @h |-(&"area")-| in(&) gap([base] * 3);
-    }
-
-
-    @v |~-~(& article)~-~| in(& .content) gap(0);
-    (& article)[center-y] == &[center-y];
-
-    article {
-      @v |(& .media)-(& .title) in(&) gap([base] * 4);
-      @v (& .title)-(& .subtitle)-| in(&) gap([base]);
-
-      @h |-(& .media)-| in(&"area") gap([base] * 5);
-      (& .media)[center-x] == &[center-x];
-
-      @h |(& .title)| in(&"area");
-      @h |(& .subtitle)| in(&"area");
-
-      .title,
-      .subtitle {
-        height: == &[intrinsic-height];
-      }
-
-      .title {
-        font-size: == 32 !require;
-        line-height: == 32 !require;
-      }
-
-      .subtitle {
-        font-size: == 16 !require;
-      }
-
-      .text {
-        height: == 0;
-        opacity: == 0;
-      }
-    }
-
-
-    @h |~-~(&"position-indicators")~-~| in(&) gap([base] * 2);
-    &"position-indicators"[center-x] == &[center-x];
-
-    /*@v (&"position-indicators")-| in(&) gap([base] * 2);*/
-    @v (& .position-indicator)-| in(&) gap([base] * 2);
-
-    @h |(& .position-indicator)-...| in(&"position-indicators") gap([base] * 2) {
-      height: == 2 !require;
-      width: == [base] * 4 !weak;
-      width: == &:next[width];
-    }
-  }
-  @else {
-    @if ::window[width] < 1008 {
-      @h |(&)| in(::window);
-      height: == ::window[height];
-
-      .title.main {
-        font-size: == 16 !require;
-        height: == &[intrinsic-height];
-      }
-
-      @h |-(& .title.main) in(&) gap([base] * 4);
-
-      @h |(& .content)| in(&);
-      @v |(& .content)| in(&);
-
-      (& .content)[width] == (& article)[width] == &[width];
-      (& article)[height] == &[height];
-
-      @h |(& article)... in(& .content) {
-        top: == &:next[top];
-        @h |-(&"area")-| in(&) gap([base] * 4);
-        @v |-(&"area") in(&) gap([base] * 5);
-        @v (&"area")-| in(&) gap([base] * 8);
-      }
-
-
-      &"text"[center-y] == &[center-y];
-      @v |(& .title.main) in(&"text");
-      &[main-title-bottom] == (& .title.main)[bottom];
-
-      @v <&[main-title-bottom]>(& article .title)(& .subtitle)~-~| in(&"text") gap(0);
-
-
-      @v |(& article)| in(& .content);
-
-      article {
-        @h |(& .title)~-~(& .media) in(&"area") gap([base] * 4);
-        @h |(& .subtitle)~-~(& .media) in(&"area") gap([base] * 4);
-
-        /*@h (& .media)| in(&"area");*/
-        @h <&[center-x]>~-~(& .media)| in(&"area") gap(0);
-        @v |~-~(& .media)~-~| in(&"area") gap(0);
-        (& .media)[center-y] == &"area"[center-y];
-
-        .title,
-        .subtitle {
-          height: == &[intrinsic-height];
-        }
-
-        .title {
-          font-size: == 32 !require;
-          line-height: == 32 !require;
-        }
-
-        .subtitle {
-          font-size: == 16 !require;
-        }
-
-        .text {
-          height: == 0;
-          opacity: == 0;
-        }
-      }
-
-
-      @h |~-~(&"position-indicators")-| in(&) gap([base] * 2);
-
-      /*@v (&"position-indicators")-| in(&) gap([base] * 2);*/
-      @v (& .position-indicator)-| in(&) gap([base] * 2);
-
-      @h |(& .position-indicator)-...| in(&"position-indicators") gap([base] * 2) {
-        height: == 2 !require;
-        width: == [base] * 4 !weak;
-        width: == &:next[width];
-      }
-    }
-    @else {
-      .title.main {
-        height: == &[intrinsic-height];
-        padding-top: == [base] * 5;
-      }
-
-      [post-column-h-gap] == [post-column-outer-h-gap] / 2;
-      [post-column-h-gap] >= [md];
-
-      [post-column-v-gap] == [base] * 10;
-
-      @h |-(& .title.main)-| in(&) gap([post-column-h-gap]);
-      @v |-(& .title.main)-(& .posts)-...~-~| in(&) gap([post-column-v-gap]);
-
-      @h |~-~(& .posts)~-~| in(&) gap(0);
-      (& .posts)[center-x] == &[center-x];
-
-      .posts {
-        article {
-          height: == &[intrinsic-height];
-        }
-
-        @h |-(& article)-...-| in(&) gap([post-column-h-gap]) outer-gap([post-column-outer-h-gap]) {
-          top: == &:next[top];
-          (& .media)[width] == &[width] - [md];
-        }
-
-        @v |(& article)~-~| in(&) gap(0);
-
-
-        &.large {
-          article {
-            width: == [md] * 4;
-
-            .title {
-              font-size: == 32;
-              margin-top: == ([base] * 6) - 8;
-            }
-
-            .subtitle {
-              font-size: == 20;
-              margin-top: == ([base] * 3) - 16;
-            }
-
-            .text {
-              font-size: == 20;
-              line-height: == 32;
-              margin-top: == ([base] * 3) - 16;
-            }
-          }
-        }
-
-        &.large + .posts.small {
-          @h |-(& .divider)-| in(&) gap([post-column-outer-h-gap]);
-
-          /*@v |(& .divider)-(& article) in(&) gap([post-column-v-gap]);*/
-          @v |(& .divider) in(&);
-          (& article)[padding-top] == [post-column-v-gap];
-        }
-
-        &.small {
-          article {
-            width: == [md] * 3;
-
-            .title {
-              font-size: == 22;
-              margin-top: == ([base] * 3) - 8;
-            }
-
-            .subtitle {
-              font-size: == 18;
-              margin-top: == ([base] * 2) - 8;
-            }
-
-            .text {
-              font-size: == 16;
-              line-height: == 24;
-              margin-top: == ([base] * 2) - 8;
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 section {
   width: 100%;

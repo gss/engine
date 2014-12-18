@@ -1,110 +1,97 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1"/><meta property="og:image" content="http://s3-us-west-2.amazonaws.com/cdn.thegrid.io/fixtures/images/no_more_zuck.png"/><meta property="og:title" content="The Team"/><meta property="og:site_name" content="The Grid"/><meta property="og:type" content="website"/><meta property="og:app_id" content="1517733501804443"/><title>The Grid | The Team</title><style type="text/css">body {
-  font-family: 'Roboto Light', sans-serif;
-  padding: 0 0 50px 0;
-  margin: 0;
-  width: 100%;
-  font-weight: lighter;
-  line-height: 1.75em;
-}
+<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1"/><meta property="description"/><meta property="og:image" content="http://s3-us-west-2.amazonaws.com/cdn.thegrid.io/fixtures/images/no_more_zuck.png"/><meta property="og:title" content="The Team"/><meta property="og:site_name" content="The Grid"/><meta property="og:type" content="website"/><meta property="og:description"/><meta property="og:app_id" content="1517733501804443"/>
+<script type="text/javascript" src="../../dist/gss.js">
+</script>
 
-.header {
-  width: 100%;
-  background-image: url(https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/fixtures/images/header.png);
-  height: 144px;
+<title>The Grid</title><style type="text/css">.ancillary-header {
+  background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/responsive.jpg');
   background-size: cover;
   background-position: center;
   box-shadow: inset 0 0 2em .1em black;
+
+  overflow: visible; /* Allow back button to show */
+  z-index: 2; /* Allow back button to be clickable */
 }
 
-.container {
-  max-width: 940px;
-  padding: 0 80px 0 80px;
-  margin: auto;
+.ancillary-header:before {
+  background: hsla(0, 0%, 0%, .6);
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
-}
-
-h1 {
-  font-size: 2.5em;
-}
-
-h1, h2 {
+.ancillary-header h1,
+.ancillary-header h2 {
+  color: hsl(0, 0%, 100%);
+  position: relative;
   text-align: center;
-  margin: 85px 0 30px 0;
+  text-transform: uppercase;
 }
 
-h3 {
-  margin: 0 0 -15px 0;
-}
-
-.back {
-  position: fixed;
-  top: 50px;
-  left: 12px;
-  width: 36px;
-  height: 36px;
-  border-radius: 36px;
-  border: 2px solid #aaa;
-  color: #aaa;
+.ancillary-header .back {
+  position: fixed !important;
+  color: hsl(0, 0%, 50%);
   text-align: center;
   padding: 0;
   -webkit-backface-visibility: hidden;
   -webkit-transform: translate3d(0,0,0);
 }
-.back i {
-  margin: 10px 0 0 0;
-}
-.back a {
+
+.ancillary-header .back a {
   text-decoration: none;
   color: inherit;
 }
-.back:hover {
-  background-color: #aaa;
-  color: #000;
-}
-.back:hover i {
-  opacity: .3;
-}
 
-.date {
-  text-align: center;
-  text-transform: uppercase;
-  display: block;
-  padding: 0 0 25px 0;
-  margin: 0 0 -25px 0;
-  border-bottom: 1px solid #aaa;
-  letter-spacing: 0.15em;
-  font-size: 0.8em;
-  color: #aaa;
-}
-
-ul {
-  padding: 0;
-  list-style: lower-alpha;
-}
-
-ul ul {
-  padding: 0 0 0 25px;
-  list-style: lower-roman;
+.ancillary-header .back:hover {
+  color: hsla(0, 0%, 50%, .8);
 }
 
 @media (max-width: 640px) {
-  .container {
-    max-width: 640px;
-    padding: 0 30px 0 30px;
-    margin: auto;
-  }
-  .back {
-    position: absolute;
-    background-color: #aaa;
-    color: #000;
+  .ancillary-header .back {
+    position: absolute !important;
   }
 }
+.ancillary {
+  color: hsl(15, 3%, 28%);
+}
 
-a {
-  color: #000000;
+.ancillary h1,
+.ancillary h2,
+.ancillary h3,
+.ancillary h4,
+.ancillary h5,
+.ancillary h6 {
+  color: hsl(180, 5%, 12%);
+}
+
+.ancillary h3 {
+  font-family: 'National Medium';
+}
+
+.ancillary h4 {
+  font-family: 'National Medium';
+  text-transform: uppercase;
+}
+
+.ancillary h1 + p {
+  border-bottom: 1px solid hsl(240, 2%, 91%);
+  color: hsl(0, 0%, 70%);
+  text-transform: uppercase;
+}
+
+.ancillary a {
+  color: hsl(0, 0%, 0%);
+}
+
+.ancillary ol {
+  list-style: lower-alpha;
+}
+
+.ancillary ol > ol {
+  list-style: lower-roman;
 }
 .post-columns {
   background-color: hsl(36, 33%, 94%);
@@ -117,7 +104,7 @@ a {
 }
 .post-cols-footer a {
   color: hsl(41, 47%, 62%);
-  font-family: 'National Light';
+  font-family: 'National Medium';
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-size: 20px;
@@ -128,10 +115,8 @@ a {
   left: 0;
   right: 0;
 }
-.post-columns .heading {
+.post-columns .title.main {
   color: hsl(255, 13%, 12%);
-  font-family: 'National Book';
-  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -144,21 +129,20 @@ a {
 
 .post-columns article .title {
   color: hsl(180, 5%, 12%);
-  font-family: 'National Light';
-  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .post-columns article .subtitle {
   color: hsl(41, 47%, 62%);
-  font-family: 'National Light';
-  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .post-columns article .text {
   color: hsl(180, 5%, 12%);
-  font-family: 'Roboto Regular', sans-serif;
+}
+
+.post-columns article .text a {
+  color: hsl(260, 45%, 40%);
 }
 
 .post-columns .position-indicator {
@@ -174,7 +158,7 @@ a {
     text-align: center;
   }
 
-  .post-columns .heading {
+  .post-columns .title.main {
     color: hsla(255, 13%, 12%, .6);
     position: absolute;
   }
@@ -191,7 +175,7 @@ a {
 
 @media (min-width: 504px) and (max-width: 1007px) {
 
-  .post-columns .heading {
+  .post-columns .title.main {
     color: hsla(255, 13%, 12%, .6);
     position: absolute;
   }
@@ -211,12 +195,12 @@ a {
     text-align: center;
   }
 
-  .post-columns .heading {
+  .post-columns .title.main {
     font-size: 34px;
     position: relative;
   }
 
-  .post-columns .heading:before {
+  .post-columns .title.main:before {
     background-color: hsl(65, 8%, 69%);
     content: "";
     display: block;
@@ -232,7 +216,588 @@ a {
     border-top: 2px solid hsla(65, 8%, 69%, .2);
   }
 }
-</style>  <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css"/><link rel="shortcut icon" href="https://passport.thegrid.io/favicon.ico"/><script type="text/javascript" src="../../dist/gss.js"></script></head><body><div class="header"></div><a class="back" href="../"><i class="fa fa-arrow-left"></i></a><section class="post-columns" style="position:relative;"><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><h1 class="heading">The Team</h1><div class="content"><div class="posts large"><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Henri.png');"></div><h1 class="title">Henri Bergius</h1><h2 class="subtitle">VP Engineering</h2><p class="text">Henri is an open source content management pioneer. He is the author of the Create.js web editing interface and the NoFlo flow-based programming environment that powers The Grid.</p></article><article id="dan_tocchini"><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Dan.png');"></div><h1 class="title">Dan Tocchini</h1><h2 class="subtitle">Founder and CEO</h2><p class="text">Creator of GSS (Grid Style Sheets) and Partner of D4 Interactive Agency. Producing interactive works for Audi, Microsoft and more.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Leigh.png');"></div><h1 class="title">Leigh Taylor</h1><h2 class="subtitle">Creative Director</h2><p class="text">Leigh was the first dedicated designer for Obvious Corp, designed arguably the best blog post editor on the web today, now known as Medium.</p></article></div><div class="posts small"><div class="divider"></div><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Brian.png');"></div><h1 class="title">Brian Axe</h1><h2 class="subtitle">Chairman / Founder</h2><p class="text">One of the creators of Google AdSense, built the business from zero to $2B in annual revenue.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Svetly.png');"></div><h1 class="title">Svetly Metodiev</h1><h2 class="subtitle">Director of Finance & Operations</h2><p class="text">Svetly is an experienced business analyst with a background in finance, formerly with Credit Suisse.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Forrest.png');"></div><h1 class="title">Forrest Oliphant</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Forrest has been experimenting with web media software for 15 years. He created Meemoo, a playful dataflow animation webapp designed for hackability.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Jon.png');"></div><h1 class="title">Jon Nordby</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Jon is a specialist in Linux and embedded devices. He has researched GPU computing for CERN and consulted for Canonical, Nokia and One Laptop Per Child. Creator of MicroFlo, a dataflow runtime for microcontrollers.</p></article></div><div class="posts small"><div class="divider"></div><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Moritz.png');"></div><h1 class="title">Moritz Krog</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Moritz Krog is an experienced full-stack developer with a background in computational biology.</p></article><article id="yaroslaff_fedin"><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Yaroslaff.png');"></div><h1 class="title">Yaroslaff Fedin</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Enthusiast of dynamic interfaces and declarative programming. Virtual machinist.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Vladimir.png');"></div><h1 class="title">Vladimir Sibirov</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Vladimir is an expert in open source content management, dataflow backends and web frameworks. He wrote code for several European startups and led web development for brands like MasterCard, Nestle and Mars.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Vilson.png');"></div><h1 class="title">Vilson Vieira</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Vilson is a code artist and open source enthusiast. He has researched computational creativity for University of Sao Paulo. He co-created MuSA and LabMacambira collectives and has been developing for Meemoo, Mozilla and Google.</p></article></div><div class="posts small"><div class="divider"></div><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Jeff.png');"></div><h1 class="title">Jeff Woods</h1><h2 class="subtitle">Community Evangelist</h2><p class="text">Jeff is a nationally recognized commercial photographer with passion to equip small businesses with the tools needed to grow in todays marketplace. He has been a featured speaker for Canon and Adobe and has presented seminars on design, business marketing and photography throughout China, Brazil, Ireland, Canada and US.</p></article><article><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/Paul.png');"></div><h1 class="title">Paul Young</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Helped build the platform that powers loyalty for companies like Pepsi, Sony Music, L'Oreal, and Nestle. Passionate about making beautiful products from the inside out.</p></article><article id="lost_cosmonaut"><div class="media" style="background-image:url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/team/_spare.png');"></div><h1 class="title">Lost Cosmonaut</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Got the right stuff? Get in touch at <a href="mailto:careers@thegrid.io" target="_blank">careers@thegrid.io</a></p></article></div></div><div class="footer"></div></section><style type="text/gss">section {
+html:not(.gss-ready) {
+  opacity:0;
+}
+
+html {
+  background-color: hsl(210, 0%, 98%);
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+a, p, h1, h2, h3, h4 {
+  font-weight: normal;
+}
+
+* {
+  /*-webkit-backface-visibility: hidden;*/
+  margin: 0px;
+  padding: 0px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+}
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+body.modal-open .modal {
+  position: fixed !important;
+  z-index: 10;
+  visibility: visible;
+  top: 0;
+  height: 100%;
+  width: 100%;
+}
+
+iframe {
+  border: none;
+  z-index: 2147483600; /* not on top of extension */
+}
+
+.iframer-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+  z-index: 2147483600; /* not on top of extension */
+  background-color: rgba(0, 0, 0, 0.95);
+}
+.iframer {
+  position: absolute;
+  top: 72px;
+  left: 72px;
+}
+
+
+.fa.fa-spinner {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.iframer-container .cta {
+  font-family: 'National Medium';
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: hsl(42, 84%, 69%);
+  border: 2px solid hsl(42, 84%, 69%);
+  border-radius: 0;
+  background-color: transparent;
+  padding: 9px;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+.iframer-container .cta:hover {
+  color: black;
+  background-color: hsl(42, 84%, 69%);
+}
+
+.iframer-container .closer {
+  width: 36px;
+  height: 36px;
+  line-height: 32px;
+  border-radius: 24px;
+  border: 2px solid #aaa;
+  color: #aaa;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  opacity: .5;
+}
+.iframer-container .closer:hover {
+  border: 2px solid #fff;
+  color: #fff;
+}
+
+
+/* Typography */
+
+html {
+  font-family: 'National Light';
+}
+
+section .heading {
+  font-family: 'National Thin';
+  letter-spacing: .16em;
+}
+
+section .title.alt {
+  letter-spacing: .16em;
+}
+
+section .subtitle {
+  letter-spacing: .16em;
+}
+
+section p,
+section ol,
+section ul,
+section .text {
+  letter-spacing: .05em;
+}
+
+section button,
+section .button {
+  font-family: 'National Medium';
+  letter-spacing: .16em;
+}
+
+@-webkit-keyframes loading {
+  0%    { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading01.png'); }
+  20%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading02.png'); }
+  40%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading03.png'); }
+  60%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading04.png'); }
+  80%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading05.png'); }
+  100%  { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading06.png'); }
+}
+
+@-moz-keyframes loading {
+  0%    { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading01.png'); }
+  20%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading02.png'); }
+  40%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading03.png'); }
+  60%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading04.png'); }
+  80%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading05.png'); }
+  100%  { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading06.png'); }
+}
+
+@-o-keyframes loading {
+  0%    { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading01.png'); }
+  20%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading02.png'); }
+  40%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading03.png'); }
+  60%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading04.png'); }
+  80%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading05.png'); }
+  100%  { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading06.png'); }
+}
+
+@keyframes loading {
+  0%    { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading01.png'); }
+  20%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading02.png'); }
+  40%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading03.png'); }
+  60%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading04.png'); }
+  80%   { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading05.png'); }
+  100%  { background-image: url('//s3-us-west-2.amazonaws.com/cdn.thegrid.io/assets/images/loading/loading06.png'); }
+}
+
+section button.loading,
+section .button.loading {
+  background-position: center;
+  background-repeat: no-repeat;
+
+  -webkit-animation: loading 1s infinite;
+  -moz-animation: loading 1s infinite;
+  -o-animation: loading 1s infinite;
+  animation: loading 1s infinite;
+}
+
+section button.loading > span,
+section .button.loading > span {
+  visibility: hidden;
+}
+section.footer {
+  background-color: hsl(300, 4%, 16%);
+  border-top: 1px solid hsl(300, 4%, 10%);
+  margin-top: -1px;
+}
+
+section.footer a {
+  font-family: 'National Medium';
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: hsl(354, 65%, 65%);
+  float: left;
+  display: block;
+  font-size: 16px;
+  line-height: 20px;
+  margin: 1em;
+  text-decoration: none;
+}
+</style><noscript><style type="text/css">html:not(.gss-ready){
+  opacity: 1;
+}
+svg {
+  width: 200px;
+  height: 200px;
+}
+.media,
+.media div {
+  width: 400px;
+  height: 300px;
+}
+.avatar {
+  width: 50px;
+  height: 50px;
+}
+</style></noscript><link rel="stylesheet" type="text/css" href="//s3-us-west-2.amazonaws.com/cdn.thegrid.io/fonts/National/National-Light.css"/><link rel="stylesheet" type="text/css" href="//s3-us-west-2.amazonaws.com/cdn.thegrid.io/fonts/National/National-Medium.css"/><link rel="stylesheet" type="text/css" href="//s3-us-west-2.amazonaws.com/cdn.thegrid.io/fonts/National/National-Thin.css"/><link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet"/><link rel="shortcut icon" href="https://passport.thegrid.io/favicon.ico"/></head><body><style type="text/gss" scoped="scoped">.ancillary-header {
+  height: == &[intrinsic-height];
+  width: == ::window[width];
+  padding-top: == &[padding-bottom] == $base * 5;
+
+  h1 {
+    margin-top: == $base;
+  }
+
+
+  .back {
+    font-size: == $base * 3;
+    height: == &[intrinsic-height];
+  }
+
+  (& .back)[center-y] == &[center-y];
+
+
+  @if ::window[width] < 504 {
+    &[padding-left] == &[padding-right] == $base * 4;
+
+    (& h1)[font-size] == 32;
+    (& h2)[font-size]  == 16;
+
+    @h |-(& .back) gap($base * 2);
+  }
+  @else {
+    @if ::window[width] < 1008 {
+      (& h1)[font-size] == 48;
+      (& h2)[font-size]  == 20;
+
+      @h |-(& .back) gap($base * 2);
+    }
+    @else {
+      &[padding-left] == &[padding-right] == $base * 11;
+
+      (& h1)[font-size] == 64;
+      (& h2)[font-size]  == 24;
+
+      @h |-(& .back) gap($base * 3);
+    }
+  }
+}
+.ancillary {
+  max-width: == ($md * 11) + &[padding-left] + &[padding-right];
+  height: == &[intrinsic-height];
+  center-x: == ::window[center-x];
+
+  @if ::window[width] < 504 {
+    padding-left: == &[padding-right] == $base * 4;
+    padding-top: == &[padding-bottom] == $base * 6;
+  }
+  @else {
+    padding-left: == &[padding-right] == $base * 11;
+    padding-top: == &[padding-bottom] == $base * 13;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: == &[font-size];
+  }
+
+  p,
+  ol,
+  ul {
+    line-height: == &[font-size] + $base;
+  }
+
+  h1 {
+    font-size: == 54;
+  }
+
+  h3 {
+    font-size: == 32;
+    margin-top: == $base * 11;
+  }
+
+  h4 {
+    font-size: == 20;
+    margin-top: == $base * 4;
+  }
+
+  p,
+  ol,
+  ul {
+    font-size: == 20;
+    margin-top: == $base * 5;
+  }
+
+  h1 + p {
+    margin-top: == $base * 3;
+    padding-bottom: == $base * 4;
+  }
+
+  h4 + p,
+  h4 + ol,
+  h4 + ul {
+    margin-top: == $base * 2;
+  }
+
+  ol > ol {
+    padding-left: == $base * 3;
+  }
+}
+
+.post-cols-footer {
+  height: == 72 !require;
+
+  (& a)[line-height] == &[height];
+
+}
+
+.post-columns {
+
+  .media {
+    width: == &[height];
+  }
+
+  @if ::window[width] < 504 {
+    @h |(&)| in(::window);
+    height: == ::window[height];
+
+    .title.main {
+      font-size: == 16 !require;
+      height: == &[intrinsic-height];
+    }
+
+    @v |-(& .title.main)-(& .media) in(&) gap(&[main-title-media-v-gap]);
+    @v (& .content)| in(&);
+
+    @h |-(& .title.main)-| in(&) gap($base * 5);
+    @h |(& .content)| in(&);
+
+    (& .content)[width] == (& article)[width] == &[width];
+
+    @h |(& article)... in(& .content) {
+      top: == &:next[top];
+      @h |-(&"area")-| in(&) gap($base * 3);
+    }
+
+
+    @v |~-~(& article)~-~| in(& .content) gap(0);
+    (& article)[center-y] == &[center-y];
+
+    article {
+      @v |(& .media)-(& .title) in(&) gap($base * 4);
+      @v (& .title)-(& .subtitle)-| in(&) gap($base);
+
+      @h |-(& .media)-| in(&"area") gap($base * 5);
+      (& .media)[center-x] == &[center-x];
+
+      @h |(& .title)| in(&"area");
+      @h |(& .subtitle)| in(&"area");
+
+      .title,
+      .subtitle {
+        height: == &[intrinsic-height];
+      }
+
+      .title {
+        font-size: == 32 !require;
+        line-height: == 32 !require;
+      }
+
+      .subtitle {
+        font-size: == 16 !require;
+      }
+
+      .text {
+        height: == 0;
+        opacity: == 0;
+      }
+    }
+
+
+    @h |~-~(&"position-indicators")~-~| in(&) gap($base * 2);
+    &"position-indicators"[center-x] == &[center-x];
+
+    /*@v (&"position-indicators")-| in(&) gap($base * 2);*/
+    @v (& .position-indicator)-| in(&) gap($base * 2);
+
+    @h |(& .position-indicator)-...| in(&"position-indicators") gap($base * 2) {
+      height: == 2 !require;
+      width: == $base * 4 !weak;
+      width: == &:next[width];
+    }
+  }
+  @else {
+    @if ::window[width] < 1008 {
+      @h |(&)| in(::window);
+      height: == ::window[height];
+
+      .title.main {
+        font-size: == 16 !require;
+        height: == &[intrinsic-height];
+      }
+
+      @h |-(& .title.main) in(&) gap($base * 4);
+
+      @h |(& .content)| in(&);
+      @v |(& .content)| in(&);
+
+      (& .content)[width] == (& article)[width] == &[width];
+      (& article)[height] == &[height];
+
+      @h |(& article)... in(& .content) {
+        top: == &:next[top];
+        @h |-(&"area")-| in(&) gap($base * 4);
+        @v |-(&"area") in(&) gap($base * 5);
+        @v (&"area")-| in(&) gap($base * 8);
+      }
+
+
+      &"text"[center-y] == &[center-y];
+      @v |(& .title.main) in(&"text");
+      &[main-title-bottom] == (& .title.main)[bottom];
+
+      @v <&[main-title-bottom]>(& article .title)(& .subtitle)~-~| in(&"text") gap(0);
+
+
+      @v |(& article)| in(& .content);
+
+      article {
+        @h |(& .title)~-~(& .media) in(&"area") gap($base * 4);
+        @h |(& .subtitle)~-~(& .media) in(&"area") gap($base * 4);
+
+        /*@h (& .media)| in(&"area");*/
+        @h <&[center-x]>~-~(& .media)| in(&"area") gap(0);
+        @v |~-~(& .media)~-~| in(&"area") gap(0);
+        (& .media)[center-y] == &"area"[center-y];
+
+        .title,
+        .subtitle {
+          height: == &[intrinsic-height];
+        }
+
+        .title {
+          font-size: == 32 !require;
+          line-height: == 32 !require;
+        }
+
+        .subtitle {
+          font-size: == 16 !require;
+        }
+
+        .text {
+          height: == 0;
+          opacity: == 0;
+        }
+      }
+
+
+      @h |~-~(&"position-indicators")-| in(&) gap($base * 2);
+
+      /*@v (&"position-indicators")-| in(&) gap($base * 2);*/
+      @v (& .position-indicator)-| in(&) gap($base * 2);
+
+      @h |(& .position-indicator)-...| in(&"position-indicators") gap($base * 2) {
+        height: == 2 !require;
+        width: == $base * 4 !weak;
+        width: == &:next[width];
+      }
+    }
+    @else {
+      .title.main {
+        height: == &[intrinsic-height];
+        padding-top: == $base * 5;
+      }
+
+      [post-column-h-gap] == [post-column-outer-h-gap] / 2;
+      [post-column-h-gap] >= $md;
+
+      [post-column-v-gap] == $base * 10;
+
+      @h |-(& .title.main)-| in(&) gap([post-column-h-gap]);
+      @v |-(& .title.main)-(& .posts)-...~-~| in(&) gap([post-column-v-gap]);
+
+      @h |~-~(& .posts)~-~| in(&) gap(0);
+      (& .posts)[center-x] == &[center-x];
+
+      .posts {
+        article {
+          height: == &[intrinsic-height];
+        }
+
+        @h |-(& article)-...-| in(&) gap([post-column-h-gap]) outer-gap([post-column-outer-h-gap]) {
+          top: == &:next[top];
+          (& .media)[width] == &[width] - $md;
+        }
+
+        @v |(& article)~-~| in(&) gap(0);
+
+
+        &.large {
+          article {
+            width: == $md * 4;
+
+            .title {
+              font-size: == 32;
+              margin-top: == ($base * 6) - 8;
+            }
+
+            .subtitle {
+              font-size: == 20;
+              margin-top: == ($base * 3) - 16;
+            }
+
+            .text {
+              font-size: == 20;
+              line-height: == 32;
+              margin-top: == ($base * 3) - 16;
+            }
+          }
+        }
+
+        &.large + .posts.small {
+          @h |-(& .divider)-| in(&) gap([post-column-outer-h-gap]);
+
+          /*@v |(& .divider)-(& article) in(&) gap([post-column-v-gap]);*/
+          @v |(& .divider) in(&);
+          (& article)[padding-top] == [post-column-v-gap];
+        }
+
+        &.small {
+          article {
+            width: == $md * 3;
+
+            .title {
+              font-size: == 22;
+              margin-top: == ($base * 3) - 8;
+            }
+
+            .subtitle {
+              font-size: == 18;
+              margin-top: == ($base * 2) - 8;
+            }
+
+            .text {
+              font-size: == 16;
+              line-height: == 24;
+              margin-top: == ($base * 2) - 8;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+section {
   width: 100%;
   width: == ::window[width] !require;
   top: == 0 !require;
@@ -259,6 +824,7 @@ section.footer {
 
   .content {
     size: == &[intrinsic-size];
+    padding: 0 20px;
   }
 }
 
@@ -322,251 +888,10 @@ GSS BUG
   }
 }
 */
-
-.post-cols-footer {
-  height: == 72 !require;
-  
-  (& a)[line-height] == &[height]; 
-  
-}
-
-.post-columns {
-  
-  .media {
-    width: == &[height];
-  }
-
-  @if ::window[width] < 504 {
-    @h |(&)| in(::window);
-    height: == ::window[height];
-
-    .heading {
-      font-size: == 16 !require;
-      height: == &[intrinsic-height];
-    }
-
-    @v |-(& .heading)-(& .media) in(&) gap(&[heading-media-v-gap]);
-    @v (& .content)| in(&);
-
-    @h |-(& .heading)-| in(&) gap([base] * 5);
-    @h |(& .content)| in(&);
-
-    (& .content)[width] == (& article)[width] == &[width];
-
-    @h |(& article)... in(& .content) {
-      top: == &:next[top];
-      @h |-(&"area")-| in(&) gap([base] * 3);
-    }
+</style><section class="ancillary-header" style="position:relative;"><h2 class="subtitle">AI Websites That Design Themselves</h2><h1 class="heading">Join the Evolution</h1><a class="back" href="../"><i class="fa fa-arrow-left"></i></a></section><section class="post-columns" style="position:relative;"><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><div class="position-indicator"></div><h1 class="title main alt">The Team</h1><div class="content"><div class="posts large"><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/63f1fbee3c6aa721e813980af38782c7/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FHenri.png');"></div><h1 class="title alt">Henri Bergius</h1><h2 class="subtitle">VP Engineering</h2><p class="text">Henri is an open source content management pioneer. He is the author of the Create.js web editing interface and the NoFlo flow-based programming environment that powers The Grid.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/da7dbef75a1a8990dddcf44a7a05306c/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FDan.png');"></div><h1 class="title alt">Dan Tocchini</h1><h2 class="subtitle">Founder and CEO</h2><p class="text">Creator of GSS (Grid Style Sheets) and Partner of D4 Interactive Agency. Producing interactive works for Audi, Microsoft and more.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/34d72b466bb1afaea60fe7052c4760b9/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FLeigh.png');"></div><h1 class="title alt">Leigh Taylor</h1><h2 class="subtitle">Creative Director</h2><p class="text">Leigh was the first dedicated designer for Obvious Corp, designed arguably the best blog post editor on the web today, now known as Medium.</p></article></div><div class="posts small"><div class="divider"></div><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/447772a51e47ab96938e5501dc2b480d/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FBrian.png');"></div><h1 class="title alt">Brian Axe</h1><h2 class="subtitle">Chairman / Founder</h2><p class="text">One of the creators of Google AdSense, built the business from zero to $2B in annual revenue.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/62370708716e0d6ac8861c1f60c593a9/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FSvetly.png');"></div><h1 class="title alt">Svetly Metodiev</h1><h2 class="subtitle">Director of Finance & Operations</h2><p class="text">Svetly is an experienced business analyst with a background in finance, formerly with Credit Suisse.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/b1f8646f12315a9298e28c70285e355b/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FLinda.png');"></div><h1 class="title alt">Linda Jenkinson</h1><h2 class="subtitle">Director</h2><p class="text">Linda is a serial Entrepreneur. The first NZ women to list a company (DMSC) on NASDAQ. Founder of LesConcierges and Porthos. Company Director at Air New Zealand and Global Woman.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/0c42eaa8e698621d1bc4158e92828f23/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FForrest.png');"></div><h1 class="title alt">Forrest Oliphant</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Forrest has been experimenting with web media software for 15 years. He created Meemoo, a playful dataflow animation webapp designed for hackability.</p></article></div><div class="posts small"><div class="divider"></div><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/e52765b5d951d2656405b21bbbd29817/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FJon.png');"></div><h1 class="title alt">Jon Nordby</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Jon is a specialist in Linux and embedded devices. He has researched GPU computing for CERN and consulted for Canonical, Nokia and One Laptop Per Child. Creator of MicroFlo, a dataflow runtime for microcontrollers.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/8fb460d68d532018c6c6cfc6e81db9bf/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FMoritz.png');"></div><h1 class="title alt">Moritz Krog</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Moritz Krog is an experienced full-stack developer with a background in computational biology.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/508f32ce40479f88f7d5100d2344f551/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FYaroslaff.png');"></div><h1 class="title alt">Yaroslaff Fedin</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Enthusiast of dynamic interfaces and declarative programming. Virtual machinist.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/3e7942aebbab5db304bdec44e4680532/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FVladimir.png');"></div><h1 class="title alt">Vladimir Sibirov</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Vladimir is an expert in open source content management, dataflow backends and web frameworks. He wrote code for several European startups and led web development for brands like MasterCard, Nestle and Mars.</p></article></div><div class="posts small"><div class="divider"></div><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/e66bb753725c90b74b89ba1332cb4734/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FVilson.png');"></div><h1 class="title alt">Vilson Vieira</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Vilson is a code artist and open source enthusiast. He has researched computational creativity for University of Sao Paulo. He co-created MuSA and LabMacambira collectives and has been developing for Meemoo, Mozilla and Google.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/6a08196bca45ecc0e2a2450cae139c47/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FJeff.png');"></div><h1 class="title alt">Jeff Woods</h1><h2 class="subtitle">Community Evangelist</h2><p class="text">Jeff is a nationally recognized commercial photographer with passion to equip small businesses with the tools needed to grow in todays marketplace. He has been a featured speaker for Canon and Adobe and has presented seminars on design, business marketing and photography throughout China, Brazil, Ireland, Canada and US.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/8fa174b8b07dd6365df555c9d25abd2e/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2FPaul.png');"></div><h1 class="title alt">Paul Young</h1><h2 class="subtitle">Software Engineer</h2><p class="text">Helped build the platform that powers loyalty for companies like Pepsi, Sony Music, L'Oreal, and Nestle. Passionate about making beautiful products from the inside out.</p></article><article><div class="media" style="background-image:url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/b8cbe556c0c92dc6ab3e408918f499f8/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fteam%2F_spare.png');"></div><h1 class="title alt">You?</h1><h2 class="subtitle">Lost Cosmonaut</h2><p class="text">Got the right stuff? Get in touch at <a href="mailto:careers@thegrid.io" target="_blank">careers@thegrid.io</a></p></article></div></div><div class="footer"></div></section><section class="footer" style="position: relative"><div class="content"><a href="/team/">Team</a><a href="/faq/">FAQ</a><a href="/pp/">Privacy Policy</a><a href="/tos/">TOS</a><a href="mailto:support@thegrid.io">support</a><a href="mailto:invest@thegrid.io">investors</a></div></section>
 
 
-    @v |~-~(& article)~-~| in(& .content) gap(0);
-    (& article)[center-y] == &[center-y];
 
-    article {
-      @v |(& .media)-(& .title) in(&) gap([base] * 4);
-      @v (& .title)-(& .subtitle)-| in(&) gap([base]);
-
-      @h |-(& .media)-| in(&"area") gap([base] * 5);
-      (& .media)[center-x] == &[center-x];
-
-      @h |(& .title)| in(&"area");
-      @h |(& .subtitle)| in(&"area");
-
-      .title,
-      .subtitle {
-        height: == &[intrinsic-height];
-      }
-
-      .title {
-        font-size: == 32 !require;
-        line-height: == 32 !require;
-      }
-
-      .subtitle {
-        font-size: == 16 !require;
-      }
-
-      .text {
-        height: == 0;
-        opacity: == 0;
-      }
-    }
-
-
-    @h |~-~(&"position-indicators")~-~| in(&) gap([base] * 2);
-    &"position-indicators"[center-x] == &[center-x];
-
-    /*@v (&"position-indicators")-| in(&) gap([base] * 2);*/
-    @v (& .position-indicator)-| in(&) gap([base] * 2);
-
-    @h |(& .position-indicator)-...| in(&"position-indicators") gap([base] * 2) {
-      height: == 2 !require;
-      width: == [base] * 4 !weak;
-      width: == &:next[width];
-    }
-  }
-  @else {
-    @if ::window[width] < 1008 {
-      @h |(&)| in(::window);
-      height: == ::window[height];
-
-      .heading {
-        font-size: == 16 !require;
-        height: == &[intrinsic-height];
-      }
-
-      @h |-(& .heading) in(&) gap([base] * 4);
-
-      @h |(& .content)| in(&);
-      @v |(& .content)| in(&);
-
-      (& .content)[width] == (& article)[width] == &[width];
-      (& article)[height] == &[height];
-
-      @h |(& article)... in(& .content) {
-        top: == &:next[top];
-        @h |-(&"area")-| in(&) gap([base] * 4);
-        @v |-(&"area") in(&) gap([base] * 5);
-        @v (&"area")-| in(&) gap([base] * 8);
-      }
-
-
-      &"text"[center-y] == &[center-y];
-      @v |(& .heading) in(&"text");
-      &[heading-bottom] == (& .heading)[bottom];
-
-      @v <&[heading-bottom]>(& .title)(& .subtitle)~-~| in(&"text") gap(0);
-
-
-      @v |(& article)| in(& .content);
-
-      article {
-        @h |(& .title)~-~(& .media) in(&"area") gap([base] * 4);
-        @h |(& .subtitle)~-~(& .media) in(&"area") gap([base] * 4);
-
-        /*@h (& .media)| in(&"area");*/
-        @h <&[center-x]>~-~(& .media)| in(&"area") gap(0);
-        @v |~-~(& .media)~-~| in(&"area") gap(0);
-        (& .media)[center-y] == &"area"[center-y];
-
-        .title,
-        .subtitle {
-          height: == &[intrinsic-height];
-        }
-
-        .title {
-          font-size: == 32 !require;
-          line-height: == 32 !require;
-        }
-
-        .subtitle {
-          font-size: == 16 !require;
-        }
-
-        .text {
-          height: == 0;
-          opacity: == 0;
-        }
-      }
-
-
-      @h |~-~(&"position-indicators")-| in(&) gap([base] * 2);
-
-      /*@v (&"position-indicators")-| in(&) gap([base] * 2);*/
-      @v (& .position-indicator)-| in(&) gap([base] * 2);
-
-      @h |(& .position-indicator)-...| in(&"position-indicators") gap([base] * 2) {
-        height: == 2 !require;
-        width: == [base] * 4 !weak;
-        width: == &:next[width];
-      }
-    }
-    @else {
-      .heading {
-        height: == &[intrinsic-height];
-        padding-top: == [base] * 5;
-      }
-
-      [post-column-h-gap] == [post-column-outer-h-gap] / 2;
-      [post-column-h-gap] >= [md];
-
-      [post-column-v-gap] == [base] * 10;
-
-      @h |-(& .heading)-| in(&) gap([post-column-h-gap]);
-      @v |-(& .heading)-(& .posts)-...~-~| in(&) gap([post-column-v-gap]);
-
-      @h |~-~(& .posts)~-~| in(&) gap(0);
-      (& .posts)[center-x] == &[center-x];
-
-      .posts {
-        article {
-          height: == &[intrinsic-height];
-        }
-
-        @h |-(& article)-...-| in(&) gap([post-column-h-gap]) outer-gap([post-column-outer-h-gap]) {
-          top: == &:next[top];
-          (& .media)[width] == &[width] - [md];
-        }
-
-        @v |(& article)~-~| in(&) gap(0);
-
-
-        &.large {
-          article {
-            width: == [md] * 4;
-
-            .title {
-              font-size: == 32;
-              margin-top: == ([base] * 6) - 8;
-            }
-
-            .subtitle {
-              font-size: == 20;
-              margin-top: == ([base] * 3) - 16;
-            }
-
-            .text {
-              font-size: == 18;
-              line-height: == 32;
-              margin-top: == ([base] * 3) - 16;
-            }
-          }
-        }
-
-        &.large + .posts.small {
-          @h |-(& .divider)-| in(&) gap([post-column-outer-h-gap]);
-
-          /*@v |(& .divider)-(& article) in(&) gap([post-column-v-gap]);*/
-          @v |(& .divider) in(&);
-          (& article)[padding-top] == [post-column-v-gap];
-        }
-
-        &.small {
-          article {
-            width: == [md] * 3;
-
-            .title {
-              font-size: == 22;
-              margin-top: == ([base] * 3) - 8;
-            }
-
-            .subtitle {
-              font-size: == 18;
-              margin-top: == ([base] * 2) - 8;
-            }
-
-            .text {
-              font-size: == 16;
-              line-height: == 24;
-              margin-top: == ([base] * 2) - 8;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-</style>
 <script>
 if (window.parent != window) {
   window.addEventListener('message', function(e) {
@@ -596,4 +921,6 @@ function boot(values) {
 
 boot()
 
-</script></body></html>
+</script>
+
+</body></html>

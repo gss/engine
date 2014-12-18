@@ -36,7 +36,7 @@ describe('Standalone page tests', function() {
         return iframe.src = './pages/virtuals.html?log=0.5';
       });
     });
-    xdescribe('Head cta section', function() {
+    describe('Head cta section', function() {
       return it('should reorient', function(done) {
         var i;
         i = 0;

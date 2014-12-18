@@ -24032,7 +24032,6 @@ Condition = (function(_super) {
           return true;
         }
       }
-      debugger;
       this.notify(engine, path, scope, result);
       return true;
     }
@@ -26279,7 +26278,7 @@ Stylesheet = (function(_super) {
         return this.getCustomSelector((parent || command).path);
       }
     }
-    if (command.key === path) {
+    if ((command.selector || command.key) === path) {
       return ' ' + path;
     } else {
       return ' ' + this.getCustomSelector((parent || command).path);
@@ -26592,8 +26591,7 @@ Top = Abstract.prototype.Default.extend({
     var args, continuation, domain, engine, meta, operation, scope, wrapper, _i;
     args = 5 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 4) : (_i = 0, []), engine = arguments[_i++], operation = arguments[_i++], continuation = arguments[_i++], scope = arguments[_i++];
     meta = {
-      key: this.delimit(continuation),
-      index: operation.index
+      key: this.delimit(continuation)
     };
     if (scope !== engine.scope) {
       meta.scope = engine.identify(scope);

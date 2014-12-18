@@ -285,7 +285,7 @@ class Stylesheet extends Command
       else
         return @getCustomSelector((parent || command).path)
 
-    if command.key == path
+    if (command.selector || command.key) == path
       return ' ' + path
     else
       return ' ' + @getCustomSelector((parent || command).path)

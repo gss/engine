@@ -40,7 +40,7 @@ describe 'Standalone page tests', ->
 
 
 
-    xdescribe 'Head cta section', ->
+    describe 'Head cta section', ->
 
       it 'should reorient', (done) ->
         i = 0
