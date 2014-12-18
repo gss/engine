@@ -31,7 +31,7 @@ class Intrinsic extends Numeric
     for property, value of Intrinsic::Dimensions::
       Properties::[property] = value
     Properties::Units = Intrinsic::Units
-    Properties::Types = new Intrinsic::Types
+    Properties::Types = Intrinsic::Types
     Properties
 
   events:

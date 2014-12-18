@@ -67,6 +67,7 @@ class Engine
     @lefts = []
     @pairs = {}
     
+    @eventHandler = @handleEvent.bind(@)
     @addListeners(@$events)
     @addListeners(@events)
 
@@ -181,12 +182,13 @@ class Engine
     return if update.blocking
 
     if solution
-      if update.solution != solution
-        update.apply(solution)
-      @solved.merge(solution)
-        
-    until update.isDone() && !update.restyled
+      if Object.keys(solution).length
+        if update.solution != solution
+          update.apply(solution)
+        @solved.merge(solution)
 
+        
+    until update.isDone() && !update.restyled && !update.solved
       # Process deferred operations, mutations and conditions
       until update.isDocumentDone()
         @triggerEvent('precommit', update)
@@ -216,7 +218,7 @@ class Engine
         @triggerEvent('validate', update.solution, update)
 
     # Discard pure update 
-    unless update.hadSideEffects()
+    unless update.hadSideEffects(solution)
       @updating = undefined
       return update
 
@@ -299,7 +301,7 @@ class Engine
           continue if index == 0
           if other.paths?[path]
             locals.push(path)
-          else if other.observers?[path]
+          else if other.watched?[path]
             other.remove(path)
       if other.changes
         for property, value of other.changes
@@ -370,7 +372,7 @@ class Engine
 
     # Receive message from worker
     message: (e) ->
-
+      debugger
       values = e.target.values ||= {}
       for property, value of e.data
         if value?
@@ -589,6 +591,9 @@ if !self.window && self.onmessage != undefined
 
       if removes.length
         @solve(removes)
+        if @updating.domains[0] == null
+          @broadcast(@updating.problems[0])
+          @index++
       if values
         @assumed.merge(values)
       if commands.length

@@ -62,7 +62,8 @@ describe('Cassowary Thread', function() {
     thread.solve([['==', ['+', ['get', 'target-width'], ['get', 'pad']], ['get', 'actual-width']], ['==', ['get', 'target-width'], 100]]);
     chai.expect(thread.values).to.eql({
       "target-width": 100,
-      "actual-width": 101
+      "actual-width": 101,
+      pad: 1
     });
     thread.solve({
       pad: 2
@@ -87,6 +88,7 @@ describe('Cassowary Thread', function() {
     });
     thread.solve([['==', ['get', 'width'], 100, 'weak'], ['==', ['get', 'width'], ['get', 'intrinsic-width'], 'require']]);
     chai.expect(thread.values).to.eql({
+      'intrinsic-width': 999,
       "width": 999
     });
     return done();
@@ -99,7 +101,8 @@ describe('Cassowary Thread', function() {
     thread.solve([['==', ['get', 'hgap'], 20, 'required'], ['==', ['get', 'width'], ['+', ['get', 'intrinsic-width'], ['get', 'hgap']], 'required'], ['==', ['get', 'width'], 20, 'strong']]);
     return chai.expect(thread.values).to.eql({
       "width": 120,
-      "hgap": 20
+      "hgap": 20,
+      'intrinsic-width': 100
     });
   });
   it('tracking & removing by get tracker', function(done) {

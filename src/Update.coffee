@@ -277,7 +277,7 @@ Update.prototype =
   mix: (result, exported) ->
     for prob in exported
       for problem, index in result
-        if problem.index > prob.index
+        if (problem.index ? Infinity) > prob.index
           break
       result.splice(index, 0, prob)
 
@@ -359,9 +359,6 @@ Update.prototype =
           @apply(result)
           solution = @apply(result, solution || {})
 
-      if domain?.constraints?.length == 0 && @engine.domains.indexOf(domain) > -1
-        debugger
-
     @terminate()
     @index--
 
@@ -383,8 +380,10 @@ Update.prototype =
           redefined = (@redefined ||= {})[property] ||= []
           if redefined[redefined.length - 1] != value && value?
             redefined.push(value)
-        solution[property] = value
-      @solved = true
+        
+        if solution[property] != value
+          @solved ?= true
+          solution[property] = value
     return solution
 
   # Remove queued commands that match given key

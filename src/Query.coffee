@@ -196,7 +196,6 @@ class Query extends Command
     # Update all DOM queries that matched mutations
     if mutations = engine.updating.mutations
       index = 0
-      console.error(mutations.slice())
       while mutations[index]
         watcher = mutations.splice(0, 3)
         (engine.document || engine.abstract).solve watcher[0], watcher[1], watcher[2]
@@ -821,7 +820,8 @@ class Query extends Command
               if (parent = engine.getScopeElement(scope.parentNode)) == engine.scope
                 return
             return scope._gss_id
-        return engine.scope.gss_id
+        if scope = engine.scope
+          return scope.gss_id
     else if node != engine.scope
       return node._gss_id || node
 

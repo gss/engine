@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-17) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-18) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19718,6 +19718,7 @@ Engine = (function() {
     this.queries = {};
     this.lefts = [];
     this.pairs = {};
+    this.eventHandler = this.handleEvent.bind(this);
     this.addListeners(this.$events);
     this.addListeners(this.events);
     this.variables = {};
@@ -19821,12 +19822,14 @@ Engine = (function() {
       return;
     }
     if (solution) {
-      if (update.solution !== solution) {
-        update.apply(solution);
+      if (Object.keys(solution).length) {
+        if (update.solution !== solution) {
+          update.apply(solution);
+        }
+        this.solved.merge(solution);
       }
-      this.solved.merge(solution);
     }
-    while (!(update.isDone() && !update.restyled)) {
+    while (!(update.isDone() && !update.restyled && !update.solved)) {
       while (!update.isDocumentDone()) {
         this.triggerEvent('precommit', update);
         this.Query.prototype.commit(this);
@@ -19855,7 +19858,7 @@ Engine = (function() {
         this.triggerEvent('validate', update.solution, update);
       }
     }
-    if (!update.hadSideEffects()) {
+    if (!update.hadSideEffects(solution)) {
       this.updating = void 0;
       return update;
     }
@@ -19952,7 +19955,7 @@ Engine = (function() {
           }
           if ((_ref1 = other.paths) != null ? _ref1[path] : void 0) {
             locals.push(path);
-          } else if ((_ref2 = other.observers) != null ? _ref2[path] : void 0) {
+          } else if ((_ref2 = other.watched) != null ? _ref2[path] : void 0) {
             other.remove(path);
           }
         }
@@ -20034,6 +20037,7 @@ Engine = (function() {
       }
     },
     message: function(e) {
+      debugger;
       var property, value, values, _base, _ref;
       values = (_base = e.target).values || (_base.values = {});
       _ref = e.data;
@@ -20344,6 +20348,10 @@ if (!self.window && self.onmessage !== void 0) {
       }
       if (removes.length) {
         this.solve(removes);
+        if (this.updating.domains[0] === null) {
+          this.broadcast(this.updating.problems[0]);
+          this.index++;
+        }
       }
       if (values) {
         this.assumed.merge(values);
@@ -20552,8 +20560,10 @@ Domain = (function() {
               this.updating.apply(this.changes);
             }
           }
+          debugger;
           if (this.immediate) {
             this.solved.set(path, null);
+            this.set(path, null);
           }
           if (Object.keys(obj).length === 0) {
             return delete this.objects[id];
@@ -22187,13 +22197,13 @@ Update.prototype = {
     return to;
   },
   mix: function(result, exported) {
-    var index, prob, problem, _i, _j, _len, _len1, _results;
+    var index, prob, problem, _i, _j, _len, _len1, _ref, _results;
     _results = [];
     for (_i = 0, _len = exported.length; _i < _len; _i++) {
       prob = exported[_i];
       for (index = _j = 0, _len1 = result.length; _j < _len1; index = ++_j) {
         problem = result[index];
-        if (problem.index > prob.index) {
+        if (((_ref = problem.index) != null ? _ref : Infinity) > prob.index) {
           break;
         }
       }
@@ -22263,7 +22273,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, previous, property, result, variable, _ref, _ref1;
+    var domain, previous, property, result, variable, _ref;
     if (solution) {
       this.apply(solution);
     }
@@ -22290,9 +22300,6 @@ Update.prototype = {
           this.apply(result);
           solution = this.apply(result, solution || {});
         }
-      }
-      if ((typeof domain !== "undefined" && domain !== null ? (_ref1 = domain.constraints) != null ? _ref1.length : void 0 : void 0) === 0 && this.engine.domains.indexOf(domain) > -1) {
-        debugger;
       }
     }
     this.terminate();
@@ -22324,9 +22331,13 @@ Update.prototype = {
             redefined.push(value);
           }
         }
-        solution[property] = value;
+        if (solution[property] !== value) {
+          if (this.solved == null) {
+            this.solved = true;
+          }
+          solution[property] = value;
+        }
       }
-      this.solved = true;
     }
     return solution;
   },
@@ -22693,7 +22704,6 @@ Query = (function(_super) {
     var ascending, collection, contd, i, index, item, mutations, old, op, watcher, _i;
     if (mutations = engine.updating.mutations) {
       index = 0;
-      console.error(mutations.slice());
       while (mutations[index]) {
         watcher = mutations.splice(0, 3);
         (engine.document || engine.abstract).solve(watcher[0], watcher[1], watcher[2]);
@@ -23436,7 +23446,9 @@ Query = (function(_super) {
             return scope._gss_id;
           }
         }
-        return engine.scope.gss_id;
+        if (scope = engine.scope) {
+          return scope.gss_id;
+        }
       }
     } else if (node !== engine.scope) {
       return node._gss_id || node;
@@ -25549,7 +25561,7 @@ Shorthand = (function() {
                   if (this.hasOwnProperty(k)) {
                     break;
                   }
-                  if (types[index] === this.styles.Type.Length) {
+                  if (types[index] === this.styles.Types.Length) {
                     expression = this.toExpressionString(k, this[k]);
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
                     previous = k;
@@ -25593,7 +25605,7 @@ Shorthand = (function() {
     switch (typeof operation) {
       case 'object':
         name = operation[0];
-        if (name === '%' || this.styles.Unit[name] || this.styles.Types.Times[name]) {
+        if (name === '%' || this.styles.Units[name] || this.styles.Types.Times[name]) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
           string = name + '(';
@@ -26681,7 +26693,7 @@ Intrinsic = (function(_super) {
       Properties.prototype[property] = value;
     }
     Properties.prototype.Units = Intrinsic.prototype.Units;
-    Properties.prototype.Types = new Intrinsic.prototype.Types;
+    Properties.prototype.Types = Intrinsic.prototype.Types;
     return Properties;
   })();
 
@@ -28073,7 +28085,7 @@ Types.define({
     if (typeof obj === 'number') {
       return obj;
     }
-    if (this.Unit[obj[0]]) {
+    if (this.Units[obj[0]]) {
       if (obj[1] === 0) {
         return 0;
       }

@@ -49,7 +49,7 @@ Types.define
   Length: (obj) ->
     if typeof obj == 'number'
       return obj
-    if @Unit[obj[0]]
+    if @Units[obj[0]]
       if obj[1] == 0
         return 0
       return obj

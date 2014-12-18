@@ -149,8 +149,10 @@ class Domain
             @changes[path] = null
             unless @updating.domains.indexOf(@) > @updating.index
               @updating.apply(@changes)
+          debugger
           if @immediate
             @solved.set path, null
+            @set path, null
           if Object.keys(obj).length == 0
             delete @objects[id]
 

@@ -137,7 +137,7 @@ class Shorthand
               for index in [keys.indexOf(key) - 1 ... 0] by -1
                 if (k = keys[index]) != previous
                   break if @hasOwnProperty(k)
-                  if types[index] == @styles.Type.Length
+                  if types[index] == @styles.Types.Length
                     expression = @toExpressionString(k, @[k])
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '')
                     previous = k
@@ -168,7 +168,7 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
-        if name == '%' || @styles.Unit[name] || @styles.Types.Times[name]
+        if name == '%' || @styles.Units[name] || @styles.Types.Times[name]
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('

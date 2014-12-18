@@ -76,6 +76,7 @@ describe 'Cassowary Thread', ->
     chai.expect(thread.values).to.eql
       "target-width": 100
       "actual-width": 101
+      pad: 1
 
     thread.solve 
       pad: 2
@@ -99,6 +100,7 @@ describe 'Cassowary Thread', ->
         ['==', ['get','width'],['get','intrinsic-width'], 'require']
       ]
     chai.expect(thread.values).to.eql
+      'intrinsic-width': 999
       "width": 999
     done()
   
@@ -115,6 +117,7 @@ describe 'Cassowary Thread', ->
     chai.expect(thread.values).to.eql
       "width": 120
       "hgap": 20
+      'intrinsic-width': 100
     #done()
   
   it 'tracking & removing by get tracker', (done) ->
