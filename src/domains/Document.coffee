@@ -19,7 +19,7 @@ class Document extends Abstract
       else
         @compile()
 
-    @engine.Selector   = @Selector
+    @engine.Selector = @Selector
     @engine.Stylesheet = @Stylesheet
     @Selector.observe(@engine)
       

@@ -112,8 +112,7 @@ Update.prototype =
 
   # Remove domain/problem pair at given index
   splice: (index) ->
-    if (i = @engine.domains.indexOf(@domains[index])) > -1
-      @engine.domains.splice i, 1
+    domain = @domains[index]
     @domains.splice(index, 1)
     @problems.splice(index, 1)
 
@@ -244,7 +243,7 @@ Update.prototype =
         domain.transfer(parent, @, other)
         #domain.Constraint::split(domain)
         exported = domain.export()
-        domain.consumed = true
+        domain.register(false)
 
       for prob in problems
         if result.indexOf(prob) == -1

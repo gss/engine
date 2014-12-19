@@ -171,7 +171,7 @@ class Query extends Command
       @reduce(engine, operation, path, scope, undefined, undefined, undefined, continuation)
     else
       @reduce(engine, operation, path, scope, added, removed, undefined, continuation)
-      
+    
     @subscribe(engine, operation, continuation, scope, node)
     @snapshot engine, path, old
 
@@ -896,7 +896,7 @@ class Query extends Command
     return bits.join(@DESCEND)
 
   getVariants: (path) ->
-    [path, path + @ASCEND, path + @PAIR, path + @DESCEND]
+    [path, path + @ASCEND, path + @PAIR, path + @DESCEND, path + @DESCEND + '&']
 
   # Return collection shared for all codepaths
   getCanonicalCollection: (engine, path) ->

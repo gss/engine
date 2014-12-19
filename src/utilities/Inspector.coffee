@@ -4,20 +4,19 @@ class Inspector
   toExpressionString: (operation) ->
     if operation?.push
       if operation[0] == 'get'
-        path = @engine.Variable.getPath(operation[1], operation[2])
-        if @engine.values[path.replace('[', '[intrinsic-')]?
+        path = operation[1]
+        prop = path.substring(i + 1, path.length - 1)
+        if @engine.values[path.replace('[', '[intrinsic-')]?# || prop.indexOf('intrinsic-') > -1
           klass = 'intrinsic'
         else if path.indexOf('"') > -1
           klass = 'virtual'
-        else if operation[2] && operation[1]
-          if operation[2] == 'x' || operation[2] == 'y'
+        else if (i = path.indexOf('[')) > -1
+          if prop == 'x' || prop == 'y'
             klass = 'position'
-          else if !(@engine.intrinsic.properties[operation[2]]?.matcher)
+          else if !(@engine.intrinsic.properties[prop]?.matcher)
             klass = 'local'
         return '<strong class="' + (klass || 'variable') + '" for="' + path + '" title="' + @engine.values[path] + '">' + path + '</strong>'
-      else if operation[0] == 'value'
-        return '<em>' + operation[1] + '</em>'
-      return @toExpressionString(operation[1]) + ' <b>' + operation[0] + '</b> ' + @toExpressionString(operation[2])
+      return @toExpressionString(operation[1]) + ' <b title=\'' + operation.parent?[0]?.key+ '\'>' + operation[0] + '</b> ' + @toExpressionString(operation[2])
     else
       return operation ? ''
     
@@ -84,12 +83,9 @@ class Inspector
         color: #999;
         background: none;
       }
-      domain.intrinsic, domain.assumed, domain.solved, domain.document {
-        background: rgba(255, 0, 0, 0.15);
-        font: 0/0 "0";
-        width: 15px;
-        height: 15px;
-        display: none;
+      domain.singles:before {
+        content: ' + ';
+        display: 'inline'
       }
       domain, domain.active {
         background: #fff;
@@ -196,8 +192,8 @@ class Inspector
     document.addEventListener 'keydown', @onKeyDown
     document.addEventListener 'keyup', @onKeyUp
   refresh: ->
-    for domain in @engine.domains
-      domain.distances = undefined
+    #for domain in @engine.domains
+    #  domain.distances = undefined
     values = {}
     for property, value of @engine.values
       values[property] = value
@@ -261,7 +257,7 @@ class Inspector
         domains = @getDomains(inspecting)
         ids = domains.map (d) -> String(d.uid)
         if e.altKey
-          @remap(domains[0])
+          #@remap(domains[0])
           @visualize null, inspecting, e.shiftKey
           @constraints ids[0], null, inspecting, e.shiftKey
         if e.metaKey
@@ -269,7 +265,7 @@ class Inspector
 
       else if (property = document.body.getAttribute('reaching')) && e.target.tagName?.toLowerCase() == 'ruler'
         domain = @reaching
-        if domain && properties = domain.distances[property]
+        if domain && properties = domain.distances?[property]
           props = []
           for prop, distance of properties
             unless distance
@@ -297,7 +293,7 @@ class Inspector
     for domain in @engine.domains
       if String(domain.uid) == String(id)
         @panel.innerHTML = domain.constraints?.map (constraint) =>
-          @toExpressionString(constraint.operation)
+          return @toExpressionString(constraint.operations[0])
         .filter (string) ->
           return true unless props
           for prop in props
@@ -376,7 +372,7 @@ class Inspector
 
     reached = false
     for prop in props
-      if domain && properties = domain.distances[prop]
+      if domain && properties = domain.distances?[prop]
         for key, distance of properties
           unless distance
             reached = true
@@ -440,26 +436,41 @@ class Inspector
       document.body.appendChild(@list)
 
     total = 0
-    innerHTML = domains.map (d) => 
-      Inspector.uid ||= 0
+    multiples = []
+    for domain, index in domains by -1
+      if domain.constraints.length == 1
+        if !singles
+          singles = {constraints: [], uid: 'singles', displayName: 'Singles'}
+        singles.constraints.push(domain.constraints[0])
+      else
+        multiples.push(domain)
+
+    multiples = multiples.sort (a, b) ->
+      return b.constraints.length - a.constraints.length
+
+    if singles
+      multiples.push(singles)
+
+    Inspector.uid ||= 0
+    innerHTML = multiples.map (d) => 
       d.uid ||= ++Inspector.uid
       length = d.constraints?.length || 0
       total += length
-      """<domain for="#{d.uid}" #{@engine.console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{length}</domain>"""
+      """<domain for="#{d.uid}" count="#{length}" #{@engine.console.level <= 1 && 'hidden'} class="#{d.displayName.toLowerCase()}">#{length}</domain>"""
     .join('')
     innerHTML += '<label> = <strong>' + total + '</strong></label>'
     @list.innerHTML = innerHTML
 
-  remap: (domain) ->
+  ###remap: (domain) ->
     if !(distances = domain.distances)
       distances = domain.distances = {}
       for constraint in domain.constraints
-        for a of constraint.operation.variables
+        for a of constraint.operations[0].variables
           if a.match(/width\]|height\]|\[\x]|\[\y\]|/)
-            for b of constraint.operation.variables
+            for b of constraint.operations[0].variables
               if b.match(/width\]|height\]|\[\x]|\[\y\]|/)
                 @reach distances, a, b
-
+  ###
 
   ruler: (element, path, value, x, y, width, height, inside) ->
 
@@ -493,11 +504,11 @@ class Inspector
 
     ruler.setAttribute('domain', domain.uid)
 
-    @remap domain
+    #@remap domain
 
     unless konst = (typeof @engine.variables[path] == 'string')
       for constraint in domain.constraints
-        if constraint.operation.variables[path] && Object.keys(constraint.operation.variables).length == 1
+        if constraint.operations[0].variables[path] && Object.keys(constraint.operations[0].variables).length == 1
           konst = true
           break
 

@@ -142,17 +142,18 @@ class Selector extends Query
       #if @updating.index > -1
       #  @updating.reset()
 
-      @updating.restyled = true
-
       for mutation in mutations
         if @Selector.filterMutation(mutation) == false
           continue
         switch mutation.type
           when "attributes"
             @Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue || '')
+            @updating.restyled ?= true
           when "childList"
-            @Selector.mutateChildList(@, mutation.target, mutation)
+            if @Selector.mutateChildList(@, mutation.target, mutation)
+              @updating.restyled ?= true
           when "characterData"
+            @updating.restyled ?= true
             @Selector.mutateCharacterData(@, mutation.target, mutation)
 
         @intrinsic.validate(mutation.target)
@@ -178,6 +179,9 @@ class Selector extends Query
           removed.push(child)
     @mutateCharacterData(engine, target, target)
     changed = added.concat(removed)
+    if !changed.length
+      return
+
     changedTags = []
     for node in changed
       tag = node.tagName
@@ -276,7 +280,7 @@ class Selector extends Query
       for added in allAdded
         if (j = engine.removed.indexOf(engine.identity.find(added))) > -1
           engine.removed.splice(j, 1)
-    @
+    return true
 
   @mutateCharacterData: (engine, target, parent = target.parentNode) ->
     if id = engine.identity.find(parent)

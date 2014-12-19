@@ -1,0 +1,408 @@
+<script src="../../dist/gss.js"></script>
+<style type="text/gss">
+
+.post-simple {
+
+  &.media-adjacent {
+    @h |(& .media)| in(&"zone1");
+    @v |(& .media)| in(&"zone1");
+  }
+  &.media-behind {
+    @h |(& .media)| in(&);
+    @v |(& .media)| in(&);
+  }
+
+  &[large-screen-content-width] <=  $md * 10;
+  &[large-screen-content-width] == ::window[width] * .61;
+  &[large-screen-content-padding] <= $md * 3/2;
+  &[large-screen-content-padding] == ::window[width] / 10;
+}
+
+@if ::window[width] <= 432 {
+
+  /*
+
+  portrait mobile
+
+  ----------------------------------------------- */
+
+  .post-simple {
+
+    /* css */
+    .content {
+      background-color: hsla(20, 4%, 14%, .8);
+    }
+    .title {
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 20px;
+      text-align: center;
+    }
+    .text {
+      font-size: 16px;
+    }
+
+    @h |(&"zone1")| in(&);
+    &"zone1"[height] == ::window[height] * 2/3;
+
+    @h |(&"zone2")| in(&);
+
+    @v |-16-(&"zone1")(&"zone2")| in(&);
+
+
+    @h |-16-(& .content)-16-| in(&);
+
+    @v  <&"zone1"[bottom] - $md2 >
+        (&"zone2");
+    @v |(& .content)| in(&"zone2");
+
+    .title, .subtitle {
+      height: == &[intrinsic-height];
+    }
+
+    @h |-(& .title)-| in(&"zone2") gap($md / 2);
+    @h |-(& .subtitle)-| in(&"zone2") gap($md / 2);
+
+    @h |-(& .text)-| in(&"zone2") gap($md / 2);
+
+    @v |-$md-(& .title) in(&"zone2");
+    @v (& .title)-(& .subtitle) gap($base * 2);
+    @v (& .subtitle)-$md-(& .text)-$md2-| in(&"zone2");
+
+    .text {
+      height: == &[intrinsic-height];
+    }
+  }
+}
+@else {
+
+  /*@elseif &[width] < ([large-screen-content-width] + [large-screen-content-padding]) {*/
+
+
+  @if ::window[width] < 590  {
+
+    /*
+
+    landscape mobile
+
+    ----------------------------------------------- */
+
+    .post-simple {
+
+      overflow-x: scroll;
+
+      .content {
+        background-color: hsl(20, 4%, 14%);
+      }
+      .title {
+        text-align: center;
+      }
+      .subtitle {
+        font-size: 14px;
+        text-align: center;
+      }
+      .text {
+        font-size: 18px;
+      }
+
+
+      &[height] >= ::window[height];
+
+
+      &"zone1"[width] == &[width] * 2/3;
+
+      @v |(&"zone1")| in(&);
+      @v |(&"zone2")| in(&);
+
+      @h |(&"zone1")(&"zone2")| in(&);
+
+      &[cover-left] == &[center-x] - ($base * 2);
+      @h <&[cover-left]>(&"cover")-| in(&) gap($base * 5);
+      &"cover"[center-y] == &[center-y] == (& .text)[center-y];
+
+      @v |-(& .content)-| in(&) gap($base * 4);
+
+      @h |(&"cover")| in(& .content);
+      @v |~-~(&"cover")~-~| in(& .content) gap($md / 2);
+
+      @h (&"cover")-(& .text) gap($base * 2);
+
+      @h |-(& .title)-| in(&"cover") gap($md / 2);
+      @h |-(& .subtitle)-| in(&"cover") gap($md / 2);
+
+      @v |(& .title)-(& .subtitle)| in(&"cover") gap($base * 2) {
+        height: == &[intrinsic-height];
+      }
+
+      .text {
+        /* Same as column width */
+        width: == 216;
+
+        /* Use instead of column-gap to make sure last column has padding*/
+        p {
+          padding-right: == $base * 4;
+        }
+      }
+
+      (& .text)[height] == &"cover"[height];
+
+      .title, .subtitle {
+        letter-spacing: == 0;
+      }
+    }
+  }
+
+  @else {
+
+    /*
+
+    Desktop
+
+    ----------------------------------------------- */
+
+    .post-simple {
+
+      .content {
+        background-color: hsl(20, 4%, 14%);
+      }
+      .subtitle {
+        font-size: 20px;
+        margin-top: $base * 2;
+      }
+      .text {
+        font-size: 18px;
+        margin-top: 1em;
+      }
+
+      (& .content)[center-y] == &"zone2"[center-y];
+      @v |~-~(& .content)~-~| in(&"zone2") gap($md);
+
+      &"zone1"[width] == &"zone2"[width];
+
+      @v |(&"zone1")| in(&);
+      @v |(&"zone2")| in(&);
+
+      (& .content)[width] == &[large-screen-content-width];
+      (& .content)[padding] == &[large-screen-content-padding];
+      .content {
+        height: == &[intrinsic-height];
+        /*height: == $md * 6;*/
+
+        .detail {
+          width: == $md / 2;
+          height: == 2;
+        }
+      }
+
+
+      &.media-adjacent {
+        .text {
+          padding-left: == $md;
+        }
+      }
+      &.media-behind {
+        .text {
+          padding-right: == $md;
+        }
+      }
+    }
+
+    .post-simple.right {
+      @h |(&"zone1")(&"zone2")| in(&);
+
+      @h |(& .content) in(&"zone2") !weak;
+      @h (& .content)~| in(&"zone2") !strong;
+    }
+
+    .post-simple.left {
+      @h |(&"zone2")(&"zone1")| in(&);
+
+      @h |~(& .content) in(&"zone2") !strong;
+      @h (& .content)| in(&"zone2") !weak;
+    }
+
+  }
+
+}
+
+
+section {
+  width: 100%;
+  width: == ::window[width] !require;
+  top: == 0 !require;
+  left: == 0 !require;
+  z-index: 1;
+  overflow-x: hidden;
+  margin: auto;
+  width: 100%;
+
+  height: <= ::window[height] !weak;
+  height: >= &[width] / 2.4 !weak;
+}
+
+.modal {
+  @h |(&)| in(::window);
+  @v |(&)| in(::window);
+}
+
+section.footer {
+  width: == ::window[width];
+  height: == 144;
+
+  (& .content)[center] == &[center];
+
+  .content {
+    size: == &[intrinsic-size];
+  }
+}
+</style>
+
+<style>
+
+.post-simple {
+  color: hsl(0, 0%, 100%);
+}
+
+.post-simple {
+    background-color: hsl(20, 4%, 14%);
+    -webkit-overflow-scrolling: touch;
+}
+
+.post-simple .media {
+  background-size: cover;
+  background-position: center;
+}
+
+.post-simple .title,
+.post-simple .subtitle {
+  text-transform: uppercase;
+}
+
+.post-simple .title {
+  font-size: 32px;
+}
+
+.post-simple .subtitle {
+  color: hsl(30, 17%, 57%);
+}
+
+.post-simple .text {
+  line-height: 28px;
+  position: relative;
+}
+
+.post-simple.media-adjacent .text .detail {
+  background-color: hsl(30, 17%, 57%);
+  position: absolute;
+  left: 0;
+  top: 14px;
+}
+
+.post-simple.media-behind .text .detail {
+  background-color: hsl(30, 17%, 57%);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.post-simple.media-behind .text {
+  padding-top: 1em;
+}
+
+
+@media (max-width: 589px) {
+  .post-simple .text {
+    columns: 216px;
+    -webkit-columns: 216px;
+    -moz-columns: 216px;
+  }
+}
+</style>
+
+<section class="post-simple media-adjacent left else" style="background-color:hsl(0,0%,20%); position:relative;"><style type="text/css" scoped="scoped">@media (max-width: 399px) {
+  #post-simple-media-adjacent-left-5-media {
+    background-image: url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/posts/Hoop-Girl.gif');
+  }
+}
+
+@media (min-width: 400px) and (max-width: 589px) {
+  #post-simple-media-adjacent-left-5-media {
+    background-image: url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/posts/Hoop-Girl.gif');
+  }
+}
+
+@media (min-width: 590px) {
+  #post-simple-media-adjacent-left-5-media {
+    background-image: url('https://s3-us-west-2.amazonaws.com/cdn.thegrid.io/posts/Hoop-Girl.gif');
+  }
+}</style><div class="media" id="post-simple-media-adjacent-left-5-media"></div><div class="content" style="background-color:hsla(0, 0%, 20%, 0.95);"><h1 class="title alt" style="color:hsl(0, 0%, 100%);">The Right Shot Every Time</h1><h2 class="subtitle" style="color:hsl(0, 0%, 60%);">Intelligent Face Detection &amp; Smart Cropping</h2><div id="c-d8abeb8b-d0e0-49e9-9cc5-f47fcf9e2637" class="text" style="color:hsl(0, 0%, 100%);"><style type="text/css" scoped="scoped">#c-d8abeb8b-d0e0-49e9-9cc5-f47fcf9e2637 a {
+  color:hsl(0, 40%, 60%);
+}</style><span class="detail" style="background-color:hsl(0, 40%, 60%);"></span><p>Why waste time cropping by hand? The Grid automatically detects faces in your photos and crops images to fit any size on any display. All you have to do is find the perfect photo.</p></div></div></section><section class="post-featured-media screenshot right else" style="position:relative; background-color:hsl(10,33%,94%);"><style type="text/css" scoped="scoped">@media (max-width: 399px) {
+  #post-featured-media-screenshot-right-6-background {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/3bf755b9326acf8509cd05dc37e600df/gaussianblur?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fposts%2FProducts-mmmm.jpg&width=399&height=224.5572&std-dev-x=25&std-dev-y=25');
+  }
+}
+
+@media (min-width: 400px) and (max-width: 589px) {
+  #post-featured-media-screenshot-right-6-background {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/0a44cbdac6427ddff8ac59da87326e94/gaussianblur?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fposts%2FProducts-mmmm.jpg&width=589&height=331.4892&std-dev-x=25&std-dev-y=25');
+  }
+}
+
+@media (min-width: 590px) {
+  #post-featured-media-screenshot-right-6-background {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/2547d6e03ead8c04c9a253b44e557213/gaussianblur?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fposts%2FProducts-mmmm.jpg&width=1368&height=769.9104&std-dev-x=25&std-dev-y=25');
+  }
+}@media (max-width: 399px) {
+  #post-featured-media-screenshot-right-6-image {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/9210794a3c9ba9e6aff89533f5f10dd8/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fposts%2FProducts-mmmm.jpg&width=399&height=224.5572');
+  }
+}
+
+@media (min-width: 400px) and (max-width: 589px) {
+  #post-featured-media-screenshot-right-6-image {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/e8415b9d2c8cb8dd24646c5c9ec3d26a/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fposts%2FProducts-mmmm.jpg&width=589&height=331.4892');
+  }
+}
+
+@media (min-width: 590px) {
+  #post-featured-media-screenshot-right-6-image {
+    background-image: url('https://imgflo.herokuapp.com/graph/vahj1ThiexotieMo/68ec86f36c757bc87dc6f32681dfc579/passthrough?input=https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fcdn.thegrid.io%2Fposts%2FProducts-mmmm.jpg&width=1368&height=769.9104');
+  }
+}</style><style type="text/gss" scoped="scoped">#post-featured-media-screenshot-right-6-image {
+  height: == &[width] / 1.7768301350390903;
+}</style><div class="background" id="post-featured-media-screenshot-right-6-background"></div><article><h1 class="title">On-Demand E-Commerce</h1><h2 class="subtitle" style="color:hsl(10,78%,65%);"></h2><p class="text"><span class="detail"></span>Add products and a shopping cart magically appears, no plugins or configuration required. Remove the products and the shopping cart disappears. No explanations necessary.</p></article><div class="media"><div id="post-featured-media-screenshot-right-6-image"></div></div></section>
+
+
+
+<script>
+if (window.parent != window) {
+  window.addEventListener('message', function(e) {
+    window.engine.merge(e.data)
+  })
+}
+
+function boot(values) {
+  var data = {
+    "md": 72,
+    "-md": -72,
+    "-md-2": -36,
+    "md-2": 36,
+    "md2": 144,
+    "md-gap": 36,
+    "md-gap2": 18,
+    "base": 8,
+  }
+  for (var property in values)
+    data[property] = values[property];
+  document.addEventListener('solve', function(solution) {
+    delete solution.detail.engine
+    window.parent.postMessage(solution.detail, location.origin)
+  })
+  window.engine = GSS(document, data);
+} 
+
+boot()
+
+</script>
+

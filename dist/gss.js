@@ -20015,6 +20015,7 @@ Engine = (function() {
     this.updating = void 0;
     this.console.groupEnd();
     this.console.info('Solution\t   ', this.updated, update.solution, this.solved.values);
+    this.inspector.update();
     this.fireEvent('solve', update.solution, this.updated);
     this.fireEvent('solved', update.solution, this.updated);
     return update.solution;
@@ -20973,7 +20974,7 @@ Domain = (function() {
     this.updating.perform(this);
     if (this.unconstrained) {
       this.Constraint.prototype.reset(this);
-      this.register(this.constraints);
+      this.register();
     }
     if (this.nullified) {
       solution = {};
@@ -21029,11 +21030,9 @@ Domain = (function() {
   };
 
   Domain.prototype.commit = function() {
-    var changes, constraints;
+    var changes;
     if (changes = this.changes) {
-      if (constraints = this.constraints) {
-        this.register(constraints);
-      }
+      this.register();
       this.changes = void 0;
       return changes;
     }
@@ -21386,9 +21385,6 @@ Command = (function() {
 
   Command.prototype.rewind = function(engine, operation, continuation, scope) {
     var path;
-    if (continuation.indexOf(this.DESCEND + '#profile-card') > -1) {
-      debugger;
-    }
     if (path = this.getScopePath(engine, continuation, 0, true)) {
       return path + this.DESCEND;
     }
@@ -22156,10 +22152,8 @@ Update.prototype = {
     return this.connect(position);
   },
   splice: function(index) {
-    var i, name, variable, _ref;
-    if ((i = this.engine.domains.indexOf(this.domains[index])) > -1) {
-      this.engine.domains.splice(i, 1);
-    }
+    var domain, name, variable, _ref;
+    domain = this.domains[index];
     this.domains.splice(index, 1);
     this.problems.splice(index, 1);
     if (this.variables) {
@@ -22314,7 +22308,7 @@ Update.prototype = {
       if (domain.paths && !domain.consumed) {
         domain.transfer(parent, this, other);
         exported = domain["export"]();
-        domain.consumed = true;
+        domain.register(false);
       }
       for (_i = 0, _len = problems.length; _i < _len; _i++) {
         prob = problems[_i];
@@ -23703,7 +23697,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.getVariants = function(path) {
-    return [path, path + this.ASCEND, path + this.PAIR, path + this.DESCEND];
+    return [path, path + this.ASCEND, path + this.PAIR, path + this.DESCEND, path + this.DESCEND + '&'];
   };
 
   Query.prototype.getCanonicalCollection = function(engine, path) {
@@ -24619,8 +24613,7 @@ Selector = (function(_super) {
       return this.solve(function() {});
     }
     result = this.solve('Document', 'mutations', function() {
-      var mutation, _i, _len;
-      this.updating.restyled = true;
+      var mutation, _base, _base1, _base2, _i, _len;
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         if (this.Selector.filterMutation(mutation) === false) {
@@ -24629,11 +24622,21 @@ Selector = (function(_super) {
         switch (mutation.type) {
           case "attributes":
             this.Selector.mutateAttribute(this, mutation.target, mutation.attributeName, mutation.oldValue || '');
+            if ((_base = this.updating).restyled == null) {
+              _base.restyled = true;
+            }
             break;
           case "childList":
-            this.Selector.mutateChildList(this, mutation.target, mutation);
+            if (this.Selector.mutateChildList(this, mutation.target, mutation)) {
+              if ((_base1 = this.updating).restyled == null) {
+                _base1.restyled = true;
+              }
+            }
             break;
           case "characterData":
+            if ((_base2 = this.updating).restyled == null) {
+              _base2.restyled = true;
+            }
             this.Selector.mutateCharacterData(this, mutation.target, mutation);
         }
         this.intrinsic.validate(mutation.target);
@@ -24669,6 +24672,9 @@ Selector = (function(_super) {
     }
     this.mutateCharacterData(engine, target, target);
     changed = added.concat(removed);
+    if (!changed.length) {
+      return;
+    }
     changedTags = [];
     for (_k = 0, _len2 = changed.length; _k < _len2; _k++) {
       node = changed[_k];
@@ -24808,7 +24814,7 @@ Selector = (function(_super) {
         }
       }
     }
-    return this;
+    return true;
   };
 
   Selector.mutateCharacterData = function(engine, target, parent) {
@@ -28828,26 +28834,25 @@ Inspector = (function() {
   }
 
   Inspector.prototype.toExpressionString = function(operation) {
-    var klass, path, _ref;
+    var i, klass, path, prop, _ref, _ref1, _ref2;
     if (operation != null ? operation.push : void 0) {
       if (operation[0] === 'get') {
-        path = this.engine.Variable.getPath(operation[1], operation[2]);
+        path = operation[1];
+        prop = path.substring(i + 1, path.length - 1);
         if (this.engine.values[path.replace('[', '[intrinsic-')] != null) {
           klass = 'intrinsic';
         } else if (path.indexOf('"') > -1) {
           klass = 'virtual';
-        } else if (operation[2] && operation[1]) {
-          if (operation[2] === 'x' || operation[2] === 'y') {
+        } else if ((i = path.indexOf('[')) > -1) {
+          if (prop === 'x' || prop === 'y') {
             klass = 'position';
-          } else if (!((_ref = this.engine.intrinsic.properties[operation[2]]) != null ? _ref.matcher : void 0)) {
+          } else if (!((_ref = this.engine.intrinsic.properties[prop]) != null ? _ref.matcher : void 0)) {
             klass = 'local';
           }
         }
         return '<strong class="' + (klass || 'variable') + '" for="' + path + '" title="' + this.engine.values[path] + '">' + path + '</strong>';
-      } else if (operation[0] === 'value') {
-        return '<em>' + operation[1] + '</em>';
       }
-      return this.toExpressionString(operation[1]) + ' <b>' + operation[0] + '</b> ' + this.toExpressionString(operation[2]);
+      return this.toExpressionString(operation[1]) + ' <b title=\'' + ((_ref1 = operation.parent) != null ? (_ref2 = _ref1[0]) != null ? _ref2.key : void 0 : void 0) + '\'>' + operation[0] + '</b> ' + this.toExpressionString(operation[2]);
     } else {
       return operation != null ? operation : '';
     }
@@ -28865,7 +28870,7 @@ Inspector = (function() {
   Inspector.prototype.stylesheet = function() {
     var sheet;
     this.sheet = sheet = document.createElement('style');
-    sheet.textContent = sheet.innerText = "domains {\n  display: block;\n  position: fixed;\n  z-index: 999999;\n  top: 0;\n  left: 0;\n  background: rgba(255,255,255,0.76);\n  font-family: Helvetica, Arial;\n}\ndomain {\n  -webkit-user-select: none;  /* Chrome all / Safari all */\n  -moz-user-select: none;     /* Firefox all */\n  -ms-user-select: none;      /* IE 10+ */\n\n  user-select: none;     \n}\npanel {\n  padding: 10px;\n  left: 0\n}\npanel strong, panel b{\n  font-weight: normal;\n}\npanel em {\n  color: red;\n}\npanel strong {\n  color: MidnightBlue;\n}\npanel strong.virtual {\n  color: green;\n}\npanel strong.intrinsic {\n  color: red;\n}\npanel strong.local {\n  color: black;\n}\npanel strong.position {\n  color: olive;\n}\npanel strong[mark] {\n  text-decoration: underline;\n}\ndomains domain{\n  padding: 5px;\n  text-align: center;\n  display: inline-block;\n  cursor: pointer;\n}\ndomain[hidden] {\n  color: #999;\n  background: none;\n}\ndomain.intrinsic, domain.assumed, domain.solved, domain.document {\n  background: rgba(255, 0, 0, 0.15);\n  font: 0/0 \"0\";\n  width: 15px;\n  height: 15px;\n  display: none;\n}\ndomain, domain.active {\n  background: #fff;\n  color: #000;\n}\ndomain.active {\n  font-weight: bold;\n}\ndomains:hover domain {\n  background: none;\n}\ndomains:hover domain:hover {\n  background: #fff\n}\ndomain panel {\n  display: block;\n  position: absolute;\n  background: #fff;\n  text-align: left;\n  white-space: pre;\n  line-height: 18px;\n  font-size: 13px;\n  font-family: monospace, serif;\n}\ndomain panel {\n  display: none;\n}\ndomain:hover panel, body[reaching] panel {\n  display: block;\n}\nruler {\n  display: block;\n  position: absolute;\n  z-index: 99999;\n  border-width: 0;\n}\nruler[hidden] {\n  display: none;\n}\nruler.x {\n  border-bottom: 1px dotted orange;\n}\nruler.y {\n  border-right: 1px dotted orange;\n}\nruler.width {\n  border-bottom: 1px dashed blue;\n}\nruler.height {\n  border-right: 1px dashed blue;\n}\nruler.virtual {\n  border-color: green;\n}\nruler.virtual.height {\n  z-index: 99998;\n}\nbody:not([inspecting]) ruler.virtual.height {\n  width: 0px !important;\n}\nbody[inspecting][reaching] ruler.virtual.height:not(:hover) {\n  width: 0px !important;\n}\nruler.virtual.height:hover, body[inspecting]:not([reaching]) ruler.virtual.height {\n  background: rgba(0,255,0,0.15);\n}\nruler.constant {\n  border-style: solid;\n}\nruler.intrinsic {\n  border-color: red;\n}\nruler:before {\n  content: \"\";\n  display: block;\n  position: absolute;\n  right: 0;\n  top: 0;\n  left: 0;\n  bottom: 0;\n  cursor: pointer;\n}\nruler.y:before, ruler.height:before, ruler.intrinsic-height:before {\n  left: -10px;\n  right: -10px;\n}\nruler.x:before, ruler.width:before, ruler.intrinsic-width:before {\n  top: -10px;\n  bottom: -10px;\n}\ndomain panel.filtered {\n  display: block\n}\nbody[reaching] ruler {\n  opacity: 0.2\n}\nbody[reaching] ruler.reached {\n  opacity: 1\n}";
+    sheet.textContent = sheet.innerText = "domains {\n  display: block;\n  position: fixed;\n  z-index: 999999;\n  top: 0;\n  left: 0;\n  background: rgba(255,255,255,0.76);\n  font-family: Helvetica, Arial;\n}\ndomain {\n  -webkit-user-select: none;  /* Chrome all / Safari all */\n  -moz-user-select: none;     /* Firefox all */\n  -ms-user-select: none;      /* IE 10+ */\n\n  user-select: none;     \n}\npanel {\n  padding: 10px;\n  left: 0\n}\npanel strong, panel b{\n  font-weight: normal;\n}\npanel em {\n  color: red;\n}\npanel strong {\n  color: MidnightBlue;\n}\npanel strong.virtual {\n  color: green;\n}\npanel strong.intrinsic {\n  color: red;\n}\npanel strong.local {\n  color: black;\n}\npanel strong.position {\n  color: olive;\n}\npanel strong[mark] {\n  text-decoration: underline;\n}\ndomains domain{\n  padding: 5px;\n  text-align: center;\n  display: inline-block;\n  cursor: pointer;\n}\ndomain[hidden] {\n  color: #999;\n  background: none;\n}\ndomain.singles:before {\n  content: ' + ';\n  display: 'inline'\n}\ndomain, domain.active {\n  background: #fff;\n  color: #000;\n}\ndomain.active {\n  font-weight: bold;\n}\ndomains:hover domain {\n  background: none;\n}\ndomains:hover domain:hover {\n  background: #fff\n}\ndomain panel {\n  display: block;\n  position: absolute;\n  background: #fff;\n  text-align: left;\n  white-space: pre;\n  line-height: 18px;\n  font-size: 13px;\n  font-family: monospace, serif;\n}\ndomain panel {\n  display: none;\n}\ndomain:hover panel, body[reaching] panel {\n  display: block;\n}\nruler {\n  display: block;\n  position: absolute;\n  z-index: 99999;\n  border-width: 0;\n}\nruler[hidden] {\n  display: none;\n}\nruler.x {\n  border-bottom: 1px dotted orange;\n}\nruler.y {\n  border-right: 1px dotted orange;\n}\nruler.width {\n  border-bottom: 1px dashed blue;\n}\nruler.height {\n  border-right: 1px dashed blue;\n}\nruler.virtual {\n  border-color: green;\n}\nruler.virtual.height {\n  z-index: 99998;\n}\nbody:not([inspecting]) ruler.virtual.height {\n  width: 0px !important;\n}\nbody[inspecting][reaching] ruler.virtual.height:not(:hover) {\n  width: 0px !important;\n}\nruler.virtual.height:hover, body[inspecting]:not([reaching]) ruler.virtual.height {\n  background: rgba(0,255,0,0.15);\n}\nruler.constant {\n  border-style: solid;\n}\nruler.intrinsic {\n  border-color: red;\n}\nruler:before {\n  content: \"\";\n  display: block;\n  position: absolute;\n  right: 0;\n  top: 0;\n  left: 0;\n  bottom: 0;\n  cursor: pointer;\n}\nruler.y:before, ruler.height:before, ruler.intrinsic-height:before {\n  left: -10px;\n  right: -10px;\n}\nruler.x:before, ruler.width:before, ruler.intrinsic-width:before {\n  top: -10px;\n  bottom: -10px;\n}\ndomain panel.filtered {\n  display: block\n}\nbody[reaching] ruler {\n  opacity: 0.2\n}\nbody[reaching] ruler.reached {\n  opacity: 1\n}";
     document.body.appendChild(sheet);
     document.addEventListener('mousedown', this.onClick);
     document.addEventListener('mousemove', this.onMouseMove);
@@ -28874,22 +28879,17 @@ Inspector = (function() {
   };
 
   Inspector.prototype.refresh = function() {
-    var bits, domain, id, ids, property, value, values, _i, _j, _len, _len1, _ref, _ref1, _ref2, _results;
-    _ref = this.engine.domains;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      domain = _ref[_i];
-      domain.distances = void 0;
-    }
+    var bits, id, ids, property, value, values, _i, _len, _ref, _ref1, _results;
     values = {};
-    _ref1 = this.engine.values;
-    for (property in _ref1) {
-      value = _ref1[property];
+    _ref = this.engine.values;
+    for (property in _ref) {
+      value = _ref[property];
       values[property] = value;
     }
     if (this.rulers) {
-      _ref2 = this.rulers;
-      for (property in _ref2) {
-        value = _ref2[property];
+      _ref1 = this.rulers;
+      for (property in _ref1) {
+        value = _ref1[property];
         if (!values.hasOwnProperty(property)) {
           values[property] = null;
         }
@@ -28905,8 +28905,8 @@ Inspector = (function() {
       }
     }
     _results = [];
-    for (_j = 0, _len1 = ids.length; _j < _len1; _j++) {
-      id = ids[_j];
+    for (_i = 0, _len = ids.length; _i < _len; _i++) {
+      id = ids[_i];
       _results.push(this.draw(id, values));
     }
     return _results;
@@ -28950,7 +28950,7 @@ Inspector = (function() {
   };
 
   Inspector.prototype.onClick = function(e) {
-    var distance, domain, domains, ids, inspecting, prop, properties, property, props, target, _ref, _ref1;
+    var distance, domain, domains, ids, inspecting, prop, properties, property, props, target, _ref, _ref1, _ref2;
     if (((_ref = e.target.tagName) != null ? _ref.toLowerCase() : void 0) === 'domain') {
       if (!this.rulers) {
         this.refresh();
@@ -28983,7 +28983,6 @@ Inspector = (function() {
           return String(d.uid);
         });
         if (e.altKey) {
-          this.remap(domains[0]);
           this.visualize(null, inspecting, e.shiftKey);
           this.constraints(ids[0], null, inspecting, e.shiftKey);
         }
@@ -28992,7 +28991,7 @@ Inspector = (function() {
         }
       } else if ((property = document.body.getAttribute('reaching')) && ((_ref1 = e.target.tagName) != null ? _ref1.toLowerCase() : void 0) === 'ruler') {
         domain = this.reaching;
-        if (domain && (properties = domain.distances[property])) {
+        if (domain && (properties = (_ref2 = domain.distances) != null ? _ref2[property] : void 0)) {
           props = [];
           for (prop in properties) {
             distance = properties[prop];
@@ -29043,7 +29042,7 @@ Inspector = (function() {
       domain = _ref2[_j];
       if (String(domain.uid) === String(id)) {
         this.panel.innerHTML = (_ref3 = domain.constraints) != null ? _ref3.map(function(constraint) {
-          return _this.toExpressionString(constraint.operation);
+          return _this.toExpressionString(constraint.operations[0]);
         }).filter(function(string) {
           var prop, _k, _len2;
           if (!props) {
@@ -29112,7 +29111,7 @@ Inspector = (function() {
   };
 
   Inspector.prototype.visualize = function(property, ids, all) {
-    var distance, domain, id, key, prop, properties, props, reached, ruler, _i, _j, _k, _len, _len1, _len2, _ref, _results;
+    var distance, domain, id, key, prop, properties, props, reached, ruler, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _results;
     if (!property && !ids) {
       if (this.reaching) {
         this.reaching = void 0;
@@ -29153,16 +29152,16 @@ Inspector = (function() {
     _results = [];
     for (_k = 0, _len2 = props.length; _k < _len2; _k++) {
       prop = props[_k];
-      if (domain && (properties = domain.distances[prop])) {
+      if (domain && (properties = (_ref1 = domain.distances) != null ? _ref1[prop] : void 0)) {
         _results.push((function() {
-          var _ref1, _results1;
+          var _ref2, _results1;
           _results1 = [];
           for (key in properties) {
             distance = properties[key];
             if (!distance) {
               reached = true;
-              if ((_ref1 = this.rulers[key]) != null) {
-                _ref1.classList.add('reached');
+              if ((_ref2 = this.rulers[key]) != null) {
+                _ref2.classList.add('reached');
               }
               this.reaching = domain;
               _results1.push(document.body.setAttribute('reaching', prop || id));
@@ -29261,7 +29260,7 @@ Inspector = (function() {
   };
 
   Inspector.prototype.domains = function(domains) {
-    var innerHTML, total,
+    var domain, index, innerHTML, multiples, singles, total, _i,
       _this = this;
     if (!this.sheet) {
       this.stylesheet();
@@ -29272,53 +29271,51 @@ Inspector = (function() {
       document.body.appendChild(this.list);
     }
     total = 0;
-    innerHTML = domains.map(function(d) {
+    multiples = [];
+    for (index = _i = domains.length - 1; _i >= 0; index = _i += -1) {
+      domain = domains[index];
+      if (domain.constraints.length === 1) {
+        if (!singles) {
+          singles = {
+            constraints: [],
+            uid: 'singles',
+            displayName: 'Singles'
+          };
+        }
+        singles.constraints.push(domain.constraints[0]);
+      } else {
+        multiples.push(domain);
+      }
+    }
+    multiples = multiples.sort(function(a, b) {
+      return b.constraints.length - a.constraints.length;
+    });
+    if (singles) {
+      multiples.push(singles);
+    }
+    Inspector.uid || (Inspector.uid = 0);
+    innerHTML = multiples.map(function(d) {
       var length, _ref;
-      Inspector.uid || (Inspector.uid = 0);
       d.uid || (d.uid = ++Inspector.uid);
       length = ((_ref = d.constraints) != null ? _ref.length : void 0) || 0;
       total += length;
-      return "<domain for=\"" + d.uid + "\" " + (_this.engine.console.level <= 1 && 'hidden') + " class=\"" + (d.displayName.toLowerCase()) + "\">" + length + "</domain>";
+      return "<domain for=\"" + d.uid + "\" count=\"" + length + "\" " + (_this.engine.console.level <= 1 && 'hidden') + " class=\"" + (d.displayName.toLowerCase()) + "\">" + length + "</domain>";
     }).join('');
     innerHTML += '<label> = <strong>' + total + '</strong></label>';
     return this.list.innerHTML = innerHTML;
   };
 
-  Inspector.prototype.remap = function(domain) {
-    var a, b, constraint, distances, _i, _len, _ref, _results;
-    if (!(distances = domain.distances)) {
-      distances = domain.distances = {};
-      _ref = domain.constraints;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        constraint = _ref[_i];
-        _results.push((function() {
-          var _results1;
-          _results1 = [];
-          for (a in constraint.operation.variables) {
-            if (a.match(/width\]|height\]|\[\x]|\[\y\]|/)) {
-              _results1.push((function() {
-                var _results2;
-                _results2 = [];
-                for (b in constraint.operation.variables) {
-                  if (b.match(/width\]|height\]|\[\x]|\[\y\]|/)) {
-                    _results2.push(this.reach(distances, a, b));
-                  } else {
-                    _results2.push(void 0);
-                  }
-                }
-                return _results2;
-              }).call(this));
-            } else {
-              _results1.push(void 0);
-            }
-          }
-          return _results1;
-        }).call(this));
-      }
-      return _results;
-    }
-  };
+  /*remap: (domain) ->
+    if !(distances = domain.distances)
+      distances = domain.distances = {}
+      for constraint in domain.constraints
+        for a of constraint.operations[0].variables
+          if a.match(/width\]|height\]|\[\x]|\[\y\]|/)
+            for b of constraint.operations[0].variables
+              if b.match(/width\]|height\]|\[\x]|\[\y\]|/)
+                @reach distances, a, b
+  */
+
 
   Inspector.prototype.ruler = function(element, path, value, x, y, width, height, inside) {
     var bits, constraint, domain, id, konst, other, property, ruler, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
@@ -29360,12 +29357,11 @@ Inspector = (function() {
       return;
     }
     ruler.setAttribute('domain', domain.uid);
-    this.remap(domain);
     if (!(konst = typeof this.engine.variables[path] === 'string')) {
       _ref3 = domain.constraints;
       for (_j = 0, _len1 = _ref3.length; _j < _len1; _j++) {
         constraint = _ref3[_j];
-        if (constraint.operation.variables[path] && Object.keys(constraint.operation.variables).length === 1) {
+        if (constraint.operations[0].variables[path] && Object.keys(constraint.operations[0].variables).length === 1) {
           konst = true;
           break;
         }

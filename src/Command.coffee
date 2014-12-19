@@ -242,8 +242,6 @@ class Command
 
   # Return parent scope continuation to execute and pair another query
   rewind: (engine, operation, continuation, scope) ->
-    if continuation.indexOf(@DESCEND + '#profile-card') > -1
-      debugger
     if path = @getScopePath(engine, continuation, 0, true)
       return path + @DESCEND
     return ''

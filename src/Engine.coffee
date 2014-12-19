@@ -229,9 +229,9 @@ class Engine
 
     @console.groupEnd()
     @console.info('Solution\t   ', @updated, update.solution, @solved.values)
+    @inspector.update()
     @fireEvent 'solve', update.solution, @updated
     @fireEvent 'solved', update.solution, @updated
-
     return update.solution
 
   validate: (update) ->

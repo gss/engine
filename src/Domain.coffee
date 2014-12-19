@@ -340,7 +340,7 @@ class Domain
     # Reconfigure solver to release removed constraints
     if @unconstrained
       @Constraint::reset(@)
-      @register(@constraints)
+      @register()
 
     if @nullified
       solution = {}
@@ -388,9 +388,7 @@ class Domain
   # Unset transaction flag and return changes
   commit: ->
     if changes = @changes
-      if constraints = @constraints
-        @register(constraints)
-        
+      @register()
       @changes = undefined
       return changes
 
