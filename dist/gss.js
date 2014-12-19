@@ -22454,7 +22454,7 @@ Update.prototype = {
     return solution || this;
   },
   apply: function(result, solution) {
-    var i, property, redefined, value, _base, _ref;
+    var i, last, property, redefined, value, _base, _ref;
     if (solution == null) {
       solution = this.solution;
     }
@@ -22465,9 +22465,12 @@ Update.prototype = {
         if ((redefined = (_ref = this.redefined) != null ? _ref[property] : void 0)) {
           i = redefined.indexOf(value);
           if (i > -1) {
-            solution[property] = redefined[redefined.length - 1];
-            if (i !== redefined.length - 1) {
-              console.error(property, 'is looping: ', this.redefined[property], ' and now ', value, 'again');
+            last = redefined[redefined.length - 1];
+            if (Math.abs(last - value) < 2) {
+              solution[property] = redefined[redefined.length - 1];
+              if (i !== redefined.length - 1) {
+                console.error(property, 'is looping: ', this.redefined[property], ' and now ', value, 'again');
+              }
             }
             continue;
           }

@@ -371,9 +371,11 @@ Update.prototype =
         if (redefined = @redefined?[property])
           i = redefined.indexOf(value)
           if i > -1
-            solution[property] = redefined[redefined.length - 1]
-            if i != redefined.length - 1
-              console.error(property, 'is looping: ', @redefined[property], ' and now ', value, 'again')
+            last = redefined[redefined.length - 1]
+            if Math.abs(last - value) < 2
+              solution[property] = redefined[redefined.length - 1]
+              if i != redefined.length - 1
+                console.error(property, 'is looping: ', @redefined[property], ' and now ', value, 'again')
             continue
         if solution == @solution
           redefined = (@redefined ||= {})[property] ||= []
