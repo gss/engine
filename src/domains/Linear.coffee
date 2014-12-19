@@ -38,6 +38,7 @@ class Linear extends Domain
       cei = @solver._editVarMap.get(constraint.variable);
       @solver.removeColumn(cei.editMinus);
       @solver._editVarMap.delete(constraint.variable);
+      delete @editing[(variable.name || variable)]
 
       #@removeConstraint(constraint)
 

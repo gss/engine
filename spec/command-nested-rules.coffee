@@ -1478,13 +1478,19 @@ describe 'Nested Rules', ->
             engine.id('box2').setAttribute('class', 'box')
           else if counter is 8
             expect(stringify(engine.values)).to.eql stringify
+              "big":500
+              "med":50
+              "small":5
+              "target-width":1000
+          else if counter is 9
+            expect(stringify(engine.values)).to.eql stringify
               "$box2[width]":500
               "big":500
               "med":50
               "small":5
               "target-width":1000
             container.innerHTML = ''
-          else if counter is 9
+          else if counter is 10
             expect(stringify(engine.values)).to.eql stringify
               "big":500
               "med":50

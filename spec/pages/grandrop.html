@@ -1,0 +1,53 @@
+When gss processed commands, it generates variables for every property. Element with id #my-drag will have it's top/left location be stored in variables $my-drag[x] and $my-drag[y].Those are absolute values coming from top/left of the document. GSS will takes care of parent offsets automatically when it applies values. 
+
+Applying a linear constraint will produce default values, that you can redefine via engine.solve(). 
+
+<div id="drag">123</div>
+<script src="http://localhost:8000/the-gss/engine/dist/gss.js"></script>
+<style type="text/gss" scoped>
+    
+#drag[x] == 250;
+#drag[y] == 250;
+    
+#drag.dragging[x] == [mouse-x] !strong;
+#drag.dragging[y] == [mouse-y] !strong;
+    
+#drag {
+    background: orange;
+    transition: all 0.2s;
+}
+#drag.dragging {
+    transition: none;
+}
+</style>
+
+
+<script>
+   var engine = new GSS(document, {
+     'mouse-x': 0,
+     'mouse-y': 0
+   })
+   document.onmousedown = function(e) {
+    
+      engine.solve({
+        'mouse-x': e.clientX,
+        'mouse-y': e.clientY
+      })
+      setTimeout(function() {
+       (window.dragging = e.target).classList.add('dragging');
+      }, 10)
+   }
+   document.onmouseup = function(e) {
+     window.dragging.classList.remove('dragging');
+     window.dragging = undefined
+   }
+   document.onmousemove = function(e) {
+      if (window.dragging)
+        engine.solve({
+          'mouse-x': e.clientX,
+          'mouse-y': e.clientY
+        })
+      return false;
+   }
+</script>
+

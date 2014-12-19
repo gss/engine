@@ -128,7 +128,7 @@ class Engine
 
     unless old = @updating
       @engine.updating = new @update
-      @updating.start ?= @engine.console.time()
+      @updating.start ?= @engine.console.getTime()
 
 
     if typeof args[0] == 'function'

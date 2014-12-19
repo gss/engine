@@ -459,7 +459,7 @@ Update.prototype =
     return GSS.prototype.clone @problems
     
   finish: ->
-    @time = @engine.console.time(@start)
+    @time = @engine.console.getTime(@start)
     @start = undefined
 
   isDone: ->

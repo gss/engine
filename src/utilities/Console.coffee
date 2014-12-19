@@ -96,6 +96,7 @@ for method in Console::methods
       if method == 'group' || method == 'groupCollapsed'
         Console::groups++
       else if method == 'groupEnd'
+        return unless Console::groups
         Console::groups--
 
       if @level || method == 'error'

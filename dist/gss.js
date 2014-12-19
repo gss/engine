@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-18) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-19) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19905,7 +19905,7 @@ Engine = (function() {
     if (!(old = this.updating)) {
       this.engine.updating = new this.update;
       if ((_base = this.updating).start == null) {
-        _base.start = this.engine.console.time();
+        _base.start = this.engine.console.getTime();
       }
     }
     if (typeof args[0] === 'function') {
@@ -22595,7 +22595,7 @@ Update.prototype = {
     return GSS.prototype.clone(this.problems);
   },
   finish: function() {
-    this.time = this.engine.console.time(this.start);
+    this.time = this.engine.console.getTime(this.start);
     return this.start = void 0;
   },
   isDone: function() {
@@ -24628,7 +24628,7 @@ Selector = (function(_super) {
         }
         switch (mutation.type) {
           case "attributes":
-            this.Selector.mutateAttribute(this, mutation.target, mutation.attributeName, mutation.oldValue);
+            this.Selector.mutateAttribute(this, mutation.target, mutation.attributeName, mutation.oldValue || '');
             break;
           case "childList":
             this.Selector.mutateChildList(this, mutation.target, mutation);
@@ -27476,7 +27476,8 @@ Linear = (function(_super) {
     if (constraint = (_ref1 = this.editing) != null ? _ref1['%' + (variable.name || variable)] : void 0) {
       cei = this.solver._editVarMap.get(constraint.variable);
       this.solver.removeColumn(cei.editMinus);
-      return this.solver._editVarMap["delete"](constraint.variable);
+      this.solver._editVarMap["delete"](constraint.variable);
+      return delete this.editing[variable.name || variable];
     }
   };
 
@@ -28687,6 +28688,9 @@ for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       if (method === 'group' || method === 'groupCollapsed') {
         Console.prototype.groups++;
       } else if (method === 'groupEnd') {
+        if (!Console.prototype.groups) {
+          return;
+        }
         Console.prototype.groups--;
       }
       if (this.level || method === 'error') {

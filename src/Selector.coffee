@@ -149,7 +149,7 @@ class Selector extends Query
           continue
         switch mutation.type
           when "attributes"
-            @Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue)
+            @Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue || '')
           when "childList"
             @Selector.mutateChildList(@, mutation.target, mutation)
           when "characterData"
