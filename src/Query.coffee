@@ -202,10 +202,10 @@ class Query extends Command
       engine.updating.mutations = undefined
 
     # Execute all deferred selectors (e.g. comma)
-    if ascending = engine.updating.ascending
+    if deferred = engine.updating.deferred
       index = 0
-      while ascending[index]
-        contd = ascending[index + 1]
+      while deferred[index]
+        contd = deferred[index + 1]
         collection = @get(engine, contd)
         if old = engine.updating.collections[contd]
           collection = collection.slice()
@@ -214,10 +214,10 @@ class Query extends Command
             if old.indexOf(item) > -1
               collection.splice(i, 1)
         if collection?.length
-          op = ascending[index]
-          (engine.document || engine.abstract).Command(op).ascend(engine.document, op, contd, ascending[index + 2], collection)
+          op = deferred[index]
+          (engine.document || engine.abstract).Command(op).ascend(engine.document, op, contd, deferred[index + 2], collection)
         index += 3
-      engine.updating.ascending = undefined
+      engine.updating.deferred = undefined
     
     return
 
@@ -322,7 +322,11 @@ class Query extends Command
       collection = c
       
     collections[key] = collection
-    
+
+  defer: (engine, operation, continuation, scope) ->
+    engine.updating.deferred ||= []
+    if engine.indexOfTriplet(engine.updating.deferred, operation, continuation, scope) == -1
+      engine.updating.deferred.push(operation, continuation, scope)
 
   # Remove element from collection needlely
   removeFromCollection: (engine, node, continuation, operation, scope, needle, contd) ->
@@ -398,6 +402,7 @@ class Query extends Command
       else
         node = engine.identity[id]
 
+
     if continuation
 
       if engine.pairs[continuation]
@@ -433,8 +438,9 @@ class Query extends Command
         if recursion != continuation
           if removed != false #true#(removed || !parent?.command.release)
             @reduce engine, operation, continuation, scope, recursion, node, continuation, contd
+
           if removed
-            @clean(engine, continuation + id)
+            @clean(engine, continuation + id, undefined, undefined, node.scoped && node.parentNode)
 
     else if node
       # Detach queries attached to an element when removing element by id
@@ -489,7 +495,7 @@ class Query extends Command
   reduce: (engine, operation, path, scope, added, removed, recursion, contd) ->
     
     oppath = @getCanonicalPath(path)
-    if path != oppath && recursion != oppath
+    if path != oppath && recursion != oppath && !@relative
       @collect engine, operation, oppath, scope, added, removed, oppath, path
 
     @collect engine, operation, path, scope, added, removed, recursion, contd || ''
@@ -551,11 +557,13 @@ class Query extends Command
     @snapshot engine, path, old
 
     if result?
-      engine.queries[path] = result
+      if !result.push || result.length
+        engine.queries[path] = result
     else
       delete engine.queries[path]
-      if engine.updating.branching
+      if engine.updating.branching 
         engine.updating.branching.push(path)
+        
 
     path = @getCanonicalPath(path)
 

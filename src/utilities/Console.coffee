@@ -39,10 +39,10 @@ class Console
     a = a.name || a
     return if typeof a != 'string'
     p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
-    if document?
+    if @breakpoint && document?
       breakpoint = String(@stringify([b,c])).trim().replace /\r?\n+|\r|\s+/g, ' '
-      if @breakpoint == a + breakpoint
-        debugger
+      #if @breakpoint == a + breakpoint
+      #  debugger
     else 
       breakpoint = ''
     if typeof c == 'string'

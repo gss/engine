@@ -57,6 +57,7 @@ Top = Abstract::Default.extend
 
     args.unshift operation[0]
     wrapper = @produce(meta, args, operation)
+    wrapper.index = operation.index
     args.parent = wrapper
 
 

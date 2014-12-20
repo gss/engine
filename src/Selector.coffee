@@ -742,8 +742,6 @@ Selector.define
 
     separator: ','
 
-    execute: ->
-
     # Comma only serializes arguments
     serialize: ->
       return ''
@@ -755,9 +753,7 @@ Selector.define
 
       contd = @getPrefixPath(engine, continuation, 0) + operation.parent.command.path
       @add(engine, result, contd, operation.parent, scope, operation, continuation)
-      engine.updating.ascending ||= []
-      if engine.indexOfTriplet(engine.updating.ascending, operation.parent, contd, scope) == -1
-        engine.updating.ascending.push(operation.parent, contd, scope)
+      @defer(engine, operation.parent, contd, scope)
       return true
 
     # Remove a single element that was found by sub-selector
@@ -771,15 +767,10 @@ Selector.define
     descend: (engine, operation, continuation, scope, ascender, ascending) ->
       for index in [1 ... operation.length] by 1
         if (argument = operation[index]) instanceof Array
-          command = argument.command || engine.Command(argument)
           argument.parent ||= operation
-          
-          # Leave forking/pairing mark in a path when resolving next arguments
-          contd = @connect(engine, operation, continuation, scope, undefined, ascender)
-
           # Evaluate argument
-          argument = command.solve(operation.domain || engine, argument, contd || continuation, scope)
-      return Array.prototype.slice.call(arguments, 0, 4)
+          engine.Command(argument).solve(operation.domain || engine, argument, continuation, scope)
+      return false
 
 
 

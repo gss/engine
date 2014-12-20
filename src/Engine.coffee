@@ -548,10 +548,8 @@ class Engine::Identity
         id = "::window"
 
       unless generate == false
-        if uid = object._gss_uid
-          object._gss_id = uid
         object._gss_id = id ||= 
-          "$" + (object.id || object._gss_id || ++Identity.uid)
+          "$" + (object.id || object._gss_uid || ++Identity.uid)
         @[id] = object
     return id
   
