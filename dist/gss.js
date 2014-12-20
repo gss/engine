@@ -19904,6 +19904,7 @@ Engine = (function() {
     args = this.transact.apply(this, arguments);
     if (!(old = this.updating)) {
       this.engine.updating = new this.update;
+      console.profile();
       if ((_base = this.updating).start == null) {
         _base.start = this.engine.console.getTime();
       }
@@ -20011,6 +20012,7 @@ Engine = (function() {
       return update;
     }
     update.finish();
+    console.profileEnd();
     this.updated = update;
     this.updating = void 0;
     this.console.groupEnd();
@@ -23141,7 +23143,7 @@ Query = (function(_super) {
       continuation = path;
     }
     if ((result = this.get(engine, path)) !== void 0) {
-      this.each('remove', engine, result, path, operation, scope, operation, false, contd);
+      this.each(this.remove, engine, result, path, operation, scope, operation, false, contd);
     }
     engine.solved.remove(path);
     if ((_ref = engine.intrinsic) != null) {
@@ -23200,10 +23202,10 @@ Query = (function(_super) {
     var collection, i, index, node, sorted, updated, _i, _len, _ref, _results,
       _this = this;
     if (removed) {
-      this.each('remove', engine, removed, path, operation, scope, operation, recursion, contd);
+      this.each(this.remove, engine, removed, path, operation, scope, operation, recursion, contd);
     }
     if (added) {
-      this.each('add', engine, added, path, operation, scope, operation, contd);
+      this.each(this.add, engine, added, path, operation, scope, operation, contd);
     }
     if ((_ref = (collection = this.get(engine, path))) != null ? _ref.continuations : void 0) {
       sorted = collection.slice().sort(function(a, b) {
@@ -23252,13 +23254,13 @@ Query = (function(_super) {
       returned = void 0;
       for (_i = 0, _len = copy.length; _i < _len; _i++) {
         child = copy[_i];
-        if (this[method](engine, child, continuation, operation, scope, needle, recursion, contd)) {
+        if (method.call(this, engine, child, continuation, operation, scope, needle, recursion, contd)) {
           returned = true;
         }
       }
       return returned;
     } else if (typeof result === 'object') {
-      return this[method](engine, result, continuation, operation, scope, needle, recursion, contd);
+      return method.call(this, engine, result, continuation, operation, scope, needle, recursion, contd);
     }
   };
 
@@ -23267,9 +23269,7 @@ Query = (function(_super) {
     old = engine.queries[path];
     this.snapshot(engine, path, old);
     if (result != null) {
-      if (!result.push || result.length) {
-        engine.queries[path] = result;
-      }
+      engine.queries[path] = result;
     } else {
       delete engine.queries[path];
       if (engine.updating.branching) {

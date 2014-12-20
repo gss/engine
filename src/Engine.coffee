@@ -128,6 +128,7 @@ class Engine
 
     unless old = @updating
       @engine.updating = new @update
+      console.profile()
       @updating.start ?= @engine.console.getTime()
 
 
@@ -223,6 +224,7 @@ class Engine
       return update
 
     update.finish()
+    console.profileEnd()
 
     @updated = update
     @updating = undefined

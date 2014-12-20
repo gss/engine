@@ -455,7 +455,7 @@ class Query extends Command
     continuation = path if bind
     
     if (result = @get(engine, path)) != undefined
-      @each 'remove', engine, result, path, operation, scope, operation, false, contd
+      @each @remove, engine, result, path, operation, scope, operation, false, contd
 
     engine.solved.remove(path)
     engine.intrinsic?.remove(path)
@@ -503,10 +503,10 @@ class Query extends Command
   # Combine nodes from multiple selector paths
   collect: (engine, operation, path, scope, added, removed, recursion, contd) ->
     if removed
-      @each 'remove', engine, removed, path, operation, scope, operation, recursion, contd
+      @each @remove, engine, removed, path, operation, scope, operation, recursion, contd
 
     if added
-      @each 'add', engine, added, path, operation, scope, operation, contd
+      @each @add, engine, added, path, operation, scope, operation, contd
 
     # Check if collection was resorted
     if (collection = @get(engine, path))?.continuations
@@ -543,11 +543,11 @@ class Query extends Command
       copy = result.slice()
       returned = undefined
       for child in copy
-        if @[method] engine, child, continuation, operation, scope, needle, recursion, contd
+        if method.call @, engine, child, continuation, operation, scope, needle, recursion, contd
           returned = true
       return returned
     else if typeof result == 'object'
-      return @[method] engine, result, continuation, operation, scope, needle, recursion, contd
+      return method.call @, engine, result, continuation, operation, scope, needle, recursion, contd
 
 
   set: (engine, path, result) ->
@@ -557,8 +557,7 @@ class Query extends Command
     @snapshot engine, path, old
 
     if result?
-      if !result.push || result.length
-        engine.queries[path] = result
+      engine.queries[path] = result
     else
       delete engine.queries[path]
       if engine.updating.branching 
