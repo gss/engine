@@ -242,9 +242,7 @@ class Command
 
   # Return parent scope continuation to execute and pair another query
   rewind: (engine, operation, continuation, scope) ->
-    if path = @getScopePath(engine, continuation, 0, true)
-      return path + @DESCEND
-    return ''
+    return @getPrefixPath(engine, continuation)
 
   # Return ascending continuation with ids when iterating collection
   fork: (engine, continuation, item) ->

@@ -480,7 +480,7 @@ class Query extends Command
     @unobserve(engine, engine.identify(scope || engine.scope), path)
 
     if !result || !@isCollection(result)
-      engine.fireEvent('remove', path)
+      engine.triggerEvent('remove', path)
     return true
 
   chain: (engine, left, right, continuation) ->
@@ -558,7 +558,7 @@ class Query extends Command
 
     if result?
       engine.queries[path] = result
-    else
+    else if engine.queries.hasOwnProperty(path)
       delete engine.queries[path]
       if engine.updating.branching 
         engine.updating.branching.push(path)
@@ -682,7 +682,7 @@ class Query extends Command
   # Update bindings of two pair collections
   pair: (engine, left, right, operation, scope, reversed) ->
     root = @getRoot(operation)
-    right = @getPrefixPath(engine, left, 0) + root.right.command.path
+    right = @getPrefixPath(engine, left) + root.right.command.path
 
 
     if reversed
@@ -860,7 +860,7 @@ class Query extends Command
 
     return continuation.substring(0, last + 1)
 
-  getPrefixPath: (engine, continuation, level = 1) ->
+  getPrefixPath: (engine, continuation, level = 0) ->
     if path = @getScopePath(engine, continuation, level, true)
       return path + @DESCEND
     return ''
@@ -1011,7 +1011,7 @@ class Query extends Command
       for condition, index in conditions by 3
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2])
       
-      engine.fireEvent('branch')
+      engine.triggerEvent('branch')
       queries = engine.updating.queries ||= {}
       collections = engine.updating.collections ||= {}
 

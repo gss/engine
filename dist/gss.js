@@ -21383,11 +21383,7 @@ Command = (function() {
   };
 
   Command.prototype.rewind = function(engine, operation, continuation, scope) {
-    var path;
-    if (path = this.getScopePath(engine, continuation, 0, true)) {
-      return path + this.DESCEND;
-    }
-    return '';
+    return this.getPrefixPath(engine, continuation);
   };
 
   Command.prototype.fork = function(engine, continuation, item) {
@@ -23173,7 +23169,7 @@ Query = (function(_super) {
     }
     this.unobserve(engine, engine.identify(scope || engine.scope), path);
     if (!result || !this.isCollection(result)) {
-      engine.fireEvent('remove', path);
+      engine.triggerEvent('remove', path);
     }
     return true;
   };
@@ -23270,7 +23266,7 @@ Query = (function(_super) {
     this.snapshot(engine, path, old);
     if (result != null) {
       engine.queries[path] = result;
-    } else {
+    } else if (engine.queries.hasOwnProperty(path)) {
       delete engine.queries[path];
       if (engine.updating.branching) {
         engine.updating.branching.push(path);
@@ -23433,7 +23429,7 @@ Query = (function(_super) {
   Query.prototype.pair = function(engine, left, right, operation, scope, reversed) {
     var I, J, added, cleaned, cleaning, contd, el, index, leftNew, leftOld, object, op, pair, removed, rightNew, rightOld, root, solved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _n, _ref, _ref1;
     root = this.getRoot(operation);
-    right = this.getPrefixPath(engine, left, 0) + root.right.command.path;
+    right = this.getPrefixPath(engine, left) + root.right.command.path;
     if (reversed) {
       leftOld = engine.updating.queries.hasOwnProperty(left) ? engine.updating.queries[left] : this.restore(engine, left);
       rightOld = engine.updating.queries.hasOwnProperty(right) ? engine.updating.queries[right] : this.restore(engine, right);
@@ -23652,7 +23648,7 @@ Query = (function(_super) {
   Query.prototype.getPrefixPath = function(engine, continuation, level) {
     var path;
     if (level == null) {
-      level = 1;
+      level = 0;
     }
     if (path = this.getScopePath(engine, continuation, level, true)) {
       return path + this.DESCEND;
@@ -23843,7 +23839,7 @@ Query = (function(_super) {
         condition = conditions[index];
         condition.command.unbranch(engine, condition, conditions[index + 1], conditions[index + 2]);
       }
-      engine.fireEvent('branch');
+      engine.triggerEvent('branch');
       queries = (_base = engine.updating).queries || (_base.queries = {});
       collections = (_base1 = engine.updating).collections || (_base1.collections = {});
       this.repair(engine, true);
@@ -24024,7 +24020,7 @@ Condition = (function(_super) {
         }
       }
       if (this.bound) {
-        continuation = this.getPrefixPath(engine, continuation, 0);
+        continuation = this.getPrefixPath(engine, continuation);
       }
       path = this.delimit(continuation, this.DESCEND) + this.key;
       if (!(value = engine.queries[path]) && result) {
@@ -25390,14 +25386,14 @@ Selector.define({
     },
     "yield": function(result, engine, operation, continuation, scope, ascender) {
       var contd;
-      contd = this.getPrefixPath(engine, continuation, 0) + operation.parent.command.path;
+      contd = this.getPrefixPath(engine, continuation) + operation.parent.command.path;
       this.add(engine, result, contd, operation.parent, scope, operation, continuation);
       this.defer(engine, operation.parent, contd, scope);
       return true;
     },
     release: function(result, engine, operation, continuation, scope) {
       var contd;
-      contd = this.getPrefixPath(engine, continuation, 0) + operation.parent.command.path;
+      contd = this.getPrefixPath(engine, continuation) + operation.parent.command.path;
       this.remove(engine, result, contd, operation.parent, scope, operation, void 0, continuation);
       return true;
     },
@@ -26053,7 +26049,7 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.update = function(engine, operation, property, value, stylesheet, rule) {
-    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, watchers, _i, _j, _len, _ref1;
+    var body, dump, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, text, watchers, _i, _j, _len, _ref1;
     watchers = this.getWatchers(engine, stylesheet);
     dump = this.getStylesheet(engine, stylesheet);
     sheet = dump.sheet;
@@ -26079,8 +26075,12 @@ Stylesheet = (function(_super) {
     }
     rules = sheet.rules || sheet.cssRules;
     if (needle !== operation.index || value === '') {
-      generated = rules[previous.length];
-      generated.style[property] = value;
+      index = previous.length;
+      generated = rules[index];
+      text = generated.cssText;
+      text = text.substring(0, text.lastIndexOf('}') - 1) + ';' + property + ':' + value + '}';
+      sheet.deleteRule(index);
+      index = sheet.insertRule(text, index);
       next = void 0;
       if (needle === operation.index) {
         needle++;

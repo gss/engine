@@ -751,7 +751,7 @@ Selector.define
     # Actual ascension is defered to make sure collection order is correct 
     yield: (result, engine, operation, continuation, scope, ascender) ->
 
-      contd = @getPrefixPath(engine, continuation, 0) + operation.parent.command.path
+      contd = @getPrefixPath(engine, continuation) + operation.parent.command.path
       @add(engine, result, contd, operation.parent, scope, operation, continuation)
       @defer(engine, operation.parent, contd, scope)
       return true
@@ -759,7 +759,7 @@ Selector.define
     # Remove a single element that was found by sub-selector
     # Doesnt trigger callbacks if it was also found by other selector
     release: (result, engine, operation, continuation, scope) ->
-      contd = @getPrefixPath(engine, continuation, 0) + operation.parent.command.path
+      contd = @getPrefixPath(engine, continuation) + operation.parent.command.path
       @remove(engine, result, contd, operation.parent, scope, operation, undefined, continuation)
       return true
     

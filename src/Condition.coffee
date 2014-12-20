@@ -99,7 +99,7 @@ class Condition extends Query
           scope = engine.identity[scoped]
 
       if @bound
-        continuation = @getPrefixPath(engine, continuation, 0)
+        continuation = @getPrefixPath(engine, continuation)
 
       path = @delimit(continuation, @DESCEND) + @key
 

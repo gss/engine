@@ -128,8 +128,12 @@ class Stylesheet extends Command
     
 
     if needle != operation.index || value == ''
-      generated = rules[previous.length]
-      generated.style[property] = value
+      index = previous.length
+      generated = rules[index]
+      text = generated.cssText
+      text = text.substring(0, text.lastIndexOf('}') - 1) + ';' + property + ':' + value + '}'
+      sheet.deleteRule(index)
+      index = sheet.insertRule(text, index)
 
       next = undefined
       if needle == operation.index
