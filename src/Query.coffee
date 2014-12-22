@@ -495,7 +495,7 @@ class Query extends Command
   reduce: (engine, operation, path, scope, added, removed, recursion, contd) ->
     
     oppath = @getCanonicalPath(path)
-    if path != oppath && recursion != oppath && !@relative
+    if path != oppath && recursion != oppath# && !@relative
       @collect engine, operation, oppath, scope, added, removed, oppath, path
 
     @collect engine, operation, path, scope, added, removed, recursion, contd || ''
