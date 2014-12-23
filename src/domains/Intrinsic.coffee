@@ -213,7 +213,8 @@ class Intrinsic extends Numeric
     if (node = @identity.solve(id)) && node.nodeType == 1
       if property.indexOf('intrinsic-') > -1
         property = property.substring(10)
-      if @engine.values[@getPath(id, property)] != undefined
+      path = @getPath(id, property)
+      if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
         node.style[property] = ''
 
   measure: (node, x, y, full) ->

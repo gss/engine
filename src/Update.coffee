@@ -347,9 +347,9 @@ Update.prototype =
         callback.call(bind || @, domain, @problems[@index], @index, @)
 
       # Send queued commands to worker
-      #if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
-      #  @terminate()
-      #  return result
+      if @busy?.length && @busy.indexOf(@domains[@index + 1]?.url) == -1
+        @terminate()
+        return result
 
       if result && result.onerror == undefined
         if result.push

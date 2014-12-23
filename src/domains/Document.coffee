@@ -47,6 +47,9 @@ class Document extends Abstract
 
       @resizer = requestAnimationFrame =>
         @resizer = undefined
+        if @updating && !@updating.resizing
+          @updating.resizing = 'scheduled'
+          return
         @solve id + ' resized', ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")

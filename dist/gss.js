@@ -20188,7 +20188,7 @@ Engine = (function() {
       }
     },
     message: function(e) {
-      var property, value, values, _base, _ref;
+      var property, value, values, _base, _ref, _ref1;
       values = (_base = e.target).values || (_base.values = {});
       _ref = e.data;
       for (property in _ref) {
@@ -20199,11 +20199,11 @@ Engine = (function() {
           delete values[property];
         }
       }
-      if (this.updating) {
-        if (this.updating.busy.length) {
-          this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
-          return this.commit(e.data);
-        }
+      if ((_ref1 = this.updating) != null ? _ref1.busy.length : void 0) {
+        debugger;
+        this.updating.solutions[this.updating.solutions.indexOf(e.target, this.updating.index)] = e.data;
+        this.updating.busy.splice(this.updating.busy.indexOf(e.target.url), 1);
+        return this.commit(e.data);
       }
     },
     error: function(e) {
@@ -22416,7 +22416,7 @@ Update.prototype = {
     }
   },
   each: function(callback, bind, solution) {
-    var domain, previous, property, result, variable, _ref;
+    var domain, previous, property, result, variable, _ref, _ref1, _ref2;
     if (solution) {
       this.apply(solution);
     }
@@ -22436,6 +22436,10 @@ Update.prototype = {
         }
       }
       result = (this.solutions || (this.solutions = []))[this.index] = callback.call(bind || this, domain, this.problems[this.index], this.index, this);
+      if (((_ref1 = this.busy) != null ? _ref1.length : void 0) && this.busy.indexOf((_ref2 = this.domains[this.index + 1]) != null ? _ref2.url : void 0) === -1) {
+        this.terminate();
+        return result;
+      }
       if (result && result.onerror === void 0) {
         if (result.push) {
           this.engine.update(result);
@@ -27120,12 +27124,13 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.onWatch = function(id, property) {
-    var node;
+    var node, path, _ref1;
     if ((node = this.identity.solve(id)) && node.nodeType === 1) {
       if (property.indexOf('intrinsic-') > -1) {
         property = property.substring(10);
       }
-      if (this.engine.values[this.getPath(id, property)] !== void 0) {
+      path = this.getPath(id, property);
+      if (this.engine.values.hasOwnProperty(path) || ((_ref1 = this.engine.updating.solution) != null ? _ref1.hasOwnProperty(path) : void 0)) {
         return node.style[property] = '';
       }
     }
@@ -27371,6 +27376,10 @@ Document = (function(_super) {
       }
       return this.resizer = requestAnimationFrame(function() {
         _this.resizer = void 0;
+        if (_this.updating && !_this.updating.resizing) {
+          _this.updating.resizing = 'scheduled';
+          return;
+        }
         return _this.solve(id + ' resized', function() {
           this.intrinsic.verify(id, "width");
           return this.intrinsic.verify(id, "height");

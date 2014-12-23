@@ -380,10 +380,11 @@ class Engine
         else
           delete values[property]
 
-      if @updating
-        if @updating.busy.length
-          @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
-          @commit e.data
+      if @updating?.busy.length
+        debugger
+        @updating.solutions[@updating.solutions.indexOf(e.target, @updating.index)] = e.data
+        @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
+        @commit e.data
 
     # Handle error from worker
     error: (e) ->
