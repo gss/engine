@@ -311,7 +311,7 @@ $[height] == $[intrinsic-height] !require;
 /* elements */
 #profile-card {      
   &width == $[width] - 480;            
-  &width == $[height] - 480;
+  &height == $[height] - 480;
   &[center-x] == $[center-x];
   &[center-y] == $[center-y];        
   &border-radius == [outer-radius];
@@ -745,6 +745,7 @@ describe 'Full page tests', ->
 
           container.innerHTML = DEMOS.PROFILE_CARD
           container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
+ 
           engine.then (solution) ->
             # phantom gives slightly different measurements
             roughAssert = (a, b, threshold = 15) ->
@@ -754,39 +755,45 @@ describe 'Full page tests', ->
 
 
             roughAssert(solution['$follow[y]'], 540)
-            roughAssert(solution['$follow[x]'], 330)
+            roughAssert(solution['$follow[x]'], 329.5)
             roughAssert(solution['flex-gap'], 40)
-        
-            container.setAttribute('style', 'height: 768px; width: 1280px; position: absolute; overflow: auto; left: 0; top: 0')
+ 
+            container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
               GSS.console.log(solution)
-              roughAssert(solution['$follow[x]'], 586)
-              roughAssert(solution['$follow[y]'], 531)
+              roughAssert(solution['$follow[x]'], 435)
+              roughAssert(solution['$follow[y]'], 537)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
  
               engine.then (solution) ->
                 GSS.console.log(solution)
-                roughAssert(solution['$follow[y]'], 659)
+                roughAssert(solution['flex-gap'], 109)
+                roughAssert(solution['$follow[y]'], 728)
                 roughAssert(solution['$follow[x]'], 240)
- 
+
                 container.setAttribute('style', 'height: 1280px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
-                
+   
                 engine.then (solution) ->
-                  roughAssert(solution['$follow[x]'], 435)
-                  roughAssert(solution['$follow[y]'], 537)
+                  GSS.console.log(solution)
+
+                  roughAssert(solution['$follow[y]'], 668)
+                  roughAssert(solution['$follow[x]'], 329.5)
+                  roughAssert(solution['flex-gap'], 158)
        
+   
+                  container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
+                  
                   engine.then (solution) ->
-                    GSS.console.log(solution)
-                    roughAssert(solution['$follow[x]'], 435)
-                    roughAssert(solution['$follow[y]'], 537)
-                    container.setAttribute('style', 'height: 1024px; width: 500px; position: absolute; overflow: auto; left: 0; top: 0')
-       
-         
+                    roughAssert(solution['$follow[y]'], 540)
+                    roughAssert(solution['flex-gap'], 40)
+   
                     container.innerHTML = ""
                     engine.then (solution) ->
+                      expect(engine.values).to.eql {}
                       done()
+
                       
         for type, j in ['with intrinsic condition', 'with linear condition']
           do (type, j) ->

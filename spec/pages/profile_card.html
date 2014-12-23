@@ -1,0 +1,214 @@
+<body id="profile-card-demo">
+<script src="../../dist/gss.js" type="text/javascript" charset="utf-8"></script>
+
+<style>
+  #profile-card-demo * { 
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+  }
+
+  #profile-card-demo {
+    background-color: hsl(3, 18%, 43%);
+  }
+
+  #profile-card-demo * {
+    -webkit-backface-visibility: hidden;
+    margin: 0px;
+    padding: 0px;
+    outline: none;
+  }
+
+  #background {
+    background-color: hsl(3, 18%, 43%);
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    right: 0px;
+    left: 0px;
+    z-index: -1;
+    background-image: url('assets/cover.jpg');
+    background-size: cover;
+    background-position: 50% 50%;
+    opacity: .7;
+    -webkit-filter: blur(5px) contrast(.7);
+  }
+
+  #cover {
+    background-color: #ccc;
+    background-image: url('assets/cover.jpg');
+    background-size: cover;
+    background-position: 50% 50%;
+  }
+
+  #avatar {
+    background-image: url('assets/avatar.jpg');
+    background-size: cover;
+    background-position: 50% 50%;
+    border: 10px solid hsl(39, 40%, 90%);
+    box-shadow: 0 1px 1px hsla(0,0%,0%,.5);
+  }
+
+  #profile-card-demo h1 {
+    color: white;
+    text-shadow: 0 1px 1px hsla(0,0%,0%,.5);
+    font-size: 40px;
+    line-height: 1.5em;
+    font-family: "adelle",georgia,serif;
+    font-style: normal;
+    font-weight: 400;
+  }
+
+  #profile-card-demo button {
+    color: hsl(3, 18%, 43%);
+    background-color: hsl(39, 40%, 90%);
+    text-shadow: 0 1px hsla(3, 18%, 100%, .5);
+    font-family: "proxima-nova-soft",sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 14px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    border: none;  
+  }
+
+  #profile-card-demo button.primary {
+    background-color: #e38f71;
+    color: white;
+    text-shadow: 0 -1px hsla(3, 18%, 43%, .5);
+  }
+
+  #profile-card-demo #profile-card, .card {
+    background-color: hsl(39, 40%, 90%);
+    border: 1px solid hsla(0,0%,100%,.6);
+    box-shadow: 0 5px 8px hsla(0,0%,0%,.3);  
+  }
+</style>
+<style type="text/gss" scoped>
+/* vars */
+[gap] == 20 !required;
+[flex-gap] >= [gap] * 2 !required;
+[radius] == 10 !required;
+[outer-radius] == [radius] * 2 !required;
+
+/* elements */
+#profile-card {      
+  &width == ::window[width] - 480;            
+  &height == ::window[height] - 480;
+  &[center-x] == ::window[center-x];
+  &[center-y] == ::window[center-y];        
+  &border-radius == [outer-radius];
+}
+
+#avatar {
+  &height == 160 !required;
+  &width == ::[height];
+  &border-radius == ::[height] / 2;        
+}
+
+#name {
+  &height == ::[intrinsic-height] !required;
+  &width == ::[intrinsic-width] !required;
+}
+
+#cover {
+  &border-radius == [radius];
+}
+
+button {
+  &width == ::[intrinsic-width] !required;
+  &height == ::[intrinsic-height] !required;        
+  &padding == [gap];
+  &padding-top == [gap] / 2;
+  &padding-bottom == [gap] / 2;
+  &border-radius == [radius];
+}
+
+
+@h |~-~(#name)~-~| in(#cover) gap([gap]*2) !strong;
+
+/* landscape profile-card */
+@if #profile-card[width] >= #profile-card[height] {
+
+  @v |
+      -
+      (#avatar)
+      -
+      (#name)
+      -
+     |
+    in(#cover)
+    gap([gap]) outer-gap([flex-gap]) {
+      &[center-x] == ($ #cover)[center-x];
+  }
+
+  @h |-10-(#cover)-10-|
+    in(#profile-card);
+
+  @v |
+      -10-
+      (#cover)
+      -
+      (#follow)
+      -
+     |
+    in(#profile-card)
+    gap([gap]) !strong;
+
+  #follow[center-x] == #profile-card[center-x];
+
+  @h |-(#message)~-~(#follow)~-~(#following)-(#followers)-|
+    in(#profile-card)
+    gap([gap])
+    !strong {
+      :next[top] == &top;
+    }
+}
+
+/* portrait profile-card */
+@else {
+  @v |
+      -
+      (#avatar)
+      -
+      (#name)
+      -
+      (#follow)
+      -
+      (#message)
+      -
+      (#following)
+      -
+      (#followers)
+      -
+     |
+    in(#cover)
+    gap([gap])
+    outer-gap([flex-gap]) !strong {
+      &[center-x] == ($ #profile-card)[center-x];
+  }
+
+  @h |-10-(#cover)-10-| in(#profile-card) !strong;
+  @v |-10-(#cover)-10-| in(#profile-card) !strong;
+}
+
+    </style>
+    <div id="background"></div>
+    <div id="profile-card"></div>
+    <div id="cover"></div>
+    <div id="avatar"></div>
+    <h1 id="name"><span>Dan Daniels</span></h1>
+    <button id="follow" class="primary">Follow</button>
+    <button id="following">Following</button>
+    <button id="followers">Followers</button>
+    <button id="message">Message</button>
+    
+
+<script>
+document.addEventListener('solve', function(solution) {
+  delete solution.detail.engine
+  window.parent.postMessage(solution.detail, location.origin)
+})
+window.engine = GSS(document);
+</script>
+</body>
