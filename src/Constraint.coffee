@@ -89,7 +89,8 @@ Constraint = Command.extend
         engine.Constraint::undeclare engine, constraint
 
 
-    # Reinitialize solver when replacing constraints
+    # Throw old solver away and make another when replacing constraints
+    # To recumpute things from a clean state
     if engine.solver._changed && engine.constrained && engine.unconstrained
       engine.solver = undefined
       engine.setup()

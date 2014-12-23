@@ -5,12 +5,13 @@ class Inspector
     if operation?.push
       if operation[0] == 'get'
         path = operation[1]
+        i = path.indexOf('[')
         prop = path.substring(i + 1, path.length - 1)
-        if @engine.values[path.replace('[', '[intrinsic-')]?# || prop.indexOf('intrinsic-') > -1
+        if @engine.values[path.replace('[', '[intrinsic-')]? || prop.indexOf('intrinsic-') > -1
           klass = 'intrinsic'
         else if path.indexOf('"') > -1
           klass = 'virtual'
-        else if (i = path.indexOf('[')) > -1
+        else if i > -1
           if prop == 'x' || prop == 'y'
             klass = 'position'
           else if !(@engine.intrinsic.properties[prop]?.matcher)

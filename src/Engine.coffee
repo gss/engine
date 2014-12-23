@@ -76,6 +76,7 @@ class Engine
     @domains      = []
     @engine       = @
     @inspector    = new @Inspector(@)
+    @exporter     = new @Exporter(@)
 
     @precompile()
  
@@ -221,7 +222,7 @@ class Engine
     # Discard pure update 
     unless update.hadSideEffects(solution)
       @updating = undefined
-      return update
+      return
 
     update.finish()
     console.profileEnd()
@@ -330,9 +331,7 @@ class Engine
   precompile: ->
     @Domain.compile(@Domains,   @)
     @update = Engine::Update.compile(@)
-
-    if location.search.indexOf('export=') > -1
-      @preexport()
+    @triggerEvent('precompile')
 
   # Compile all static definitions in the engine
   compile: () ->
@@ -586,6 +585,7 @@ if !self.window && self.onmessage != undefined
             else
               if command[0]?.key?
                 command[1].parent = command
+                command.index = command[0].index
               commands.push(command)
 
       if removes.length

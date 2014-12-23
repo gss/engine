@@ -77,8 +77,8 @@ class Linear extends Domain
     return strength && c.Strength[strength] || c.Strength[byDefault]
 
   weight: (weight, operation) ->
-    if index = operation?.parent[0].index
-      return index / 1000
+    #if index = operation?.parent[0].index
+    #  return index / 1000
     return weight
 
 # Capture values coming from other domains

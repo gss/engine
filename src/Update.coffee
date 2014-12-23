@@ -403,7 +403,7 @@ Update.prototype =
   # Find globally broadcasted commands and apply them to a domain
   # So it can be safely merged into another 
   perform: (domain) -> 
-    globals = @domains.indexOf(null, @index + 1)
+    globals = @domains.indexOf(null, @index)
     if globals > -1
       globs = @problems[globals]
       if typeof globs[0] == 'string'

@@ -19874,6 +19874,7 @@ Engine = (function() {
     this.domains = [];
     this.engine = this;
     this.inspector = new this.Inspector(this);
+    this.exporter = new this.Exporter(this);
     this.precompile();
     this.assumed = new this.Numeric;
     this.assumed.displayName = 'Assumed';
@@ -20010,7 +20011,7 @@ Engine = (function() {
     }
     if (!update.hadSideEffects(solution)) {
       this.updating = void 0;
-      return update;
+      return;
     }
     update.finish();
     console.profileEnd();
@@ -20146,9 +20147,7 @@ Engine = (function() {
   Engine.prototype.precompile = function() {
     this.Domain.compile(this.Domains, this);
     this.update = Engine.prototype.Update.compile(this);
-    if (location.search.indexOf('export=') > -1) {
-      return this.preexport();
-    }
+    return this.triggerEvent('precompile');
   };
 
   Engine.prototype.compile = function() {
@@ -20488,6 +20487,7 @@ if (!self.window && self.onmessage !== void 0) {
             } else {
               if (((_ref = command[0]) != null ? _ref.key : void 0) != null) {
                 command[1].parent = command;
+                command.index = command[0].index;
               }
               commands.push(command);
             }
@@ -22509,7 +22509,7 @@ Update.prototype = {
   },
   perform: function(domain) {
     var glob, globals, globs, _i, _len;
-    globals = this.domains.indexOf(null, this.index + 1);
+    globals = this.domains.indexOf(null, this.index);
     if (globals > -1) {
       globs = this.problems[globals];
       if (typeof globs[0] === 'string') {
@@ -27569,10 +27569,6 @@ Linear = (function(_super) {
   };
 
   Linear.prototype.weight = function(weight, operation) {
-    var index;
-    if (index = operation != null ? operation.parent[0].index : void 0) {
-      return index / 1000;
-    }
     return weight;
   };
 
@@ -28880,12 +28876,13 @@ Inspector = (function() {
     if (operation != null ? operation.push : void 0) {
       if (operation[0] === 'get') {
         path = operation[1];
+        i = path.indexOf('[');
         prop = path.substring(i + 1, path.length - 1);
-        if (this.engine.values[path.replace('[', '[intrinsic-')] != null) {
+        if ((this.engine.values[path.replace('[', '[intrinsic-')] != null) || prop.indexOf('intrinsic-') > -1) {
           klass = 'intrinsic';
         } else if (path.indexOf('"') > -1) {
           klass = 'virtual';
-        } else if ((i = path.indexOf('[')) > -1) {
+        } else if (i > -1) {
           if (prop === 'x' || prop === 'y') {
             klass = 'position';
           } else if (!((_ref = this.engine.intrinsic.properties[prop]) != null ? _ref.matcher : void 0)) {
