@@ -2716,6 +2716,7 @@ describe 'End - to - End', ->
                 width: == 100;
                 
                 @h |($ .a)($ .b)| in(::) {
+                  x: >= 0;
                   &[width] == :next[width];
                 }
               }                           

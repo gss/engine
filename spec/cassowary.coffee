@@ -85,3 +85,29 @@ describe 'Cassowary', ->
     solver.removeConstraint eq2
     solver.solve()
     expect(x.value).to.equal 1
+
+  it 'weights', ->
+    solver = new c.SimplexSolver()
+    solver.autoSolve = false
+    x = new c.Variable()
+    eq1 = new c.Inequality(x, c.GEQ, 100, c.Strength.medium, 0.5)
+    eq2 = new c.Inequality(x, c.GEQ, 10, c.Strength.medium, 0.3)
+    solver.addConstraint(eq1).addConstraint(eq2)
+    solver.solve()
+    expect(x.value).to.equal 100
+    solver.removeConstraint eq1
+    solver.solve()
+    expect(x.value).to.equal 10
+    solver.addConstraint eq1
+    solver.solve()
+    expect(x.value).to.equal 100
+    solver.solve()
+    solver.removeConstraint eq2
+    expect(x.value).to.equal 100
+    solver.solve()
+    solver.removeConstraint eq1
+    solver.solve()
+    expect(x.value).to.equal 0
+    solver.addConstraint eq2
+    solver.solve()
+    expect(x.value).to.equal 10

@@ -83,7 +83,7 @@ describe('Cassowary', function() {
     expect(tw.value).to.equal(100);
     return expect(zoom.value).to.equal(2);
   });
-  return it('hierarchy', function() {
+  it('hierarchy', function() {
     var eq1, eq2, eq3, solver, x;
     solver = new c.SimplexSolver();
     solver.autoSolve = false;
@@ -100,5 +100,32 @@ describe('Cassowary', function() {
     solver.removeConstraint(eq2);
     solver.solve();
     return expect(x.value).to.equal(1);
+  });
+  return it('weights', function() {
+    var eq1, eq2, solver, x;
+    solver = new c.SimplexSolver();
+    solver.autoSolve = false;
+    x = new c.Variable();
+    eq1 = new c.Inequality(x, c.GEQ, 100, c.Strength.medium, 0.5);
+    eq2 = new c.Inequality(x, c.GEQ, 10, c.Strength.medium, 0.3);
+    solver.addConstraint(eq1).addConstraint(eq2);
+    solver.solve();
+    expect(x.value).to.equal(100);
+    solver.removeConstraint(eq1);
+    solver.solve();
+    expect(x.value).to.equal(10);
+    solver.addConstraint(eq1);
+    solver.solve();
+    expect(x.value).to.equal(100);
+    solver.solve();
+    solver.removeConstraint(eq2);
+    expect(x.value).to.equal(100);
+    solver.solve();
+    solver.removeConstraint(eq1);
+    solver.solve();
+    expect(x.value).to.equal(0);
+    solver.addConstraint(eq2);
+    solver.solve();
+    return expect(x.value).to.equal(10);
   });
 });

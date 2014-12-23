@@ -167,8 +167,8 @@ describe 'Domain', ->
       expect(engine.solve
         a: null
       ).to.eql
-        result: 1
-        a: 0
+        result: 0
+        a: -1
 
     it 'should use intrinsic values as known values', ->
       el = document.createElement('div')
@@ -237,8 +237,8 @@ describe 'Domain', ->
             , (solution) ->
               GSS.console.info(solution)
               expect(solution).to.eql 
-                result: 21
-                x: 0
+                result: 0
+                x: 21
               root.removeChild(engine.id('box0'))
               engine.then (solution) ->
                 GSS.console.info(solution)

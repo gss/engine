@@ -1954,7 +1954,7 @@ describe('End - to - End', function() {
     });
     describe('plural selectors & in(::)', function() {
       return it('should compute values', function(done) {
-        container.innerHTML = "<div id=\"cont1\" class=\"cont\"></div>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>            \n<style type=\"text/gss\">                            \n  .cont {\n    width: == 100;\n    \n    @h |($ .a)($ .b)| in(::) {\n      &[width] == :next[width];\n    }\n  }                           \n</style>";
+        container.innerHTML = "<div id=\"cont1\" class=\"cont\"></div>\n<div id=\"a1\" class=\"a\"></div>\n<div id=\"a2\" class=\"a\"></div>\n<div id=\"b1\" class=\"b\"></div>\n<div id=\"b2\" class=\"b\"></div>            \n<style type=\"text/gss\">                            \n  .cont {\n    width: == 100;\n    \n    @h |($ .a)($ .b)| in(::) {\n      x: >= 0;\n      &[width] == :next[width];\n    }\n  }                           \n</style>";
         return engine.once('solved', function(solution) {
           expect(solution).to.eql({
             "$cont1[width]": 100,

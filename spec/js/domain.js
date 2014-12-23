@@ -107,8 +107,8 @@ describe('Domain', function() {
       return expect(engine.solve({
         a: null
       })).to.eql({
-        result: 1,
-        a: 0
+        result: 0,
+        a: -1
       });
     });
     return it('should use intrinsic values as known values', function() {
@@ -160,8 +160,8 @@ describe('Domain', function() {
             }, function(solution) {
               GSS.console.info(solution);
               expect(solution).to.eql({
-                result: 21,
-                x: 0
+                result: 0,
+                x: 21
               });
               root.removeChild(engine.id('box0'));
               return engine.then(function(solution) {

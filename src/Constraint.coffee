@@ -82,15 +82,34 @@ Constraint = Command.extend
   reset: (engine) ->
     if engine.constrained
       for constraint in engine.constrained
-        engine.Constraint::inject engine, constraint
         engine.Constraint::declare engine, constraint
-      engine.constrained ||= []
 
     if engine.unconstrained
       for constraint in engine.unconstrained
-        engine.Constraint::eject engine, constraint
         engine.Constraint::undeclare engine, constraint
+
+
+    # Reinitialize solver when replacing constraints
+    if engine.solver._changed && engine.constrained && engine.unconstrained
+      engine.solver = undefined
+      engine.setup()
+      if editing = engine.editing
+        engine.editing = undefined
+        
+        for property, constraint of editing
+          engine.edit(engine.variables[property], engine.variables[property].value)
+      if engine.constraints
+        for constraint in engine.constraints
+          engine.Constraint::inject engine, constraint
+    else
+      if engine.unconstrained
+        for constraint in engine.unconstrained
+          engine.Constraint::eject engine, constraint
+      if engine.constrained
+        for constraint in engine.constrained
+          engine.Constraint::inject engine, constraint
       engine.constrained ||= []
+
 
     engine.unconstrained = undefined
 

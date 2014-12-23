@@ -10,7 +10,7 @@ class Linear extends Domain
 
   setup: () ->
     super
-    unless @hasOwnProperty('solver')
+    unless @solver
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
       @solver._store = []
@@ -66,6 +66,7 @@ class Linear extends Domain
 
     @edit(variable, strength, weight, continuation)
     @solver.suggestValue(variable, value)
+    variable.value = value
     @suggested = true
     return variable
 

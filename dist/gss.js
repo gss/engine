@@ -4187,30 +4187,6 @@ module.exports = (function() {
         gaps = {};
         hasGap = false;
         
-        g = options.gap;
-        if (g) { 
-          hasGap = true;
-          gaps.top = g;
-          gaps.right = g;
-          gaps.bottom = g;
-          gaps.left = g;
-          gaps.h = g;
-          gaps.v = g;
-        }    
-        g = options['h-gap'];
-        if (g) { 
-          hasGap = true;
-          gaps.right = g;
-          gaps.left = g;
-          gaps.h = g;
-        }
-        g = options['v-gap'];
-        if (g) { 
-          hasGap = true;
-          gaps.top = g;
-          gaps.bottom = g;
-          gaps.v = g;
-        }
         g = options['outer-gap'];
         if (g) { 
           hasGap = true;
@@ -4240,6 +4216,31 @@ module.exports = (function() {
           gaps.left = g;
         }
         
+        
+        g = options.gap;
+        if (g) { 
+          hasGap = true;
+          gaps.top = g;
+          gaps.right = g;
+          gaps.bottom = g;
+          gaps.left = g;
+          gaps.h = g;
+          gaps.v = g;
+        }    
+        g = options['h-gap'];
+        if (g) { 
+          hasGap = true;
+          gaps.right = g;
+          gaps.left = g;
+          gaps.h = g;
+        }
+        g = options['v-gap'];
+        if (g) { 
+          hasGap = true;
+          gaps.top = g;
+          gaps.bottom = g;
+          gaps.v = g;
+        }
         
         if (hasGap) {
           mdOp = "<=";
@@ -23188,7 +23189,7 @@ Query = (function(_super) {
   Query.prototype.reduce = function(engine, operation, path, scope, added, removed, recursion, contd) {
     var oppath;
     oppath = this.getCanonicalPath(path);
-    if (path !== oppath && recursion !== oppath && !this.relative) {
+    if (path !== oppath && recursion !== oppath) {
       this.collect(engine, operation, oppath, scope, added, removed, oppath, path);
     }
     return this.collect(engine, operation, path, scope, added, removed, recursion, contd || '');
@@ -24215,22 +24216,52 @@ Constraint = Command.extend({
     }
   },
   reset: function(engine) {
-    var constraint, _i, _j, _len, _len1, _ref, _ref1;
+    var constraint, editing, property, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4;
     if (engine.constrained) {
       _ref = engine.constrained;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         constraint = _ref[_i];
-        engine.Constraint.prototype.inject(engine, constraint);
         engine.Constraint.prototype.declare(engine, constraint);
       }
-      engine.constrained || (engine.constrained = []);
     }
     if (engine.unconstrained) {
       _ref1 = engine.unconstrained;
       for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
         constraint = _ref1[_j];
-        engine.Constraint.prototype.eject(engine, constraint);
         engine.Constraint.prototype.undeclare(engine, constraint);
+      }
+    }
+    if (engine.solver._changed && engine.constrained && engine.unconstrained) {
+      engine.solver = void 0;
+      engine.setup();
+      if (editing = engine.editing) {
+        engine.editing = void 0;
+        for (property in editing) {
+          constraint = editing[property];
+          engine.edit(engine.variables[property], engine.variables[property].value);
+        }
+      }
+      if (engine.constraints) {
+        _ref2 = engine.constraints;
+        for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+          constraint = _ref2[_k];
+          engine.Constraint.prototype.inject(engine, constraint);
+        }
+      }
+    } else {
+      if (engine.unconstrained) {
+        _ref3 = engine.unconstrained;
+        for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+          constraint = _ref3[_l];
+          engine.Constraint.prototype.eject(engine, constraint);
+        }
+      }
+      if (engine.constrained) {
+        _ref4 = engine.constrained;
+        for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
+          constraint = _ref4[_m];
+          engine.Constraint.prototype.inject(engine, constraint);
+        }
       }
       engine.constrained || (engine.constrained = []);
     }
@@ -26735,7 +26766,7 @@ Abstract.prototype.Assignment.Style = Abstract.prototype.Assignment.extend({
         }
         parent = parent.parent;
       }
-      operation.index = parent.rules = (parent.rules || 0) + 1;
+      operation.index || (operation.index = parent.rules = (parent.rules || 0) + 1);
       if (rule) {
         (rule.properties || (rule.properties = [])).push(operation.index);
       }
@@ -27455,7 +27486,7 @@ Linear = (function(_super) {
 
   Linear.prototype.setup = function() {
     Linear.__super__.setup.apply(this, arguments);
-    if (!this.hasOwnProperty('solver')) {
+    if (!this.solver) {
       this.solver = new c.SimplexSolver();
       this.solver.autoSolve = false;
       this.solver._store = [];
@@ -27519,6 +27550,7 @@ Linear = (function(_super) {
     }
     this.edit(variable, strength, weight, continuation);
     this.solver.suggestValue(variable, value);
+    variable.value = value;
     this.suggested = true;
     return variable;
   };
