@@ -227,7 +227,7 @@ class Stylesheet extends Command
     for id, style of engine.stylesheets.dumps
       for rule in (style.sheet.rules || style.sheet.cssRules)
         text = rule.cssText.replace /\[matches~="(.*?)"\]/g, (m, selector) ->
-          selector.replace(/@\d+/g, '').replace(/↓/g, ' ')
+          selector.replace(/@[^↓]+/g, '').replace(/↓&/g, '').replace(/↓/g, ' ')
         sheet.push text
 
     return sheet.join('')
