@@ -94,6 +94,8 @@ class Selector extends Query
   getIndexSuffix: (operation) ->
     return operation[2] || operation[1]
 
+  getKey: ->
+    return @selector || @key
 
   @options:
     subtree: true

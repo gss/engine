@@ -453,12 +453,16 @@ class Query extends Command
 
     return removed
 
-  getCleaningKey: (operation, continuation) ->
-    return (continuation || '') + (@selector || @key)
+  getKey: ->
+    return @key
 
   clean: (engine, path, continuation, operation, scope, bind, contd) ->
     if command = path.command
-      path = command.getCleaningKey(operation, continuation)
+      if key = command.getKey(engine, operation, continuation)
+        path = continuation + key
+      else
+        path = @delimit(continuation)
+
     continuation = path if bind
     
     if (result = @get(engine, path)) != undefined
@@ -916,11 +920,11 @@ class Query extends Command
     return engine.queries[@getCanonicalPath(path)]
     
   getLocalPath: (engine, operation, continuation) ->
-    return continuation + (@selector || @key)
+    return continuation + @getKey(engine, operation, continuation)
 
   # Return shared absolute path of a dom query ($id selector) 
   getGlobalPath: (engine, operation, continuation, node) ->
-    return engine.identify(node) + ' ' + (@selector || @key)
+    return engine.identify(node) + ' ' + @getKey(engine, operation, continuation, node)
 
   # Compare position of two nodes to sort collection in DOM order
   # Virtual elements make up stable positions within collection,
@@ -996,7 +1000,11 @@ class Query extends Command
   continuate: (engine, scope) ->
     if watchers = engine.observers[engine.identify(scope)]
       for watcher, index in watchers by 3
-        @schedule(engine, watcher, watchers[index + 1], watchers[index + 2])
+        contd = watchers[index + 1]
+        scoped = watchers[index + 2]
+        if key = watcher.command.getKey(engine, watcher, contd, scoped)
+          contd += key
+        @schedule(engine, watcher, contd, scoped)
     return
 
   # Clean observers paths without removing the observers

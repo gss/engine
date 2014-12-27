@@ -1536,6 +1536,7 @@ describe 'End - to - End', ->
         external = null
         listen = (e) ->
           counter++
+          debugger
           if counter == 1
             expect(engine.values).to.eql 
               "external-file": 1000

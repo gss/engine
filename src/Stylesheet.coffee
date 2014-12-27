@@ -271,14 +271,11 @@ class Stylesheet extends Command.List
         node.setAttribute('matches', matches.replace(path,''))
 
 
-  getCleaningKey: (operation, continuation) ->
-    if continuation && ((index = continuation.lastIndexOf(@DESCEND)) == -1 || index == continuation.length - 1)
-      if index == -1
-        return continuation
-      else
-        return @delimit(continuation)
-    else
-      return continuation + (@key)
+  # Dont add @import() to the path for global level stylesheets
+  getKey: (engine, operation, continuation, node) ->
+    if !node && continuation && continuation.lastIndexOf(@DESCEND) == -1
+      return
+    return @key
 
 class Stylesheet.Import extends Query
   type: 'Import'
@@ -318,10 +315,9 @@ class Stylesheet.Import extends Query
           @uncontinuate(engine, path)
           if text
             stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
-            @continuate(engine, path)
+            @continuate(engine, path, )
             return
         else
-          debugger
           @clean(engine, path)
           return 
       else
@@ -338,21 +334,29 @@ class Stylesheet.Import extends Query
         stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
 
       else unless command.xhr
-        command.xhr = xhr = new XMLHttpRequest()
         engine.updating.block(engine)
-        xhr.onreadystatechange = =>
-          if xhr.readyState == 4 && xhr.status == 200
-            command.xhr = undefined
-            stylesheet.push.apply(stylesheet, command.parse(engine, type, xhr.responseText))
-            console.log('subscribe', continuation, 'to', stylesheet.command.path)
-            @continuate(engine, command.source)
-            if engine.updating.unblock(engine)
-              engine.engine.commit()
-        xhr.open(method && method.toUpperCase() || 'GET', src)
-        xhr.send()
+        command.resolver = (text) =>
+          command.resolver = undefined
+          stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
+          console.log('subscribe', continuation, 'to', stylesheet.command.key)
+          @continuate(engine, command.source)
+          if engine.updating.unblock(engine) && async
+            engine.engine.commit()
+        @resolve src, method, command.resolver
+        async = true
+
 
 
       return stylesheet
+
+  resolve: (url, method, callback) ->
+    xhr = new XMLHttpRequest()
+    xhr.onreadystatechange = =>
+      if xhr.readyState == 4 && xhr.status == 200
+        callback(xhr.responseText)
+    xhr.open(method && method.toUpperCase() || 'GET', url)
+    xhr.send()
+
 
   after: (args, result, engine, operation, continuation, scope) ->
     node = if args[0]?.nodeType == 1 then args[0] else scope

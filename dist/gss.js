@@ -23153,14 +23153,18 @@ Query = (function(_super) {
     return removed;
   };
 
-  Query.prototype.getCleaningKey = function(operation, continuation) {
-    return (continuation || '') + (this.selector || this.key);
+  Query.prototype.getKey = function() {
+    return this.key;
   };
 
   Query.prototype.clean = function(engine, path, continuation, operation, scope, bind, contd) {
-    var command, i, result, s, shared, _i, _len, _ref, _ref1, _ref2;
+    var command, i, key, result, s, shared, _i, _len, _ref, _ref1, _ref2;
     if (command = path.command) {
-      path = command.getCleaningKey(operation, continuation);
+      if (key = command.getKey(engine, operation, continuation)) {
+        path = continuation + key;
+      } else {
+        path = this.delimit(continuation);
+      }
     }
     if (bind) {
       continuation = path;
@@ -23738,11 +23742,11 @@ Query = (function(_super) {
   };
 
   Query.prototype.getLocalPath = function(engine, operation, continuation) {
-    return continuation + (this.selector || this.key);
+    return continuation + this.getKey(engine, operation, continuation);
   };
 
   Query.prototype.getGlobalPath = function(engine, operation, continuation, node) {
-    return engine.identify(node) + ' ' + (this.selector || this.key);
+    return engine.identify(node) + ' ' + this.getKey(engine, operation, continuation, node);
   };
 
   Query.prototype.comparePosition = function(a, b, op1, op2) {
@@ -23836,11 +23840,16 @@ Query = (function(_super) {
   };
 
   Query.prototype.continuate = function(engine, scope) {
-    var index, watcher, watchers, _i, _len;
+    var contd, index, key, scoped, watcher, watchers, _i, _len;
     if (watchers = engine.observers[engine.identify(scope)]) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
-        this.schedule(engine, watcher, watchers[index + 1], watchers[index + 2]);
+        contd = watchers[index + 1];
+        scoped = watchers[index + 2];
+        if (key = watcher.command.getKey(engine, watcher, contd, scoped)) {
+          contd += key;
+        }
+        this.schedule(engine, watcher, contd, scoped);
       }
     }
   };
@@ -24641,6 +24650,10 @@ Selector = (function(_super) {
 
   Selector.prototype.getIndexSuffix = function(operation) {
     return operation[2] || operation[1];
+  };
+
+  Selector.prototype.getKey = function() {
+    return this.selector || this.key;
   };
 
   Selector.options = {
@@ -26358,17 +26371,11 @@ Stylesheet = (function(_super) {
     }
   };
 
-  Stylesheet.prototype.getCleaningKey = function(operation, continuation) {
-    var index;
-    if (continuation && ((index = continuation.lastIndexOf(this.DESCEND)) === -1 || index === continuation.length - 1)) {
-      if (index === -1) {
-        return continuation;
-      } else {
-        return this.delimit(continuation);
-      }
-    } else {
-      return continuation + this.key;
+  Stylesheet.prototype.getKey = function(engine, operation, continuation, node) {
+    if (!node && continuation && continuation.lastIndexOf(this.DESCEND) === -1) {
+      return;
     }
+    return this.key;
   };
 
   return Stylesheet;
@@ -26403,7 +26410,7 @@ Stylesheet.Import = (function(_super) {
       return engine.Stylesheet.Import[name].prototype.execute(type, text, void 0, engine, operation, continuation, scope);
     },
     "import": function(node, type, method, engine, operation, continuation, scope) {
-      var command, path, src, stylesheet, text, xhr,
+      var async, command, path, src, stylesheet, text,
         _this = this;
       if (typeof node === 'string') {
         src = node;
@@ -26427,7 +26434,6 @@ Stylesheet.Import = (function(_super) {
             return;
           }
         } else {
-          debugger;
           this.clean(engine, path);
           return;
         }
@@ -26443,25 +26449,35 @@ Stylesheet.Import = (function(_super) {
       if (text) {
         stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
       } else if (!command.xhr) {
-        command.xhr = xhr = new XMLHttpRequest();
         engine.updating.block(engine);
-        xhr.onreadystatechange = function() {
-          if (xhr.readyState === 4 && xhr.status === 200) {
-            command.xhr = void 0;
-            stylesheet.push.apply(stylesheet, command.parse(engine, type, xhr.responseText));
-            console.log('subscribe', continuation, 'to', stylesheet.command.path);
-            _this.continuate(engine, command.source);
-            if (engine.updating.unblock(engine)) {
-              return engine.engine.commit();
-            }
+        command.resolver = function(text) {
+          command.resolver = void 0;
+          stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
+          console.log('subscribe', continuation, 'to', stylesheet.command.key);
+          _this.continuate(engine, command.source);
+          if (engine.updating.unblock(engine) && async) {
+            return engine.engine.commit();
           }
         };
-        xhr.open(method && method.toUpperCase() || 'GET', src);
-        xhr.send();
+        this.resolve(src, method, command.resolver);
+        async = true;
       }
       return stylesheet;
     }
   });
+
+  Import.prototype.resolve = function(url, method, callback) {
+    var xhr,
+      _this = this;
+    xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        return callback(xhr.responseText);
+      }
+    };
+    xhr.open(method && method.toUpperCase() || 'GET', url);
+    return xhr.send();
+  };
 
   Import.prototype.after = function(args, result, engine, operation, continuation, scope) {
     var contd, node, path, _ref2;
