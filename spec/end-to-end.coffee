@@ -1485,12 +1485,19 @@ describe 'End - to - End', ->
     describe "single file", ->
     
       it 'should compute', (done) ->
+        counter = 0
         listen = (e) ->     
-          expect(engine.values).to.eql 
-            "external-file": 1000
-          done()     
-                     
-        engine.once 'solve', listen
+          counter++
+          if counter == 1
+            expect(engine.values).to.eql 
+              "external-file": 1000
+            container.innerHTML = ""
+          else
+            expect(engine.values).to.eql {}
+            engine.removeEventListener 'solve', listen
+            done()     
+                       
+        engine.addEventListener 'solve', listen
     
         container.innerHTML =  """
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss" scoped></link>
@@ -1507,6 +1514,9 @@ describe 'End - to - End', ->
               "external-file": 1000
               "external-file-2": 2000
               "external-file-3": 3000
+            container.innerHTML = ""
+          else
+            expect(engine.values).to.eql {}
             engine.removeEventListener 'solve', listen
             done()     
                      
@@ -1516,6 +1526,58 @@ describe 'End - to - End', ->
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file.gss" scoped></link>
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-2.gss" scoped></link>
             <link rel="stylesheet" type="text/gss" href="./fixtures/external-file-3.gss" scoped></link>
+          """
+
+    describe "nested files", ->
+    
+      it 'should compute', (done) ->
+        counter = 0
+        inline = null
+        external = null
+        listen = (e) ->
+          counter++
+          if counter == 1
+            expect(engine.values).to.eql 
+              "external-file": 1000
+              "external-file-2": 2000
+              "external-file-3": 3000
+            inline = engine.id('inline')
+            inline.parentNode.removeChild(inline)
+          else if counter == 2
+            expect(engine.values).to.eql 
+              "external-file-2": 2000
+              "external-file-3": 3000
+            engine.scope.appendChild(inline)
+          else if counter == 3
+            expect(engine.values).to.eql 
+              "external-file": 1000
+              "external-file-2": 2000
+              "external-file-3": 3000
+            external = engine.id('external')
+            external.parentNode.removeChild(external)
+          else if counter == 4
+            expect(engine.values).to.eql 
+              "external-file": 1000
+            engine.scope.appendChild(external)
+          else if counter == 5
+            expect(engine.values).to.eql 
+              "external-file": 1000
+              "external-file-2": 2000
+              "external-file-3": 3000
+            engine.scope.innerHTML = ''
+          else 
+            expect(engine.values).to.eql {}
+
+            engine.removeEventListener 'solve', listen
+            done()    
+                     
+        engine.addEventListener 'solve', listen
+    
+        container.innerHTML =  """
+            <style type="text/gss" scoped id="inline">
+              @import ./fixtures/external-file.gss;
+            </style>
+            <link rel="stylesheet" id="external" type="text/gss" href="./fixtures/external-file-2-3.gss" scoped></link>
           """
 
   

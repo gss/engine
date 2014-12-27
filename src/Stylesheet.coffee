@@ -1,103 +1,37 @@
 Parser = require('ccss-compiler')
+Query = require('./Query')
 Command = require('./Command')
 
-class Stylesheet extends Command
+class Stylesheet extends Command.List
   type: 'Stylesheet'
-  
-  signature: [
-    'source': ['Selector', 'String', 'Node']
-    [
-      'type': ['String']
-      'text': ['String']
-    ]
-  ]
 
-  @define
-    # Evaluate stylesheet
-    "eval": (node, type, text, engine, operation, continuation, scope) ->
-      engine.Stylesheet.add engine.engine, operation, continuation, node, type, node.textContent
-      return
-
-
-    # Load & evaluate stylesheet
-    "load": (node, type, method, engine, operation, continuation, scope) ->
-        src = node.href || node.src || node
-        type ||= node.type || 'text/gss'
-        xhr = new XMLHttpRequest()
-        engine.updating.block(engine)
-        xhr.onreadystatechange = =>
-          if xhr.readyState == 4 && xhr.status == 200
-            engine.Stylesheet.add(engine, operation, continuation, node, type, xhr.responseText)
-            if engine.updating.unblock(engine)
-              engine.Stylesheet.complete(engine)
-        xhr.open('GET', method && method.toUpperCase() || src)
-        xhr.send()
-      
-  @mimes:
+  mimes:
     "text/gss-ast": (source) ->
       return JSON.parse(source)
 
     "text/gss": (source) ->
       return Parser.parse(source)?.commands
+
     
   # Insert stylesheet into a collection
-  @add: (engine, operation, continuation, stylesheet, type, source) ->
-    type = stylesheet.getAttribute('type') || 'text/gss'
+  parse: (engine, type = 'text/gss', source) ->
+    operations = engine.clone(@mimes[type](source))
+    if typeof operations[0] == 'string'
+      operations = [operations]
+    engine.console.row(type, operations)
+    return operations
 
-
-    if stylesheet.operations
-      engine.Query::clean(engine, @prototype.delimit(stylesheet.continuation))
-      if (old = engine.stylesheets[stylesheet.continuation]) != stylesheet
-        engine.stylesheets.splice(engine.stylesheets.indexOf(old), 1)
-    else
-      stylesheet.continuation = @prototype.delimit(continuation, @prototype.DESCEND)
-    stylesheet.command = @
-    stylesheet.operations = engine.clone @mimes[type](source)
-
-    stylesheets = engine.engine.stylesheets ||= []
-    engine.console.row('parse', stylesheet.operations, stylesheet.continuation)
-
-    if stylesheets.indexOf(stylesheet) == -1
-      for el, index in stylesheets
-        break unless engine.Query::comparePosition(el, stylesheet, operation, operation)
-      stylesheets.splice index, 0, stylesheet
-    engine.stylesheets[stylesheet.continuation] = stylesheet
-    (engine.updating.stylesheets ||= []).push(stylesheet)
-
-    return
+  descend: ->
+    debugger
+    @users = (@users || 0) + 1
+    super 
+  
 
 
   @operations: [
-    ['eval',  ['[*=]', ['tag', 'style'], 'type', 'text/gss']]
-    ['load',  ['[*=]', ['tag', 'link' ], 'type', 'text/gss']]
+    ['import',  ['[*=]', ['tag', 'style'], 'type', 'text/gss']]
+    ['import',  ['[*=]', ['tag', 'link' ], 'type', 'text/gss']]
   ]
-
-  @perform: (engine) ->
-    if engine.stylesheets
-      for stylesheet in engine.stylesheets
-        @evaluate(engine, stylesheet)
-    @
-
-  @evaluate: (engine, stylesheet) ->
-    unless stylesheets = engine.updating.stylesheets
-      return
-
-    if (index = stylesheets.indexOf(stylesheet)) == -1
-      return
-
-    stylesheets.splice(index, 1)
-    if stylesheets.length == 0
-      engine.updating.stylesheets = undefined
-
-    if stylesheet.getAttribute('scoped')?
-      stylesheet.scoped ?= 'scoped'
-      scope = engine.getScopeElement(stylesheet.parentNode)
-
-    engine.solve(stylesheet.operations, stylesheet.continuation, scope)
-
-  @complete: (engine) ->
-    @perform(engine)
-    engine.engine.commit()
 
   @compile: (engine) ->
     @CanonicalizeSelectorRegExp = new RegExp(
@@ -152,6 +86,11 @@ class Stylesheet extends Command
       index = sheet.insertRule(selectors + "{" + body + "}", previous.length)
     return true
 
+  onClean: (engine, operation, query, watcher, subscope) ->
+    if @users && !--@users
+      engine.Query::clean(engine, @source)
+      engine.Query::unobserve(engine, @source, @delimit(query))
+
 
   @getRule: (operation) ->
     rule = operation
@@ -186,7 +125,7 @@ class Stylesheet extends Command
 
       return true
 
-  @remove: (engine, continuation) ->
+  @onRemove: (engine, continuation) ->
     if engine.stylesheets
       for stylesheet in engine.stylesheets
         if watchers = @getWatchers(engine, stylesheet)
@@ -239,7 +178,7 @@ class Stylesheet extends Command
     parent = operation
     results = wrapped = custom = undefined
 
-    # Iterate rules
+    # Iterate parent commands
     while parent
 
       # Append condition id to path
@@ -295,14 +234,15 @@ class Stylesheet extends Command
       return ' ' + @getCustomSelector((parent || command).path)
 
   @getCustomSelector: (selector, suffix, prefix) ->
-    selector = selector.replace(/\s+/g, @prototype.DESCEND)
+    DESCEND = @prototype.DESCEND
+    selector = selector.replace(/\s+/g, DESCEND)
     if suffix
       if suffix.charAt(0) == ' '
         suffix = suffix.substring(1)
       if suffix.substring(0, 11) == '[matches~="'
-        suffix = @prototype.DESCEND + suffix.substring(11)
+        suffix = DESCEND + suffix.substring(11)
       else
-        suffix = @prototype.DESCEND + suffix.replace(/\s+/g, @prototype.DESCEND) + '"]'
+        suffix = DESCEND + suffix.replace(/\s+/g, DESCEND) + '"]'
     else
       suffix = '"]'
     return '[matches~="' + selector + suffix
@@ -329,4 +269,143 @@ class Stylesheet extends Command
       path = ' ' + @getCanonicalSelector(continuation)
       if matches.indexOf(path) > -1
         node.setAttribute('matches', matches.replace(path,''))
+
+
+  getCleaningKey: (operation, continuation) ->
+    if continuation && ((index = continuation.lastIndexOf(@DESCEND)) == -1 || index == continuation.length - 1)
+      if index == -1
+        return continuation
+      else
+        return @delimit(continuation)
+    else
+      return continuation + (@key)
+
+class Stylesheet.Import extends Query
+  type: 'Import'
+
+  relative: true
+  
+  signature: [
+    'source': ['Selector', 'String', 'Node']
+    [
+      'type': ['String']
+      'text': ['String']
+    ]
+  ]
+      
+  @define
+    "directive": (name, type, text, engine, operation, continuation, scope) ->
+      engine.Stylesheet.Import[name]::execute(type, text, undefined, engine, operation, continuation, scope)
+
+    # Load & evaluate stylesheet
+    "import": (node, type, method, engine, operation, continuation, scope) ->
+      if typeof node == 'string'
+        src = node
+        node = undefined
+      else
+        unless src = @getUrl(node)
+          text = node.innerText
+
+        type ||= node.getAttribute?('type')
+
+      
+      path = @getGlobalPath(engine, operation, continuation, node)
+      if stylesheet = engine.queries[path]
+        command = stylesheet.command
+        stylesheet.splice(0)
+        if node.parentNode
+          command.users = 0
+          @uncontinuate(engine, path)
+          if text
+            stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
+            @continuate(engine, path)
+            return
+        else
+          debugger
+          @clean(engine, path)
+          return 
+      else
+        stylesheet = []
+        command = stylesheet.command = new engine.Stylesheet(engine, operation, continuation, node)
+        command.key = @getGlobalPath(engine, operation, continuation, node, 'import')
+        command.source = path
+
+        if node?.getAttribute('scoped')?
+          node.scoped = command.scoped = true
+
+
+      if text
+        stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
+
+      else unless command.xhr
+        command.xhr = xhr = new XMLHttpRequest()
+        engine.updating.block(engine)
+        xhr.onreadystatechange = =>
+          if xhr.readyState == 4 && xhr.status == 200
+            command.xhr = undefined
+            stylesheet.push.apply(stylesheet, command.parse(engine, type, xhr.responseText))
+            console.log('subscribe', continuation, 'to', stylesheet.command.path)
+            @continuate(engine, command.source)
+            if engine.updating.unblock(engine)
+              engine.engine.commit()
+        xhr.open(method && method.toUpperCase() || 'GET', src)
+        xhr.send()
+
+
+      return stylesheet
+
+  after: (args, result, engine, operation, continuation, scope) ->
+    node = if args[0]?.nodeType == 1 then args[0] else scope
+    path = result.command.source
+    @set engine, path, result
+
+    contd = @delimit(continuation, @DESCEND)
+    # Subscribe to @parse
+    @subscribe(engine, result, contd, scope, path)
+    
+    # Subscribe to @import
+    @subscribe(engine, result, contd, scope, node)
+
+    if result.command.users == 0
+      @continuate(engine, path)
+
+
+    return result
+
+  ascend: (engine, operation, continuation, scope, result) ->
+    if result.length == 0
+      return
+
+    @schedule(engine, result, @delimit(continuation, @DESCEND), scope)
+    return
+
+
+  write: (engine, operation, continuation, scope, node) ->
+    return true
+
+  getUrl: (node) ->
+    return node.getAttribute('href') || node.getAttribute('src')
+
+  getId: (node) ->
+    return @getUrl(node) || node._gss_id
+
+  formatId: (id) ->
+    if (i = id.lastIndexOf('/')) > -1
+      id = id.substring(i + 1)
+    return id
+
+  getLocalPath: (engine, operation, continuation, node) ->
+    return @getGlobalPath(engine, operation, continuation, node)
+
+  getGlobalPath: (engine, operation, continuation, node, command = 'parse')-> 
+    index = operation[0] == 'directive' && 2 || 1
+    if typeof operation[index] == 'string'
+      id = operation[index]
+    else
+      if !node? && continuation
+        node = @getByPath(engine, continuation)
+      id = @getId(node)
+    return '@' + command + '(' + @formatId(id) + ')'
+
+
 module.exports = Stylesheet

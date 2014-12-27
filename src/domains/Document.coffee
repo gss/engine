@@ -99,10 +99,6 @@ class Document extends Abstract
           @identity.unset(id)
         @document.removed = undefined
       
-    commit: ->
-      @document.Stylesheet.perform(@document)
-
-      
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @
       #if @scope != document

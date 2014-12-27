@@ -81,7 +81,7 @@ class Query extends Command
     return true
 
   continue: (result, engine, operation, continuation = '') ->
-    return continuation + @key
+    return continuation + (@key || '')
 
   # Evaluate compound native selector by jumping to either its head or tail
   jump: (engine, operation, continuation, scope, ascender, ascending) ->
@@ -103,29 +103,29 @@ class Query extends Command
   # Check if query was already updated
   before: (args, engine, operation, continuation, scope, ascender, ascending) ->
     node = if args[0]?.nodeType == 1 then args[0] else scope
-    query = operation.command.getPath(engine, operation, node)
-    if alias = engine.updating.aliases?[query]
-      if engine.updating.queries?.hasOwnProperty(alias)
-        return engine.updating.queries[alias]
-      return engine.updating.queries?[continuation]
+    query = @getGlobalPath(engine, operation, continuation, node)
+    alias = engine.updating.aliases?[query] || query
+    if engine.updating.queries?.hasOwnProperty(alias)
+      return engine.updating.queries[alias]
+    return engine.updating.queries?[query]
 
   # Subscribe elements to query 
   after: (args, result, engine, operation, continuation, scope) ->
-    
     updating = engine.updating
-    path = operation.command.getPath(engine, operation, continuation)
+
+    node = if args[0]?.nodeType == 1 then args[0] else scope
+    path = @getLocalPath(engine, operation, continuation, node)
+    # Compute once, reference result subsequently
+    unless @relative# || @type == 'Condition'
+      query = @getGlobalPath(engine, operation, continuation, node)
+      aliases = updating.aliases ||= {}
+      if !(alias = aliases[query]) || alias.length > path.length || !updating.queries?.hasOwnProperty(alias)
+        aliases[query] = path
+
     old = @get(engine, path)
 
     # Normalize query to reuse results
     command = operation.command
-
-    node = if args[0]?.nodeType == 1 then args[0] else scope
-
-    unless @relative# || @type == 'Condition'
-      query = operation.command.getPath(engine, operation, node, scope)
-      aliases = updating.aliases ||= {}
-      if !(alias = aliases[query]) || alias.length > path.length || !updating.queries?.hasOwnProperty(alias)
-        aliases[query] = path
 
     (updating.queries ||= {})[path] = result
 
@@ -164,9 +164,15 @@ class Query extends Command
       if result && result.item
         result = Array.prototype.slice.call(result, 0)
     else
-      added = result 
+      added = result
       removed = old
 
+    if @write(engine, operation, continuation, scope, node, path, result, old, added, removed)
+      @set engine, path, result
+    return added
+
+  # Write result, update collections, subscribe to query
+  write: (engine, operation, continuation, scope, node, path, result, old, added, removed) ->
     if result?.continuations
       @reduce(engine, operation, path, scope, undefined, undefined, undefined, continuation)
     else
@@ -175,23 +181,19 @@ class Query extends Command
     @subscribe(engine, operation, continuation, scope, node)
     @snapshot engine, path, old
 
-    return if result == old
-
-    unless result?.push
-      @set engine, path, result
-
-    return added
+    unless result == old
+      return !result?.push
 
   # Subscribe node to the query
   subscribe: (engine, operation, continuation, scope, node) ->
     id = engine.identify(node)
     observers = engine.engine.observers[id] ||= []
     if (engine.indexOfTriplet(observers, operation, continuation, scope) == -1)
-      operation.command.prepare(operation)
+      operation.command.prepare?(operation)
       observers.push(operation, continuation, scope)
 
 
-
+  # Execute all pending mutations and deferred operations
   commit: (engine, solution) ->
     # Update all DOM queries that matched mutations
     if mutations = engine.updating.mutations
@@ -269,9 +271,9 @@ class Query extends Command
 
   # Return collection by path & scope
   get: (engine, continuation) ->
-    return engine.queries[continuation] 
+    return engine.queries[continuation]  
 
-  # Remove observers from element
+  # Remove observers from element, trigger cascade cleanup
   unobserve: (engine, id, continuation, quick, path, contd, scope, top) ->
     if continuation != true
       refs = @getVariants(continuation)
@@ -301,6 +303,9 @@ class Query extends Command
       subscope = observers[index + 2]
       observers.splice(index, 3)
       if !quick
+        debugger
+        watcher.command.onClean?(engine, watcher, query, watcher, subscope)
+
         @clean(engine, watcher, query, watcher, subscope, true, contd ? query)
     if !observers.length && observers == engine.observers[id]
       delete engine.observers[id]
@@ -448,10 +453,12 @@ class Query extends Command
 
     return removed
 
+  getCleaningKey: (operation, continuation) ->
+    return (continuation || '') + (@selector || @key)
 
   clean: (engine, path, continuation, operation, scope, bind, contd) ->
     if command = path.command
-      path = (continuation || '') + (operation.uid || '') + (command.selector || command.key || '')
+      path = command.getCleaningKey(operation, continuation)
     continuation = path if bind
     
     if (result = @get(engine, path)) != undefined
@@ -459,7 +466,7 @@ class Query extends Command
 
     engine.solved.remove(path)
     engine.intrinsic?.remove(path)
-    engine.Stylesheet?.remove(engine, path)
+    engine.Stylesheet?.onRemove(engine, path)
 
     shared = false
     if @isCollection(result)
@@ -571,7 +578,6 @@ class Query extends Command
         (engine.updating.pairs ||= {})[left] = true
 
     return
-
 
   onLeft: (engine, operation, parent, continuation, scope) ->
     left = @getCanonicalPath(continuation)
@@ -909,16 +915,12 @@ class Query extends Command
   getCanonicalCollection: (engine, path) ->
     return engine.queries[@getCanonicalPath(path)]
     
-  # Return shared absolute path of a dom query ($id selector) 
-  getPath: (engine, operation, continuation) ->
-    if continuation
-      if continuation.nodeType
-        return engine.identify(continuation) + ' ' + @path
-      else
-        return continuation + (@selector || @key)
-    else
-      return (@selector || @key)
+  getLocalPath: (engine, operation, continuation) ->
+    return continuation + (@selector || @key)
 
+  # Return shared absolute path of a dom query ($id selector) 
+  getGlobalPath: (engine, operation, continuation, node) ->
+    return engine.identify(node) + ' ' + (@selector || @key)
 
   # Compare position of two nodes to sort collection in DOM order
   # Virtual elements make up stable positions within collection,
@@ -982,11 +984,26 @@ class Query extends Command
       @schedule(engine, operation, continuation, scope)
     return
 
+  # Schedule matching observers (used when observer is shared within scope, e.g. in conditions)
   notify: (engine, continuation, scope) ->
     if watchers = engine.observers[engine.identify(scope)]
       for watcher, index in watchers by 3
         if watchers[index + 1] + watcher.command.key == continuation
           @schedule(engine, watcher, continuation, scope)
+    return
+
+  # Fire off all observers with their original continuations
+  continuate: (engine, scope) ->
+    if watchers = engine.observers[engine.identify(scope)]
+      for watcher, index in watchers by 3
+        @schedule(engine, watcher, watchers[index + 1], watchers[index + 2])
+    return
+
+  # Clean observers paths without removing the observers
+  uncontinuate: (engine, scope) ->
+    if watchers = engine.observers[engine.identify(scope)]
+      for watcher, index in watchers by 3
+        @clean(engine, watcher, watchers[index + 1], watchers[index + 2])    
     return
 
   # Add query into the queue 
@@ -995,12 +1012,16 @@ class Query extends Command
 
     length = (continuation || '').length
     last = null
+    stylesheet = operation.stylesheet
     for watcher, index in mutations by 3
       contd = mutations[index + 1] || ''
       if watcher == operation && continuation == contd && scope == mutations[index + 2]
         return
       # Make shorter continuation keys run before longer ones
-      if contd.length < length
+      if stylesheet
+        if !last? && !@comparePosition(el, stylesheet, operation, operation)
+          last = index + 3
+      else if contd.length < length
         last = index + 3
     mutations.splice(last ? 0, 0, operation, continuation, scope)
 

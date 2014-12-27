@@ -198,7 +198,7 @@ class Engine
         @Query::repair(@)
         @Query::branch(@)
         @triggerEvent('commit', update)
-
+      debugger
       return if update.blocking
 
       # Process queue
@@ -534,12 +534,14 @@ class Engine
 class Engine::Identity
   @uid: 0
 
+  excludes: ['$'.charCodeAt(0), ':'.charCodeAt(0), '@'.charCodeAt(0)]
+
   set: (object, generate) =>
     unless object
       return ''
 
     if typeof object == 'string'
-      if object.charAt(0) != '$' && object.charAt(0) != ':'
+      if @excludes.indexOf(object.charCodeAt(0)) == -1
         return '$' + object
       return object
 

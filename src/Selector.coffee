@@ -19,6 +19,8 @@ class Selector extends Query
 
   # Build lookup tables for selector operations to match against mutations
   prepare: (operation, parent) ->
+    return if @prepared
+    @prepared = true
     prefix = @getIndexPrefix(operation, parent)
     name = @getIndex(operation, parent)
     suffix = @getIndexSuffix(operation, parent)
@@ -50,7 +52,7 @@ class Selector extends Query
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
       result ?= node
-      
+    debugger
     if result  = command.after(args, result, engine, operation, continuation, scope)
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
 
@@ -286,7 +288,7 @@ class Selector extends Query
     if id = engine.identity.find(parent)
       if parent.tagName == 'STYLE' 
         if parent.getAttribute('type')?.indexOf('text/gss') > -1
-          engine.eval(parent)
+          engine.import(parent)
 
   @mutateAttribute: (engine, target, name, changed) ->
 

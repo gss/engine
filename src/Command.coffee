@@ -451,7 +451,10 @@ class Command
             if extras > 3
               args.push(engine.scope)
 
-      return command.execute.apply(command, args)
+      if (result = command.execute.apply(command, args))?
+        unless command.ascend == command.constructor.__super__.ascend
+          command.ascend(engine, args, '', engine.scope, result)
+        return result
   
 
   ### 
@@ -706,8 +709,9 @@ class Command.List extends Command
   # Fast descender for lists - doesnt build evaluated list of arguments
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     for argument, index in operation
-      if command = argument?.command
-        command.solve(engine, argument, continuation, scope)
+      if argument?.push
+        if command = argument.command || engine.Command(argument)
+          command.solve(engine, argument, continuation, scope)
     return
 
 

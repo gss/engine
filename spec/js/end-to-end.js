@@ -1174,18 +1174,26 @@ describe('End - to - End', function() {
   describe('External .gss files', function() {
     describe("single file", function() {
       return it('should compute', function(done) {
-        var listen;
+        var counter, listen;
+        counter = 0;
         listen = function(e) {
-          expect(engine.values).to.eql({
-            "external-file": 1000
-          });
-          return done();
+          counter++;
+          if (counter === 1) {
+            expect(engine.values).to.eql({
+              "external-file": 1000
+            });
+            return container.innerHTML = "";
+          } else {
+            expect(engine.values).to.eql({});
+            engine.removeEventListener('solve', listen);
+            return done();
+          }
         };
-        engine.once('solve', listen);
+        engine.addEventListener('solve', listen);
         return container.innerHTML = "<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file.gss\" scoped></link>";
       });
     });
-    return describe("multiple files", function() {
+    describe("multiple files", function() {
       return it('should compute', function(done) {
         var counter, listen;
         counter = 0;
@@ -1197,12 +1205,67 @@ describe('End - to - End', function() {
               "external-file-2": 2000,
               "external-file-3": 3000
             });
+            return container.innerHTML = "";
+          } else {
+            expect(engine.values).to.eql({});
             engine.removeEventListener('solve', listen);
             return done();
           }
         };
         engine.addEventListener('solve', listen);
         return container.innerHTML = "<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file.gss\" scoped></link>\n<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file-2.gss\" scoped></link>\n<link rel=\"stylesheet\" type=\"text/gss\" href=\"./fixtures/external-file-3.gss\" scoped></link>";
+      });
+    });
+    return describe("nested files", function() {
+      return it('should compute', function(done) {
+        var counter, external, inline, listen;
+        counter = 0;
+        inline = null;
+        external = null;
+        listen = function(e) {
+          counter++;
+          if (counter === 1) {
+            expect(engine.values).to.eql({
+              "external-file": 1000,
+              "external-file-2": 2000,
+              "external-file-3": 3000
+            });
+            inline = engine.id('inline');
+            return inline.parentNode.removeChild(inline);
+          } else if (counter === 2) {
+            expect(engine.values).to.eql({
+              "external-file-2": 2000,
+              "external-file-3": 3000
+            });
+            return engine.scope.appendChild(inline);
+          } else if (counter === 3) {
+            expect(engine.values).to.eql({
+              "external-file": 1000,
+              "external-file-2": 2000,
+              "external-file-3": 3000
+            });
+            external = engine.id('external');
+            return external.parentNode.removeChild(external);
+          } else if (counter === 4) {
+            expect(engine.values).to.eql({
+              "external-file": 1000
+            });
+            return engine.scope.appendChild(external);
+          } else if (counter === 5) {
+            expect(engine.values).to.eql({
+              "external-file": 1000,
+              "external-file-2": 2000,
+              "external-file-3": 3000
+            });
+            return engine.scope.innerHTML = '';
+          } else {
+            expect(engine.values).to.eql({});
+            engine.removeEventListener('solve', listen);
+            return done();
+          }
+        };
+        engine.addEventListener('solve', listen);
+        return container.innerHTML = "<style type=\"text/gss\" scoped id=\"inline\">\n  @import ./fixtures/external-file.gss;\n</style>\n<link rel=\"stylesheet\" id=\"external\" type=\"text/gss\" href=\"./fixtures/external-file-2-3.gss\" scoped></link>";
       });
     });
   });

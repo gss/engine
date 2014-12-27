@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2014-12-23) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2014-12-27) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19988,6 +19988,7 @@ Engine = (function() {
         this.Query.prototype.branch(this);
         this.triggerEvent('commit', update);
       }
+      debugger;
       if (update.blocking) {
         return;
       }
@@ -20421,13 +20422,15 @@ Engine.prototype.Identity = (function() {
 
   Identity.uid = 0;
 
+  Identity.prototype.excludes = ['$'.charCodeAt(0), ':'.charCodeAt(0), '@'.charCodeAt(0)];
+
   Identity.prototype.set = function(object, generate) {
     var id;
     if (!object) {
       return '';
     }
     if (typeof object === 'string') {
-      if (object.charAt(0) !== '$' && object.charAt(0) !== ':') {
+      if (this.excludes.indexOf(object.charCodeAt(0)) === -1) {
         return '$' + object;
       }
       return object;
@@ -21608,7 +21611,7 @@ Command = (function() {
     signature = engine.signatures[name];
     base = [name];
     return (_base = engine.engine)[name] || (_base[name] = function() {
-      var args, command, extras, length, _ref;
+      var args, command, extras, length, result, _ref;
       args = Array.prototype.slice.call(arguments);
       command = Command.match(engine, base.concat(args)).prototype;
       length = (command.hasOwnProperty('permutation') && command.permutation.length || 0) + command.padding;
@@ -21627,7 +21630,12 @@ Command = (function() {
           }
         }
       }
-      return command.execute.apply(command, args);
+      if ((result = command.execute.apply(command, args)) != null) {
+        if (command.ascend !== command.constructor.__super__.ascend) {
+          command.ascend(engine, args, '', engine.scope, result);
+        }
+        return result;
+      }
     });
   };
 
@@ -21947,8 +21955,10 @@ Command.List = (function(_super) {
     var argument, command, index, _i, _len;
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       argument = operation[index];
-      if (command = argument != null ? argument.command : void 0) {
-        command.solve(engine, argument, continuation, scope);
+      if (argument != null ? argument.push : void 0) {
+        if (command = argument.command || engine.Command(argument)) {
+          command.solve(engine, argument, continuation, scope);
+        }
       }
     }
   };
@@ -22736,7 +22746,7 @@ Query = (function(_super) {
     if (continuation == null) {
       continuation = '';
     }
-    return continuation + this.key;
+    return continuation + (this.key || '');
   };
 
   Query.prototype.jump = function(engine, operation, continuation, scope, ascender, ascending) {
@@ -22757,29 +22767,28 @@ Query = (function(_super) {
   Query.prototype.before = function(args, engine, operation, continuation, scope, ascender, ascending) {
     var alias, node, query, _ref, _ref1, _ref2, _ref3;
     node = ((_ref = args[0]) != null ? _ref.nodeType : void 0) === 1 ? args[0] : scope;
-    query = operation.command.getPath(engine, operation, node);
-    if (alias = (_ref1 = engine.updating.aliases) != null ? _ref1[query] : void 0) {
-      if ((_ref2 = engine.updating.queries) != null ? _ref2.hasOwnProperty(alias) : void 0) {
-        return engine.updating.queries[alias];
-      }
-      return (_ref3 = engine.updating.queries) != null ? _ref3[continuation] : void 0;
+    query = this.getGlobalPath(engine, operation, continuation, node);
+    alias = ((_ref1 = engine.updating.aliases) != null ? _ref1[query] : void 0) || query;
+    if ((_ref2 = engine.updating.queries) != null ? _ref2.hasOwnProperty(alias) : void 0) {
+      return engine.updating.queries[alias];
     }
+    return (_ref3 = engine.updating.queries) != null ? _ref3[query] : void 0;
   };
 
   Query.prototype.after = function(args, result, engine, operation, continuation, scope) {
     var added, alias, aliases, child, command, index, isCollection, node, old, path, query, removed, updating, _base, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3;
     updating = engine.updating;
-    path = operation.command.getPath(engine, operation, continuation);
-    old = this.get(engine, path);
-    command = operation.command;
     node = ((_ref = args[0]) != null ? _ref.nodeType : void 0) === 1 ? args[0] : scope;
+    path = this.getLocalPath(engine, operation, continuation, node);
     if (!this.relative) {
-      query = operation.command.getPath(engine, operation, node, scope);
+      query = this.getGlobalPath(engine, operation, continuation, node);
       aliases = updating.aliases || (updating.aliases = {});
       if (!(alias = aliases[query]) || alias.length > path.length || !((_ref1 = updating.queries) != null ? _ref1.hasOwnProperty(alias) : void 0)) {
         aliases[query] = path;
       }
     }
+    old = this.get(engine, path);
+    command = operation.command;
     (updating.queries || (updating.queries = {}))[path] = result;
     if ((_ref2 = updating.collections) != null ? _ref2.hasOwnProperty(path) : void 0) {
       old = updating.collections[path];
@@ -22824,6 +22833,13 @@ Query = (function(_super) {
       added = result;
       removed = old;
     }
+    if (this.write(engine, operation, continuation, scope, node, path, result, old, added, removed)) {
+      this.set(engine, path, result);
+    }
+    return added;
+  };
+
+  Query.prototype.write = function(engine, operation, continuation, scope, node, path, result, old, added, removed) {
     if (result != null ? result.continuations : void 0) {
       this.reduce(engine, operation, path, scope, void 0, void 0, void 0, continuation);
     } else {
@@ -22831,21 +22847,19 @@ Query = (function(_super) {
     }
     this.subscribe(engine, operation, continuation, scope, node);
     this.snapshot(engine, path, old);
-    if (result === old) {
-      return;
+    if (result !== old) {
+      return !(result != null ? result.push : void 0);
     }
-    if (!(result != null ? result.push : void 0)) {
-      this.set(engine, path, result);
-    }
-    return added;
   };
 
   Query.prototype.subscribe = function(engine, operation, continuation, scope, node) {
-    var id, observers, _base;
+    var id, observers, _base, _base1;
     id = engine.identify(node);
     observers = (_base = engine.engine.observers)[id] || (_base[id] = []);
     if (engine.indexOfTriplet(observers, operation, continuation, scope) === -1) {
-      operation.command.prepare(operation);
+      if (typeof (_base1 = operation.command).prepare === "function") {
+        _base1.prepare(operation);
+      }
       return observers.push(operation, continuation, scope);
     }
   };
@@ -22940,7 +22954,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.unobserve = function(engine, id, continuation, quick, path, contd, scope, top) {
-    var index, matched, observers, parent, query, refs, subscope, watcher;
+    var index, matched, observers, parent, query, refs, subscope, watcher, _base;
     if (continuation !== true) {
       refs = this.getVariants(continuation);
     }
@@ -22972,6 +22986,10 @@ Query = (function(_super) {
       subscope = observers[index + 2];
       observers.splice(index, 3);
       if (!quick) {
+        debugger;
+        if (typeof (_base = watcher.command).onClean === "function") {
+          _base.onClean(engine, watcher, query, watcher, subscope);
+        }
         this.clean(engine, watcher, query, watcher, subscope, true, contd != null ? contd : query);
       }
     }
@@ -23135,10 +23153,14 @@ Query = (function(_super) {
     return removed;
   };
 
+  Query.prototype.getCleaningKey = function(operation, continuation) {
+    return (continuation || '') + (this.selector || this.key);
+  };
+
   Query.prototype.clean = function(engine, path, continuation, operation, scope, bind, contd) {
     var command, i, result, s, shared, _i, _len, _ref, _ref1, _ref2;
     if (command = path.command) {
-      path = (continuation || '') + (operation.uid || '') + (command.selector || command.key || '');
+      path = command.getCleaningKey(operation, continuation);
     }
     if (bind) {
       continuation = path;
@@ -23151,7 +23173,7 @@ Query = (function(_super) {
       _ref.remove(path);
     }
     if ((_ref1 = engine.Stylesheet) != null) {
-      _ref1.remove(engine, path);
+      _ref1.onRemove(engine, path);
     }
     shared = false;
     if (this.isCollection(result)) {
@@ -23715,16 +23737,12 @@ Query = (function(_super) {
     return engine.queries[this.getCanonicalPath(path)];
   };
 
-  Query.prototype.getPath = function(engine, operation, continuation) {
-    if (continuation) {
-      if (continuation.nodeType) {
-        return engine.identify(continuation) + ' ' + this.path;
-      } else {
-        return continuation + (this.selector || this.key);
-      }
-    } else {
-      return this.selector || this.key;
-    }
+  Query.prototype.getLocalPath = function(engine, operation, continuation) {
+    return continuation + (this.selector || this.key);
+  };
+
+  Query.prototype.getGlobalPath = function(engine, operation, continuation, node) {
+    return engine.identify(node) + ' ' + (this.selector || this.key);
   };
 
   Query.prototype.comparePosition = function(a, b, op1, op2) {
@@ -23817,18 +23835,43 @@ Query = (function(_super) {
     }
   };
 
+  Query.prototype.continuate = function(engine, scope) {
+    var index, watcher, watchers, _i, _len;
+    if (watchers = engine.observers[engine.identify(scope)]) {
+      for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
+        watcher = watchers[index];
+        this.schedule(engine, watcher, watchers[index + 1], watchers[index + 2]);
+      }
+    }
+  };
+
+  Query.prototype.uncontinuate = function(engine, scope) {
+    var index, watcher, watchers, _i, _len;
+    if (watchers = engine.observers[engine.identify(scope)]) {
+      for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
+        watcher = watchers[index];
+        this.clean(engine, watcher, watchers[index + 1], watchers[index + 2]);
+      }
+    }
+  };
+
   Query.prototype.schedule = function(engine, operation, continuation, scope) {
-    var contd, index, last, length, mutations, watcher, _base, _i, _len;
+    var contd, index, last, length, mutations, stylesheet, watcher, _base, _i, _len;
     mutations = (_base = engine.updating).mutations || (_base.mutations = []);
     length = (continuation || '').length;
     last = null;
+    stylesheet = operation.stylesheet;
     for (index = _i = 0, _len = mutations.length; _i < _len; index = _i += 3) {
       watcher = mutations[index];
       contd = mutations[index + 1] || '';
       if (watcher === operation && continuation === contd && scope === mutations[index + 2]) {
         return;
       }
-      if (contd.length < length) {
+      if (stylesheet) {
+        if ((last == null) && !this.comparePosition(el, stylesheet, operation, operation)) {
+          last = index + 3;
+        }
+      } else if (contd.length < length) {
         last = index + 3;
       }
     }
@@ -24528,6 +24571,10 @@ Selector = (function(_super) {
 
   Selector.prototype.prepare = function(operation, parent) {
     var argument, name, prefix, suffix, _base, _base1, _i, _len, _name, _ref;
+    if (this.prepared) {
+      return;
+    }
+    this.prepared = true;
     prefix = this.getIndexPrefix(operation, parent);
     name = this.getIndex(operation, parent);
     suffix = this.getIndexSuffix(operation, parent);
@@ -24559,6 +24606,7 @@ Selector = (function(_super) {
         result = node;
       }
     }
+    debugger;
     if (result = command.after(args, result, engine, operation, continuation, scope)) {
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender);
     }
@@ -24866,7 +24914,7 @@ Selector = (function(_super) {
     if (id = engine.identity.find(parent)) {
       if (parent.tagName === 'STYLE') {
         if (((_ref = parent.getAttribute('type')) != null ? _ref.indexOf('text/gss') : void 0) > -1) {
-          return engine["eval"](parent);
+          return engine["import"](parent);
         }
       }
     }
@@ -25947,11 +25995,13 @@ module.exports = Style;
 
 });
 require.register("gss/lib/Stylesheet.js", function(exports, require, module){
-var Command, Parser, Stylesheet, _ref,
+var Command, Parser, Query, Stylesheet, _ref, _ref1,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Parser = require('ccss-compiler');
+
+Query = require('./Query');
 
 Command = require('./Command');
 
@@ -25965,42 +26015,7 @@ Stylesheet = (function(_super) {
 
   Stylesheet.prototype.type = 'Stylesheet';
 
-  Stylesheet.prototype.signature = [
-    {
-      'source': ['Selector', 'String', 'Node']
-    }, [
-      {
-        'type': ['String'],
-        'text': ['String']
-      }
-    ]
-  ];
-
-  Stylesheet.define({
-    "eval": function(node, type, text, engine, operation, continuation, scope) {
-      engine.Stylesheet.add(engine.engine, operation, continuation, node, type, node.textContent);
-    },
-    "load": function(node, type, method, engine, operation, continuation, scope) {
-      var src, xhr,
-        _this = this;
-      src = node.href || node.src || node;
-      type || (type = node.type || 'text/gss');
-      xhr = new XMLHttpRequest();
-      engine.updating.block(engine);
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-          engine.Stylesheet.add(engine, operation, continuation, node, type, xhr.responseText);
-          if (engine.updating.unblock(engine)) {
-            return engine.Stylesheet.complete(engine);
-          }
-        }
-      };
-      xhr.open('GET', method && method.toUpperCase() || src);
-      return xhr.send();
-    }
-  });
-
-  Stylesheet.mimes = {
+  Stylesheet.prototype.mimes = {
     "text/gss-ast": function(source) {
       return JSON.parse(source);
     },
@@ -26010,73 +26025,26 @@ Stylesheet = (function(_super) {
     }
   };
 
-  Stylesheet.add = function(engine, operation, continuation, stylesheet, type, source) {
-    var el, index, old, stylesheets, _base, _base1, _i, _len;
-    type = stylesheet.getAttribute('type') || 'text/gss';
-    if (stylesheet.operations) {
-      engine.Query.prototype.clean(engine, this.prototype.delimit(stylesheet.continuation));
-      if ((old = engine.stylesheets[stylesheet.continuation]) !== stylesheet) {
-        engine.stylesheets.splice(engine.stylesheets.indexOf(old), 1);
-      }
-    } else {
-      stylesheet.continuation = this.prototype.delimit(continuation, this.prototype.DESCEND);
+  Stylesheet.prototype.parse = function(engine, type, source) {
+    var operations;
+    if (type == null) {
+      type = 'text/gss';
     }
-    stylesheet.command = this;
-    stylesheet.operations = engine.clone(this.mimes[type](source));
-    stylesheets = (_base = engine.engine).stylesheets || (_base.stylesheets = []);
-    engine.console.row('parse', stylesheet.operations, stylesheet.continuation);
-    if (stylesheets.indexOf(stylesheet) === -1) {
-      for (index = _i = 0, _len = stylesheets.length; _i < _len; index = ++_i) {
-        el = stylesheets[index];
-        if (!engine.Query.prototype.comparePosition(el, stylesheet, operation, operation)) {
-          break;
-        }
-      }
-      stylesheets.splice(index, 0, stylesheet);
+    operations = engine.clone(this.mimes[type](source));
+    if (typeof operations[0] === 'string') {
+      operations = [operations];
     }
-    engine.stylesheets[stylesheet.continuation] = stylesheet;
-    ((_base1 = engine.updating).stylesheets || (_base1.stylesheets = [])).push(stylesheet);
+    engine.console.row(type, operations);
+    return operations;
   };
 
-  Stylesheet.operations = [['eval', ['[*=]', ['tag', 'style'], 'type', 'text/gss']], ['load', ['[*=]', ['tag', 'link'], 'type', 'text/gss']]];
-
-  Stylesheet.perform = function(engine) {
-    var stylesheet, _i, _len, _ref1;
-    if (engine.stylesheets) {
-      _ref1 = engine.stylesheets;
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        stylesheet = _ref1[_i];
-        this.evaluate(engine, stylesheet);
-      }
-    }
-    return this;
+  Stylesheet.prototype.descend = function() {
+    debugger;
+    this.users = (this.users || 0) + 1;
+    return Stylesheet.__super__.descend.apply(this, arguments);
   };
 
-  Stylesheet.evaluate = function(engine, stylesheet) {
-    var index, scope, stylesheets;
-    if (!(stylesheets = engine.updating.stylesheets)) {
-      return;
-    }
-    if ((index = stylesheets.indexOf(stylesheet)) === -1) {
-      return;
-    }
-    stylesheets.splice(index, 1);
-    if (stylesheets.length === 0) {
-      engine.updating.stylesheets = void 0;
-    }
-    if (stylesheet.getAttribute('scoped') != null) {
-      if (stylesheet.scoped == null) {
-        stylesheet.scoped = 'scoped';
-      }
-      scope = engine.getScopeElement(stylesheet.parentNode);
-    }
-    return engine.solve(stylesheet.operations, stylesheet.continuation, scope);
-  };
-
-  Stylesheet.complete = function(engine) {
-    this.perform(engine);
-    return engine.engine.commit();
-  };
+  Stylesheet.operations = [['import', ['[*=]', ['tag', 'style'], 'type', 'text/gss']], ['import', ['[*=]', ['tag', 'link'], 'type', 'text/gss']]];
 
   Stylesheet.compile = function(engine) {
     this.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + this.prototype.DESCEND + "]\s*", "gi");
@@ -26140,6 +26108,13 @@ Stylesheet = (function(_super) {
     return true;
   };
 
+  Stylesheet.prototype.onClean = function(engine, operation, query, watcher, subscope) {
+    if (this.users && !--this.users) {
+      engine.Query.prototype.clean(engine, this.source);
+      return engine.Query.prototype.unobserve(engine, this.source, this.delimit(query));
+    }
+  };
+
   Stylesheet.getRule = function(operation) {
     var rule;
     rule = operation;
@@ -26190,7 +26165,7 @@ Stylesheet = (function(_super) {
     }
   };
 
-  Stylesheet.remove = function(engine, continuation) {
+  Stylesheet.onRemove = function(engine, continuation) {
     var operation, operations, stylesheet, watchers, _i, _j, _len, _ref1;
     if (engine.stylesheets) {
       _ref1 = engine.stylesheets;
@@ -26331,15 +26306,17 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.getCustomSelector = function(selector, suffix, prefix) {
-    selector = selector.replace(/\s+/g, this.prototype.DESCEND);
+    var DESCEND;
+    DESCEND = this.prototype.DESCEND;
+    selector = selector.replace(/\s+/g, DESCEND);
     if (suffix) {
       if (suffix.charAt(0) === ' ') {
         suffix = suffix.substring(1);
       }
       if (suffix.substring(0, 11) === '[matches~="') {
-        suffix = this.prototype.DESCEND + suffix.substring(11);
+        suffix = DESCEND + suffix.substring(11);
       } else {
-        suffix = this.prototype.DESCEND + suffix.replace(/\s+/g, this.prototype.DESCEND) + '"]';
+        suffix = DESCEND + suffix.replace(/\s+/g, DESCEND) + '"]';
       }
     } else {
       suffix = '"]';
@@ -26381,9 +26358,176 @@ Stylesheet = (function(_super) {
     }
   };
 
+  Stylesheet.prototype.getCleaningKey = function(operation, continuation) {
+    var index;
+    if (continuation && ((index = continuation.lastIndexOf(this.DESCEND)) === -1 || index === continuation.length - 1)) {
+      if (index === -1) {
+        return continuation;
+      } else {
+        return this.delimit(continuation);
+      }
+    } else {
+      return continuation + this.key;
+    }
+  };
+
   return Stylesheet;
 
-})(Command);
+})(Command.List);
+
+Stylesheet.Import = (function(_super) {
+  __extends(Import, _super);
+
+  function Import() {
+    _ref1 = Import.__super__.constructor.apply(this, arguments);
+    return _ref1;
+  }
+
+  Import.prototype.type = 'Import';
+
+  Import.prototype.relative = true;
+
+  Import.prototype.signature = [
+    {
+      'source': ['Selector', 'String', 'Node']
+    }, [
+      {
+        'type': ['String'],
+        'text': ['String']
+      }
+    ]
+  ];
+
+  Import.define({
+    "directive": function(name, type, text, engine, operation, continuation, scope) {
+      return engine.Stylesheet.Import[name].prototype.execute(type, text, void 0, engine, operation, continuation, scope);
+    },
+    "import": function(node, type, method, engine, operation, continuation, scope) {
+      var command, path, src, stylesheet, text, xhr,
+        _this = this;
+      if (typeof node === 'string') {
+        src = node;
+        node = void 0;
+      } else {
+        if (!(src = this.getUrl(node))) {
+          text = node.innerText;
+        }
+        type || (type = typeof node.getAttribute === "function" ? node.getAttribute('type') : void 0);
+      }
+      path = this.getGlobalPath(engine, operation, continuation, node);
+      if (stylesheet = engine.queries[path]) {
+        command = stylesheet.command;
+        stylesheet.splice(0);
+        if (node.parentNode) {
+          command.users = 0;
+          this.uncontinuate(engine, path);
+          if (text) {
+            stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
+            this.continuate(engine, path);
+            return;
+          }
+        } else {
+          debugger;
+          this.clean(engine, path);
+          return;
+        }
+      } else {
+        stylesheet = [];
+        command = stylesheet.command = new engine.Stylesheet(engine, operation, continuation, node);
+        command.key = this.getGlobalPath(engine, operation, continuation, node, 'import');
+        command.source = path;
+        if ((node != null ? node.getAttribute('scoped') : void 0) != null) {
+          node.scoped = command.scoped = true;
+        }
+      }
+      if (text) {
+        stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
+      } else if (!command.xhr) {
+        command.xhr = xhr = new XMLHttpRequest();
+        engine.updating.block(engine);
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+            command.xhr = void 0;
+            stylesheet.push.apply(stylesheet, command.parse(engine, type, xhr.responseText));
+            console.log('subscribe', continuation, 'to', stylesheet.command.path);
+            _this.continuate(engine, command.source);
+            if (engine.updating.unblock(engine)) {
+              return engine.engine.commit();
+            }
+          }
+        };
+        xhr.open(method && method.toUpperCase() || 'GET', src);
+        xhr.send();
+      }
+      return stylesheet;
+    }
+  });
+
+  Import.prototype.after = function(args, result, engine, operation, continuation, scope) {
+    var contd, node, path, _ref2;
+    node = ((_ref2 = args[0]) != null ? _ref2.nodeType : void 0) === 1 ? args[0] : scope;
+    path = result.command.source;
+    this.set(engine, path, result);
+    contd = this.delimit(continuation, this.DESCEND);
+    this.subscribe(engine, result, contd, scope, path);
+    this.subscribe(engine, result, contd, scope, node);
+    if (result.command.users === 0) {
+      this.continuate(engine, path);
+    }
+    return result;
+  };
+
+  Import.prototype.ascend = function(engine, operation, continuation, scope, result) {
+    if (result.length === 0) {
+      return;
+    }
+    this.schedule(engine, result, this.delimit(continuation, this.DESCEND), scope);
+  };
+
+  Import.prototype.write = function(engine, operation, continuation, scope, node) {
+    return true;
+  };
+
+  Import.prototype.getUrl = function(node) {
+    return node.getAttribute('href') || node.getAttribute('src');
+  };
+
+  Import.prototype.getId = function(node) {
+    return this.getUrl(node) || node._gss_id;
+  };
+
+  Import.prototype.formatId = function(id) {
+    var i;
+    if ((i = id.lastIndexOf('/')) > -1) {
+      id = id.substring(i + 1);
+    }
+    return id;
+  };
+
+  Import.prototype.getLocalPath = function(engine, operation, continuation, node) {
+    return this.getGlobalPath(engine, operation, continuation, node);
+  };
+
+  Import.prototype.getGlobalPath = function(engine, operation, continuation, node, command) {
+    var id, index;
+    if (command == null) {
+      command = 'parse';
+    }
+    index = operation[0] === 'directive' && 2 || 1;
+    if (typeof operation[index] === 'string') {
+      id = operation[index];
+    } else {
+      if ((node == null) && continuation) {
+        node = this.getByPath(engine, continuation);
+      }
+      id = this.getId(node);
+    }
+    return '@' + command + '(' + this.formatId(id) + ')';
+  };
+
+  return Import;
+
+})(Query);
 
 module.exports = Stylesheet;
 
@@ -26696,6 +26840,7 @@ Abstract.prototype.Variable.Getter = Abstract.prototype.Variable.extend({
   ]
 }, {
   'get': function(object, property, engine, operation, continuation, scope) {
+    debugger;
     var prefix, prop;
     if (engine.queries) {
       prefix = engine.Query.prototype.getScope(engine, object, continuation);
@@ -27441,9 +27586,6 @@ Document = (function(_super) {
         }
         return this.document.removed = void 0;
       }
-    },
-    commit: function() {
-      return this.document.Stylesheet.perform(this.document);
     },
     destroy: function() {
       var _ref;
