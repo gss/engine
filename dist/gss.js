@@ -19973,20 +19973,11 @@ Engine = (function() {
     if (update.blocking) {
       return;
     }
-    if (solution) {
-      if (Object.keys(solution).length) {
-        if (update.solution !== solution) {
-          update.apply(solution);
-        }
-        this.solved.merge(solution);
-      }
+    if (solution && Object.keys(solution).length) {
+      this.triggerEvent('resume', solution, update);
     }
     while (!(update.isDone() && !update.restyled && !update.solved)) {
       while (!update.isDocumentDone()) {
-        this.triggerEvent('precommit', update);
-        this.Query.prototype.commit(this);
-        this.Query.prototype.repair(this);
-        this.Query.prototype.branch(this);
         this.triggerEvent('commit', update);
       }
       if (update.blocking) {
@@ -20000,11 +19991,9 @@ Engine = (function() {
           return update;
         }
       }
-      if (update.solution) {
-        this.triggerEvent('apply', update.solution, update);
-        this.triggerEvent('write', update.solution, update);
-        this.solved.merge(update.solution);
-      }
+      this.triggerEvent('apply', update.solution, update);
+      this.triggerEvent('write', update.solution, update);
+      this.triggerEvent('flush', update.solution, update);
       if (update.solved || update.isDone()) {
         update.solved = update.restyled = void 0;
         this.triggerEvent('validate', update.solution, update);
@@ -20175,16 +20164,24 @@ Engine = (function() {
   Engine.prototype.DONE = 'solve';
 
   Engine.prototype.$events = {
-    remove: function(path) {
-      var _ref, _ref1;
-      this.solved.remove(path);
-      if ((_ref = this.intrinsic) != null) {
-        _ref.remove(path);
-      }
-      this.updating.remove(path);
-      return (_ref1 = this.Stylesheet) != null ? _ref1.remove(this, path) : void 0;
+    commit: function() {
+      this.Query.prototype.commit(this);
+      this.Query.prototype.repair(this);
+      return this.Query.prototype.branch(this);
     },
-    "switch": function(path, operation) {},
+    flush: function(solution) {
+      return this.solved.merge(solution);
+    },
+    resume: function(solution, update) {
+      if (update.solution !== solution) {
+        update.apply(solution);
+      }
+      return this.solved.merge(solution);
+    },
+    remove: function(path) {
+      this.solved.remove(path);
+      return this.updating.remove(path);
+    },
     destroy: function(e) {
       if (this.scope) {
         Engine[this.scope._gss_id] = void 0;
@@ -22933,7 +22930,7 @@ Query = (function(_super) {
       this.chain(engine, collection[index - 1], node, continuation);
       this.chain(engine, node, collection[index + 1], continuation);
       if (operation.parent[0] === 'rule') {
-        engine.Stylesheet.match(node, continuation);
+        engine.Stylesheet.match(engine, node, continuation, true);
       }
       return true;
     } else if (!(scopes[index] === scope && paths[index] === contd)) {
@@ -23090,7 +23087,7 @@ Query = (function(_super) {
         this.chain(engine, collection[index - 1], node, continuation);
         this.chain(engine, node, collection[index], continuation);
         if (operation.parent[0] === 'rule') {
-          engine.Stylesheet.unmatch(node, continuation);
+          engine.Stylesheet.match(engine, node, continuation, false);
         }
         return true;
       }
@@ -26349,31 +26346,71 @@ Stylesheet = (function(_super) {
     return selector;
   };
 
-  Stylesheet.match = function(node, continuation) {
-    var index;
+  Stylesheet.match = function(engine, node, continuation, value) {
+    var append, i, index, remove, _base, _base1, _base2, _base3, _name, _name1, _ref1, _ref2;
     if (node.nodeType !== 1) {
       return;
     }
     if ((index = continuation.indexOf(this.prototype.DESCEND)) > -1) {
       continuation = continuation.substring(index + 1);
     }
-    continuation = this.prototype.getCanonicalSelector(continuation);
-    return node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, this.prototype.DESCEND));
+    continuation = this.prototype.getCanonicalSelector(continuation).replace(/\s+/, this.prototype.DESCEND);
+    if (value) {
+      append = (_base = ((_base1 = engine.updating).matches || (_base1.matches = {})))[_name = node._gss_id] || (_base[_name] = []);
+      remove = (_ref1 = engine.updating.unmatches) != null ? _ref1[node._gss_id] : void 0;
+    } else {
+      remove = (_ref2 = engine.updating.matches) != null ? _ref2[node._gss_id] : void 0;
+      append = (_base2 = ((_base3 = engine.updating).unmatches || (_base3.unmatches = {})))[_name1 = node._gss_id] || (_base2[_name1] = []);
+    }
+    if (append && append.indexOf(continuation) === -1) {
+      append.push(continuation);
+    }
+    if (remove && (i = remove.indexOf(continuation)) > -1) {
+      return remove.splice(i, 1);
+    }
   };
 
-  Stylesheet.unmatch = function(node, continuation) {
-    var index, matches, path;
-    if (node.nodeType !== 1) {
-      return;
+  Stylesheet.rematch = function(engine) {
+    var bits, element, id, index, matches, tokens, unmatches, value, values, _i, _j, _len, _len1;
+    if (matches = engine.updating.matches) {
+      for (id in matches) {
+        values = matches[id];
+        element = engine.identity.get(id);
+        if (tokens = element.getAttribute('matches')) {
+          bits = tokens.split(' ');
+          for (_i = 0, _len = values.length; _i < _len; _i++) {
+            value = values[_i];
+            if (bits.indexOf(value) === -1) {
+              bits.push(value);
+            }
+          }
+        } else {
+          bits = values;
+        }
+        element.setAttribute('matches', bits.join(' '));
+      }
+      engine.matches = void 0;
     }
-    if (matches = node.getAttribute('matches')) {
-      if ((index = continuation.indexOf(this.prototype.DESCEND)) > -1) {
-        continuation = continuation.substring(index + 1);
+    if (unmatches = engine.updating.unmatches) {
+      for (id in unmatches) {
+        values = unmatches[id];
+        element = engine.identity.get(id);
+        if (tokens = element.getAttribute('matches')) {
+          bits = tokens.split(' ');
+          for (_j = 0, _len1 = values.length; _j < _len1; _j++) {
+            value = values[_j];
+            if ((index = bits.indexOf(value)) === -1) {
+              bits.splice(index, 1);
+            }
+          }
+        }
+        if (matches && bits.length) {
+          element.setAttribute('matches', bits.join(' '));
+        } else {
+          element.removeAttribute('matches');
+        }
       }
-      path = ' ' + this.prototype.getCanonicalSelector(continuation);
-      if (matches.indexOf(path) > -1) {
-        return node.setAttribute('matches', matches.replace(path, ''));
-      }
+      return engine.unmatches = void 0;
     }
   };
 
@@ -26940,7 +26977,7 @@ Abstract.prototype.Assignment.Style = Abstract.prototype.Assignment.extend({
         }
         parent = parent.parent;
       }
-      operation.index || (operation.index = parent.rules = (parent.rules || 0) + 1);
+      operation.index || (operation.index = parent.assignments = (parent.assignments || 0) + 1);
       if (rule) {
         (rule.properties || (rule.properties = [])).push(operation.index);
       }
@@ -27071,12 +27108,12 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.events = {
     write: function(solution) {
-      var _ref1, _ref2;
-      if ((_ref1 = this.Selector) != null) {
-        _ref1.disconnect(this, true);
+      if (solution && Object.keys(solution).length) {
+        return this.intrinsic.assign(solution);
       }
-      this.intrinsic.assign(solution);
-      return (_ref2 = this.Selector) != null ? _ref2.connect(this, true) : void 0;
+    },
+    remove: function(path) {
+      return this.intrinsic.remove(path);
     },
     validate: function(solution, update) {
       var measured, _ref1;
@@ -27085,9 +27122,6 @@ Intrinsic = (function(_super) {
         update.apply(measured);
         return this.solved.merge(measured);
       }
-    },
-    remove: function(path) {
-      return this.intrinsic.remove(path);
     }
   };
 
@@ -27488,8 +27522,6 @@ Document = (function(_super) {
 
   Document.prototype.Stylesheet = require('../Stylesheet');
 
-  Document.prototype.disconnected = true;
-
   function Document() {
     Document.__super__.constructor.apply(this, arguments);
     if (this.scope.nodeType === 9) {
@@ -27511,6 +27543,18 @@ Document = (function(_super) {
   }
 
   Document.prototype.events = {
+    apply: function() {
+      return this.Selector.disconnect(this, true);
+    },
+    write: function(solution) {
+      return this.Stylesheet.rematch(this);
+    },
+    flush: function() {
+      return this.Selector.connect(this, true);
+    },
+    remove: function(path) {
+      return this.Stylesheet.remove(this, path);
+    },
     resize: function(e) {
       var id,
         _this = this;

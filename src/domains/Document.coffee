@@ -5,8 +5,6 @@ class Document extends Abstract
   
   Selector:    require('../Selector')
   Stylesheet:  require('../Stylesheet')
-               
-  disconnected: true
 
   constructor: () ->
     super
@@ -30,6 +28,19 @@ class Document extends Abstract
 
 
   events:
+    apply: ->
+      @Selector.disconnect(@, true)
+
+    write: (solution) ->
+      @Stylesheet.rematch(@)
+
+    flush: ->
+      @Selector.connect(@, true)
+
+    remove: (path) ->
+      @Stylesheet.remove(@, path)
+
+
     resize: (e = '::window') ->
       id = e.target && @identify(e.target) || e
 

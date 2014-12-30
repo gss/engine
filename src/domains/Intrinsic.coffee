@@ -36,9 +36,11 @@ class Intrinsic extends Numeric
 
   events:
     write: (solution) ->
-      @Selector?.disconnect(@, true)
-      @intrinsic.assign(solution)
-      @Selector?.connect(@, true)
+      if solution && Object.keys(solution).length
+        @intrinsic.assign(solution)
+
+    remove: (path) ->
+      @intrinsic.remove(path)
 
     validate: (solution, update) ->
       if @intrinsic?.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
@@ -46,8 +48,6 @@ class Intrinsic extends Numeric
         update.apply measured
         @solved.merge measured
 
-    remove: (path) ->
-      @intrinsic.remove(path)
 
 
   getComputedStyle: (element, force) ->

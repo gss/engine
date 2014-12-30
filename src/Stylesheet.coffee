@@ -280,23 +280,58 @@ class Stylesheet extends Command.List
       replace(/\s+/g, @DESCEND)#.
     return selector
 
-  @match: (node, continuation) ->
+  # Schedule element to have its "matches" attribute updated
+  @match: (engine, node, continuation, value) ->
     return unless node.nodeType == 1
     if (index = continuation.indexOf(@prototype.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
-    continuation = @prototype.getCanonicalSelector(continuation)
-    node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @prototype.DESCEND))
-  
-  @unmatch: (node, continuation) ->
-    return unless node.nodeType == 1
-    if matches = node.getAttribute('matches')
-      if (index = continuation.indexOf(@prototype.DESCEND)) > -1
-        continuation = continuation.substring(index + 1)
-      path = ' ' + @prototype.getCanonicalSelector(continuation)
-      if matches.indexOf(path) > -1
-        node.setAttribute('matches', matches.replace(path,''))
+    continuation = @prototype.getCanonicalSelector(continuation).
+                    replace(/\s+/, @prototype.DESCEND)
 
+    if value
+      append = (engine.updating.matches ||= {})[node._gss_id] ||= []
+      remove = engine.updating.unmatches?[node._gss_id]
+    else
+      remove = engine.updating.matches?[node._gss_id]
+      append = (engine.updating.unmatches ||= {})[node._gss_id] ||= []
 
+    if append && append.indexOf(continuation) == -1
+      append.push(continuation)
+
+    if remove && (i = remove.indexOf(continuation)) > -1
+      remove.splice(i, 1)
+
+  # Update matches attributes on elements matched by css rules
+  @rematch: (engine) ->
+    if matches = engine.updating.matches
+      for id, values of matches
+        element = engine.identity.get(id)
+        if tokens = element.getAttribute('matches')
+          bits = tokens.split(' ')
+          for value in values
+            if bits.indexOf(value) == -1
+              bits.push(value)
+        else
+          bits = values
+
+        element.setAttribute('matches', bits.join(' '))
+      engine.matches = undefined
+
+    if unmatches = engine.updating.unmatches
+      for id, values of unmatches
+        element = engine.identity.get(id)
+        if tokens = element.getAttribute('matches')
+          bits = tokens.split(' ')
+          for value in values
+            if (index = bits.indexOf(value)) == -1
+              bits.splice(index, 1)
+
+        if matches && bits.length
+          element.setAttribute('matches', bits.join(' '))
+        else
+          element.removeAttribute('matches')
+
+      engine.unmatches = undefined
   # Dont add @import() to the path for global level stylesheets
   getKey: (engine, operation, continuation, node) ->
     if !node && continuation && continuation.lastIndexOf(@DESCEND) == -1#continuation.indexOf(@DESCEND)

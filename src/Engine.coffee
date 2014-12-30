@@ -184,37 +184,28 @@ class Engine
   commit: (solution, update = @updating) ->
     return if update.blocking
 
-    if solution
-      if Object.keys(solution).length
-        if update.solution != solution
-          update.apply(solution)
-        @solved.merge(solution)
-
+    if solution && Object.keys(solution).length
+      @triggerEvent('resume', solution, update)
         
     until update.isDone() && !update.restyled && !update.solved
-      # Process deferred operations, mutations and conditions
+      # Process stylesheets, mutations, pairs, conditions, branches
       until update.isDocumentDone()
-        @triggerEvent('precommit', update)
-        @Query::commit(@)
-        @Query::repair(@)
-        @Query::branch(@)
         @triggerEvent('commit', update)
       return if update.blocking
 
-      # Process queue
+      # Evaluate queue of generated constraints
       if update.domains.length
         if !update.busy?.length
           update.each @resolve, @
         if update.busy?.length
           return update
 
-      # Apply styles
-      if update.solution
-        @triggerEvent('apply', update.solution, update)
-        @triggerEvent('write', update.solution, update)
+      # Apply styles in bulk
+      @triggerEvent('apply', update.solution, update)
+      @triggerEvent('write', update.solution, update)
+      @triggerEvent('flush', update.solution, update)
 
-        @solved.merge update.solution
-        
+      # Re-measure values
       if update.solved || update.isDone()
         update.solved = update.restyled = undefined
         @triggerEvent('validate', update.solution, update)
@@ -355,16 +346,27 @@ class Engine
   DONE: 'solve'
 
   $events:
+
+    # Perform pending query operations
+    commit: ->
+      @Query::commit(@)
+      @Query::repair(@)
+      @Query::branch(@)
+
+    # Merge results into a solved domain (updates engine.values)
+    flush: (solution) ->
+      @solved.merge solution
+
+    # Apply given values to current update object and solved domain
+    resume: (solution, update) ->
+      if update.solution != solution
+        update.apply(solution)
+      @solved.merge(solution)
+
     # Dispatch remove command
     remove: (path) ->
       @solved.remove(path)
-      @intrinsic?.remove(path)
       @updating.remove(path)
-      @Stylesheet?.remove(@, path)
-
-    switch: (path, operation) ->
-      #@updating.cleanup 'collections', path
-      #@updating.remove(path)
 
     # Unsubscribe from worker and forget the engine
     destroy: (e) ->

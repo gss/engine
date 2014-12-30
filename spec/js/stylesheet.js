@@ -34,9 +34,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -57,7 +57,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['[matches~="#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box2!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             return done();
           });
@@ -78,7 +78,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box2!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('#box2!+.box');
             return done();
           });
         });
@@ -98,9 +98,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".box, .zox { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -121,7 +121,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.box, .zox, [matches~=".box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .box,&.zox,!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             return done();
           });
@@ -144,9 +144,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -167,7 +167,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['[matches~=".outer' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql;
             return done();
           });
@@ -188,7 +188,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(["#box1.box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box1 #box1' + GSS.prototype.Command.prototype.DESCEND + '&.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('#box1 #box1' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -211,9 +211,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box, .outer .zox { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -234,9 +234,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, .outer.zox, [matches~=".outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -259,9 +259,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box, .zouter .box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -282,7 +282,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['[matches~=".outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -305,7 +305,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(["#box1.box, .outer.box { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box1,.outer #box1,.outer' + GSS.prototype.Command.prototype.DESCEND + '&.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('#box1,.outer #box1,.outer' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -328,9 +328,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql([".outer .box, .zouter .box, .outer .zox, .zouter .zox { width: 1px; }"]);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -351,9 +351,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, .zouter .box, .outer.zox, .zouter.zox, [matches~=".outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer,.zouter' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -376,9 +376,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -399,7 +399,7 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['[matches~=".outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '#box2!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
             expect(engine.id('box2').getAttribute('matches')).to.eql(null);
             expect(engine.id('box2').offsetWidth).to.not.eql(1);
@@ -422,9 +422,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['#box2.box, [matches~="#box2,div!+div"].box { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' #box2,div!+div #box2,div!+div' + GSS.prototype.Command.prototype.DESCEND + '&.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('#box2,div!+div #box2,div!+div' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' #box2,div!+div #box2,div!+div' + GSS.prototype.Command.prototype.DESCEND + '&.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('#box2,div!+div #box2,div!+div' + GSS.prototype.Command.prototype.DESCEND + '&.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -445,9 +445,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer .zox, [matches~=".outer,div!+div"] .zox { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,.zox');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });
@@ -468,9 +468,9 @@ describe('Stylesheet', function() {
               }
               return _results;
             })()).to.eql(['.outer .box, [matches~=".outer,div!+div"] .box, .outer.zox, [matches~=".outer,div!+div"].zox, [matches~=".outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box"] { width: 1px; }']);
-            expect(engine.id('box1').getAttribute('matches')).to.eql(' .outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box1').getAttribute('matches')).to.eql('.outer,div!+div .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box1').offsetWidth).to.eql(1);
-            expect(engine.id('box2').getAttribute('matches')).to.eql(' .outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
+            expect(engine.id('box2').getAttribute('matches')).to.eql('.outer,div!+div' + GSS.prototype.Command.prototype.DESCEND + '.box,&.zox,!+.box');
             expect(engine.id('box2').offsetWidth).to.eql(1);
             return done();
           });

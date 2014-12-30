@@ -162,7 +162,7 @@ Abstract::Assignment.Style = Abstract::Assignment.extend {
           rule = parent
         parent = parent.parent
 
-      operation.index ||= parent.rules = (parent.rules || 0) + 1
+      operation.index ||= parent.assignments = (parent.assignments || 0) + 1
       if rule
         (rule.properties ||= []).push(operation.index)
       return
