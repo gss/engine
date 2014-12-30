@@ -710,6 +710,7 @@ class Command.List extends Command
   descend: (engine, operation, continuation, scope, ascender, ascending) ->
     for argument, index in operation
       if argument?.push
+        argument.parent ||= operation
         if command = argument.command || engine.Command(argument)
           command.solve(engine, argument, continuation, scope)
     return

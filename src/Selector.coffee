@@ -52,7 +52,6 @@ class Selector extends Query
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
       result ?= node
-    debugger
     if result  = command.after(args, result, engine, operation, continuation, scope)
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
 

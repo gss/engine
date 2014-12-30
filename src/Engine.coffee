@@ -74,6 +74,7 @@ class Engine
 
     @variables    = {}
     @domains      = []
+    @stylesheets  = []
     @engine       = @
     @inspector    = new @Inspector(@)
     @exporter     = new @Exporter(@)
@@ -198,7 +199,6 @@ class Engine
         @Query::repair(@)
         @Query::branch(@)
         @triggerEvent('commit', update)
-      debugger
       return if update.blocking
 
       # Process queue
@@ -381,7 +381,6 @@ class Engine
           delete values[property]
 
       if @updating?.busy.length
-        debugger
         @updating.solutions[@updating.solutions.indexOf(e.target, @updating.index)] = e.data
         @updating.busy.splice(@updating.busy.indexOf(e.target.url), 1)
         @commit e.data

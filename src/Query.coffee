@@ -303,7 +303,6 @@ class Query extends Command
       subscope = observers[index + 2]
       observers.splice(index, 3)
       if !quick
-        debugger
         watcher.command.onClean?(engine, watcher, query, watcher, subscope)
 
         @clean(engine, watcher, query, watcher, subscope, true, contd ? query)
@@ -470,7 +469,7 @@ class Query extends Command
 
     engine.solved.remove(path)
     engine.intrinsic?.remove(path)
-    engine.Stylesheet?.onRemove(engine, path)
+    engine.Stylesheet?.remove(engine, path)
 
     shared = false
     if @isCollection(result)
@@ -1026,8 +1025,8 @@ class Query extends Command
       if watcher == operation && continuation == contd && scope == mutations[index + 2]
         return
       # Make shorter continuation keys run before longer ones
-      if stylesheet
-        if !last? && !@comparePosition(el, stylesheet, operation, operation)
+      if other = stylesheet
+        if !last? && !@comparePosition(other, stylesheet, operation, operation)
           last = index + 3
       else if contd.length < length
         last = index + 3

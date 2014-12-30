@@ -13,7 +13,7 @@ class Stylesheet extends Command.List
       return Parser.parse(source)?.commands
 
     
-  # Insert stylesheet into a collection
+  # Parse stylesheet, provide root operation if needed
   parse: (engine, type = 'text/gss', source) ->
     operations = engine.clone(@mimes[type](source))
     if typeof operations[0] == 'string'
@@ -22,31 +22,30 @@ class Stylesheet extends Command.List
     return operations
 
   descend: ->
-    debugger
     @users = (@users || 0) + 1
     super 
   
 
 
   @operations: [
-    ['import',  ['[*=]', ['tag', 'style'], 'type', 'text/gss']]
-    ['import',  ['[*=]', ['tag', 'link' ], 'type', 'text/gss']]
+    ['import',  ['[*=]', ['tag', 'style'], 'type', 'gss']]
+    ['import',  ['[*=]', ['tag', 'link' ], 'type', 'gss']]
   ]
 
   @compile: (engine) ->
-    @CanonicalizeSelectorRegExp = new RegExp(
+    @prototype.CanonicalizeSelectorRegExp = new RegExp(
       "[$][a-z0-9]+[" + @prototype.DESCEND + "]\s*", "gi"
     )
     
     engine.engine.solve 'Document', 'stylesheets', @operations
 
 
-  @update: (engine, operation, property, value, stylesheet, rule) ->
+  update: (engine, operation, property, value, stylesheet, rule) ->
     watchers = @getWatchers(engine, stylesheet)
-    dump = @getStylesheet(engine, stylesheet)
-    sheet = dump.sheet
+    sheet = stylesheet.sheet
     needle = @getOperation(operation, watchers, rule)
     previous = []
+    debugger
 
     for item, index in watchers
       break if index >= needle
@@ -92,23 +91,44 @@ class Stylesheet extends Command.List
       engine.Query::unobserve(engine, @source, @delimit(query))
 
 
-  @getRule: (operation) ->
+  getRule: (operation) ->
     rule = operation
     while rule = rule.parent
       if rule[0] == 'rule'
         return rule
     return
 
-  @getStylesheet: (engine, stylesheet) ->
-    unless sheet = (engine.stylesheets.dumps ||= {})[stylesheet._gss_id]
-      sheet = engine.stylesheets.dumps[stylesheet._gss_id]= document.createElement('STYLE')
-      stylesheet.parentNode.insertBefore(sheet, stylesheet.nextSibling)
+  getStylesheet: (engine, continuation) ->
+    path = continuation
+    boundary = path.lastIndexOf('@import')
+    index = path.indexOf(@DESCEND, boundary)
+    prefix = path.substring(0, index).replace(@CanonicalizeSelectorRegExp, ' ')
+
+
+    unless sheet = engine.stylesheets[prefix]
+      if (index = continuation.indexOf(@DESCEND)) > -1
+        continuation = continuation.substring(0, index)
+      if anchor = engine.Query::getByPath(engine, continuation)
+        if anchor.tagName == 'STYLE'
+          while anchor = anchor.nextSibling
+            break unless anchor.continuation
+        else
+          anchor = undefined
+      sheet = engine.stylesheets[prefix] = document.createElement('STYLE')
+      engine.stylesheets.push(sheet)
+      engine.identify(sheet)
+      sheet.continuation = prefix
+      sheet.selectors = continuation.lastIndexOf('@import')
+      if anchor
+        anchor.parentNode.insertBefore(sheet, anchor)
+      else
+        engine.scope.appendChild(sheet)
     return sheet
 
-  @getWatchers: (engine, stylesheet) ->
-    return (engine.stylesheets.watchers ||= {})[stylesheet._gss_id] ||= []
+  getWatchers: (engine, stylesheet) ->
+    return (stylesheet.assignments ||= {})[stylesheet._gss_id] ||= []
 
-  @getOperation: (operation, watchers, rule) ->
+  getOperation: (operation, watchers, rule) ->
     needle = operation.index
     for other in rule.properties
       if watchers[other]?.length
@@ -117,24 +137,25 @@ class Stylesheet extends Command.List
     return needle
 
   # dump style into native stylesheet rule
-  @set: (engine, operation, continuation, stylesheet, element, property, value) ->
+  set: (engine, operation, continuation, element, property, value) ->
     if rule = @getRule(operation)
-      if @watch engine, operation, continuation, stylesheet
-        if @update engine, operation, property, value, stylesheet, rule
-          engine.updating.restyled = true
+      if stylesheet = @getStylesheet(engine, continuation)
+        if @watch engine, operation, continuation, stylesheet
+          if @update engine, operation, property, value, stylesheet, rule
+            engine.updating.restyled = true
 
       return true
 
-  @onRemove: (engine, continuation) ->
+  @remove: (engine, continuation) ->
     if engine.stylesheets
       for stylesheet in engine.stylesheets
-        if watchers = @getWatchers(engine, stylesheet)
+        if watchers = @prototype.getWatchers(engine, stylesheet)
           if operations = watchers[continuation]
             for operation in operations by -1
-              @unwatch(engine, operation, continuation, stylesheet, watchers)
+              @prototype.unwatch(engine, operation, continuation, stylesheet, watchers)
     return
 
-  @watch: (engine, operation, continuation, stylesheet) ->
+  watch: (engine, operation, continuation, stylesheet) ->
     watchers = @getWatchers(engine, stylesheet)
 
     meta = (watchers[operation.index] ||= [])
@@ -143,7 +164,7 @@ class Stylesheet extends Command.List
     (watchers[continuation] ||= []).push(operation)
     return meta.push(continuation) == 1
 
-  @unwatch: (engine, operation, continuation, stylesheet, watchers) ->
+  unwatch: (engine, operation, continuation, stylesheet, watchers) ->
     watchers ?= @getWatchers(engine, stylesheet)
 
     index = operation.index
@@ -163,7 +184,7 @@ class Stylesheet extends Command.List
   
   @export: ->
     sheet = []
-    for id, style of engine.stylesheets.dumps
+    for id, style of engine.stylesheets
       for rule in (style.sheet.rules || style.sheet.cssRules)
         text = rule.cssText.replace /\[matches~="(.*?)"\]/g, (m, selector) ->
           selector.replace(/@[^↓]+/g, '').replace(/↓&/g, '').replace(/↓/g, ' ')
@@ -171,10 +192,10 @@ class Stylesheet extends Command.List
 
     return sheet.join('')
 
-  @getSelector: (operation) ->
+  getSelector: (operation) ->
     return @getSelectors(operation).join(', ')
 
-  @getSelectors: (operation) ->
+  getSelectors: (operation) ->
     parent = operation
     results = wrapped = custom = undefined
 
@@ -212,14 +233,14 @@ class Stylesheet extends Command.List
 
     return results
 
-  @getRuleSelectors: (operation) ->
+  getRuleSelectors: (operation) ->
     if operation[0] == ','
       for index in [1 ... operation.length] by 1
         @getRuleSelector(operation[index], operation.command)
     else
       return [@getRuleSelector(operation)]
 
-  @getRuleSelector: (operation, parent) ->
+  getRuleSelector: (operation, parent) ->
     command = operation.command
     path = command.path
     if path.charAt(0) == '&'
@@ -233,8 +254,8 @@ class Stylesheet extends Command.List
     else
       return ' ' + @getCustomSelector((parent || command).path)
 
-  @getCustomSelector: (selector, suffix, prefix) ->
-    DESCEND = @prototype.DESCEND
+  getCustomSelector: (selector, suffix, prefix) ->
+    DESCEND = @DESCEND
     selector = selector.replace(/\s+/g, DESCEND)
     if suffix
       if suffix.charAt(0) == ' '
@@ -247,18 +268,18 @@ class Stylesheet extends Command.List
       suffix = '"]'
     return '[matches~="' + selector + suffix
 
-  @getCanonicalSelector: (selector) ->
+  getCanonicalSelector: (selector) ->
     selector = selector.trim()
     selector = selector.
       replace(@CanonicalizeSelectorRegExp, ' ').
-      replace(/\s+/g, @prototype.DESCEND)#.
+      replace(/\s+/g, @DESCEND)#.
     return selector
 
   @match: (node, continuation) ->
     return unless node.nodeType == 1
     if (index = continuation.indexOf(@prototype.DESCEND)) > -1
       continuation = continuation.substring(index + 1)
-    continuation = @getCanonicalSelector(continuation)
+    continuation = @prototype.getCanonicalSelector(continuation)
     node.setAttribute('matches', (node.getAttribute('matches') || '') + ' ' + continuation.replace(/\s+/, @prototype.DESCEND))
   
   @unmatch: (node, continuation) ->
@@ -266,7 +287,7 @@ class Stylesheet extends Command.List
     if matches = node.getAttribute('matches')
       if (index = continuation.indexOf(@prototype.DESCEND)) > -1
         continuation = continuation.substring(index + 1)
-      path = ' ' + @getCanonicalSelector(continuation)
+      path = ' ' + @prototype.getCanonicalSelector(continuation)
       if matches.indexOf(path) > -1
         node.setAttribute('matches', matches.replace(path,''))
 
@@ -291,11 +312,11 @@ class Stylesheet.Import extends Query
   ]
       
   @define
-    "directive": (name, type, text, engine, operation, continuation, scope) ->
+    'directive': (name, type, text, engine, operation, continuation, scope) ->
       engine.Stylesheet.Import[name]::execute(type, text, undefined, engine, operation, continuation, scope)
 
     # Load & evaluate stylesheet
-    "import": (node, type, method, engine, operation, continuation, scope) ->
+    'import': (node, type, method, engine, operation, continuation, scope) ->
       if typeof node == 'string'
         src = node
         node = undefined
@@ -359,6 +380,7 @@ class Stylesheet.Import extends Query
 
 
   after: (args, result, engine, operation, continuation, scope) ->
+    return result unless result?
     node = if args[0]?.nodeType == 1 then args[0] else scope
     path = result.command.source
     @set engine, path, result

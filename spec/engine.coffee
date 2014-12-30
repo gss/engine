@@ -394,11 +394,11 @@ describe 'GSS engine', ->
         listener = (e) ->        
           expect(engine.updated.getProblems()).to.eql [
               [[
-                key: 'style[type*="text/gss"]$style1↓.box$box1'
+                key: 'style[type*="gss"]$style1↓.box$box1'
                 ['==', ['get','$box1[x]'], 100]
               ]]
               [[
-                key: 'style[type*="text/gss"]$style1↓.box$box2'
+                key: 'style[type*="gss"]$style1↓.box$box2'
                 ['==', ['get','$box2[x]'], 100]
               ]]
             ]

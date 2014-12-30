@@ -103,7 +103,6 @@ Abstract::Variable.Getter = Abstract::Variable.extend {
   ]
 },
   'get': (object, property, engine, operation, continuation, scope) ->
-    debugger
     if engine.queries
       prefix = engine.Query::getScope(engine, object, continuation)
 

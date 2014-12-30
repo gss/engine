@@ -85,26 +85,20 @@ class Intrinsic extends Numeric
       else if element.positioned == 0
         element.style.position = ''
 
-    if continuation
-      bits = continuation.split(@Command::DESCEND)
-      first = bits.shift()
-      if (j = first.lastIndexOf('$')) > -1
-        id = first.substring(j)
-        if command = (stylesheet = @identity[id])?.command
-          parent = operation
-          while parent = parent.parent
-            if parent[0] == 'rule'
-              break
-            if parent[0] == 'if' && !parent.command.global
-              shared = false
-              break
-          if shared != false
-            if command.set @, operation, @Command::delimit(continuation), stylesheet, element, property, value
-              return
+    if parent = operation
+      while parent.parent
+        parent = parent.parent
+        if parent.command.type == 'Condition' && !parent.command.global
+          break
 
-    path = @getPath(element, 'intrinsic-' + property)
-    if @watchers?[path]
-      return
+      path = @getPath(element, 'intrinsic-' + property)
+      if @watchers?[path]
+        return
+
+      if parent.command.type == 'Stylesheet'
+        if parent.command.set @, operation, @Command::delimit(continuation), element, property, value
+          return
+
     element.style[camel] = value
     return
 
