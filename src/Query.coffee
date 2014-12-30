@@ -274,40 +274,33 @@ class Query extends Command
     return engine.queries[continuation]  
 
   # Remove observers from element, trigger cascade cleanup
-  unobserve: (engine, id, continuation, quick, path, contd, scope, top) ->
-    if continuation != true
-      refs = @getVariants(continuation)
-    index = 0
+  unobserve: (engine, id, path, continuation, scope) ->
+    if typeof id == 'object'
+      observers = id
+      id = undefined
+    else
+      unless observers = engine.observers[id]
+        return
 
-    return unless (observers = typeof id == 'object' && id || engine.observers[id])
+    if path != true
+      refs = @getVariants(path)
+      
+    index = 0
     while watcher = observers[index]
       query = observers[index + 1]
-      if refs && 
-          (refs.indexOf(query) == -1 || 
-          (scope && scope != observers[index + 2]) ||
-          (top && @getRoot(watcher) != top))
+      if refs && refs.indexOf(query) == -1
         index += 3
         continue
-      if path
-        parent = watcher
-        matched = false
-        while parent
-          if parent.path == path
-            matched = true
-            break
-          parent = parent.parent
-        unless matched
-          index += 3
-          continue 
 
       subscope = observers[index + 2]
       observers.splice(index, 3)
-      if !quick
+      if id?
         watcher.command.onClean?(engine, watcher, query, watcher, subscope)
 
-        @clean(engine, watcher, query, watcher, subscope, true, contd ? query)
-    if !observers.length && observers == engine.observers[id]
-      delete engine.observers[id]
+        @clean(engine, watcher, query, watcher, subscope, continuation)
+
+        unless observers.length
+          delete engine.observers[id]
 
   snapshot: (engine, key, collection) ->
     return if (collections = engine.updating.collections ||= {}).hasOwnProperty key
@@ -434,10 +427,7 @@ class Query extends Command
         # Remove all observers that match continuation path
         ref = continuation + (collection?.length? && id || '')
 
-        #if ref.charAt(0) == @PAIR
-        #  @unobserve(id, ref, undefined, undefined, ref, scope)
-        #else
-        @unobserve(engine, id, ref, undefined, undefined, ref)
+        @unobserve(engine, id, ref, ref)
 
         if recursion != continuation
           if removed != false #true#(removed || !parent?.command.release)
@@ -455,37 +445,21 @@ class Query extends Command
   getKey: ->
     return @key
 
-  clean: (engine, path, continuation, operation, scope, bind, contd) ->
+  clean: (engine, path, continuation, operation, scope, contd = continuation) ->
     if command = path.command
       if key = command.getKey(engine, operation, continuation)
         path = continuation + key
       else
         path = @delimit(continuation)
 
-    continuation = path if bind
-    
     if (result = @get(engine, path)) != undefined
       @each @remove, engine, result, path, operation, scope, operation, false, contd
 
-    engine.solved.remove(path)
-    engine.intrinsic?.remove(path)
-    engine.Stylesheet?.remove(engine, path)
-
-    shared = false
-    if @isCollection(result)
-      if result.scopes
-        for s, i in result.scopes
-          # fixme
-          if s != scope || (operation && result.continuations[i] != operation)
-            shared = true
-            break
-
-    if !shared
-      @set engine, path, undefined
+    @set engine, path, undefined
 
     # Remove queries in queue and global observers that match the path 
     if engine.updating.mutations
-      @unobserve(engine, engine.updating.mutations, path, true)
+      @unobserve(engine, engine.updating.mutations, path)
 
     @unobserve(engine, engine.identify(scope || engine.scope), path)
 
@@ -796,7 +770,6 @@ class Query extends Command
       cleaning = rights.slice()
 
       # clean right part if nobody else is subscribed
-      top = @getRoot(operation)
       for prefix, others of engine.pairs
         for other, i in others by 3
           for index, j in cleaning by -1
@@ -1010,7 +983,7 @@ class Query extends Command
   uncontinuate: (engine, scope) ->
     if watchers = engine.observers[engine.identify(scope)]
       for watcher, index in watchers by 3
-        @clean(engine, watcher, watchers[index + 1], watchers[index + 2])    
+        @clean(engine, watcher, watchers[index + 1], watcher, watchers[index + 2])    
     return
 
   # Add query into the queue 

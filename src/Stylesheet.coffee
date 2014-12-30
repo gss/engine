@@ -3,7 +3,6 @@ Query = require('./Query')
 Command = require('./Command')
 
 class Stylesheet extends Command.List
-  type: 'Stylesheet'
 
   mimes:
     "text/gss-ast": (source) ->
@@ -21,9 +20,16 @@ class Stylesheet extends Command.List
     engine.console.row(type, operations)
     return operations
 
-  descend: ->
-    @users = (@users || 0) + 1
-    super 
+  descend: (engine, operation, continuation, scope, ascender, ascending) ->
+    @users = (@users || 0) + 1 
+    for argument, index in operation
+      if argument?.push
+        console.log(argument)
+        argument.parent ?= operation
+        if command = argument.command || engine.Command(argument)
+          command.solve(engine, argument, continuation, scope)
+    return
+
   
 
 
@@ -45,7 +51,6 @@ class Stylesheet extends Command.List
     sheet = stylesheet.sheet
     needle = @getOperation(operation, watchers, rule)
     previous = []
-    debugger
 
     for item, index in watchers
       break if index >= needle
@@ -54,8 +59,8 @@ class Stylesheet extends Command.List
         if previous.indexOf(other) == -1
           previous.push(other)
     unless sheet
-      if dump.parentNode
-        dump.parentNode.removeChild(dump)
+      if stylesheet.parentNode
+        stylesheet.parentNode.removeChild(stylesheet)
       return 
     rules = sheet.rules || sheet.cssRules
     
@@ -294,7 +299,7 @@ class Stylesheet extends Command.List
 
   # Dont add @import() to the path for global level stylesheets
   getKey: (engine, operation, continuation, node) ->
-    if !node && continuation && continuation.lastIndexOf(@DESCEND) == -1
+    if !node && continuation && continuation.lastIndexOf(@DESCEND) == -1#continuation.indexOf(@DESCEND)
       return
     return @key
 
@@ -336,9 +341,10 @@ class Stylesheet.Import extends Query
           @uncontinuate(engine, path)
           if text
             stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
-            @continuate(engine, path, )
+            @continuate(engine, path)
             return
         else
+          debugger
           @clean(engine, path)
           return 
       else
@@ -432,6 +438,5 @@ class Stylesheet.Import extends Query
         node = @getByPath(engine, continuation)
       id = @getId(node)
     return '@' + command + '(' + @formatId(id) + ')'
-
 
 module.exports = Stylesheet

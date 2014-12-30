@@ -335,7 +335,7 @@ class Command
 
   # Return topmost known command
   getRoot: (operation) ->
-    while !(operation.command instanceof Command.Default)
+    while operation.command.type != 'Default'
       operation = operation.parent
     return operation
 

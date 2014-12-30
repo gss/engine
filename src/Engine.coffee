@@ -357,7 +357,10 @@ class Engine
   $events:
     # Dispatch remove command
     remove: (path) ->
+      @solved.remove(path)
+      @intrinsic?.remove(path)
       @updating.remove(path)
+      @Stylesheet?.remove(@, path)
 
     switch: (path, operation) ->
       #@updating.cleanup 'collections', path

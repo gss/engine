@@ -46,6 +46,9 @@ class Intrinsic extends Numeric
         update.apply measured
         @solved.merge measured
 
+    remove: (path) ->
+      @intrinsic.remove(path)
+
 
   getComputedStyle: (element, force) ->
     unless (old = element.currentStyle)?
@@ -91,13 +94,13 @@ class Intrinsic extends Numeric
         if parent.command.type == 'Condition' && !parent.command.global
           break
 
-      path = @getPath(element, 'intrinsic-' + property)
-      if @watchers?[path]
-        return
-
-      if parent.command.type == 'Stylesheet'
+      if parent.command.parse
         if parent.command.set @, operation, @Command::delimit(continuation), element, property, value
           return
+    path = @getPath(element, 'intrinsic-' + property)
+    if @watchers?[path]
+      return
+
 
     element.style[camel] = value
     return
