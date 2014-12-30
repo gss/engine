@@ -400,45 +400,33 @@ class Query extends Command
         node = engine.identity[id]
 
 
-    if continuation
+    if engine.pairs[continuation]
+      (engine.updating.pairs ||= {})[continuation] = true
+    
+    collection = @get(engine, continuation)
 
-      if engine.pairs[continuation]
-        (engine.updating.pairs ||= {})[continuation] = true
-      
-      collection = @get(engine, continuation)
+    if collection && @isCollection(collection)
+      @snapshot engine, continuation, collection
+    
+      removed = @removeFromCollection(engine, node, continuation, operation, scope, needle, contd)
 
-      if collection && @isCollection(collection)
-        @snapshot engine, continuation, collection
-      
-        removed = @removeFromCollection(engine, node, continuation, operation, scope, needle, contd)
-        
+    if removed != false
+      if @isCollection(collection)
+        ref = continuation + id
       else
-        removed = undefined
+        ref = continuation
 
-      if removed != false
-        if parent = operation?.parent
-          if @isCollection(collection)
-            string = continuation + id
-          else
-            string = continuation
-          parent.command.release?(node, engine, operation, string, scope)
-          
-      
-        # Remove all observers that match continuation path
-        ref = continuation + (collection?.length? && id || '')
+      if parent = operation?.parent
+        parent.command.release?(node, engine, operation, ref, scope)
+        
+      @unobserve(engine, id, ref, ref)
 
-        @unobserve(engine, id, ref, ref)
+      if recursion != continuation
+        if removed != false
+          @reduce engine, operation, continuation, scope, recursion, node, continuation, contd
 
-        if recursion != continuation
-          if removed != false #true#(removed || !parent?.command.release)
-            @reduce engine, operation, continuation, scope, recursion, node, continuation, contd
-
-          if removed
-            @clean(engine, continuation + id, undefined, undefined, node.scoped && node.parentNode)
-
-    else if node
-      # Detach queries attached to an element when removing element by id
-      @unobserve(engine, id, true)
+        if removed
+          @clean(engine, continuation + id, undefined, undefined, node.scoped && node.parentNode)
 
     return removed
 
@@ -983,7 +971,7 @@ class Query extends Command
   uncontinuate: (engine, scope) ->
     if watchers = engine.observers[engine.identify(scope)]
       for watcher, index in watchers by 3
-        @clean(engine, watcher, watchers[index + 1], watcher, watchers[index + 2])    
+        @clean(engine, watcher, @delimit(watchers[index + 1]), watcher, watchers[index + 2])    
     return
 
   # Add query into the queue 
