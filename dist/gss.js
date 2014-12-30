@@ -24683,6 +24683,9 @@ Selector = (function(_super) {
     }
     result = this.solve('Document', 'mutations', function() {
       var mutation, _base, _base1, _base2, _i, _len;
+      if (this.updating.index > -1) {
+        this.updating.reset();
+      }
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
         if (this.Selector.filterMutation(mutation) === false) {
@@ -26022,7 +26025,6 @@ Stylesheet = (function(_super) {
     for (index = _i = 0, _len = operation.length; _i < _len; index = ++_i) {
       argument = operation[index];
       if (argument != null ? argument.push : void 0) {
-        console.log(argument);
         if (argument.parent == null) {
           argument.parent = operation;
         }
@@ -26497,7 +26499,6 @@ Stylesheet.Import = (function(_super) {
         command.resolver = function(text) {
           command.resolver = void 0;
           stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
-          console.log('subscribe', continuation, 'to', stylesheet.command.key);
           _this.continuate(engine, command.source);
           if (engine.updating.unblock(engine) && async) {
             return engine.engine.commit();

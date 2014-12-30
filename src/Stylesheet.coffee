@@ -24,7 +24,6 @@ class Stylesheet extends Command.List
     @users = (@users || 0) + 1 
     for argument, index in operation
       if argument?.push
-        console.log(argument)
         argument.parent ?= operation
         if command = argument.command || engine.Command(argument)
           command.solve(engine, argument, continuation, scope)
@@ -400,7 +399,6 @@ class Stylesheet.Import extends Query
         command.resolver = (text) =>
           command.resolver = undefined
           stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
-          console.log('subscribe', continuation, 'to', stylesheet.command.key)
           @continuate(engine, command.source)
           if engine.updating.unblock(engine) && async
             engine.engine.commit()

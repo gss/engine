@@ -142,8 +142,8 @@ class Selector extends Query
 
     
     result = @solve 'Document', 'mutations', ->
-      #if @updating.index > -1
-      #  @updating.reset()
+      if @updating.index > -1
+        @updating.reset()
 
       for mutation in mutations
         if @Selector.filterMutation(mutation) == false
