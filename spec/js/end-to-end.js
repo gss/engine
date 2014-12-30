@@ -2078,7 +2078,7 @@ describe('End - to - End', function() {
     });
     describe('order specific selectors on the right within rules', function() {
       return it('should do it', function(done) {
-        container.innerHTML = "<style type=\"text/gss\">\n  article {\n    width: == 50;\n    height: == 50;\n    x: >= 0;\n  }\n  #p1[width] == 50;\n  @h (article)... {\n    (& p)[width] == (&:next p)[width];\n  }\n</style>\n<article id=\"article1\">\n  <p id=\"p1\"></p>\n</article>\n<article id=\"article1\">\n  <p id=\"p2\"></p>\n</article>";
+        container.innerHTML = "<style type=\"text/gss\">\n  article {\n    width: == 50;\n    height: == 50;\n    x: >= 0;\n  }\n  #p1[width] == 50;\n  @h (article)... {\n    (& p)[width] == (&:next p)[width];\n  }\n</style>\n<article id=\"article1\">\n  <p id=\"p1\"></p>\n</article>\n<article id=\"article2\">\n  <p id=\"p2\"></p>\n</article>";
         return engine.then(function(solution) {
           expect(solution['$p1[width]']).to.eql(solution['$p2[width]']);
           return done();

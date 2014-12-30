@@ -2897,7 +2897,7 @@ describe 'End - to - End', ->
           <article id="article1">
             <p id="p1"></p>
           </article>
-          <article id="article1">
+          <article id="article2">
             <p id="p2"></p>
           </article>
         """
