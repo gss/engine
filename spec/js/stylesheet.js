@@ -26,7 +26,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -49,7 +49,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -70,7 +70,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -90,7 +90,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -113,7 +113,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -136,7 +136,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -159,7 +159,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -180,7 +180,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -203,7 +203,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -226,7 +226,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -251,7 +251,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -274,7 +274,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -297,7 +297,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -320,7 +320,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -343,7 +343,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -368,7 +368,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -391,7 +391,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -414,7 +414,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -437,7 +437,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
@@ -460,7 +460,7 @@ describe('Stylesheet', function() {
             var rule;
             expect((function() {
               var _i, _len, _ref, _results;
-              _ref = engine.stylesheets.dumps.$gss2.sheet.cssRules;
+              _ref = engine.stylesheets[0].sheet.cssRules;
               _results = [];
               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
                 rule = _ref[_i];
