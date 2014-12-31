@@ -348,7 +348,7 @@ class Stylesheet.Import extends Query
       
   @define
     'directive': (name, type, text, engine, operation, continuation, scope) ->
-      engine.Stylesheet.Import[name]::execute(type, text, undefined, engine, operation, continuation, scope)
+      Stylesheet.Import[name]::execute(type, text, undefined, engine, operation, continuation, scope)
 
     # Load & evaluate stylesheet
     'import': (node, type, method, engine, operation, continuation, scope) ->
@@ -379,7 +379,7 @@ class Stylesheet.Import extends Query
           return 
       else
         stylesheet = []
-        command = stylesheet.command = new engine.Stylesheet(engine, operation, continuation, node)
+        command = stylesheet.command = new Stylesheet(engine, operation, continuation, node)
         command.key = @getGlobalPath(engine, operation, continuation, node, 'import')
         command.source = path
 

@@ -26453,7 +26453,7 @@ Stylesheet.Import = (function(_super) {
 
   Import.define({
     'directive': function(name, type, text, engine, operation, continuation, scope) {
-      return engine.Stylesheet.Import[name].prototype.execute(type, text, void 0, engine, operation, continuation, scope);
+      return Stylesheet.Import[name].prototype.execute(type, text, void 0, engine, operation, continuation, scope);
     },
     'import': function(node, type, method, engine, operation, continuation, scope) {
       var async, command, path, src, stylesheet, text,
@@ -26486,7 +26486,7 @@ Stylesheet.Import = (function(_super) {
         }
       } else {
         stylesheet = [];
-        command = stylesheet.command = new engine.Stylesheet(engine, operation, continuation, node);
+        command = stylesheet.command = new Stylesheet(engine, operation, continuation, node);
         command.key = this.getGlobalPath(engine, operation, continuation, node, 'import');
         command.source = path;
         if ((node != null ? node.getAttribute('scoped') : void 0) != null) {
