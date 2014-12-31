@@ -17,8 +17,6 @@ class Document extends Abstract
       else
         @compile()
 
-    @engine.Selector = @Selector
-    @engine.Stylesheet = @Stylesheet
     @Selector.observe(@engine)
       
     @scope.addEventListener 'scroll', @engine, true
@@ -29,16 +27,38 @@ class Document extends Abstract
 
   events:
     apply: ->
-      @Selector.disconnect(@, true)
+      @document.Selector.disconnect(@, true)
 
     write: (solution) ->
-      @Stylesheet.rematch(@)
+      @document.Stylesheet.rematch(@)
 
     flush: ->
-      @Selector.connect(@, true)
+      @document.Selector.connect(@, true)
 
     remove: (path) ->
-      @Stylesheet.remove(@, path)
+      @document.Stylesheet.remove(@, path)
+
+    compile: ->
+      #@console.start('Stylesheets')
+      @solve @document.Stylesheet.operations
+      #@console.end()
+      @document.Selector?.connect(@, true)
+
+    solve: ->
+      if @scope.nodeType == 9
+        html = @scope.body.parentNode
+        klass = html.className
+        if klass.indexOf('gss-ready') == -1
+          @document.Selector.disconnect(@, true)
+          html.className = (klass && klass + ' ' || '') + 'gss-ready' 
+          @document.Selector.connect(@, true)
+
+    
+      # Unreference removed elements
+      if @document.removed
+        for id in @document.removed
+          @identity.unset(id)
+        @document.removed = undefined
 
 
     resize: (e = '::window') ->
@@ -71,45 +91,27 @@ class Document extends Abstract
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
 
-    # Observe stylesheets in dom
+    # Fire as early as possible
     DOMContentLoaded: ->
       document.removeEventListener 'DOMContentLoaded', @
       @compile()
+      #@solve 'Ready', ->
+        #@intrinsic.solve()
 
     # Wait for web fonts
     readystatechange: ->
       if @running && document.readyState == 'complete'
-        @solve 'Document', 'readystatechange', ->
-          @intrinsic.solve()
+        #@solve 'Update', ->
+          #@intrinsic.solve()
     
     # Remeasure when images are loaded
     load: ->
       window.removeEventListener 'load', @
       document.removeEventListener 'DOMContentLoaded', @
-      @solve 'Document', 'load', ->
+      @solve 'Load', ->
+        #@intrinsic.solve()
 
-    # Observe and parse stylesheets
-
-    compile: ->
-      @document.Stylesheet.compile(@document)
-      @Selector?.connect(@, true)
-
-    solve: ->
-      if @scope.nodeType == 9
-        html = @scope.body.parentNode
-        klass = html.className
-        if klass.indexOf('gss-ready') == -1
-          @Selector?.disconnect(@, true)
-          html.className = (klass && klass + ' ' || '') + 'gss-ready' 
-          @Selector?.connect(@, true)
-
-    
-      # Unreference removed elements
-      if @document.removed
-        for id in @document.removed
-          @identity.unset(id)
-        @document.removed = undefined
-      
+    # Unsubscribe events and observers
     destroy: ->
       @scope.removeEventListener 'DOMContentLoaded', @
       #if @scope != document
@@ -117,7 +119,7 @@ class Document extends Abstract
       @scope.removeEventListener 'scroll', @
       window.removeEventListener 'resize', @
 
-      @Selector?.disconnect(@, true)
+      @document.Selector.disconnect(@, true)
 
   @condition: ->
     @scope?

@@ -60,7 +60,7 @@ class Exporter
         if property == 'x' || property == 'y' || document.body.style[property] != undefined
           unless @engine.values[id + '[intrinsic-' + property + ']']?
             values[path] = Math.ceil(value)
-    values.stylesheets = @engine.Stylesheet.export() 
+    values.stylesheets = @engine.document.Stylesheet.export() 
     return values
 
 module.exports = Exporter

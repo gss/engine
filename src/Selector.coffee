@@ -114,11 +114,11 @@ class Selector extends Query
 
   @connect: (engine, temporary) ->
     return if temporary && window.JsMutationObserver == @Observer
-    engine.Selector.listener.observe engine.scope, @options 
+    @listener.observe engine.scope, @options 
 
   @disconnect: (engine, temporary) ->
     return if temporary && window.JsMutationObserver == @Observer
-    engine.Selector.listener.disconnect()
+    @listener.disconnect()
 
   @filterMutation: (mutation)->
     parent = mutation.target
@@ -146,18 +146,18 @@ class Selector extends Query
         @updating.reset()
 
       for mutation in mutations
-        if @Selector.filterMutation(mutation) == false
+        if Selector.filterMutation(mutation) == false
           continue
         switch mutation.type
           when "attributes"
-            @Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue || '')
+            Selector.mutateAttribute(@, mutation.target, mutation.attributeName, mutation.oldValue || '')
             @updating.restyled ?= true
           when "childList"
-            if @Selector.mutateChildList(@, mutation.target, mutation)
+            if Selector.mutateChildList(@, mutation.target, mutation)
               @updating.restyled ?= true
           when "characterData"
             @updating.restyled ?= true
-            @Selector.mutateCharacterData(@, mutation.target, mutation)
+            Selector.mutateCharacterData(@, mutation.target, mutation)
 
         @intrinsic.validate(mutation.target)
       return

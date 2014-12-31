@@ -251,7 +251,7 @@ class Query extends Command
       @chain engine, collection[index - 1], node, continuation
       @chain engine, node, collection[index + 1], continuation
       if operation.parent[0] == 'rule'
-        engine.Stylesheet.match(engine, node, continuation, true)
+        engine.document?.Stylesheet.match(engine, node, continuation, true)
 
       return true
     else unless scopes[index] == scope && paths[index] == contd
@@ -383,7 +383,7 @@ class Query extends Command
         @chain engine, collection[index - 1], node, continuation
         @chain engine, node, collection[index], continuation
         if operation.parent[0] == 'rule'
-          engine.Stylesheet.match(engine, node, continuation, false)
+          engine.document?.Stylesheet.match(engine, node, continuation, false)
         return true
 
 
