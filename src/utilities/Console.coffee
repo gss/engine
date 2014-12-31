@@ -5,14 +5,54 @@ class Console
     @level ?= self.GSS_LOG ? parseFloat(self?.location?.search.match(/log=([\d.]+)/)?[1] || 0)
     if !Console.bind
       @level = 0
+    @stack = []
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0
 
   compile: (engine) ->
+    @DESCEND = engine.Command.prototype.DESCEND
 
+  push: (a, b, c, d) ->
+    if @level > 0.5
+      @stack.push(a, b, c, Console, d || @row)
 
+  pop: (d, type = @row, update) ->
+    if @level > 0.5
+      for item, index in @stack by -5
+        if @stack[index] == type && @stack[index - 1] == Console
+          @stack[index - 1] = d
+          if update
+            @stack[index - 2] = @getTime(@stack[index - 2])
+          if index == 4
+            @flush()
+          return index - 4
+      return
 
+  flush: ->
+    for item, index in @stack by 5
+      @stack[index + 4].call(@, @stack[index], @stack[index + 1], @stack[index + 2], @stack[index + 3])
+    @stack = []
+
+  openGroup: (name, reason, time, result) ->
+
+    fmt = '%c%s%O \t  '
+    if typeof reason != 'string'
+      fmt += '%O'
+    else
+      fmt += '%s'
+
+      method = 'groupCollapsed'
+    fmt += ' \t  %c%sms'
+    while name.length < 13
+      name += ' '
+
+    if @level <= 1
+      method = 'groupCollapsed'
+    @[method || 'group'](fmt, 'font-weight: normal', name, reason, result, 'color: #999; font-weight: normal; font-style: italic;', time)
+
+  closeGroup: ->
+    @groupEnd()
 
   stringify: (obj) ->
     return '' unless obj
@@ -34,11 +74,11 @@ class Console
 
   breakpoint: decodeURIComponent (document?.location.search.match(/breakpoint=([^&]+)/, '') || ['',''])[1]
 
-  row: (a, b, c) ->
+  row: (a, b, c, d) ->
     return if @level < 1
     a = a.name || a
     return if typeof a != 'string'
-    p1 = Array(5 - Math.floor(a.length / 4) ).join('\t')
+    p1 = Array(4 - Math.floor((a.length + 1) / 4)).join('\t')
     if @breakpoint && document?
       breakpoint = String(@stringify([b,c])).trim().replace /\r?\n+|\r|\s+/g, ' '
       #if @breakpoint == a + breakpoint
@@ -46,10 +86,27 @@ class Console
     else 
       breakpoint = ''
     if typeof c == 'string'
+      if (index = c.indexOf(@DESCEND)) > -1
+        if c.indexOf('style[type*="gss"]') > -1
+          c = c.substring(index)
+
       c = c.replace /\r?\n|\r|\s+/g, ' '
+
+    if d
+      unless d instanceof Array
+        d = [d]
+    else
+      d = []
+
     if document?
       if typeof b == 'object'
-        @log('%c%s%c%s%c%s%O%c\t\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint, '', p1, b, 'color: #999', c || "")
+        @log('%c%s%c%s%c%s%O\t\t%O%c\t\t%s', 
+            'color: #666', a, 
+            'font-size: 0;line-height:0;', breakpoint, 
+            '', 
+            p1, b, 
+            d,
+            'color: #999', c || "")
       else
         p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
         @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
@@ -57,33 +114,12 @@ class Console
       @log a, b, c
 
   start: (reason, name) ->
-    @startTime = @getTime()
-    @started ||= []
-    if @started.indexOf(name) > -1
-      started = true
-    @started.push(name)
-    return if started
-    return if @level < 1
-    fmt = '%c%s'
-    fmt += Array(5 - Math.floor(String(name).length / 4) ).join('\t')
-
-    fmt += "%c"
-    if typeof reason != 'string'
-      fmt += '%O'
-    else
-      fmt += '%s'
-
-      method = 'groupCollapsed'
-    @[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason)
-    return true
+    @push(reason, name, @getTime(), @openGroup)
   
-  end: (reason) ->
-    popped = @started?.pop()
-    return if !popped || @started.indexOf(popped) > -1
-    @endTime = @getTime()
-    return if @level < 1
-    @groupEnd()
-    
+  end: (result) ->
+    @pop(result, @openGroup, true)
+    @push(undefined, undefined, undefined, @closeGroup)
+
   getTime: (other, time) ->
     time ||= performance?.now?() || Date.now?() || + (new Date)
     return time if time && !other

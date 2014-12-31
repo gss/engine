@@ -28809,13 +28809,78 @@ Console = (function() {
     if (!Console.bind) {
       this.level = 0;
     }
+    this.stack = [];
   }
 
   Console.prototype.methods = ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd'];
 
   Console.prototype.groups = 0;
 
-  Console.prototype.compile = function(engine) {};
+  Console.prototype.compile = function(engine) {
+    return this.DESCEND = engine.Command.prototype.DESCEND;
+  };
+
+  Console.prototype.push = function(a, b, c, d) {
+    if (this.level > 0.5) {
+      return this.stack.push(a, b, c, Console, d || this.row);
+    }
+  };
+
+  Console.prototype.pop = function(d, type, update) {
+    var index, item, _i, _ref;
+    if (type == null) {
+      type = this.row;
+    }
+    if (this.level > 0.5) {
+      _ref = this.stack;
+      for (index = _i = _ref.length - 1; _i >= 0; index = _i += -5) {
+        item = _ref[index];
+        if (this.stack[index] === type && this.stack[index - 1] === Console) {
+          this.stack[index - 1] = d;
+          if (update) {
+            this.stack[index - 2] = this.getTime(this.stack[index - 2]);
+          }
+          if (index === 4) {
+            this.flush();
+          }
+          return index - 4;
+        }
+      }
+    }
+  };
+
+  Console.prototype.flush = function() {
+    var index, item, _i, _len, _ref;
+    _ref = this.stack;
+    for (index = _i = 0, _len = _ref.length; _i < _len; index = _i += 5) {
+      item = _ref[index];
+      this.stack[index + 4].call(this, this.stack[index], this.stack[index + 1], this.stack[index + 2], this.stack[index + 3]);
+    }
+    return this.stack = [];
+  };
+
+  Console.prototype.openGroup = function(name, reason, time, result) {
+    var fmt, method;
+    fmt = '%c%s%O \t  ';
+    if (typeof reason !== 'string') {
+      fmt += '%O';
+    } else {
+      fmt += '%s';
+      method = 'groupCollapsed';
+    }
+    fmt += ' \t  %c%sms';
+    while (name.length < 13) {
+      name += ' ';
+    }
+    if (this.level <= 1) {
+      method = 'groupCollapsed';
+    }
+    return this[method || 'group'](fmt, 'font-weight: normal', name, reason, result, 'color: #999; font-weight: normal; font-style: italic;', time);
+  };
+
+  Console.prototype.closeGroup = function() {
+    return this.groupEnd();
+  };
 
   Console.prototype.stringify = function(obj) {
     if (!obj) {
@@ -28840,8 +28905,8 @@ Console = (function() {
 
   Console.prototype.breakpoint = decodeURIComponent(((typeof document !== "undefined" && document !== null ? document.location.search.match(/breakpoint=([^&]+)/, '') : void 0) || ['', ''])[1]);
 
-  Console.prototype.row = function(a, b, c) {
-    var breakpoint, p1, p2;
+  Console.prototype.row = function(a, b, c, d) {
+    var breakpoint, index, p1, p2;
     if (this.level < 1) {
       return;
     }
@@ -28849,18 +28914,30 @@ Console = (function() {
     if (typeof a !== 'string') {
       return;
     }
-    p1 = Array(5 - Math.floor(a.length / 4)).join('\t');
+    p1 = Array(4 - Math.floor((a.length + 1) / 4)).join('\t');
     if (this.breakpoint && (typeof document !== "undefined" && document !== null)) {
       breakpoint = String(this.stringify([b, c])).trim().replace(/\r?\n+|\r|\s+/g, ' ');
     } else {
       breakpoint = '';
     }
     if (typeof c === 'string') {
+      if ((index = c.indexOf(this.DESCEND)) > -1) {
+        if (c.indexOf('style[type*="gss"]') > -1) {
+          c = c.substring(index);
+        }
+      }
       c = c.replace(/\r?\n|\r|\s+/g, ' ');
+    }
+    if (d) {
+      if (!(d instanceof Array)) {
+        d = [d];
+      }
+    } else {
+      d = [];
     }
     if (typeof document !== "undefined" && document !== null) {
       if (typeof b === 'object') {
-        return this.log('%c%s%c%s%c%s%O%c\t\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint, '', p1, b, 'color: #999', c || "");
+        return this.log('%c%s%c%s%c%s%O\t\t%O%c\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint, '', p1, b, d, 'color: #999', c || "");
       } else {
         p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
         return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
@@ -28871,43 +28948,12 @@ Console = (function() {
   };
 
   Console.prototype.start = function(reason, name) {
-    var fmt, method, started;
-    this.startTime = this.getTime();
-    this.started || (this.started = []);
-    if (this.started.indexOf(name) > -1) {
-      started = true;
-    }
-    this.started.push(name);
-    if (started) {
-      return;
-    }
-    if (this.level < 1) {
-      return;
-    }
-    fmt = '%c%s';
-    fmt += Array(5 - Math.floor(String(name).length / 4)).join('\t');
-    fmt += "%c";
-    if (typeof reason !== 'string') {
-      fmt += '%O';
-    } else {
-      fmt += '%s';
-      method = 'groupCollapsed';
-    }
-    this[method || 'group'](fmt, 'font-weight: normal', name, 'color: #666; font-weight: normal', reason);
-    return true;
+    return this.push(reason, name, this.getTime(), this.openGroup);
   };
 
-  Console.prototype.end = function(reason) {
-    var popped, _ref;
-    popped = (_ref = this.started) != null ? _ref.pop() : void 0;
-    if (!popped || this.started.indexOf(popped) > -1) {
-      return;
-    }
-    this.endTime = this.getTime();
-    if (this.level < 1) {
-      return;
-    }
-    return this.groupEnd();
+  Console.prototype.end = function(result) {
+    this.pop(result, this.openGroup, true);
+    return this.push(void 0, void 0, void 0, this.closeGroup);
   };
 
   Console.prototype.getTime = function(other, time) {
