@@ -128,18 +128,20 @@ class Engine
 
     args = @transact.apply(@, arguments)
 
+    
     unless old = @updating
       @engine.updating = new @update
       console.profile()
       @updating.start ?= @engine.console.getTime()
-
 
     if typeof args[0] == 'function'
       result = args.shift().apply(@, args) 
     else if args[0]?
       strategy = @[@strategy]
       if strategy.solve
+        @console.start(strategy.displayName, args)
         result = strategy.solve.apply(strategy, args) || {}
+        @console.end(result)
       else
         result = strategy.apply(@, args)
 
@@ -184,17 +186,23 @@ class Engine
         @triggerEvent('commit', update)
       return if update.blocking
 
+
       # Evaluate queue of generated constraints
       if update.domains.length
         if !update.busy?.length
+          @console.start('Solvers', update.problems.slice(update.index))
           update.each @resolve, @
+          @console.end(update.solution)
         if update.busy?.length
           return update
 
+
       # Apply styles in bulk
+      @console.start('Apply')
       @triggerEvent('apply', update.solution, update)
       @triggerEvent('write', update.solution, update)
       @triggerEvent('flush', update.solution, update)
+      @console.end()
 
       # Re-measure values
       if update.solved || update.isDone()

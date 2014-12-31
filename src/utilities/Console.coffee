@@ -6,6 +6,7 @@ class Console
     if !Console.bind
       @level = 0
     @stack = []
+    @buffer = []
 
   methods: ['log', 'warn', 'info', 'error', 'group', 'groupEnd', 'groupCollapsed', 'time', 'timeEnd', 'profile', 'profileEnd']
   groups: 0
@@ -24,14 +25,16 @@ class Console
           @stack[index - 1] = d
           if update
             @stack[index - 2] = @getTime(@stack[index - 2])
-          if index == 4
-            @flush()
+          if index == @stack.length - 1
+            @buffer.push.apply(@buffer, @stack.splice(index - 4, 5))
+            unless @stack.length
+              @flush()
           return index - 4
       return
 
   flush: ->
-    for item, index in @stack by 5
-      @stack[index + 4].call(@, @stack[index], @stack[index + 1], @stack[index + 2], @stack[index + 3])
+    for item, index in @buffer by -5
+      @stack[index].call(@, @stack[index - 4], @stack[index - 3], @stack[index - 2], @stack[index - 1])
     @stack = []
 
   openGroup: (name, reason, time, result) ->

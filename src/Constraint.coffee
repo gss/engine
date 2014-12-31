@@ -12,6 +12,10 @@ Constraint = Command.extend
   	]
   ]
 
+  # Provide logging for an action
+  log: (args, engine, operation, continuation, scope, name) ->
+    engine.console.push(name || operation[0], args, operation.hash ||= @toExpression(operation))
+
   # Create a hash that represents substituted variables
   toHash: (meta) ->
     hash = ''
