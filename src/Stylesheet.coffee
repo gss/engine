@@ -36,14 +36,10 @@ class Stylesheet extends Command.List
     ['import',  ['[*=]', ['tag', 'style'], 'type', 'gss']]
     ['import',  ['[*=]', ['tag', 'link' ], 'type', 'gss']]
   ]
-
-  @compile: (engine) ->
-    @prototype.CanonicalizeSelectorRegExp = new RegExp(
-      "[$][a-z0-9]+[" + @prototype.DESCEND + "]\s*", "gi"
-    )
-    
-    engine.engine.solve 'Document', 'stylesheets', @operations
-
+  
+  CanonicalizeSelectorRegExp: new RegExp(
+    "[$][a-z0-9]+[" + Command::DESCEND + "]\s*", "gi"
+  )
 
   update: (engine, operation, property, value, stylesheet, rule) ->
     watchers = @getWatchers(engine, stylesheet)

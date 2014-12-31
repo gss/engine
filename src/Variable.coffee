@@ -6,6 +6,8 @@ class Variable extends Command
   signature: [
     property: ['String']
   ]
+
+  log: ->
   
   constructor: ->
     

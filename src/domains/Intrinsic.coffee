@@ -36,17 +36,18 @@ class Intrinsic extends Numeric
 
   events:
     write: (solution) ->
-      if solution && Object.keys(solution).length
+      if solution# && Object.keys(solution).length
         @intrinsic.assign(solution)
 
     remove: (path) ->
       @intrinsic.remove(path)
 
     validate: (solution, update) ->
-      if @intrinsic?.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
-        measured = @intrinsic.solve()
-        update.apply measured
-        @solved.merge measured
+      if @intrinsic.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
+        if measured = @intrinsic.solve()
+          if true#Object.keys(measured).length
+            update.apply measured
+            @solved.merge measured
 
 
 
@@ -180,20 +181,20 @@ class Intrinsic extends Numeric
     if parent == document
       parent = document.body
     child = parent.firstChild
-    index = 0
+
     while child
       if child.nodeType == 1
-        if measure && index == 0 && child.offsetParent == parent
+        if measure && child.offsetParent == parent
           x += parent.offsetLeft + parent.clientLeft
           y += parent.offsetTop + parent.clientTop
           offsetParent = parent
+          measure = false
+
         if child.style.position == 'relative'
           @each(child, callback, 0, 0, offsetParent, a,r,g,s)
         else
           @each(child, callback, x, y, offsetParent, a,r,g,s)
         
-        index++
-
       child = child.nextSibling
     return a
 

@@ -151,6 +151,9 @@ Abstract::Assignment.Style = Abstract::Assignment.extend {
     value:    ['Any']
   ]
 
+  log: ->
+    return
+
   # Register assignment within parent rule 
   # by its auto-incremented property local to operation list
   advices: [

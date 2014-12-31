@@ -22903,7 +22903,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.add = function(engine, node, continuation, operation, scope, key, contd) {
-    var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1;
+    var collection, dup, duplicates, el, index, keys, paths, scopes, _base, _base1, _i, _j, _len, _len1, _ref;
     collection = (_base = engine.queries)[continuation] || (_base[continuation] = []);
     if (!collection.push) {
       return;
@@ -22930,7 +22930,9 @@ Query = (function(_super) {
       this.chain(engine, collection[index - 1], node, continuation);
       this.chain(engine, node, collection[index + 1], continuation);
       if (operation.parent[0] === 'rule') {
-        engine.Stylesheet.match(engine, node, continuation, true);
+        if ((_ref = engine.document) != null) {
+          _ref.Stylesheet.match(engine, node, continuation, true);
+        }
       }
       return true;
     } else if (!(scopes[index] === scope && paths[index] === contd)) {
@@ -23029,7 +23031,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.removeFromCollection = function(engine, node, continuation, operation, scope, needle, contd) {
-    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _i, _len;
+    var collection, dup, duplicate, duplicates, index, keys, length, negative, paths, refs, scopes, _i, _len, _ref;
     collection = this.get(engine, continuation);
     length = collection.length;
     keys = collection.continuations;
@@ -23087,7 +23089,9 @@ Query = (function(_super) {
         this.chain(engine, collection[index - 1], node, continuation);
         this.chain(engine, node, collection[index], continuation);
         if (operation.parent[0] === 'rule') {
-          engine.Stylesheet.match(engine, node, continuation, false);
+          if ((_ref = engine.document) != null) {
+            _ref.Stylesheet.match(engine, node, continuation, false);
+          }
         }
         return true;
       }
@@ -24644,14 +24648,14 @@ Selector = (function(_super) {
     if (temporary && window.JsMutationObserver === this.Observer) {
       return;
     }
-    return engine.Selector.listener.observe(engine.scope, this.options);
+    return this.listener.observe(engine.scope, this.options);
   };
 
   Selector.disconnect = function(engine, temporary) {
     if (temporary && window.JsMutationObserver === this.Observer) {
       return;
     }
-    return engine.Selector.listener.disconnect();
+    return this.listener.disconnect();
   };
 
   Selector.filterMutation = function(mutation) {
@@ -24688,18 +24692,18 @@ Selector = (function(_super) {
       }
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
-        if (this.Selector.filterMutation(mutation) === false) {
+        if (Selector.filterMutation(mutation) === false) {
           continue;
         }
         switch (mutation.type) {
           case "attributes":
-            this.Selector.mutateAttribute(this, mutation.target, mutation.attributeName, mutation.oldValue || '');
+            Selector.mutateAttribute(this, mutation.target, mutation.attributeName, mutation.oldValue || '');
             if ((_base = this.updating).restyled == null) {
               _base.restyled = true;
             }
             break;
           case "childList":
-            if (this.Selector.mutateChildList(this, mutation.target, mutation)) {
+            if (Selector.mutateChildList(this, mutation.target, mutation)) {
               if ((_base1 = this.updating).restyled == null) {
                 _base1.restyled = true;
               }
@@ -24709,7 +24713,7 @@ Selector = (function(_super) {
             if ((_base2 = this.updating).restyled == null) {
               _base2.restyled = true;
             }
-            this.Selector.mutateCharacterData(this, mutation.target, mutation);
+            Selector.mutateCharacterData(this, mutation.target, mutation);
         }
         this.intrinsic.validate(mutation.target);
       }
@@ -26037,10 +26041,7 @@ Stylesheet = (function(_super) {
 
   Stylesheet.operations = [['import', ['[*=]', ['tag', 'style'], 'type', 'gss']], ['import', ['[*=]', ['tag', 'link'], 'type', 'gss']]];
 
-  Stylesheet.compile = function(engine) {
-    this.prototype.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + this.prototype.DESCEND + "]\s*", "gi");
-    return engine.engine.solve('Document', 'stylesheets', this.operations);
-  };
+  Stylesheet.prototype.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + Command.prototype.DESCEND + "]\s*", "gi");
 
   Stylesheet.prototype.update = function(engine, operation, property, value, stylesheet, rule) {
     var body, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, text, watchers, _i, _j, _len, _ref1;
@@ -26614,6 +26615,8 @@ Variable = (function(_super) {
     }
   ];
 
+  Variable.prototype.log = function() {};
+
   function Variable() {}
 
   Variable.prototype.before = function(args, engine, operation, continuation, scope, ascender, ascending) {
@@ -26967,6 +26970,7 @@ Abstract.prototype.Assignment.Style = Abstract.prototype.Assignment.extend({
       value: ['Any']
     }
   ],
+  log: function() {},
   advices: [
     function(engine, operation, command) {
       var parent, rule;
@@ -27109,7 +27113,7 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.events = {
     write: function(solution) {
-      if (solution && Object.keys(solution).length) {
+      if (solution) {
         return this.intrinsic.assign(solution);
       }
     },
@@ -27117,11 +27121,14 @@ Intrinsic = (function(_super) {
       return this.intrinsic.remove(path);
     },
     validate: function(solution, update) {
-      var measured, _ref1;
-      if (((_ref1 = this.intrinsic) != null ? _ref1.objects : void 0) && update.domains.indexOf(this.intrinsic, update.index + 1) === -1) {
-        measured = this.intrinsic.solve();
-        update.apply(measured);
-        return this.solved.merge(measured);
+      var measured;
+      if (this.intrinsic.objects && update.domains.indexOf(this.intrinsic, update.index + 1) === -1) {
+        if (measured = this.intrinsic.solve()) {
+          if (true) {
+            update.apply(measured);
+            return this.solved.merge(measured);
+          }
+        }
       }
     }
   };
@@ -27263,7 +27270,7 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.each = function(parent, callback, x, y, offsetParent, a, r, g, s) {
-    var child, index, measure, offsets, scope;
+    var child, measure, offsets, scope;
     if (x == null) {
       x = 0;
     }
@@ -27288,20 +27295,19 @@ Intrinsic = (function(_super) {
       parent = document.body;
     }
     child = parent.firstChild;
-    index = 0;
     while (child) {
       if (child.nodeType === 1) {
-        if (measure && index === 0 && child.offsetParent === parent) {
+        if (measure && child.offsetParent === parent) {
           x += parent.offsetLeft + parent.clientLeft;
           y += parent.offsetTop + parent.clientTop;
           offsetParent = parent;
+          measure = false;
         }
         if (child.style.position === 'relative') {
           this.each(child, callback, 0, 0, offsetParent, a, r, g, s);
         } else {
           this.each(child, callback, x, y, offsetParent, a, r, g, s);
         }
-        index++;
       }
       child = child.nextSibling;
     }
@@ -27534,8 +27540,6 @@ Document = (function(_super) {
         this.compile();
       }
     }
-    this.engine.Selector = this.Selector;
-    this.engine.Stylesheet = this.Stylesheet;
     this.Selector.observe(this.engine);
     this.scope.addEventListener('scroll', this.engine, true);
     if (typeof window !== "undefined" && window !== null) {
@@ -27545,16 +27549,41 @@ Document = (function(_super) {
 
   Document.prototype.events = {
     apply: function() {
-      return this.Selector.disconnect(this, true);
+      return this.document.Selector.disconnect(this, true);
     },
     write: function(solution) {
-      return this.Stylesheet.rematch(this);
+      return this.document.Stylesheet.rematch(this);
     },
     flush: function() {
-      return this.Selector.connect(this, true);
+      return this.document.Selector.connect(this, true);
     },
     remove: function(path) {
-      return this.Stylesheet.remove(this, path);
+      return this.document.Stylesheet.remove(this, path);
+    },
+    compile: function() {
+      var _ref;
+      this.solve(this.document.Stylesheet.operations);
+      return (_ref = this.document.Selector) != null ? _ref.connect(this, true) : void 0;
+    },
+    solve: function() {
+      var html, id, klass, _i, _len, _ref;
+      if (this.scope.nodeType === 9) {
+        html = this.scope.body.parentNode;
+        klass = html.className;
+        if (klass.indexOf('gss-ready') === -1) {
+          this.document.Selector.disconnect(this, true);
+          html.className = (klass && klass + ' ' || '') + 'gss-ready';
+          this.document.Selector.connect(this, true);
+        }
+      }
+      if (this.document.removed) {
+        _ref = this.document.removed;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          id = _ref[_i];
+          this.identity.unset(id);
+        }
+        return this.document.removed = void 0;
+      }
     },
     resize: function(e) {
       var id,
@@ -27608,53 +27637,17 @@ Document = (function(_super) {
       document.removeEventListener('DOMContentLoaded', this);
       return this.compile();
     },
-    readystatechange: function() {
-      if (this.running && document.readyState === 'complete') {
-        return this.solve('Document', 'readystatechange', function() {
-          return this.intrinsic.solve();
-        });
-      }
-    },
+    readystatechange: function() {},
     load: function() {
       window.removeEventListener('load', this);
       document.removeEventListener('DOMContentLoaded', this);
-      return this.solve('Document', 'load', function() {});
-    },
-    compile: function() {
-      var _ref;
-      this.document.Stylesheet.compile(this.document);
-      return (_ref = this.Selector) != null ? _ref.connect(this, true) : void 0;
-    },
-    solve: function() {
-      var html, id, klass, _i, _len, _ref, _ref1, _ref2;
-      if (this.scope.nodeType === 9) {
-        html = this.scope.body.parentNode;
-        klass = html.className;
-        if (klass.indexOf('gss-ready') === -1) {
-          if ((_ref = this.Selector) != null) {
-            _ref.disconnect(this, true);
-          }
-          html.className = (klass && klass + ' ' || '') + 'gss-ready';
-          if ((_ref1 = this.Selector) != null) {
-            _ref1.connect(this, true);
-          }
-        }
-      }
-      if (this.document.removed) {
-        _ref2 = this.document.removed;
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          id = _ref2[_i];
-          this.identity.unset(id);
-        }
-        return this.document.removed = void 0;
-      }
+      return this.solve('Load', function() {});
     },
     destroy: function() {
-      var _ref;
       this.scope.removeEventListener('DOMContentLoaded', this);
       this.scope.removeEventListener('scroll', this);
       window.removeEventListener('resize', this);
-      return (_ref = this.Selector) != null ? _ref.disconnect(this, true) : void 0;
+      return this.document.Selector.disconnect(this, true);
     }
   };
 
@@ -29058,7 +29051,7 @@ Exporter = (function() {
         }
       }
     }
-    values.stylesheets = this.engine.Stylesheet["export"]();
+    values.stylesheets = this.engine.document.Stylesheet["export"]();
     return values;
   };
 
