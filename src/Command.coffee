@@ -53,6 +53,9 @@ class Command
       if result = @after(args, result, domain, operation, continuation, scope, ascender, ascending)
         continuation = @continue(result, domain, operation, continuation, scope, ascender, ascending)
 
+
+      engine.console.pop(result)
+
     if result?
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
 
@@ -197,7 +200,7 @@ class Command
 
   # Provide logging for an action
   log: (args, engine, operation, continuation, scope, name) ->
-    engine.console.row(name || operation[0], args, continuation || "")
+    engine.console.push(name || operation[0], args, continuation || "")
 
 
   # Reinitialize foreign expression as local to parent domain

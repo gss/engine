@@ -13,12 +13,12 @@ class Console
   compile: (engine) ->
     @DESCEND = engine.Command.prototype.DESCEND
 
-  push: (a, b, c, d) ->
-    if @level > 0.5
-      @stack.push(a, b, c, Console, d || @row)
+  push: (a, b, c, type) ->
+    if @level > 0.5 || type
+      @stack.push(a, b, c, Console, type || @row)
 
   pop: (d, type = @row, update) ->
-    if @level > 0.5
+    if @level > 0.5 || type != @row
       for item, index in @stack by -5
         if @stack[index] == type && @stack[index - 1] == Console
           @stack[index - 1] = d

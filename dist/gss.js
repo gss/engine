@@ -19929,18 +19929,12 @@ Engine = (function() {
   };
 
   Engine.prototype.transact = function() {
-    var arg, args, index, name, problematic, reason, source, _i, _len;
+    var arg, args, index, problematic, reason, _i, _len;
     if (typeof arguments[0] === 'string') {
-      if (typeof arguments[1] === 'string') {
-        source = arguments[0];
-        reason = arguments[1];
-        index = 2;
-      } else {
-        reason = arguments[0];
-        index = 1;
-      }
+      reason = arguments[0];
     }
-    args = Array.prototype.slice.call(arguments, index || 0);
+    args = Array.prototype.slice.call(arguments, +(reason != null));
+    this.console.start(reason || 'Solve', args);
     if (!this.running) {
       this.compile();
     }
@@ -19958,9 +19952,6 @@ Engine = (function() {
           problematic = arg;
         }
       }
-    }
-    if (name = source || this.displayName) {
-      this.console.start(reason || args[0], name);
     }
     return args;
   };
@@ -20007,8 +19998,7 @@ Engine = (function() {
     console.profileEnd();
     this.updated = update;
     this.updating = void 0;
-    this.console.groupEnd();
-    this.console.info('Solution\t   ', this.updated, update.solution, this.solved.values);
+    this.console.end(update.solution);
     this.inspector.update();
     this.fireEvent('solve', update.solution, this.updated);
     this.fireEvent('solved', update.solution, this.updated);
@@ -20043,7 +20033,7 @@ Engine = (function() {
     if (!domain) {
       return this.broadcast(problems, update);
     }
-    this.console.start(problems, domain.displayName);
+    this.console.start(domain.displayName, problems);
     result = domain.solve(problems) || void 0;
     if (result && result.postMessage) {
       update.await(result.url);
@@ -20052,7 +20042,7 @@ Engine = (function() {
         result = result[0];
       }
     }
-    this.console.end();
+    this.console.end(result);
     return result;
   };
 
@@ -21174,6 +21164,7 @@ Command = (function() {
       if (result = this.after(args, result, domain, operation, continuation, scope, ascender, ascending)) {
         continuation = this["continue"](result, domain, operation, continuation, scope, ascender, ascending);
       }
+      engine.console.pop(result);
     }
     if (result != null) {
       return this.ascend(engine, operation, continuation, scope, result, ascender, ascending);
@@ -21331,7 +21322,7 @@ Command = (function() {
   };
 
   Command.prototype.log = function(args, engine, operation, continuation, scope, name) {
-    return engine.console.row(name || operation[0], args, continuation || "");
+    return engine.console.push(name || operation[0], args, continuation || "");
   };
 
   Command.prototype.patch = function(engine, operation, continuation, scope, replacement) {
@@ -22870,15 +22861,18 @@ Query = (function(_super) {
   Query.prototype.commit = function(engine, solution) {
     var collection, contd, deferred, i, index, item, mutations, old, op, watcher, _i;
     if (mutations = engine.updating.mutations) {
+      engine.console.start('Queries', mutations.slice());
       index = 0;
       while (mutations[index]) {
         watcher = mutations.splice(0, 3);
         (engine.document || engine.abstract).solve(watcher[0], watcher[1], watcher[2]);
       }
       engine.updating.mutations = void 0;
+      engine.console.end();
     }
     if (deferred = engine.updating.deferred) {
       index = 0;
+      engine.console.start('Deferred', deferred);
       while (deferred[index]) {
         contd = deferred[index + 1];
         collection = this.get(engine, contd);
@@ -22899,6 +22893,7 @@ Query = (function(_super) {
         index += 3;
       }
       engine.updating.deferred = void 0;
+      engine.console.end();
     }
   };
 
@@ -23364,6 +23359,7 @@ Query = (function(_super) {
     if (!(dirty = engine.updating.pairs)) {
       return;
     }
+    engine.console.start('Pairs', dirty);
     engine.updating.pairs = false;
     for (property in dirty) {
       value = dirty[property];
@@ -23374,7 +23370,8 @@ Query = (function(_super) {
         }
       }
     }
-    return engine.updating.pairs = void 0;
+    engine.updating.pairs = void 0;
+    return engine.console.end();
   };
 
   /*
@@ -23860,8 +23857,9 @@ Query = (function(_super) {
   };
 
   Query.prototype.branch = function(engine) {
-    var collections, condition, conditions, index, path, queries, removed, _base, _base1, _i, _j, _k, _len, _len1, _len2, _results;
+    var collections, condition, conditions, index, path, queries, removed, _base, _base1, _i, _j, _k, _len, _len1, _len2;
     if (conditions = engine.updating.branches) {
+      engine.console.start('Branches');
       engine.updating.branches = void 0;
       removed = engine.updating.branching = [];
       for (index = _i = 0, _len = conditions.length; _i < _len; index = _i += 3) {
@@ -23886,12 +23884,11 @@ Query = (function(_super) {
         }
         delete engine.queries[path];
       }
-      _results = [];
       for (index = _k = 0, _len2 = conditions.length; _k < _len2; index = _k += 3) {
         condition = conditions[index];
-        _results.push(condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2]));
+        condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2]);
       }
-      return _results;
+      return engine.console.end();
     }
   };
 
@@ -24586,6 +24583,7 @@ Selector = (function(_super) {
         result = node;
       }
     }
+    engine.console.pop(result);
     if (result = command.after(args, result, engine, operation, continuation, scope)) {
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender);
     }
@@ -28821,9 +28819,9 @@ Console = (function() {
     return this.DESCEND = engine.Command.prototype.DESCEND;
   };
 
-  Console.prototype.push = function(a, b, c, d) {
-    if (this.level > 0.5) {
-      return this.stack.push(a, b, c, Console, d || this.row);
+  Console.prototype.push = function(a, b, c, type) {
+    if (this.level > 0.5 || type) {
+      return this.stack.push(a, b, c, Console, type || this.row);
     }
   };
 
@@ -28832,7 +28830,7 @@ Console = (function() {
     if (type == null) {
       type = this.row;
     }
-    if (this.level > 0.5) {
+    if (this.level > 0.5 || type !== this.row) {
       _ref = this.stack;
       for (index = _i = _ref.length - 1; _i >= 0; index = _i += -5) {
         item = _ref[index];

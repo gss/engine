@@ -150,16 +150,11 @@ class Engine
   # Figure out arguments and prepare to solve given operations
   transact: ->
     if typeof arguments[0] == 'string'
-      if typeof arguments[1] == 'string'
-        source = arguments[0]
-        reason = arguments[1]
-        index = 2
-      else
-        reason = arguments[0]
-        index = 1
+      reason = arguments[0]
 
-    args = Array.prototype.slice.call(arguments, index || 0)
+    args = Array.prototype.slice.call(arguments, +reason?)
 
+    @console.start(reason || 'Solve', args)
     unless @running
       @compile()
 
@@ -173,10 +168,6 @@ class Engine
             break
         else
           problematic = arg
-
-    #if typeof args[0] == 'object'
-    if name = source || @displayName
-      @console.start(reason || args[0], name)
 
     return args
 
@@ -221,8 +212,7 @@ class Engine
     @updated = update
     @updating = undefined
 
-    @console.groupEnd()
-    @console.info('Solution\t   ', @updated, update.solution, @solved.values)
+    @console.end(update.solution)
     @inspector.update()
     @fireEvent 'solve', update.solution, @updated
     @fireEvent 'solved', update.solution, @updated
@@ -255,14 +245,14 @@ class Engine
     unless domain
       return @broadcast problems, update
 
-    @console.start(problems, domain.displayName)
+    @console.start(domain.displayName, problems)
     result = domain.solve(problems) || undefined
     if result && result.postMessage
       update.await(result.url)
     else
       if result?.length == 1
         result = result[0]
-    @console.end()
+    @console.end(result)
 
     return result
 

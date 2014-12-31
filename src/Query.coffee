@@ -1001,6 +1001,7 @@ class Query extends Command
 
   branch: (engine)->
     if conditions = engine.updating.branches
+      engine.console.start('Branches')
       engine.updating.branches = undefined
       removed = engine.updating.branching = []
       for condition, index in conditions by 3
@@ -1024,7 +1025,7 @@ class Query extends Command
 
       for condition, index in conditions by 3
         condition.command.rebranch(engine, condition, conditions[index + 1], conditions[index + 2])
-
+      engine.console.end()
   # Hook: Should interpreter iterate returned object?
   # (yes, if it's a collection of objects or empty array)
   isCollection: (object) ->
