@@ -14,10 +14,11 @@ class Stylesheet extends Command.List
     
   # Parse stylesheet, provide root operation if needed
   parse: (engine, type = 'text/gss', source) ->
+    engine.console.push(type.split('/')[1], [source])
     operations = engine.clone(@mimes[type](source))
     if typeof operations[0] == 'string'
       operations = [operations]
-    engine.console.row(type, operations)
+    engine.console.pop(operations)
     return operations
 
   descend: (engine, operation, continuation, scope, ascender, ascending) ->

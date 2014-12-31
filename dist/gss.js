@@ -21166,7 +21166,7 @@ Command = (function() {
       if (args === false) {
         return;
       }
-      this.log(args, domain, operation, continuation);
+      this.log(args, engine, operation, continuation, scope);
       result = this.before(args, domain, operation, continuation, scope, ascender, ascending);
       if (result == null) {
         result = this.execute.apply(this, args);
@@ -24020,17 +24020,16 @@ Condition = (function(_super) {
     inverted = operation[0] === 'unless';
     index = this.conditional + 1 + ((increment === -1) ^ inverted);
     if (branch = operation[index]) {
-      engine.console.group('%s \t\t\t\t%o\t\t\t%c%s', (index === 2 && 'if' || 'else') + this.DESCEND, operation[index], 'font-weight: normal; color: #999', continuation);
+      engine.console.start(index === 2 && 'if' || 'else', operation[index], continuation);
       domain = engine.document || engine.abstract;
       result = domain.Command(branch).solve(domain, branch, this.delimit(continuation, this.DESCEND), scope);
-      return engine.console.groupEnd(continuation);
+      return engine.console.end(result);
     }
   };
 
   Condition.prototype.unbranch = function(engine, operation, continuation, scope) {
-    var increment, old, _ref, _ref1;
-    console.log('unbranch', old = (_ref = engine.updating.collections) != null ? _ref[continuation] : void 0);
-    if (old = (_ref1 = engine.updating.collections) != null ? _ref1[continuation] : void 0) {
+    var increment, old, _ref;
+    if (old = (_ref = engine.updating.collections) != null ? _ref[continuation] : void 0) {
       increment = this.getOldValue(engine, continuation) ? -1 : 1;
       if ((engine.queries[continuation] += increment) === 0) {
         this.clean(engine, continuation, continuation, operation, scope);
@@ -26015,11 +26014,12 @@ Stylesheet = (function(_super) {
     if (type == null) {
       type = 'text/gss';
     }
+    engine.console.push(type.split('/')[1], [source]);
     operations = engine.clone(this.mimes[type](source));
     if (typeof operations[0] === 'string') {
       operations = [operations];
     }
-    engine.console.row(type, operations);
+    engine.console.pop(operations);
     return operations;
   };
 
@@ -27209,9 +27209,10 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.perform = function() {
-    if (arguments.length < 4) {
+    if (arguments.length < 4 && this.objects) {
+      this.console.start('Measure');
       this.each(this.scope, this.measure);
-      this.console.row('Intrinsic', this.changes);
+      this.console.end(this.changes);
       return this.changes;
     }
   };

@@ -45,7 +45,7 @@ class Command
 
       return if args == false
 
-      @log(args, domain, operation, continuation)
+      @log(args, engine, operation, continuation, scope)
 
       # Execute command with hooks
       result = @before(args, domain, operation, continuation, scope, ascender, ascending)

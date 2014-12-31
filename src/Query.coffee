@@ -197,15 +197,18 @@ class Query extends Command
   commit: (engine, solution) ->
     # Update all DOM queries that matched mutations
     if mutations = engine.updating.mutations
+      engine.console.start('Queries', mutations.slice())
       index = 0
       while mutations[index]
         watcher = mutations.splice(0, 3)
         (engine.document || engine.abstract).solve watcher[0], watcher[1], watcher[2]
       engine.updating.mutations = undefined
+      engine.console.end()
 
     # Execute all deferred selectors (e.g. comma)
     if deferred = engine.updating.deferred
       index = 0
+      engine.console.start('Deferred', deferred)
       while deferred[index]
         contd = deferred[index + 1]
         collection = @get(engine, contd)
@@ -220,6 +223,7 @@ class Query extends Command
           (engine.document || engine.abstract).Command(op).ascend(engine.document, op, contd, deferred[index + 2], collection)
         index += 3
       engine.updating.deferred = undefined
+      engine.console.end()
     
     return
 
@@ -602,12 +606,14 @@ class Query extends Command
 
   repair: (engine, reversed) ->
     return unless dirty = engine.updating.pairs
+    engine.console.start('Pairs', dirty)
     engine.updating.pairs = false
     for property, value of dirty
       if pairs = engine.pairs[property]?.slice()
         for pair, index in pairs by 3
           @pair engine, property, pair, pairs[index + 1], pairs[index + 2], reversed
     engine.updating.pairs = undefined
+    engine.console.end()
   ###
   match: (collection, node, scope) ->
     if (index = collection.indexOf(node)) > -1

@@ -109,9 +109,10 @@ class Intrinsic extends Numeric
 
 
   perform: ->
-    if arguments.length < 4
+    if arguments.length < 4 && @objects
+      @console.start('Measure')
       @each @scope, @measure
-      @console.row('Intrinsic', @changes)
+      @console.end(@changes)
       return @changes
     return
 

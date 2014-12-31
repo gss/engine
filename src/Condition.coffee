@@ -76,13 +76,12 @@ class Condition extends Query
     index = @conditional + 1 + ((increment == -1) ^ inverted)
 
     if branch = operation[index]
-      engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', (index == 2 && 'if' || 'else') + @DESCEND, operation[index], 'font-weight: normal; color: #999', continuation
+      engine.console.start(index == 2 && 'if' || 'else', operation[index], continuation)
       domain = (engine.document || engine.abstract)
       result = domain.Command(branch).solve(domain, branch, @delimit(continuation, @DESCEND), scope)
-      engine.console.groupEnd(continuation)
+      engine.console.end(result)
 
   unbranch: (engine, operation, continuation, scope) ->
-    console.log('unbranch', old = engine.updating.collections?[continuation])
     if old = engine.updating.collections?[continuation]
       increment = if @getOldValue(engine, continuation) then -1 else 1
       if (engine.queries[continuation] += increment) == 0
