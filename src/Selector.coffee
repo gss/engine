@@ -595,6 +595,7 @@ Selector.define
         return ''
 
     log: ->
+    unlog: ->
 
     # Dont leave trace in a continuation path
     hidden: true

@@ -16,26 +16,23 @@ class Console
 
   push: (a, b, c, type) ->
     if @level > 0.5 || type
-      @stack.push(a, b, c, Console, type || @row)
+      index = @buffer.push(a, b, c, undefined, type || @row)
+      @stack.push(index - 5)
 
   pop: (d, type = @row, update) ->
     if @level > 0.5 || type != @row
-      for item, index in @stack by -5
-        if @stack[index] == type && @stack[index - 1] == Console
-          @stack[index - 1] = d
-          if update
-            @stack[index - 2] = @getTime(@stack[index - 2])
-          if index == @stack.length - 1
-            @buffer.push.apply(@buffer, @stack.splice(index - 4, 5))
-            unless @stack.length
-              @flush()
-          return index - 4
+      index = @stack.pop()
+      @buffer[index + 3] = d
+      if type != @row
+        @buffer[index + 2] = @getTime(@buffer[index + 2])
+      unless @stack.length
+        @flush()
       return
 
   flush: ->
-    for item, index in @buffer by -5
-      @stack[index].call(@, @stack[index - 4], @stack[index - 3], @stack[index - 2], @stack[index - 1])
-    @stack = []
+    for item, index in @buffer by 5
+      @buffer[index + 4].call(@, @buffer[index], @buffer[index + 1], @buffer[index + 2], @buffer[index + 3])
+    @buffer = []
 
   openGroup: (name, reason, time, result) ->
 
@@ -120,8 +117,8 @@ class Console
     @push(reason, name, @getTime(), @openGroup)
   
   end: (result) ->
+    @buffer.push(undefined, undefined, undefined, undefined, @closeGroup)
     @pop(result, @openGroup, true)
-    @push(undefined, undefined, undefined, @closeGroup)
 
   getTime: (other, time) ->
     time ||= performance?.now?() || Date.now?() || + (new Date)

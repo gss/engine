@@ -152,7 +152,7 @@ Abstract::Assignment.Style = Abstract::Assignment.extend {
   ]
 
   log: ->
-    return
+  unlog: ->
 
   # Register assignment within parent rule 
   # by its auto-incremented property local to operation list

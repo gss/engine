@@ -8,6 +8,7 @@ class Variable extends Command
   ]
 
   log: ->
+  unlog: ->
   
   constructor: ->
     
