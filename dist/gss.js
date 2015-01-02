@@ -27548,20 +27548,27 @@ Document = (function(_super) {
   Document.prototype.Stylesheet = require('../Stylesheet');
 
   function Document() {
+    var state,
+      _this = this;
     Document.__super__.constructor.apply(this, arguments);
     if (this.scope.nodeType === 9) {
-      if (['complete', 'loaded'].indexOf(this.scope.readyState) === -1) {
-        document.addEventListener('DOMContentLoaded', this.engine);
-        document.addEventListener('readystatechange', this.engine);
-        window.addEventListener('load', this.engine);
+      state = this.scope.readyState;
+      if (state !== 'complete' && state !== 'loaded' && (state !== 'interactive' || document.documentMode)) {
+        document.addEventListener('DOMContentLoaded', this.engine, false);
+        document.addEventListener('readystatechange', this.engine, false);
+        window.addEventListener('load', this.engine, false);
       } else {
-        this.compile();
+        setTimeout(function() {
+          if (!_this.engine.running) {
+            return _this.engine.compile();
+          }
+        }, 10);
       }
     }
     this.Selector.observe(this.engine);
     this.scope.addEventListener('scroll', this.engine, true);
     if (typeof window !== "undefined" && window !== null) {
-      window.addEventListener('resize', this.engine);
+      window.addEventListener('resize', this.engine, true);
     }
   }
 

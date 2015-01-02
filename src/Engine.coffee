@@ -110,6 +110,9 @@ class Engine
       else
         'abstract'
 
+    #if @ready
+    #  @compile()
+
     return @
 
   # Evaluate bypassing abstract domain

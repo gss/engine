@@ -10,19 +10,24 @@ class Document extends Abstract
     super
 
     if @scope.nodeType == 9
-      if ['complete', 'loaded'].indexOf(@scope.readyState) == -1
-        document.addEventListener('DOMContentLoaded', @engine)
-        document.addEventListener('readystatechange', @engine)
-        window  .addEventListener('load',             @engine)
+      state = @scope.readyState
+      if state != 'complete' && state != 'loaded' && 
+          (state != 'interactive' || document.documentMode)
+        document.addEventListener('DOMContentLoaded', @engine, false)
+        document.addEventListener('readystatechange', @engine, false)
+        window  .addEventListener('load',             @engine, false)
       else
-        @compile()
+        setTimeout =>
+          unless @engine.running
+            @engine.compile()
+        , 10
 
     @Selector.observe(@engine)
       
     @scope.addEventListener 'scroll', @engine, true
     #if @scope != document
     #  document.addEventListener 'scroll', engine, true
-    window?.addEventListener 'resize', @engine
+    window?.addEventListener 'resize', @engine, true
 
 
   events:
