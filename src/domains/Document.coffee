@@ -81,13 +81,13 @@ class Document extends Abstract
         if @updating && !@updating.resizing
           @updating.resizing = 'scheduled'
           return
-        @solve id + ' resized', ->
+        @solve 'Resize', id ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
       
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
-      @solve id + ' scrolled', ->
+      @solve 'Scroll', id, ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
 
@@ -95,20 +95,20 @@ class Document extends Abstract
     DOMContentLoaded: ->
       document.removeEventListener 'DOMContentLoaded', @
       @compile()
-      #@solve 'Ready', ->
+      @solve 'Ready', ->
         #@intrinsic.solve()
 
     # Wait for web fonts
     readystatechange: ->
-      #if @running && document.readyState == 'complete'
-        #@solve 'Update', ->
+      if @running && document.readyState == 'complete'
+        @solve 'Statechange', ->
           #@intrinsic.solve()
     
     # Remeasure when images are loaded
     load: ->
       window.removeEventListener 'load', @
       document.removeEventListener 'DOMContentLoaded', @
-      @solve 'Load', ->
+      @solve 'Loaded', ->
         #@intrinsic.solve()
 
     # Unsubscribe events and observers

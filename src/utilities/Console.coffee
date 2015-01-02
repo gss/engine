@@ -16,6 +16,9 @@ class Console
 
   push: (a, b, c, type) ->
     if @level > 0.5 || type
+      unless @buffer.length
+        if @level > 1
+          console.profile()
       index = @buffer.push(a, b, c, undefined, type || @row)
       @stack.push(index - 5)
 
@@ -33,6 +36,8 @@ class Console
     for item, index in @buffer by 5
       @buffer[index + 4].call(@, @buffer[index], @buffer[index + 1], @buffer[index + 2], @buffer[index + 3])
     @buffer = []
+    if @level > 1
+      console.profileEnd()
 
   openGroup: (name, reason, time, result) ->
 
@@ -42,12 +47,11 @@ class Console
     else
       fmt += '%s'
 
-      method = 'groupCollapsed'
     fmt += ' \t  %c%sms'
     while name.length < 13
       name += ' '
 
-    if @level <= 1
+    if @level <= 1.5
       method = 'groupCollapsed'
     @[method || 'group'](fmt, 'font-weight: normal', name, reason, result, 'color: #999; font-weight: normal; font-style: italic;', time)
 

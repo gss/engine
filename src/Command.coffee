@@ -53,8 +53,7 @@ class Command
       if result = @after(args, result, domain, operation, continuation, scope, ascender, ascending)
         continuation = @continue(result, domain, operation, continuation, scope, ascender, ascending)
 
-
-      engine.console.pop(result)
+      @unlog(engine, result)
 
     if result?
       return @ascend(engine, operation, continuation, scope, result, ascender, ascending)
@@ -200,7 +199,12 @@ class Command
 
   # Provide logging for an action
   log: (args, engine, operation, continuation, scope, name) ->
+    #if @permutation
+    #  args = args.slice(0, @permutation.length)
     engine.console.push(name || operation[0], args, continuation || "")
+
+  unlog: (engine, result) ->
+    engine.console.pop(result)
 
 
   # Reinitialize foreign expression as local to parent domain
@@ -704,6 +708,7 @@ class Command.List extends Command
   execute: ->
 
   log: ->
+  unlog: ->
 
   # Capture results and do nothing with them to stop propagation
   yield: ->

@@ -52,7 +52,7 @@ class Selector extends Query
       result ?= node.querySelectorAll(args[1])
     else if (result != node) && node.matches(args[1])
       result ?= node
-    engine.console.pop(result)
+    command.unlog(engine, result)
     if result = command.after(args, result, engine, operation, continuation, scope)
       return command.ascend(engine, operation, continuation + selector, scope, result, ascender)
 
@@ -142,7 +142,7 @@ class Selector extends Query
       return @solve(->)
 
     
-    result = @solve 'Document', 'mutations', ->
+    result = @solve 'Mutate', ->
       if @updating.index > -1
         @updating.reset()
 

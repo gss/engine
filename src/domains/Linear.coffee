@@ -14,7 +14,7 @@ class Linear extends Domain
       @solver = new c.SimplexSolver()
       @solver.autoSolve = false
       @solver._store = []
-      if @console.level > 1
+      if @console.level > 2
         c.debug = true
         c.trace = true
       c.Strength.require = c.Strength.required

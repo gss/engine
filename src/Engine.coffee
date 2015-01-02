@@ -128,11 +128,6 @@ class Engine
 
     args = @transact.apply(@, arguments)
 
-    
-    unless old = @updating
-      @engine.updating = new @update
-      console.profile()
-      @updating.start ?= @engine.console.getTime()
 
     if typeof args[0] == 'function'
       result = args.shift().apply(@, args) 
@@ -153,10 +148,18 @@ class Engine
   transact: ->
     if typeof arguments[0] == 'string'
       reason = arguments[0]
+      if typeof arguments[1] == 'string'
+        arg = arguments[1]
 
-    args = Array.prototype.slice.call(arguments, +reason?)
+    args = Array.prototype.slice.call(arguments, +reason? + +arg?)
 
-    @console.start(reason || 'Solve', args)
+
+    
+    unless @updating
+      @console.start(reason || (@updated && 'Update' || 'Initialize'), arg || args)
+      @engine.updating = new @update
+      @updating.start ?= @engine.console.getTime()
+
     unless @running
       @compile()
 
@@ -198,11 +201,11 @@ class Engine
 
 
       # Apply styles in bulk
-      @console.start('Apply')
+      @console.start('Apply', update.solution)
       @triggerEvent('apply', update.solution, update)
       @triggerEvent('write', update.solution, update)
       @triggerEvent('flush', update.solution, update)
-      @console.end()
+      @console.end(@values)
 
       # Re-measure values
       if update.solved || update.isDone()
@@ -212,18 +215,19 @@ class Engine
     # Discard pure update 
     unless update.hadSideEffects(solution)
       @updating = undefined
+      @console.end()
       return
 
     update.finish()
-    console.profileEnd()
 
     @updated = update
     @updating = undefined
 
-    @console.end(update.solution)
     @inspector.update()
     @fireEvent 'solve', update.solution, @updated
     @fireEvent 'solved', update.solution, @updated
+    @console.end(update.solution)
+
     return update.solution
 
   validate: (update) ->

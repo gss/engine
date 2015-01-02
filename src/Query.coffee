@@ -710,8 +710,6 @@ class Query extends Command
         if rightNew[index]
           added.push([leftNew[index], rightNew[index]])
 
-    engine.console.group '%s \t\t\t\t%o\t\t\t%c%s', @PAIR, [['pairs', added, removed], ['new', leftNew, rightNew], ['old', leftOld, rightOld]], 'font-weight: normal; color: #999',  left + ' ' + @PAIR + ' ' + root.right.command.path + ' in ' + engine.identify(scope)
-      
 
     cleaned = []
     for pair in removed
@@ -749,8 +747,6 @@ class Query extends Command
         break
     if cleaning
       @unpair(engine, left, scope, operation)
-
-    engine.console.groupEnd()
 
   unpair: (engine, left, scope, operation) ->  
     if pairs = engine.pairs?[left]
@@ -1001,7 +997,7 @@ class Query extends Command
 
   branch: (engine)->
     if conditions = engine.updating.branches
-      engine.console.start('Branches')
+      engine.console.start('Branches', conditions.slice())
       engine.updating.branches = undefined
       removed = engine.updating.branching = []
       for condition, index in conditions by 3
