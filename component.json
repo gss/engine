@@ -67,8 +67,8 @@
   ],
   "dependencies": {
     "gss/ccss-compiler": "64f0f83e6b331625c62d6c54e69b0db6a2540c03",
-    "d4tocchini/customevent-polyfill": "*",
-    "slightlyoff/cassowary.js": "*"
+    "d4tocchini/customevent-polyfill": "a4d3bc1941713de90f999874d482ab6c2a6cd4a2",
+    "slightlyoff/cassowary.js": "829729cb602d4a17341b4d1a5dba6767bf1cfd5c"
   },
   "files": [
     "vendor/observe.js",
