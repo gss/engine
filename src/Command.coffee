@@ -199,8 +199,6 @@ class Command
 
   # Provide logging for an action
   log: (args, engine, operation, continuation, scope, name) ->
-    #if @permutation
-    #  args = args.slice(0, @permutation.length)
     engine.console.push(name || operation[0], args, continuation || "")
 
   unlog: (engine, result) ->

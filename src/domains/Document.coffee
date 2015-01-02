@@ -81,7 +81,7 @@ class Document extends Abstract
         if @updating && !@updating.resizing
           @updating.resizing = 'scheduled'
           return
-        @solve 'Resize', id ->
+        @solve 'Resize', id, ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
       

@@ -33,23 +33,43 @@ class Console
       return
 
   flush: ->
+    if @level > 1
+      console.profileEnd()
     for item, index in @buffer by 5
       @buffer[index + 4].call(@, @buffer[index], @buffer[index + 1], @buffer[index + 2], @buffer[index + 3])
     @buffer = []
-    if @level > 1
-      console.profileEnd()
 
-  openGroup: (name, reason, time, result) ->
-
-    fmt = '%c%s%O \t  '
-    if typeof reason != 'string'
-      fmt += '%O'
+  pad: (object, length = 17) ->
+    if object.length > length
+      object.substring(0, length - 1) + '…'
     else
-      fmt += '%s'
+      object + Array(length - object.length).join(' ') 
 
-    fmt += ' \t  %c%sms'
-    while name.length < 13
-      name += ' '
+  openGroup: (name, reason = '', time, result = '') ->
+
+    fmt = '%c%s'
+
+    switch typeof reason
+      when 'string'
+        fmt += '%s'
+        reason = @pad(reason, 16)
+      when 'object'
+        fmt += '%O\t'
+        unless reason.length?
+          fmt += '\t'
+
+    switch typeof result
+      when 'string'
+        fmt += '%s'
+        result = @pad(result, 17)
+      when 'object'
+        fmt += '%O\t'
+        unless result.length > 9
+          fmt += '\t'
+
+    fmt += ' %c%sms'
+
+    name = @pad(name, 13)
 
     if @level <= 1.5
       method = 'groupCollapsed'
@@ -78,42 +98,47 @@ class Console
 
   breakpoint: decodeURIComponent (document?.location.search.match(/breakpoint=([^&]+)/, '') || ['',''])[1]
 
-  row: (a, b, c, d) ->
+  row: (a, b = '', c = '', d = '') ->
     return if @level < 1
     a = a.name || a
     return if typeof a != 'string'
     p1 = Array(4 - Math.floor((a.length + 1) / 4)).join('\t')
-    if @breakpoint && document?
-      breakpoint = String(@stringify([b,c])).trim().replace /\r?\n+|\r|\s+/g, ' '
-      #if @breakpoint == a + breakpoint
-      #  debugger
-    else 
-      breakpoint = ''
-    if typeof c == 'string'
-      if (index = c.indexOf(@DESCEND)) > -1
-        if c.indexOf('style[type*="gss"]') > -1
-          c = c.substring(index)
 
-      c = c.replace /\r?\n|\r|\s+/g, ' '
+    if (index = c.indexOf(@DESCEND)) > -1
+      if c.indexOf('style[type*="gss"]') > -1
+        c = c.substring(index + 1)
 
-    if d
-      unless d instanceof Array
-        d = [d]
-    else
-      d = []
+    c = c.replace /\r?\n|\r|\s+/g, ' '
+
+    fmt = '%c%s'
+
+    switch typeof b
+      when 'string'
+        fmt += '%s'
+        b = @pad(b, 14)
+      when 'object'
+        fmt += '%O\t'
+        unless b.push
+          b = [b]
+          #fmt += ''
+
+    switch typeof d
+      when 'string', 'boolean', 'number'
+        fmt += '  %s '
+        d = @pad(String(d), 17)
+      when 'object'
+        fmt += '  %O\t   '
+        if d.item
+          d = Array.prototype.slice.call(d)
+        else unless d.length?
+          d = [d]
 
     if document?
-      if typeof b == 'object'
-        @log('%c%s%c%s%c%s%O\t\t%O%c\t\t%s', 
-            'color: #666', a, 
-            'font-size: 0;line-height:0;', breakpoint, 
-            '', 
-            p1, b, 
-            d,
-            'color: #999', c || "")
-      else
-        p2 = Array(6 - Math.floor(String(b).length / 4) ).join('\t')
-        @log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "")
+      @log(fmt + '%c%s', 
+          'color: #666', @pad(a, 11), 
+          b, 
+          d,
+          'color: #999', c)
     else
       @log a, b, c
 

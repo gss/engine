@@ -24697,7 +24697,7 @@ Selector = (function(_super) {
       }
       return this.solve(function() {});
     }
-    result = this.solve('Mutate', function() {
+    result = this.solve('Mutate', String(mutations.length), function() {
       var mutation, _base, _base1, _base2, _i, _len;
       if (this.updating.index > -1) {
         this.updating.reset();
@@ -27634,10 +27634,10 @@ Document = (function(_super) {
           _this.updating.resizing = 'scheduled';
           return;
         }
-        return _this.solve('Resize', id(function() {
+        return _this.solve('Resize', id, function() {
           this.intrinsic.verify(id, "width");
           return this.intrinsic.verify(id, "height");
-        }));
+        });
       });
     },
     scroll: function(e) {
@@ -27646,7 +27646,6 @@ Document = (function(_super) {
         e = '::window';
       }
       id = e.target && this.identify(e.target) || e;
-      console.log('scroll');
       return this.solve('Scroll', id, function() {
         this.intrinsic.verify(id, "scroll-top");
         return this.intrinsic.verify(id, "scroll-left");
@@ -28877,29 +28876,61 @@ Console = (function() {
 
   Console.prototype.flush = function() {
     var index, item, _i, _len, _ref;
+    if (this.level > 1) {
+      console.profileEnd();
+    }
     _ref = this.buffer;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = _i += 5) {
       item = _ref[index];
       this.buffer[index + 4].call(this, this.buffer[index], this.buffer[index + 1], this.buffer[index + 2], this.buffer[index + 3]);
     }
-    this.buffer = [];
-    if (this.level > 1) {
-      return console.profileEnd();
+    return this.buffer = [];
+  };
+
+  Console.prototype.pad = function(object, length) {
+    if (length == null) {
+      length = 17;
+    }
+    if (object.length > length) {
+      return object.substring(0, length - 1) + '…';
+    } else {
+      return object + Array(length - object.length).join(' ');
     }
   };
 
   Console.prototype.openGroup = function(name, reason, time, result) {
     var fmt, method;
-    fmt = '%c%s%O \t  ';
-    if (typeof reason !== 'string') {
-      fmt += '%O';
-    } else {
-      fmt += '%s';
+    if (reason == null) {
+      reason = '';
     }
-    fmt += ' \t  %c%sms';
-    while (name.length < 13) {
-      name += ' ';
+    if (result == null) {
+      result = '';
     }
+    fmt = '%c%s';
+    switch (typeof reason) {
+      case 'string':
+        fmt += '%s';
+        reason = this.pad(reason, 16);
+        break;
+      case 'object':
+        fmt += '%O\t';
+        if (reason.length == null) {
+          fmt += '\t';
+        }
+    }
+    switch (typeof result) {
+      case 'string':
+        fmt += '%s';
+        result = this.pad(result, 17);
+        break;
+      case 'object':
+        fmt += '%O\t';
+        if (!(result.length > 9)) {
+          fmt += '\t';
+        }
+    }
+    fmt += ' %c%sms';
+    name = this.pad(name, 13);
     if (this.level <= 1.5) {
       method = 'groupCollapsed';
     }
@@ -28934,7 +28965,16 @@ Console = (function() {
   Console.prototype.breakpoint = decodeURIComponent(((typeof document !== "undefined" && document !== null ? document.location.search.match(/breakpoint=([^&]+)/, '') : void 0) || ['', ''])[1]);
 
   Console.prototype.row = function(a, b, c, d) {
-    var breakpoint, index, p1, p2;
+    var fmt, index, p1;
+    if (b == null) {
+      b = '';
+    }
+    if (c == null) {
+      c = '';
+    }
+    if (d == null) {
+      d = '';
+    }
     if (this.level < 1) {
       return;
     }
@@ -28943,33 +28983,41 @@ Console = (function() {
       return;
     }
     p1 = Array(4 - Math.floor((a.length + 1) / 4)).join('\t');
-    if (this.breakpoint && (typeof document !== "undefined" && document !== null)) {
-      breakpoint = String(this.stringify([b, c])).trim().replace(/\r?\n+|\r|\s+/g, ' ');
-    } else {
-      breakpoint = '';
+    if ((index = c.indexOf(this.DESCEND)) > -1) {
+      if (c.indexOf('style[type*="gss"]') > -1) {
+        c = c.substring(index + 1);
+      }
     }
-    if (typeof c === 'string') {
-      if ((index = c.indexOf(this.DESCEND)) > -1) {
-        if (c.indexOf('style[type*="gss"]') > -1) {
-          c = c.substring(index);
+    c = c.replace(/\r?\n|\r|\s+/g, ' ');
+    fmt = '%c%s';
+    switch (typeof b) {
+      case 'string':
+        fmt += '%s';
+        b = this.pad(b, 14);
+        break;
+      case 'object':
+        fmt += '%O\t';
+        if (!b.push) {
+          b = [b];
         }
-      }
-      c = c.replace(/\r?\n|\r|\s+/g, ' ');
     }
-    if (d) {
-      if (!(d instanceof Array)) {
-        d = [d];
-      }
-    } else {
-      d = [];
+    switch (typeof d) {
+      case 'string':
+      case 'boolean':
+      case 'number':
+        fmt += '  %s ';
+        d = this.pad(String(d), 17);
+        break;
+      case 'object':
+        fmt += '  %O\t   ';
+        if (d.item) {
+          d = Array.prototype.slice.call(d);
+        } else if (d.length == null) {
+          d = [d];
+        }
     }
     if (typeof document !== "undefined" && document !== null) {
-      if (typeof b === 'object') {
-        return this.log('%c%s%c%s%c%s%O\t\t%O%c\t\t%s', 'color: #666', a, 'font-size: 0;line-height:0;', breakpoint, '', p1, b, d, 'color: #999', c || "");
-      } else {
-        p2 = Array(6 - Math.floor(String(b).length / 4)).join('\t');
-        return this.log('%c%s%s%s%c%s%s', 'color: #666', a, p1, b, 'color: #999', p2, c || "");
-      }
+      return this.log(fmt + '%c%s', 'color: #666', this.pad(a, 11), b, d, 'color: #999', c);
     } else {
       return this.log(a, b, c);
     }

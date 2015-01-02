@@ -142,7 +142,7 @@ class Selector extends Query
       return @solve(->)
 
     
-    result = @solve 'Mutate', ->
+    result = @solve 'Mutate', String(mutations.length), ->
       if @updating.index > -1
         @updating.reset()
 
