@@ -334,8 +334,7 @@ class Stylesheet extends Command.List
       return ''
     return @key
 
-  continue: (engine, operation, continuation = '') ->
-    return continuation#engine.Query::continue.apply(@, arguments) + @DESCEND
+  continue: Query::continue#.apply(@, arguments) + @DESCEND
 
 class Stylesheet.Import extends Query
   type: 'Import'
@@ -361,26 +360,26 @@ class Stylesheet.Import extends Query
         node = undefined
       else
         unless src = @getUrl(node)
-          text = node.innerText
+          text = node.innerText || node.textContent
 
         type ||= node.getAttribute?('type')
 
-      
       path = @getGlobalPath(engine, operation, continuation, node)
+
       if stylesheet = engine.queries[path]
         command = stylesheet.command
-        stylesheet.splice(0)
-        if node.parentNode
-          command.users = 0
-          @uncontinuate(engine, path)
-          if text
-            stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
-            @continuate(engine, path)
-            return
-        else
-          debugger
-          @clean(engine, path)
-          return 
+        if stylesheet.length
+          stylesheet.splice(0)
+          if node.parentNode
+            command.users = 0
+            @uncontinuate(engine, path)
+            if text
+              stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
+              @continuate(engine, path)
+              return
+          else
+            @clean(engine, path)
+            return 
       else
         stylesheet = []
         command = stylesheet.command = new Stylesheet(engine, operation, continuation, node)
