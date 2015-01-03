@@ -82,7 +82,7 @@ class Stylesheet extends Command.List
         sheet.deleteRule(previous.length)
     else
       body = property + ':' + value
-      selectors = @getSelector(operation)
+      selectors = @getSelector(stylesheet, operation)
       index = sheet.insertRule(selectors + "{" + body + "}", previous.length)
     return true
 
@@ -193,10 +193,10 @@ class Stylesheet extends Command.List
 
     return sheet.join('')
 
-  getSelector: (operation) ->
-    return @getSelectors(operation).join(', ')
+  getSelector: (stylesheet, operation) ->
+    return @getSelectors(stylesheet, operation).join(', ')
 
-  getSelectors: (operation) ->
+  getSelectors: (stylesheet, operation) ->
     parent = operation
     results = wrapped = custom = undefined
 
@@ -211,35 +211,34 @@ class Stylesheet extends Command.List
       
       # Add rule selector to path
       else if parent.command.type == 'Iterator'
-        query = parent[1]
-
-        selectors = []
         # Prepend selectors with selectors of a parent rule
-        if results?.length
-          update = []
+        results = @combineSelectors(results, parent[1])
 
-          for result, index in results
-            if result.substring(0, 12) == ' [matches~="'
-              update.push ' ' + @getCustomSelector(query.command.path, result)
-            else
-              for selector in @getRuleSelectors(parent[1])
-                update.push selector + result
-          results = update
-        # Wrap custom selectors
-        else 
-          results = @getRuleSelectors(parent[1], true)
-
-
-      parent = parent.parent
+      if !(parent = parent.parent) && stylesheet?.selectors
+        results = @combineSelectors(results,  stylesheet)
 
     return results
 
-  getRuleSelectors: (operation) ->
-    if operation[0] == ','
-      for index in [1 ... operation.length] by 1
-        @getRuleSelector(operation[index], operation.command)
-    else
-      return [@getRuleSelector(operation)]
+  empty: ['']
+
+  combineSelectors: (results = @empty, operation) ->
+    update = []
+    for result, index in results
+      if operation.selectors
+        if result.substring(0, 12) == ' [matches~="'
+          update.push ' ' + @getCustomSelector(result.selector, result)
+        else
+          for selector in operation.selectors
+            update.push selector + result
+      else if result.substring(0, 12) == ' [matches~="'
+        update.push ' ' + @getCustomSelector(operation.command.path, result)
+      else if operation[0] == ','
+        for index in [1 ... operation.length] by 1
+          update.push @getRuleSelector(operation[index], operation.command) + result 
+      else 
+        update.push @getRuleSelector(operation) + result
+    return update
+
 
   getRuleSelector: (operation, parent) ->
     command = operation.command
