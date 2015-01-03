@@ -111,7 +111,7 @@ class Intrinsic extends Numeric
   perform: ->
     if arguments.length < 4 && @objects
       @console.start('Measure', @values)
-      @each @scope, @measure
+      @each @scope, 'measure'
       @console.end(@changes)
       return @changes
     return
@@ -162,12 +162,12 @@ class Intrinsic extends Numeric
 
 
   # Iterate elements and measure intrinsic offsets
-  each: (parent, callback, x = 0,y = 0, offsetParent, a,r,g,s) ->
+  each: (parent, callback, x = 0,y = 0, a,r,g,s) ->
     scope = @engine.scope
     parent ||= scope
 
     # Calculate new offsets for given element and styles
-    if offsets = callback.call(@, parent, x, y, a,r,g,s)
+    if offsets = @[callback](parent, x, y, a,r,g,s)
       x += offsets.x || 0
       y += offsets.y || 0
 
@@ -185,16 +185,14 @@ class Intrinsic extends Numeric
 
     while child
       if child.nodeType == 1
-        if measure && child.offsetParent == parent
-          x += parent.offsetLeft + parent.clientLeft
-          y += parent.offsetTop + parent.clientTop
-          offsetParent = parent
-          measure = false
-
         if child.style.position == 'relative'
-          @each(child, callback, 0, 0, offsetParent, a,r,g,s)
+          @each(child, callback, 0, 0, a,r,g,s)
         else
-          @each(child, callback, x, y, offsetParent, a,r,g,s)
+          if measure && child.offsetParent == parent
+            x += parent.offsetLeft + parent.clientLeft
+            y += parent.offsetTop + parent.clientTop
+            measure = false
+          @each(child, callback, x, y, a,r,g,s)
         
       child = child.nextSibling
     return a
@@ -277,7 +275,7 @@ class Intrinsic extends Numeric
           @write null, path, value, positioning
 
     # Adjust positioning styles to respect element offsets 
-    @each(node, @placehold, null, null, null, positioning, !!data)
+    @each(node, 'placehold', null, null, positioning, !!data)
 
     # Set new positions in bulk (Reflow)
     positions = {}

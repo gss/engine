@@ -335,7 +335,7 @@ class Stylesheet extends Command.List
     return @key
 
   continue: (engine, operation, continuation = '') ->
-    return engine.Query::continue.apply(@, arguments) + @DESCEND
+    return continuation#engine.Query::continue.apply(@, arguments) + @DESCEND
 
 class Stylesheet.Import extends Query
   type: 'Import'
