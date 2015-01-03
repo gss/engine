@@ -39,7 +39,7 @@ class Stylesheet extends Command.List
   ]
   
   CanonicalizeSelectorRegExp: new RegExp(
-    "[$][a-z0-9]+[" + Command::DESCEND + "]\s*", "gi"
+    "[$][a-z0-9]+[" + Command::DESCEND + "]\\s*", "gi"
   )
 
   update: (engine, operation, property, value, stylesheet, rule) ->
@@ -331,8 +331,11 @@ class Stylesheet extends Command.List
   # Dont add @import() to the path for global level stylesheets
   getKey: (engine, operation, continuation, node) ->
     if !node && continuation && continuation.lastIndexOf(@DESCEND) == -1#continuation.indexOf(@DESCEND)
-      return
+      return ''
     return @key
+
+  continue: (engine, operation, continuation = '') ->
+    return engine.Query::continue.apply(@, arguments) + @DESCEND
 
 class Stylesheet.Import extends Query
   type: 'Import'
@@ -391,7 +394,7 @@ class Stylesheet.Import extends Query
       if text
         stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
 
-      else unless command.xhr
+      else unless command.resolver
         engine.updating.block(engine)
         command.resolver = (text) =>
           command.resolver = undefined
