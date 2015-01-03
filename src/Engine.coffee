@@ -227,9 +227,9 @@ class Engine
     @updating = undefined
 
     @inspector.update()
+    @console.end(update.solution)
     @fireEvent 'solve', update.solution, @updated
     @fireEvent 'solved', update.solution, @updated
-    @console.end(update.solution)
 
     return update.solution
 

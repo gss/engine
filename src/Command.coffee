@@ -51,7 +51,7 @@ class Command
       result = @before(args, domain, operation, continuation, scope, ascender, ascending)
       result ?= @execute.apply(@, args)
       if result = @after(args, result, domain, operation, continuation, scope, ascender, ascending)
-        continuation = @continue(result, domain, operation, continuation, scope, ascender, ascending)
+        continuation = @continue(domain, operation, continuation, scope, ascender, ascending)
 
       @unlog(engine, result)
 
@@ -185,7 +185,7 @@ class Command
         Command.descend(cmd, engine, argument)
     return command
       
-  continue: (result, engine, operation, continuation) ->
+  continue: (engine, operation, continuation) ->
     return continuation
 
   # Hook that happens before actual function call

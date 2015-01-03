@@ -80,8 +80,8 @@ class Query extends Command
         @path = path + @path
     return true
 
-  continue: (result, engine, operation, continuation = '') ->
-    return continuation + (@key || '')
+  continue: (engine, operation, continuation = '') ->
+    return continuation + @getKey(engine, operation, continuation)
 
   # Evaluate compound native selector by jumping to either its head or tail
   jump: (engine, operation, continuation, scope, ascender, ascending) ->
@@ -435,7 +435,7 @@ class Query extends Command
     return removed
 
   getKey: ->
-    return @key
+    return @key || ''
 
   clean: (engine, path, continuation, operation, scope, contd = continuation) ->
     if command = path.command
@@ -882,9 +882,9 @@ class Query extends Command
     return engine.queries[@getCanonicalPath(path)]
     
   getLocalPath: (engine, operation, continuation) ->
-    return continuation + @getKey(engine, operation, continuation)
+    return @continue(engine, operation, continuation)
 
-  # Return shared absolute path of a dom query ($id selector) 
+  # Return shared absolute path of a dom query
   getGlobalPath: (engine, operation, continuation, node) ->
     return engine.identify(node) + ' ' + @getKey(engine, operation, continuation, node)
 
@@ -962,10 +962,8 @@ class Query extends Command
   continuate: (engine, scope) ->
     if watchers = engine.observers[engine.identify(scope)]
       for watcher, index in watchers by 3
-        contd = watchers[index + 1]
         scoped = watchers[index + 2]
-        if key = watcher.command.getKey(engine, watcher, contd, scoped)
-          contd += key
+        contd = watcher.command.continue(engine, watcher, watchers[index + 1], scoped)
         @schedule(engine, watcher, contd, scoped)
     return
 
