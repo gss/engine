@@ -54,7 +54,5 @@
     "gss/vfl-compiler": "*",
     "slightlyoff/cassowary.js": "*"
   },
-  "paths": ["/Users/invizko/Sites/the-gss"],
-  "locals": ["the-compiler", "ccss-compiler"],
   "main": "lib/Engine.js"
 }
