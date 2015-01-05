@@ -35,9 +35,9 @@ class Linear extends Domain
   unedit: (variable) ->
     if constraint = @editing?['%' + (variable.name || variable)]
       #@solver.removeConstraint(constraint)
-      cei = @solver._editVarMap.get(constraint.variable);
-      @solver.removeColumn(cei.editMinus);
-      @solver._editVarMap.delete(constraint.variable);
+      cei = @solver._editVarMap.get(constraint.variable)
+      @solver.removeColumn(cei.editMinus)
+      @solver._editVarMap.delete(constraint.variable)
       delete @editing[(variable.name || variable)]
 
       #@removeConstraint(constraint)
@@ -48,7 +48,7 @@ class Linear extends Domain
       constraint.variable = variable
       @Constraint::inject @, constraint
       (@editing ||= {})[variable.name] = constraint
-    
+
     return constraint
 
   nullify: (variable, full) ->
@@ -101,7 +101,7 @@ Linear::Constraint = Constraint.extend {
   # Get cached operation by expression and set of input variables
   get: (engine, operation, scope) ->
     return engine.linear.operations?[operation.hash ||= @toExpression(operation)]?[@toHash(scope)]
-  
+
   yield: Linear.Mixin.yield
 
   inject: (engine, constraint) ->
@@ -132,9 +132,9 @@ Linear::Variable = Variable.extend Linear.Mixin,
     variable = @declare(engine, path)
     engine.unedit(variable)
     return variable
-    
+
 Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
-  
+
   '+': (left, right) ->
     return c.plus(left, right)
 
@@ -148,17 +148,17 @@ Linear::Variable.Expression = Variable.Expression.extend Linear.Mixin,
     return c.divide(left, right)
 
 # Handle constraints wrapped into meta constructs provided by Abstract
-Linear::Meta = Command.Meta.extend {}, 
-  'object': 
+Linear::Meta = Command.Meta.extend {},
+  'object':
     execute: (constraint, engine, operation) ->
       if constraint?.hashCode?
         operation[1].command.add(constraint, engine, operation[1], operation[0].key)
 
-    descend: (engine, operation) -> 
+    descend: (engine, operation) ->
       operation[1].parent = operation
       [
         operation[1].command.solve(engine, operation[1], '', undefined, undefined, operation[0])
-        engine, 
+        engine,
         operation
       ]
 
@@ -168,7 +168,7 @@ Linear::Stay = Command.extend {
   ]
 },
   stay: (value, engine, operation) ->
-    engine.suggested = true;
+    engine.suggested = true
     engine.solver.addStay(value)
     return
 

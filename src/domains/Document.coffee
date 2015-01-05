@@ -2,7 +2,7 @@ Abstract = require('./Abstract')
 
 class Document extends Abstract
   priority: Infinity
-  
+
   Selector:    require('../Selector')
   Stylesheet:  require('../Stylesheet')
 
@@ -18,7 +18,7 @@ class Document extends Abstract
         @compile()
 
     @Selector.observe(@engine)
-      
+
     @scope.addEventListener 'scroll', @engine, true
     #if @scope != document
     #  document.addEventListener 'scroll', engine, true
@@ -50,10 +50,10 @@ class Document extends Abstract
         klass = html.className
         if klass.indexOf('gss-ready') == -1
           @document.Selector.disconnect(@, true)
-          html.className = (klass && klass + ' ' || '') + 'gss-ready' 
+          html.className = (klass && klass + ' ' || '') + 'gss-ready'
           @document.Selector.connect(@, true)
 
-    
+
       # Unreference removed elements
       if @document.removed
         for id in @document.removed
@@ -74,7 +74,7 @@ class Document extends Abstract
             if @updated?.resizing == 'scheduled'
               @triggerEvent('resize')
       else
-        cancelAnimationFrame(@resizer);
+        cancelAnimationFrame(@resizer)
 
       @resizer = requestAnimationFrame =>
         @resizer = undefined
@@ -84,7 +84,7 @@ class Document extends Abstract
         @solve 'Resize', id, ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
-      
+
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
       @solve 'Scroll', id, ->
@@ -103,7 +103,7 @@ class Document extends Abstract
       if @running && document.readyState == 'complete'
         @solve 'Statechange', ->
           #@intrinsic.solve()
-    
+
     # Remeasure when images are loaded
     load: ->
       window.removeEventListener 'load', @
@@ -123,7 +123,7 @@ class Document extends Abstract
 
   @condition: ->
     @scope?
-    
+
   url: null
 
 module.exports = Document
