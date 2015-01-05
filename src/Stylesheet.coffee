@@ -38,7 +38,7 @@ class Stylesheet extends Command.List
     ['import',  ['[*=]', ['tag', 'link' ], 'type', 'gss']]
   ]
   
-  CanonicalizeSelectorRegExp: new RegExp(
+  @CanonicalizeSelectorRegExp: new RegExp(
     "[$][a-z0-9]+[" + Command::DESCEND + "]\\s*", "gi"
   )
 
@@ -103,23 +103,24 @@ class Stylesheet extends Command.List
     path = continuation
     boundary = path.lastIndexOf('@import')
     index = path.indexOf(@DESCEND, boundary)
-    prefix = path.substring(0, index).replace(@CanonicalizeSelectorRegExp, ' ')
-
-
-    unless sheet = engine.stylesheets[prefix]
+    if boundary > -1
+      prefix = @getCanonicalSelector(path.substring(0, boundary))
+      path = prefix + continuation.substring(boundary, index)
+    else
+      path = path.substring(0, index)
+    
+    unless sheet = engine.stylesheets[path]
       if (index = continuation.indexOf(@DESCEND)) > -1
         continuation = continuation.substring(0, index)
+      sheet = engine.stylesheets[path] = document.createElement('STYLE')
       if anchor = engine.Query::getByPath(engine, continuation)
-        if anchor.tagName == 'STYLE'
-          while anchor = anchor.nextSibling
-            break unless anchor.continuation
-        else
-          anchor = undefined
-      sheet = engine.stylesheets[prefix] = document.createElement('STYLE')
+
+        if imported = engine.imported[anchor._gss_id]
+          sheet.selectors = imported[path]
+        while anchor = anchor.nextSibling
+          break unless anchor.selectors
       engine.stylesheets.push(sheet)
       engine.identify(sheet)
-      sheet.continuation = prefix
-      sheet.selectors = continuation.lastIndexOf('@import')
       if anchor
         anchor.parentNode.insertBefore(sheet, anchor)
       else
@@ -219,9 +220,9 @@ class Stylesheet extends Command.List
 
     return results
 
-  empty: ['']
+  @empty: ['']
 
-  combineSelectors: (results = @empty, operation) ->
+  combineSelectors: (results = Stylesheet.empty, operation) ->
     update = []
     for result, index in results
       if operation.selectors
@@ -271,7 +272,7 @@ class Stylesheet extends Command.List
   getCanonicalSelector: (selector) ->
     selector = selector.trim()
     selector = selector.
-      replace(@CanonicalizeSelectorRegExp, ' ').
+      replace(Stylesheet.CanonicalizeSelectorRegExp, ' ').
       replace(/\s+/g, @DESCEND)#.
     return selector
 
@@ -333,7 +334,7 @@ class Stylesheet extends Command.List
       return ''
     return @key
 
-  continue: Query::continue#.apply(@, arguments) + @DESCEND
+  continue: Query::continue# + @DESCEND
 
 class Stylesheet.Import extends Query
   type: 'Import'
@@ -389,6 +390,14 @@ class Stylesheet.Import extends Query
           node.scoped = command.scoped = true
 
 
+      if (index = continuation.indexOf(@DESCEND)) > -1
+        left = continuation.substring(0, index)
+        if anchor = engine.Query::getByPath(engine, left)
+          if anchor.tagName == 'STYLE'
+            left = engine.Stylesheet::getCanonicalSelector(continuation) + command.key
+            imported = engine.imported[anchor._gss_id] ||= {}
+            imported[left] = engine.Stylesheet::getSelectors(null, operation)
+      
       if text
         stylesheet.push.apply(stylesheet, command.parse(engine, type, text))
 

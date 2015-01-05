@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2015-01-02) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2015-01-05) - http://gridstylesheets.org */
 ;(function(){
 
 /**
@@ -19873,6 +19873,7 @@ Engine = (function() {
     this.variables = {};
     this.domains = [];
     this.stylesheets = [];
+    this.imported = {};
     this.engine = this;
     this.inspector = new this.Inspector(this);
     this.exporter = new this.Exporter(this);
@@ -20007,9 +20008,9 @@ Engine = (function() {
     this.updated = update;
     this.updating = void 0;
     this.inspector.update();
+    this.console.end(update.solution);
     this.fireEvent('solve', update.solution, this.updated);
     this.fireEvent('solved', update.solution, this.updated);
-    this.console.end(update.solution);
     return update.solution;
   };
 
@@ -21170,7 +21171,7 @@ Command = (function() {
         result = this.execute.apply(this, args);
       }
       if (result = this.after(args, result, domain, operation, continuation, scope, ascender, ascending)) {
-        continuation = this["continue"](result, domain, operation, continuation, scope, ascender, ascending);
+        continuation = this["continue"](domain, operation, continuation, scope, ascender, ascending);
       }
       this.unlog(engine, result);
     }
@@ -21319,7 +21320,7 @@ Command = (function() {
     return command;
   };
 
-  Command.prototype["continue"] = function(result, engine, operation, continuation) {
+  Command.prototype["continue"] = function(engine, operation, continuation) {
     return continuation;
   };
 
@@ -22750,11 +22751,11 @@ Query = (function(_super) {
     return true;
   };
 
-  Query.prototype["continue"] = function(result, engine, operation, continuation) {
+  Query.prototype["continue"] = function(engine, operation, continuation) {
     if (continuation == null) {
       continuation = '';
     }
-    return continuation + (this.key || '');
+    return continuation + this.getKey(engine, operation, continuation);
   };
 
   Query.prototype.jump = function(engine, operation, continuation, scope, ascender, ascending) {
@@ -23158,7 +23159,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.getKey = function() {
-    return this.key;
+    return this.key || '';
   };
 
   Query.prototype.clean = function(engine, path, continuation, operation, scope, contd) {
@@ -23723,7 +23724,7 @@ Query = (function(_super) {
   };
 
   Query.prototype.getLocalPath = function(engine, operation, continuation) {
-    return continuation + this.getKey(engine, operation, continuation);
+    return this["continue"](engine, operation, continuation);
   };
 
   Query.prototype.getGlobalPath = function(engine, operation, continuation, node) {
@@ -23821,15 +23822,12 @@ Query = (function(_super) {
   };
 
   Query.prototype.continuate = function(engine, scope) {
-    var contd, index, key, scoped, watcher, watchers, _i, _len;
+    var contd, index, scoped, watcher, watchers, _i, _len;
     if (watchers = engine.observers[engine.identify(scope)]) {
       for (index = _i = 0, _len = watchers.length; _i < _len; index = _i += 3) {
         watcher = watchers[index];
-        contd = watchers[index + 1];
         scoped = watchers[index + 2];
-        if (key = watcher.command.getKey(engine, watcher, contd, scoped)) {
-          contd += key;
-        }
+        contd = watcher.command["continue"](engine, watcher, watchers[index + 1], scoped);
         this.schedule(engine, watcher, contd, scoped);
       }
     }
@@ -25275,7 +25273,7 @@ Selector.define({
     retrieve: function() {
       return this.execute.apply(this, arguments);
     },
-    "continue": function(result, engine, operation, continuation) {
+    "continue": function(engine, operation, continuation) {
       var key;
       if (continuation == null) {
         continuation = '';
@@ -26055,7 +26053,7 @@ Stylesheet = (function(_super) {
 
   Stylesheet.operations = [['import', ['[*=]', ['tag', 'style'], 'type', 'gss']], ['import', ['[*=]', ['tag', 'link'], 'type', 'gss']]];
 
-  Stylesheet.prototype.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + Command.prototype.DESCEND + "]\s*", "gi");
+  Stylesheet.CanonicalizeSelectorRegExp = new RegExp("[$][a-z0-9]+[" + Command.prototype.DESCEND + "]\\s*", "gi");
 
   Stylesheet.prototype.update = function(engine, operation, property, value, stylesheet, rule) {
     var body, generated, index, item, needle, next, ops, other, previous, rules, selectors, sheet, text, watchers, _i, _j, _len, _ref1;
@@ -26107,7 +26105,7 @@ Stylesheet = (function(_super) {
       }
     } else {
       body = property + ':' + value;
-      selectors = this.getSelector(operation);
+      selectors = this.getSelector(stylesheet, operation);
       index = sheet.insertRule(selectors + "{" + body + "}", previous.length);
     }
     return true;
@@ -26131,31 +26129,33 @@ Stylesheet = (function(_super) {
   };
 
   Stylesheet.prototype.getStylesheet = function(engine, continuation) {
-    var anchor, boundary, index, path, prefix, sheet;
+    var anchor, boundary, imported, index, path, prefix, sheet;
     path = continuation;
     boundary = path.lastIndexOf('@import');
     index = path.indexOf(this.DESCEND, boundary);
-    prefix = path.substring(0, index).replace(this.CanonicalizeSelectorRegExp, ' ');
-    if (!(sheet = engine.stylesheets[prefix])) {
+    if (boundary > -1) {
+      prefix = this.getCanonicalSelector(path.substring(0, boundary));
+      path = prefix + continuation.substring(boundary, index);
+    } else {
+      path = path.substring(0, index);
+    }
+    if (!(sheet = engine.stylesheets[path])) {
       if ((index = continuation.indexOf(this.DESCEND)) > -1) {
         continuation = continuation.substring(0, index);
       }
+      sheet = engine.stylesheets[path] = document.createElement('STYLE');
       if (anchor = engine.Query.prototype.getByPath(engine, continuation)) {
-        if (anchor.tagName === 'STYLE') {
-          while (anchor = anchor.nextSibling) {
-            if (!anchor.continuation) {
-              break;
-            }
+        if (imported = engine.imported[anchor._gss_id]) {
+          sheet.selectors = imported[path];
+        }
+        while (anchor = anchor.nextSibling) {
+          if (!anchor.selectors) {
+            break;
           }
-        } else {
-          anchor = void 0;
         }
       }
-      sheet = engine.stylesheets[prefix] = document.createElement('STYLE');
       engine.stylesheets.push(sheet);
       engine.identify(sheet);
-      sheet.continuation = prefix;
-      sheet.selectors = continuation.lastIndexOf('@import');
       if (anchor) {
         anchor.parentNode.insertBefore(sheet, anchor);
       } else {
@@ -26264,12 +26264,12 @@ Stylesheet = (function(_super) {
     return sheet.join('');
   };
 
-  Stylesheet.prototype.getSelector = function(operation) {
-    return this.getSelectors(operation).join(', ');
+  Stylesheet.prototype.getSelector = function(stylesheet, operation) {
+    return this.getSelectors(stylesheet, operation).join(', ');
   };
 
-  Stylesheet.prototype.getSelectors = function(operation) {
-    var custom, index, parent, query, result, results, selector, selectors, update, wrapped, _i, _j, _k, _len, _len1, _len2, _ref1;
+  Stylesheet.prototype.getSelectors = function(stylesheet, operation) {
+    var custom, index, parent, result, results, wrapped, _i, _len;
     parent = operation;
     results = wrapped = custom = void 0;
     while (parent) {
@@ -26281,43 +26281,46 @@ Stylesheet = (function(_super) {
           }
         }
       } else if (parent.command.type === 'Iterator') {
-        query = parent[1];
-        selectors = [];
-        if (results != null ? results.length : void 0) {
-          update = [];
-          for (index = _j = 0, _len1 = results.length; _j < _len1; index = ++_j) {
-            result = results[index];
-            if (result.substring(0, 12) === ' [matches~="') {
-              update.push(' ' + this.getCustomSelector(query.command.path, result));
-            } else {
-              _ref1 = this.getRuleSelectors(parent[1]);
-              for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-                selector = _ref1[_k];
-                update.push(selector + result);
-              }
-            }
-          }
-          results = update;
-        } else {
-          results = this.getRuleSelectors(parent[1], true);
-        }
+        results = this.combineSelectors(results, parent[1]);
       }
-      parent = parent.parent;
+      if (!(parent = parent.parent) && (stylesheet != null ? stylesheet.selectors : void 0)) {
+        results = this.combineSelectors(results, stylesheet);
+      }
     }
     return results;
   };
 
-  Stylesheet.prototype.getRuleSelectors = function(operation) {
-    var index, _i, _ref1, _results;
-    if (operation[0] === ',') {
-      _results = [];
-      for (index = _i = 1, _ref1 = operation.length; _i < _ref1; index = _i += 1) {
-        _results.push(this.getRuleSelector(operation[index], operation.command));
-      }
-      return _results;
-    } else {
-      return [this.getRuleSelector(operation)];
+  Stylesheet.empty = [''];
+
+  Stylesheet.prototype.combineSelectors = function(results, operation) {
+    var index, result, selector, update, _i, _j, _k, _len, _len1, _ref1, _ref2;
+    if (results == null) {
+      results = Stylesheet.empty;
     }
+    update = [];
+    for (index = _i = 0, _len = results.length; _i < _len; index = ++_i) {
+      result = results[index];
+      if (operation.selectors) {
+        if (result.substring(0, 12) === ' [matches~="') {
+          update.push(' ' + this.getCustomSelector(result.selector, result));
+        } else {
+          _ref1 = operation.selectors;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            selector = _ref1[_j];
+            update.push(selector + result);
+          }
+        }
+      } else if (result.substring(0, 12) === ' [matches~="') {
+        update.push(' ' + this.getCustomSelector(operation.command.path, result));
+      } else if (operation[0] === ',') {
+        for (index = _k = 1, _ref2 = operation.length; _k < _ref2; index = _k += 1) {
+          update.push(this.getRuleSelector(operation[index], operation.command) + result);
+        }
+      } else {
+        update.push(this.getRuleSelector(operation) + result);
+      }
+    }
+    return update;
   };
 
   Stylesheet.prototype.getRuleSelector = function(operation, parent) {
@@ -26359,7 +26362,7 @@ Stylesheet = (function(_super) {
 
   Stylesheet.prototype.getCanonicalSelector = function(selector) {
     selector = selector.trim();
-    selector = selector.replace(this.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.DESCEND);
+    selector = selector.replace(Stylesheet.CanonicalizeSelectorRegExp, ' ').replace(/\s+/g, this.DESCEND);
     return selector;
   };
 
@@ -26433,10 +26436,12 @@ Stylesheet = (function(_super) {
 
   Stylesheet.prototype.getKey = function(engine, operation, continuation, node) {
     if (!node && continuation && continuation.lastIndexOf(this.DESCEND) === -1) {
-      return;
+      return '';
     }
     return this.key;
   };
+
+  Stylesheet.prototype["continue"] = Query.prototype["continue"];
 
   return Stylesheet;
 
@@ -26470,33 +26475,34 @@ Stylesheet.Import = (function(_super) {
       return Stylesheet.Import[name].prototype.execute(type, text, void 0, engine, operation, continuation, scope);
     },
     'import': function(node, type, method, engine, operation, continuation, scope) {
-      var async, command, path, src, stylesheet, text,
+      var anchor, async, command, imported, index, left, path, src, stylesheet, text, _base, _name,
         _this = this;
       if (typeof node === 'string') {
         src = node;
         node = void 0;
       } else {
         if (!(src = this.getUrl(node))) {
-          text = node.innerText;
+          text = node.innerText || node.textContent;
         }
         type || (type = typeof node.getAttribute === "function" ? node.getAttribute('type') : void 0);
       }
       path = this.getGlobalPath(engine, operation, continuation, node);
       if (stylesheet = engine.queries[path]) {
         command = stylesheet.command;
-        stylesheet.splice(0);
-        if (node.parentNode) {
-          command.users = 0;
-          this.uncontinuate(engine, path);
-          if (text) {
-            stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
-            this.continuate(engine, path);
+        if (stylesheet.length) {
+          stylesheet.splice(0);
+          if (node.parentNode) {
+            command.users = 0;
+            this.uncontinuate(engine, path);
+            if (text) {
+              stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
+              this.continuate(engine, path);
+              return;
+            }
+          } else {
+            this.clean(engine, path);
             return;
           }
-        } else {
-          debugger;
-          this.clean(engine, path);
-          return;
         }
       } else {
         stylesheet = [];
@@ -26507,9 +26513,19 @@ Stylesheet.Import = (function(_super) {
           node.scoped = command.scoped = true;
         }
       }
+      if ((index = continuation.indexOf(this.DESCEND)) > -1) {
+        left = continuation.substring(0, index);
+        if (anchor = engine.Query.prototype.getByPath(engine, left)) {
+          if (anchor.tagName === 'STYLE') {
+            left = engine.Stylesheet.prototype.getCanonicalSelector(continuation) + command.key;
+            imported = (_base = engine.imported)[_name = anchor._gss_id] || (_base[_name] = {});
+            imported[left] = engine.Stylesheet.prototype.getSelectors(null, operation);
+          }
+        }
+      }
       if (text) {
         stylesheet.push.apply(stylesheet, command.parse(engine, type, text));
-      } else if (!command.xhr) {
+      } else if (!command.resolver) {
         engine.updating.block(engine);
         command.resolver = function(text) {
           command.resolver = void 0;
@@ -27228,7 +27244,7 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.perform = function() {
     if (arguments.length < 4 && this.objects) {
       this.console.start('Measure', this.values);
-      this.each(this.scope, this.measure);
+      this.each(this.scope, 'measure');
       this.console.end(this.changes);
       return this.changes;
     }
@@ -27287,7 +27303,7 @@ Intrinsic = (function(_super) {
     }
   };
 
-  Intrinsic.prototype.each = function(parent, callback, x, y, offsetParent, a, r, g, s) {
+  Intrinsic.prototype.each = function(parent, callback, x, y, a, r, g, s) {
     var child, measure, offsets, scope;
     if (x == null) {
       x = 0;
@@ -27297,7 +27313,7 @@ Intrinsic = (function(_super) {
     }
     scope = this.engine.scope;
     parent || (parent = scope);
-    if (offsets = callback.call(this, parent, x, y, a, r, g, s)) {
+    if (offsets = this[callback](parent, x, y, a, r, g, s)) {
       x += offsets.x || 0;
       y += offsets.y || 0;
     }
@@ -27315,16 +27331,15 @@ Intrinsic = (function(_super) {
     child = parent.firstChild;
     while (child) {
       if (child.nodeType === 1) {
-        if (measure && child.offsetParent === parent) {
-          x += parent.offsetLeft + parent.clientLeft;
-          y += parent.offsetTop + parent.clientTop;
-          offsetParent = parent;
-          measure = false;
-        }
         if (child.style.position === 'relative') {
-          this.each(child, callback, 0, 0, offsetParent, a, r, g, s);
+          this.each(child, callback, 0, 0, a, r, g, s);
         } else {
-          this.each(child, callback, x, y, offsetParent, a, r, g, s);
+          if (measure && child.offsetParent === parent) {
+            x += parent.offsetLeft + parent.clientLeft;
+            y += parent.offsetTop + parent.clientTop;
+            measure = false;
+          }
+          this.each(child, callback, x, y, a, r, g, s);
         }
       }
       child = child.nextSibling;
@@ -27441,7 +27456,7 @@ Intrinsic = (function(_super) {
         }
       }
     }
-    this.each(node, this.placehold, null, null, null, positioning, !!data);
+    this.each(node, 'placehold', null, null, positioning, !!data);
     positions = {};
     for (id in positioning) {
       styles = positioning[id];

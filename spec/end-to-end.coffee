@@ -325,6 +325,41 @@ describe 'End - to - End', ->
               done()
 
 
+    describe 'imported', ->
+      it 'should dump', (done) ->
+        container.innerHTML =  """
+          <div class="outer">
+            <button></button>
+            <button></button>
+          </div>
+          <div class="outie">
+            <button></button>
+            <button></button>
+          </div>
+          <style type="text/gss" scoped>
+            .outer, .outie {
+              @import fixtures/external-file-css1.gss;
+            }
+          </style>
+          """
+        engine.once 'solve', ->
+          expect(getSource(engine.tag('style')[1])).to.equal """
+            .outer button, .outie button{z-index:1;}
+            """
+          for el in engine.tag('div')
+            el.className = ''
+
+          engine.then ->
+            expect(getSource(engine.tag('style')[1])).to.equal """
+              """
+            engine.tag('div')[0].className = 'outer'
+            
+            engine.then ->
+              expect(getSource(engine.tag('style')[1])).to.equal """
+                .outer button, .outie button{z-index:1;}
+                """
+              done()
+
   
   # CCSS
   # ===========================================================      

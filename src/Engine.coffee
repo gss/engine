@@ -75,6 +75,7 @@ class Engine
     @variables    = {}
     @domains      = []
     @stylesheets  = []
+    @imported     = {}
     @engine       = @
     @inspector    = new @Inspector(@)
     @exporter     = new @Exporter(@)
