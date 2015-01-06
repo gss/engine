@@ -1,4 +1,5 @@
 expect = chai.expect
+c = require 'cassowary'
 
 describe 'Cassowary', ->
   it 'should be available', ->
