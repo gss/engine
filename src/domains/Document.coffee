@@ -89,12 +89,14 @@ class Document extends Abstract
         @solve 'Resize', id, ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
+          return
       
     scroll: (e = '::window') ->
       id = e.target && @identify(e.target) || e
       @solve 'Scroll', id, ->
         @intrinsic.verify(id, "scroll-top")
         @intrinsic.verify(id, "scroll-left")
+        return
 
     # Fire as early as possible
     DOMContentLoaded: ->

@@ -8,12 +8,45 @@ class Unit extends Variable
 
   # Dynamic lengths
 
+  getProperty: (operation) ->
+    parent = operation
+    while parent = parent.parent
+      if parent.command.type == 'Assignment'
+        return parent[1]
+
+  Dependencies:
+    'margin-top':            'containing-width'
+    'margin-top':            'containing-width'
+    'margin-right':          'containing-width'
+    'margin-left':           'containing-width'
+    'padding-top':           'containing-width'
+    'padding-top':           'containing-width'
+    'padding-right':         'containing-width'
+    'padding-left':          'containing-width'
+    'left':                  'containing-width'
+    'right':                 'containing-width'
+    'width':                 'containing-width'
+    'min-width':             'containing-width'
+    'max-width':             'containing-width'
+    'text-width':            'containing-width'
+    'top':                   'containing-height'
+    'bottom':                'containing-height'
+    'height':                'containing-height'
+    'font-size':             'containing-font-size'
+    'vertical-align':        'line-height'
+    'background-position-x': 'width'
+    'background-position-y': 'height'
+  
   @define
     '%': (value, engine, operation, continuation, scope) ->
-      return ['*', ['px', value] , ['get', 'font-size']]
+      debugger
+      property = @Dependencies[@getProperty(operation)] || 'containing-width'
+      path = engine.getPath(scope, property)
+      return ['*', ['px', value] , ['get', path]]
 
     em: (value, engine, operation, continuation, scope) ->
-      return ['*', ['px', value] , ['get', 'font-size']]
+      path = engine.getPath(scope, 'computed-font-size')
+      return ['*', ['px', value] , ['get', path]]
     
     rem: (value, engine, operation, continuation, scope) ->
       return ['*', ['px', value] , ['get', @engine.getPath(engine.scope._gss_id, 'font-size')]]

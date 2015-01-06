@@ -468,12 +468,12 @@ describe('Nested Rules', function() {
                 {
                   key: '.vessel .box$box1',
                   scope: "$box1"
-                }, ['<=', ['get', '$box1[width]'], ['get', 'width']]
+                }, ['<=', ['get', '$box1[width]'], ['get', '$container0[width]']]
               ], [
                 {
                   key: '.vessel .box$box2',
                   scope: "$box2"
-                }, ['<=', ['get', '$box2[width]'], ['get', 'width']]
+                }, ['<=', ['get', '$box2[width]'], ['get', '$container0[width]']]
               ]
             ]
           ]));
@@ -811,12 +811,12 @@ describe('Nested Rules', function() {
                 {
                   "key": ".vessel .box$box1",
                   "scope": "$box1"
-                }, ["<=", ["get", "$box1[width]"], ["get", "width"]]
+                }, ["<=", ["get", "$box1[width]"], ["get", "$container0[width]"]]
               ], [
                 {
                   "key": ".vessel .box$box2",
                   "scope": "$box2"
-                }, ["<=", ["get", "$box2[width]"], ["get", "width"]]
+                }, ["<=", ["get", "$box2[width]"], ["get", "$container0[width]"]]
               ]
             ]
           ]);

@@ -211,7 +211,7 @@ describe('Full page tests', function() {
                   '$title[margin-top]': 72,
                   '$title[padding-top]': 40,
                   '$face-demo[intrinsic-width]': 640,
-                  'width': 640,
+                  '$face-demo[width]': 640,
                   'md': 72,
                   'md-sub': 8
                 });
@@ -220,13 +220,13 @@ describe('Full page tests', function() {
                   expect(solution['$title[margin-top]']).to.eql(8);
                   expect(solution['$title[padding-top]']).to.eql(null);
                   expect(solution['$face-demo[intrinsic-width]']).to.eql(400);
-                  expect(solution['width']).to.eql(400);
+                  expect(solution['$face-demo[width]']).to.eql(400);
                   container.innerHTML = "";
                   return engine.then(function(solution) {
                     expect(solution).to.eql({
                       '$title[margin-top]': null,
                       '$face-demo[intrinsic-width]': null,
-                      'width': null,
+                      '$face-demo[width]': null,
                       'md': null,
                       'md-sub': null
                     });

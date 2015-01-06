@@ -14,7 +14,6 @@ Updater = (engine) ->
     if typeof problem[0] == 'string'
       unless engine.domain.signatures[problem[0]]
         Domain = problem.domain = engine.solved
-        debugger
 
     # Process arguments
     for arg, index in problem
@@ -148,7 +147,6 @@ Update.prototype =
     # Use suggested domain if no argument domain can handle operation
     if (!other || (Domain && other.displayName != Domain.displayName))
       other = Domain
-      debugger
       position = @push [operation], other
 
     if !positions

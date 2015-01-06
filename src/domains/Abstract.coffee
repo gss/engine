@@ -110,11 +110,10 @@ Abstract::Variable.Getter = Abstract::Variable.extend {
 
     if prop = engine.properties[property]
       unless prop.matcher
-        if (object ||= scope).nodeType == 9
-          object = object.body
         return prop.call(engine, object, continuation)
-    if property.indexOf('intrinsic') > -1
-      prefix ||= engine.scope
+
+    if !prefix && engine.intrinsic?.check(engine.scope, property)
+      prefix = engine.scope
     return ['get', engine.getPath(prefix, property)]
   
 # Proxy math that passes basic expressions along

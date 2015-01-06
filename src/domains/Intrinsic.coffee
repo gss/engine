@@ -142,7 +142,6 @@ class Intrinsic extends Numeric
     return value || 0
 
   fetch: (path) ->
-    debugger
     if (prop = @properties[path])?
       if typeof prop == 'function'
         return prop.call(@, object)
@@ -163,6 +162,14 @@ class Intrinsic extends Numeric
           else if !prop.matcher && property.indexOf('intrinsic') == -1
             return prop.call(@, object)
 
+  check: (id, property) ->
+    if @properties[property]? || property.indexOf('intrinsic-') == 0 || property.indexOf('computed-') == 0
+      return true
+    if @properties[id._gss_id || id]
+      if @properties[(id._gss_id || id) + '[' + property + ']']?
+        debugger
+        return true
+
   # Triggered on possibly resized element by mutation observer
   # If an element is known to listen for its intrinsic properties
   # schedule a reflow on that element. If another element is already
@@ -172,7 +179,7 @@ class Intrinsic extends Numeric
 
     @engine.updating.reflown = @scope
 
-  verify: (object, property, continuation) ->
+  verify: (object, property) ->
     path = @getPath(object, property)
     if @values.hasOwnProperty(path)
       @set(null, path, @fetch(path))
@@ -181,7 +188,11 @@ class Intrinsic extends Numeric
   # Iterate elements and measure intrinsic offsets
   each: (parent, callback, x = 0,y = 0, a,r,g,s) ->
     scope = @engine.scope
-    parent ||= scope
+    
+    if (parent ||= scope).nodeType == 9
+      @verify(parent, 'width')
+      @verify(parent, 'height')
+      parent = parent.body
 
     # Calculate new offsets for given element and styles
     if offsets = @[callback](parent, x, y, a,r,g,s)
@@ -225,8 +236,7 @@ class Intrinsic extends Numeric
   # Reset intrinsic style when observed initially
   onWatch: (id, property) ->
     if (node = @identity.solve(id)) && node.nodeType == 1
-      if property.indexOf('intrinsic-') > -1
-        property = property.substring(10)
+      property = property.replace(/^(?:computed|intrinsic)-/, '')
       path = @getPath(id, property)
       if @engine.values.hasOwnProperty(path) || @engine.updating.solution?.hasOwnProperty(path)
         node.style[property] = ''

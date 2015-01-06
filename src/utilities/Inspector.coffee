@@ -196,7 +196,6 @@ class Inspector
     #for domain in @engine.domains
     #  domain.distances = undefined
     values = {}
-    @singles = undefined
     for property, value of @engine.values
       values[property] = value
     if @rulers
@@ -432,6 +431,7 @@ class Inspector
 
 
   domains: (domains) ->
+    @singles = undefined
     unless @sheet
       @stylesheet()
     unless @list

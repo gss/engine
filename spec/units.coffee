@@ -112,4 +112,36 @@ describe 'Units', ->
 
           engine.intrinsic.set('::window', 'width', 1000)
 
+    describe 'bound to font-size', ->
+      it 'should be able to compute width', (done) ->
+        container.innerHTML = """
+          <style type="text/gss-ast">
+            ["rule", ["tag", "span"], [
+              [">=", ["get", "width"], ["em", 10]], 
+              [">=", ["get", "height"], ["em", ["get", "c"]]],
+              [">=", ["get", "c"], 2]
+            ]]
+          </style>
+          <div id="wrapper" style="font-size: 20px">
+            <span id="button1"></span>
+          </div>
+        """
+        engine.then (solution)->
+          expect(Math.round solution['$button1[width]']).to.eql(Math.round 200)
+          expect(Math.round solution['$button1[height]']).to.eql(Math.round 40)
+          engine.then (solution) ->
+            expect(Math.round solution['$button1[width]']).to.eql(Math.round 300)
+            expect(Math.round solution['$button1[height]']).to.eql(Math.round 60)
+
+            remove(engine.id('button1'))
+          
+            engine.then (solution)->
+              expect(solution['$button1[width]']).to.eql null
+              expect(solution['$button1[height]']).to.eql null
+              expect(solution['$button1[c]']).to.eql null
+              expect(Object.keys(engine.intrinsic.watchers)).to.eql []
+              done()
+
+          engine.id('wrapper').style.fontSize = '30px'
+
             

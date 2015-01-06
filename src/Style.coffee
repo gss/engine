@@ -82,7 +82,7 @@ Style = (definition, name, styles,
     initial::properties = properties
 
 
-  matcher.format    = (value) ->
+  matcher.format = (value) ->
     return Shorthand::toExpressionString(name, value, false, styles)
 
   return styles[name] = matcher

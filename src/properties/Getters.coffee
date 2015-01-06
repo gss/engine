@@ -9,18 +9,25 @@ class Getters
 
     height: ->
       return window.innerHeight
+    x: 0
+    y: 0
 
-    #right: '::window[width]'
-    #bottom: '::window[height]'
-    #
-    #center:
-    #  x: ->
-    #    return window.innerWidth / 2
-    #
-    #  y: ->
-    #    return window.innerHeight / 2
+  '::document':
+
+    height: ->
+      return document.body.offsetHeight
+      
+    width: ->
+      return document.body.offsetWidth
+
+    x: 0
+    y: 0
 
     scroll:
+      height: ->
+        return document.body.scrollHeight
+      width: ->
+        return document.body.scrollWidth
 
       left: ->
         return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft 
@@ -28,17 +35,6 @@ class Getters
       top: ->
         return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop 
 
-    x: 0
-    y: 0
-
-  '::document':
-
-    scroll:
-      left: '::window[scroll-left]'
-      top:  '::window[scroll-top]'
-      
-    x: '::window[x]'
-    y: '::window[y]'
 
   intrinsic:
 

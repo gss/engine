@@ -20906,7 +20906,7 @@ Domain = (function() {
   };
 
   Domain.prototype.getPath = function(id, property) {
-    var _ref;
+    var _ref, _ref1;
     if (!property) {
       property = id;
       id = void 0;
@@ -20921,7 +20921,10 @@ Domain = (function() {
           id = id.path;
         }
       }
-      if (id === ((_ref = this.scope) != null ? _ref._gss_id : void 0) && property.substring(0, 10) !== 'intrinsic-') {
+      if (property.indexOf('scroll') > -1) {
+        debugger;
+      }
+      if (id === ((_ref = this.scope) != null ? _ref._gss_id : void 0) && !((_ref1 = this.intrinsic) != null ? _ref1.check(id, property) : void 0)) {
         return property;
       }
       if (id.substring(0, 2) === '$"') {
@@ -21963,7 +21966,6 @@ Updater = function(engine) {
     if (typeof problem[0] === 'string') {
       if (!engine.domain.signatures[problem[0]]) {
         Domain = problem.domain = engine.solved;
-        debugger;
       }
     }
     for (index = _i = 0, _len = problem.length; _i < _len; index = ++_i) {
@@ -22129,7 +22131,6 @@ Update.prototype = {
     }
     if (!other || (Domain && other.displayName !== Domain.displayName)) {
       other = Domain;
-      debugger;
       position = this.push([operation], other);
     }
     if (!positions) {
@@ -26671,12 +26672,52 @@ Unit = (function(_super) {
     }
   ];
 
+  Unit.prototype.getProperty = function(operation) {
+    var parent;
+    parent = operation;
+    while (parent = parent.parent) {
+      if (parent.command.type === 'Assignment') {
+        return parent[1];
+      }
+    }
+  };
+
+  Unit.prototype.Dependencies = {
+    'margin-top': 'containing-width',
+    'margin-top': 'containing-width',
+    'margin-right': 'containing-width',
+    'margin-left': 'containing-width',
+    'padding-top': 'containing-width',
+    'padding-top': 'containing-width',
+    'padding-right': 'containing-width',
+    'padding-left': 'containing-width',
+    'left': 'containing-width',
+    'right': 'containing-width',
+    'width': 'containing-width',
+    'min-width': 'containing-width',
+    'max-width': 'containing-width',
+    'text-width': 'containing-width',
+    'top': 'containing-height',
+    'bottom': 'containing-height',
+    'height': 'containing-height',
+    'font-size': 'containing-font-size',
+    'vertical-align': 'line-height',
+    'background-position-x': 'width',
+    'background-position-y': 'height'
+  };
+
   Unit.define({
     '%': function(value, engine, operation, continuation, scope) {
-      return ['*', ['px', value], ['get', 'font-size']];
+      debugger;
+      var path, property;
+      property = this.Dependencies[this.getProperty(operation)] || 'containing-width';
+      path = engine.getPath(scope, property);
+      return ['*', ['px', value], ['get', path]];
     },
     em: function(value, engine, operation, continuation, scope) {
-      return ['*', ['px', value], ['get', 'font-size']];
+      var path;
+      path = engine.getPath(scope, 'computed-font-size');
+      return ['*', ['px', value], ['get', path]];
     },
     rem: function(value, engine, operation, continuation, scope) {
       return ['*', ['px', value], ['get', this.engine.getPath(engine.scope._gss_id, 'font-size')]];
@@ -26936,20 +26977,17 @@ Abstract.prototype.Variable.Getter = Abstract.prototype.Variable.extend({
   ]
 }, {
   'get': function(object, property, engine, operation, continuation, scope) {
-    var prefix, prop;
+    var prefix, prop, _ref1;
     if (engine.queries) {
       prefix = engine.Query.prototype.getScope(engine, object, continuation);
     }
     if (prop = engine.properties[property]) {
       if (!prop.matcher) {
-        if ((object || (object = scope)).nodeType === 9) {
-          object = object.body;
-        }
         return prop.call(engine, object, continuation);
       }
     }
-    if (property.indexOf('intrinsic') > -1) {
-      prefix || (prefix = engine.scope);
+    if (!prefix && ((_ref1 = engine.intrinsic) != null ? _ref1.check(engine.scope, property) : void 0)) {
+      prefix = engine.scope;
     }
     return ['get', engine.getPath(prefix, property)];
   }
@@ -27290,7 +27328,6 @@ Intrinsic = (function(_super) {
   };
 
   Intrinsic.prototype.fetch = function(path) {
-    debugger;
     var id, j, object, prop, property;
     if ((prop = this.properties[path]) != null) {
       if (typeof prop === 'function') {
@@ -27317,6 +27354,18 @@ Intrinsic = (function(_super) {
     }
   };
 
+  Intrinsic.prototype.check = function(id, property) {
+    if ((this.properties[property] != null) || property.indexOf('intrinsic-') === 0 || property.indexOf('computed-') === 0) {
+      return true;
+    }
+    if (this.properties[id._gss_id || id]) {
+      if (this.properties[(id._gss_id || id) + '[' + property + ']'] != null) {
+        debugger;
+        return true;
+      }
+    }
+  };
+
   Intrinsic.prototype.validate = function(node) {
     var subscribers;
     if (!(subscribers = this.objects)) {
@@ -27325,7 +27374,7 @@ Intrinsic = (function(_super) {
     return this.engine.updating.reflown = this.scope;
   };
 
-  Intrinsic.prototype.verify = function(object, property, continuation) {
+  Intrinsic.prototype.verify = function(object, property) {
     var path;
     path = this.getPath(object, property);
     if (this.values.hasOwnProperty(path)) {
@@ -27342,7 +27391,11 @@ Intrinsic = (function(_super) {
       y = 0;
     }
     scope = this.engine.scope;
-    parent || (parent = scope);
+    if ((parent || (parent = scope)).nodeType === 9) {
+      this.verify(parent, 'width');
+      this.verify(parent, 'height');
+      parent = parent.body;
+    }
     if (offsets = this[callback](parent, x, y, a, r, g, s)) {
       x += offsets.x || 0;
       y += offsets.y || 0;
@@ -27392,9 +27445,7 @@ Intrinsic = (function(_super) {
   Intrinsic.prototype.onWatch = function(id, property) {
     var node, path, _ref1;
     if ((node = this.identity.solve(id)) && node.nodeType === 1) {
-      if (property.indexOf('intrinsic-') > -1) {
-        property = property.substring(10);
-      }
+      property = property.replace(/^(?:computed|intrinsic)-/, '');
       path = this.getPath(id, property);
       if (this.engine.values.hasOwnProperty(path) || ((_ref1 = this.engine.updating.solution) != null ? _ref1.hasOwnProperty(path) : void 0)) {
         return node.style[property] = '';
@@ -27681,7 +27732,7 @@ Document = (function(_super) {
         }
         return _this.solve('Resize', id, function() {
           this.intrinsic.verify(id, "width");
-          return this.intrinsic.verify(id, "height");
+          this.intrinsic.verify(id, "height");
         });
       });
     },
@@ -27693,7 +27744,7 @@ Document = (function(_super) {
       id = e.target && this.identify(e.target) || e;
       return this.solve('Scroll', id, function() {
         this.intrinsic.verify(id, "scroll-top");
-        return this.intrinsic.verify(id, "scroll-left");
+        this.intrinsic.verify(id, "scroll-left");
       });
     },
     DOMContentLoaded: function() {
@@ -28130,25 +28181,33 @@ Getters = (function() {
     height: function() {
       return window.innerHeight;
     },
+    x: 0,
+    y: 0
+  };
+
+  Getters.prototype['::document'] = {
+    height: function() {
+      return document.body.offsetHeight;
+    },
+    width: function() {
+      return document.body.offsetWidth;
+    },
+    x: 0,
+    y: 0,
     scroll: {
+      height: function() {
+        return document.body.scrollHeight;
+      },
+      width: function() {
+        return document.body.scrollWidth;
+      },
       left: function() {
         return window.pageXOffset || document.documentElement.scrollLeft || document.body.scrollLeft;
       },
       top: function() {
         return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
       }
-    },
-    x: 0,
-    y: 0
-  };
-
-  Getters.prototype['::document'] = {
-    scroll: {
-      left: '::window[scroll-left]',
-      top: '::window[scroll-top]'
-    },
-    x: '::window[x]',
-    y: '::window[y]'
+    }
   };
 
   Getters.prototype.intrinsic = {
@@ -29739,7 +29798,6 @@ Inspector = (function() {
   Inspector.prototype.refresh = function() {
     var bits, id, ids, property, value, values, _i, _len, _ref, _ref1, _results;
     values = {};
-    this.singles = void 0;
     _ref = this.engine.values;
     for (property in _ref) {
       value = _ref[property];
@@ -30124,6 +30182,7 @@ Inspector = (function() {
   Inspector.prototype.domains = function(domains) {
     var domain, index, innerHTML, multiples, singles, total, _i,
       _this = this;
+    this.singles = void 0;
     if (!this.sheet) {
       this.stylesheet();
     }
