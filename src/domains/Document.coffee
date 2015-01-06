@@ -89,6 +89,8 @@ class Document extends Abstract
         @solve 'Resize', id, ->
           @intrinsic.verify(id, "width")
           @intrinsic.verify(id, "height")
+          @intrinsic.verify(@scope, "width")
+          @intrinsic.verify(@scope, "height")
           return
       
     scroll: (e = '::window') ->

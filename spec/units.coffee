@@ -94,12 +94,14 @@ describe 'Units', ->
           <button id="button1"></button>
         """
         engine.then (solution)->
-          expect(Math.round solution['$button1[width]']).to.eql(Math.round window.innerWidth / 10)
-          expect(Math.round solution['$button1[height]']).to.eql(Math.round window.innerHeight / 2)
-          expect(Math.round solution['$button1[c]']).to.eql(Math.round Math.max(window.innerWidth, window.innerHeight) * 0.3)
+          w = document.documentElement.clientWidth
+          h = Math.min(window.innerHeight, document.documentElement.clientHeight)
+          expect(Math.round solution['$button1[width]']).to.eql(Math.round w / 10)
+          expect(Math.round solution['$button1[height]']).to.eql(Math.round h / 2)
+          expect(Math.round solution['$button1[c]']).to.eql(Math.round Math.max(w, h) * 0.3)
           engine.then (solution) ->
             expect(Math.round solution['$button1[width]']).to.eql(Math.round 1000 / 10)
-            expect(Math.round solution['$button1[c]']).to.eql(Math.round Math.max(1000, window.innerHeight) * 0.3)
+            expect(Math.round solution['$button1[c]']).to.eql(Math.round Math.max(1000, h) * 0.3)
             
             remove(engine.id('button1'))
           
@@ -109,6 +111,8 @@ describe 'Units', ->
               expect(solution['$button1[c]']).to.eql null
               expect(Object.keys(engine.intrinsic.watchers)).to.eql []
               done()
+          engine.intrinsic.properties['::window[width]'] = ->
+            return 1000
 
           engine.intrinsic.set('::window', 'width', 1000)
 

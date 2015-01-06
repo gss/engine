@@ -232,7 +232,7 @@ describe 'GSS commands', ->
             ['get','::window[width]']
           ],
           [[
-            key: '.box$12322', values: {'::window[width]': window.innerWidth}
+            key: '.box$12322', values: {'::window[width]': document.documentElement.clientWidth}
             ['==', 
               ['get', '$12322[width]'],
               ['get', '::window[width]']
@@ -282,17 +282,17 @@ describe 'GSS commands', ->
                   ['get', '::window[y]']],
         ]],
         [[
-          key: '', values: {'::window[height]': window.innerHeight}
+          key: '', values: {'::window[height]': Math.min(window.innerHeight, document.documentElement.clientHeight)}
           ['>=',  ['get', 'hhh'], 
                   ['get', '::window[height]']]
         ]],
         [[
-          key: '', values: {'::window[height]': window.innerHeight}
+          key: '', values: {'::window[height]': Math.min(window.innerHeight, document.documentElement.clientHeight)}
           ['>=',  ['get', 'hah']
                   ['get', '::window[height]']]
         ]],
         [[
-          key: '', values: {'::window[width]': window.innerWidth}
+          key: '', values: {'::window[width]': document.documentElement.clientWidth}
           ['<=',  ['get', 'www'], 
                   ['get', '::window[width]']]
         ]] 

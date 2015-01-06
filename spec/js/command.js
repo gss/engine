@@ -274,7 +274,7 @@ describe('GSS commands', function() {
               {
                 key: '.box$12322',
                 values: {
-                  '::window[width]': window.innerWidth
+                  '::window[width]': document.documentElement.clientWidth
                 }
               }, ['==', ['get', '$12322[width]'], ['get', '::window[width]']]
             ]
@@ -320,7 +320,7 @@ describe('GSS commands', function() {
             {
               key: '',
               values: {
-                '::window[height]': window.innerHeight
+                '::window[height]': Math.min(window.innerHeight, document.documentElement.clientHeight)
               }
             }, ['>=', ['get', 'hhh'], ['get', '::window[height]']]
           ]
@@ -329,7 +329,7 @@ describe('GSS commands', function() {
             {
               key: '',
               values: {
-                '::window[height]': window.innerHeight
+                '::window[height]': Math.min(window.innerHeight, document.documentElement.clientHeight)
               }
             }, ['>=', ['get', 'hah'], ['get', '::window[height]']]
           ]
@@ -338,7 +338,7 @@ describe('GSS commands', function() {
             {
               key: '',
               values: {
-                '::window[width]': window.innerWidth
+                '::window[width]': document.documentElement.clientWidth
               }
             }, ['<=', ['get', 'www'], ['get', '::window[width]']]
           ]

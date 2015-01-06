@@ -57,6 +57,11 @@ class Intrinsic extends Numeric
 
     validate: (solution, update) ->
       if @intrinsic.objects && update.domains.indexOf(@intrinsic, update.index + 1) == -1
+        
+        @intrinsic.verify('::window', 'width')
+        @intrinsic.verify('::window', 'height')
+        @intrinsic.verify(@scope, 'width')
+        @intrinsic.verify(@scope, 'height')
         if measured = @intrinsic.solve()
           if true#Object.keys(measured).length
             update.apply measured
@@ -167,7 +172,6 @@ class Intrinsic extends Numeric
       return true
     if @properties[id._gss_id || id]
       if @properties[(id._gss_id || id) + '[' + property + ']']?
-        debugger
         return true
 
   # Triggered on possibly resized element by mutation observer

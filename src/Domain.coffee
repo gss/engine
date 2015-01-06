@@ -373,8 +373,6 @@ class Domain
           id = @identify(id)
         else 
           id = id.path
-      if property.indexOf('scroll') > -1
-        debugger
       if id == @scope?._gss_id && !@intrinsic?.check(id, property)
         return property
       if id.substring(0, 2) == '$"'

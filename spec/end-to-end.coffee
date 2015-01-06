@@ -1480,9 +1480,9 @@ describe 'End - to - End', ->
     describe 'center values', ->  
       it 'should compute values', (done) ->
         engine.once 'solve', (e) ->     
-          w = (window.innerWidth)# - GSS.get.scrollbarWidth())
+          w = document.documentElement.clientWidth
           cx = w / 2
-          h = (window.innerHeight)
+          h = Math.min(window.innerHeight, document.documentElement.clientHeight)
           cy = h / 2
           expect(engine.values["center-x"]).to.eql cx
           expect(engine.values["center-y"]).to.eql cy
@@ -1496,8 +1496,8 @@ describe 'End - to - End', ->
     describe 'position values', ->  
       it 'should compute values', (done) ->
         engine.once 'solve', (e) ->
-          w = (window.innerWidth)# - GSS.get.scrollbarWidth())
-          h = (window.innerHeight)
+          w = document.documentElement.clientWidth
+          h = Math.min(window.innerHeight, document.documentElement.clientHeight)
           expect(engine.values["top"]).to.eql 0
           expect(engine.values["right"]).to.eql w
           expect(engine.values["bottom"]).to.eql h
@@ -2525,15 +2525,15 @@ describe 'End - to - End', ->
           expect(engine.values).to.eql {
             '$section1[height]': 20
             '$section1[intrinsic-height]': 20
-            '$section1[width]': window.innerWidth - 200
+            '$section1[width]': document.documentElement.clientWidth - 200
             '$section1[x]': 100
             '$section1[y]': 0
             '$section2[height]': 10
             '$section2[intrinsic-height]': 10
-            '$section2[width]': window.innerWidth - 200
+            '$section2[width]': document.documentElement.clientWidth - 200
             '$section2[x]': 100
             '$section2[y]': 0
-            '::window[width]': window.innerWidth
+            '::window[width]': document.documentElement.clientWidth
             '::window[x]': 0
             '::window[y]': 0
             'Wwin': 1000

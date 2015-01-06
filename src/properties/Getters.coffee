@@ -5,20 +5,20 @@ class Getters
   '::window':
       
     width: ->
-      return window.innerWidth
+      return document.documentElement.clientWidth
 
     height: ->
-      return window.innerHeight
+      return Math.min(window.innerHeight, document.documentElement.clientHeight)
     x: 0
     y: 0
 
   '::document':
 
     height: ->
-      return document.body.offsetHeight
+      return document.documentElement.clientHeight
       
     width: ->
-      return document.body.offsetWidth
+      return document.documentElement.clientWidth
 
     x: 0
     y: 0

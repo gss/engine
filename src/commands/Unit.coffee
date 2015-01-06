@@ -39,7 +39,6 @@ class Unit extends Variable
   
   @define
     '%': (value, engine, operation, continuation, scope) ->
-      debugger
       property = @Dependencies[@getProperty(operation)] || 'containing-width'
       path = engine.getPath(scope, property)
       return ['*', ['px', value] , ['get', path]]

@@ -1,4 +1,3 @@
-/* gss-engine - version 1.0.4-beta (2015-01-06) - http://gridstylesheets.org */
 
 ;(function(){
 
@@ -20921,9 +20920,6 @@ Domain = (function() {
           id = id.path;
         }
       }
-      if (property.indexOf('scroll') > -1) {
-        debugger;
-      }
       if (id === ((_ref = this.scope) != null ? _ref._gss_id : void 0) && !((_ref1 = this.intrinsic) != null ? _ref1.check(id, property) : void 0)) {
         return property;
       }
@@ -26708,7 +26704,6 @@ Unit = (function(_super) {
 
   Unit.define({
     '%': function(value, engine, operation, continuation, scope) {
-      debugger;
       var path, property;
       property = this.Dependencies[this.getProperty(operation)] || 'containing-width';
       path = engine.getPath(scope, property);
@@ -27215,6 +27210,10 @@ Intrinsic = (function(_super) {
     validate: function(solution, update) {
       var measured;
       if (this.intrinsic.objects && update.domains.indexOf(this.intrinsic, update.index + 1) === -1) {
+        this.intrinsic.verify('::window', 'width');
+        this.intrinsic.verify('::window', 'height');
+        this.intrinsic.verify(this.scope, 'width');
+        this.intrinsic.verify(this.scope, 'height');
         if (measured = this.intrinsic.solve()) {
           if (true) {
             update.apply(measured);
@@ -27360,7 +27359,6 @@ Intrinsic = (function(_super) {
     }
     if (this.properties[id._gss_id || id]) {
       if (this.properties[(id._gss_id || id) + '[' + property + ']'] != null) {
-        debugger;
         return true;
       }
     }
@@ -27733,6 +27731,8 @@ Document = (function(_super) {
         return _this.solve('Resize', id, function() {
           this.intrinsic.verify(id, "width");
           this.intrinsic.verify(id, "height");
+          this.intrinsic.verify(this.scope, "width");
+          this.intrinsic.verify(this.scope, "height");
         });
       });
     },
@@ -28176,10 +28176,10 @@ Getters = (function() {
 
   Getters.prototype['::window'] = {
     width: function() {
-      return window.innerWidth;
+      return document.documentElement.clientWidth;
     },
     height: function() {
-      return window.innerHeight;
+      return Math.min(window.innerHeight, document.documentElement.clientHeight);
     },
     x: 0,
     y: 0
@@ -28187,10 +28187,10 @@ Getters = (function() {
 
   Getters.prototype['::document'] = {
     height: function() {
-      return document.body.offsetHeight;
+      return document.documentElement.clientHeight;
     },
     width: function() {
-      return document.body.offsetWidth;
+      return document.documentElement.clientWidth;
     },
     x: 0,
     y: 0,
