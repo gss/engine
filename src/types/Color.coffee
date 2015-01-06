@@ -1,8 +1,20 @@
 # Algorithms are used as they are from chroma.js by Gregor Aisch (BSD License).
 
+Command = require '../Command'
 
-class Color
+class Color extends Command
   @Keywords: {'transparent', 'currentColor'}
+
+  constructor: (obj) ->
+    switch typeof obj
+      when 'string'
+        if Color.Keywords[obj]
+          return obj
+        else if obj.charAt(0) == '#'
+          return obj
+      when 'object'
+        if Color[obj[0]]
+          return obj
 
   @define
     hsl: (h, s, l) ->

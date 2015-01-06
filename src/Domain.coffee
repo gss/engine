@@ -38,10 +38,12 @@ class Domain
       @addListeners(@events)
 
 
+
     if @Properties
-      @Property.compile @Properties::, @
-      Properties = @Properties
-    @properties  = new (Properties || Object)(@engine)
+      @properties  = new @Properties(@)
+      @Property.compile @properties, @
+    else
+      @properties = {}
 
     if @url && @getWorkerURL
       if @url && (@url = @getWorkerURL?(@url))
@@ -427,13 +429,13 @@ class Domain
             path = reference + '-' + key
           else
             path = reference + '[' + key + ']'
-
           properties[path] = @Property(value, path, properties)
     return property
 
   # Compile own properties
   Domain::Property.compile = (properties, engine) ->
     for key, property of properties
+      continue if key == 'engine'
       @call(engine, property, key, properties)
     return properties
   

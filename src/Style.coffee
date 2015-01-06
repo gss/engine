@@ -48,17 +48,14 @@ Style = (definition, name, styles,
           max = Math.max(substyle.depth, max)
         when "string"
           # Predefined value type
-          if type = @engine[property]
+          if type = @[property]
             types.push(type)
-            if initial == undefined
-              ###if storage = Types[type.displayName + 's']
-                for key of storage
-                  if type.call(@, key)
-                    initial = key
-                  break\
-              ###
-              
-              initial ?= 0
+            if storage = type.Keywords
+              for key of storage
+                initial = key
+                break
+            
+            initial ?= 0
           # Keyword
           else
             initial ?= property
@@ -132,7 +129,7 @@ class Shorthand
               for index in [keys.indexOf(key) - 1 ... 0] by -1
                 if (k = keys[index]) != previous
                   break if @hasOwnProperty(k)
-                  if types[index] == @engine.Length
+                  if types[index] == @styles.engine.Length
                     expression = @toExpressionString(k, @[k])
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '')
                     previous = k
@@ -163,7 +160,7 @@ class Shorthand
     switch typeof operation
       when 'object'
         name = operation[0]
-        if name == '%' || @styles.signatures[name]
+        if @styles.engine.signatures[name]?.Number?.resolved
           return @toExpressionString(key, operation[1], true) + name
         else
           string = name + '('
@@ -174,11 +171,12 @@ class Shorthand
       when 'number'
         if !expression
           types = styles[key].types
-          for type in types
-            if type.displayName == 'Integer' || type.displayName == 'Float'
-              return operation
-          if operation != 0
-            operation = Math.floor(operation) + 'px'
+          if operation
+            for type in types
+              if type.formatNumber
+                if (expression = type.formatNumber(operation))?
+                  return expression
+          return operation
     return operation
 
 
@@ -233,7 +231,7 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
           for property, index in keys
             if !result || (!result.hasOwnProperty(property) &&
                           (!(req = required[property]) || result.hasOwnProperty(req)))
-              if (matched = types[index].call(@, argument)) != undefined
+              if (matched = types[index](argument)) != undefined
                 (result ||= new initial)[property] = matched
                 break
         else

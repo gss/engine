@@ -216,7 +216,6 @@ class Command
 
   # Write meta data for a foreign domain, optionally queues parent operation
   transfer: (engine, operation, continuation, scope, ascender, ascending, top, replacement) ->
-    debugger
     if (meta = @getMeta(operation)) && !engine.finalized
       for path of operation.variables
         if (value = (replacement || engine).values[path])?
@@ -414,6 +413,9 @@ class Command
           if property.match /^[A-Z]/
             @compile(engine, value)
       return
+    if (engine.compiled ||= []).indexOf(command) > -1
+      return
+    engine.compiled.push(command)
 
     Types = command.types = {}
     for property, value of command

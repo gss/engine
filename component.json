@@ -44,6 +44,8 @@
     "lib/types/Measurement.js",
     "lib/types/Primitive.js",
     "lib/types/URL.js",
+    "lib/types/Color.js",
+    "lib/types/Gradient.js",
 
     "lib/utilities/Console.js",
     "lib/utilities/Exporter.js",

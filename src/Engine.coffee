@@ -444,7 +444,7 @@ class Engine
     
     if @assumed.values.hasOwnProperty(path)
       return @assumed
-    else if property && intrinsic = @intrinsic
+    else if property && (intrinsic = @intrinsic)
       if props = intrinsic.properties
         if (props[path]? || (props[property] && !props[property].matcher))
           return intrinsic

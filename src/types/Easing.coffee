@@ -1,7 +1,7 @@
 Command = require '../commands/Variable'
 
 class Easing extends Command
-  @condition: (obj) ->
+  constructor: (obj) ->
     if typeof obj == 'string'
       if obj = @Type.Timings[obj]
         return obj

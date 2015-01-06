@@ -14,7 +14,6 @@ class Variable extends Command
     
   before: (args, engine, operation, continuation, scope, ascender, ascending) ->
     if (value = ascending?.values?[args[0]])?
-      debugger
       return value
 
   # Declare variable within domain, initial value is zero

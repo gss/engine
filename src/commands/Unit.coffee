@@ -9,6 +9,9 @@ class Unit extends Variable
   # Dynamic lengths
 
   @define
+    '%': (value, engine, operation, continuation, scope) ->
+      return ['*', ['px', value] , ['get', 'font-size']]
+
     em: (value, engine, operation, continuation, scope) ->
       return ['*', ['px', value] , ['get', 'font-size']]
     
@@ -24,6 +27,9 @@ class Unit extends Variable
     vmin: (value, engine, operation, continuation, scope) ->
       return ['*', ['/', ['px', value], 100] , ['min', ['get', '::window[height]'], ['get', '::window[width]']]]
       
+    vmax: (value, engine, operation, continuation, scope) ->
+      return ['*', ['/', ['px', value], 100] , ['max', ['get', '::window[height]'], ['get', '::window[width]']]]
+
     vmax: (value, engine, operation, continuation, scope) ->
       return ['*', ['/', ['px', value], 100] , ['max', ['get', '::window[height]'], ['get', '::window[width]']]]
 

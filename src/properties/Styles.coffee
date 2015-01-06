@@ -7,10 +7,10 @@ class Styles
 
   animation: [[[
     name:              ['none', 'String']
-    duration:          ['time']
-    delay:             ['time']
+    duration:          ['Time']
+    delay:             ['Time']
     direction:         ['normal', 'reverse', 'alternate']
-    'timing-function': ['timing'],
+    'timing-function': ['Easing'],
     'iteration-count': [1, 'infinite', 'Number']
     'fill-mode':       ['none', 'both', 'forwards', 'backwards']
     'play-state':      ['running', 'paused']
@@ -18,14 +18,14 @@ class Styles
   
   transition: [[[
     property:          ['all', 'property', 'none']
-    duration:          ['time']
-    delay:             ['time']
+    duration:          ['Time']
+    delay:             ['Time']
     direction:         ['reverse', 'normal']
-    'timing-function': ['timing']
+    'timing-function': ['Easing']
   ]]]
 
   background: [[[
-    image:             ['Image', 'Gradient', 'none']
+    image:             ['URL', 'Gradient', 'none']
     position:         
       x:               ['Length', 'Percentage', 'center', 'left', 'right']
       y:               ['Length', 'Percentage', 'center', 'top', 'bottom']
@@ -76,7 +76,7 @@ class Styles
   ]
 
 
-  'line-height':       ['normal', 'Number', 'Length', 'Percentage']
+  'line-height':       ['normal', 'Length', 'Number', 'Percentage']
 
   font: [
     [ 
@@ -87,14 +87,14 @@ class Styles
     size:              ['Size', 'Length', 'Percentage']
     [ 
       #'/',
-      'line-height':   ['normal', 'Number', 'Length', 'Percentage'] 
+      'line-height':   ['normal', 'Length', 'Number', 'Percentage'] 
     ]
     family:            ['inherit', 'strings']
   ]
 
   'font-stretch':      ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 
                         'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded' ] 
-  'font-size-adjust':  ['Float']
+  'font-size-adjust':  ['Number']
 
   'letter-spacing':    ['normal', 'Length'],
   
@@ -130,7 +130,7 @@ class Styles
   left:                ['Length', 'Percentage', 'auto']
   right:               ['Length', 'Percentage', 'auto']
   bottom:              ['Length', 'Percentage', 'auto']
-  opacity:             ['Float']
+  opacity:             ['Number']
   'z-index':           ['Integer']
   cursor:              ['auto', 'crosshair', 'default', 'hand', 'move', 'e-resize', 'ne-resize', 'nw-resize',
                        'n-resize', 'se-resize', 'sw-resize', 's-resize', 'w-resize', 'text', 'wait', 'help']

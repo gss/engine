@@ -20486,7 +20486,6 @@ Domain = (function() {
   Domain.prototype.strategy = void 0;
 
   function Domain(engine, url, values, name) {
-    var Properties;
     this.values = {};
     if (engine) {
       this.engine = engine;
@@ -20505,10 +20504,11 @@ Domain = (function() {
       this.addListeners(this.events);
     }
     if (this.Properties) {
-      this.Property.compile(this.Properties.prototype, this);
-      Properties = this.Properties;
+      this.properties = new this.Properties(this);
+      this.Property.compile(this.properties, this);
+    } else {
+      this.properties = {};
     }
-    this.properties = new (Properties || Object)(this.engine);
     if (this.url && this.getWorkerURL) {
       if (this.url && (this.url = typeof this.getWorkerURL === "function" ? this.getWorkerURL(this.url) : void 0)) {
         if (engine !== this) {
@@ -21002,6 +21002,9 @@ Domain = (function() {
     var key, property;
     for (key in properties) {
       property = properties[key];
+      if (key === 'engine') {
+        continue;
+      }
       this.call(engine, property, key, properties);
     }
     return properties;
@@ -21257,7 +21260,6 @@ Command = (function() {
   };
 
   Command.prototype.transfer = function(engine, operation, continuation, scope, ascender, ascending, top, replacement) {
-    debugger;
     var domain, meta, parent, path, value, _ref, _ref1, _ref2;
     if ((meta = this.getMeta(operation)) && !engine.finalized) {
       for (path in operation.variables) {
@@ -21486,6 +21488,10 @@ Command = (function() {
       }
       return;
     }
+    if ((engine.compiled || (engine.compiled = [])).indexOf(command) > -1) {
+      return;
+    }
+    engine.compiled.push(command);
     Types = command.types = {};
     for (property in command) {
       value = command[property];
@@ -23844,7 +23850,7 @@ require.register("gss/lib/Style.js", function (exports, module) {
 var Matcher, Shorthand, Style;
 
 Style = function(definition, name, styles, keywords, types, keys, properties, required, optional, depth) {
-  var callback, def, index, initial, item, key, matcher, max, p, pad, previous, prop, property, requirement, style, substyle, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3;
+  var callback, def, index, initial, item, key, matcher, max, p, pad, previous, prop, property, requirement, storage, style, substyle, type, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3;
   if (keywords == null) {
     keywords = {};
   }
@@ -23918,19 +23924,16 @@ Style = function(definition, name, styles, keywords, types, keys, properties, re
           max = Math.max(substyle.depth, max);
           break;
         case "string":
-          if (type = this.engine[property]) {
+          if (type = this[property]) {
             types.push(type);
-            if (initial === void 0) {
-              /*if storage = Types[type.displayName + 's']
-                for key of storage
-                  if type.call(@, key)
-                    initial = key
-                  break\
-              */
-
-              if (initial == null) {
-                initial = 0;
+            if (storage = type.Keywords) {
+              for (key in storage) {
+                initial = key;
+                break;
               }
+            }
+            if (initial == null) {
+              initial = 0;
             }
           } else {
             if (initial == null) {
@@ -24024,7 +24027,7 @@ Shorthand = (function() {
                   if (this.hasOwnProperty(k)) {
                     break;
                   }
-                  if (types[index] === this.engine.Length) {
+                  if (types[index] === this.styles.engine.Length) {
                     expression = this.toExpressionString(k, this[k]);
                     prefix = ((string || prefix) && ' ' || '') + expression + (prefix && ' ' + prefix || '');
                     previous = k;
@@ -24061,18 +24064,18 @@ Shorthand = (function() {
   };
 
   Shorthand.prototype.toExpressionString = function(key, operation, expression, styles) {
-    var index, name, string, type, types, _i, _j, _len, _ref;
+    var index, name, string, type, types, _i, _j, _len, _ref, _ref1, _ref2;
     if (styles == null) {
       styles = this.styles;
     }
     switch (typeof operation) {
       case 'object':
         name = operation[0];
-        if (name === '%' || this.styles.signatures[name]) {
+        if ((_ref = this.styles.engine.signatures[name]) != null ? (_ref1 = _ref.Number) != null ? _ref1.resolved : void 0 : void 0) {
           return this.toExpressionString(key, operation[1], true) + name;
         } else {
           string = name + '(';
-          for (index = _i = 1, _ref = operation.length - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; index = 1 <= _ref ? ++_i : --_i) {
+          for (index = _i = 1, _ref2 = operation.length - 1; 1 <= _ref2 ? _i <= _ref2 : _i >= _ref2; index = 1 <= _ref2 ? ++_i : --_i) {
             if (index !== 1) {
               string += ',';
             }
@@ -24084,15 +24087,17 @@ Shorthand = (function() {
       case 'number':
         if (!expression) {
           types = styles[key].types;
-          for (_j = 0, _len = types.length; _j < _len; _j++) {
-            type = types[_j];
-            if (type.displayName === 'Integer' || type.displayName === 'Float') {
-              return operation;
+          if (operation) {
+            for (_j = 0, _len = types.length; _j < _len; _j++) {
+              type = types[_j];
+              if (type.formatNumber) {
+                if ((expression = type.formatNumber(operation)) != null) {
+                  return expression;
+                }
+              }
             }
           }
-          if (operation !== 0) {
-            operation = Math.floor(operation) + 'px';
-          }
+          return operation;
         }
     }
     return operation;
@@ -24157,7 +24162,7 @@ Matcher = function(name, keywords, types, keys, required, pad, depth, initial, c
           for (index = _j = 0, _len1 = keys.length; _j < _len1; index = ++_j) {
             property = keys[index];
             if (!result || (!result.hasOwnProperty(property) && (!(req = required[property]) || result.hasOwnProperty(req)))) {
-              if ((matched = types[index].call(this, argument)) !== void 0) {
+              if ((matched = types[index](argument)) !== void 0) {
                 (result || (result = new initial))[property] = matched;
                 break;
               }
@@ -26951,7 +26956,6 @@ Variable = (function(_super) {
   Variable.prototype.before = function(args, engine, operation, continuation, scope, ascender, ascending) {
     var value, _ref;
     if ((value = ascending != null ? (_ref = ascending.values) != null ? _ref[args[0]] : void 0 : void 0) != null) {
-      debugger;
       return value;
     }
   };
@@ -27051,6 +27055,9 @@ Unit = (function(_super) {
   ];
 
   Unit.define({
+    '%': function(value, engine, operation, continuation, scope) {
+      return ['*', ['px', value], ['get', 'font-size']];
+    },
     em: function(value, engine, operation, continuation, scope) {
       return ['*', ['px', value], ['get', 'font-size']];
     },
@@ -27065,6 +27072,9 @@ Unit = (function(_super) {
     },
     vmin: function(value, engine, operation, continuation, scope) {
       return ['*', ['/', ['px', value], 100], ['min', ['get', '::window[height]'], ['get', '::window[width]']]];
+    },
+    vmax: function(value, engine, operation, continuation, scope) {
+      return ['*', ['/', ['px', value], 100], ['max', ['get', '::window[height]'], ['get', '::window[width]']]];
     },
     vmax: function(value, engine, operation, continuation, scope) {
       return ['*', ['/', ['px', value], 100], ['max', ['get', '::window[height]'], ['get', '::window[width]']]];
@@ -27479,21 +27489,23 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.url = null;
 
+  Intrinsic.prototype.Style = require('gss/lib/Style.js');
+
   Intrinsic.prototype.Getters = require('gss/lib/properties/Getters.js');
 
   Intrinsic.prototype.Styles = require('gss/lib/properties/Styles.js');
 
-  Intrinsic.prototype.Style = require('gss/lib/Style.js');
-
-  Intrinsic.Primitive = require('gss/lib/types/Primitive.js');
-
-  Intrinsic.Measurement = require('gss/lib/types/Measurement.js');
+  Intrinsic.prototype.Gradient = require('gss/lib/types/Gradient.js');
 
   Intrinsic.prototype.Matrix = require('gss/lib/types/Matrix.js');
 
   Intrinsic.prototype.Easing = require('gss/lib/types/Easing.js');
 
+  Intrinsic.prototype.Color = require('gss/lib/types/Color.js');
+
   Intrinsic.prototype.URL = require('gss/lib/types/URL.js');
+
+  Intrinsic.Primitive = require('gss/lib/types/Primitive.js');
 
   Intrinsic.prototype.Number = Intrinsic.Primitive.Number;
 
@@ -27507,7 +27519,9 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.Position = Intrinsic.Primitive.Position;
 
-  Intrinsic.prototype.Length = Intrinsic.Measurement.Size;
+  Intrinsic.Measurement = require('gss/lib/types/Measurement.js');
+
+  Intrinsic.prototype.Length = Intrinsic.Measurement.Length;
 
   Intrinsic.prototype.Time = Intrinsic.Measurement.Time;
 
@@ -27515,11 +27529,13 @@ Intrinsic = (function(_super) {
 
   Intrinsic.prototype.Angle = Intrinsic.Measurement.Angle;
 
+  Intrinsic.prototype.Percentage = Intrinsic.Measurement.Percentage;
+
   Intrinsic.prototype.Properties = (function() {
     var Properties, property, value, _ref1;
     Properties = function(engine) {
       if (engine) {
-        return this.engine = engine;
+        this.engine = engine;
       }
     };
     Properties.prototype = new Intrinsic.prototype.Styles;
@@ -27645,36 +27661,43 @@ Intrinsic = (function(_super) {
     'intrinsic-y': 'intrinsic-y'
   };
 
-  Intrinsic.prototype.get = function(object, property, continuation) {
-    var id, j, path, prop, value;
+  Intrinsic.prototype.get = function(object, property) {
+    var path, value;
     path = this.getPath(object, property);
-    if ((value = Numeric.prototype.get.call(this, null, path, continuation)) == null) {
-      if ((prop = this.properties[path]) != null) {
-        if (typeof prop === 'function') {
-          value = prop.call(this, object, continuation);
-        } else {
-          value = prop;
-        }
+    if ((value = Numeric.prototype.get.call(this, null, path)) == null) {
+      if ((value = this.fetch(path)) != null) {
         this.set(null, path, value);
-        return value;
+      }
+    }
+    return value || 0;
+  };
+
+  Intrinsic.prototype.fetch = function(path) {
+    debugger;
+    var id, j, object, prop, property;
+    if ((prop = this.properties[path]) != null) {
+      if (typeof prop === 'function') {
+        return prop.call(this, object);
       } else {
-        if ((j = path.indexOf('[')) > -1) {
-          id = path.substring(0, j);
-          property = path.substring(j + 1, path.length - 1);
-          object = this.identity.solve(path.substring(0, j));
-          if ((prop = this.properties[property]) != null) {
-            if (prop.axiom) {
-              return prop.call(this, object, continuation);
-            } else if (typeof prop !== 'function') {
-              return prop;
-            } else if (!prop.matcher && property.indexOf('intrinsic') === -1) {
-              return prop.call(this, object, continuation);
-            }
+        return prop;
+      }
+      return value;
+    } else {
+      if ((j = path.indexOf('[')) > -1) {
+        id = path.substring(0, j);
+        property = path.substring(j + 1, path.length - 1);
+        object = this.identity.solve(path.substring(0, j));
+        if ((prop = this.properties[property]) != null) {
+          if (prop.axiom) {
+            return prop.call(this, object);
+          } else if (typeof prop !== 'function') {
+            return prop;
+          } else if (!prop.matcher && property.indexOf('intrinsic') === -1) {
+            return prop.call(this, object);
           }
         }
       }
     }
-    return value || 0;
   };
 
   Intrinsic.prototype.validate = function(node) {
@@ -27689,7 +27712,7 @@ Intrinsic = (function(_super) {
     var path;
     path = this.getPath(object, property);
     if (this.values.hasOwnProperty(path)) {
-      return this.set(null, path, this.get(null, path, continuation));
+      return this.set(null, path, this.fetch(path));
     }
   };
 
@@ -27790,7 +27813,8 @@ Intrinsic = (function(_super) {
               this.set(id, prop, node.offsetHeight);
               break;
             default:
-              style = prop.replace(/$(?:computed|intrinsic)-/, '');
+              style = prop.replace(/^(?:computed|intrinsic)-/, '');
+              console.error(style, prop);
               if ((_ref1 = this.properties[style]) != null ? _ref1.matcher : void 0) {
                 this.set(id, prop, this.getStyle(node, style));
               } else {
@@ -28591,10 +28615,10 @@ Styles = (function() {
       [
         {
           name: ['none', 'String'],
-          duration: ['time'],
-          delay: ['time'],
+          duration: ['Time'],
+          delay: ['Time'],
           direction: ['normal', 'reverse', 'alternate'],
-          'timing-function': ['timing'],
+          'timing-function': ['Easing'],
           'iteration-count': [1, 'infinite', 'Number'],
           'fill-mode': ['none', 'both', 'forwards', 'backwards'],
           'play-state': ['running', 'paused']
@@ -28608,10 +28632,10 @@ Styles = (function() {
       [
         {
           property: ['all', 'property', 'none'],
-          duration: ['time'],
-          delay: ['time'],
+          duration: ['Time'],
+          delay: ['Time'],
           direction: ['reverse', 'normal'],
-          'timing-function': ['timing']
+          'timing-function': ['Easing']
         }
       ]
     ]
@@ -28621,7 +28645,7 @@ Styles = (function() {
     [
       [
         {
-          image: ['Image', 'Gradient', 'none'],
+          image: ['URL', 'Gradient', 'none'],
           position: {
             x: ['Length', 'Percentage', 'center', 'left', 'right'],
             y: ['Length', 'Percentage', 'center', 'top', 'bottom']
@@ -28696,7 +28720,7 @@ Styles = (function() {
     }
   ];
 
-  Styles.prototype['line-height'] = ['normal', 'Number', 'Length', 'Percentage'];
+  Styles.prototype['line-height'] = ['normal', 'Length', 'Number', 'Percentage'];
 
   Styles.prototype.font = [
     [
@@ -28709,7 +28733,7 @@ Styles = (function() {
       size: ['Size', 'Length', 'Percentage']
     }, [
       {
-        'line-height': ['normal', 'Number', 'Length', 'Percentage']
+        'line-height': ['normal', 'Length', 'Number', 'Percentage']
       }
     ], {
       family: ['inherit', 'strings']
@@ -28718,7 +28742,7 @@ Styles = (function() {
 
   Styles.prototype['font-stretch'] = ['normal', 'ultra-condensed', 'extra-condensed', 'condensed', 'semi-condensed', 'semi-expanded', 'expanded', 'extra-expanded', 'ultra-expanded'];
 
-  Styles.prototype['font-size-adjust'] = ['Float'];
+  Styles.prototype['font-size-adjust'] = ['Number'];
 
   Styles.prototype['letter-spacing'] = ['normal', 'Length'];
 
@@ -28770,7 +28794,7 @@ Styles = (function() {
 
   Styles.prototype.bottom = ['Length', 'Percentage', 'auto'];
 
-  Styles.prototype.opacity = ['Float'];
+  Styles.prototype.opacity = ['Number'];
 
   Styles.prototype['z-index'] = ['Integer'];
 
@@ -28847,15 +28871,35 @@ module.exports = Styles;
 });
 
 require.register("gss/lib/types/Color.js", function (exports, module) {
-var Color;
+var Color, Command,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Color = (function() {
-  function Color() {}
+Command = require('gss/lib/Command.js');
+
+Color = (function(_super) {
+  __extends(Color, _super);
 
   Color.Keywords = {
     'transparent': 'transparent',
     'currentColor': 'currentColor'
   };
+
+  function Color(obj) {
+    switch (typeof obj) {
+      case 'string':
+        if (Color.Keywords[obj]) {
+          return obj;
+        } else if (obj.charAt(0) === '#') {
+          return obj;
+        }
+        break;
+      case 'object':
+        if (Color[obj[0]]) {
+          return obj;
+        }
+    }
+  }
 
   Color.define({
     hsl: function(h, s, l) {
@@ -28933,14 +28977,14 @@ Color = (function() {
 
   return Color;
 
-})();
+})(Command);
 
 module.exports = Color;
 
 });
 
 require.register("gss/lib/types/Easing.js", function (exports, module) {
-var Command, Easing, _ref,
+var Command, Easing,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -28949,12 +28993,7 @@ Command = require('gss/lib/commands/Variable.js');
 Easing = (function(_super) {
   __extends(Easing, _super);
 
-  function Easing() {
-    _ref = Easing.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Easing.condition = function(obj) {
+  function Easing(obj) {
     if (typeof obj === 'string') {
       if (obj = this.Type.Timings[obj]) {
         return obj;
@@ -28962,7 +29001,7 @@ Easing = (function(_super) {
     } else if (obj[0] === 'steps' || obj[0] === 'cubic-bezier') {
       return obj;
     }
-  };
+  }
 
   Easing.define({
     'ease': ['cubic-bezier', .42, 0, 1, 1],
@@ -29112,11 +29151,13 @@ Matrix = (function(_super) {
 });
 
 require.register("gss/lib/types/Measurement.js", function (exports, module) {
-var Measurement, Variable, _ref, _ref1, _ref2, _ref3, _ref4,
+var Measurement, Unit, Variable, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 Variable = require('gss/lib/commands/Variable.js');
+
+Unit = require('gss/lib/commands/Unit.js');
 
 Measurement = (function(_super) {
   __extends(Measurement, _super);
@@ -29136,12 +29177,37 @@ Measurement = (function(_super) {
 
 })(Variable);
 
+Measurement.Percentage = (function(_super) {
+  __extends(Percentage, _super);
+
+  function Percentage(obj) {
+    switch (typeof obj) {
+      case 'object':
+        if (obj[0] === '%') {
+          return obj;
+        }
+    }
+  }
+
+  return Percentage;
+
+})(Measurement);
+
 Measurement.Length = (function(_super) {
   __extends(Length, _super);
 
-  function Length() {
-    _ref1 = Length.__super__.constructor.apply(this, arguments);
-    return _ref1;
+  function Length(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Length[obj[0]]) {
+          return obj;
+        }
+        if (Unit[obj[0]] && obj[0] !== '%') {
+          return obj;
+        }
+    }
   }
 
   Length.define({
@@ -29162,6 +29228,10 @@ Measurement.Length = (function(_super) {
     }
   });
 
+  Length.formatNumber = function(number) {
+    return number + 'px';
+  };
+
   return Length;
 
 })(Measurement);
@@ -29169,9 +29239,15 @@ Measurement.Length = (function(_super) {
 Measurement.Angle = (function(_super) {
   __extends(Angle, _super);
 
-  function Angle() {
-    _ref2 = Angle.__super__.constructor.apply(this, arguments);
-    return _ref2;
+  function Angle(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Angle[obj[0]]) {
+          return obj;
+        }
+    }
   }
 
   Angle.define({
@@ -29189,6 +29265,10 @@ Measurement.Angle = (function(_super) {
     }
   });
 
+  Angle.formatNumber = function(number) {
+    return number + 'rad';
+  };
+
   return Angle;
 
 })(Measurement);
@@ -29196,9 +29276,15 @@ Measurement.Angle = (function(_super) {
 Measurement.Time = (function(_super) {
   __extends(Time, _super);
 
-  function Time() {
-    _ref3 = Time.__super__.constructor.apply(this, arguments);
-    return _ref3;
+  function Time(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (Measurement.Time[obj[0]]) {
+          return obj;
+        }
+    }
   }
 
   Time.define({
@@ -29216,6 +29302,10 @@ Measurement.Time = (function(_super) {
     }
   });
 
+  Time.formatNumber = function(number) {
+    return number + 'ms';
+  };
+
   return Time;
 
 })(Measurement);
@@ -29223,25 +29313,32 @@ Measurement.Time = (function(_super) {
 Measurement.Frequency = (function(_super) {
   __extends(Frequency, _super);
 
-  function Frequency() {
-    _ref4 = Frequency.__super__.constructor.apply(this, arguments);
-    return _ref4;
+  function Frequency(obj) {
+    switch (typeof obj) {
+      case 'number':
+        return obj;
+      case 'object':
+        if (this[obj[0]]) {
+          return obj;
+        }
+    }
   }
 
   Frequency.define({
-    deg: function(value) {
-      return value * (Math.PI / 180);
+    mhz: function(value) {
+      return value * 1000 * 1000;
     },
-    grad: function(value) {
-      return value * (Math.PI / 180) / (360 / 400);
+    khz: function(value) {
+      return value * 1000;
     },
-    turn: function(value) {
-      return value * (Math.PI / 180) * 360;
-    },
-    rad: function(value) {
+    hz: function(value) {
       return value;
     }
   });
+
+  Frequency.formatNumber = function(number) {
+    return number + 'hz';
+  };
 
   return Frequency;
 
@@ -29252,7 +29349,7 @@ module.exports = Measurement;
 });
 
 require.register("gss/lib/types/Primitive.js", function (exports, module) {
-var Command, Primitive, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7,
+var Command, Primitive, _ref, _ref1,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -29266,13 +29363,6 @@ Primitive = (function(_super) {
     return _ref;
   }
 
-  Primitive.condition = function(obj) {
-    var _ref1;
-    if (typeof obj === 'string' && ((_ref1 = this.Keywords) != null ? _ref1[obj] : void 0)) {
-      return obj;
-    }
-  };
-
   return Primitive;
 
 })(Command);
@@ -29280,19 +29370,18 @@ Primitive = (function(_super) {
 Primitive.Number = (function(_super) {
   __extends(Number, _super);
 
-  function Number() {
-    _ref1 = Number.__super__.constructor.apply(this, arguments);
-    return _ref1;
-  }
-
   Number.prototype.type = 'Number';
 
-  Number.condition = function(obj) {
+  function Number(obj) {
     var parsed;
     parsed = parseFloat(obj);
     if (parsed === obj) {
       return parsed;
     }
+  }
+
+  Number.formatNumber = function(number) {
+    return number;
   };
 
   return Number;
@@ -29302,20 +29391,15 @@ Primitive.Number = (function(_super) {
 Primitive.Integer = (function(_super) {
   __extends(Integer, _super);
 
-  function Integer() {
-    _ref2 = Integer.__super__.constructor.apply(this, arguments);
-    return _ref2;
-  }
-
   Integer.prototype.type = 'Integer';
 
-  Integer.condition = function(obj) {
+  function Integer(obj) {
     var parsed;
     parsed = parseInt(obj);
     if (String(parsed) === String(obj)) {
       return parsed;
     }
-  };
+  }
 
   return Integer;
 
@@ -29324,18 +29408,13 @@ Primitive.Integer = (function(_super) {
 Primitive.String = (function(_super) {
   __extends(String, _super);
 
-  function String() {
-    _ref3 = String.__super__.constructor.apply(this, arguments);
-    return _ref3;
-  }
-
   String.prototype.type = 'String';
 
-  String.condition = function(obj) {
+  function String(obj) {
     if (typeof obj === 'string') {
       return obj;
     }
-  };
+  }
 
   return String;
 
@@ -29344,18 +29423,13 @@ Primitive.String = (function(_super) {
 Primitive.Strings = (function(_super) {
   __extends(Strings, _super);
 
-  function Strings() {
-    _ref4 = Strings.__super__.constructor.apply(this, arguments);
-    return _ref4;
-  }
-
   Strings.prototype.type = 'Strings';
 
-  Strings.condition = function(obj) {
+  function Strings(obj) {
     if (typeof obj === 'string' || obj instanceof Array) {
       return obj;
     }
-  };
+  }
 
   return Strings;
 
@@ -29364,12 +29438,14 @@ Primitive.Strings = (function(_super) {
 Primitive.Size = (function(_super) {
   __extends(Size, _super);
 
-  function Size() {
-    _ref5 = Size.__super__.constructor.apply(this, arguments);
-    return _ref5;
-  }
-
   Size.prototype.type = 'Size';
+
+  function Size(obj) {
+    var _ref1;
+    if (typeof obj === 'string' && ((_ref1 = Primitive.Size.Keywords) != null ? _ref1[obj] : void 0)) {
+      return obj;
+    }
+  }
 
   Size.Keywords = {
     'medium': 'medium',
@@ -29390,12 +29466,14 @@ Primitive.Size = (function(_super) {
 Primitive.Position = (function(_super) {
   __extends(Position, _super);
 
-  function Position() {
-    _ref6 = Position.__super__.constructor.apply(this, arguments);
-    return _ref6;
-  }
-
   Position.prototype.type = 'Position';
+
+  function Position(obj) {
+    var _ref1;
+    if (typeof obj === 'string' && ((_ref1 = Primitive.Position.Keywords) != null ? _ref1[obj] : void 0)) {
+      return obj;
+    }
+  }
 
   Position.Keywords = {
     "top": "top",
@@ -29412,8 +29490,8 @@ Primitive.Property = (function(_super) {
   __extends(Property, _super);
 
   function Property() {
-    _ref7 = Property.__super__.constructor.apply(this, arguments);
-    return _ref7;
+    _ref1 = Property.__super__.constructor.apply(this, arguments);
+    return _ref1;
   }
 
   Property.prototype.type = 'Property';
@@ -29433,7 +29511,7 @@ module.exports = Primitive;
 });
 
 require.register("gss/lib/types/URL.js", function (exports, module) {
-var Command, URL, _ref,
+var Command, URL,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -29442,21 +29520,177 @@ Command = require('gss/lib/Command.js');
 URL = (function(_super) {
   __extends(URL, _super);
 
-  function URL() {
-    _ref = URL.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
   URL.prototype.type = 'URL';
+
+  function URL(obj) {
+    switch (typeof obj) {
+      case 'object':
+        if (URL[obj[0]]) {
+          return obj;
+        }
+    }
+  }
 
   URL.define({
     'url': function() {},
-    'src': function() {}
+    'src': function() {},
+    'canvas': function() {}
   });
 
   return URL;
 
 })(Command);
+
+module.exports = URL;
+
+});
+
+require.register("gss/lib/types/Color.js", function (exports, module) {
+var Color, Command,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('gss/lib/Command.js');
+
+Color = (function(_super) {
+  __extends(Color, _super);
+
+  Color.Keywords = {
+    'transparent': 'transparent',
+    'currentColor': 'currentColor'
+  };
+
+  function Color(obj) {
+    switch (typeof obj) {
+      case 'string':
+        if (Color.Keywords[obj]) {
+          return obj;
+        } else if (obj.charAt(0) === '#') {
+          return obj;
+        }
+        break;
+      case 'object':
+        if (Color[obj[0]]) {
+          return obj;
+        }
+    }
+  }
+
+  Color.define({
+    hsl: function(h, s, l) {
+      var b, c, g, i, r, t1, t2, t3, _i, _ref;
+      if (s === 0) {
+        r = g = b = l * 255;
+      } else {
+        t3 = [0, 0, 0];
+        c = [0, 0, 0];
+        t2 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        t1 = 2 * l - t2;
+        h /= 360;
+        t3[0] = h + 1 / 3;
+        t3[1] = h;
+        t3[2] = h - 1 / 3;
+        for (i = _i = 0; _i <= 2; i = ++_i) {
+          if (t3[i] < 0) {
+            t3[i] += 1;
+          }
+          if (t3[i] > 1) {
+            t3[i] -= 1;
+          }
+          if (6 * t3[i] < 1) {
+            c[i] = t1 + (t2 - t1) * 6 * t3[i];
+          } else if (2 * t3[i] < 1) {
+            c[i] = t2;
+          } else if (3 * t3[i] < 2) {
+            c[i] = t1 + (t2 - t1) * ((2 / 3) - t3[i]) * 6;
+          } else {
+            c[i] = t1;
+          }
+        }
+        _ref = [Math.round(c[0] * 255), Math.round(c[1] * 255), Math.round(c[2] * 255)], r = _ref[0], g = _ref[1], b = _ref[2];
+      }
+      return ['rgb', r, g, b];
+    },
+    hsla: function(h, s, l, a) {
+      return Type.Color.hsl.execute(h, s, l).concat[a];
+    },
+    rgb: function(r, g, b) {
+      return ['rgb', r, g, b];
+    },
+    rgba: function(r, g, b, a) {
+      return ['rgba', r, g, b, a];
+    },
+    hex: function(hex) {
+      var a, b, g, r, u;
+      if (hex.match(/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)) {
+        if (hex.length === 4 || hex.length === 7) {
+          hex = hex.substr(1);
+        }
+        if (hex.length === 3) {
+          hex = hex.split("");
+          hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        u = parseInt(hex, 16);
+        r = u >> 16;
+        g = u >> 8 & 0xFF;
+        b = u & 0xFF;
+        return ['rgb', r, g, b];
+      }
+      if (hex.match(/^#?([A-Fa-f0-9]{8})$/)) {
+        if (hex.length === 9) {
+          hex = hex.substr(1);
+        }
+        u = parseInt(hex, 16);
+        r = u >> 24 & 0xFF;
+        g = u >> 16 & 0xFF;
+        b = u >> 8 & 0xFF;
+        a = u & 0xFF;
+        return ['rgba', r, g, b, a];
+      }
+    }
+  });
+
+  return Color;
+
+})(Command);
+
+module.exports = Color;
+
+});
+
+require.register("gss/lib/types/Gradient.js", function (exports, module) {
+var Command, Gradient,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Command = require('gss/lib/Command.js');
+
+Gradient = (function(_super) {
+  __extends(Gradient, _super);
+
+  Gradient.prototype.type = 'Gradient';
+
+  function Gradient(obj) {
+    switch (typeof obj) {
+      case 'object':
+        if (Gradient[obj[0]]) {
+          return obj;
+        }
+    }
+  }
+
+  Gradient.define({
+    'linear-gradient': function() {},
+    'radial-gradient': function() {},
+    'repeating-linear-gradient': function() {},
+    'repeating-radial-gradient': function() {}
+  });
+
+  return Gradient;
+
+})(Command);
+
+module.exports = Gradient;
 
 });
 
@@ -35507,6 +35741,8 @@ require.define("gss/component.json", {
     "lib/types/Measurement.js",
     "lib/types/Primitive.js",
     "lib/types/URL.js",
+    "lib/types/Color.js",
+    "lib/types/Gradient.js",
 
     "lib/utilities/Console.js",
     "lib/utilities/Exporter.js",

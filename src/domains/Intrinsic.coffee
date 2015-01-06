@@ -17,18 +17,17 @@ class Intrinsic extends Numeric
   immediate: true
   url: null
 
+  Style:        require('../Style')
   Getters:      require('../properties/Getters')
   Styles:       require('../properties/Styles')
 
-  Style:        require('../Style')
-
-  @Primitive:   require('../types/Primitive')
-  @Measurement: require('../types/Measurement')
-
+  Gradient:     require('../types/Gradient')
   Matrix:       require('../types/Matrix')
   Easing:       require('../types/Easing')
+  Color:        require('../types/Color')
   URL:          require('../types/URL')
 
+  @Primitive:   require('../types/Primitive')
   Number:       @Primitive.Number
   Integer:      @Primitive.Integer
   String:       @Primitive.String
@@ -36,14 +35,18 @@ class Intrinsic extends Numeric
   Size:         @Primitive.Size
   Position:     @Primitive.Position
 
-  Length:       @Measurement.Size
+  @Measurement: require('../types/Measurement')
+  Length:       @Measurement.Length
   Time:         @Measurement.Time
   Frequency:    @Measurement.Frequency
   Angle:        @Measurement.Angle
+  Percentage:   @Measurement.Percentage
 
   Properties: do ->
     Properties = (engine) ->
-      @engine = engine if engine
+      if engine
+        @engine = engine
+      return
     Properties.prototype = new Intrinsic::Styles
     Properties.prototype = new Properties
     for property, value of Intrinsic::Getters::
@@ -136,32 +139,35 @@ class Intrinsic extends Numeric
     'intrinsic-width', 'intrinsic-height', 'intrinsic-x', 'intrinsic-y'
   }
 
-  get: (object, property, continuation) ->
+  get: (object, property) ->
     path = @getPath(object, property)
 
-    unless (value = Numeric::get.call(@, null, path, continuation))?
-      if (prop = @properties[path])?
-        if typeof prop == 'function'
-          value = prop.call(@, object, continuation)
-        else
-          value = prop
-        @set null, path, value
-        return value
-      else 
-        if (j = path.indexOf('[')) > -1
-          id = path.substring(0, j)
-          property = path.substring(j + 1, path.length - 1)
-          object = @identity.solve(path.substring(0, j))
-
-          if (prop = @properties[property])?
-            if prop.axiom
-              return prop.call(@, object, continuation)
-            else if typeof prop != 'function'
-              return prop
-            else if !prop.matcher && property.indexOf('intrinsic') == -1
-              return prop.call(@, object, continuation)
+    unless (value = Numeric::get.call(@, null, path))?
+      if (value = @fetch(path))?
+        @set(null, path, value)
     return value || 0
 
+  fetch: (path) ->
+    debugger
+    if (prop = @properties[path])?
+      if typeof prop == 'function'
+        return prop.call(@, object)
+      else
+        return prop
+      return value
+    else 
+      if (j = path.indexOf('[')) > -1
+        id = path.substring(0, j)
+        property = path.substring(j + 1, path.length - 1)
+        object = @identity.solve(path.substring(0, j))
+
+        if (prop = @properties[property])?
+          if prop.axiom
+            return prop.call(@, object)
+          else if typeof prop != 'function'
+            return prop
+          else if !prop.matcher && property.indexOf('intrinsic') == -1
+            return prop.call(@, object)
 
   # Triggered on possibly resized element by mutation observer
   # If an element is known to listen for its intrinsic properties
@@ -175,7 +181,7 @@ class Intrinsic extends Numeric
   verify: (object, property, continuation) ->
     path = @getPath(object, property)
     if @values.hasOwnProperty(path)
-      @set(null, path, @get(null, path, continuation))
+      @set(null, path, @fetch(path))
 
 
   # Iterate elements and measure intrinsic offsets
@@ -246,7 +252,8 @@ class Intrinsic extends Numeric
             when "height", "intrinsic-height"#, "computed-height"
               @set id, prop, node.offsetHeight
             else
-              style = prop.replace(/$(?:computed|intrinsic)-/, '')
+              style = prop.replace(/^(?:computed|intrinsic)-/, '')
+              console.error(style, prop)
               if @properties[style]?.matcher
                 @set id, prop, @getStyle(node, style)
               else
