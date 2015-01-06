@@ -21,7 +21,6 @@
     "lib/commands/Constraint.js", 
     "lib/commands/Iterator.js", 
     "lib/commands/Selector.js", 
-    "lib/commands/Style.js",
     "lib/commands/Stylesheet.js", 
     "lib/commands/Variable.js", 
     "lib/commands/Unit.js", 

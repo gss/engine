@@ -14,7 +14,7 @@ class Measurement.Percentage extends Measurement
     switch typeof obj
       when 'object'
         if obj[0] == '%'
-          return obj
+          return @
 
 
 class Measurement.Length extends Measurement
@@ -23,10 +23,8 @@ class Measurement.Length extends Measurement
       when 'number'
         return obj
       when 'object'
-        if Measurement.Length[obj[0]]
-          return obj
-        if Unit[obj[0]] && obj[0] != '%'
-          return obj
+        if Measurement.Length[obj[0]] || (Unit[obj[0]] && obj[0] != '%')
+          return @
 
   @define
 
@@ -59,7 +57,7 @@ class Measurement.Angle extends Measurement
         return obj
       when 'object'
         if Measurement.Angle[obj[0]]
-          return obj
+          return @
   @define 
     deg: (value) ->
       return value * (Math.PI / 180)
@@ -84,7 +82,7 @@ class Measurement.Time extends Measurement
         return obj
       when 'object'
         if Measurement.Time[obj[0]]
-          return obj
+          return @
 
   @define
     h: (value) ->
@@ -109,8 +107,8 @@ class Measurement.Frequency extends Measurement
       when 'number'
         return obj
       when 'object'
-        if @[obj[0]]
-          return obj
+        if Measurement.Frequency[obj[0]]
+          return @
 
   @define
     mhz: (value) ->
@@ -118,7 +116,7 @@ class Measurement.Frequency extends Measurement
 
     khz: (value) ->
       return value * 1000
-      
+
     hz: (value) ->
       return value
 

@@ -232,12 +232,12 @@ Matcher = (name, keywords, types, keys, required, pad, depth, initial, callback)
             if !result || (!result.hasOwnProperty(property) &&
                           (!(req = required[property]) || result.hasOwnProperty(req)))
               if (matched = types[index](argument)) != undefined
-                (result ||= new initial)[property] = matched
+                (result ||= new initial)[property] = argument
                 break
         else
           for type, index in types
-            if (typed = type.call(@, argument)) != undefined
-              return typed
+            if type(argument) != undefined
+              return argument
 
       return unless matched?
       matched = undefined

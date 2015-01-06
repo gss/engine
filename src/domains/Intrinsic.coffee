@@ -18,6 +18,7 @@ class Intrinsic extends Numeric
   url: null
 
   Style:        require('../Style')
+  Unit:         require('../commands/Unit')
   Getters:      require('../properties/Getters')
   Styles:       require('../properties/Styles')
 
@@ -34,13 +35,6 @@ class Intrinsic extends Numeric
   Strings:      @Primitive.Strings
   Size:         @Primitive.Size
   Position:     @Primitive.Position
-
-  @Measurement: require('../types/Measurement')
-  Length:       @Measurement.Length
-  Time:         @Measurement.Time
-  Frequency:    @Measurement.Frequency
-  Angle:        @Measurement.Angle
-  Percentage:   @Measurement.Percentage
 
   Properties: do ->
     Properties = (engine) ->

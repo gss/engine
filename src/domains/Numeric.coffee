@@ -11,7 +11,13 @@ Variable = require('../commands/Variable')
 
 class Numeric extends Domain
   priority: 200
-  Units: require('../commands/Unit')
+
+  @Measurement: require('../types/Measurement')
+  Length:       @Measurement.Length
+  Time:         @Measurement.Time
+  Frequency:    @Measurement.Frequency
+  Angle:        @Measurement.Angle
+  Percentage:   @Measurement.Percentage
 
   # Numeric domains usually dont use worker
   url: null
