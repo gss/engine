@@ -32,19 +32,19 @@ DEMOS =
 
   """
   SCOPING: """
-    <div id="box1" class="box w-virtual" onclick="
+    <button id="box1" class="box w-virtual" onclick="
       this.setAttribute('class', 
-        this.className = 'box ' + (this.className.indexOf('wo') > -1 ? 'w-virtual' : 'wo-virtual'))">
+        'box ' + (this.className.indexOf('wo') > -1 ? 'w-virtual' : 'wo-virtual'))">
       <div class="innie" id="innie1" ></div>
-    </div>
-    <div id="box2" class="box wo-virtual" onclick="this.setAttribute('class', 
-      this.className = 'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
+    </button>
+    <button id="box2" class="box wo-virtual" onclick="this.setAttribute('class', 
+      'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
       <div class="innie" id="innie2" ></div>
-    </div>
-    <div id="box3" class="box w-virtual" onclick="this.setAttribute('class', 
-      this.className = 'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
+    </button>
+    <button id="box3" class="box w-virtual" onclick="this.setAttribute('class', 
+      'box ' + (this.className.indexOf('wo') > -1 && 'w-virtual' || 'wo-virtual'))">
       <div class="innie" id="innie3" ></div>
-    </div>
+    </button>
     
     <style>
     * {
@@ -606,37 +606,37 @@ describe 'Full page tests', ->
             for expect, value in expectation
               assert(engine.values[expect]).to.eql value
 
-            engine.id('box1').onclick()
+            engine.id('box1').click()
             engine.then (solution) ->
               expect(solution['$box1"zone"[height]']).to.eql null
               expect(solution['$box1"zone"[width]']).to.eql null
               expect(solution['$box1"zone"[x]']).to.eql null
               expect(solution['$box1"zone"[y]']).to.eql null
-              engine.id('box1').onclick()
+              engine.id('box1').click()
               engine.then (solution) ->
                 expect(solution['$box1"zone"[height]']).to.eql 260
                 expect(solution['$box1"zone"[width]']).to.eql 760
                 expect(solution['$box1"zone"[x]']).to.eql 120
                 expect(solution['$box1"zone"[y]']).to.eql 30
-                engine.id('box2').onclick()
+                engine.id('box2').click()
                 engine.then (solution) ->
                   expect(solution['$box2"zone"[height]']).to.eql 260
                   expect(solution['$box2"zone"[width]']).to.eql 720
                   expect(solution['$box2"zone"[x]']).to.eql 140
                   expect(solution['$box2"zone"[y]']).to.eql 350
-                  engine.id('box2').onclick()
+                  engine.id('box2').click()
                   engine.then (solution) ->
                     expect(solution['$box2"zone"[height]']).to.eql null
                     expect(solution['$box2"zone"[width]']).to.eql null
                     expect(solution['$box2"zone"[x]']).to.eql null
                     expect(solution['$box2"zone"[y]']).to.eql null
-                    engine.id('box3').onclick()
+                    engine.id('box3').click()
                     engine.then (solution) ->
                       expect(solution['$box3"zone"[height]']).to.eql null
                       expect(solution['$box3"zone"[width]']).to.eql null
                       expect(solution['$box3"zone"[x]']).to.eql null
                       expect(solution['$box3"zone"[y]']).to.eql null
-                      engine.id('box3').onclick()
+                      engine.id('box3').click()
                       engine.then (solution) ->
                         expect(solution['$box3"zone"[height]']).to.eql 260
                         expect(solution['$box3"zone"[width]']).to.eql 680
@@ -751,9 +751,6 @@ describe 'Full page tests', ->
             roughAssert = (a, b, threshold = 15) ->
               expect(Math.abs(a - b) < threshold).to.eql true
 
-            GSS.console.log(JSON.stringify solution)
-
-
             roughAssert(solution['$follow[y]'], 540)
             roughAssert(solution['$follow[x]'], 329.5)
             roughAssert(solution['flex-gap'], 40)
@@ -761,14 +758,12 @@ describe 'Full page tests', ->
             container.setAttribute('style', 'height: 768px; width: 1124px; position: absolute; overflow: auto; left: 0; top: 0')
  
             engine.then (solution) ->
-              GSS.console.log(solution)
               roughAssert(solution['$follow[x]'], 435)
               roughAssert(solution['$follow[y]'], 537)
               container.setAttribute('style', 'height: 1024px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
  
  
               engine.then (solution) ->
-                GSS.console.log(solution)
                 roughAssert(solution['flex-gap'], 109)
                 roughAssert(solution['$follow[y]'], 728)
                 roughAssert(solution['$follow[x]'], 240)
@@ -776,7 +771,6 @@ describe 'Full page tests', ->
                 container.setAttribute('style', 'height: 1280px; width: 768px; position: absolute; overflow: auto; left: 0; top: 0')
    
                 engine.then (solution) ->
-                  GSS.console.log(solution)
 
                   roughAssert(solution['$follow[y]'], 668)
                   roughAssert(solution['$follow[x]'], 329.5)
@@ -812,7 +806,6 @@ describe 'Full page tests', ->
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT
                 else
                   container.innerHTML = DEMOS.ADAPTIVE_ASPECT_LINEAR
-                GSS.console.log(container.innerHTML)
                   
                 engine.then (solution) ->
                   expect(solution['$article[height]']).to.eql 600
@@ -825,7 +818,7 @@ describe 'Full page tests', ->
                   container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
 
                   engine.then (solution) ->
-                    expect(solution['$article[height]'] > 1500).to.eql true
+                    expect(solution['$article[height]'] > 1400).to.eql true
                     expect(solution['article-gap']).to.eql 16
                     expect(solution['$article[width]']).to.eql 608
                     expect(solution['$footer[height]']).to.eql 72
@@ -845,7 +838,7 @@ describe 'Full page tests', ->
                       expect(solution['$header[width]']).to.eql 72
                       container.setAttribute('style', 'height: 800px; width: 640px; position: absolute; overflow: auto; left: 0; top: 0')
                       engine.then (solution) ->
-                        expect(solution['$article[height]'] > 1500).to.eql true
+                        expect(solution['$article[height]'] > 1400).to.eql true
                         expect(solution['$article[width]']).to.eql 608
                         expect(solution['$footer[height]']).to.eql 72
                         expect(solution['$footer[width]']).to.eql 608
@@ -856,7 +849,7 @@ describe 'Full page tests', ->
                         container.setAttribute('style', 'height: 800px; width: 600px; position: absolute; overflow: auto; left: 0; top: 0')
                         
                         engine.then (solution) ->
-                          expect(solution['$article[height]'] > 1500).to.eql true
+                          expect(solution['$article[height]'] > 1400).to.eql true
                           expect(solution['$article[width]']).to.eql 568
                           expect(solution['$footer[width]']).to.eql 568
                           expect(solution['$header[width]']).to.eql 568

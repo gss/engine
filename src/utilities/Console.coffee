@@ -18,7 +18,7 @@ class Console
     if @level > 0.5 || type
       unless @buffer.length
         if @level > 1
-          console.profile()
+          console?.profile()
       index = @buffer.push(a, b, c, undefined, type || @row)
       @stack.push(index - 5)
 
@@ -34,7 +34,7 @@ class Console
 
   flush: ->
     if @level > 1
-      console.profileEnd()
+      console?.profileEnd()
     for item, index in @buffer by 5
       @buffer[index + 4].call(@, @buffer[index], @buffer[index + 1], @buffer[index + 2], @buffer[index + 3])
     @buffer = []

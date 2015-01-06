@@ -239,7 +239,7 @@ describe 'Nested Rules', ->
         box1 = container.getElementsByClassName('box')[1]
         box2 = container.getElementsByClassName('box')[2]
         vessel0 = container.getElementsByClassName('vessel')[0] 
-
+        console.log(1)
         engine.once 'solve', ->
           expect(stringify(engine.updated.getProblems())).to.eql stringify([
             [[
@@ -250,6 +250,8 @@ describe 'Nested Rules', ->
               key: '.vessel$vessel0↓ .box$box2', scope: "$vessel0"
               ['==', ['get', '$box2[x]'], 100]]]
           ])
+          console.log(box1.setAttribute.toString())
+          console.log(HTMLElement.prototype.setAttribute.toString())
           expect(stringify(engine.values)).to.eql stringify
             "$box1[x]": 100
             "$box2[x]": 100
@@ -260,6 +262,7 @@ describe 'Nested Rules', ->
           box1.setAttribute('class', '')
 
           engine.once 'solve', ->
+            console.log(1)
             # One child doesnt match the subselector anymore
             expect(stringify(engine.updated.getProblems())).to.eql stringify([
               [['remove', '.vessel$vessel0↓ .box$box1']]
@@ -272,6 +275,7 @@ describe 'Nested Rules', ->
             box1.setAttribute('class', 'box')
 
             engine.once 'solve', ->
+              console.log(1)
               # Child matches again
               expect(stringify(engine.updated.getProblems())).to.eql stringify([
                 [[
@@ -288,6 +292,7 @@ describe 'Nested Rules', ->
               vessel0.setAttribute('class', '')
 
               engine.once 'solve', ->
+                console.log(1)
                 # Parent doesnt match anymore: Remove the whole tree
                 expect(stringify(engine.updated.getProblems())).to.eql stringify([
                   [
@@ -303,6 +308,7 @@ describe 'Nested Rules', ->
                 vessel0.setAttribute('class', 'vessel')
 
                 engine.once 'solve', ->
+                  console.log(1)
                   # Parent matches again, re-watch everything 
                   expect(stringify(engine.updated.getProblems())).to.eql stringify([
                     [[

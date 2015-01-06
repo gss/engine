@@ -1,4 +1,4 @@
-/* gss-engine - version 1.0.4-beta (2015-01-05) - http://gridstylesheets.org */
+/* gss-engine - version 1.0.4-beta (2015-01-06) - http://gridstylesheets.org */
 
 ;(function(){
 
@@ -19771,7 +19771,7 @@ Engine = (function() {
     if (!this.Command) {
       return new Engine(arguments[0], arguments[1], arguments[2]);
     }
-    if (url != null) {
+    if ((url != null) && (typeof Worker !== "undefined" && Worker !== null)) {
       this.url = url;
     }
     this.listeners = {};
@@ -20308,7 +20308,21 @@ Engine = (function() {
       value = data[prop];
       detail[prop] = value;
     }
-    return element.dispatchEvent(new CustomEvent(type, {
+    if (!window.CustomEvent) {
+      window.CustomEvent = function(event, params) {
+        var evt;
+        params = params || {
+          bubbles: false,
+          cancelable: false,
+          detail: undefined
+        };
+        evt = document.createEvent("CustomEvent");
+        evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
+        return evt;
+      };
+      window.CustomEvent.prototype = window.Event.prototype;
+    }
+    return element.dispatchEvent(new window.CustomEvent(type, {
       detail: detail,
       bubbles: bubbles,
       cancelable: cancelable
@@ -22402,7 +22416,9 @@ Update.prototype = {
             if (Math.abs(last - value) < 2) {
               solution[property] = redefined[redefined.length - 1];
               if (i !== redefined.length - 1) {
-                console.error(property, 'is looping: ', this.redefined[property], ' and now ', value, 'again');
+                if (typeof console !== "undefined" && console !== null) {
+                  console.error(property, 'is looping: ', this.redefined[property], ' and now ', value, 'again');
+                }
               }
             }
             continue;
@@ -27617,7 +27633,7 @@ module.exports = Document;
 });
 
 require.register("gss/lib/domains/Linear.js", function (exports, module) {
-var Command, Constraint, Domain, Linear, Variable, _ref,
+var Command, Constraint, Domain, Linear, Variable, c, _ref,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   __slice = [].slice;
@@ -27630,6 +27646,8 @@ Variable = require('gss/lib/Variable.js');
 
 Constraint = require('gss/lib/Constraint.js');
 
+c = require('slightlyoff~cassowary.js@829729cb602d4a17341b4d1a5dba6767bf1cfd5c');
+
 Linear = (function(_super) {
   __extends(Linear, _super);
 
@@ -27640,7 +27658,7 @@ Linear = (function(_super) {
 
   Linear.prototype.priority = 0;
 
-  Linear.prototype.Solver = require('slightlyoff~cassowary.js@829729cb602d4a17341b4d1a5dba6767bf1cfd5c');
+  Linear.prototype.Solver = c;
 
   Linear.prototype.setup = function() {
     Linear.__super__.setup.apply(this, arguments);
@@ -27848,13 +27866,13 @@ Linear.hack = function() {
   var obj, property, set;
   if (c.isUnordered == null) {
     obj = {
-      9: 1,
-      10: 1
+      10: 1,
+      9: 1
     };
     for (property in obj) {
       break;
     }
-    if (c.isUnordered = property === 10) {
+    if (c.isUnordered = property > 9) {
       set = c.HashTable.prototype.set;
       return c.HashTable.prototype.set = function() {
         var store;
@@ -28786,7 +28804,9 @@ Console = (function() {
     if (this.level > 0.5 || type) {
       if (!this.buffer.length) {
         if (this.level > 1) {
-          console.profile();
+          if (typeof console !== "undefined" && console !== null) {
+            console.profile();
+          }
         }
       }
       index = this.buffer.push(a, b, c, void 0, type || this.row);
@@ -28814,7 +28834,9 @@ Console = (function() {
   Console.prototype.flush = function() {
     var index, item, _i, _len, _ref;
     if (this.level > 1) {
-      console.profileEnd();
+      if (typeof console !== "undefined" && console !== null) {
+        console.profileEnd();
+      }
     }
     _ref = this.buffer;
     for (index = _i = 0, _len = _ref.length; _i < _len; index = _i += 5) {
@@ -34487,6 +34509,7 @@ if (typeof window != 'undefined')
 });
 
 require.register("gss/vendor/MutationObserver.attributes.js", function (exports, module) {
+
 if (typeof window != 'undefined')
 
 (function() {
@@ -34539,7 +34562,7 @@ if (typeof window != 'undefined')
     var prevVal = this.getAttribute(attrName);
     this.__setAttribute(attrName, newVal);
     newVal = this.getAttribute(attrName);
-    if (newVal != prevVal)
+    if (newVal !== prevVal)
     {
       var evt = document.createEvent("MutationEvent");
       evt.initMutationEvent(

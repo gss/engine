@@ -57,7 +57,7 @@ class Engine
     unless @Command
       return new Engine(arguments[0], arguments[1], arguments[2])
 
-    if url?
+    if url? && Worker?
       @url = url
 
     @listeners = {}
@@ -528,7 +528,19 @@ class Engine
     for prop, value of data
       detail[prop] = value
 
-    element.dispatchEvent new CustomEvent(type, {detail,bubbles,cancelable})
+    unless window.CustomEvent
+      window.CustomEvent = (event, params) ->
+        params = params or
+          bubbles: false
+          cancelable: false
+          detail: `undefined`
+
+        evt = document.createEvent "CustomEvent"
+        evt.initCustomEvent event, params.bubbles, params.cancelable, params.detail
+        evt
+      window.CustomEvent:: = window.Event::
+
+    element.dispatchEvent new window.CustomEvent(type, {detail,bubbles,cancelable})
 
   # Catch-all event listener 
   handleEvent: (e) ->

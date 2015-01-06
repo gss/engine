@@ -1,3 +1,4 @@
+
 if (typeof window != 'undefined')
 
 (function() {
@@ -50,7 +51,7 @@ if (typeof window != 'undefined')
     var prevVal = this.getAttribute(attrName);
     this.__setAttribute(attrName, newVal);
     newVal = this.getAttribute(attrName);
-    if (newVal != prevVal)
+    if (newVal !== prevVal)
     {
       var evt = document.createEvent("MutationEvent");
       evt.initMutationEvent(

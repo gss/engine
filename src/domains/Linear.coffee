@@ -2,11 +2,11 @@ Domain     = require('../Domain')
 Command    = require('../Command')
 Variable   = require('../Variable')
 Constraint = require('../Constraint')
-
+c          = require('cassowary')
 class Linear extends Domain
   priority: 0
 
-  Solver:  require('cassowary')
+  Solver:  c
 
   setup: () ->
     super
@@ -188,10 +188,10 @@ Linear::Remove = Command.extend {
 # The hack enforces arrays as base structure.
 Linear.hack = ->
   unless c.isUnordered?
-    obj = {9: 1, 10: 1}
+    obj = {10: 1, 9: 1}
     for property of obj
       break
-    if c.isUnordered = (property == 10)
+    if c.isUnordered = (property > 9)
       set = c.HashTable.prototype.set
       c.HashTable.prototype.set = ->
         if !@_store.push
