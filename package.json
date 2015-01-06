@@ -4,7 +4,7 @@
   "version": "1.0.4-beta",
   "repository": {
     "type": "git",
-    "url": "git://github.com/the-gss/engine.git"
+    "url": "git://github.com/gss/engine.git"
   },
   "licenses": [
     {
